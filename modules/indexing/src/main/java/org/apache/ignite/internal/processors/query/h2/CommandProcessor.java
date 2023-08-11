@@ -37,7 +37,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -45,7 +44,6 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
-import org.apache.ignite.cache.query.BulkLoadContextCursor;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -59,19 +57,11 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
-import org.apache.ignite.internal.processors.bulkload.BulkLoadAckClientParameters;
-import org.apache.ignite.internal.processors.bulkload.BulkLoadCacheWriter;
-import org.apache.ignite.internal.processors.bulkload.BulkLoadParser;
-import org.apache.ignite.internal.processors.bulkload.BulkLoadStreamerWriter;
-import org.apache.ignite.internal.processors.bulkload.BulkLoadProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
-import org.apache.ignite.internal.processors.io.BulkLoadFactory;
-import org.apache.ignite.internal.processors.io.Reader;
-import org.apache.ignite.internal.processors.io.Writer;
+import org.apache.ignite.internal.processors.io.BulkLoadCommandProcessorFactory;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
@@ -81,9 +71,6 @@ import org.apache.ignite.internal.processors.query.QueryEntityEx;
 import org.apache.ignite.internal.processors.query.QueryField;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.SqlClientContext;
-import org.apache.ignite.internal.processors.query.h2.dml.DmlBulkLoadDataConverter;
-import org.apache.ignite.internal.processors.query.h2.dml.UpdatePlan;
-import org.apache.ignite.internal.processors.query.h2.dml.UpdatePlanBuilder;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlAlterTableAddColumn;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlAlterTableDropColumn;
@@ -99,9 +86,6 @@ import org.apache.ignite.internal.processors.query.schema.SchemaOperationExcepti
 import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
 import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
-import org.apache.ignite.internal.processors.tracing.MTC;
-import org.apache.ignite.internal.processors.tracing.NoopSpan;
-import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.sql.command.SqlAlterTableCommand;
 import org.apache.ignite.internal.sql.command.SqlAlterUserCommand;
 import org.apache.ignite.internal.sql.command.SqlAnalyzeCommand;
@@ -121,11 +105,9 @@ import org.apache.ignite.internal.sql.command.SqlRollbackTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlSetStreamingCommand;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.lang.IgniteClosureX;
 import org.apache.ignite.internal.util.typedef.CIX2;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.security.SecurityPermission;
@@ -146,9 +128,7 @@ import static java.util.Objects.nonNull;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccEnabled;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.tx;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.txStart;
-import static org.apache.ignite.internal.processors.query.h2.H2Utils.UPDATE_RESULT_META;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser.PARAM_WRAP_VALUE;
-import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_BATCH_PROCESS;
 
 /**
  * Processor responsible for execution of all non-SELECT and non-DML commands.
@@ -192,7 +172,7 @@ public class CommandProcessor {
         }
     };
 
-    private BulkLoadFactory bulkLoadFactory;
+    private final BulkLoadCommandProcessorFactory bulkLoadCommandProcessorFactory;
 
     /**
      * Constructor.
@@ -206,7 +186,7 @@ public class CommandProcessor {
         this.idx = idx;
 
         log = ctx.log(CommandProcessor.class);
-        this.bulkLoadFactory = loadFactoryExtension(ctx);
+        this.bulkLoadCommandProcessorFactory = new BulkLoadCommandProcessorFactory(ctx);
     }
 
     /**
@@ -430,11 +410,9 @@ public class CommandProcessor {
             if (isDdl(cmdNative))
                 runCommandNativeDdl(sql, cmdNative);
             else if (cmdNative instanceof SqlBulkLoadCommand) {
-                if (bulkLoadFactory != null && !cliCtx.isLegacyCopyEnabled()) {
-                    res = processEEBulkLoadCommand((SqlBulkLoadCommand) cmdNative, qryId);
-                } else {
-                    res = processBulkLoadCommand((SqlBulkLoadCommand) cmdNative, qryId);
-                }
+                res = bulkLoadCommandProcessorFactory
+                    .getBulkLoadCommandProcessor(cliCtx.legacyCopyEnabled())
+                    .processBulkLoadCommand(ctx, idx, schemaMgr, (SqlBulkLoadCommand) cmdNative, qryId);
 
                 unregister = false;
             }
@@ -1418,108 +1396,5 @@ public class CommandProcessor {
             );
         else
             cliCtx.disableStreaming();
-    }
-
-    /**
-     * Process bulk load COPY command.
-     *
-     * @param cmd The command.
-     * @param qryId Query id.
-     * @return The context (which is the result of the first request/response).
-     * @throws IgniteCheckedException If something failed.
-     */
-    private FieldsQueryCursor<List<?>> processBulkLoadCommand(SqlBulkLoadCommand cmd, Long qryId)
-        throws IgniteCheckedException {
-        if (cmd.packetSize() == null)
-            cmd.packetSize(BulkLoadAckClientParameters.DFLT_PACKET_SIZE);
-
-        GridH2Table tbl = schemaMgr.dataTable(cmd.schemaName(), cmd.tableName());
-
-        if (tbl == null) {
-            throw new IgniteSQLException("Table does not exist: " + cmd.tableName(),
-                IgniteQueryErrorCode.TABLE_NOT_FOUND);
-        }
-
-        H2Utils.checkAndStartNotStartedCache(ctx, tbl);
-
-        UpdatePlan plan = UpdatePlanBuilder.planForBulkLoad(cmd, tbl);
-
-        IgniteClosureX<List<?>, IgniteBiTuple<?, ?>> dataConverter = new DmlBulkLoadDataConverter(plan);
-
-        IgniteDataStreamer<Object, Object> streamer = ctx.grid().dataStreamer(tbl.cacheName());
-
-        BulkLoadCacheWriter outputWriter = new BulkLoadStreamerWriter(streamer);
-
-        BulkLoadParser inputParser = BulkLoadParser.createParser(cmd.inputFormat());
-
-        BulkLoadProcessor processor = new BulkLoadProcessor(inputParser, dataConverter, outputWriter,
-            idx.runningQueryManager(), qryId, ctx.tracing());
-
-        BulkLoadAckClientParameters params = new BulkLoadAckClientParameters(cmd.localFileName(), cmd.packetSize());
-
-        return new BulkLoadContextCursor(processor, params);
-    }
-
-    /**
-     * Process bulkload COPY command by BulkLoad extension.
-     *
-     * @param cmd The command.
-     * @param qryId Query id.
-     * @return The context (which is the result of the first request/response).
-     * @throws IgniteCheckedException If something failed.
-     */
-    private FieldsQueryCursor<List<?>> processEEBulkLoadCommand(SqlBulkLoadCommand cmd, Long qryId)
-        throws IgniteCheckedException {
-
-        final GridRunningQueryInfo qryInfo = idx.runningQueryManager().runningQueryInfo(qryId);
-        final Span qrySpan = qryInfo == null ? NoopSpan.INSTANCE : qryInfo.span();
-
-        long count;
-        try (MTC.TraceSurroundings ignored = MTC.support(ctx.tracing().create(SQL_BATCH_PROCESS, qrySpan));
-             Reader reader = bulkLoadFactory.reader(ctx, cmd);
-             Writer writer = bulkLoadFactory.writer(ctx, cmd)) {
-
-            count = copy(reader, writer);
-
-            QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(Collections.singletonList(
-                    Collections.singletonList(count)), null, false, false);
-
-            resCur.fieldsMeta(UPDATE_RESULT_META);
-            return resCur;
-        } catch (Exception e) {
-            throw new IgniteCheckedException(e.getMessage(), e);
-        }
-    }
-
-    private BulkLoadFactory loadFactoryExtension(GridKernalContext ctx) {
-        if (nonNull(ctx.plugins())) {
-            BulkLoadFactory[] ext = ctx.plugins().extensions(BulkLoadFactory.class);
-
-            if (nonNull(ext)) {
-                if (ext.length == 1)
-                    return ext[0];
-                if (ext.length > 1)
-                    log.info("More than one BulkLoadFactory extension is defined.");
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Copies entries from Reader to a Writer.
-     *
-     * @param reader the Reader to read from
-     * @param writer the Writer to write to
-     * @return the number of entries copied
-     * @throws IOException if an I/O error occurs
-     */
-    private static long copy(final Reader reader, final Writer writer) throws IOException {
-        long count = 0;
-        while (reader.hasNext()) {
-            List<List<?>> batch = reader.nextBatch(1024);
-            writer.writeAll(batch);
-            count += batch.size();
-        }
-        return count;
     }
 }

@@ -77,11 +77,8 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Version 2.8.3: adds user attributes.*/
     static final ClientListenerProtocolVersion VER_2_8_3 = ClientListenerProtocolVersion.create(2, 8, 3);
 
-    /** Version 2.8.4 adds legacy copy enabled flag */
-    static final ClientListenerProtocolVersion VER_2_8_4 = ClientListenerProtocolVersion.create(2, 8, 4);
-
     /** Current version. */
-    public static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_4;
+    public static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_3;
 
     /** Supported versions. */
     private static final Set<ClientListenerProtocolVersion> SUPPORTED_VERS = new HashSet<>();
@@ -105,7 +102,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     private JdbcProtocolContext protoCtx;
 
     /** Is legacy copy enbled */
-    private boolean isLegacyCopyEnabled;
+    private boolean legacyCopyEnabled;
 
     /** Last reported affinity topology version. */
     private AtomicReference<AffinityTopologyVersion> lastAffinityTopVer = new AtomicReference<>();
@@ -233,8 +230,8 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
         if (ver.compareTo(VER_2_8_3) >= 0)
             userAttrs = reader.readMap();
 
-        if (ver.compareTo(VER_2_8_4) >= 0) {
-            isLegacyCopyEnabled = reader.readBoolean();
+        if (features.contains(JdbcThinFeature.LEGACY_BULKLOAD_PARAM)) {
+            legacyCopyEnabled = reader.readBoolean();
         }
 
         if (ver.compareTo(VER_2_5_0) >= 0) {
@@ -278,7 +275,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
         }
 
         handler = new JdbcRequestHandler(busyLock, sender, maxCursors, maxMemory, distributedJoins, enforceJoinOrder,
-            collocated, replicatedOnly, autoCloseCursors, lazyExec, skipReducerOnUpdate, isLegacyCopyEnabled, nestedTxMode,
+            collocated, replicatedOnly, autoCloseCursors, lazyExec, skipReducerOnUpdate, legacyCopyEnabled, nestedTxMode,
             dataPageScanEnabled, updateBatchSize, actx, ver, this);
 
         handler.start();

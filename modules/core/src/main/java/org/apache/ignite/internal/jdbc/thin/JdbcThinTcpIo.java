@@ -99,11 +99,8 @@ public class JdbcThinTcpIo {
     /** Version 2.8.3. Add User Attributes. */
     private static final ClientListenerProtocolVersion VER_2_8_3 = ClientListenerProtocolVersion.create(2, 8, 3);
 
-    /** Version 2.8.3. Legacy copy enabled flag. */
-    private static final ClientListenerProtocolVersion VER_2_8_4 = ClientListenerProtocolVersion.create(2, 8, 4);
-
     /** Current version. */
-    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_4;
+    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_3;
 
     /** Initial output stream capacity for handshake. */
     private static final int HANDSHAKE_MSG_SIZE = 13;
@@ -320,8 +317,8 @@ public class JdbcThinTcpIo {
             }
         }
 
-        if (ver.compareTo(VER_2_8_4) >= 0) {
-            writer.writeBoolean(connProps.isLegacyCopyEnabled());
+        if (enabledFeatures().contains(JdbcThinFeature.LEGACY_BULKLOAD_PARAM)) {
+            writer.writeBoolean(connProps.legacyCopyEnabled());
         }
 
         if (!F.isEmpty(connProps.getUsername())) {

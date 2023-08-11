@@ -22,6 +22,7 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.UnsupportedCharsetException;
 import java.sql.BatchUpdateException;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -148,16 +149,25 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Parameterized.Parameter(2)
     public Boolean isNear;
 
+    @Parameterized.Parameter(3)
+    public Boolean legacyCopyEnabled;
+
     /** Test run configurations: Cache mode, atomicity type, is near. */
-    @Parameterized.Parameters(name = "cacheMode={0}, atomicityMode={1}, isNear={2}")
+    @Parameterized.Parameters(name = "cacheMode={0}, atomicityMode={1}, isNear={2}, legacyCopyEnabled={3}")
     public static Collection<Object[]> runConfig() {
         return Arrays.asList(new Object[][] {
-            {PARTITIONED, ATOMIC, true},
-            {PARTITIONED, ATOMIC, false},
-            {PARTITIONED, TRANSACTIONAL, true},
-            {PARTITIONED, TRANSACTIONAL, false},
-            {REPLICATED, ATOMIC, false},
-            {REPLICATED, TRANSACTIONAL, false},
+            {PARTITIONED, ATOMIC, true, false},
+            {PARTITIONED, ATOMIC, true, true},
+            {PARTITIONED, ATOMIC, false, false},
+            {PARTITIONED, ATOMIC, false, true},
+            {PARTITIONED, TRANSACTIONAL, true, false},
+            {PARTITIONED, TRANSACTIONAL, true, true},
+            {PARTITIONED, TRANSACTIONAL, false, false},
+            {PARTITIONED, TRANSACTIONAL, false, true},
+            {REPLICATED, ATOMIC, false, false},
+            {REPLICATED, ATOMIC, false, true},
+            {REPLICATED, TRANSACTIONAL, false, false},
+            {REPLICATED, TRANSACTIONAL, false, true},
         });
     }
 
@@ -191,6 +201,14 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         );
 
         return cache;
+    }
+
+    @Override protected Connection createConnection() throws SQLException {
+        String baseConnectionString = "jdbc:ignite:thin://127.0.0.1/";
+        if (legacyCopyEnabled) {
+            return DriverManager.getConnection(baseConnectionString + "?legacyCopyEnabled=true");
+        }
+        return DriverManager.getConnection(baseConnectionString);
     }
 
     /**

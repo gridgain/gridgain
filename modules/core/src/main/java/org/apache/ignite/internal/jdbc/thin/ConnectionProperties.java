@@ -603,5 +603,5 @@ public interface ConnectionProperties {
     /**
      * Is legacy bulk load implementation enabled
      */
-    public boolean isLegacyCopyEnabled();
+    public boolean legacyCopyEnabled();
 }
