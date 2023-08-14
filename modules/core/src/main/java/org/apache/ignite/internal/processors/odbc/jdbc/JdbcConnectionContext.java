@@ -266,10 +266,8 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             }
         }
 
-        boolean serverBulkLoadEnabled = features.contains(JdbcThinFeature.SERVER_BULK_LOAD);
-
         handler = new JdbcRequestHandler(busyLock, sender, maxCursors, maxMemory, distributedJoins, enforceJoinOrder,
-            collocated, replicatedOnly, autoCloseCursors, lazyExec, skipReducerOnUpdate, serverBulkLoadEnabled, nestedTxMode,
+            collocated, replicatedOnly, autoCloseCursors, lazyExec, skipReducerOnUpdate, nestedTxMode,
             dataPageScanEnabled, updateBatchSize, actx, ver, this);
 
         handler.start();

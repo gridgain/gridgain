@@ -41,18 +41,20 @@ import org.apache.ignite.internal.util.lang.IgniteClosureX;
 import org.apache.ignite.lang.IgniteBiTuple;
 
 /**
- * This implementation of BulkLoadCommandProcessor is for JDBC thin client only
+ * This implementation of BulkLoadCommandProcessor is for JDBC thin client only.
+ * Client-side CSV importing is supported only by JDBC thin client.
  */
 public class BasicBulkLoadCommandProcessor implements BulkLoadCommandProcessor {
 
-    @Override public FieldsQueryCursor<List<?>> processBulkLoadCommand(GridKernalContext ctx, IgniteH2Indexing idx,
-        SchemaManager schemaMgr,
+    @Override public FieldsQueryCursor<List<?>> processBulkLoadCommand(
+        GridKernalContext ctx,
         SqlBulkLoadCommand cmd,
         Long qryId) throws IgniteCheckedException {
         if (cmd.packetSize() == null)
             cmd.packetSize(BulkLoadAckClientParameters.DFLT_PACKET_SIZE);
 
-        GridH2Table tbl = schemaMgr.dataTable(cmd.schemaName(), cmd.tableName());
+        IgniteH2Indexing idx = (IgniteH2Indexing) ctx.query().getIndexing();
+        GridH2Table tbl = idx.schemaManager().dataTable(cmd.schemaName(), cmd.tableName());
 
         if (tbl == null) {
             throw new IgniteSQLException("Table does not exist: " + cmd.tableName(),

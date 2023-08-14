@@ -97,8 +97,8 @@ public class SqlClientContext implements AutoCloseable {
      * the processing the last request. */
     private long totalProcessedOrderedReqs;
 
-    /** Is server copy (bulk load) enabled */
-    private boolean serverBulkLoadEnabled;
+    /** Is server copy (bulk load) enabled. */
+    private final boolean serverBulkLoadEnabled;
 
     /** Logger. */
     private final IgniteLogger log;

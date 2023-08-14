@@ -20,8 +20,6 @@ import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.sql.command.SqlBulkLoadCommand;
 import org.apache.ignite.plugin.Extension;
 
@@ -32,11 +30,9 @@ import org.apache.ignite.plugin.Extension;
 public interface BulkLoadCommandProcessor extends Extension {
 
     /**
-     * Processes bulk load (COPY) command
+     * Processes bulk load (COPY) command.
      *
      * @param ctx GridKernalContext.
-     * @param idx IgniteH2Indexing.
-     * @param schemaMgr SchemaManager.
      * @param cmd SqlBulkLoadCommand.
      * @param qryId Query ID.
      * @return FieldsQueryCursor
@@ -44,8 +40,6 @@ public interface BulkLoadCommandProcessor extends Extension {
      */
     FieldsQueryCursor<List<?>> processBulkLoadCommand(
         GridKernalContext ctx,
-        IgniteH2Indexing idx,
-        SchemaManager schemaMgr,
         SqlBulkLoadCommand cmd,
         Long qryId) throws IgniteCheckedException;
 }

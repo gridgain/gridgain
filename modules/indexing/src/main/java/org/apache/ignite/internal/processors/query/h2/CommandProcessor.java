@@ -412,7 +412,7 @@ public class CommandProcessor {
             else if (cmdNative instanceof SqlBulkLoadCommand) {
                 res = bulkLoadCommandProcessorFactory
                     .getBulkLoadCommandProcessor(cliCtx.serverBulkLoadEnabled())
-                    .processBulkLoadCommand(ctx, idx, schemaMgr, (SqlBulkLoadCommand) cmdNative, qryId);
+                    .processBulkLoadCommand(ctx, (SqlBulkLoadCommand) cmdNative, qryId);
 
                 unregister = false;
             }
@@ -810,7 +810,6 @@ public class CommandProcessor {
                         ).get();
                     }
                     else {
-
                         ctx.query().dynamicTableCreate(
                             cmd.schemaName(),
                             e,

@@ -203,7 +203,6 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         boolean autoCloseCursors,
         boolean lazy,
         boolean skipReducerOnUpdate,
-        boolean serverBulkLoadEnabled,
         NestedTxMode nestedTxMode,
         @Nullable Boolean dataPageScanEnabled,
         @Nullable Integer updateBatchSize,
@@ -221,6 +220,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                 return new OrderedBatchWorker();
             }
         };
+
+        boolean serverBulkLoadEnabled = connCtx.protocolContext().isFeatureSupported(JdbcThinFeature.SERVER_BULK_LOAD);
 
         cliCtx = new SqlClientContext(
             connCtx.kernalContext(),

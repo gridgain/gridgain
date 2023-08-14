@@ -178,7 +178,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
             null,
             null,
             U.parseBytes(ctx.config().getSqlConfiguration().getSqlQueryMemoryQuota()),
-            false
+            true
         );
 
         this.busyLock = busyLock;
