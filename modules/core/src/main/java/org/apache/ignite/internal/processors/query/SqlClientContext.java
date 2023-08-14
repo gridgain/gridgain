@@ -257,7 +257,7 @@ public class SqlClientContext implements AutoCloseable {
     }
 
     /**
-     * @return is legacy copy enabled.
+     * @return is server bulk load (copy) enabled.
      */
     public boolean serverBulkLoadEnabled() {
         return serverBulkLoadEnabled;

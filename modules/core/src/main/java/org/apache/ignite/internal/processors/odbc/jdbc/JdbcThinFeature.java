@@ -40,9 +40,7 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
     /** Add ability to set explicit query timeout on the cluster node by the JDBC client. */
     QUERY_TIMEOUT(3),
 
-    /**
-     * Support for server bulk load feature.
-     */
+    /** Support for server bulk load feature. */
     SERVER_BULK_LOAD(4);
 
     /** */

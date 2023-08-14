@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -124,7 +125,6 @@ import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static java.util.Objects.nonNull;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccEnabled;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.tx;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.txStart;
@@ -1189,10 +1189,10 @@ public class CommandProcessor {
         )
             res.fillAbsentPKsWithDefaults(true);
 
-        if (nonNull(createTbl.primaryKeyInlineSize()))
+        if (Objects.nonNull(createTbl.primaryKeyInlineSize()))
             res.setPrimaryKeyInlineSize(createTbl.primaryKeyInlineSize());
 
-        if (nonNull(createTbl.affinityKeyInlineSize()))
+        if (Objects.nonNull(createTbl.affinityKeyInlineSize()))
             res.setAffinityKeyInlineSize(createTbl.affinityKeyInlineSize());
 
         return res;
