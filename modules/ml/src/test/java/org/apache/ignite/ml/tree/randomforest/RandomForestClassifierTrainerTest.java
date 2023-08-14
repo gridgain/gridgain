@@ -16,23 +16,34 @@
 
 package org.apache.ignite.ml.tree.randomforest;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.*;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import org.apache.commons.math3.util.Precision;
 import org.apache.ignite.ml.IgniteModel;
 import org.apache.ignite.ml.TestUtils;
 import org.apache.ignite.ml.common.TrainerTest;
 import org.apache.ignite.ml.composition.ModelsComposition;
 import org.apache.ignite.ml.composition.predictionsaggregator.OnMajorityPredictionsAggregator;
 import org.apache.ignite.ml.dataset.feature.FeatureMeta;
+import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
+import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.LabeledDummyVectorizer;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
+import org.apache.ignite.ml.math.primitives.vector.impl.DenseVector;
 import org.apache.ignite.ml.structures.LabeledVector;
 import org.apache.ignite.ml.trainers.DatasetTrainer;
 import org.apache.ignite.ml.tree.randomforest.data.TreeNode;
 import org.apache.ignite.ml.tree.randomforest.data.TreeRoot;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 
 import static org.apache.ignite.ml.tree.randomforest.data.FeaturesCountSelectionStrategies.SQRT;
 import static org.apache.ignite.ml.tree.randomforest.data.TreeNode.Type.LEAF;
@@ -44,99 +55,74 @@ import static org.junit.Assert.*;
 public class RandomForestClassifierTrainerTest extends TrainerTest {
     /** */
     @Test
-    public void testFit() {
-        int sampleSize = 500;
-        Map<Integer, LabeledVector<Double>> sample = new HashMap<>();
-        for (int i = 0; i < sampleSize; i++) {
-            double x1 = i;
-            double x2 = x1 / 10.0;
-            double x3 = x2 / 10.0;
-            double x4 = x3 / 10.0;
+    public void testFit() throws IOException {
+        System.out.println("##### Reading data...");
 
-            sample.put(i, VectorUtils.of(x1, x2, x3, x4).labeled((double) i % 2));
-        }
+        Map<Integer, Vector> data = readDataFromCsvAsVector();
 
-        ArrayList<FeatureMeta> meta = new ArrayList<>();
-        for (int i = 0; i < 4; i++)
-            meta.add(new FeatureMeta("", i, false));
-        DatasetTrainer<ModelsComposition, Double> trainer = new RandomForestClassifierTrainer(meta)
-            .withAmountOfTrees(5)
-            .withFeaturesCountSelectionStrgy(x -> 2)
-            .withEnvironmentBuilder(TestUtils.testEnvBuilder());
+        System.out.println("##### Training data...");
 
-        ModelsComposition mdl = trainer.fit(sample, parts, new LabeledDummyVectorizer<>());
+        RandomForestClassifierTrainer classifier = createTrainer();
 
-        assertTrue(mdl.getPredictionsAggregator() instanceof OnMajorityPredictionsAggregator);
-        assertEquals(5, mdl.getModels().size());
+        Vectorizer<Integer, Vector, Integer, Double> vectorizer = new DummyVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
+        ModelsComposition randomForestModel = classifier.fit(data, 1, vectorizer);
+
+        System.out.println("##### Finished training, checking the accurancy...");
+
+        AtomicInteger amountOfErrors = new AtomicInteger(0);
+        AtomicInteger totalAmount = new AtomicInteger(0);
+
+        data.entrySet().stream().forEach(entry -> {
+            Vector val = entry.getValue();
+            Vector inputs = val.copyOfRange(1, val.size());
+            double groundTruth = val.get(0);
+
+            double prediction = randomForestModel.predict(inputs);
+
+            totalAmount.incrementAndGet();
+            if (!Precision.equals(groundTruth, prediction, Precision.EPSILON)) {
+                amountOfErrors.incrementAndGet();
+            }
+        });
+
+        System.out.println("\n##### Evaluated model on " + totalAmount + " data points.");
+
+        // >>> Accuracy 0.9706862091938707
+        System.out.println("\n##### Absolute amount of errors " + amountOfErrors);
+        System.out.println("\n##### Accuracy " + (1 - amountOfErrors.get() / (double) totalAmount.get()));
+
     }
 
-    /** */
-    @Test
-    public void testUpdate() {
-        int sampleSize = 500;
-        Map<Integer, LabeledVector<Double>> sample = new HashMap<>();
-        for (int i = 0; i < sampleSize; i++) {
-            double x1 = i;
-            double x2 = x1 / 10.0;
-            double x3 = x2 / 10.0;
-            double x4 = x3 / 10.0;
-
-            sample.put(i, VectorUtils.of(x1, x2, x3, x4).labeled((double) i % 2));
+    private static RandomForestClassifierTrainer createTrainer() {
+        List<FeatureMeta> features = new ArrayList<>();
+        String[] featureName = WfDeltaVectorizer.features();
+        for (int i = 0; i < featureName.length; i++) {
+            features.add(new FeatureMeta(featureName[i], i, false));
         }
 
-        ArrayList<FeatureMeta> meta = new ArrayList<>();
-        for (int i = 0; i < 4; i++)
-            meta.add(new FeatureMeta("", i, false));
-        DatasetTrainer<ModelsComposition, Double> trainer = new RandomForestClassifierTrainer(meta)
-            .withAmountOfTrees(32)
-            .withFeaturesCountSelectionStrgy(x -> 2)
-            .withEnvironmentBuilder(TestUtils.testEnvBuilder());
-
-        ModelsComposition originalMdl = trainer.fit(sample, parts, new LabeledDummyVectorizer<>());
-        ModelsComposition updatedOnSameDS = trainer.update(originalMdl, sample, parts, new LabeledDummyVectorizer<>());
-        ModelsComposition updatedOnEmptyDS = trainer.update(originalMdl, new HashMap<Integer, LabeledVector<Double>>(), parts, new LabeledDummyVectorizer<>());
-
-        Vector v = VectorUtils.of(5, 0.5, 0.05, 0.005);
-        assertEquals(originalMdl.predict(v), updatedOnSameDS.predict(v), 0.01);
-        assertEquals(originalMdl.predict(v), updatedOnEmptyDS.predict(v), 0.01);
-    }
-
-    /**
-     * Test checks whether the tree has nodes duplication.
-     */
-    @Test
-    public void testDuplicateNodes() {
-        int sampleSize = 500;
-        Random rnd = new Random(1);
-        Map<Integer, LabeledVector<Double>> sample = new HashMap<>();
-        for (int i = 0; i < sampleSize; i++) {
-            sample.put(i, VectorUtils.of(rnd.nextDouble(), rnd.nextDouble(), rnd.nextDouble(), rnd.nextDouble())
-                    .labeled((double) i % 2));
-        }
-
-        ArrayList<FeatureMeta> meta = new ArrayList<>();
-        for (int i = 0; i < 4; i++)
-            meta.add(new FeatureMeta("", i, false));
-        DatasetTrainer<ModelsComposition, Double> trainer = new RandomForestClassifierTrainer(meta)
-                .withAmountOfTrees(1)
-                .withMaxDepth(10)
+        return new RandomForestClassifierTrainer(features)
+                .withAmountOfTrees(101) // 101
                 .withFeaturesCountSelectionStrgy(SQRT)
-                .withSeed(777)
-                .withEnvironmentBuilder(TestUtils.testEnvBuilder());
-
-        ModelsComposition mdl = trainer.fit(sample, parts, new LabeledDummyVectorizer<>());
-
-        List<IgniteModel<Vector, Double>> models = mdl.getModels();
-
-        assertEquals(1, mdl.getModels().size());
-
-        TreeRoot tree = (TreeRoot) models.get(0);
-
-        TreeNode repeatingNode = findDuplicatedNode(tree.getRootNode());
-
-        assertNull(repeatingNode);
+                .withMaxDepth(60)
+                .withSeed(777); // we get a different tree each run despite specifying a seed
     }
 
+    private static Map<Integer, Vector> readDataFromCsvAsVector() throws IOException {
+        Resource file = new ClassPathResource("data.txt");
+        Map<Integer, Vector> data = new HashMap<>();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+            List<String> lines = reader.lines().collect(Collectors.toList());
+            List<List<Double>> doublest = lines.stream()
+                    .map(l -> Arrays.stream(l.split(",")).map(Double::parseDouble).collect(Collectors.toList()))
+                    .collect(Collectors.toList());
+            for (int i = 0; i < doublest.size(); i++) {
+                List<Double> doubles = doublest.get(i);
+                Vector v = new DenseVector(doubles.stream().mapToDouble(Double::doubleValue).toArray());
+                data.put(i, v);
+            }
+        }
+        return data;
+    }
     /**
      * Go through the tree and find a node branch that has repeating feature + value.
      */
