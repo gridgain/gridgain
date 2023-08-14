@@ -1529,10 +1529,8 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         assertTrue(waitForCondition(() -> grid(0).cluster().nodes().size() == exceptedNodesCnt, 30000L));
 
-        for (int idx : restartNodes) {
+        for (int idx : restartNodes)
             stopGrid(getTestIgniteInstanceName(idx), true, false);
-            doSleep(5_000);
-        }
 
         fut.get();
 
