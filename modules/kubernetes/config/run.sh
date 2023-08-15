@@ -42,7 +42,7 @@ if [ "$IGNITE_QUIET" = "false" ]; then
   QUIET="-v"
 fi
 
-find $IGNITE_WORK_DIR/ -name 'java_pid1-*.hprof' -type f -mtime +7 -delete
+cd $IGNITE_WORK_DIR/ && ls -tr java_pid1-*.hprof | head -n -5 | xargs --no-run-if-empty rm && cd -
 
 test -f $IGNITE_WORK_DIR/java_pid1.hprof && mv $IGNITE_WORK_DIR/java_pid1.hprof $IGNITE_WORK_DIR/java_pid1-$(stat -c %Y $IGNITE_WORK_DIR/java_pid1.hprof).hprof
 
