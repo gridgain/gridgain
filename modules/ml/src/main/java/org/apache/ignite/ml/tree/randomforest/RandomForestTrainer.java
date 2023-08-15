@@ -274,7 +274,7 @@ public abstract class RandomForestTrainer<L, S extends ImpurityComputer<Bootstra
             if (bestSplit.isPresent())
                 bestSplit.get().createLeaf(cornerNode);
             else {
-                cornerNode.setImpurity(Double.NEGATIVE_INFINITY);
+                cornerNode.setImpurity(0.0);
                 cornerNode.toLeaf(0.0);
             }
         }
@@ -383,8 +383,8 @@ public abstract class RandomForestTrainer<L, S extends ImpurityComputer<Bootstra
      * @return true if split is needed.
      */
     boolean needSplit(TreeNode parentNode, Optional<NodeSplit> split) {
-        return split.isPresent() && parentNode.getImpurity() - split.get().getImpurity() > minImpurityDelta &&
-            parentNode.getDepth() < (maxDepth + 1);
+        return split.isPresent() && split.get().getGain() > minImpurityDelta &&
+                parentNode.getDepth() < (maxDepth + 1);
     }
 
     /**
