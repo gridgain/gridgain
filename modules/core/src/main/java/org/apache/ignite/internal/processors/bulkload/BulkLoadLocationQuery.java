@@ -16,14 +16,19 @@
 
 package org.apache.ignite.internal.processors.bulkload;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-
 /**
- * A superclass and a factory for bulk load format options.
+ * Subquery in parentheses with syntax (query).
  */
-public interface BulkLoadFormat {
-    /** The default input charset. */
-    Charset DFLT_INPUT_CHARSET = StandardCharsets.UTF_8;
+public class BulkLoadLocationQuery implements BulkLoadLocation {
 
+    private String sql;
+
+    public String sql() {
+        return sql;
+    }
+
+    public BulkLoadLocationQuery sql(String sql) {
+        this.sql = sql;
+        return this;
+    }
 }

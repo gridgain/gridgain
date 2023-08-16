@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.sql;
 
+import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationQuery;
+import org.apache.ignite.internal.sql.command.SqlBulkLoadCommand;
+import org.apache.ignite.internal.sql.command.SqlCommand;
 import org.junit.Test;
 
 /**
@@ -35,15 +38,17 @@ public class SqlParserBulkLoadSelfTest extends SqlParserAbstractSelfTest {
 
         assertParseError(null,
             "copy from unquoted into Person (_key, age, firstName, lastName) format csv",
-            "Unexpected token: \"UNQUOTED\" (expected: \"[file name: string]\"");
+            "Unexpected token: \"INTO\" (expected: \"(\")");
 
         assertParseError(null,
             "copy from unquoted.file into Person (_key, age, firstName, lastName) format csv",
-            "Unexpected token: \"UNQUOTED\" (expected: \"[file name: string]\"");
+            "Unexpected token: \"INTO\" (expected: \"(\")");
 
         new SqlParser(null,
             "copy from '' into Person (_key, age, firstName, lastName) format csv")
             .nextCommand();
+
+        // File
 
         new SqlParser(null,
             "copy from 'd:/copy/from/into/format.csv' into Person (_key, age, firstName, lastName) format csv")
@@ -140,5 +145,24 @@ public class SqlParserBulkLoadSelfTest extends SqlParserAbstractSelfTest {
         assertParseError(null,
             "copy from 'any.file' into Person (_key, age, firstName, lastName) format csv charset ",
             "Unexpected end of command (expected: \"[string]\")");
+    }
+
+    @Test
+    public void testCopySubquery() {
+        String subquery = "select * from (select * from Person) as p";
+
+        SqlCommand cmd = new SqlParser(null,
+                "copy from (" + subquery + ") into 'any.file' format csv")
+                .nextCommand();
+        String actual = ((BulkLoadLocationQuery) ((SqlBulkLoadCommand) cmd).from()).sql();
+        assertEquals(subquery, actual);
+
+        assertParseError(null,
+                "copy from (select * from (select * from Person as p into 'any.file' format csv",
+                "Unexpected end of command (expected: \"[query: parenthesis]\")");
+
+        assertParseError(null,
+                "copy from select _key from (select * from Person) as p) into 'any.file' format csv",
+                "Unexpected token: \"_KEY\" (expected: \"(\"");
     }
 }

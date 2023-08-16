@@ -19,11 +19,17 @@ package org.apache.ignite.internal.sql.command;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadCsvFormat;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadFormat;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadAckClientParameters;
+import org.apache.ignite.internal.processors.bulkload.BulkLoadLocation;
+import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationFile;
+import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationQuery;
+import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationTable;
 import org.apache.ignite.internal.sql.SqlKeyword;
 import org.apache.ignite.internal.sql.SqlLexer;
+import org.apache.ignite.internal.sql.SqlLexerToken;
 import org.apache.ignite.internal.sql.SqlLexerTokenType;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,17 +48,13 @@ import static org.apache.ignite.internal.sql.SqlParserUtils.skipIfMatchesKeyword
  * A parser for a COPY command (called 'bulk load' in the code, since word 'copy' is too generic).
  */
 public class SqlBulkLoadCommand implements SqlCommand {
-    /** Local file name to send from client to server. */
-    private String locFileName;
 
-    /** Schema name + table name. */
-    private SqlQualifiedName tblQName;
+    private BulkLoadLocation from;
 
-    /** User-specified list of columns. */
-    private List<String> cols;
+    private BulkLoadLocation into;
 
     /** File format. */
-    private BulkLoadFormat inputFormat;
+    private BulkLoadFormat format;
 
     /** Packet size (size of portion of a file sent in each sub-request). */
     private Integer packetSize;
@@ -66,11 +68,11 @@ public class SqlBulkLoadCommand implements SqlCommand {
     @Override public SqlCommand parse(SqlLexer lex) {
         skipIfMatchesKeyword(lex, SqlKeyword.FROM); // COPY keyword is already parsed
 
-        parseFileName(lex);
+        from = parseLocation(lex);
 
-        parseTableName(lex);
+        skipIfMatchesKeyword(lex, SqlKeyword.INTO);
 
-        parseColumns(lex);
+        into = parseLocation(lex);
 
         parseFormat(lex);
 
@@ -79,18 +81,44 @@ public class SqlBulkLoadCommand implements SqlCommand {
         return this;
     }
 
+    private static BulkLoadLocation parseLocation(SqlLexer lex) {
+        SqlLexerToken lookAhead = lex.lookAhead();
+        if (SqlKeyword.isKeyword(lookAhead.token())) {
+            throw errorUnexpectedToken(lookAhead, "[file name: string]");
+        }
+
+        if (lookAhead.tokenType() == SqlLexerTokenType.STRING) {
+            // '/dir/any.file'
+            String locFileName = parseFileName(lex);
+            return new BulkLoadLocationFile().path(locFileName);
+
+        } else if (lookAhead.tokenType() == SqlLexerTokenType.PARENTHESIS_LEFT) {
+            // (query)
+            String sql = parseQuery(lex);
+            return new BulkLoadLocationQuery().sql(sql);
+
+        } else if (!SqlKeyword.isKeyword(lookAhead.token())) {
+            // [<schema>.]<table_name> ( <col_name> [ , <col_name> ... ] )
+            SqlQualifiedName tblQName = parseTableName(lex);
+            List<String> cols = parseColumns(lex);
+            return new BulkLoadLocationTable().tableQualifiedName(tblQName).columns(cols);
+        }
+
+        throw errorUnexpectedToken(lookAhead, "[location: 'file', table_name (col_name), (query)]");
+    }
+
     /**
      * Parses the file name.
      *
      * @param lex The lexer.
      */
-    private void parseFileName(SqlLexer lex) {
+    private static String parseFileName(SqlLexer lex) {
         if (lex.lookAhead().tokenType() != SqlLexerTokenType.STRING)
             throw errorUnexpectedToken(lex.lookAhead(), "[file name: string]");
 
         lex.shift();
 
-        locFileName = lex.token();
+        return lex.token();
     }
 
     /**
@@ -98,10 +126,8 @@ public class SqlBulkLoadCommand implements SqlCommand {
      *
      * @param lex The lexer.
      */
-    private void parseTableName(SqlLexer lex) {
-        skipIfMatchesKeyword(lex, SqlKeyword.INTO);
-
-        tblQName = parseQualifiedIdentifier(lex);
+    private static SqlQualifiedName parseTableName(SqlLexer lex) {
+        return parseQualifiedIdentifier(lex);
     }
 
     /**
@@ -109,15 +135,17 @@ public class SqlBulkLoadCommand implements SqlCommand {
      *
      * @param lex The lexer.
      */
-    private void parseColumns(SqlLexer lex) {
+    private static List<String> parseColumns(SqlLexer lex) {
         skipIfMatches(lex, SqlLexerTokenType.PARENTHESIS_LEFT);
 
-        cols = new ArrayList<>();
+        List<String> cols = new ArrayList<>();
 
         do {
             cols.add(parseColumn(lex));
         }
         while (!skipCommaOrRightParenthesis(lex));
+
+        return cols;
     }
 
     /**
@@ -126,8 +154,35 @@ public class SqlBulkLoadCommand implements SqlCommand {
      * @param lex The lexer.
      * @return The column name.
      */
-    private String parseColumn(SqlLexer lex) {
+    private static String parseColumn(SqlLexer lex) {
         return parseIdentifier(lex);
+    }
+
+    private static String parseQuery(SqlLexer lex) {
+        if (lex.lookAhead().tokenType() != SqlLexerTokenType.PARENTHESIS_LEFT)
+            throw errorUnexpectedToken(lex.lookAhead(), "[query: parenthesis]");
+
+        lex.shift();
+        ArrayDeque<SqlLexerTokenType> stack = new ArrayDeque<>();
+        stack.push(lex.tokenType());
+
+        int startInclusive = lex.position();
+        do {
+            lex.shift();
+            SqlLexerTokenType tokenType = lex.tokenType();
+            if (tokenType == SqlLexerTokenType.PARENTHESIS_LEFT) {
+                stack.push(tokenType);
+            } else if (tokenType == SqlLexerTokenType.PARENTHESIS_RIGHT) {
+                stack.pop();
+            }
+        } while (!(stack.isEmpty() || lex.eod()));
+        int endExclusive = lex.tokenPosition();
+
+        if (!stack.isEmpty()) {
+            throw errorUnexpectedToken(lex.lookAhead(), "[query: parenthesis]");
+        }
+
+        return lex.sql().substring(startInclusive, endExclusive);
     }
 
     /**
@@ -141,7 +196,7 @@ public class SqlBulkLoadCommand implements SqlCommand {
         String name = parseIdentifier(lex);
 
         switch (name.toUpperCase()) {
-            case BulkLoadCsvFormat.NAME:
+            case "CSV":
                 BulkLoadCsvFormat fmt = new BulkLoadCsvFormat();
 
                 // IGNITE-7537 will introduce user-defined values
@@ -152,18 +207,18 @@ public class SqlBulkLoadCommand implements SqlCommand {
                 fmt.escapeChars(BulkLoadCsvFormat.DEFAULT_ESCAPE_CHARS);
                 fmt.nullString(BulkLoadCsvFormat.DEFAULT_NULL_STRING);
                 fmt.trim(BulkLoadCsvFormat.DEFAULT_TRIM_SPACES);
-                fmt.inputCharsetName(BulkLoadCsvFormat.DEFAULT_INPUT_CHARSET.toString());
+                fmt.inputCharsetName(BulkLoadCsvFormat.DFLT_INPUT_CHARSET.toString());
 
                 parseCsvOptions(lex, fmt);
 
                 validateCsvParserFormat(lex, fmt);
 
-                inputFormat = fmt;
+                format = fmt;
 
                 break;
             default:
                 throw error(lex, "Unknown format name: " + name +
-                    ". Currently supported format is " + BulkLoadCsvFormat.NAME);
+                        ". Currently supported format is " + "CSV");
         }
     }
 
@@ -267,72 +322,28 @@ public class SqlBulkLoadCommand implements SqlCommand {
                 + "', quote char is '" + quoteChars + "'");
     }
 
-    /**
-     * Returns the schemaName.
-     *
-     * @return schemaName.
-     */
+    /** {@inheritDoc} */
     @Override public String schemaName() {
-        return tblQName.schemaName();
+        return null;
     }
 
     /** {@inheritDoc} */
     @Override public void schemaName(String schemaName) {
-        tblQName.schemaName(schemaName);
+        if (from instanceof BulkLoadLocationTable && null == ((BulkLoadLocationTable) from).schemaName()) {
+            ((BulkLoadLocationTable) from).schemaName(schemaName);
+        }
+        if (into instanceof BulkLoadLocationTable && null == ((BulkLoadLocationTable) into).schemaName()) {
+            ((BulkLoadLocationTable) into).schemaName(schemaName);
+        }
     }
 
     /**
-     * Returns the table name.
+     * Returns the file format.
      *
-     * @return The table name
+     * @return The file format.
      */
-    public String tableName() {
-        return tblQName.name();
-    }
-
-    /**
-     * Sets the table name
-     *
-     * @param tblName The table name.
-     */
-    public void tableName(String tblName) {
-        tblQName.name(tblName);
-    }
-
-    /**
-     * Returns the local file name.
-     *
-     * @return The local file name.
-     */
-    public String localFileName() {
-        return locFileName;
-    }
-
-    /**
-     * Sets the local file name.
-     *
-     * @param locFileName The local file name.
-     */
-    public void localFileName(String locFileName) {
-        this.locFileName = locFileName;
-    }
-
-    /**
-     * Returns the list of columns.
-     *
-     * @return The list of columns.
-     */
-    public List<String> columns() {
-        return cols;
-    }
-
-    /**
-     * Returns the input file format.
-     *
-     * @return The input file format.
-     */
-    public BulkLoadFormat inputFormat() {
-        return inputFormat;
+    public BulkLoadFormat format() {
+        return format;
     }
 
     /**
@@ -351,6 +362,22 @@ public class SqlBulkLoadCommand implements SqlCommand {
      */
     public void packetSize(int packetSize) {
         this.packetSize = packetSize;
+    }
+
+    /**
+     * Location to COPY FROM.
+     * @return location
+     */
+    public BulkLoadLocation from() {
+        return from;
+    }
+
+    /**
+     * Location to COPY INTO.
+     * @return location
+     */
+    public BulkLoadLocation into() {
+        return into;
     }
 
     /** {@inheritDoc} */
