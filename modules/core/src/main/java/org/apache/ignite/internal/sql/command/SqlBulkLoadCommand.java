@@ -161,6 +161,26 @@ public class SqlBulkLoadCommand implements SqlCommand {
                 inputFormat = fmt;
 
                 break;
+            case "PARQUET":
+                BulkLoadCsvFormat fmt2 = new BulkLoadCsvFormat();
+
+                // IGNITE-7537 will introduce user-defined values
+                fmt2.lineSeparator(BulkLoadCsvFormat.DEFAULT_LINE_SEPARATOR);
+                fmt2.fieldSeparator(BulkLoadCsvFormat.DEFAULT_FIELD_SEPARATOR);
+                fmt2.quoteChars(BulkLoadCsvFormat.DEFAULT_QUOTE_CHARS);
+                fmt2.commentChars(BulkLoadCsvFormat.DEFAULT_COMMENT_CHARS);
+                fmt2.escapeChars(BulkLoadCsvFormat.DEFAULT_ESCAPE_CHARS);
+                fmt2.nullString(BulkLoadCsvFormat.DEFAULT_NULL_STRING);
+                fmt2.trim(BulkLoadCsvFormat.DEFAULT_TRIM_SPACES);
+                fmt2.inputCharsetName(BulkLoadCsvFormat.DEFAULT_INPUT_CHARSET.toString());
+
+//                parseCsvOptions(lex, fmt2);
+
+//                validateCsvParserFormat(lex, fmt2);
+
+                inputFormat = fmt2;
+
+                break;
 
             default:
                 throw error(lex, "Unknown format name: " + name +

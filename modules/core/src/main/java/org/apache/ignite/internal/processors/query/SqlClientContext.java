@@ -256,9 +256,7 @@ public class SqlClientContext implements AutoCloseable {
         return qryMaxMemory;
     }
 
-    /**
-     * @return is server bulk load (copy) enabled.
-     */
+    /** is server bulk load (copy) enabled. */
     public boolean serverBulkLoadEnabled() {
         return serverBulkLoadEnabled;
     }

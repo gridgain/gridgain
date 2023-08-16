@@ -55,7 +55,7 @@ public class BulkLoadCommandProcessorFactory {
 
     /**
      * Returns BulkLoadCommandProcessor implementation depending on enabled extensions and serverBulkLoadEnabled
-     * param
+     * param.
      */
     public BulkLoadCommandProcessor getBulkLoadCommandProcessor(boolean serverBulkloadEnabled) {
         if (bulkLoadCommandProcessorExt != null && serverBulkloadEnabled) {
