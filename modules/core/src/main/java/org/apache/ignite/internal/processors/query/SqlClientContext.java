@@ -97,6 +97,9 @@ public class SqlClientContext implements AutoCloseable {
      * the processing the last request. */
     private long totalProcessedOrderedReqs;
 
+    /** Is server copy (bulk load) enabled. */
+    private final boolean serverBulkLoadEnabled;
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -116,8 +119,8 @@ public class SqlClientContext implements AutoCloseable {
     public SqlClientContext(GridKernalContext ctx, Factory<GridWorker> orderedBatchWorkerFactory,
         boolean distributedJoins, boolean enforceJoinOrder,
         boolean collocated, boolean replicatedOnly, boolean lazy, boolean skipReducerOnUpdate,
-        @Nullable Boolean dataPageScanEnabled, @Nullable Integer updateBatchSize, long qryMaxMemory
-        ) {
+        @Nullable Boolean dataPageScanEnabled, @Nullable Integer updateBatchSize, long qryMaxMemory,
+        boolean serverBulkLoadEnabled) {
         this.ctx = ctx;
         this.orderedBatchWorkerFactory = orderedBatchWorkerFactory;
         this.distributedJoins = distributedJoins;
@@ -129,6 +132,7 @@ public class SqlClientContext implements AutoCloseable {
         this.dataPageScanEnabled = dataPageScanEnabled;
         this.updateBatchSize = updateBatchSize;
         this.qryMaxMemory = qryMaxMemory;
+        this.serverBulkLoadEnabled = serverBulkLoadEnabled;
 
         log = ctx.log(SqlClientContext.class.getName());
     }
@@ -250,6 +254,11 @@ public class SqlClientContext implements AutoCloseable {
      */
     public long maxMemory() {
         return qryMaxMemory;
+    }
+
+    /** is server bulk load (copy) enabled. */
+    public boolean serverBulkLoadEnabled() {
+        return serverBulkLoadEnabled;
     }
 
     /**
