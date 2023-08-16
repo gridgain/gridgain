@@ -410,8 +410,11 @@ public class CommandProcessor {
             if (isDdl(cmdNative))
                 runCommandNativeDdl(sql, cmdNative);
             else if (cmdNative instanceof SqlBulkLoadCommand) {
+                // SqlClientContext is not available if using JDBC Client Driver but
+                // serverBulkLoadEnabled should be still enabled by default.
+                boolean serverBulkLoadEnabled = cliCtx == null || cliCtx.serverBulkLoadEnabled();
                 res = bulkLoadCommandProcessorFactory
-                    .getBulkLoadCommandProcessor(cliCtx.serverBulkLoadEnabled())
+                    .getBulkLoadCommandProcessor(serverBulkLoadEnabled)
                     .processBulkLoadCommand(ctx, (SqlBulkLoadCommand) cmdNative, qryId);
 
                 unregister = false;
