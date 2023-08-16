@@ -183,6 +183,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @param autoCloseCursors Flag to automatically close server cursors.
      * @param lazy Lazy query execution flag.
      * @param skipReducerOnUpdate Skip reducer on update flag.
+     * @param serverBulkLoadEnabled server bulk load flag.
      * @param nestedTxMode Transactional mode.
      * @param dataPageScanEnabled Enable scan data page mode.
      * @param updateBatchSize Size of internal batch for DML queries.
@@ -220,6 +221,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
             }
         };
 
+        boolean serverBulkLoadEnabled = connCtx.protocolContext().isFeatureSupported(JdbcThinFeature.SERVER_BULK_LOAD);
+
         cliCtx = new SqlClientContext(
             connCtx.kernalContext(),
             orderedFactory,
@@ -231,7 +234,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
             skipReducerOnUpdate,
             dataPageScanEnabled,
             updateBatchSize,
-            maxMem
+            maxMem,
+            serverBulkLoadEnabled
         );
 
         this.busyLock = busyLock;
