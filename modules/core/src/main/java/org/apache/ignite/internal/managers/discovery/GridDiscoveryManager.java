@@ -869,9 +869,6 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                 }
 
                 if (type == EVT_CLIENT_NODE_DISCONNECTED || type == EVT_NODE_SEGMENTED || !ctx.clientDisconnected()) {
-                    if (type == 12)
-                        System.out.println("[" + Thread.currentThread().getName() + "] -->>-->> NODE_FAILED_EVENT generated");
-
                     discoWrk.addEvent(
                             new NotificationEvent(
                                     type,
