@@ -24,8 +24,8 @@ import java.util.List;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.junit.Test;
 
 /**
@@ -212,7 +212,7 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
     public void testEnforceStatisticValues() throws Exception {
         long size = SMALL_SIZE;
 
-        Logger.getLogger(StatisticsProcessor.class).setLevel(Level.TRACE);
+        Configurator.setLevel(StatisticsProcessor.class.getName(), Level.TRACE);
         ObjectStatisticsImpl smallStat = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
 
         assertNotNull(smallStat);

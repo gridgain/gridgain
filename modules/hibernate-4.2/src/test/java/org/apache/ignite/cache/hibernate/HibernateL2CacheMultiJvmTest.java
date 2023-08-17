@@ -19,6 +19,7 @@ package org.apache.ignite.cache.hibernate;
 import java.util.Map;
 import javax.persistence.Cacheable;
 import javax.persistence.Id;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteLogger;
@@ -26,11 +27,12 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.lang.IgniteRunnable;
-import org.apache.ignite.logger.log4j.Log4JLogger;
+import org.apache.ignite.logger.log4j2.Log4J2Logger;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
@@ -74,9 +76,7 @@ public class HibernateL2CacheMultiJvmTest extends GridCommonAbstractTest {
 
         cfg.setPeerClassLoadingEnabled(false);
 
-        Log4JLogger log = new Log4JLogger(ROUTER_LOG_CFG);
-
-        cfg.setGridLogger(log);
+        cfg.setGridLogger(new Log4J2Logger(ROUTER_LOG_CFG));
 
         return cfg;
     }
@@ -241,7 +241,7 @@ public class HibernateL2CacheMultiJvmTest extends GridCommonAbstractTest {
             // Hibernate autoconfigures log4j logger with root level set to debug mode, this is causing
             // exception on calling getTransactionIsolation from the hibernate internals with cause
             // function LOCK_MODE not found.
-            Logger.getRootLogger().setLevel(org.apache.log4j.Level.INFO);
+            Configurator.setRootLevel(Level.INFO);
 
             Configuration cfg = hibernateConfiguration(igniteInstanceName);
 

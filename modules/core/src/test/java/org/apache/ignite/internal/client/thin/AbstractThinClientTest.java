@@ -29,7 +29,7 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
-import org.apache.log4j.Level;
+import org.apache.logging.log4j.Level;
 
 /**
  * Abstract thin client test.

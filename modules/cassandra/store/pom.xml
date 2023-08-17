@@ -64,7 +64,7 @@
 
         <dependency>
             <groupId>org.gridgain</groupId>
-            <artifactId>ignite-log4j</artifactId>
+            <artifactId>ignite-log4j2</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
@@ -162,14 +162,22 @@
 
         <!-- Apache log4j -->
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>ignite-core</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
     </dependencies>
