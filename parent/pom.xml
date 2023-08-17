@@ -104,7 +104,7 @@
         <jtidy.version>1.0.4</jtidy.version>
         <kafka.version>2.2.2</kafka.version>
         <karaf.version>4.0.2</karaf.version>
-        <log4j.version>2.17.1</log4j.version>
+        <log4j.version>2.20.0</log4j.version>
         <lucene.bundle.version>7.4.0_1</lucene.bundle.version>
         <lucene.version>8.11.1</lucene.version>
         <lz4.version>1.8.0</lz4.version>
