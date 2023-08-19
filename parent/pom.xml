@@ -73,6 +73,7 @@
         <ezmorph.bundle.version>1.0.6_1</ezmorph.bundle.version>
         <ezmorph.version>1.0.6</ezmorph.version>
         <flume.ng.version>1.7.0</flume.ng.version>
+        <grpc-context.version>1.57.2</grpc-context.version>
         <guava.retrying.version>2.0.0</guava.retrying.version>
         <guava.jre.version>32.0.0-jre</guava.jre.version>
         <guava.android.version>32.0.0-android</guava.android.version>

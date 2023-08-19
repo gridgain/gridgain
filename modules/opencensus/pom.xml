@@ -38,7 +38,7 @@
             <dependency>
                 <groupId>io.grpc</groupId>
                 <artifactId>grpc-context</artifactId>
-                <version>1.56.1</version>
+                <version>${grpc-context.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
