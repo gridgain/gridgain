@@ -42,7 +42,7 @@ if [ "$IGNITE_QUIET" = "false" ]; then
   QUIET="-v"
 fi
 
-cd $IGNITE_WORK_DIR/ && ls -tr java_pid1-*.hprof | head -n -5 | xargs --no-run-if-empty rm && cd -
+ls -tr $IGNITE_WORK_DIR/java_pid1-*.hprof | head -n -5 | xargs --no-run-if-empty rm
 
 test -f $IGNITE_WORK_DIR/java_pid1.hprof && mv $IGNITE_WORK_DIR/java_pid1.hprof $IGNITE_WORK_DIR/java_pid1-$(stat -c %Y $IGNITE_WORK_DIR/java_pid1.hprof).hprof
 
