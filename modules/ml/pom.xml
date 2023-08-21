@@ -33,7 +33,7 @@
     </parent>
 
     <artifactId>ignite-ml</artifactId>
-    <version>8.8.127-SNAPSHOT</version>
+    <version>8.8.33</version>
     <url>http://ignite.apache.org</url>
 
     <build>
