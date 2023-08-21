@@ -20,7 +20,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 /**
- * A superclass and a factory for bulk load format options.
+ * A marker interface for bulk load format options.
  */
 public interface BulkLoadFormat {
     /** The default input charset. */
