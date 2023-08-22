@@ -72,6 +72,24 @@ public class BulkLoadLocationTable implements BulkLoadLocation {
         return this;
     }
 
+    public SqlQualifiedName qualifiedName() {
+        return tblQName;
+    }
+
+    /**
+     * @return true if schema name is quoted, otherwise false.
+     */
+    public boolean isSchemaNameQuoted() {
+        return tblQName.isSchemaNameQuoted();
+    }
+
+    /**
+     * @return true if table name is quoted, otherwise false.
+     */
+    public boolean isTableNameQuoted() {
+        return tblQName.isNameQuoted();
+    }
+
     /**
      * Returns the list of columns.
      *

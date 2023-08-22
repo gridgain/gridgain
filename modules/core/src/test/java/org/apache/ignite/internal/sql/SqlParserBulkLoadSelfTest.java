@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.sql;
 
 import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationQuery;
+import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationTable;
 import org.apache.ignite.internal.sql.command.SqlBulkLoadCommand;
 import org.apache.ignite.internal.sql.command.SqlCommand;
 import org.junit.Test;
@@ -164,5 +165,20 @@ public class SqlParserBulkLoadSelfTest extends SqlParserAbstractSelfTest {
         assertParseError(null,
                 "copy from select _key from (select * from Person) as p) into 'any.file' format csv",
                 "Unexpected token: \"_KEY\" (expected: \"(\"");
+    }
+
+    @Test
+    public void testCopyTable() {
+        SqlCommand cmd = new SqlParser(null, "COPY FROM \"schema\".\"person\" (_key, id) into 'any.file' format csv")
+                .nextCommand();
+        BulkLoadLocationTable from = (BulkLoadLocationTable) ((SqlBulkLoadCommand) cmd).from();
+        assertTrue(from.isSchemaNameQuoted());
+        assertTrue(from.isTableNameQuoted());
+
+        cmd = new SqlParser(null, "COPY FROM schema.person (_key, id) into 'any.file' format csv")
+                .nextCommand();
+        from = (BulkLoadLocationTable) ((SqlBulkLoadCommand) cmd).from();
+        assertFalse(from.isSchemaNameQuoted());
+        assertFalse(from.isTableNameQuoted());
     }
 }

@@ -330,10 +330,10 @@ public class SqlBulkLoadCommand implements SqlCommand {
     /** {@inheritDoc} */
     @Override public void schemaName(String schemaName) {
         if (from instanceof BulkLoadLocationTable && null == ((BulkLoadLocationTable) from).schemaName()) {
-            ((BulkLoadLocationTable) from).schemaName(schemaName);
+            ((BulkLoadLocationTable) from).qualifiedName().schemaName(schemaName, true);
         }
         if (into instanceof BulkLoadLocationTable && null == ((BulkLoadLocationTable) into).schemaName()) {
-            ((BulkLoadLocationTable) into).schemaName(schemaName);
+            ((BulkLoadLocationTable) into).qualifiedName().schemaName(schemaName, true);
         }
     }
 
