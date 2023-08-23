@@ -16,14 +16,30 @@
 
 package org.apache.ignite.internal.processors.bulkload;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-
 /**
- * A marker interface for bulk load format options.
+ * Quoted file path with syntax '../../any.file'.
  */
-public interface BulkLoadFormat {
-    /** The default input charset. */
-    Charset DFLT_INPUT_CHARSET = StandardCharsets.UTF_8;
+public class BulkLoadLocationFile implements BulkLoadLocation {
 
+    /** Local file pathname to send from client to server. */
+    private String path;
+
+    /**
+     * Returns the file pathname.
+     *
+     * @return The file pathname.
+     */
+    public String path() {
+        return path;
+    }
+
+    /**
+     * Sets the file pathname.
+     *
+     * @param path The file pathname.
+     */
+    public BulkLoadLocationFile path(String path) {
+        this.path = path;
+        return this;
+    }
 }

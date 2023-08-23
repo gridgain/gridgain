@@ -16,14 +16,9 @@
 
 package org.apache.ignite.internal.processors.bulkload;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-
 /**
- * A marker interface for bulk load format options.
+ * Represents location in {@code COPY FROM <location> INTO <location>}.
  */
-public interface BulkLoadFormat {
-    /** The default input charset. */
-    Charset DFLT_INPUT_CHARSET = StandardCharsets.UTF_8;
-
+public interface BulkLoadLocation {
+    // No-op.
 }

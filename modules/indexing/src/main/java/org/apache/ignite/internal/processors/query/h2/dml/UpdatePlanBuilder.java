@@ -62,7 +62,6 @@ import org.apache.ignite.internal.processors.query.h2.sql.GridSqlStatement;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlTable;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlUnion;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlUpdate;
-import org.apache.ignite.internal.sql.command.SqlBulkLoadCommand;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -552,11 +551,11 @@ public final class UpdatePlanBuilder {
     /**
      * Prepare update plan for COPY command (AKA bulk load).
      *
-     * @param cmd Bulk load command
+     * @param cols List of colums to update.
      * @return The update plan for this command.
      * @throws IgniteCheckedException if failed.
      */
-    public static UpdatePlan planForBulkLoad(SqlBulkLoadCommand cmd, GridH2Table tbl) throws IgniteCheckedException {
+    public static UpdatePlan planForBulkLoad(List<String> cols, GridH2Table tbl) throws IgniteCheckedException {
         GridH2RowDescriptor desc = tbl.rowDescriptor();
 
         if (desc == null)
@@ -564,8 +563,6 @@ public final class UpdatePlanBuilder {
                 IgniteQueryErrorCode.NULL_TABLE_DESCRIPTOR);
 
         GridCacheContext<?, ?> cctx = desc.context();
-
-        List<String> cols = cmd.columns();
 
         if (cols == null)
             throw new IgniteSQLException("Columns are not defined", IgniteQueryErrorCode.NULL_TABLE_DESCRIPTOR);

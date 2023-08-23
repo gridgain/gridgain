@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 /**
  * A placeholder for bulk load CSV format parser options.
  */
-public class BulkLoadCsvFormat extends BulkLoadFormat {
+public class BulkLoadCsvFormat implements BulkLoadFormat {
     /** Line separator pattern. */
     @NotNull public static final Pattern DEFAULT_LINE_SEPARATOR = Pattern.compile("[\r\n]+");
 
@@ -45,9 +45,6 @@ public class BulkLoadCsvFormat extends BulkLoadFormat {
 
     /** Whether leading and trailing spaces should be trimmed. */
     @Nullable public static final boolean DEFAULT_TRIM_SPACES = true;
-
-    /** Format name. */
-    public static final String NAME = "CSV";
 
     /** Line separator pattern. */
     @Nullable private Pattern lineSeparator;
@@ -72,15 +69,6 @@ public class BulkLoadCsvFormat extends BulkLoadFormat {
 
     /**    */
     @Nullable private boolean trim;
-
-    /**
-     * Returns the name of the format.
-     *
-     * @return The name of the format.
-     */
-    @Override public String name() {
-        return NAME;
-    }
 
     /**
      * Returns the line separator pattern.
