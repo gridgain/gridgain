@@ -23,6 +23,7 @@ import org.apache.ignite.internal.processors.bulkload.BulkLoadLocation;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationFile;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationQuery;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationTable;
+import org.apache.ignite.internal.processors.bulkload.BulkLoadParquetFormat;
 import org.apache.ignite.internal.sql.SqlKeyword;
 import org.apache.ignite.internal.sql.SqlLexer;
 import org.apache.ignite.internal.sql.SqlLexerToken;
@@ -216,9 +217,13 @@ public class SqlBulkLoadCommand implements SqlCommand {
                 format = fmt;
 
                 break;
+            case "PARQUET":
+                BulkLoadParquetFormat parquetFormat = new BulkLoadParquetFormat();
+                parseParquetOptions(lex, parquetFormat);
+                format = parquetFormat;
+                break;
             default:
-                throw error(lex, "Unknown format name: " + name +
-                        ". Currently supported format is " + "CSV");
+                throw error(lex, "Unknown format name: " + name);
         }
     }
 
@@ -268,6 +273,28 @@ public class SqlBulkLoadCommand implements SqlCommand {
 
                     format.nullString(nullString);
 
+                    break;
+                }
+
+                default:
+                    return;
+            }
+        }
+    }
+
+    /**
+     * Parses Parquet format options.
+     *
+     * @param lex The lexer.
+     * @param format Parquet format object to configure.
+     */
+    private void parseParquetOptions(SqlLexer lex, BulkLoadParquetFormat format) {
+        while (lex.lookAhead().tokenType() == SqlLexerTokenType.DEFAULT) {
+            switch (lex.lookAhead().token()) {
+                case SqlKeyword.PATTERN: {
+                    lex.shift();
+                    String pattern = parseString(lex);
+                    format.pattern(pattern);
                     break;
                 }
 
