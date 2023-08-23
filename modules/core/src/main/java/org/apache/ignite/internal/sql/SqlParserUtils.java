@@ -197,6 +197,7 @@ public class SqlParserUtils {
             SqlQualifiedName res = new SqlQualifiedName();
 
             String first = lex.token();
+            boolean firstQuoted = lex.tokenType() == SqlLexerTokenType.QUOTED;
 
             SqlLexerToken nextTok = lex.lookAhead();
 
@@ -204,11 +205,12 @@ public class SqlParserUtils {
                 lex.shift();
 
                 String second = parseIdentifier(lex);
+                boolean secondQuoted = lex.tokenType() == SqlLexerTokenType.QUOTED;
 
-                return res.schemaName(first).name(second);
+                return res.schemaName(first, firstQuoted).name(second, secondQuoted);
             }
             else
-                return res.name(first);
+                return res.name(first, firstQuoted);
         }
 
         throw errorUnexpectedToken(lex, "[qualified identifier]", additionalExpTokens);

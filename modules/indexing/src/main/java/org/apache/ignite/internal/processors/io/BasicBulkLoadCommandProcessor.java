@@ -24,6 +24,9 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadAckClientParameters;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadCacheWriter;
+import org.apache.ignite.internal.processors.bulkload.BulkLoadCsvFormat;
+import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationFile;
+import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationTable;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadParser;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadProcessor;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadStreamerWriter;
@@ -49,20 +52,28 @@ public class BasicBulkLoadCommandProcessor implements BulkLoadCommandProcessor {
         GridKernalContext ctx,
         SqlBulkLoadCommand cmd,
         Long qryId) throws IgniteCheckedException {
+
+        if (!(cmd.from() instanceof BulkLoadLocationFile
+                && cmd.into() instanceof BulkLoadLocationTable
+                && cmd.format() instanceof BulkLoadCsvFormat))
+            throw new IgniteSQLException("Community edition supports only COPY FROM <file> INTO <table> FORMAT CSV",
+                    IgniteQueryErrorCode.UNEXPECTED_ELEMENT_TYPE);
+
         if (cmd.packetSize() == null)
             cmd.packetSize(BulkLoadAckClientParameters.DFLT_PACKET_SIZE);
 
         IgniteH2Indexing idx = (IgniteH2Indexing) ctx.query().getIndexing();
-        GridH2Table tbl = idx.schemaManager().dataTable(cmd.schemaName(), cmd.tableName());
+        BulkLoadLocationTable into = (BulkLoadLocationTable) cmd.into();
+        GridH2Table tbl = idx.schemaManager().dataTable(into.schemaName(), into.tableName());
 
         if (tbl == null) {
-            throw new IgniteSQLException("Table does not exist: " + cmd.tableName(),
+            throw new IgniteSQLException("Table does not exist: " + into.tableName(),
                 IgniteQueryErrorCode.TABLE_NOT_FOUND);
         }
 
         H2Utils.checkAndStartNotStartedCache(ctx, tbl);
 
-        UpdatePlan plan = UpdatePlanBuilder.planForBulkLoad(cmd, tbl);
+        UpdatePlan plan = UpdatePlanBuilder.planForBulkLoad(into.columns(), tbl);
 
         IgniteClosureX<List<?>, IgniteBiTuple<?, ?>> dataConverter = new DmlBulkLoadDataConverter(plan);
 
@@ -70,12 +81,13 @@ public class BasicBulkLoadCommandProcessor implements BulkLoadCommandProcessor {
 
         BulkLoadCacheWriter outputWriter = new BulkLoadStreamerWriter(streamer);
 
-        BulkLoadParser inputParser = BulkLoadParser.createParser(cmd.inputFormat());
+        BulkLoadParser inputParser = BulkLoadParser.createParser(cmd.format());
 
         BulkLoadProcessor processor = new BulkLoadProcessor(inputParser, dataConverter, outputWriter,
             idx.runningQueryManager(), qryId, ctx.tracing());
 
-        BulkLoadAckClientParameters params = new BulkLoadAckClientParameters(cmd.localFileName(), cmd.packetSize());
+        String path = ((BulkLoadLocationFile) cmd.from()).path();
+        BulkLoadAckClientParameters params = new BulkLoadAckClientParameters(path, cmd.packetSize());
 
         return new BulkLoadContextCursor(processor, params);
     }
