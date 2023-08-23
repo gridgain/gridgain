@@ -3109,6 +3109,16 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         }
 
         /** {@inheritDoc} */
+        @Override public CacheDataRow findKey(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
+            CacheDataStore delegate = init0(true);
+
+            if (delegate != null)
+                return delegate.findKey(cctx, key);
+
+            return null;
+        }
+
+        /** {@inheritDoc} */
         @Override public CacheDataRow mvccFind(GridCacheContext cctx, KeyCacheObject key, MvccSnapshot snapshot)
             throws IgniteCheckedException {
             CacheDataStore delegate = init0(true);

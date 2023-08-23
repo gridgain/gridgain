@@ -500,7 +500,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
 
                     CacheDataRow row = mvccSnapshot != null ?
                         cctx.offheap().mvccRead(cctx, key0, mvccSnapshot) :
-                        cctx.offheap().read(cctx, key0);
+                        cctx.offheap().findKey(cctx, key0);
 
                     if (row != null) {
                         long expireTime = row.expireTime();

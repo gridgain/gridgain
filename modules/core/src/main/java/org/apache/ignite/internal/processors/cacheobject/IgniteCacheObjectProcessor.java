@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cacheobject;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
-
 import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -36,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IncompleteCacheObject;
+import org.apache.ignite.internal.processors.cache.IncompleteObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.jetbrains.annotations.Nullable;
 
@@ -190,8 +190,12 @@ public interface IgniteCacheObjectProcessor extends GridProcessor {
      * @return Incomplete cache object.
      * @throws IgniteCheckedException If fail.
      */
-    public IncompleteCacheObject toCacheObject(CacheObjectContext ctx, ByteBuffer buf,
-        @Nullable IncompleteCacheObject incompleteObj) throws IgniteCheckedException;
+    public IncompleteObject<CacheObject> toCacheObject(
+        CacheObjectContext ctx,
+        ByteBuffer buf,
+        @Nullable IncompleteObject<CacheObject> incompleteObj,
+        boolean createCacheObjectShadow
+    ) throws IgniteCheckedException;
 
     /**
      * @param ctx Cache object context.
@@ -200,8 +204,11 @@ public interface IgniteCacheObjectProcessor extends GridProcessor {
      * @return Incomplete cache object.
      * @throws IgniteCheckedException If fail.
      */
-    public IncompleteCacheObject toKeyCacheObject(CacheObjectContext ctx, ByteBuffer buf,
-        @Nullable IncompleteCacheObject incompleteObj) throws IgniteCheckedException;
+    public IncompleteCacheObject toKeyCacheObject(
+        CacheObjectContext ctx,
+        ByteBuffer buf,
+        @Nullable IncompleteCacheObject incompleteObj
+    ) throws IgniteCheckedException;
 
     /**
      * @param obj Value.

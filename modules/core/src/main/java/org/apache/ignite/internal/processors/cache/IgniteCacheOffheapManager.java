@@ -137,6 +137,14 @@ public interface IgniteCacheOffheapManager {
     @Nullable public CacheDataRow read(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
 
     /**
+     * @param cctx Cache context.
+     * @param key Key.
+     * @return Cached row, if available, null otherwise.
+     * @throws IgniteCheckedException If failed.
+     */
+    @Nullable public CacheDataRow findKey(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
+
+    /**
      * @param p Partition.
      * @return Data store.
      * @throws IgniteCheckedException If failed.
@@ -1001,6 +1009,14 @@ public interface IgniteCacheOffheapManager {
          * @throws IgniteCheckedException If failed.
          */
         public CacheDataRow find(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
+
+        /**
+         * @param cctx Cache context.
+         * @param key Key.
+         * @return Data row.
+         * @throws IgniteCheckedException If failed.
+         */
+        public CacheDataRow findKey(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
 
         /**
          * Returns iterator over the all row versions for the given key.
