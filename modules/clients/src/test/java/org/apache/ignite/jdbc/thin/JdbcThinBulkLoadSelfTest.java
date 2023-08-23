@@ -1107,6 +1107,21 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         }, SQLException.class, "Given statement type does not match that declared by JDBC driver");
     }
 
+    @Test
+    public void testExportIsNotSupportedInCommunityEdition() {
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                stmt.executeUpdate(
+                        "copy from " + TBL_NAME +
+                                " (_key, age, firstName, lastName)" +
+                                " into '/path/any.file'" +
+                                " format csv");
+
+                return null;
+            }
+        }, SQLException.class, "Community edition supports only COPY FROM <file> INTO <table> FORMAT CSV");
+    }
+
     /**
      * Checks cache contents after bulk loading data in the above tests: ASCII version.
      * <p>
