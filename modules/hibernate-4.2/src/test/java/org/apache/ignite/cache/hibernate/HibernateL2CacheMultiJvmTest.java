@@ -56,7 +56,7 @@ public class HibernateL2CacheMultiJvmTest extends GridCommonAbstractTest {
     private static final String TIMESTAMP_CACHE = "org.hibernate.cache.spi.UpdateTimestampsCache";
 
     /** */
-    public static final String ROUTER_LOG_CFG = "modules/hibernate-4.2/config/ignite-log4j.xml";
+    public static final String ROUTER_LOG_CFG = "modules/core/src/test/config/log4j2-test.xml";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
