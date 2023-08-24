@@ -16,13 +16,12 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.processors.query.h2.H2Utils;
-import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.gridgain.internal.h2.engine.Constants;
 import org.gridgain.internal.h2.value.Value;
 import org.junit.Test;
 
@@ -45,31 +44,30 @@ public class IgniteSqlCustomFunctionTest extends AbstractIndexingCommonTest {
 
         for (String cacheName : grid(0).cacheNames())
             grid(0).cache(cacheName).destroy();
+
+        stopAllGrids(false);
+    }
+
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        CacheConfiguration<Integer, Integer> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
+        ccfg.setSqlFunctionClasses(CountSubqueryFunction.class);
+
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+        cfg.setCacheConfiguration(ccfg);
+        return cfg;
     }
 
     @Test
     public void testFunctionAliasSupportsSubquery() throws Exception {
-        for (int i = 0; i < 2; i++) {
-            IgniteH2Indexing indexing = (IgniteH2Indexing) grid(i).context().query().getIndexing();
-            H2Utils.registerSqlFunctions(log, indexing.connections(), Constants.SCHEMA_MAIN, new Class[]{CountSubqueryFunction.class});
-        }
+        IgniteCache<Object, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
         // does not throw 'Scalar subquery contains more than one row'
-        List<List<?>> rows = sql("SELECT COUNT_SUBQUERY(SELECT * FROM (SELECT * FROM VALUES (1), (2), (3)) as t limit 2)")
+        List<List<?>> rows = cache.query(new SqlFieldsQuery(
+                "SELECT COUNT_SUBQUERY(SELECT * FROM (SELECT * FROM VALUES (1), (2), (3)) as t limit 2)"))
                 .getAll();
 
         assertEquals(1, rows.size());
         assertEquals(2, rows.get(0).get(0));
-    }
-
-    /**
-     * @param sql SQL query.
-     * @param args Query parameters.
-     * @return Results cursor.
-     */
-    private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
-        return grid(0).context().query().querySqlFields(new SqlFieldsQuery(sql)
-                .setArgs(args), false);
     }
 
     /**
