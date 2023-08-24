@@ -20,7 +20,6 @@ import org.apache.ignite.plugin.Extension;
 
 /**
  * Provides custom sql functions.
- * The extension is a part of GG EE.
  */
 public interface SqlPluginExtension extends Extension {
 
