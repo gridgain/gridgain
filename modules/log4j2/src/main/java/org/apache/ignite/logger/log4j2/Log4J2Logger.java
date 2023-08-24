@@ -428,7 +428,6 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAndApplicationAwa
         logCfg.getRootLogger().addAppender(consoleApp, Level.TRACE, null);
     }
 
-
     /**
      * Checks if Log4j is already configured within this VM or not.
      *
