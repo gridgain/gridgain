@@ -32,6 +32,13 @@ public class CacheObjectShadow extends CacheObjectAdapter {
     /** Type of cache object. */
     private byte type;
 
+    /**
+     * Default constructor.
+     */
+    public CacheObjectShadow() {
+        valBytes = EMPTY_BYTES;
+    }
+
     /** */
     public CacheObjectShadow(byte type) {
         this.type = type;
