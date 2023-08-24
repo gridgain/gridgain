@@ -21,7 +21,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,9 +45,9 @@ public class ListenedGridTestLog4jLogger extends GridTestLog4jLogger {
      * @return Initiated logger.
      */
     public static GridTestLog4jLogger createLogger(Object ctgr) {
-        return new ListenedGridTestLog4jLogger(ctgr == null ? Logger.getRootLogger() :
-            ctgr instanceof Class ? Logger.getLogger(((Class<?>)ctgr).getName()) :
-                Logger.getLogger(ctgr.toString()));
+        return new ListenedGridTestLog4jLogger(ctgr == null ? LogManager.getRootLogger() :
+            ctgr instanceof Class ? LogManager.getLogger(((Class<?>)ctgr).getName()) :
+                    LogManager.getLogger(ctgr.toString()));
     }
 
     /** {@inheritDoc} */
