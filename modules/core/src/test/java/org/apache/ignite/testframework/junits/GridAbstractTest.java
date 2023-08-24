@@ -129,13 +129,13 @@ import org.apache.ignite.testframework.junits.multijvm.IgniteNodeRunner;
 import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
 import org.apache.ignite.thread.IgniteThread;
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.appender.ConsoleAppender;
 import org.apache.logging.log4j.core.appender.RollingFileAppender;
 import org.apache.logging.log4j.core.appender.rolling.DefaultRolloverStrategy;
 import org.apache.logging.log4j.core.appender.rolling.SizeBasedTriggeringPolicy;
 import org.apache.logging.log4j.core.config.Configurator;
-import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.After;
@@ -487,13 +487,11 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * default in {@link #afterTest()}.
      */
     protected final void setRootLoggerDebugLevel() {
-        String logName = "org.apache.ignite";
+        Logger logger = LogManager.getRootLogger();
 
-        LoggerConfig logCfg = LoggerContext.getContext(false).getConfiguration().getLoggerConfig(logName);
+        assertNull(logger + " level: " + Level.DEBUG, changedLevels.put(logger.getName(), logger.getLevel()));
 
-        assertNull(logCfg + " level: " + Level.DEBUG, changedLevels.put(logName, logCfg.getLevel()));
-
-        Configurator.setLevel(logName, DEBUG);
+        Configurator.setLevel(logger.getName(), DEBUG);
     }
 
     /**

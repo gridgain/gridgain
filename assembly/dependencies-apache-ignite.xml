@@ -123,7 +123,6 @@
                 <exclude>org.gridgain:ignite-examples</exclude>
                 <exclude>org.gridgain:ignite-examples-ml</exclude>
                 <exclude>org.gridgain:ignite-indexing</exclude>
-                <exclude>org.gridgain:ignite-log4j</exclude>
                 <exclude>org.gridgain:ignite-log4j2</exclude>
                 <exclude>org.gridgain:ignite-visor-console</exclude>
                 <exclude>org.gridgain:ignite-visor-console_2.10</exclude>
