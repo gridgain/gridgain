@@ -143,6 +143,7 @@ import org.apache.ignite.internal.processors.query.h2.dml.DmlUpdateSingleEntryIt
 import org.apache.ignite.internal.processors.query.h2.dml.DmlUtils;
 import org.apache.ignite.internal.processors.query.h2.dml.UpdateMode;
 import org.apache.ignite.internal.processors.query.h2.dml.UpdatePlan;
+import org.apache.ignite.internal.processors.query.h2.extension.SqlPluginExtension;
 import org.apache.ignite.internal.processors.query.h2.maintenance.RebuildIndexWorkflowCallback;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
@@ -202,9 +203,9 @@ import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilterImpl;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
-import org.gridgain.internal.h2.api.AggregateFunction;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.api.JavaObjectSerializer;
+import org.gridgain.internal.h2.engine.Constants;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.index.Index;
@@ -219,6 +220,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.singletonList;
+import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MVCC_TX_SIZE_CACHING_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.TX_SIZE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.checkActive;
@@ -2408,6 +2410,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         registerAggregateFunctions();
 
+        registerSqlFunctions();
+
         distrCfg = new DistributedSqlConfiguration(ctx, log);
 
         distrCfg.listenDisabledFunctions(new FunctionsManager<>());
@@ -3479,29 +3483,22 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @throws IgniteCheckedException If failed.
      */
     private void registerAggregateFunctions() throws IgniteCheckedException {
-        registerAggregateFunction(GridFirstValueFunction.NAME, GridFirstValueFunction.class);
-        registerAggregateFunction(GridLastValueFunction.NAME, GridLastValueFunction.class);
+        H2Utils.registerAggregateFunction(log, connMgr, GridFirstValueFunction.NAME, GridFirstValueFunction.class);
+        H2Utils.registerAggregateFunction(log, connMgr, GridLastValueFunction.NAME, GridLastValueFunction.class);
     }
 
     /**
-     * Register custom aggregate function.
+     * Register predefined custom sql functions.
      *
-     * @param fnName SQL function name.
-     * @param cls Function implementation class.
      * @throws IgniteCheckedException If failed.
      */
-    public void registerAggregateFunction(String fnName,
-        Class<? extends AggregateFunction> cls) throws IgniteCheckedException {
-        Objects.requireNonNull(fnName, "Function name can't be null");
-        Objects.requireNonNull(cls, "Class name can't be null");
-
-        if (!AggregateFunction.class.isAssignableFrom(cls))
-            throw new IgniteSQLException("Aggregate function '" + cls.getName() + "' should implement '" + AggregateFunction.class.getName() + "'");
-
-        connections().executeStatement(null, "CREATE AGGREGATE " + fnName + " FOR \"" + cls.getName() + "\"");
-
-        if (log.isDebugEnabled())
-            log.debug("Aggregation function " + fnName + "(" + cls.getName() + ") has been registered.");
+    private void registerSqlFunctions() throws IgniteCheckedException {
+        SqlPluginExtension[] ext = ctx.plugins().extensions(SqlPluginExtension.class);
+        if (nonNull(ext)) {
+            for (SqlPluginExtension e : ext) {
+                H2Utils.registerSqlFunctions(log, connMgr, Constants.SCHEMA_MAIN, e.getSqlFunctions());
+            }
+        }
     }
 
     /**
