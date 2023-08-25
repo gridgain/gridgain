@@ -32,6 +32,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.gridgain.internal.h2.api.AggregateFunction;
@@ -122,8 +123,8 @@ public class IgniteSqlCustomAggregationTest extends AbstractIndexingCommonTest {
         IgniteEx ignite = grid(3);
 
         for (int i = 0; i < 4; i++) {
-            ((IgniteH2Indexing)grid(i).context().query().getIndexing()).
-                registerAggregateFunction("ACCUMULATE", AccumulateFunction.class);
+            IgniteH2Indexing indexing = (IgniteH2Indexing) grid(i).context().query().getIndexing();
+            H2Utils.registerAggregateFunction(log, indexing.connections(), "ACCUMULATE", AccumulateFunction.class);
         }
 
         IgniteCache<PersonKey, Person> cache = ignite.cache(CACHE_NAME);
@@ -226,8 +227,8 @@ public class IgniteSqlCustomAggregationTest extends AbstractIndexingCommonTest {
         GridTestUtils.assertThrowsAnyCause(log, new Callable<Object>() {
             @Override public Object call() throws IgniteCheckedException {
                 for (int i = 0; i < 4; i++) {
-                    ((IgniteH2Indexing)grid(i).context().query().getIndexing()).
-                        registerAggregateFunction("ACCUMULATE%", AccumulateFunction.class);
+                    IgniteH2Indexing indexing = (IgniteH2Indexing) grid(i).context().query().getIndexing();
+                    H2Utils.registerAggregateFunction(log, indexing.connections(), "ACCUMULATE%", AccumulateFunction.class);
                 }
 
                 return null;
