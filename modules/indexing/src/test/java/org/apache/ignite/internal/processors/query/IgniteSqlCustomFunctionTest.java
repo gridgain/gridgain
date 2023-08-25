@@ -42,9 +42,6 @@ public class IgniteSqlCustomFunctionTest extends AbstractIndexingCommonTest {
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
-        for (String cacheName : grid(0).cacheNames())
-            grid(0).cache(cacheName).destroy();
-
         stopAllGrids(false);
     }
 
