@@ -58,7 +58,7 @@ public class GridCacheMvccObsoleteEntryExtras extends GridCacheEntryExtrasAdapte
             return this;
         }
         else
-            return new GridCacheObsoleteEntryExtras(obsoleteVer);
+            return new GridCacheObsoleteEntryExtras(obsoleteVer, mvcc().getGridCacheContext());
     }
 
     /** {@inheritDoc} */

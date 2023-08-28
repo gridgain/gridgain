@@ -16,8 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache.extras;
 
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheMvcc;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -34,6 +37,12 @@ public class GridCacheObsoleteTtlEntryExtras extends GridCacheEntryExtrasAdapter
     /** Expire time. */
     private long expireTime;
 
+    @GridToStringExclude
+    private GridCacheContext<?,?> сctx;
+
+    @GridToStringExclude
+    private IgniteLogger log;
+
     /**
      * Constructor.
      *
@@ -41,13 +50,20 @@ public class GridCacheObsoleteTtlEntryExtras extends GridCacheEntryExtrasAdapter
      * @param ttl TTL.
      * @param expireTime Expire time.
      */
-    GridCacheObsoleteTtlEntryExtras(GridCacheVersion obsoleteVer, long ttl, long expireTime) {
+    GridCacheObsoleteTtlEntryExtras(GridCacheVersion obsoleteVer, long ttl, long expireTime, GridCacheContext<?,?> сctx) {
         assert obsoleteVer != null;
         assert expireTime != CU.EXPIRE_TIME_ETERNAL;
 
+        this.сctx = сctx;
+        this.log = сctx.kernalContext().log(GridCacheObsoleteTtlEntryExtras.class);
         this.obsoleteVer = obsoleteVer;
         this.ttl = ttl;
         this.expireTime = expireTime;
+
+        try {
+            log.error(toString(), new Exception());
+        } catch (Exception ignore) {
+        }
     }
 
     /** {@inheritDoc} */
@@ -63,12 +79,17 @@ public class GridCacheObsoleteTtlEntryExtras extends GridCacheEntryExtrasAdapter
     /** {@inheritDoc} */
     @Override public GridCacheEntryExtras obsoleteVersion(GridCacheVersion obsoleteVer) {
         if (obsoleteVer != null) {
+            try {
+                log.error("Setting obsoleteVer=" + obsoleteVer + ", previous: " + toString(), new Exception());
+            } catch (Exception ignore) {
+            }
+
             this.obsoleteVer = obsoleteVer;
 
             return this;
         }
         else
-            return new GridCacheTtlEntryExtras(ttl, expireTime);
+            return new GridCacheTtlEntryExtras(ttl, expireTime, сctx);
     }
 
     /** {@inheritDoc} */
@@ -90,7 +111,7 @@ public class GridCacheObsoleteTtlEntryExtras extends GridCacheEntryExtrasAdapter
             return this;
         }
         else
-            return new GridCacheObsoleteEntryExtras(obsoleteVer);
+            return new GridCacheObsoleteEntryExtras(obsoleteVer, сctx);
     }
 
     /** {@inheritDoc} */

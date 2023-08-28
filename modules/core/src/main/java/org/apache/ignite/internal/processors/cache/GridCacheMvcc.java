@@ -96,6 +96,10 @@ public final class GridCacheMvcc {
             log = U.logger(cctx.kernalContext(), logRef, GridCacheMvcc.class);
     }
 
+    public GridCacheContext<?, ?> getGridCacheContext() {
+        return cctx;
+    }
+
     /**
      * @return Any owner.
      */

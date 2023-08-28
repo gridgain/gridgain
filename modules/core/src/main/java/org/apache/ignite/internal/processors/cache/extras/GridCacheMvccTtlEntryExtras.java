@@ -63,7 +63,7 @@ public class GridCacheMvccTtlEntryExtras extends GridCacheEntryExtrasAdapter {
             return this;
         }
         else
-            return new GridCacheTtlEntryExtras(ttl, expireTime);
+            return new GridCacheTtlEntryExtras(ttl, expireTime, mvcc().getGridCacheContext());
     }
 
     /** {@inheritDoc} */

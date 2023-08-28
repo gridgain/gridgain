@@ -4789,7 +4789,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         extras = (extras != null) ?
             extras.obsoleteVersion(obsoleteVer) :
             obsoleteVer != null ?
-                (ext != null) ? ext : new GridCacheObsoleteEntryExtras(obsoleteVer) :
+                (ext != null) ? ext : new GridCacheObsoleteEntryExtras(obsoleteVer, cctx) :
                 null;
     }
 
@@ -4933,7 +4933,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         assert ttl != CU.TTL_NOT_CHANGED && ttl != CU.TTL_ZERO;
 
         extras = (extras != null) ? extras.ttlAndExpireTime(ttl, expireTime) : expireTime != CU.EXPIRE_TIME_ETERNAL ?
-            new GridCacheTtlEntryExtras(ttl, expireTime) : null;
+            new GridCacheTtlEntryExtras(ttl, expireTime, cctx) : null;
     }
 
     /**

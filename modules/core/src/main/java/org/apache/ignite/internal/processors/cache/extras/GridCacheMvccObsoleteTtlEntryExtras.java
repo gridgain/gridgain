@@ -70,7 +70,7 @@ public class GridCacheMvccObsoleteTtlEntryExtras extends GridCacheEntryExtrasAda
             return this;
         }
         else
-            return new GridCacheObsoleteTtlEntryExtras(obsoleteVer, ttl, expireTime);
+            return new GridCacheObsoleteTtlEntryExtras(obsoleteVer, ttl, expireTime, mvcc().getGridCacheContext());
     }
 
     /** {@inheritDoc} */
