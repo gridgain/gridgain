@@ -495,6 +495,20 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
+     * Sets a logger's level.
+     *
+     * @param loggerName the logger name.
+     * @param level the new level.
+     */
+    public static void setLoggerLevel(String loggerName, Level level) {
+        Logger logger = LogManager.getLogger(loggerName);
+
+        assertNull(logger + " level: " + level, changedLevels.put(loggerName, logger.getLevel()));
+
+        Configurator.setLevel(loggerName, level);
+    }
+
+    /**
      * Resets log4j programmatically.
      *
      * @param log4jLevel Level.
