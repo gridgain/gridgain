@@ -495,6 +495,10 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                 boolean skipEntry = readNoEntry;
 
                 if (readNoEntry) {
+                    assert !skipVals || skipVals && !needVer :
+                        ">>>>> Test assertion [skipVals=" + skipVals + ", needVer=" + needVer +
+                            ", readThrough=" + readThrough + ']';
+
                     KeyCacheObject key0 = (key == null ? null :
                         key.prepareForCache(cctx.cacheObjectContext(), false));
 
@@ -502,7 +506,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                     if (mvccSnapshot != null)
                         row = cctx.offheap().mvccRead(cctx, key0, mvccSnapshot);
                     else {
-                        if (skipVals)
+                        if (skipVals && !needVer)
                             row = cctx.offheap().findKey(cctx, key0);
                         else
                             row = cctx.offheap().read(cctx, key0);
@@ -527,8 +531,10 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                                     !deserializeBinary);
                             }
                         }
-                        else
-                            skipEntry = false;
+                        else {
+                            if (!skipVals || needVer)
+                                skipEntry = false;
+                        }
                     }
                 }
 

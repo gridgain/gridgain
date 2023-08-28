@@ -772,6 +772,10 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                         boolean skipEntry = readNoEntry;
 
                         if (readNoEntry) {
+                            assert !skipVals || skipVals && !needVer :
+                                ">>>>> Test assertion [skipVals=" + skipVals + ", needVer=" + needVer +
+                                    ", readThrough=" + readThrough + ", storeEnabled=" + storeEnabled + ']';
+
                             CacheDataRow row = null;
                             if (mvccSnapshot != null)
                                 row = ctx.offheap().mvccRead(ctx, key, mvccSnapshot);
@@ -793,8 +797,10 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                                             expireTime,
                                             0);
                                     }
-                                    else
-                                        skipEntry = false;
+                                    else {
+                                        if (!skipVals || needVer)
+                                            skipEntry = false;
+                                    }
                                 }
                                 else
                                     res = new EntryGetResult(row.value(), row.version(), false);

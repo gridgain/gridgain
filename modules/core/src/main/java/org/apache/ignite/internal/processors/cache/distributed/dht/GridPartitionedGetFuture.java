@@ -478,6 +478,10 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                 GridCacheVersion ver = null;
 
                 if (readNoEntry) {
+                    assert !skipVals || skipVals && !needVer :
+                        ">>>>> Test assertion [skipVals=" + skipVals + ", needVer=" + needVer +
+                            ", readThrough=" + readThrough +']';
+
                     KeyCacheObject key0 = (key == null ? null :
                         key.prepareForCache(cctx.cacheObjectContext(), false));
 
@@ -485,7 +489,7 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                     if (mvccSnapshot != null)
                         row = cctx.offheap().mvccRead(cctx, key0, mvccSnapshot);
                     else {
-                        if (skipVals)
+                        if (skipVals && !needVer)
                             row = cctx.offheap().findKey(cctx, key0);
                         else
                             row = cctx.offheap().read(cctx, key0);
@@ -510,8 +514,10 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                                     !deserializeBinary);
                             }
                         }
-                        else
-                            skipEntry = false;
+                        else {
+                            if (!skipVals || needVer)
+                                skipEntry = false;
+                        }
                     }
                 }
 
