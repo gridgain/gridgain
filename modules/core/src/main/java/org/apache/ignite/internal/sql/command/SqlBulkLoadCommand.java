@@ -219,8 +219,11 @@ public class SqlBulkLoadCommand implements SqlCommand {
                 break;
             case "PARQUET":
                 BulkLoadParquetFormat parquetFormat = new BulkLoadParquetFormat();
+
                 parseParquetOptions(lex, parquetFormat);
+
                 format = parquetFormat;
+
                 break;
             default:
                 throw error(lex, "Unknown format name: " + name);
@@ -293,8 +296,10 @@ public class SqlBulkLoadCommand implements SqlCommand {
             switch (lex.lookAhead().token()) {
                 case SqlKeyword.PATTERN: {
                     lex.shift();
+
                     String pattern = parseString(lex);
                     format.pattern(pattern);
+
                     break;
                 }
 

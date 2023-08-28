@@ -205,7 +205,7 @@ public class SqlKeyword {
     /** Keyword: ORDERED. */
     public static final String ORDERED = "ORDERED";
 
-    /** Keyword: PATTERN */
+    /** Keyword: PATTERN. */
     public static final String PATTERN = "PATTERN";
 
     /** Keyword: PER_NODE_PARALLEL_OPERATIONS. */

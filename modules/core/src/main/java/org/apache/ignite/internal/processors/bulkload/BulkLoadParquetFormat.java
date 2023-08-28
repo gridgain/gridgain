@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ package org.apache.ignite.internal.processors.bulkload;
  * A placeholder for bulk load Parquet format parser options.
  */
 public class BulkLoadParquetFormat implements BulkLoadFormat {
-
     /** regex pattern for matching files */
     private String pattern;
 
