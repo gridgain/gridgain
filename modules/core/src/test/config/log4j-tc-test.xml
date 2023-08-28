@@ -27,7 +27,7 @@
             <ThresholdFilter level="WARN" onMatch="ACCEPT" onMismatch="DENY"/>
             <PatternLayout pattern="[%d{ISO8601}][%-5p][%t][%c{1}] %m%n"/>
         </Console>
-        <File name="FILE" fileName="${IGNITE_HOME}/work/log/ignite.log" append="true">
+        <File name="FILE" fileName="${sys:IGNITE_HOME}/work/log/ignite.log" append="true">
             <PatternLayout pattern="[%d{ISO8601}][%-5p][%t][%c{1}] %m%n"/>
         </File>
     </Appenders>
