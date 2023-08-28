@@ -27,9 +27,16 @@
             <ThresholdFilter level="WARN" onMatch="ACCEPT" onMismatch="DENY"/>
             <PatternLayout pattern="[%d{ISO8601}][%-5p][%t][%c{1}] %m%n"/>
         </Console>
-        <File name="FILE" fileName="${sys:IGNITE_HOME}/work/log/ignite.log" append="true">
+        <RollingFile name="FILE"
+                     append="true"
+                     fileName="${sys:IGNITE_HOME}/work/log/ignite.log"
+                     filePattern="${sys:IGNITE_HOME}/work/log/ignite.log.%i">
             <PatternLayout pattern="[%d{ISO8601}][%-5p][%t][%c{1}] %m%n"/>
-        </File>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
     </Appenders>
 
     <Loggers>
