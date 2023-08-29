@@ -18,26 +18,15 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.nio.ByteBuffer;
 
-import static org.apache.ignite.internal.processors.cache.IncompleteCacheObject.HEAD_LEN;
-
 /**
- *
+ * Cache object container that only accumulates type of the object without its data.
  */
-public class IncompleteCacheObjectShadow extends IncompleteObject<CacheObject> {
-    /** */
-    private static final int TEM_BUFFER_CAPACITY = 1024 * 4;
-
-    /** */
-    private byte type;
-
-    /** */
+public class IncompleteCacheObjectShadow extends IncompleteCacheObject {
+    /** Value size in bytes. */
     private int valLen;
 
-    /** */
-    private int headOff;
-
-    /** */
-    private byte[] head;
+    /** This variable indicates that the header was red and ready to use. */
+    private boolean headerReady;
 
     /**
      * @param buf Byte buffer.
@@ -46,8 +35,6 @@ public class IncompleteCacheObjectShadow extends IncompleteObject<CacheObject> {
         if (buf.remaining() >= HEAD_LEN) {
             valLen = buf.getInt();
             type = buf.get();
-
-            data = new byte[TEM_BUFFER_CAPACITY];
 
             headerReady();
         }
@@ -59,10 +46,10 @@ public class IncompleteCacheObjectShadow extends IncompleteObject<CacheObject> {
 
     /** {@inheritDoc} */
     @Override public void readData(ByteBuffer buf) {
-        if (data == null) {
-            assert head != null;
+        if (!headerReady) {
+            assert head != null : "Header should be initialized before data reading.";
 
-            final int len = Math.min(HEAD_LEN - headOff, buf.remaining());
+            int len = Math.min(HEAD_LEN - headOff, buf.remaining());
 
             buf.get(head, headOff, len);
 
@@ -73,55 +60,27 @@ public class IncompleteCacheObjectShadow extends IncompleteObject<CacheObject> {
 
                 headBuf.order(buf.order());
 
-                valLen = buf.getInt();
+                valLen = headBuf.getInt();
                 type = headBuf.get();
-
-                data = new byte[TEM_BUFFER_CAPACITY];
 
                 headerReady();
             }
         }
 
-        if (data != null) {
-            /**
-             assert data != null;
+        if (headerReady) {
+            int len = Math.min(valLen - off, buf.remaining());
 
-             final int len = Math.min(data.length - off, buf.remaining());
-
-             buf.get(data, off, len);
-
-             off += len;
-             */
-            assert data != null;
-
-            final int len = Math.min(Math.min(TEM_BUFFER_CAPACITY, valLen - off), buf.remaining());
-
-            buf.get(data, 0, len);
+            buf.position(buf.position() + len);
 
             off += len;
         }
     }
 
     /**
-     * Invoke when object header is ready.
-     */
-    private void headerReady() {
-        if (type == CacheObject.TOMBSTONE)
-            object(TombstoneCacheObject.INSTANCE);
-    }
-
-    /**
-     * @return Size of already read data.
-     */
-    public int dataOffset() {
-        return off;
-    }
-
-    /**
      * @return {@code True} if cache object is fully assembled.
      */
     @Override public boolean isReady() {
-        return data != null && off == valLen;
+        return headerReady && off == valLen;
     }
 
     /**
@@ -131,10 +90,9 @@ public class IncompleteCacheObjectShadow extends IncompleteObject<CacheObject> {
         throw new UnsupportedOperationException("Incomplete cache object shadow does not support materialization");
     }
 
-    /**
-     * @return Data type.
-     */
-    public byte type() {
-        return type;
+    /** {@inheritDoc} */
+    @Override protected void headerReady() {
+        super.headerReady();
+        headerReady = true;
     }
 }

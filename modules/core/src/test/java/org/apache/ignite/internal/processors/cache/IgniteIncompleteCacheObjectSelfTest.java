@@ -16,16 +16,19 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.nio.ByteBuffer;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
-
-import java.nio.ByteBuffer;
-import java.util.concurrent.ThreadLocalRandom;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.processors.cache.CacheObjectAdapter.putValue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
 /**
  * Simple test for arbitrary CacheObject reading/writing.
@@ -38,6 +41,15 @@ public class IgniteIncompleteCacheObjectSelfTest extends GridCommonAbstractTest 
      */
     @Test
     public void testIncompleteObject() throws Exception {
+        testIncompleteObject(false);
+    }
+
+    @Test
+    public void testIncompleteObjectShadow() throws Exception {
+        testIncompleteObject(true);
+    }
+
+    private void testIncompleteObject(boolean objectShadow) throws Exception {
         final byte[] data = new byte[1024];
 
         ThreadLocalRandom.current().nextBytes(data);
@@ -50,28 +62,29 @@ public class IgniteIncompleteCacheObjectSelfTest extends GridCommonAbstractTest 
         final TestCacheObject obj = new TestCacheObject((byte) 1);
 
         // Write part of the cache object and cut on header (3 bytes instead of 5)
-        assert CacheObjectAdapter.putValue(obj.cacheObjectType(), dataBuf, off, len, data, 0);
+        assert putValue(obj.cacheObjectType(), dataBuf, off, len, data, 0);
 
         off += len;
         len = IncompleteCacheObject.HEAD_LEN - len + data.length;
 
         // Write rest data.
-        assert CacheObjectAdapter.putValue(obj.cacheObjectType(), dataBuf, off, len, data, 0);
+        assertThat(CacheObjectAdapter.putValue(obj.cacheObjectType(), dataBuf, off, len, data, 0), is(true));
 
-        assert !dataBuf.hasRemaining() : "Not all data were written.";
+        assertThat("Not all data were written.", !dataBuf.hasRemaining(), is(true));
 
         dataBuf.clear();
 
         // Cut on header for reading.
         dataBuf.limit(3);
 
-        final IncompleteCacheObject incompleteObj = new IncompleteCacheObject(dataBuf);
+        final IncompleteCacheObject incompleteObj = objectShadow ?
+            new IncompleteCacheObjectShadow(dataBuf) : new IncompleteCacheObject(dataBuf);
 
         incompleteObj.readData(dataBuf);
 
-        assert !incompleteObj.isReady();
+        assertThat(!incompleteObj.isReady(), is(true));
 
-        assert !dataBuf.hasRemaining() : "Data were read incorrectly.";
+        assertThat("Data were read incorrectly.", !dataBuf.hasRemaining(), is(true));
 
         // Make rest data available.
         dataBuf.limit(dataBuf.capacity());
@@ -82,7 +95,9 @@ public class IgniteIncompleteCacheObjectSelfTest extends GridCommonAbstractTest 
 
         // Check that cache object data assembled correctly.
         assertEquals(obj.cacheObjectType(), incompleteObj.type());
-        Assert.assertArrayEquals(data, incompleteObj.data());
+
+        if (!objectShadow)
+            Assert.assertArrayEquals(data, incompleteObj.data());
     }
 
     /**

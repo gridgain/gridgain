@@ -507,7 +507,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                         row = cctx.offheap().mvccRead(cctx, key0, mvccSnapshot);
                     else {
                         if (skipVals && !needVer)
-                            row = cctx.offheap().findKey(cctx, key0);
+                            row = cctx.offheap().find(cctx, key0);
                         else
                             row = cctx.offheap().read(cctx, key0);
                     }

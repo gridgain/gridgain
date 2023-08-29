@@ -142,7 +142,7 @@ public interface IgniteCacheOffheapManager {
      * @return Cached row, if available, null otherwise.
      * @throws IgniteCheckedException If failed.
      */
-    @Nullable public CacheDataRow findKey(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
+    @Nullable public CacheDataRow find(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
 
     /**
      * @param p Partition.
@@ -1016,7 +1016,7 @@ public interface IgniteCacheOffheapManager {
          * @return Data row.
          * @throws IgniteCheckedException If failed.
          */
-        public CacheDataRow findKey(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
+        public CacheDataRow find(GridCacheContext cctx, KeyCacheObject key, CacheDataRowAdapter.RowData x) throws IgniteCheckedException;
 
         /**
          * Returns iterator over the all row versions for the given key.

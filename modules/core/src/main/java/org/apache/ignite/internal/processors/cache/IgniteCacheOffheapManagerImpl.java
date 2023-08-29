@@ -688,13 +688,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public CacheDataRow findKey(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
+    @Nullable @Override public CacheDataRow find(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
         CacheDataStore dataStore = dataStore(cctx, key);
 
-        CacheDataRow row = dataStore != null ? dataStore.findKey(cctx, key) : null;
+        CacheDataRow row = dataStore != null ?
+            dataStore.find(cctx, key, CacheDataRowAdapter.RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME) : null;
 
         if (row != null && row.tombstone())
             row = null;
+
+        assert row == null || row.value() != null : row;
 
         return row;
     }
@@ -3102,32 +3105,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public CacheDataRow find(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
-            key = key.prepareForCache(cctx.cacheObjectContext(), false);
-
-            int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
-
-            CacheDataRow row;
-
-            if (grp.mvccEnabled()) {
-                MvccFirstRowTreeClosure clo = new MvccFirstRowTreeClosure(cctx);
-
-                dataTree.iterate(
-                    new MvccMaxSearchRow(cacheId, key),
-                    new MvccMinSearchRow(cacheId, key),
-                    clo
-                );
-
-                row = clo.row();
-            }
-            else
-                row = dataTree.findOne(new SearchRow(cacheId, key), CacheDataRowAdapter.RowData.NO_KEY);
-
-            afterRowFound(row, key);
-
-            return row;
+            return find(cctx, key, CacheDataRowAdapter.RowData.NO_KEY);
         }
 
-        @Override public CacheDataRow findKey(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
+        @Override public CacheDataRow find(
+            GridCacheContext cctx,
+            KeyCacheObject key,
+            CacheDataRowAdapter.RowData x
+        ) throws IgniteCheckedException {
             key = key.prepareForCache(cctx.cacheObjectContext(), false);
 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
@@ -3146,9 +3131,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 row = clo.row();
             }
             else
-                row = dataTree.findOne(
-                    new SearchRow(cacheId, key),
-                    CacheDataRowAdapter.RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME);
+                row = dataTree.findOne(new SearchRow(cacheId, key), x);
 
             afterRowFound(row, key);
 

@@ -776,12 +776,12 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                                 ">>>>> Test assertion [skipVals=" + skipVals + ", needVer=" + needVer +
                                     ", readThrough=" + readThrough + ", storeEnabled=" + storeEnabled + ']';
 
-                            CacheDataRow row = null;
+                            CacheDataRow row;
                             if (mvccSnapshot != null)
                                 row = ctx.offheap().mvccRead(ctx, key, mvccSnapshot);
                             else {
                                 if (skipVals)
-                                    row = ctx.offheap().findKey(ctx, key);
+                                    row = ctx.offheap().find(ctx, key);
                                 else
                                     row = ctx.offheap().read(ctx, key);
                             }
