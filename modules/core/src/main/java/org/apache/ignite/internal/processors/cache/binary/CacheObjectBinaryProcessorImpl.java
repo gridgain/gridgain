@@ -84,7 +84,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheDefaultAffinityKeyMa
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.IncompleteCacheObject;
 import org.apache.ignite.internal.processors.cache.IncompleteCacheObjectShadow;
-import org.apache.ignite.internal.processors.cache.IncompleteObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
@@ -1275,10 +1274,10 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public IncompleteObject<CacheObject> toCacheObject(
+    @Override public IncompleteCacheObject toCacheObject(
         CacheObjectContext ctx,
         ByteBuffer buf,
-        @Nullable IncompleteObject<CacheObject> incompleteObj,
+        @Nullable IncompleteCacheObject incompleteObj,
         boolean createCacheObjectShadow
     ) {
         if (incompleteObj == null) {
@@ -1291,14 +1290,10 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         incompleteObj.readData(buf);
 
         if (incompleteObj.isReady()) {
-            if (createCacheObjectShadow) {
-                IncompleteCacheObjectShadow incompleteCacheObj = (IncompleteCacheObjectShadow) incompleteObj;
-                incompleteCacheObj.object(new CacheObjectShadow(incompleteCacheObj.type()));
-            }
-            else {
-                IncompleteCacheObject incompleteCacheObj = (IncompleteCacheObject) incompleteObj;
-                incompleteCacheObj.object(toCacheObject(ctx, incompleteCacheObj.type(), incompleteCacheObj.data()));
-            }
+            CacheObject obj = createCacheObjectShadow ? new CacheObjectShadow(incompleteObj.type()) :
+                toCacheObject(ctx, incompleteObj.type(), incompleteObj.data());
+
+            incompleteObj.object(obj);
         }
 
         return incompleteObj;

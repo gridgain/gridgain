@@ -27,13 +27,19 @@ public class IncompleteCacheObject extends IncompleteObject<CacheObject> {
     public static final int HEAD_LEN = 5;
 
     /** */
-    private byte type;
+    protected byte type;
 
     /** */
-    private int headOff;
+    protected int headOff;
 
     /** */
-    private byte[] head;
+    protected byte[] head;
+
+    /**
+     * Default constructor
+     */
+    protected IncompleteCacheObject() {
+    }
 
     /**
      * @param buf Byte buffer.
@@ -81,7 +87,7 @@ public class IncompleteCacheObject extends IncompleteObject<CacheObject> {
     /**
      * Invoke when object header is ready.
      */
-    private void headerReady() {
+    protected void headerReady() {
         if (type == CacheObject.TOMBSTONE)
             object(TombstoneCacheObject.INSTANCE);
     }

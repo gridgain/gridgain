@@ -440,7 +440,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
 
         // Read value.
         if (val == null) {
-            incomplete = readIncompleteValue(coctx, buf, (IncompleteObject<CacheObject>) incomplete, rowData);
+            incomplete = readIncompleteValue(coctx, buf, (IncompleteCacheObject) incomplete, rowData);
 
             if (val == null) {
                 assert incomplete != null;
@@ -617,7 +617,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
     protected IncompleteObject<CacheObject> readIncompleteValue(
         CacheObjectContext coctx,
         ByteBuffer buf,
-        IncompleteObject<CacheObject> incomplete,
+        IncompleteCacheObject incomplete,
         RowData rowData
     ) throws IgniteCheckedException {
         boolean createShadow = rowData == RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME;

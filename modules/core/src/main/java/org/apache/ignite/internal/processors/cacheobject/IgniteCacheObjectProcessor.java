@@ -190,10 +190,10 @@ public interface IgniteCacheObjectProcessor extends GridProcessor {
      * @return Incomplete cache object.
      * @throws IgniteCheckedException If fail.
      */
-    public IncompleteObject<CacheObject> toCacheObject(
+    public IncompleteCacheObject toCacheObject(
         CacheObjectContext ctx,
         ByteBuffer buf,
-        @Nullable IncompleteObject<CacheObject> incompleteObj,
+        @Nullable IncompleteCacheObject incompleteObj,
         boolean createCacheObjectShadow
     ) throws IgniteCheckedException;
 

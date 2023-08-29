@@ -39,7 +39,11 @@ public class CacheObjectShadow extends CacheObjectAdapter {
         valBytes = EMPTY_BYTES;
     }
 
-    /** */
+    /**
+     * Creates a new instance of CacheObjectShadow with the given type.
+     *
+     * @param type Type of cache object.
+     **/
     public CacheObjectShadow(byte type) {
         this.type = type;
         valBytes = EMPTY_BYTES;
