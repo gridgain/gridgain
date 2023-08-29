@@ -855,9 +855,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
         } catch (GridCacheEntryRemovedException e) {
             log.error("Entry was exprired [key=" + key + ", currentTime=" + U.currentTimeMillis() + ", expireTime=" + expireTimeExtras()+ ", ttl=" + ttlExtras() +
-                    ", expiryPlcForCreate=" + expiryPlc.forCreate() + ", expiryPlcForUpdate=" + expiryPlc.forUpdate() +
-                    ", expiryPlcForAccess=" + expiryPlc.forAccess() + ", cacheName=" + cctx.cache().name() +
-                    ", entry=" + System.identityHashCode(this) + ']');
+                    (expiryPlc != null ? ", expiryPlcForCreate=" + expiryPlc.forCreate() + ", expiryPlcForUpdate=" + expiryPlc.forUpdate() +
+                            ", expiryPlcForAccess=" + expiryPlc.forAccess() : "") +
+                    ", cacheName=" + cctx.cache().name() + ", entry=" + System.identityHashCode(this) + ']');
 
             throw e;
         }
@@ -869,9 +869,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             onMarkedObsolete();
 
             log.error("Entry was exprired [key=" + key + ", currentTime=" + U.currentTimeMillis() + ", expireTime=" + expireTimeExtras()+ ", ttl=" + ttlExtras() +
-                    ", expiryPlcForCreate=" + expiryPlc.forCreate() + ", expiryPlcForUpdate=" + expiryPlc.forUpdate() +
-                    ", expiryPlcForAccess=" + expiryPlc.forAccess() + ", cacheName=" + cctx.cache().name() +
-                    ", entry=" + System.identityHashCode(this) + ']');
+                    (expiryPlc != null ? ", expiryPlcForCreate=" + expiryPlc.forCreate() + ", expiryPlcForUpdate=" + expiryPlc.forUpdate() +
+                    ", expiryPlcForAccess=" + expiryPlc.forAccess() : "") +
+                    ", cacheName=" + cctx.cache().name() + ", entry=" + System.identityHashCode(this) + ']');
 
             throw new GridCacheEntryRemovedException();
         }
