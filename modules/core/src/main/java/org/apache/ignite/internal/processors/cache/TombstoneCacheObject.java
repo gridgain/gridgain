@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 import java.io.IOException;
 import java.io.ObjectInput;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -27,9 +28,6 @@ import org.jetbrains.annotations.Nullable;
 public class TombstoneCacheObject extends CacheObjectAdapter {
     /** */
     private static final long serialVersionUID = 2106775575127797257L;
-
-    /** Empty. */
-    private static final byte[] EMPTY = new byte[0];
 
     /** */
     public static final short TYPE_CODE = 179;
@@ -41,12 +39,12 @@ public class TombstoneCacheObject extends CacheObjectAdapter {
      * Default constructor.
      */
     public TombstoneCacheObject() {
-        valBytes = EMPTY;
+        valBytes = U.EMPTY_BYTES;
     }
 
     /** {@inheritDoc} */
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        valBytes = EMPTY;
+        valBytes = U.EMPTY_BYTES;
     }
 
     /** {@inheritDoc} */
