@@ -141,8 +141,7 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
         stopAllGrids();
     }
 
-    @Override
-    protected void afterTest() throws Exception {
+    @Override protected void afterTest() throws Exception {
         super.afterTest();
 
         IgniteCache<Object, Object> cache = grid(0).cache(HUGE_ATOMIC_CACHE_NAME);

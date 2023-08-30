@@ -1281,7 +1281,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         boolean createCacheObjectShadow
     ) {
         if (incompleteObj == null) {
-            incompleteObj = createCacheObjectShadow ? new IncompleteCacheObjectShadow(buf): new IncompleteCacheObject(buf);
+            incompleteObj = createCacheObjectShadow ? new IncompleteCacheObjectShadow(buf) : new IncompleteCacheObject(buf);
         }
 
         if (incompleteObj.isReady())

@@ -27,7 +27,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.EMPTY_BYTES;
  */
 public class CacheObjectShadow extends CacheObjectAdapter {
     /** */
-    private static final long  serialVersionUID = 0L;
+    private static final long serialVersionUID = 0L;
 
     /** Type of cache object. */
     private byte type;
