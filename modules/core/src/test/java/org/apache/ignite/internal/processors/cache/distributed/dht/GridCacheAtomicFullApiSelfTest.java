@@ -18,14 +18,10 @@ package org.apache.ignite.internal.processors.cache.distributed.dht;
 
 import com.google.common.collect.ImmutableSet;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import javax.cache.CacheException;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedFullApiSelfTest;
@@ -33,7 +29,6 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
-import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 
 /**
  * Multi node test for disabled near cache.
@@ -41,7 +36,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 public class GridCacheAtomicFullApiSelfTest extends GridCachePartitionedFullApiSelfTest {
     /** {@inheritDoc} */
     @Override protected CacheAtomicityMode atomicityMode() {
-        return TRANSACTIONAL;
+        return ATOMIC;
     }
 
     /** {@inheritDoc} */
@@ -114,54 +109,5 @@ public class GridCacheAtomicFullApiSelfTest extends GridCachePartitionedFullApiS
         assertEquals(1, (int)map2.get("key1"));
         assertEquals(2, (int)map2.get("key2"));
         assertNull(map2.get("key9999"));
-    }
-    /**
-     * @throws Exception In case of error.
-     */
-    @Override
-    @Test
-    public void testContainsKey() throws Exception {
-        IgniteCache c = jcache();
-        c.put("testContainsKey", new byte[1024 * 8]);
-//        c.put("testContainsKey", new byte[12]);
-
-//        checkContainsKey(true, "testContainsKey");
-//        checkContainsKey(false, "testContainsKeyWrongKey");
-//        Set<String> keys = new HashSet<>();
-//        keys.add("testContainsKey");
-        //keys.add("testContainsKeyWrongKey");
-
-        //doSleep(7_000);
-
-        boolean vals = c.containsKey("testContainsKey");
-
-//        assertFalse(vals);
-        assertTrue(vals);
-    }
-
-    @Override protected int backups() {
-        return 0;
-    }
-
-    @Test
-    public void testContainsKeyFromClient() throws Exception {
-        Ignite client = startClientGrid(12);
-
-        IgniteCache c = client.getOrCreateCache(DEFAULT_CACHE_NAME);
-
-        Ignite additionalNode = startGrid(5);
-
-        awaitPartitionMapExchange();
-
-        Integer primaryKey = primaryKey(additionalNode.cache(DEFAULT_CACHE_NAME));
-
-//        c.put(primaryKey, new byte[1024 * 8]);
-//        c.put(primaryKey, new byte[12]);
-
-        doSleep(7_000);
-
-        boolean val = c.containsKey(primaryKey);
-
-        assertTrue(val);
     }
 }

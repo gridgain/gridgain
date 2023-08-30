@@ -187,6 +187,7 @@ public interface IgniteCacheObjectProcessor extends GridProcessor {
      * @param ctx Cache object context.
      * @param buf Buffer.
      * @param incompleteObj Incomplete cache object or {@code null} if it's a first read.
+     * @param createCacheObjectShadow If {@code true} then cache object shadow will be created.
      * @return Incomplete cache object.
      * @throws IgniteCheckedException If fail.
      */

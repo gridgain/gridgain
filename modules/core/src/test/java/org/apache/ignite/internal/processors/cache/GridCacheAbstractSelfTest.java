@@ -220,8 +220,6 @@ public abstract class GridCacheAbstractSelfTest extends GridCommonAbstractTest {
 
         cfg.setCommunicationSpi(comm);
 
-        cfg.setFailureDetectionTimeout(60_000);
-        cfg.setClientFailureDetectionTimeout(60_000);
         return cfg;
     }
 

@@ -4307,7 +4307,7 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
      * @param oldEntry {@code True} to check TTL on old entry, {@code false} on new.
      * @throws Exception If failed.
      */
-    protected void checkTtl(boolean inTx, boolean oldEntry) throws Exception {
+    private void checkTtl(boolean inTx, boolean oldEntry) throws Exception {
         int ttl = 4000;
 
         final ExpiryPolicy expiry = new TouchedExpiryPolicy(new Duration(MILLISECONDS, ttl));
@@ -4843,7 +4843,7 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
      * @param key Key.
      * @throws Exception If failed.
      */
-    protected void checkContainsKey(boolean exp, String key) throws Exception {
+    private void checkContainsKey(boolean exp, String key) throws Exception {
         if (nearEnabled())
             assertEquals(exp, jcache().containsKey(key));
         else {

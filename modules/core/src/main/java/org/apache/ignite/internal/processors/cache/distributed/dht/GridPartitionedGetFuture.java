@@ -481,15 +481,11 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                     KeyCacheObject key0 = (key == null ? null :
                         key.prepareForCache(cctx.cacheObjectContext(), false));
 
-                    CacheDataRow row = null;
+                    CacheDataRow row;
                     if (mvccSnapshot != null)
                         row = cctx.offheap().mvccRead(cctx, key0, mvccSnapshot);
-                    else {
-                        if (skipVals)
-                            row = cctx.offheap().find(cctx, key0);
-                        else
-                            row = cctx.offheap().read(cctx, key0);
-                    }
+                    else
+                        row = skipVals ? cctx.offheap().find(cctx, key0) : cctx.offheap().read(cctx, key0);
 
                     if (row != null) {
                         long expireTime = row.expireTime();

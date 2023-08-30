@@ -3108,6 +3108,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             return find(cctx, key, CacheDataRowAdapter.RowData.NO_KEY);
         }
 
+        /** {@inheritDoc} */
         @Override public CacheDataRow find(
             GridCacheContext cctx,
             KeyCacheObject key,
