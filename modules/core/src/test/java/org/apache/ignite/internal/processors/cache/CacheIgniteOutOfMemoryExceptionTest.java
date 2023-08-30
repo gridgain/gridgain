@@ -16,7 +16,13 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.cache.expiry.CreatedExpiryPolicy;
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ExpiryPolicy;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -31,6 +37,7 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -43,7 +50,13 @@ import static org.apache.ignite.configuration.DataPageEvictionMode.DISABLED;
  */
 public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest {
     /** Minimal region size. */
-    private static final long DATA_REGION_SIZE = 10L * 1024 * 1024;
+    private static final long DATA_REGION_SIZE = 10L * U.MB;
+
+    /** Huge data region. */
+    private static final long HUGE_DATA_REGION_SIZE = U.GB;
+
+    /** Region name. */
+    private static final String HUGE_DATA_REGION_NAME = "hugeRegion";
 
     /** Page size. */
     private static final long PAGE_SIZE = 4 * 1024;
@@ -65,6 +78,12 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
                     .setMaxSize(DATA_REGION_SIZE)
                     .setPageEvictionMode(DISABLED)
                     .setPersistenceEnabled(false)
+                    .setMetricsEnabled(true))
+            .setDataRegionConfigurations(
+                new DataRegionConfiguration()
+                    .setName(HUGE_DATA_REGION_NAME)
+                    .setMaxSize(HUGE_DATA_REGION_SIZE)
+                    .setPersistenceEnabled(false)
                     .setMetricsEnabled(true)));
 
         cfg.setFailureHandler(new AbstractFailureHandler() {
@@ -77,7 +96,9 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
             }
         });
 
-        cfg.setCacheConfiguration(cacheConfiguration(ATOMIC), cacheConfiguration(TRANSACTIONAL));
+        cfg.setCacheConfiguration(
+            cacheConfiguration("test-atomic", ATOMIC, true),
+            cacheConfiguration("test-tx", TRANSACTIONAL, true));
 
         return cfg;
     }
@@ -88,10 +109,14 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
      * @param mode Cache atomicity mode.
      * @return Cache configuration.
      */
-    private CacheConfiguration cacheConfiguration(CacheAtomicityMode mode) {
-        return new CacheConfiguration(mode.name())
+    private CacheConfiguration cacheConfiguration(String cacheName, CacheAtomicityMode mode, boolean defaultDataRegion) {
+        return new CacheConfiguration(cacheName)
             .setAtomicityMode(mode)
-            .setAffinity(new RendezvousAffinityFunction(false, 32));
+            .setAffinity(new RendezvousAffinityFunction(false, 32))
+            .setBackups(1)
+            .setReadFromBackup(false)
+            .setDataRegionName(defaultDataRegion ? null : HUGE_DATA_REGION_NAME)
+            .setEagerTtl(false);
     }
 
     /** {@inheritDoc} */
@@ -109,7 +134,7 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
      */
     @Test
     public void testLoadAndClearAtomicCache() throws Exception {
-        loadAndClearCache(ATOMIC, ATTEMPTS_NUM);
+        loadAndClearCache("test-atomic", ATTEMPTS_NUM);
     }
 
     /**
@@ -117,7 +142,7 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
      */
     @Test
     public void testLoadAndClearTransactionalCache() throws Exception {
-        loadAndClearCache(TRANSACTIONAL, ATTEMPTS_NUM);
+        loadAndClearCache("test-tx", ATTEMPTS_NUM);
     }
 
     /**
@@ -125,11 +150,11 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
      * It is assumed that {@link IgniteOutOfMemoryException} is thrown during loading the cache,
      * however {@link IgniteCache#clear()} should return the cache to the operable state.
      *
-     * @param mode Cache atomicity mode.
+     * @param cacheName Cache name.
      * @param attempts Number of attempts to load and clear the cache.
      */
-    private void loadAndClearCache(CacheAtomicityMode mode, int attempts) {
-        IgniteCache<Object, Object> cache = grid(0).cache(mode.name());
+    private void loadAndClearCache(String cacheName, int attempts) {
+        IgniteCache<Object, Object> cache = grid(0).cache(cacheName);
 
         for (int i = 0; i < attempts; ++i) {
             try {
@@ -171,10 +196,10 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
         // The number of pages that can be hypothetically allocated by user excluding overhead.
         long possibleAvailablePages = maxPages - getDefaultRegionMetrics().getTotalUsedPages() - 42;
 
-        IgniteCache<Object, Object> cache = grid(0).cache(ATOMIC.name());
+        IgniteCache<Object, Object> cache = grid(0).cache("test-atomic");
 
         try {
-            grid(0).cache(ATOMIC.name()).put(0, new byte[(int)(possibleAvailablePages * PAGE_SIZE)]);
+            grid(0).cache("test-atomic").put(0, new byte[(int)(possibleAvailablePages * PAGE_SIZE)]);
 
             fail("The implementation should reserve at least 256 pages for internal needs " +
                     "[maxPages=" + maxPages + ", totalUsed=" + getDefaultRegionMetrics().getTotalUsedPages() + ']');
@@ -198,6 +223,130 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
         }
 
         assertFalse("Failure handler should not be called during clearing the cache.", failure.get());
+    }
+
+    /**
+     * Tests that contains operation does not require loading the whole entry.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testContains() throws Exception {
+        testFastLocalGet(
+            grid(0).getOrCreateCache(cacheConfiguration("test-atomic-huge", ATOMIC, false)),
+            null);
+    }
+
+    /**
+     * Tests that contains operation does not require loading the whole entry.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testContainsWithExpiryPolicy() throws Exception {
+        testFastLocalGet(
+            grid(0).getOrCreateCache(cacheConfiguration("test-atomic-huge", ATOMIC, false)),
+            new CreatedExpiryPolicy(new Duration(TimeUnit.MINUTES, 1)));
+    }
+
+    /**
+     * Tests that contains operation does not require loading the whole entry.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testTxContains() throws Exception {
+        testFastLocalGet(
+            grid(0).getOrCreateCache(cacheConfiguration("test-tx-huge", TRANSACTIONAL, false)),
+            null);
+    }
+
+    /**
+     * Tests that contains operation does not require loading the whole entry.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testTxContainsWithExpiryPolicy() throws Exception {
+        testFastLocalGet(
+            grid(0).getOrCreateCache(cacheConfiguration("test-tx-huge", TRANSACTIONAL, false)),
+            new CreatedExpiryPolicy(new Duration(TimeUnit.MINUTES, 1)));
+    }
+
+    /**
+     * @param cache Cache name.
+     * @param expiryPolicy Expiry policy.
+     */
+    private void testFastLocalGet(IgniteCache<Integer, Object> cache, ExpiryPolicy expiryPolicy) {
+        try {
+            testContains(cache, primaryKey(cache), expiryPolicy);
+        }
+        finally {
+            cache.destroy();
+        }
+    }
+
+    /**
+     * Tests that contains operation does not require loading the whole entry.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testContainsFromBackup() throws Exception {
+        testContainsFromBackup0(
+            grid(0).getOrCreateCache(cacheConfiguration("test-atomic-huge", ATOMIC, false)),
+            null);
+    }
+
+    @Test
+    public void testTxContainsFromBackup() throws Exception {
+        testContainsFromBackup0(
+            grid(0).getOrCreateCache(cacheConfiguration("test-tx-huge", TRANSACTIONAL, false)),
+            null);
+    }
+
+    public void testContainsFromBackup0(IgniteCache<Integer, Object> cache, ExpiryPolicy expiryPolicy) throws Exception {
+        startGrid(1);
+
+        try {
+            testContains(cache, backupKey(cache), expiryPolicy);
+        }
+        finally {
+            cache.destroy();
+
+            stopGrid(1);
+        }
+    }
+
+    private void testContains(IgniteCache<Integer, Object> cache, Integer key, ExpiryPolicy expiryPolicy) {
+        Runtime.getRuntime().gc();
+
+        int blobSize = (int) (512 * U.MB);
+
+        if (expiryPolicy != null)
+            cache = cache.withExpiryPolicy(expiryPolicy);
+
+        cache.put(key, new byte[blobSize]);
+
+        long usedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        long totalFreeMemory = Runtime.getRuntime().maxMemory() - usedMemory;
+
+        // Let's occupy all free memory.
+        List<Object> unused = new ArrayList<>();
+        while (blobSize < totalFreeMemory) {
+            try {
+                unused.add(new byte[(int) (512 * U.MB)]);
+            }
+            catch (OutOfMemoryError e) {
+                // We don't have enough space to allocate a new continous block.
+                break;
+            }
+
+            usedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+            totalFreeMemory = Runtime.getRuntime().maxMemory() - usedMemory;
+        }
+
+        assertTrue(cache.containsKey(key));
     }
 
     /**
