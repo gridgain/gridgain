@@ -346,7 +346,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     private static final long PERIODIC_COLLECTION_PDS_ALLOCATION_SIZE_FREQ = 60_000L;
 
     /** PDS allocation size collection delay. */
-    private static final long COLLECTION_PDS_ALLOCATION_SIZE_DELAY = 60_000L;
+    private static final long PERIODIC_COLLECTION_PDS_ALLOCATION_SIZE_DELAY = 60_000L;
 
     /** @see IgniteSystemProperties#IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED */
     public static final boolean DFLT_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED = false;
@@ -1481,7 +1481,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 node.setAttributes(attrs);
             }
-        }, COLLECTION_PDS_ALLOCATION_SIZE_DELAY, PERIODIC_COLLECTION_PDS_ALLOCATION_SIZE_FREQ);
+        }, PERIODIC_COLLECTION_PDS_ALLOCATION_SIZE_DELAY, PERIODIC_COLLECTION_PDS_ALLOCATION_SIZE_FREQ);
 
         ctx.performance().add("Disable assertions (remove '-ea' from JVM options)", !U.assertionsEnabled());
 
@@ -2297,10 +2297,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     private long allocatedPDSSize() {
-        DataStorageConfiguration dsCfg = ctx.config().getDataStorageConfiguration();
-
-        if (dsCfg == null)
+        if (ctx.clientNode())
             return 0;
+
+        DataStorageConfiguration dsCfg = ctx.config().getDataStorageConfiguration();
 
         long res = ctx.grid().dataRegionMetrics(DFLT_DATA_REG_DEFAULT_NAME).getTotalAllocatedSize();
 
@@ -2308,7 +2308,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         if (dataRegions != null) {
             for (DataRegionConfiguration dataReg : dataRegions) {
-                res += ctx.grid().dataRegionMetrics(dataReg.getName()).getTotalAllocatedSize();
+                if (dataReg.isPersistenceEnabled())
+                    res += ctx.grid().dataRegionMetrics(dataReg.getName()).getTotalAllocatedSize();
             }
         }
 

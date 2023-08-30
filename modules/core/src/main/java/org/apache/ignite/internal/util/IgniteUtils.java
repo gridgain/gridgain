@@ -1461,7 +1461,10 @@ public abstract class IgniteUtils {
     public static double allocatedPDSSize(Iterable<ClusterNode> nodes, int precision) {
         double totalAllocatedPDS = .0;
 
-        for (ClusterNode n : nodesPerJvm(nodes)) {
+        for (ClusterNode n : nodes) {
+            if(n.isClient())
+                continue;
+
             Long val = n.<Long>attribute(ATTR_DATA_REGIONS_TOTAL_ALLOCATED_SIZE);
 
             if (val != null)
@@ -1474,11 +1477,13 @@ public abstract class IgniteUtils {
     public static double hostRamSize(Iterable<ClusterNode> nodes, int precision) {
         double totalHostRamSize = .0;
 
-        for (ClusterNode n : nodesPerHost(nodes)) {
-            Long val = n.<Long>attribute(ATTR_HOST_RAM_SIZE);
+        for (Collection<ClusterNode> nodesPerHost : neighborhood(nodes).values()) {
+            if (!nodesPerHost.isEmpty()) {
+                Long val = nodesPerHost.iterator().next().<Long>attribute(ATTR_HOST_RAM_SIZE);
 
-            if (val != null)
-                totalHostRamSize += val;
+                if (val != null)
+                    totalHostRamSize += val;
+            }
         }
 
         return roundedHeapSize(totalHostRamSize, precision);
@@ -1496,26 +1501,6 @@ public abstract class IgniteUtils {
         // Group by mac addresses and pid.
         for (ClusterNode node : nodes) {
             String grpId = node.attribute(ATTR_MACS) + "|" + node.attribute(ATTR_JVM_PID);
-
-            if (!grpMap.containsKey(grpId))
-                grpMap.put(grpId, node);
-        }
-
-        return grpMap.values();
-    }
-
-    /**
-     * Returns one representative node for each host.
-     *
-     * @param nodes Nodes.
-     * @return Collection which contains only one representative node for each host.
-     */
-    private static Iterable<ClusterNode> nodesPerHost(Iterable<ClusterNode> nodes) {
-        Map<String, ClusterNode> grpMap = new HashMap<>();
-
-        // Group by mac addresses and pid.
-        for (ClusterNode node : nodes) {
-            String grpId = node.attribute(ATTR_MACS);
 
             if (!grpMap.containsKey(grpId))
                 grpMap.put(grpId, node);
