@@ -1478,8 +1478,9 @@ public abstract class IgniteUtils {
         double totalHostRamSize = .0;
 
         for (Collection<ClusterNode> nodesPerHost : neighborhood(nodes).values()) {
-            if (!nodesPerHost.isEmpty()) {
-                Long val = nodesPerHost.iterator().next().<Long>attribute(ATTR_HOST_RAM_SIZE);
+            ClusterNode first = F.first(nodesPerHost);
+            if (first != null) {
+                Long val = first.<Long>attribute(ATTR_HOST_RAM_SIZE);
 
                 if (val != null)
                     totalHostRamSize += val;
