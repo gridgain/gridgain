@@ -1462,7 +1462,7 @@ public abstract class IgniteUtils {
         double totalAllocatedPDS = .0;
 
         for (ClusterNode n : nodes) {
-            if(n.isClient())
+            if (n.isClient())
                 continue;
 
             Long val = n.<Long>attribute(ATTR_DATA_REGIONS_TOTAL_ALLOCATED_SIZE);
