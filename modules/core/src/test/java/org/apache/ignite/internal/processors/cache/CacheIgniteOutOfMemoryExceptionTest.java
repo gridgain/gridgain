@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -24,6 +25,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
+import javax.management.MBeanServer;
+import com.sun.management.HotSpotDiagnosticMXBean;
+import com.sun.management.VMOption;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -39,6 +43,7 @@ import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -264,6 +269,7 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
     public void testContainsKeyLocalWithExpiryPolicy() {
         CacheConfiguration<Integer, Object> ccfg = cacheConfiguration(ATOMIC, HUGE_ATOMIC_CACHE_NAME, HUGE_DATA_REGION_NAME)
             .setCacheMode(LOCAL)
+            .setEagerTtl(false)
             .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MINUTES, 1)));
 
         IgniteCache<Integer, Object> cache = grid(0).getOrCreateCache(ccfg);
@@ -386,6 +392,7 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
         CacheConfiguration<Integer, Object> ccfg = cacheConfiguration(ATOMIC, HUGE_ATOMIC_CACHE_NAME, HUGE_DATA_REGION_NAME)
             .setReadFromBackup(false)
             .setBackups(1)
+            .setEagerTtl(false)
             .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MINUTES, 1)));
 
         IgniteCache<Integer, Object> cache = grid(0).getOrCreateCache(ccfg);
@@ -406,6 +413,13 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
         }
     }
 
+    /**
+     * Tests that contains operation does not require loading the whole entry.
+     *
+     * @param cache Cache.
+     * @param keys Keys.
+     * @param expectContains Expected result.
+     */
     private void testContains(IgniteCache<Integer, Object> cache, Collection<Integer> keys, boolean expectContains) {
         Runtime.getRuntime().gc();
 
@@ -419,21 +433,25 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
 
         // Let's occupy all free memory.
         List<Object> unused = new ArrayList<>();
-        while (blobSize < totalFreeMemory) {
-            try {
-                unused.add(new byte[(int) (5 * U.MB)]);
-            }
-            catch (OutOfMemoryError e) {
-                // We don't have enough space to allocate a new continous block.
-                break;
-            }
+        IgniteBiTuple<HotSpotDiagnosticMXBean, VMOption> mbean = disableHeapDumpOnOutOfMemoryError();
+        try {
+            while (blobSize < totalFreeMemory) {
+                try {
+                    unused.add(new byte[(int) (25 * U.MB)]);
+                } catch (OutOfMemoryError e) {
+                    // We don't have enough space to allocate a new continous block.
+                    break;
+                }
 
-            Runtime.getRuntime().gc();
-
-            usedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-            totalFreeMemory = Runtime.getRuntime().maxMemory() - usedMemory;
+                usedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+                totalFreeMemory = Runtime.getRuntime().maxMemory() - usedMemory;
+            }
+        }
+        finally {
+            restoreHeapDumpOnOutOfMemoryError(mbean);
         }
 
+        // This code should not throw OutOfMemoryError.
         assertEquals(
             expectContains ? "The request key is not found, but it should be." : "The request key is found but should not be.",
             expectContains,
@@ -445,5 +463,38 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
      */
     private DataRegionMetrics getDefaultRegionMetrics() {
         return grid(0).dataRegionMetrics().stream().filter(d -> d.getName().equals("default")).findFirst().get();
+    }
+
+    private void restoreHeapDumpOnOutOfMemoryError(IgniteBiTuple<HotSpotDiagnosticMXBean, VMOption> bean) {
+        if (bean != null) {
+            try {
+                bean.get1().setVMOption("HeapDumpOnOutOfMemoryError", bean.get2().getValue());
+            }
+            catch (Exception e) {
+                // No-op.
+            }
+        }
+    }
+
+    private IgniteBiTuple<HotSpotDiagnosticMXBean, VMOption> disableHeapDumpOnOutOfMemoryError() {
+        try {
+            MBeanServer srv = ManagementFactory.getPlatformMBeanServer();
+
+            String hotSpotBeanName = "com.sun.management:type=HotSpotDiagnostic";
+
+            HotSpotDiagnosticMXBean hotSpotDiagnosticMXBean = ManagementFactory.newPlatformMXBeanProxy(
+                srv,
+                hotSpotBeanName,
+                HotSpotDiagnosticMXBean.class);
+
+            VMOption option = hotSpotDiagnosticMXBean.getVMOption("HeapDumpOnOutOfMemoryError");
+
+            hotSpotDiagnosticMXBean.setVMOption("HeapDumpOnOutOfMemoryError", "false");
+
+            return new IgniteBiTuple<>(hotSpotDiagnosticMXBean, option);
+        }
+        catch (Exception e) {
+            return null;
+        }
     }
 }
