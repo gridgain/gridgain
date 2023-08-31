@@ -421,12 +421,14 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
         List<Object> unused = new ArrayList<>();
         while (blobSize < totalFreeMemory) {
             try {
-                unused.add(new byte[(int) (20 * U.MB)]);
+                unused.add(new byte[(int) (5 * U.MB)]);
             }
             catch (OutOfMemoryError e) {
                 // We don't have enough space to allocate a new continous block.
                 break;
             }
+
+            Runtime.getRuntime().gc();
 
             usedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
             totalFreeMemory = Runtime.getRuntime().maxMemory() - usedMemory;
