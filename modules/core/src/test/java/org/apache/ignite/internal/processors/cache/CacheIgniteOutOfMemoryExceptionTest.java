@@ -454,7 +454,7 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
             keys.size() == 1 ? cache.containsKey(keys.iterator().next()) : cache.containsKeys(new HashSet<>(keys)));
 
         // To avoid JIT effects (removing unused variabales).
-        assertTrue(!unused.isEmpty());
+        assertFalse(unused.isEmpty());
     }
 
     /**
