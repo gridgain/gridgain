@@ -56,12 +56,12 @@ public class CacheObjectShadow extends CacheObjectAdapter {
 
     /** {@inheritDoc} */
     @Override public <T> @Nullable T value(CacheObjectValueContext ctx, boolean cpy) {
-        return null;
+        throw new UnsupportedOperationException("Incomplete cache object shadow does not support materialization.");
     }
 
     /** {@inheritDoc} */
     @Override public <T> @Nullable T value(CacheObjectValueContext ctx, boolean cpy, ClassLoader ldr) {
-        return null;
+        throw new UnsupportedOperationException("Incomplete cache object shadow does not support materialization.");
     }
 
     /** {@inheritDoc} */
@@ -76,7 +76,7 @@ public class CacheObjectShadow extends CacheObjectAdapter {
 
     /** {@inheritDoc} */
     @Override public CacheObject prepareForCache(CacheObjectContext ctx, boolean compress) throws IgniteCheckedException {
-        return null;
+        throw new UnsupportedOperationException("Incomplete cache object shadow does not support materialization.");
     }
 
     /** {@inheritDoc} */

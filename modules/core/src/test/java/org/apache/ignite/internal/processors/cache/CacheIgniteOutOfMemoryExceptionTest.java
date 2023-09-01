@@ -428,23 +428,19 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
         for (Integer k : keys)
             cache.put(k, new byte[blobSize]);
 
-        long usedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-        long totalFreeMemory = Runtime.getRuntime().maxMemory() - usedMemory;
-
         // Let's occupy all free memory.
         List<Object> unused = new ArrayList<>();
         IgniteBiTuple<HotSpotDiagnosticMXBean, VMOption> mbean = disableHeapDumpOnOutOfMemoryError();
         try {
-            while (blobSize < totalFreeMemory) {
+            while (true) {
                 try {
-                    unused.add(new byte[(int) (25 * U.MB)]);
+                    unused.add(new byte[(int) (50 * U.MB)]);
                 } catch (OutOfMemoryError e) {
                     // We don't have enough space to allocate a new continous block.
+                    // Let's remove one blob in order to have enough memory to process the request.
+                    unused.remove(unused.size() - 1);
                     break;
                 }
-
-                usedMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-                totalFreeMemory = Runtime.getRuntime().maxMemory() - usedMemory;
             }
         }
         finally {
@@ -456,6 +452,9 @@ public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest 
             expectContains ? "The request key is not found, but it should be." : "The request key is found but should not be.",
             expectContains,
             keys.size() == 1 ? cache.containsKey(keys.iterator().next()) : cache.containsKeys(new HashSet<>(keys)));
+
+        // To avoid JIT effects (removing unused variabales).
+        assertTrue(!unused.isEmpty());
     }
 
     /**
