@@ -44,6 +44,7 @@ import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -55,6 +56,9 @@ import static org.apache.ignite.configuration.DataPageEvictionMode.DISABLED;
 /**
  * Tests behavior of IgniteCache when {@link IgniteOutOfMemoryException} is thrown.
  */
+@WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable implicit clearing on cache op.
+@WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable background cleanup.
+@WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
 public class CacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstractTest {
     /** Minimal region size. */
     private static final long DATA_REGION_SIZE = 10L * U.MB;
