@@ -1479,8 +1479,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 attrs.put(ATTR_DATA_REGIONS_TOTAL_ALLOCATED_SIZE, allocatedPDSSize);
 
-                System.out.println("node: " + node.consistentId() + ", allocatedPDSSize: " + allocatedPDSSize);
-
                 node.setAttributes(attrs);
             }
         }, PERIODIC_COLLECTION_PDS_ALLOCATION_SIZE_DELAY, PERIODIC_COLLECTION_PDS_ALLOCATION_SIZE_FREQ);
