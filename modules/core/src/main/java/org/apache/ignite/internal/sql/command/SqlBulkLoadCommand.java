@@ -19,6 +19,7 @@ package org.apache.ignite.internal.sql.command;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadCsvFormat;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadFormat;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadAckClientParameters;
+import org.apache.ignite.internal.processors.bulkload.BulkLoadIcebergFormat;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadLocation;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationFile;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationQuery;
@@ -32,7 +33,10 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.ignite.internal.sql.SqlParserUtils.error;
 import static org.apache.ignite.internal.sql.SqlParserUtils.errorUnexpectedToken;
@@ -61,6 +65,11 @@ public class SqlBulkLoadCommand implements SqlCommand {
     private Integer packetSize;
 
     /**
+     * Case sensitive properties.
+     */
+    private Map<String, String> properties;
+
+    /**
      * Parses the command.
      *
      * @param lex The lexer.
@@ -78,6 +87,8 @@ public class SqlBulkLoadCommand implements SqlCommand {
         parseFormat(lex);
 
         parseParameters(lex);
+
+        properties = parseProperties(lex);
 
         return this;
     }
@@ -225,6 +236,10 @@ public class SqlBulkLoadCommand implements SqlCommand {
                 format = parquetFormat;
 
                 break;
+            case "ICEBERG":
+                format = new BulkLoadIcebergFormat();
+
+                break;
             default:
                 throw error(lex, "Unknown format name: " + name);
         }
@@ -336,6 +351,35 @@ public class SqlBulkLoadCommand implements SqlCommand {
     }
 
     /**
+     * Parses the optional case-sensitive properties with syntax PROPERTIES ('k1' = 'v1', 'k2' = 'v2', ...)
+     * @param lex The lexer.
+     * @return properties map.
+     */
+    private static Map<String, String> parseProperties(SqlLexer lex) {
+        if (!"PROPERTIES".equals(lex.lookAhead().token())) {
+            return Collections.emptyMap();
+        }
+        Map<String, String> props = new HashMap<>();
+        skipIfMatchesKeyword(lex, "PROPERTIES");
+        skipIfMatches(lex, SqlLexerTokenType.PARENTHESIS_LEFT);
+        do {
+            if (lex.lookAhead().tokenType() == SqlLexerTokenType.PARENTHESIS_RIGHT) {
+                continue;
+            }
+            String key = lex.lookAhead().token();
+            lex.shift();
+            skipIfMatchesKeyword(lex, "=");
+            String value = lex.lookAhead().token();
+            lex.shift();
+            props.put(key, value);
+        }
+        while (!skipCommaOrRightParenthesis(lex));
+        lex.shift();
+
+        return Collections.unmodifiableMap(props);
+    }
+
+    /**
      * Parses the optional parameters.
      *
      * @param lex The lexer.
@@ -410,6 +454,16 @@ public class SqlBulkLoadCommand implements SqlCommand {
      */
     public BulkLoadLocation into() {
         return into;
+    }
+
+    /**
+     * Propertes (case-sensitive) passed to command.
+     * Syntax: PROPERTIES ('k1' = 'v1', 'k2' = 'v2', ...)
+     * Properties keys/values are case-sensitive.
+     * @return immutable properties
+     */
+    public Map<String, String> properties() {
+        return properties;
     }
 
     /** {@inheritDoc} */
