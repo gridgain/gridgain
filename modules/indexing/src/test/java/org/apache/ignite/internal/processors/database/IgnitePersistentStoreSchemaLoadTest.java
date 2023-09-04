@@ -17,6 +17,11 @@
 package org.apache.ignite.internal.processors.database;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -30,11 +35,10 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
-import org.apache.ignite.internal.processors.query.QuerySchema;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -149,11 +153,11 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
 
         CountDownLatch cnt = checkpointLatch(node);
 
-        assertEquals(0, indexCnt(node, STATIC_CACHE_NAME));
+        checkOriginalSchema(node, STATIC_CACHE_NAME, Collections.emptyList());
 
         makeDynamicSchemaChanges(node, STATIC_CACHE_NAME);
 
-        checkDynamicSchemaChanges(node, STATIC_CACHE_NAME);
+        checkModifiedSchema(node, STATIC_CACHE_NAME);
 
         cnt.await();
 
@@ -165,7 +169,7 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
 
         node.active(true);
 
-        checkDynamicSchemaChanges(node, STATIC_CACHE_NAME);
+        checkModifiedSchema(node, STATIC_CACHE_NAME);
     }
 
     /**
@@ -183,14 +187,20 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
 
         CountDownLatch cnt = checkpointLatch(node);
 
-        node.context().query().querySqlFields(
-            new SqlFieldsQuery("create table \"Person\" (\"id\" int primary key, \"name\" varchar)"), false);
+        runSql("create table \"Person\" (" +
+            "\"id\" int primary key," +
+            "\"name\" varchar," +
+            "\"city\" int," +
+            "\"str1\" varchar," +
+            "\"str2\" char(10) not null default '1'," +
+            "\"num1\" decimal," +
+            "\"num2\" decimal(10, 2) not null default 1)", node, QueryUtils.DFLT_SCHEMA);
 
-        assertEquals(0, indexCnt(node, SQL_CACHE_NAME));
+        checkOriginalSchema(node, SQL_CACHE_NAME, F.asList("str2", "num2"));
 
         makeDynamicSchemaChanges(node, QueryUtils.DFLT_SCHEMA);
 
-        checkDynamicSchemaChanges(node, SQL_CACHE_NAME);
+        checkModifiedSchema(node, SQL_CACHE_NAME);
 
         cnt.await();
 
@@ -200,43 +210,9 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
 
         node.active(true);
 
-        checkDynamicSchemaChanges(node, SQL_CACHE_NAME);
+        checkModifiedSchema(node, SQL_CACHE_NAME);
 
         node.context().query().querySqlFields(new SqlFieldsQuery("drop table \"Person\""), false).getAll();
-    }
-
-    /** */
-    private int indexCnt(IgniteEx node, String cacheName) {
-        DynamicCacheDescriptor desc = node.context().cache().cacheDescriptor(cacheName);
-
-        int cnt = 0;
-
-        if (desc != null) {
-            QuerySchema schema = desc.schema();
-            if (schema != null) {
-                for (QueryEntity entity : schema.entities())
-                    cnt += entity.getIndexes().size();
-            }
-        }
-        return cnt;
-    }
-
-    /** */
-    private int colsCnt(IgniteEx node, String cacheName) {
-        DynamicCacheDescriptor desc = node.context().cache().cacheDescriptor(cacheName);
-
-        int cnt = 0;
-
-        if (desc != null) {
-            QuerySchema schema = desc.schema();
-            if (schema != null) {
-
-                for (QueryEntity entity : schema.entities())
-                    cnt += entity.getFields().size();
-            }
-        }
-
-        return cnt;
     }
 
     /**
@@ -271,17 +247,51 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
      * @param schema Schema name.
      */
     private void makeDynamicSchemaChanges(IgniteEx node, String schema) {
-        node.context().query().querySqlFields(
-            new SqlFieldsQuery("create index \"my_idx\" on \"Person\" (\"id\", \"name\")").setSchema(schema), false)
-                .getAll();
+        runSql("create index \"my_idx\" on \"Person\" (\"id\", \"name\")", node, schema);
 
-        node.context().query().querySqlFields(
-            new SqlFieldsQuery("alter table \"Person\" add column (\"age\" int, \"city\" char)")
-            .setSchema(schema), false).getAll();
+        runSql("alter table \"Person\" drop column " +
+            "\"city\", \"str1\", \"str2\", \"num1\", \"num2\"", node, schema);
 
-        node.context().query().querySqlFields(
-            new SqlFieldsQuery("alter table \"Person\" drop column \"city\"").setSchema(schema), false)
-            .getAll();
+        runSql("alter table \"Person\" add column (" +
+                "\"rate\" decimal(10, 2) not null," +
+                "\"str1\" char(10) not null," +
+                "\"str2\" varchar," +
+                "\"num1\" decimal(10, 2) not null," +
+                "\"num2\" decimal)", node, schema);
+    }
+
+    /**
+     * Executes SQL query.
+     *
+     * @param sql SQL query.
+     * @param node Ignite node.
+     * @param schema Target schema.
+     * @return Query execution result.
+     */
+    private List<List<?>> runSql(String sql, IgniteEx node, String schema) {
+        return node.context().query().querySqlFields(new SqlFieldsQuery(sql).setSchema(schema), false).getAll();
+    }
+
+    /**
+     * Check original schema.
+     *
+     * @param node Node.
+     * @param cacheName Cache name.
+     * @param expDfltFields List of fields that have a default value.
+     */
+    private void checkOriginalSchema(IgniteEx node, String cacheName, List<String> expDfltFields) {
+        Collection<QueryEntity> entities = node.context().cache().cacheDescriptor(cacheName).schema().entities();
+        assertEquals(1, entities.size());
+
+        QueryEntity e = F.first(entities);
+
+        assertEquals(0, e.getIndexes().size());
+
+        assertEqualsUnordered(F.asList("id", "name", "city", "str1", "str2", "num1", "num2"), e.getFields().keySet());
+        assertEqualsUnordered(F.asList("str2", "num2"), e.getNotNullFields());
+        assertEqualsUnordered(F.asList("num2"), e.getFieldsScale().keySet());
+        assertEqualsUnordered(F.asList("str2", "num2"), e.getFieldsPrecision().keySet());
+        assertEqualsUnordered(expDfltFields, e.getDefaultFieldValues().keySet());
     }
 
     /**
@@ -289,10 +299,29 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
      * @param node Node.
      * @param cacheName Cache name.
      */
-    private void checkDynamicSchemaChanges(IgniteEx node, String cacheName) {
-        assertEquals(1, indexCnt(node, cacheName));
+    private void checkModifiedSchema(IgniteEx node, String cacheName) {
+        Collection<QueryEntity> entities = node.context().cache().cacheDescriptor(cacheName).schema().entities();
+        assertEquals(1, entities.size());
 
-        assertEquals(3, colsCnt(node, cacheName));
+        QueryEntity e = F.first(entities);
+
+        assertEquals(1, e.getIndexes().size());
+        assertEquals(0, e.getDefaultFieldValues().size());
+
+        assertEqualsUnordered(F.asList("id", "name", "rate", "str1", "str2", "num1", "num2"), e.getFields().keySet());
+        assertEqualsUnordered(F.asList("rate", "str1", "num1"), e.getNotNullFields());
+        assertEqualsUnordered(F.asList("rate", "num1"), e.getFieldsScale().keySet());
+        assertEqualsUnordered(F.asList("rate", "str1", "num1"), e.getFieldsPrecision().keySet());
+    }
+
+    /**
+     * Compares collections without considering the order of the elements.
+     */
+    private void assertEqualsUnordered(List<String> expected, Set<String> actual) {
+        String msg = "expected=" + expected + ", actual=" + actual;
+
+        assertEquals(msg, expected.size(), actual.size());
+        assertTrue(msg, actual.containsAll(expected));
     }
 
     /**
@@ -321,27 +350,24 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
         @QuerySqlField
         protected String name;
 
-        /** {@inheritDoc} */
-        @Override public boolean equals(Object o) {
-            if (this == o)
-                return true;
+        /** */
+        @QuerySqlField
+        protected int city;
 
-            if (o == null || getClass() != o.getClass())
-                return false;
+        /** */
+        @QuerySqlField
+        protected String str1;
 
-            IgnitePersistentStoreSchemaLoadTest.Person person = (IgnitePersistentStoreSchemaLoadTest.Person) o;
+        /** */
+        @QuerySqlField(precision = 10, notNull = true)
+        protected String str2;
 
-            return id == person.id && (name != null ? name.equals(person.name) : person.name == null);
+        /** */
+        @QuerySqlField
+        protected BigDecimal num1;
 
-        }
-
-        /** {@inheritDoc} */
-        @Override public int hashCode() {
-            int res = id;
-
-            res = 31 * res + (name != null ? name.hashCode() : 0);
-
-            return res;
-        }
+        /** */
+        @QuerySqlField(precision = 10, scale = 2, notNull = true)
+        protected BigDecimal num2;
     }
 }

@@ -50,6 +50,7 @@ import static org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand
 import static org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand.ParseStart.DATA_CENTERS;
 import static org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand.ParseStart.SENDER_GROUP;
 import static org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand.ParseStart.SNAPSHOT_ID;
+import static org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand.ParseStart.SYNC_MODE;
 
 /** */
 public class DrCommand extends AbstractCommand<Object> {
@@ -104,6 +105,7 @@ public class DrCommand extends AbstractCommand<Object> {
             DATA_CENTER_REPLICATION,
             CACHE.toString(),
             "<regExp> --action full-state-transfer",
+            optional(SYNC_MODE),
             optional(CMD_AUTO_CONFIRMATION)
         );
 
@@ -116,6 +118,7 @@ public class DrCommand extends AbstractCommand<Object> {
             optional(CACHES_PARAM, "<cacheName1, ...>"),
             optional(SENDER_GROUP, "<groupName>|ALL|DEFAULT|NONE"),
             optional(DATA_CENTERS, "<dcId, ...>"),
+            optional(SYNC_MODE),
             optional(CMD_AUTO_CONFIRMATION)
         );
 

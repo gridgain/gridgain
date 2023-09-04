@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.commandline;
 
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -27,7 +28,13 @@ import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.client.GridClientNode;
+import org.apache.ignite.internal.commandline.baseline.BaselineArguments;
+import org.apache.ignite.internal.commandline.baseline.BaselineSubcommands;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.visor.baseline.VisorBaselineNode;
+import org.apache.ignite.internal.visor.baseline.VisorBaselineTask;
+import org.apache.ignite.internal.visor.baseline.VisorBaselineTaskArg;
+import org.apache.ignite.internal.visor.baseline.VisorBaselineTaskResult;
 
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
@@ -39,6 +46,8 @@ import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommandLogger.or;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
+import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
+import static org.apache.ignite.internal.commandline.util.TopologyUtils.coordinatorId;
 
 /**
  * Command to change cluster state.
@@ -55,6 +64,12 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
 
     /** If {@code true}, cluster deactivation will be forced. */
     private boolean forceDeactivation;
+
+    /** Flag of completed partial activation check */
+    private boolean partialActivationCheckComplete = false;
+
+    /** If {@code null}, no partial activation message */
+    private String partialActivationMsg = null;
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger log) {
@@ -75,12 +90,20 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
             
             if (!clientState.state().equals(INACTIVE))
                 clusterName = clientState.clusterName();
+
+            if (state == ACTIVE)
+                partialActivationMsg = partialActivationCheck(client, clientCfg);
         }
     }
 
     /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
-        return "Warning: the command will change state of cluster with name \"" + clusterName + "\" to " + state + ".";
+        String prompt = "Warning: the command will change state of cluster with name \"" + clusterName + "\" to " + state + ".";
+
+        if (partialActivationMsg != null)
+            prompt = partialActivationMsg + "\n" + prompt;
+
+        return prompt;
     }
 
     /** {@inheritDoc} */
@@ -116,6 +139,12 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
                 else
                     client.state().state(state);
 
+            if (state == ACTIVE && !partialActivationCheckComplete)
+                partialActivationMsg = partialActivationCheck(client, clientCfg);
+
+            if (partialActivationMsg != null)
+                log.warning(partialActivationMsg);
+
             log.info("Cluster state changed to " + state);
 
             return null;
@@ -149,6 +178,53 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
                 argIter.nextArg("");
             }
         }
+    }
+
+    /**
+     * Check if all baseline nodes are online during activation.
+     * Partial activation message will be generated if some nodes are offline.
+     * Return {@code null} if no message shall be printed
+     **/
+    private String partialActivationCheck(GridClient client, GridClientConfiguration clientCfg) throws GridClientException {
+        BaselineArguments args = new BaselineArguments.Builder(BaselineSubcommands.COLLECT).build();
+
+        Set<String> offlineNodes = new HashSet<>();
+
+        partialActivationCheckComplete = true;
+
+        VisorBaselineTaskResult res = executeTaskByNameOnNode(
+                client,
+                VisorBaselineTask.class.getName(),
+                new VisorBaselineTaskArg(
+                        args.getCmd().visorBaselineOperation(),
+                        args.getTopVer(),
+                        args.getConsistentIds()
+                ),
+                coordinatorId(client.compute()),
+                clientCfg
+        );
+
+        Map<String, VisorBaselineNode> baseline = res.getBaseline();
+
+        if (baseline == null)
+            return null;
+
+        for (VisorBaselineNode node : baseline.values()) {
+            String constId = node.getConsistentId();
+
+            VisorBaselineNode srvNode = res.getServers().get(constId);
+
+            if (srvNode == null)
+                offlineNodes.add(constId);
+        }
+
+        if (!offlineNodes.isEmpty()) {
+            return "Partial activation detected. Baseline has " +
+                    offlineNodes.size() + " offline node(s).\nOffline node(s) = " +
+                    offlineNodes + "\nThis may lead to partition loss. Please ensure that this is intended.";
+        }
+
+        return null;
     }
 
     /** {@inheritDoc} */
