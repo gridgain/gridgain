@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,34 +19,21 @@ package org.apache.ignite.internal.processors.cache;
 import java.nio.ByteBuffer;
 
 /**
- * Cache object container that accumulates partial binary data
- * unless all of them ready.
+ * Cache object container that only accumulates type of the object without its data.
  */
-public class IncompleteCacheObject extends IncompleteObject<CacheObject> {
-    /** 4 bytes - cache object length, 1 byte - type. */
-    public static final int HEAD_LEN = 5;
+public class IncompleteCacheObjectShadow extends IncompleteCacheObject {
+    /** Value size in bytes. */
+    private int valLen;
 
-    /** */
-    protected byte type;
-
-    /** */
-    protected int headOff;
-
-    /** */
-    protected byte[] head;
-
-    /**
-     * Default constructor
-     */
-    protected IncompleteCacheObject() {
-    }
+    /** This variable indicates that the header was red and ready to use. */
+    private boolean headerReady;
 
     /**
      * @param buf Byte buffer.
      */
-    public IncompleteCacheObject(final ByteBuffer buf) {
+    public IncompleteCacheObjectShadow(final ByteBuffer buf) {
         if (buf.remaining() >= HEAD_LEN) {
-            data = new byte[buf.getInt()];
+            valLen = buf.getInt();
             type = buf.get();
 
             headerReady();
@@ -59,10 +46,10 @@ public class IncompleteCacheObject extends IncompleteObject<CacheObject> {
 
     /** {@inheritDoc} */
     @Override public void readData(ByteBuffer buf) {
-        if (data == null) {
-            assert head != null;
+        if (!headerReady) {
+            assert head != null : "Header should be initialized before data reading.";
 
-            final int len = Math.min(HEAD_LEN - headOff, buf.remaining());
+            int len = Math.min(HEAD_LEN - headOff, buf.remaining());
 
             buf.get(head, headOff, len);
 
@@ -73,36 +60,39 @@ public class IncompleteCacheObject extends IncompleteObject<CacheObject> {
 
                 headBuf.order(buf.order());
 
-                data = new byte[headBuf.getInt()];
+                valLen = headBuf.getInt();
                 type = headBuf.get();
 
                 headerReady();
             }
         }
 
-        if (data != null)
-            super.readData(buf);
+        if (headerReady) {
+            int len = Math.min(valLen - off, buf.remaining());
+
+            buf.position(buf.position() + len);
+
+            off += len;
+        }
     }
 
     /**
-     * Invoke when object header is ready.
+     * @return {@code True} if cache object is fully assembled.
      */
-    protected void headerReady() {
-        if (type == CacheObject.TOMBSTONE)
-            object(TombstoneCacheObject.INSTANCE);
+    @Override public boolean isReady() {
+        return headerReady && off == valLen;
     }
 
     /**
-     * @return Size of already read data.
+     * @return Data array.
      */
-    public int dataOffset() {
-        return off;
+    @Override public byte[] data() {
+        throw new UnsupportedOperationException("Incomplete cache object shadow does not support materialization");
     }
 
-    /**
-     * @return Data type.
-     */
-    public byte type() {
-        return type;
+    /** {@inheritDoc} */
+    @Override protected void headerReady() {
+        super.headerReady();
+        headerReady = true;
     }
 }

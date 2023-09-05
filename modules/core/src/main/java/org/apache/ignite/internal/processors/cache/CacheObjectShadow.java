@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,55 +16,57 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.io.IOException;
-import java.io.ObjectInput;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.util.IgniteUtils.EMPTY_BYTES;
+
 /**
- * Special value object indicating that value is removed.
+ * This class represents a place holder for a cache object and provides its type only.
+ * The instances of this class should not be used in any other context except the reading from data tree when only the type is needed.
  */
-public class TombstoneCacheObject extends CacheObjectAdapter {
+public class CacheObjectShadow extends CacheObjectAdapter {
     /** */
-    private static final long serialVersionUID = 2106775575127797257L;
+    private static final long serialVersionUID = 0L;
 
-    /** */
-    public static final short TYPE_CODE = 179;
-
-    /** Instance. */
-    public static final TombstoneCacheObject INSTANCE = new TombstoneCacheObject();
+    /** Type of cache object. */
+    private byte type;
 
     /**
      * Default constructor.
      */
-    public TombstoneCacheObject() {
-        valBytes = U.EMPTY_BYTES;
+    public CacheObjectShadow() {
+        valBytes = EMPTY_BYTES;
     }
 
-    /** {@inheritDoc} */
-    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        valBytes = U.EMPTY_BYTES;
-    }
-
-    /** {@inheritDoc} */
-    @Override public <T> @Nullable T value(CacheObjectValueContext ctx, boolean cpy) {
-        return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override public <T> @Nullable T value(CacheObjectValueContext ctx, boolean cpy, ClassLoader ldr) {
-        return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte[] valueBytes(CacheObjectValueContext ctx) throws IgniteCheckedException {
-        return valBytes;
+    /**
+     * Creates a new instance of CacheObjectShadow with the given type.
+     *
+     * @param type Type of cache object.
+     **/
+    public CacheObjectShadow(byte type) {
+        this.type = type;
+        valBytes = EMPTY_BYTES;
     }
 
     /** {@inheritDoc} */
     @Override public byte cacheObjectType() {
-        return CacheObject.TOMBSTONE;
+        return type;
+    }
+
+    /** {@inheritDoc} */
+    @Override public <T> @Nullable T value(CacheObjectValueContext ctx, boolean cpy) {
+        throw new UnsupportedOperationException("Incomplete cache object shadow does not support materialization.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public <T> @Nullable T value(CacheObjectValueContext ctx, boolean cpy, ClassLoader ldr) {
+        throw new UnsupportedOperationException("Incomplete cache object shadow does not support materialization.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte[] valueBytes(CacheObjectValueContext ctx) throws IgniteCheckedException {
+        return EMPTY_BYTES;
     }
 
     /** {@inheritDoc} */
@@ -74,26 +76,23 @@ public class TombstoneCacheObject extends CacheObjectAdapter {
 
     /** {@inheritDoc} */
     @Override public CacheObject prepareForCache(CacheObjectContext ctx, boolean compress) throws IgniteCheckedException {
-        return this;
+        throw new UnsupportedOperationException("Incomplete cache object shadow does not support materialization.");
     }
 
     /** {@inheritDoc} */
     @Override public void finishUnmarshal(CacheObjectValueContext ctx, ClassLoader ldr) throws IgniteCheckedException {
-
     }
 
     /** {@inheritDoc} */
     @Override public void prepareMarshal(CacheObjectValueContext ctx) throws IgniteCheckedException {
-
     }
 
     /** {@inheritDoc} */
     @Override public short directType() {
-        return TYPE_CODE;
+        return -1;
     }
 
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
-
     }
 }

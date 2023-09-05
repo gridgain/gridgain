@@ -386,7 +386,7 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
 
         warnIfUnordered(keys, BulkOperation.GET);
 
-        final IgniteCacheExpiryPolicy expiry = expiryPolicy(opCtx != null ? opCtx.expiry() : null);
+        final IgniteCacheExpiryPolicy expiry = skipVals ? null : expiryPolicy(opCtx != null ? opCtx.expiry() : null);
 
         boolean success = true;
         boolean readNoEntry = ctx.readNoEntry(expiry, false);
@@ -404,7 +404,7 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
                 boolean skipEntry = readNoEntry;
 
                 if (readNoEntry) {
-                    CacheDataRow row = ctx.offheap().read(ctx, cacheKey);
+                    CacheDataRow row = skipVals ? ctx.offheap().find(ctx, cacheKey) : ctx.offheap().read(ctx, cacheKey);
 
                     if (row != null) {
                         long expireTime = row.expireTime();
@@ -437,8 +437,10 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
                                     !deserializeBinary);
                             }
                         }
-                        else
-                            skipEntry = false;
+                        else {
+                            if (!skipVals)
+                                skipEntry = false;
+                        }
                     }
                     else
                         success = false;
