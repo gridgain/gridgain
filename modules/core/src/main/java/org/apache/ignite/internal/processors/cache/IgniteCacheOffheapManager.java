@@ -137,6 +137,9 @@ public interface IgniteCacheOffheapManager {
     @Nullable public CacheDataRow read(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
 
     /**
+     * Finds and returns a row for the given key.
+     * The returned row provides information about its version, expiration time, and value type, value bytes are not available, however.
+     *
      * @param cctx Cache context.
      * @param key Key.
      * @return Cached row, if available, null otherwise.
