@@ -488,11 +488,11 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
         execute(ignite0, "CREATE TABLE T2(ID LONG PRIMARY KEY, NAME VARCHAR(50))");
 
         List<List<?>> expRes = asList(
-            asList("ID", "T1", "PUBLIC", false, false, "null", true, true, -1, -1, Long.class.getName()),
+            asList("ID", "T1", "PUBLIC", false, false, "null", true, true, 19, -1, Long.class.getName()),
             asList("NAME", "T1", "PUBLIC", false, false, "null", true, false, 40, -1, String.class.getName()),
             asList("_KEY", "T1", "PUBLIC", true, false, null, false, true, -1, -1, null),
             asList("_VAL", "T1", "PUBLIC", false, false, null, true, false, -1, -1, null),
-            asList("ID", "T2", "PUBLIC", false, false, "null", true, true, -1, -1, Long.class.getName()),
+            asList("ID", "T2", "PUBLIC", false, false, "null", true, true, 19, -1, Long.class.getName()),
             asList("NAME", "T2", "PUBLIC", false, false, "null", true, false, 50, -1, String.class.getName()),
             asList("_KEY", "T2", "PUBLIC", true, false, null, false, true, -1, -1, null),
             asList("_VAL", "T2", "PUBLIC", false, false, null, true, false, -1, -1, null)

@@ -20,7 +20,7 @@ public class ValueFloat extends Value {
     /**
      * The precision in digits.
      */
-    static final int PRECISION = 7;
+    public static final int PRECISION = 7;
 
     /**
      * The maximum display size of a float.

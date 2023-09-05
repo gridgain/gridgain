@@ -48,8 +48,20 @@ import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.jdbc2.JdbcUtils;
 import org.apache.ignite.internal.processors.query.QueryEntityEx;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.gridgain.internal.h2.value.ValueBoolean;
+import org.gridgain.internal.h2.value.ValueByte;
+import org.gridgain.internal.h2.value.ValueDouble;
+import org.gridgain.internal.h2.value.ValueFloat;
+import org.gridgain.internal.h2.value.ValueInt;
+import org.gridgain.internal.h2.value.ValueLong;
+import org.gridgain.internal.h2.value.ValueShort;
+import org.gridgain.internal.h2.value.ValueTime;
+import org.gridgain.internal.h2.value.ValueTimestamp;
+import org.gridgain.internal.h2.value.ValueUuid;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -602,19 +614,19 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
             ResultSet rs = meta.getColumns(null, null, null, null);
 
             Set<String> expectedCols = new HashSet<>(Arrays.asList(
-                "PUBLIC.Quoted.Id.null",
+                "PUBLIC.Quoted.Id.null.10",
                 "PUBLIC.Quoted.Name.null.50",
-                "PUBLIC.TEST.ID.null",
+                "PUBLIC.TEST.ID.null.10",
                 "PUBLIC.TEST.NAME.'default name'.50",
-                "PUBLIC.TEST.AGE.21",
+                "PUBLIC.TEST.AGE.21.10",
                 "PUBLIC.TEST.VAL.null.50",
-                "PUBLIC.TEST_DECIMAL_COLUMN.ID.null",
+                "PUBLIC.TEST_DECIMAL_COLUMN.ID.null.10",
                 "PUBLIC.TEST_DECIMAL_COLUMN.DEC_COL.null.8.3",
-                "PUBLIC.TEST_DECIMAL_COLUMN_PRECISION.ID.null",
+                "PUBLIC.TEST_DECIMAL_COLUMN_PRECISION.ID.null.10",
                 "PUBLIC.TEST_DECIMAL_COLUMN_PRECISION.DEC_COL.null.8",
-                "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.ID.null",
+                "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.ID.null.10",
                 "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.DEC_COL.null.8",
-                "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.DATE_COL.null",
+                "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.DATE_COL.null.10",
                 "dep.DEPARTMENT.ID.null",
                 "dep.DEPARTMENT.NAME.null.43",
                 "org.ORGANIZATION.ID.null",
@@ -1402,6 +1414,65 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
         }
     }
 
+    @Test
+    public void testColumnsPrecisionAndScale() throws SQLException {
+        doTestColumnsPrecisionsAndScale("TEST_COLUMN_TYPES", false);
+    }
+
+    @Test
+    public void testDynamicColumnsPrecisionAndScale() throws SQLException {
+        doTestColumnsPrecisionsAndScale("TEST_DYNAMIC_COLUMN_TYPES", true);
+    }
+
+    private void doTestColumnsPrecisionsAndScale(String tblName, boolean alterTableAddColumns) throws SQLException {
+        PrecicsionAndScaleTestPatameters params = PrecicsionAndScaleTestPatameters
+            .builder()
+            .table(tblName)
+            .addColumn("INTEGER")
+            .addColumn("BOOLEAN")
+            .addColumn("TINYINT")
+            .addColumn("SMALLINT")
+            .addColumn("BIGINT")
+            .addColumn("DECIMAL")
+            .addColumn("DECIMAL", 10, 2)
+            .addColumn("REAL")
+            .addColumn("FLOAT")
+            .addColumn("DOUBLE")
+            .addColumn("TIME")
+            .addColumn("TIMESTAMP")
+            .addColumn("VARCHAR")
+            .addColumn("VARCHAR", 21)
+            .addColumn("UUID")
+            .build();
+
+        try (Connection conn = DriverManager.getConnection(URL)) {
+            try {
+                conn.createStatement().executeUpdate(params.tableCreateStatement(alterTableAddColumns));
+
+                ResultSet rs = conn.getMetaData().getColumns(null, null, tblName, null);
+
+                int columnsCount = 0;
+                while (rs.next()) {
+                    String columnName = rs.getString("COLUMN_NAME");
+
+                    if (!params.columns.containsKey(columnName))
+                        continue;
+
+                    columnsCount++;
+
+                    int precision = rs.getInt("COLUMN_SIZE");
+                    int scale = rs.getInt("DECIMAL_DIGITS");
+                    assertEquals(columnName, params.precision(columnName), precision);
+                    assertEquals(columnName, params.scale(columnName), scale);
+                }
+
+                assertEquals(params.columns.size(), columnsCount);
+            } finally {
+                conn.createStatement().executeUpdate("DROP TABLE IF EXISTS " + tblName);
+            }
+        }
+    }
+
     /**
      * Negative scenarios for catalog name.
      * Perform metadata lookups, that use incorrect catalog names.
@@ -1591,6 +1662,162 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
         /** */
         public String columnName() {
             return colName;
+        }
+    }
+
+    private static class PrecicsionAndScaleTestPatameters {
+        private final Map<String, TestColumnData> columns;
+        private final String tableName;
+
+        PrecicsionAndScaleTestPatameters(Map<String, TestColumnData> columns, String tableName) {
+            this.columns = columns;
+            this.tableName = tableName;
+        }
+
+        String tableCreateStatement(boolean alterTable) {
+            SB buf = new SB();
+
+            for (Map.Entry<String, TestColumnData> e : columns.entrySet()) {
+                String colName = e.getKey();
+                TestColumnData col = e.getValue();
+
+                if (buf.length() > 0)
+                    buf.a(", ");
+
+                String customPrecisionAndScale = col.precision != null ?
+                    "(" + col.precision + (col.scale != null ? ", " + col.scale : "") + ")" : "";
+
+                buf.a(String.format("%s %s%s", colName, col.type, customPrecisionAndScale));
+            }
+
+            String columnList = buf.toString();
+
+            if (alterTable) {
+                return String.format(
+                    "CREATE TABLE %s (ID INT PRIMARY KEY, VAL INT); " +
+                    "ALTER TABLE %s add column(%s)", tableName, tableName, columnList
+                );
+            }
+
+            return String.format("CREATE TABLE %s (ID INT PRIMARY KEY, %s)", tableName, columnList);
+        }
+
+        int precision(String column) {
+            TestColumnData data = columns.get(column);
+
+            if (data.precision == null) {
+                return defaultPrecision(data.type);
+            }
+
+            return data.precision;
+        }
+
+        int scale(String column) {
+            TestColumnData data = columns.get(column);
+
+            if (data.scale == null) {
+                return defaultScale(data.type);
+            }
+
+            return data.scale;
+        }
+
+        Set<String> columnNames(String name) {
+            return columns.keySet();
+        }
+
+        private int defaultPrecision(String type) {
+            switch (type) {
+                case "BOOLEAN":
+                    return ValueBoolean.PRECISION;
+                case "TINYINT":
+                    return ValueByte.PRECISION;
+                case "SMALLINT":
+                    return ValueShort.PRECISION;
+                case "INTEGER":
+                    return ValueInt.PRECISION;
+                case "BIGINT":
+                    return ValueLong.PRECISION;
+                case "DECIMAL":
+                    return H2Utils.DECIMAL_DEFAULT_PRECISION;
+                case "REAL":
+                    return ValueFloat.PRECISION;
+                case "FLOAT":
+                case "DOUBLE":
+                    return ValueDouble.PRECISION;
+                case "TIME":
+                    return ValueTime.DEFAULT_PRECISION;
+                case "TIMESTAMP":
+                    return ValueTimestamp.DEFAULT_PRECISION;
+                case "VARCHAR":
+                    return H2Utils.STRING_DEFAULT_PRECISION;
+                case "UUID":
+                    return ValueUuid.PRECISION;
+                default:
+                    throw new IllegalArgumentException("Unknown type " + type);
+            }
+        }
+
+        private int defaultScale(String type) {
+            switch (type) {
+                case "DECIMAL":
+                    return H2Utils.DECIMAL_DEFAULT_SCALE;
+                case "TIMESTAMP":
+                    return ValueTimestamp.DEFAULT_SCALE;
+                default:
+                    return 0;
+            }
+        }
+
+        static PrecicsionAndScaleTestParamtersBuilder builder() {
+            return new PrecicsionAndScaleTestParamtersBuilder();
+        }
+
+        static class TestColumnData {
+            final String type;
+            final Integer precision;
+            final Integer scale;
+
+            public TestColumnData(String type, Integer precision, Integer scale) {
+                this.type = type;
+                this.precision = precision;
+                this.scale = scale;
+            }
+        }
+
+        static class PrecicsionAndScaleTestParamtersBuilder {
+            private final Map<String, TestColumnData> columns = new HashMap<>();
+
+            private String tblName;
+
+            int columnCnt;
+
+            PrecicsionAndScaleTestParamtersBuilder table(String name) {
+                tblName = name;
+
+                return this;
+            }
+
+            PrecicsionAndScaleTestParamtersBuilder addColumn(String type) {
+                return addColumn(type, null, null);
+            }
+
+            PrecicsionAndScaleTestParamtersBuilder addColumn(String type, int precision) {
+                return addColumn(type, precision, null);
+            }
+
+            private PrecicsionAndScaleTestParamtersBuilder addColumn(String type, Integer precision, Integer scale) {
+                String type0 = type.toUpperCase();
+                String colName = String.format("COL_%d_%s", ++columnCnt, type0);
+
+                columns.put(colName, new TestColumnData(type0, precision, scale));
+
+                return this;
+            }
+
+            PrecicsionAndScaleTestPatameters build() {
+                return new PrecicsionAndScaleTestPatameters(columns, tblName);
+            }
         }
     }
 }

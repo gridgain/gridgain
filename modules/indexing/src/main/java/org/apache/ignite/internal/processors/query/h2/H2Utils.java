@@ -131,17 +131,17 @@ public class H2Utils {
     /**
      * The default precision for a char/varchar value.
      */
-    static final int STRING_DEFAULT_PRECISION = Integer.MAX_VALUE;
+    public static final int STRING_DEFAULT_PRECISION = Integer.MAX_VALUE;
 
     /**
      * The default precision for a decimal value.
      */
-    static final int DECIMAL_DEFAULT_PRECISION = 65535;
+    public static final int DECIMAL_DEFAULT_PRECISION = 65535;
 
     /**
      * The default scale for a decimal value.
      */
-    static final int DECIMAL_DEFAULT_SCALE = 32767;
+    public static final int DECIMAL_DEFAULT_SCALE = 32767;
 
     /** Dummy metadata for update result. */
     public static final List<GridQueryFieldMetadata> UPDATE_RESULT_META =
