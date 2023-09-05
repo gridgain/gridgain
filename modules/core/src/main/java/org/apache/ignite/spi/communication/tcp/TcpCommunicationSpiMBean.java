@@ -285,6 +285,14 @@ public interface TcpCommunicationSpiMBean extends IgniteSpiManagementMBean {
     public int getAckSendThreshold();
 
     /**
+     * Gets accrued size of received messages per connection to node after which acknowledgment message is sent.
+     *
+     * @return Accrued size of received messages after which acknowledgment is sent.
+     */
+    @MXBeanDescription("Accrued size of received messages after which acknowledgment is sent.")
+    public long getAckSendThresholdBytes();
+
+    /**
      * Gets maximum number of stored unacknowledged messages per connection to node.
      * If number of unacknowledged messages exceeds this number then connection to node is
      * closed and reconnect is attempted.

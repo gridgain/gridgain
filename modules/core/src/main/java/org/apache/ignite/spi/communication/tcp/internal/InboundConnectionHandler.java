@@ -330,7 +330,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 if (recovery != null) {
                     long rcvCnt = recovery.onReceived();
 
-                    if (rcvCnt % cfg.ackSendThreshold() == 0) {
+                    if (rcvCnt % cfg.ackSendThreshold() == 0 || recovery.ackThresholdInBytesTriggered()) {
                         if (log.isDebugEnabled()) {
                             log.debug("Send recovery acknowledgement [rmtNode=" + connKey.nodeId() +
                                 ", connIdx=" + connKey.connectionIndex() +

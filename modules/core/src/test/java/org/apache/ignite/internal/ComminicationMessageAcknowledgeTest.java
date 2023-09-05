@@ -110,6 +110,8 @@ public class ComminicationMessageAcknowledgeTest extends GridCommonAbstractTest 
         // We cannot just set a very large number here because the code preallocates an array of this size
         // multiplied by 128.
         communicationSpi.setAckSendThreshold(1_000);
+
+        communicationSpi.setAckSendThresholdBytes(Long.MAX_VALUE);
     }
 
     /** {@inheritDoc} */
@@ -158,7 +160,7 @@ public class ComminicationMessageAcknowledgeTest extends GridCommonAbstractTest 
     }
 
     /**
-     * Makes sure that acks are sent by reaching the configured count threshold.
+     * Makes sure that acks are sent when hitting the configured count threshold.
      */
     @Test
     public void acksShouldBeSentOnCountThreshold() throws Exception {
@@ -172,6 +174,14 @@ public class ComminicationMessageAcknowledgeTest extends GridCommonAbstractTest 
     @Test
     public void acksShouldBeSentOnIdleConnectionTimeout() throws Exception {
         testMessagesAckingExpectingSuccess(spi -> spi.setIdleConnectionTimeout(10));
+    }
+
+    /**
+     * Makes sure that acks are sent when hitting the configured accrued message size threshold.
+     */
+    @Test
+    public void acksShouldBeSentOnAccruedSizeThreshold() throws Exception {
+        testMessagesAckingExpectingSuccess(spi -> spi.setAckSendThresholdBytes(1024 * 1024));
     }
 
     /***/
