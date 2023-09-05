@@ -143,6 +143,32 @@ public class H2Utils {
      */
     public static final int DECIMAL_DEFAULT_SCALE = 32767;
 
+    /**
+     * The default precision for a byte value.
+     */
+    public static final int BYTE_DEFAULT_PRECISION = 3;
+
+    /**
+     * The default precision for a short value.
+     */
+    public static final int SHORT_DEFAULT_PRECISION = 5;
+
+    /**
+     * The default precision for real value.
+     */
+    public static final int REAL_DEFAULT_PRECISION = 7;
+
+    /**
+     * The default precision for a uuid value.
+     */
+    public static final int UUID_DEFAULT_PRECISION = 16;
+
+    /**
+     * The default scale for a timestamp value.
+     */
+    public static final int TIMESTAMP_DEFAULT_SCALE = 6;
+
+
     /** Dummy metadata for update result. */
     public static final List<GridQueryFieldMetadata> UPDATE_RESULT_META =
         Collections.singletonList(new H2SqlFieldMetadata(null, null, "UPDATED", Long.class.getName(), -1, -1,

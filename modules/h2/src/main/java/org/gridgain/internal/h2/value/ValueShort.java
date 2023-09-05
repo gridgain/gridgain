@@ -19,7 +19,7 @@ public class ValueShort extends Value {
     /**
      * The precision in digits.
      */
-    public static final int PRECISION = 5;
+    static final int PRECISION = 5;
 
     /**
      * The maximum display size of a short.

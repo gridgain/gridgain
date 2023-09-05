@@ -23,7 +23,7 @@ public class ValueUuid extends Value {
     /**
      * The precision of this value in number of bytes.
      */
-    public static final int PRECISION = 16;
+    static final int PRECISION = 16;
 
     /**
      * The display size of the textual representation of a UUID.

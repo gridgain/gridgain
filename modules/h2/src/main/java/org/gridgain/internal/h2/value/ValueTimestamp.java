@@ -33,7 +33,7 @@ public class ValueTimestamp extends Value {
     /**
      * The default scale for timestamps.
      */
-    public static final int DEFAULT_SCALE = 6;
+    static final int DEFAULT_SCALE = 6;
 
     /**
      * The maximum scale for timestamps.

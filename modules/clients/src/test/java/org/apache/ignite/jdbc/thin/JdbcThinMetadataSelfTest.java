@@ -53,15 +53,11 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.gridgain.internal.h2.value.ValueBoolean;
-import org.gridgain.internal.h2.value.ValueByte;
 import org.gridgain.internal.h2.value.ValueDouble;
-import org.gridgain.internal.h2.value.ValueFloat;
 import org.gridgain.internal.h2.value.ValueInt;
 import org.gridgain.internal.h2.value.ValueLong;
-import org.gridgain.internal.h2.value.ValueShort;
 import org.gridgain.internal.h2.value.ValueTime;
 import org.gridgain.internal.h2.value.ValueTimestamp;
-import org.gridgain.internal.h2.value.ValueUuid;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -1731,9 +1727,9 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 case "BOOLEAN":
                     return ValueBoolean.PRECISION;
                 case "TINYINT":
-                    return ValueByte.PRECISION;
+                    return H2Utils.BYTE_DEFAULT_PRECISION;
                 case "SMALLINT":
-                    return ValueShort.PRECISION;
+                    return H2Utils.SHORT_DEFAULT_PRECISION;
                 case "INTEGER":
                     return ValueInt.PRECISION;
                 case "BIGINT":
@@ -1741,7 +1737,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 case "DECIMAL":
                     return H2Utils.DECIMAL_DEFAULT_PRECISION;
                 case "REAL":
-                    return ValueFloat.PRECISION;
+                    return H2Utils.REAL_DEFAULT_PRECISION;
                 case "FLOAT":
                 case "DOUBLE":
                     return ValueDouble.PRECISION;
@@ -1752,7 +1748,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 case "VARCHAR":
                     return H2Utils.STRING_DEFAULT_PRECISION;
                 case "UUID":
-                    return ValueUuid.PRECISION;
+                    return H2Utils.UUID_DEFAULT_PRECISION;
                 default:
                     throw new IllegalArgumentException("Unknown type " + type);
             }
@@ -1763,7 +1759,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 case "DECIMAL":
                     return H2Utils.DECIMAL_DEFAULT_SCALE;
                 case "TIMESTAMP":
-                    return ValueTimestamp.DEFAULT_SCALE;
+                    return H2Utils.TIMESTAMP_DEFAULT_SCALE;
                 default:
                     return 0;
             }
