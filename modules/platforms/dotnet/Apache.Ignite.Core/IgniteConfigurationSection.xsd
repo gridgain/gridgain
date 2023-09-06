@@ -1193,6 +1193,16 @@
                                 <xs:documentation>Number of received messages per connection to node after which acknowledgment message is sent.</xs:documentation>
                             </xs:annotation>
                         </xs:attribute>
+                        <xs:attribute name="ackSendThresholdBytes" type="xs:int">
+                            <xs:annotation>
+                                <xs:documentation>Accrued size of received messages per connection to node after which acknowledgment is sent.</xs:documentation>
+                            </xs:annotation>
+                        </xs:attribute>
+                        <xs:attribute name="ackSendThresholdMillis" type="xs:int">
+                            <xs:annotation>
+                                <xs:documentation>Number of milliseconds after which acknowledgment is sent. This only happens if there is at least one unacknowledged message.</xs:documentation>
+                            </xs:annotation>
+                        </xs:attribute>
                         <xs:attribute name="connectTimeout" type="xs:string">
                             <xs:annotation>
                                 <xs:documentation>Connect timeout used when establishing connection with remote nodes.</xs:documentation>

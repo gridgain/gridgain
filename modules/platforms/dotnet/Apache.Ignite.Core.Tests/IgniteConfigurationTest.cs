@@ -189,6 +189,8 @@ namespace Apache.Ignite.Core.Tests
                 var com = (TcpCommunicationSpi) cfg.CommunicationSpi;
                 var resCom = (TcpCommunicationSpi) resCfg.CommunicationSpi;
                 Assert.AreEqual(com.AckSendThreshold, resCom.AckSendThreshold);
+                Assert.AreEqual(com.AckSendThresholdBytes, resCom.AckSendThresholdBytes);
+                Assert.AreEqual(com.AckSendThresholdMillis, resCom.AckSendThresholdMillis);
                 Assert.AreEqual(com.ConnectionsPerNode, resCom.ConnectionsPerNode);
                 Assert.AreEqual(com.ConnectTimeout, resCom.ConnectTimeout);
                 Assert.AreEqual(com.DirectBuffer, resCom.DirectBuffer);
@@ -799,6 +801,8 @@ namespace Apache.Ignite.Core.Tests
                     ReconnectCount = 33,
                     SocketReceiveBufferSize = 512,
                     AckSendThreshold = 99,
+                    AckSendThresholdBytes = 200000,
+                    AckSendThresholdMillis = 888,
                     DirectBuffer = false,
                     DirectSendBuffer = true,
                     LocalPortRange = 45,
