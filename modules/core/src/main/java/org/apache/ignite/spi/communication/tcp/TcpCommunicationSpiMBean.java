@@ -293,6 +293,14 @@ public interface TcpCommunicationSpiMBean extends IgniteSpiManagementMBean {
     public long getAckSendThresholdBytes();
 
     /**
+     * Gets number of milliseconds after which acknowledgment is sent (if there are unacked messages).
+     *
+     * @return Number of milliseconds after which acknowledgment is sent.
+     */
+    @MXBeanDescription("Number of milliseconds after which acknowledgment is sent (if there are unacked messages).")
+    public long getAckSendThresholdMillis();
+
+    /**
      * Gets maximum number of stored unacknowledged messages per connection to node.
      * If number of unacknowledged messages exceeds this number then connection to node is
      * closed and reconnect is attempted.

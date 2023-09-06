@@ -64,7 +64,7 @@ public class CommunicationWorker extends GridWorker {
     private final AttributeNames attrs;
 
     /** */
-    private final BlockingQueue<DisconnectedSessionInfo> q = new LinkedBlockingQueue<>();
+    private final BlockingQueue<DisconnectedSessionInfo> disconnectRequestsQueue = new LinkedBlockingQueue<>();
 
     /** Client pool. */
     private final ConnectionClientPool clientPool;
@@ -135,7 +135,7 @@ public class CommunicationWorker extends GridWorker {
      * @param sesInfo Disconnected session information.
      */
     public void addProcessDisconnectRequest(DisconnectedSessionInfo sesInfo) {
-        boolean add = q.add(sesInfo);
+        boolean add = disconnectRequestsQueue.add(sesInfo);
 
         assert add;
     }
@@ -156,23 +156,38 @@ public class CommunicationWorker extends GridWorker {
 
         Throwable err = null;
 
+        long lastConnMaintenanceTs = U.currentTimeMillis();
+        long lastAckSendingTs = U.currentTimeMillis();
+
+        long awakeEachMs = Math.min(cfg.idleConnectionTimeout(), cfg.ackSendThresholdMillis());
+
         try {
             while (!isCancelled()) {
-                DisconnectedSessionInfo disconnectData;
+                DisconnectedSessionInfo disconnectRequest;
 
                 blockingSectionBegin();
 
                 try {
-                    disconnectData = q.poll(cfg.idleConnectionTimeout(), TimeUnit.MILLISECONDS);
+                    disconnectRequest = disconnectRequestsQueue.poll(awakeEachMs, TimeUnit.MILLISECONDS);
                 }
                 finally {
                     blockingSectionEnd();
                 }
 
-                if (disconnectData != null)
-                    processDisconnect(disconnectData);
-                else
-                    processIdle();
+                if (disconnectRequest != null)
+                    processDisconnect(disconnectRequest);
+
+                long now = U.currentTimeMillis();
+                if (now - lastConnMaintenanceTs > cfg.idleConnectionTimeout()) {
+                    sendAcksAndDoMaintenance();
+
+                    lastAckSendingTs = now;
+                    lastConnMaintenanceTs = now;
+                } else if (now - lastAckSendingTs > cfg.ackSendThresholdMillis()) {
+                    sendAcks();
+
+                    lastAckSendingTs = now;
+                }
 
                 onIdle();
             }
@@ -199,10 +214,29 @@ public class CommunicationWorker extends GridWorker {
     }
 
     /**
-     * Process idle.
+     * Sends acks for connections where there are unacked messages.
      */
-    private void processIdle() {
-        cleanupRecovery();
+    private void sendAcks() {
+        sendAcksAndMaybeDoMaintenance(false);
+    }
+
+    /**
+     * Sends acks for connections where there are unacked messages and does connection maintenance
+     * closing stale clients and idle connections and cleaning up recovery descriptors.
+     */
+    private void sendAcksAndDoMaintenance() {
+        sendAcksAndMaybeDoMaintenance(true);
+    }
+
+    /**
+     * Sends acks for connections where there are unacked messages and (if requested) does connection maintenance
+     * closing stale clients and idle connections and cleaning up recovery descriptors.
+     *
+     * @param doMaintenance Whether connection/client maintenance should be done.
+     */
+    private void sendAcksAndMaybeDoMaintenance(boolean doMaintenance) {
+        if (doMaintenance)
+            cleanupRecovery();
 
         for (Map.Entry<UUID, GridCommunicationClient[]> e : clientPool.entrySet()) {
             UUID nodeId = e.getKey();
@@ -214,7 +248,8 @@ public class CommunicationWorker extends GridWorker {
                 ClusterNode node = nodeGetter.apply(nodeId);
 
                 if (node == null) {
-                    forceCloseAndRemove(client, nodeId);
+                    if (doMaintenance)
+                        forceCloseAndRemove(client, nodeId);
 
                     continue;
                 }
@@ -233,7 +268,8 @@ public class CommunicationWorker extends GridWorker {
                     }
                 }
 
-                closeConnectionIfIdleAndHasNoUnackedMessages(nodeId, node, client, recovery);
+                if (doMaintenance)
+                    closeConnectionIfIdleAndHasNoUnackedMessages(nodeId, node, client, recovery);
             }
         }
 

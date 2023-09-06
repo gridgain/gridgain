@@ -104,7 +104,9 @@ public class ComminicationMessageAcknowledgeTest extends GridCommonAbstractTest 
 
     /***/
     private static void disableAcksForTestDuration(TcpCommunicationSpi communicationSpi) {
-        communicationSpi.setIdleConnectionTimeout(TimeUnit.DAYS.toMillis(365));
+        long oneYearInMillis = TimeUnit.DAYS.toMillis(365);
+
+        communicationSpi.setIdleConnectionTimeout(oneYearInMillis);
 
         // We have much less than 1k messages between the nodes during the test, so 1k is like 'infinity'.
         // We cannot just set a very large number here because the code preallocates an array of this size
@@ -112,6 +114,7 @@ public class ComminicationMessageAcknowledgeTest extends GridCommonAbstractTest 
         communicationSpi.setAckSendThreshold(1_000);
 
         communicationSpi.setAckSendThresholdBytes(Long.MAX_VALUE);
+        communicationSpi.setAckSendThresholdMillis(oneYearInMillis);
     }
 
     /** {@inheritDoc} */
@@ -184,6 +187,14 @@ public class ComminicationMessageAcknowledgeTest extends GridCommonAbstractTest 
         testMessagesAckingExpectingSuccess(spi -> spi.setAckSendThresholdBytes(1024 * 1024));
     }
 
+    /**
+     * Makes sure that acks are sent when hitting the configured accrued message size threshold.
+     */
+    @Test
+    public void acksShouldBeSentOnTimeout() throws Exception {
+        testMessagesAckingExpectingSuccess(spi -> spi.setAckSendThresholdMillis(10));
+    }
+
     /***/
     private void testMessagesAckingExpectingSuccess(Consumer<TcpCommunicationSpi> communicationSpiCustomizer)
         throws Exception {
@@ -233,8 +244,12 @@ public class ComminicationMessageAcknowledgeTest extends GridCommonAbstractTest 
                 if (expectFailure) {
                     // The node has failed, which is expected, so some put is expected to fail.
                     break;
-                } else
+                } else {
+                    if ("Topology projection is empty.".equals(e.getMessage()))
+                        throw new AssertionError("Remote node seems to have died", e);
+
                     throw e;
+                }
             }
 
             // Give timeout-based ack sending mechanisms some time to ack the message.

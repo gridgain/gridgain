@@ -406,6 +406,31 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
     }
 
     /**
+     * See {@link #setAckSendThresholdMillis(long)}.
+     *
+     * @return Number of milliseconds after which acknowledgment is sent.
+     */
+    public long getAckSendThresholdMillis() {
+        return cfg.ackSendThresholdMillis();
+    }
+
+    /**
+     * Sets number of milliseconds after which acknowledgment is sent. This only happens if there is
+     * at least one unacknowledged message.
+     * <p>
+     * Default to {@link TcpCommunicationSpi#DFLT_ACK_SND_THRESHOLD_MILLIS}.
+     *
+     * @param ackSndThresholdMillis Number of milliseconds after which acknowledgment is sent.
+     * @return {@code this} for chaining.
+     */
+    @IgniteSpiConfiguration(optional = true)
+    public TcpCommunicationSpi setAckSendThresholdMillis(long ackSndThresholdMillis) {
+        cfg.ackSendThresholdMillis(ackSndThresholdMillis);
+
+        return (TcpCommunicationSpi) this;
+    }
+
+    /**
      * See {@link #setUnacknowledgedMessagesBufferSize(int)}.
      *
      * @return Maximum number of unacknowledged messages.
@@ -877,6 +902,7 @@ cfg.socketSendBuffer(sockSndBuf);
         assertParameter(cfg.socketWriteTimeout() >= 0, "sockWriteTimeout >= 0");
         assertParameter(cfg.ackSendThreshold() > 0, "ackSndThreshold > 0");
         assertParameter(cfg.ackSendThresholdBytes() > 0, "ackSndThresholdBytes > 0");
+        assertParameter(cfg.ackSendThresholdMillis() > 0, "ackSndThresholdMillis > 0");
         assertParameter(cfg.unackedMsgsBufferSize() >= 0, "unackedMsgsBufSize >= 0");
 
         if (cfg.unackedMsgsBufferSize() > 0) {

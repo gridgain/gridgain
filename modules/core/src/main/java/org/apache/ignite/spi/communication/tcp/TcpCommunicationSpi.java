@@ -172,6 +172,8 @@ import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionInde
  * <li>Number of received messages after which acknowledgment is sent (see {@link #setAckSendThreshold(int)})</li>
  * <li>Accrued size of received messages after which acknowledgment is sent
  * (see {@link #setAckSendThresholdBytes(long)})</li>
+ * <li>Number of milliseconds after which acknowledgment is sent if there are unacked messages
+ * (see {@link #setAckSendThresholdMillis(long)})</li>
  * <li>Maximum number of unacknowledged messages (see {@link #setUnacknowledgedMessagesBufferSize(int)})</li>
  * </ul>
  * <h2 class="header">Java Example</h2>
@@ -293,6 +295,9 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** Default received messages threshold (in bytes) for sending ack. */
     public static final long DFLT_ACK_SND_THRESHOLD_BYTES = 1024 * 1024;
+
+    /** Default received messages timeout (in millis) for sending ack. */
+    public static final long DFLT_ACK_SND_THRESHOLD_MILLIS = 1000;
 
     /** Default socket write timeout. */
     public static final long DFLT_SOCK_WRITE_TIMEOUT = 2000;
@@ -828,6 +833,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             log.debug(configInfo("sockWriteTimeout", cfg.socketWriteTimeout()));
             log.debug(configInfo("ackSndThreshold", cfg.ackSendThreshold()));
             log.debug(configInfo("ackSndThresholdBytes", cfg.ackSendThresholdBytes()));
+            log.debug(configInfo("ackSndThresholdMillis", cfg.ackSendThresholdMillis()));
             log.debug(configInfo("unackedMsgsBufSize", cfg.unackedMsgsBufferSize()));
         }
 

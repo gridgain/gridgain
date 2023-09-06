@@ -102,6 +102,11 @@ public class TcpCommunicationSpiMBeanImpl extends IgniteSpiMBeanAdapter implemen
     }
 
     /** {@inheritDoc} */
+    @Override public long getAckSendThresholdMillis() {
+        return cfg.ackSendThresholdMillis();
+    }
+
+    /** {@inheritDoc} */
     @Override public int getUnacknowledgedMessagesBufferSize() {
         return cfg.unackedMsgsBufferSize();
     }
