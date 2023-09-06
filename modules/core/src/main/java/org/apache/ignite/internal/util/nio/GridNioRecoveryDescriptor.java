@@ -212,8 +212,15 @@ public class GridNioRecoveryDescriptor {
 
                 return msgReqs.size() < queueLimit;
             }
-            else
+            else {
+                // Recovery is happening now and messages that were in #msgReqs at the moment the recovery was started
+                // are added for a resend. While #resendCnt is positive we ONLY get messages that were not acked, so
+                // they are already in #msgReqs, so we don't need to add them there again, so we just decrease
+                // #resendCnt. When it reaches zero, we'll switch to the 'normal' mode (as this will mean that all
+                // messages that were in #msgReqs at the moment when recovery started are passed through this method).
+
                 resendCnt--;
+            }
         }
 
         return true;
