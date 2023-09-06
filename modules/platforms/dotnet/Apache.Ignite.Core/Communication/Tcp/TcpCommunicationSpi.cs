@@ -173,14 +173,14 @@ namespace Apache.Ignite.Core.Communication.Tcp
         /// to node after which acknowledgment is sent.
         /// </summary>
         [DefaultValue(DefaultAckSendThresholdBytes)]
-        public int AckSendThresholdBytes { get; set; }
+        public long AckSendThresholdBytes { get; set; }
 
         /// <summary>
         /// Gets or sets the number of milliseconds after which acknowledgment
         /// is sent. This only happens if there is at least one unacknowledged message.
         /// </summary>
         [DefaultValue(DefaultAckSendThresholdMillis)]
-        public int AckSendThresholdMillis { get; set; }
+        public long AckSendThresholdMillis { get; set; }
 
         /// <summary>
         /// Gets or sets the connect timeout used when establishing connection with remote nodes.
