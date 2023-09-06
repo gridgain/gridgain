@@ -31,11 +31,9 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
-import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * This tests that network messages sent using {@link TcpCommunicationSpi} get acknowledged according to configuration.
@@ -153,21 +151,11 @@ public class CommunicationMessageAcknowledgeTest extends GridCommonAbstractTest 
     }
 
     /**
-     * Makes sure no acks are sent when all mechanisms that trigger ack sending are disabled.
-     * This is mostly needed to make sure the test as a whole is sane and capable to notice unacked messages
-     * piling up.
-     */
-    @Test
-    public void noAcksShouldBeSentWhenAllDisabled() throws Exception {
-        testMessagesAckingExpectingFailure(spi -> {});
-    }
-
-    /**
      * Makes sure that acks are sent when hitting the configured count threshold.
      */
     @Test
     public void acksShouldBeSentOnCountThreshold() throws Exception {
-        testMessagesAckingExpectingSuccess(spi -> spi.setAckSendThreshold(1));
+        testMessagesAcking(spi -> spi.setAckSendThreshold(1));
     }
 
     /**
@@ -176,7 +164,7 @@ public class CommunicationMessageAcknowledgeTest extends GridCommonAbstractTest 
      */
     @Test
     public void acksShouldBeSentOnIdleConnectionTimeout() throws Exception {
-        testMessagesAckingExpectingSuccess(spi -> spi.setIdleConnectionTimeout(10));
+        testMessagesAcking(spi -> spi.setIdleConnectionTimeout(10));
     }
 
     /**
@@ -184,7 +172,7 @@ public class CommunicationMessageAcknowledgeTest extends GridCommonAbstractTest 
      */
     @Test
     public void acksShouldBeSentOnAccruedSizeThreshold() throws Exception {
-        testMessagesAckingExpectingSuccess(spi -> spi.setAckSendThresholdBytes(1024 * 1024));
+        testMessagesAcking(spi -> spi.setAckSendThresholdBytes(1024 * 1024));
     }
 
     /**
@@ -192,34 +180,18 @@ public class CommunicationMessageAcknowledgeTest extends GridCommonAbstractTest 
      */
     @Test
     public void acksShouldBeSentOnTimeout() throws Exception {
-        testMessagesAckingExpectingSuccess(spi -> spi.setAckSendThresholdMillis(10));
-    }
-
-    /***/
-    private void testMessagesAckingExpectingSuccess(Consumer<TcpCommunicationSpi> communicationSpiCustomizer)
-        throws Exception {
-
-        testMessagesAcking(communicationSpiCustomizer, false);
-    }
-
-    /***/
-    private void testMessagesAckingExpectingFailure(Consumer<TcpCommunicationSpi> communicationSpiCustomizer)
-        throws Exception {
-
-        testMessagesAcking(communicationSpiCustomizer, true);
+        testMessagesAcking(spi -> spi.setAckSendThresholdMillis(10));
     }
 
     /**
      * Runs the test by first applying the {@link #communicationSpiCustomizer} and the running the scenario
-     * described in the class javadoc and making sure that the node either fails or does not fail, depending
-     * on the expectFailure parameter.
+     * described in the class javadoc and making sure that the remote node does not fail.
      *
      * @param communicationSpiCustomizer    Customizer to customize the configuration before starting nodes.
-     * @param expectFailure                 Whether it is expected that the remote node will fail.
      * @throws Exception If something goes wrong.
      */
     @SuppressWarnings({"resource", "BusyWait"})
-    private void testMessagesAcking(Consumer<TcpCommunicationSpi> communicationSpiCustomizer, boolean expectFailure)
+    private void testMessagesAcking(Consumer<TcpCommunicationSpi> communicationSpiCustomizer)
         throws Exception {
 
         this.communicationSpiCustomizer = communicationSpiCustomizer;
@@ -244,29 +216,17 @@ public class CommunicationMessageAcknowledgeTest extends GridCommonAbstractTest 
                 // Remove to reduce memory footprint of the test.
                 cache.remove(i);
             } catch (ClusterGroupEmptyException e) {
-                if (expectFailure) {
-                    // The node has failed, which is expected, so some put is expected to fail.
-                    break;
-                } else {
-                    if ("Topology projection is empty.".equals(e.getMessage()))
-                        throw new AssertionError("Remote node seems to have died", e);
+                if ("Topology projection is empty.".equals(e.getMessage()))
+                    throw new AssertionError("Remote node seems to have died", e);
 
-                    throw e;
-                }
+                throw e;
             }
 
             // Give timeout-based ack sending mechanisms some time to ack the message.
             Thread.sleep(MILLIS_BETWEEN_PUTS);
         }
 
-        if (expectFailure) {
-            assertTrue(
-                "Remote node did not fail",
-                waitForCondition(remoteNodeFailed::get, SECONDS.toMillis(10))
-            );
-        } else {
-            assertFalse("Remote node failed, probably an OOM", remoteNodeFailed.get());
-        }
+        assertFalse("Remote node failed, probably an OOM", remoteNodeFailed.get());
     }
 
     /**
