@@ -240,6 +240,9 @@ public class CommunicationMessageAcknowledgeTest extends GridCommonAbstractTest 
 
             try {
                 cache.put(i, bytes);
+
+                // Remove to reduce memory footprint of the test.
+                cache.remove(i);
             } catch (ClusterGroupEmptyException e) {
                 if (expectFailure) {
                     // The node has failed, which is expected, so some put is expected to fail.
