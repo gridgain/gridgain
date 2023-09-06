@@ -47,7 +47,7 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
  * (that sends them to the local Ignite). If the tested mechanism-to-send-acks does not work, the messages will not
  * be acked, so they will pile up in the heap, and the remote node will soon blow up with an OOM.
  */
-public class ComminicationMessageAcknowledgeTest extends GridCommonAbstractTest {
+public class CommunicationMessageAcknowledgeTest extends GridCommonAbstractTest {
     /** Size of a single put in bytes. */
     private static final int SINGLE_PUT_SIZE = 100 * 1024 * 1024;
 

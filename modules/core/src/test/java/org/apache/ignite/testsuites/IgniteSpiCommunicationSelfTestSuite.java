@@ -16,7 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
-import org.apache.ignite.internal.ComminicationMessageAcknowledgeTest;
+import org.apache.ignite.internal.CommunicationMessageAcknowledgeTest;
 import org.apache.ignite.spi.communication.tcp.ClientExceptionsUtilsTest;
 import org.apache.ignite.spi.communication.tcp.GridSandboxedClientWithoutNetworkTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationInverseConnectionEstablishingTest;
@@ -129,7 +129,7 @@ import org.junit.runners.Suite;
 
     TcpCommunicationConnectionCheckFutureSelfTest.class,
 
-    ComminicationMessageAcknowledgeTest.class
+    CommunicationMessageAcknowledgeTest.class
 })
 public class IgniteSpiCommunicationSelfTestSuite {
 }
