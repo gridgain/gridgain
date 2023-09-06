@@ -100,6 +100,13 @@ public class GridNioRecoveryDescriptor {
     private GridNioSession ses;
 
     /**
+     * Used to synchronize access to methods and fields used to determine whether an ack should be sent
+     * ({@link #rcvCnt}, {@link #rcvBytes}, {@link #lastAckRcvBytes}, {@link #onReceived()},
+     * {@link #lastAcknowledged()}) and sending acks back ({@link #lastAcknowledged(long)}.
+     */
+    private final Object receiveAndAckMonitor = new Object();
+
+    /**
      * @param pairedConnections {@code True} if in/out connections pair is used for communication with node.
      * @param queueLimit Maximum size of unacknowledged messages queue.
      * @param ackThresholdBytes Number of accrued bytes of received messages to trigger ack.
@@ -163,8 +170,10 @@ public class GridNioRecoveryDescriptor {
     /**
      * @return Number of received messages.
      */
-    public synchronized long received() {
-        return rcvCnt;
+    public long received() {
+        synchronized (receiveAndAckMonitor) {
+            return rcvCnt;
+        }
     }
 
     /**
@@ -186,8 +195,10 @@ public class GridNioRecoveryDescriptor {
     /**
      * @return Last acknowledged message.
      */
-    public synchronized long lastAcknowledged() {
-        return lastAck;
+    public long lastAcknowledged() {
+        synchronized (receiveAndAckMonitor) {
+            return lastAck;
+        }
     }
 
     /**
@@ -463,6 +474,14 @@ public class GridNioRecoveryDescriptor {
      */
     public boolean ackThresholdInBytesTriggered() {
         return rcvBytes - lastAckRcvBytes >= ackThresholdBytes;
+    }
+
+    /**
+     * @return Monitor used to synchronize access to methods and fields used to determine whether an ack should be sent
+     * and sending acks back.
+     */
+    public Object receiveAndAckMonitor() {
+        return receiveAndAckMonitor;
     }
 
     /** {@inheritDoc} */

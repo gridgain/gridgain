@@ -262,7 +262,7 @@ public class CommunicationWorker extends GridWorker {
                     );
 
                     if (recovery != null) {
-                        synchronized (recovery) {
+                        synchronized (recovery.receiveAndAckMonitor()) {
                             if (recovery.lastAcknowledged() != recovery.received()) {
                                 sendRecoveryAckOnTimeout(((GridTcpNioCommunicationClient) client).session(), recovery);
 
@@ -359,7 +359,7 @@ public class CommunicationWorker extends GridWorker {
                 assert ses.accepted() : ses;
 
                 if (recovery != null) {
-                    synchronized (recovery) {
+                    synchronized (recovery.receiveAndAckMonitor()) {
                         if (recovery.lastAcknowledged() != recovery.received())
                             sendRecoveryAckOnTimeout(ses, recovery);
                     }

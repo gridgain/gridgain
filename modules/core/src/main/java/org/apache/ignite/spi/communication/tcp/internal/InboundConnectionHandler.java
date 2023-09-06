@@ -328,7 +328,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 GridNioRecoveryDescriptor recovery = ses.inRecoveryDescriptor();
 
                 if (recovery != null) {
-                    synchronized (recovery) {
+                    synchronized (recovery.receiveAndAckMonitor()) {
                         long rcvCnt = recovery.onReceived();
 
                         if (rcvCnt % cfg.ackSendThreshold() == 0 || recovery.ackThresholdInBytesTriggered()) {
