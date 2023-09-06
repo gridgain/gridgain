@@ -163,7 +163,7 @@ public class GridNioRecoveryDescriptor {
     /**
      * @return Number of received messages.
      */
-    public long received() {
+    public synchronized long received() {
         return rcvCnt;
     }
 
@@ -186,7 +186,7 @@ public class GridNioRecoveryDescriptor {
     /**
      * @return Last acknowledged message.
      */
-    public long lastAcknowledged() {
+    public synchronized long lastAcknowledged() {
         return lastAck;
     }
 

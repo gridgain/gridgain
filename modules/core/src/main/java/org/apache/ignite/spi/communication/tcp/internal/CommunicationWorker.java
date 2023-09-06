@@ -261,10 +261,14 @@ public class CommunicationWorker extends GridWorker {
                         node.id(), client.connectionIndex(), -1)
                     );
 
-                    if (recovery != null && recovery.lastAcknowledged() != recovery.received()) {
-                        sendRecoveryAckOnTimeout(((GridTcpNioCommunicationClient) client).session(), recovery);
+                    if (recovery != null) {
+                        synchronized (recovery) {
+                            if (recovery.lastAcknowledged() != recovery.received()) {
+                                sendRecoveryAckOnTimeout(((GridTcpNioCommunicationClient) client).session(), recovery);
 
-                        continue;
+                                continue;
+                            }
+                        }
                     }
                 }
 
@@ -354,8 +358,11 @@ public class CommunicationWorker extends GridWorker {
             if (recovery != null && usingPairedConnectionsWith(recovery.node())) {
                 assert ses.accepted() : ses;
 
-                if (recovery != null && recovery.lastAcknowledged() != recovery.received()) {
-                    sendRecoveryAckOnTimeout(ses, recovery);
+                if (recovery != null) {
+                    synchronized (recovery) {
+                        if (recovery.lastAcknowledged() != recovery.received())
+                            sendRecoveryAckOnTimeout(ses, recovery);
+                    }
                 }
             }
         }

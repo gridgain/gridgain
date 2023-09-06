@@ -328,18 +328,20 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 GridNioRecoveryDescriptor recovery = ses.inRecoveryDescriptor();
 
                 if (recovery != null) {
-                    long rcvCnt = recovery.onReceived();
+                    synchronized (recovery) {
+                        long rcvCnt = recovery.onReceived();
 
-                    if (rcvCnt % cfg.ackSendThreshold() == 0 || recovery.ackThresholdInBytesTriggered()) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("Send recovery acknowledgement [rmtNode=" + connKey.nodeId() +
-                                ", connIdx=" + connKey.connectionIndex() +
-                                ", rcvCnt=" + rcvCnt + ']');
+                        if (rcvCnt % cfg.ackSendThreshold() == 0 || recovery.ackThresholdInBytesTriggered()) {
+                            if (log.isDebugEnabled()) {
+                                log.debug("Send recovery acknowledgement [rmtNode=" + connKey.nodeId() +
+                                    ", connIdx=" + connKey.connectionIndex() +
+                                    ", rcvCnt=" + rcvCnt + ']');
+                            }
+
+                            ses.systemMessage(new RecoveryLastReceivedMessage(rcvCnt));
+
+                            recovery.lastAcknowledged(rcvCnt);
                         }
-
-                        ses.systemMessage(new RecoveryLastReceivedMessage(rcvCnt));
-
-                        recovery.lastAcknowledged(rcvCnt);
                     }
                 }
                 else if (connKey.dummy()) {
