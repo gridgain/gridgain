@@ -39,7 +39,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -116,6 +115,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_HASH_JOIN_MAX_TABL
 import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_COL;
 import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_FIELD_NAME;
 import static org.apache.ignite.internal.processors.query.QueryUtils.VAL_FIELD_NAME;
+import static org.apache.ignite.internal.processors.query.h2.H2DatabaseType.DECIMAL;
+import static org.apache.ignite.internal.processors.query.h2.H2DatabaseType.VARCHAR;
 
 /**
  * H2 utility methods.
@@ -816,12 +817,13 @@ public class H2Utils {
     private static String dbTypeFromClass(Class<?> cls, int precision, int scale) {
         String dbType = H2DatabaseType.fromClass(cls).dBTypeAsString();
 
-        if (precision != -1 && scale != -1 && dbType.equalsIgnoreCase(H2DatabaseType.DECIMAL.dBTypeAsString()))
+        if (precision != -1 && scale != -1 && scale < DECIMAL_DEFAULT_SCALE &&
+            dbType.equalsIgnoreCase(DECIMAL.dBTypeAsString()))
             return dbType + "(" + precision + ", " + scale + ')';
 
-        if (precision != -1 && (
-                dbType.equalsIgnoreCase(H2DatabaseType.VARCHAR.dBTypeAsString())
-                        || dbType.equalsIgnoreCase(H2DatabaseType.DECIMAL.dBTypeAsString())))
+        if (precision != -1 &&
+            ((dbType.equalsIgnoreCase(VARCHAR.dBTypeAsString()) && precision < STRING_DEFAULT_PRECISION) ||
+                (dbType.equalsIgnoreCase(DECIMAL.dBTypeAsString()) && precision < DECIMAL_DEFAULT_PRECISION)))
             return dbType + '(' + precision + ')';
 
         return dbType;
