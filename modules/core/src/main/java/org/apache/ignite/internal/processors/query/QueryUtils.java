@@ -177,6 +177,41 @@ public class QueryUtils {
         return sqlClasses;
     }
 
+    @NotNull private static Map<Class<?>, Integer> createSqlTypes2() {
+        Map<Class<?>, Integer> sqlClasses = new HashMap<>();
+
+        sqlClasses.put(Integer.class, 19);
+        sqlClasses.put(Boolean.class, 1);
+        sqlClasses.put(Byte.class, 3);
+        sqlClasses.put(Short.class, 5);
+        sqlClasses.put(Long.class, 5);
+        sqlClasses.put(BigDecimal.class, 32768);
+        sqlClasses.put(Double.class, 17);
+        sqlClasses.put(Float.class, 9);
+        sqlClasses.put(Time.class, 9);
+
+//            Boolean.class,
+//            Byte.class,
+//            Short.class,
+//            Long.class,
+//            BigDecimal.class,
+//            Double.class,
+//            Float.class,
+//            Time.class,
+//            Timestamp.class,
+//            Date.class,
+//            java.sql.Date.class,
+//            LocalTime.class,
+//            LocalDate.class,
+//            LocalDateTime.class,
+//            String.class,
+//            UUID.class,
+//            byte[].class
+//        ));
+
+        return sqlClasses;
+    }
+
     /**
      * Get table name for entity.
      *
@@ -667,10 +702,20 @@ public class QueryUtils {
 
             Object dfltVal = dlftVals != null ? dlftVals.get(fieldName) : null;
 
+            int precision0 = precision == null ? -1 : precision.getOrDefault(fieldName, -1);
+
+            Class<?> objType = U.classForName(fieldType, Object.class, true);
+
+            if (precision0 == -1) {
+                Integer precisionX = createSqlTypes2().get(objType);
+
+                precision0 = precisionX == null ? -1 : precisionX;
+            }
+
             QueryBinaryProperty prop = buildBinaryProperty(ctx, fieldName,
-                U.classForName(fieldType, Object.class, true),
+                objType,
                 d.aliases(), isKeyField, notNull, dfltVal,
-                precision == null ? -1 : precision.getOrDefault(fieldName, -1),
+                precision0,
                 scale == null ? -1 : scale.getOrDefault(fieldName, -1));
 
             d.addProperty(prop, false);
