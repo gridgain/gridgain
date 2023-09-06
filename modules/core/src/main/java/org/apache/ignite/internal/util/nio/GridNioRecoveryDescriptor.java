@@ -97,6 +97,7 @@ public class GridNioRecoveryDescriptor {
 
     /** Session for the descriptor. */
     @GridToStringExclude
+    @Nullable
     private GridNioSession ses;
 
     /**
@@ -157,12 +158,13 @@ public class GridNioRecoveryDescriptor {
     /**
      * Increments received messages counter.
      *
+     * @param currentBytesReceived Current bytesReceived on the session.
      * @return Number of received messages.
      */
-    public long onReceived() {
+    public long onReceived(long currentBytesReceived) {
         rcvCnt++;
 
-        rcvBytes = ses.bytesReceived();
+        rcvBytes = currentBytesReceived;
 
         return rcvCnt;
     }
