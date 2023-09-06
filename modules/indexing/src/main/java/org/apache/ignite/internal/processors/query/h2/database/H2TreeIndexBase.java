@@ -116,11 +116,12 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
         if (propSize == 0)
             return 0;
 
-        int size = 0;
+        // TODO rework
+        long size = 0;
 
         for (InlineIndexColumn idxHelper : inlineIdxs) {
             // for variable types - default variable size, for other types - type's size + type marker
-            int sizeInc = idxHelper.size() < 0 ? IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE : idxHelper.size() + 1;
+            long sizeInc = idxHelper.size() < 0 ? IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE : idxHelper.size() + 1;
 
             fixedSize &= idxHelper.size() != -1;
 
@@ -132,7 +133,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
 
                     if (m.find())
                         // if column has defined length we use it as default + 3 bytes for the inner info of the variable type
-                        sizeInc = Integer.parseInt(m.group(1)) + 3;
+                        sizeInc = Long.parseLong(m.group(1)) + 3;
                 }
             }
 
@@ -151,13 +152,13 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
                         "This will lead to wasting of space inside index pages. Ignoring " +
                         "[index=" + name + ", explicitInlineSize=" + cfgInlineSize + ", realInlineSize=" + size + ']');
 
-                return size;
+                return (int) size;
             }
 
             return cfgInlineSize;
         }
 
-        return Math.min(PageIO.MAX_PAYLOAD_SIZE, size);
+        return (int)Math.min(PageIO.MAX_PAYLOAD_SIZE, size);
     }
 
     /**
