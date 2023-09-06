@@ -53,8 +53,8 @@ public class GridNioRecoveryDescriptor {
     /** Number of received messages. */
     private long rcvCnt;
 
-    /** Number of received bytes divided by {@link #ackThresholdBytes}. */
-    private long rcvInBytesThresholds;
+    /** Number of received bytes. */
+    private long rcvBytes;
 
     /** Number of sent messages. */
     private long sentCnt;
@@ -65,8 +65,8 @@ public class GridNioRecoveryDescriptor {
     /** Last acknowledged message. */
     private long lastAck;
 
-    /** Number of received bytes divided by {@link #ackThresholdBytes} at the moment of the last ack. */
-    private long lastAckRcvInBytesThresholds;
+    /** Number of received bytes at the moment of the last ack. */
+    private long lastAckRcvBytes;
 
     /** Node left flag. */
     private boolean nodeLeft;
@@ -155,7 +155,7 @@ public class GridNioRecoveryDescriptor {
     public long onReceived() {
         rcvCnt++;
 
-        rcvInBytesThresholds = ses.bytesReceived() / ackThresholdBytes;
+        rcvBytes = ses.bytesReceived();
 
         return rcvCnt;
     }
@@ -180,7 +180,7 @@ public class GridNioRecoveryDescriptor {
     public void lastAcknowledged(long lastAck) {
         this.lastAck = lastAck;
 
-        lastAckRcvInBytesThresholds = rcvInBytesThresholds;
+        lastAckRcvBytes = rcvBytes;
     }
 
     /**
@@ -455,7 +455,7 @@ public class GridNioRecoveryDescriptor {
      * @return {@code true} if enough received messages were accrued since last acknowledge to trigger an ack.
      */
     public boolean ackThresholdInBytesTriggered() {
-        return rcvInBytesThresholds != lastAckRcvInBytesThresholds;
+        return rcvBytes - lastAckRcvBytes >= ackThresholdBytes;
     }
 
     /** {@inheritDoc} */
