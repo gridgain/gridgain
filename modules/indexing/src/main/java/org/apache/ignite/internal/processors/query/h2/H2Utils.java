@@ -218,7 +218,6 @@ public class H2Utils {
     /** */
     public static final IndexColumn[] EMPTY_COLUMNS = new IndexColumn[0];
 
-
     /** Spatial index class name. */
     private static final String SPATIAL_IDX_CLS =
         "org.apache.ignite.internal.processors.query.h2.opt.GridH2SpatialIndex";
@@ -238,10 +237,10 @@ public class H2Utils {
     private static boolean enableHashJoin
         = IgniteSystemProperties.getBoolean(IGNITE_ENABLE_HASH_JOIN, false);
 
-    /** Mapping a type to its default precision. */
+    /** Mapping of type to its default precision. */
     private static final Map<Class<?>, Integer> defaultPrecisionsByType = knownDefaultPrecisions();
 
-    /** Mapping a type to its default scale. */
+    /** Mapping of type to its default scale. */
     private static final Map<Class<?>, Integer> defaultScalesByType = knownDefaultScales();
 
     /**

@@ -307,7 +307,7 @@ public class QueryUtils {
 
             return entity;
         }
-
+    
         QueryEntityEx normalEntity = new QueryEntityEx();
 
         // Propagate plain properties.
@@ -371,7 +371,7 @@ public class QueryUtils {
         }
 
         normalEntity.setIndexes(normalIdxs);
-
+        
         if (!ctx.recoveryMode() && IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
                 IgniteDiscoverySpi.ALL_NODES), IgniteFeatures.FILLS_ABSENT_PKS_WITH_DEFAULTS)
         )
@@ -478,12 +478,12 @@ public class QueryUtils {
         desc.schemaName(schemaName);
 
         desc.aliases(qryEntity.getAliases());
-
+        
         if (qryEntity instanceof QueryEntityEx) {
             desc.setFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).fillAbsentPKsWithDefaults());
             desc.implicitPk(((QueryEntityEx)qryEntity).isImplicitPk());
         }
-
+        
         // Key and value classes still can be available if they are primitive or JDK part.
         // We need that to set correct types for _key and _val columns.
         // We better box these types - otherwise, if user provides, say, raw 'byte' for

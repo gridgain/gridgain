@@ -1444,30 +1444,43 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
 
         try (Connection conn = DriverManager.getConnection(URL)) {
             try {
-                conn.createStatement().executeUpdate(params.tableCreateStatement(alterTableAddColumns));
+                Statement stmt = conn.createStatement();
 
+                stmt.executeUpdate(params.tableCreateStatement(alterTableAddColumns));
+
+                // Validate metadata.
                 ResultSet rs = conn.getMetaData().getColumns(null, null, tblName, null);
+                validateColumnsResultSet(rs, params, 0);
 
-                int columnsCount = 0;
-                while (rs.next()) {
-                    String columnName = rs.getString("COLUMN_NAME");
-
-                    if (!params.columns.containsKey(columnName))
-                        continue;
-
-                    columnsCount++;
-
-                    int precision = rs.getInt("COLUMN_SIZE");
-                    int scale = rs.getInt("DECIMAL_DIGITS");
-                    assertEquals(columnName, params.precision(columnName), precision);
-                    assertEquals(columnName, params.scale(columnName), scale);
-                }
-
-                assertEquals(params.columns.size(), columnsCount);
+                // Validate system view attributes.
+                rs = stmt.executeQuery(String.format("SELECT COLUMN_NAME, PRECISION as COLUMN_SIZE, " +
+                    "SCALE as DECIMAL_DIGITS FROM " + sysSchemaName() + ".TABLE_COLUMNS WHERE TABLE_NAME='%s'", tblName));
+                validateColumnsResultSet(rs, params, -1);
             } finally {
                 conn.createStatement().executeUpdate("DROP TABLE IF EXISTS " + tblName);
             }
         }
+    }
+
+    private void validateColumnsResultSet(ResultSet rs, PrecicsionAndScaleTestPatameters params,
+        int undefinedScale) throws SQLException {
+        int columnsCount = 0;
+
+        while (rs.next()) {
+            String columnName = rs.getString("COLUMN_NAME");
+
+            if (!params.columns.containsKey(columnName))
+                continue;
+
+            columnsCount++;
+
+            int precision = rs.getInt("COLUMN_SIZE");
+            int scale = rs.getInt("DECIMAL_DIGITS");
+            assertEquals(columnName, params.precision(columnName), precision);
+            assertEquals(columnName, params.scale(columnName, undefinedScale), scale);
+        }
+
+        assertEquals(params.columns.size(), columnsCount);
     }
 
     /**
@@ -1709,11 +1722,11 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
             return data.precision;
         }
 
-        int scale(String column) {
+        int scale(String column, int undefinedValue) {
             TestColumnData data = columns.get(column);
 
             if (data.scale == null) {
-                return defaultScale(data.type);
+                return defaultScale(data.type, undefinedValue);
             }
 
             return data.scale;
@@ -1772,7 +1785,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
             }
         }
 
-        private int defaultScale(String type) {
+        private int defaultScale(String type, int defaultVal) {
             switch (type) {
                 case SqlKeyword.DECIMAL:
                     return H2Utils.DECIMAL_DEFAULT_SCALE;
@@ -1782,7 +1795,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                     return H2Utils.TIMESTAMP_DEFAULT_SCALE;
 
                 default:
-                    return 0;
+                    return defaultVal;
             }
         }
 
