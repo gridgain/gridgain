@@ -49,6 +49,7 @@ import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.jdbc2.JdbcUtils;
 import org.apache.ignite.internal.processors.query.QueryEntityEx;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
+import org.apache.ignite.internal.sql.SqlKeyword;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -617,13 +618,13 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.ID.null.10",
                 "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.DEC_COL.null.8",
                 "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.DATE_COL.null.10",
-                "dep.DEPARTMENT.ID.null",
+                "dep.DEPARTMENT.ID.null.10",
                 "dep.DEPARTMENT.NAME.null.43",
-                "org.ORGANIZATION.ID.null",
+                "org.ORGANIZATION.ID.null.10",
                 "org.ORGANIZATION.NAME.null.42",
-                "pers.PERSON.NAME.null",
-                "pers.PERSON.AGE.null",
-                "pers.PERSON.ORGID.null"
+                "pers.PERSON.NAME.null.2147483647",
+                "pers.PERSON.AGE.null.10",
+                "pers.PERSON.ORGID.null.10"
             ));
 
             Set<String> actualUserCols = new HashSet<>(expectedCols.size());
@@ -1418,25 +1419,27 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
         PrecicsionAndScaleTestPatameters params = PrecicsionAndScaleTestPatameters
             .builder()
             .table(tblName)
-            .addColumn("INTEGER")
-            .addColumn("BOOLEAN")
-            .addColumn("TINYINT")
-            .addColumn("SMALLINT")
-            .addColumn("BIGINT")
-            .addColumn("DECIMAL")
-            .addColumn("DECIMAL", 10, 2)
-            .addColumn("REAL")
-            .addColumn("FLOAT")
-            .addColumn("DOUBLE")
-            .addColumn("TIME")
-            .addColumn("TIMESTAMP")
-            .addColumn("CHAR")
-            .addColumn("CHAR", 22)
-            .addColumn("VARCHAR")
-            .addColumn("VARCHAR", 21)
-            .addColumn("BINARY")
-            .addColumn("VARBINARY")
-            .addColumn("UUID")
+            .addColumn(SqlKeyword.INTEGER)
+            .addColumn(SqlKeyword.BOOLEAN)
+            .addColumn(SqlKeyword.TINYINT)
+            .addColumn(SqlKeyword.SMALLINT)
+            .addColumn(SqlKeyword.BIGINT)
+            .addColumn(SqlKeyword.DECIMAL)
+            .addColumn(SqlKeyword.DECIMAL, 10, 2)
+            .addColumn(SqlKeyword.REAL)
+            .addColumn(SqlKeyword.FLOAT)
+            .addColumn(SqlKeyword.DOUBLE)
+            .addColumn(SqlKeyword.TIME)
+            .addColumn(SqlKeyword.DATE)
+            .addColumn(SqlKeyword.DATETIME)
+            .addColumn(SqlKeyword.TIMESTAMP)
+            .addColumn(SqlKeyword.CHAR)
+            .addColumn(SqlKeyword.CHAR, 22)
+            .addColumn(SqlKeyword.VARCHAR)
+            .addColumn(SqlKeyword.VARCHAR, 21)
+            .addColumn(SqlKeyword.BINARY)
+            .addColumn(SqlKeyword.VARBINARY)
+            .addColumn(SqlKeyword.UUID)
             .build();
 
         try (Connection conn = DriverManager.getConnection(URL)) {
@@ -1716,41 +1719,54 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
             return data.scale;
         }
 
-        Set<String> columnNames(String name) {
-            return columns.keySet();
-        }
-
         private int defaultPrecision(String type) {
             switch (type) {
-                case "BOOLEAN":
+                case SqlKeyword.BOOLEAN:
                     return H2Utils.BOOLEAN_DEFAULT_PRECISION;
-                case "TINYINT":
+
+                case SqlKeyword.TINYINT:
                     return H2Utils.BYTE_DEFAULT_PRECISION;
-                case "SMALLINT":
+
+                case SqlKeyword.SMALLINT:
                     return H2Utils.SHORT_DEFAULT_PRECISION;
-                case "INTEGER":
+
+                case SqlKeyword.INTEGER:
                     return H2Utils.INTEGER_DEFAULT_PRECISION;
-                case "BIGINT":
+
+                case SqlKeyword.BIGINT:
                     return H2Utils.LONG_DEFAULT_PRECISION;
-                case "DECIMAL":
+
+                case SqlKeyword.DECIMAL:
                     return H2Utils.DECIMAL_DEFAULT_PRECISION;
-                case "REAL":
+
+                case SqlKeyword.REAL:
                     return H2Utils.REAL_DEFAULT_PRECISION;
-                case "FLOAT":
-                case "DOUBLE":
+
+                case SqlKeyword.FLOAT:
+                case SqlKeyword.DOUBLE:
                     return H2Utils.DOUBLE_DEFAULT_PRECISION;
-                case "TIME":
+
+                case SqlKeyword.TIME:
                     return H2Utils.TIME_DEFAULT_PRECISION;
-                case "TIMESTAMP":
+
+                case SqlKeyword.DATE:
+                    return H2Utils.DATE_DEFAULT_PRECISION;
+
+                case SqlKeyword.DATETIME:
+                case SqlKeyword.TIMESTAMP:
                     return H2Utils.TIMESTAMP_DEFAULT_PRECISION;
-                case "BINARY":
-                case "VARBINARY":
+
+                case SqlKeyword.BINARY:
+                case SqlKeyword.VARBINARY:
                     return H2Utils.BINARY_DEFAULT_PRECISION;
-                case "CHAR":
-                case "VARCHAR":
+
+                case SqlKeyword.CHAR:
+                case SqlKeyword.VARCHAR:
                     return H2Utils.STRING_DEFAULT_PRECISION;
-                case "UUID":
+
+                case SqlKeyword.UUID:
                     return H2Utils.UUID_DEFAULT_PRECISION;
+
                 default:
                     throw new IllegalArgumentException("Unknown type " + type);
             }
@@ -1758,10 +1774,13 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
 
         private int defaultScale(String type) {
             switch (type) {
-                case "DECIMAL":
+                case SqlKeyword.DECIMAL:
                     return H2Utils.DECIMAL_DEFAULT_SCALE;
-                case "TIMESTAMP":
+
+                case SqlKeyword.DATETIME:
+                case SqlKeyword.TIMESTAMP:
                     return H2Utils.TIMESTAMP_DEFAULT_SCALE;
+
                 default:
                     return 0;
             }

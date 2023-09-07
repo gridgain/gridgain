@@ -195,6 +195,11 @@ public class H2Utils {
     public static final int TIME_DEFAULT_PRECISION = ValueTime.DEFAULT_PRECISION;;
 
     /**
+     * The default precision for a date value (see {@link ValueDate}).
+     */
+    public static final int DATE_DEFAULT_PRECISION = ValueDate.PRECISION;;
+
+    /**
      * The default precision for a timestamp value (see {@link ValueTimestamp}).
      */
     public static final int TIMESTAMP_DEFAULT_PRECISION = ValueTimestamp.DEFAULT_PRECISION;
@@ -1339,6 +1344,7 @@ public class H2Utils {
         dfltPrecisions.put(Float.class, REAL_DEFAULT_PRECISION);
 
         dfltPrecisions.put(Time.class, TIME_DEFAULT_PRECISION);
+        dfltPrecisions.put(Date.class, DATE_DEFAULT_PRECISION);
         dfltPrecisions.put(Timestamp.class, TIMESTAMP_DEFAULT_PRECISION);
 
         dfltPrecisions.put(String.class, STRING_DEFAULT_PRECISION);
