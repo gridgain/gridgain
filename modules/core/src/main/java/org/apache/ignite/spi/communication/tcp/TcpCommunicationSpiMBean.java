@@ -289,7 +289,7 @@ public interface TcpCommunicationSpiMBean extends IgniteSpiManagementMBean {
      *
      * @return Accrued size of received messages after which acknowledgment is sent.
      */
-    @MXBeanDescription("Accrued size of received messages after which acknowledgment is sent.")
+    @MXBeanDescription("Accrued size of received messages after which an acknowledgment is sent.")
     public long getAckSendThresholdBytes();
 
     /**

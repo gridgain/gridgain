@@ -86,7 +86,7 @@ public class GridNioRecoveryDescriptor {
     /** Maximum size of unacknowledged messages queue. */
     private final int queueLimit;
 
-    /** Number of accrued bytes of received messages to trigger ack. */
+    /** Number of accrued bytes of received messages to trigger an ack. */
     private final long ackThresholdBytes;
 
     /** Number of descriptor reservations (for info purposes). */
