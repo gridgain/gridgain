@@ -177,41 +177,6 @@ public class QueryUtils {
         return sqlClasses;
     }
 
-    @NotNull private static Map<Class<?>, Integer> createSqlTypes2() {
-        Map<Class<?>, Integer> sqlClasses = new HashMap<>();
-
-        sqlClasses.put(Integer.class, 19);
-        sqlClasses.put(Boolean.class, 1);
-        sqlClasses.put(Byte.class, 3);
-        sqlClasses.put(Short.class, 5);
-        sqlClasses.put(Long.class, 5);
-        sqlClasses.put(BigDecimal.class, 32768);
-        sqlClasses.put(Double.class, 17);
-        sqlClasses.put(Float.class, 9);
-        sqlClasses.put(Time.class, 9);
-
-//            Boolean.class,
-//            Byte.class,
-//            Short.class,
-//            Long.class,
-//            BigDecimal.class,
-//            Double.class,
-//            Float.class,
-//            Time.class,
-//            Timestamp.class,
-//            Date.class,
-//            java.sql.Date.class,
-//            LocalTime.class,
-//            LocalDate.class,
-//            LocalDateTime.class,
-//            String.class,
-//            UUID.class,
-//            byte[].class
-//        ));
-
-        return sqlClasses;
-    }
-
     /**
      * Get table name for entity.
      *
@@ -342,7 +307,7 @@ public class QueryUtils {
 
             return entity;
         }
-    
+
         QueryEntityEx normalEntity = new QueryEntityEx();
 
         // Propagate plain properties.
@@ -406,7 +371,7 @@ public class QueryUtils {
         }
 
         normalEntity.setIndexes(normalIdxs);
-        
+
         if (!ctx.recoveryMode() && IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
                 IgniteDiscoverySpi.ALL_NODES), IgniteFeatures.FILLS_ABSENT_PKS_WITH_DEFAULTS)
         )
@@ -513,12 +478,12 @@ public class QueryUtils {
         desc.schemaName(schemaName);
 
         desc.aliases(qryEntity.getAliases());
-        
+
         if (qryEntity instanceof QueryEntityEx) {
             desc.setFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).fillAbsentPKsWithDefaults());
             desc.implicitPk(((QueryEntityEx)qryEntity).isImplicitPk());
         }
-        
+
         // Key and value classes still can be available if they are primitive or JDK part.
         // We need that to set correct types for _key and _val columns.
         // We better box these types - otherwise, if user provides, say, raw 'byte' for
@@ -702,20 +667,10 @@ public class QueryUtils {
 
             Object dfltVal = dlftVals != null ? dlftVals.get(fieldName) : null;
 
-            int precision0 = precision == null ? -1 : precision.getOrDefault(fieldName, -1);
-
-            Class<?> objType = U.classForName(fieldType, Object.class, true);
-
-            if (precision0 == -1) {
-                Integer precisionX = createSqlTypes2().get(objType);
-
-                precision0 = precisionX == null ? -1 : precisionX;
-            }
-
             QueryBinaryProperty prop = buildBinaryProperty(ctx, fieldName,
-                objType,
+                U.classForName(fieldType, Object.class, true),
                 d.aliases(), isKeyField, notNull, dfltVal,
-                precision0,
+                precision == null ? -1 : precision.getOrDefault(fieldName, -1),
                 scale == null ? -1 : scale.getOrDefault(fieldName, -1));
 
             d.addProperty(prop, false);

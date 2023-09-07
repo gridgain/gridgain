@@ -52,12 +52,6 @@ import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.gridgain.internal.h2.value.ValueBoolean;
-import org.gridgain.internal.h2.value.ValueDouble;
-import org.gridgain.internal.h2.value.ValueInt;
-import org.gridgain.internal.h2.value.ValueLong;
-import org.gridgain.internal.h2.value.ValueTime;
-import org.gridgain.internal.h2.value.ValueTimestamp;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -1436,8 +1430,12 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
             .addColumn("DOUBLE")
             .addColumn("TIME")
             .addColumn("TIMESTAMP")
+            .addColumn("CHAR")
+            .addColumn("CHAR", 22)
             .addColumn("VARCHAR")
             .addColumn("VARCHAR", 21)
+            .addColumn("BINARY")
+            .addColumn("VARBINARY")
             .addColumn("UUID")
             .build();
 
@@ -1725,26 +1723,30 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
         private int defaultPrecision(String type) {
             switch (type) {
                 case "BOOLEAN":
-                    return ValueBoolean.PRECISION;
+                    return H2Utils.BOOLEAN_DEFAULT_PRECISION;
                 case "TINYINT":
                     return H2Utils.BYTE_DEFAULT_PRECISION;
                 case "SMALLINT":
                     return H2Utils.SHORT_DEFAULT_PRECISION;
                 case "INTEGER":
-                    return ValueInt.PRECISION;
+                    return H2Utils.INTEGER_DEFAULT_PRECISION;
                 case "BIGINT":
-                    return ValueLong.PRECISION;
+                    return H2Utils.LONG_DEFAULT_PRECISION;
                 case "DECIMAL":
                     return H2Utils.DECIMAL_DEFAULT_PRECISION;
                 case "REAL":
                     return H2Utils.REAL_DEFAULT_PRECISION;
                 case "FLOAT":
                 case "DOUBLE":
-                    return ValueDouble.PRECISION;
+                    return H2Utils.DOUBLE_DEFAULT_PRECISION;
                 case "TIME":
-                    return ValueTime.DEFAULT_PRECISION;
+                    return H2Utils.TIME_DEFAULT_PRECISION;
                 case "TIMESTAMP":
-                    return ValueTimestamp.DEFAULT_PRECISION;
+                    return H2Utils.TIMESTAMP_DEFAULT_PRECISION;
+                case "BINARY":
+                case "VARBINARY":
+                    return H2Utils.BINARY_DEFAULT_PRECISION;
+                case "CHAR":
                 case "VARCHAR":
                     return H2Utils.STRING_DEFAULT_PRECISION;
                 case "UUID":

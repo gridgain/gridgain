@@ -889,10 +889,14 @@ public class CommandProcessor {
                             }
                         }
 
-                        QueryField field = new QueryField(col.columnName(),
+                        QueryField field = new QueryField(
+                            col.columnName(),
                             getTypeClassName(col),
-                            col.column().isNullable(), col.defaultValue(),
-                            col.precision(), col.scale());
+                            col.column().isNullable(),
+                            col.defaultValue(),
+                            convertH2ColumnPrecision(col.column().getType()),
+                            convertH2ColumnScale(col.column().getType())
+                        );
 
                         cols.add(field);
 
@@ -1112,8 +1116,15 @@ public class CommandProcessor {
             if (dfltVal != null)
                 dfltValues.put(e.getKey(), dfltVal);
 
-            scale.put(e.getKey(), col.getType().getScale());
-            precision.put(e.getKey(), (int)col.getType().getPrecision());
+            int precisionVal = convertH2ColumnPrecision(col.getType());
+            if (precisionVal != QueryField.UNDEFINED_PRECISION) {
+                precision.put(e.getKey(), precisionVal);
+            }
+
+            int scaleVal = convertH2ColumnScale(col.getType());
+            if (scaleVal != QueryField.UNDEFINED_SCALE) {
+                scale.put(e.getKey(), scaleVal);
+            }
         }
 
         if (!F.isEmpty(dfltValues))
@@ -1193,29 +1204,27 @@ public class CommandProcessor {
         return res;
     }
 
-    // TODO remove
     private static int convertH2ColumnPrecision(TypeInfo type) {
         if (type.getValueType() == Value.DECIMAL) {
-            return type.getPrecision() < H2Utils.DECIMAL_DEFAULT_PRECISION ?
-                (int)type.getPrecision() : QueryField.UNDEFINED_PRECISION;
+            if (type.getPrecision() < H2Utils.DECIMAL_DEFAULT_PRECISION)
+                return (int)type.getPrecision();
         }
         else if (type.getValueType() == Value.STRING ||
             type.getValueType() == Value.STRING_FIXED ||
             type.getValueType() == Value.STRING_IGNORECASE) {
-            return type.getPrecision() < H2Utils.STRING_DEFAULT_PRECISION ?
-                (int)type.getPrecision() : QueryField.UNDEFINED_PRECISION;
+            if (type.getPrecision() < H2Utils.STRING_DEFAULT_PRECISION)
+                return (int)type.getPrecision();
         }
 
-        return (int)type.getPrecision();
+        return QueryField.UNDEFINED_PRECISION;
     }
 
-    // TODO remove
     private static int convertH2ColumnScale(TypeInfo type) {
-        if (type.getValueType() == Value.DECIMAL) {
-            return type.getScale() < H2Utils.DECIMAL_DEFAULT_SCALE ? type.getScale() : QueryField.UNDEFINED_SCALE;
-        }
+        if (type.getValueType() == Value.DECIMAL &&
+            type.getScale() < H2Utils.DECIMAL_DEFAULT_SCALE)
+            return type.getScale();
 
-        return type.getScale();
+        return QueryField.UNDEFINED_SCALE;
     }
 
     /**
