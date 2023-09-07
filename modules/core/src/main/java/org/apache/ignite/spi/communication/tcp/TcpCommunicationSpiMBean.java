@@ -297,7 +297,8 @@ public interface TcpCommunicationSpiMBean extends IgniteSpiManagementMBean {
      *
      * @return Number of milliseconds after which acknowledgment is sent.
      */
-    @MXBeanDescription("Number of milliseconds after which acknowledgment is sent (if there are unacked messages).")
+    @MXBeanDescription("Number of milliseconds after which an acknowledgment is sent (if there are unacknowledged " +
+        "messages).")
     public long getAckSendThresholdMillis();
 
     /**
