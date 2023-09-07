@@ -331,10 +331,13 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                     synchronized (recovery.receiveAndAckMonitor()) {
                         long rcvCnt = recovery.onReceived(ses.bytesReceived());
 
-                        if (rcvCnt % cfg.ackSendThreshold() == 0 || recovery.ackThresholdInBytesTriggered()) {
+                        boolean ackByCountThresholdTriggered = rcvCnt % cfg.ackSendThreshold() == 0;
+                        if (ackByCountThresholdTriggered || recovery.ackThresholdInBytesExceeded()) {
                             if (log.isDebugEnabled()) {
-                                log.debug("Send recovery acknowledgement [rmtNode=" + connKey.nodeId() +
-                                    ", connIdx=" + connKey.connectionIndex() +
+                                String reason = ackByCountThresholdTriggered ? "count" : "accrued size";
+
+                                log.debug("Send recovery acknowledgement by " + reason + " threshold [rmtNode=" +
+                                    connKey.nodeId() + ", connIdx=" + connKey.connectionIndex() +
                                     ", rcvCnt=" + rcvCnt + ']');
                             }
 

@@ -474,7 +474,7 @@ public class GridNioRecoveryDescriptor {
     /**
      * @return {@code true} if enough received messages were accrued since last acknowledge to trigger an ack.
      */
-    public boolean ackThresholdInBytesTriggered() {
+    public boolean ackThresholdInBytesExceeded() {
         return rcvBytes - lastAckRcvBytes >= ackThresholdBytes;
     }
 
