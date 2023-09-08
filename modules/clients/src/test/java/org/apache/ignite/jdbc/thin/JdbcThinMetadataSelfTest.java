@@ -1476,7 +1476,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
             int precision = rs.getInt("COLUMN_SIZE");
             int scale = rs.getInt("DECIMAL_DIGITS");
             assertEquals(columnName, params.precision(columnName), precision);
-            assertEquals(columnName, params.scale(columnName, 0), scale);
+            assertEquals(columnName, params.scale(columnName), scale);
         }
 
         assertEquals(params.columns.size(), columnsCount);
@@ -1722,11 +1722,11 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
             return data.precision;
         }
 
-        int scale(String column, int undefinedValue) {
+        int scale(String column) {
             TestColumnData data = columns.get(column);
 
             if (data.scale == null) {
-                return defaultScale(data.type, undefinedValue);
+                return defaultScale(data.type);
             }
 
             return data.scale;
@@ -1785,7 +1785,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
             }
         }
 
-        private int defaultScale(String type, int defaultVal) {
+        private int defaultScale(String type) {
             switch (type) {
                 case SqlKeyword.DECIMAL:
                     return H2Utils.DECIMAL_DEFAULT_SCALE;
@@ -1795,7 +1795,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                     return H2Utils.TIMESTAMP_DEFAULT_SCALE;
 
                 default:
-                    return defaultVal;
+                    return 0;
             }
         }
 
