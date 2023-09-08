@@ -861,7 +861,7 @@ public class H2Utils {
             return scale;
         }
 
-        return defaultScalesByType.getOrDefault(prop.type(), scale);
+        return defaultScalesByType.getOrDefault(prop.type(), 0);
     }
 
     /**

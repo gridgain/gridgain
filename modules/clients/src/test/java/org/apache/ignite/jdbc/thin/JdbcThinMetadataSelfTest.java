@@ -1450,20 +1450,19 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
 
                 // Validate metadata.
                 ResultSet rs = conn.getMetaData().getColumns(null, null, tblName, null);
-                validateColumnsResultSet(rs, params, 0);
+                validateColumnsResultSet(rs, params);
 
                 // Validate system view attributes.
                 rs = stmt.executeQuery(String.format("SELECT COLUMN_NAME, PRECISION as COLUMN_SIZE, " +
                     "SCALE as DECIMAL_DIGITS FROM " + sysSchemaName() + ".TABLE_COLUMNS WHERE TABLE_NAME='%s'", tblName));
-                validateColumnsResultSet(rs, params, -1);
+                validateColumnsResultSet(rs, params);
             } finally {
                 conn.createStatement().executeUpdate("DROP TABLE IF EXISTS " + tblName);
             }
         }
     }
 
-    private void validateColumnsResultSet(ResultSet rs, PrecicsionAndScaleTestPatameters params,
-        int undefinedScale) throws SQLException {
+    private void validateColumnsResultSet(ResultSet rs, PrecicsionAndScaleTestPatameters params) throws SQLException {
         int columnsCount = 0;
 
         while (rs.next()) {
@@ -1477,7 +1476,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
             int precision = rs.getInt("COLUMN_SIZE");
             int scale = rs.getInt("DECIMAL_DIGITS");
             assertEquals(columnName, params.precision(columnName), precision);
-            assertEquals(columnName, params.scale(columnName, undefinedScale), scale);
+            assertEquals(columnName, params.scale(columnName, 0), scale);
         }
 
         assertEquals(params.columns.size(), columnsCount);
