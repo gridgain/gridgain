@@ -192,12 +192,12 @@ public class H2Utils {
     /**
      * The default precision for a time value (see {@link ValueTime}).
      */
-    public static final int TIME_DEFAULT_PRECISION = ValueTime.DEFAULT_PRECISION;;
+    public static final int TIME_DEFAULT_PRECISION = ValueTime.DEFAULT_PRECISION;
 
     /**
      * The default precision for a date value (see {@link ValueDate}).
      */
-    public static final int DATE_DEFAULT_PRECISION = ValueDate.PRECISION;;
+    public static final int DATE_DEFAULT_PRECISION = ValueDate.PRECISION;
 
     /**
      * The default precision for a timestamp value (see {@link ValueTimestamp}).
@@ -208,7 +208,6 @@ public class H2Utils {
      * The default scale for a timestamp value (see {@link ValueTimestamp}).
      */
     public static final int TIMESTAMP_DEFAULT_SCALE = 6;
-
 
     /** Dummy metadata for update result. */
     public static final List<GridQueryFieldMetadata> UPDATE_RESULT_META =

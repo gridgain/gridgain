@@ -1677,6 +1677,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
 
     private static class PrecicsionAndScaleTestPatameters {
         private final Map<String, TestColumnData> columns;
+
         private final String tableName;
 
         PrecicsionAndScaleTestPatameters(Map<String, TestColumnData> columns, String tableName) {
@@ -1805,7 +1806,9 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
 
         static class TestColumnData {
             final String type;
+
             final Integer precision;
+
             final Integer scale;
 
             public TestColumnData(String type, Integer precision, Integer scale) {
