@@ -244,6 +244,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_STARVATION_CHECK_I
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SUCCESS_FILE;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.snapshot;
+import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_DATA_REG_DEFAULT_NAME;
 import static org.apache.ignite.internal.GridKernalState.DISCONNECTED;
 import static org.apache.ignite.internal.GridKernalState.STARTED;
 import static org.apache.ignite.internal.GridKernalState.STARTING;
@@ -256,6 +257,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CLIENT_MODE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CONSISTENCY_CHECK_SKIPPED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DAEMON;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DATA_REGIONS_TOTAL_ALLOCATED_SIZE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DATA_STORAGE_CONFIG;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DATA_STREAMER_POOL_SIZE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DEPLOYMENT_MODE;
@@ -340,6 +342,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** Default long operations dump timeout. */
     public static final long DFLT_LONG_OPERATIONS_DUMP_TIMEOUT = 60_000L;
 
+    /** PDS allocation size collection frequency. */
+    private static final long PERIODIC_COLLECTION_PDS_ALLOCATION_SIZE_FREQ = 60_000L;
+
+    /** PDS allocation size collection delay. */
+    private static final long COLLECTION_PDS_ALLOCATION_SIZE_DELAY = 60_000L;
+
     /** @see IgniteSystemProperties#IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED */
     public static final boolean DFLT_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED = false;
 
@@ -380,6 +388,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** */
     @GridToStringExclude
     private GridTimeoutProcessor.CancelableTask metricsLogTask;
+
+    /** */
+    @GridToStringExclude
+    private GridTimeoutProcessor.CancelableTask collectAllocationPDSTask;
 
     /** Indicate error on grid stop. */
     @GridToStringExclude
@@ -1458,6 +1470,19 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             }, metricsLogFreq, metricsLogFreq);
         }
 
+        collectAllocationPDSTask = ctx.timeout().schedule(new Runnable() {
+            @Override public void run() {
+                long allocatedPDSSize = allocatedPDSSize();
+
+                TcpDiscoveryNode node = (TcpDiscoveryNode) localNode();
+                Map<String, Object> attrs = new HashMap<>(node.getAttributes());
+
+                attrs.put(ATTR_DATA_REGIONS_TOTAL_ALLOCATED_SIZE, allocatedPDSSize);
+
+                node.setAttributes(attrs);
+            }
+        }, COLLECTION_PDS_ALLOCATION_SIZE_DELAY, PERIODIC_COLLECTION_PDS_ALLOCATION_SIZE_FREQ);
+
         ctx.performance().add("Disable assertions (remove '-ea' from JVM options)", !U.assertionsEnabled());
 
         ctx.performance().logSuggestions(log, igniteInstanceName);
@@ -2271,6 +2296,25 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         }
     }
 
+    private long allocatedPDSSize() {
+        DataStorageConfiguration dsCfg = ctx.config().getDataStorageConfiguration();
+
+        if (dsCfg == null)
+            return 0;
+
+        long res = ctx.grid().dataRegionMetrics(DFLT_DATA_REG_DEFAULT_NAME).getTotalAllocatedSize();
+
+        DataRegionConfiguration[] dataRegions = dsCfg.getDataRegionConfigurations();
+
+        if (dataRegions != null) {
+            for (DataRegionConfiguration dataReg : dataRegions) {
+                res += ctx.grid().dataRegionMetrics(dataReg.getName()).getTotalAllocatedSize();
+            }
+        }
+
+        return res;
+    }
+
     /** */
     public static String dataStorageReport(IgniteCacheDatabaseSharedManager db, boolean includeMemoryStatistics) {
         return dataStorageReport(db, doubleFormat(), includeMemoryStatistics);
@@ -2506,6 +2550,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             if (metricsLogTask != null)
                 metricsLogTask.close();
+
+            if (collectAllocationPDSTask != null)
+                collectAllocationPDSTask.close();
 
             if (longJVMPauseDetector != null)
                 longJVMPauseDetector.stop();
