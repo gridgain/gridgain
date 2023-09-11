@@ -45,7 +45,7 @@ public class BulkLoadCsvParser extends BulkLoadParser {
      */
     public BulkLoadCsvParser(BulkLoadCsvFormat format) {
         try {
-            Charset charset = format.inputCharsetName() == null ? BulkLoadFormat.DEFAULT_INPUT_CHARSET :
+            Charset charset = format.inputCharsetName() == null ? BulkLoadFormat.DFLT_INPUT_CHARSET :
                 Charset.forName(format.inputCharsetName());
 
             inputBlock = new CharsetDecoderBlock(charset);

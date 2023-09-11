@@ -17,18 +17,13 @@
 package org.apache.ignite.internal.processors.bulkload;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
- * A superclass and a factory for bulk load format options.
+ * A marker interface for bulk load format options.
  */
-public abstract class BulkLoadFormat {
+public interface BulkLoadFormat {
     /** The default input charset. */
-    public static final Charset DEFAULT_INPUT_CHARSET = Charset.forName("UTF-8");
+    Charset DFLT_INPUT_CHARSET = StandardCharsets.UTF_8;
 
-    /**
-     * Returns the format name.
-     *
-     * @return The format name.
-     */
-    public abstract String name();
 }

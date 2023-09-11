@@ -14,8 +14,32 @@
  * limitations under the License.
  */
 
+package org.apache.ignite.internal.processors.bulkload;
+
 /**
- * <!-- Package description. -->
- * Contains <b>default</b> Log4j implementation for logging.
+ * Quoted file path with syntax '../../any.file'.
  */
-package org.apache.ignite.logger.log4j;
+public class BulkLoadLocationFile implements BulkLoadLocation {
+
+    /** Local file pathname to send from client to server. */
+    private String path;
+
+    /**
+     * Returns the file pathname.
+     *
+     * @return The file pathname.
+     */
+    public String path() {
+        return path;
+    }
+
+    /**
+     * Sets the file pathname.
+     *
+     * @param path The file pathname.
+     */
+    public BulkLoadLocationFile path(String path) {
+        this.path = path;
+        return this;
+    }
+}

@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -34,7 +32,6 @@ import java.util.function.BiConsumer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.systemview.walker.SqlIndexViewWalker;
 import org.apache.ignite.internal.managers.systemview.walker.SqlSchemaViewWalker;
@@ -314,7 +311,7 @@ public class SchemaManager {
 
         cacheName2schema.put(cacheName, schemaName);
 
-        createSqlFunctions(schemaName, sqlFuncs);
+        H2Utils.registerSqlFunctions(log, connMgr,schemaName, sqlFuncs);
     }
 
     /**
@@ -457,40 +454,6 @@ public class SchemaManager {
         }
 
         return false;
-    }
-
-    /**
-     * Registers SQL functions.
-     *
-     * @param schema Schema.
-     * @param clss Classes.
-     * @throws IgniteCheckedException If failed.
-     */
-    private void createSqlFunctions(String schema, Class<?>[] clss) throws IgniteCheckedException {
-        if (F.isEmpty(clss))
-            return;
-
-        for (Class<?> cls : clss) {
-            for (Method m : cls.getDeclaredMethods()) {
-                QuerySqlFunction ann = m.getAnnotation(QuerySqlFunction.class);
-
-                if (ann != null) {
-                    int modifiers = m.getModifiers();
-
-                    if (!Modifier.isStatic(modifiers) || !Modifier.isPublic(modifiers))
-                        throw new IgniteCheckedException("Method " + m.getName() + " must be public static.");
-
-                    String alias = ann.alias().isEmpty() ? m.getName() : ann.alias();
-
-                    String clause = "CREATE ALIAS IF NOT EXISTS " + alias + (ann.deterministic() ?
-                        " DETERMINISTIC FOR \"" :
-                        " FOR \"") +
-                        cls.getName() + '.' + m.getName() + '"';
-
-                    connMgr.executeStatement(schema, clause);
-                }
-            }
-        }
     }
 
     /**

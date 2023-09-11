@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,18 @@
  * limitations under the License.
  */
 
+package org.apache.ignite.internal.processors.query.h2.extension;
+
+import org.apache.ignite.plugin.Extension;
+
 /**
- * <!-- Package description. -->
- * Contains internal tests or test related classes and interfaces.
+ * Provides custom sql functions.
  */
-package org.apache.ignite.logger.log4j;
+public interface SqlPluginExtension extends Extension {
+
+    /**
+     * Get sql functions with methods annotated with {@link org.apache.ignite.cache.query.annotations.QuerySqlFunction}
+     * @return array of classes that contains functions.
+     */
+    Class<?>[] getSqlFunctions();
+}

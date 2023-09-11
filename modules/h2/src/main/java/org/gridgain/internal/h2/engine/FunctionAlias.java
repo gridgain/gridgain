@@ -15,6 +15,7 @@ import java.util.Arrays;
 
 import org.gridgain.internal.h2.command.Parser;
 import org.gridgain.internal.h2.expression.Expression;
+import org.gridgain.internal.h2.expression.Subquery;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.message.Trace;
 import org.gridgain.internal.h2.schema.Schema;
@@ -382,16 +383,30 @@ public class FunctionAlias extends SchemaObjectBase {
                 params[p++] = session.createConnection(columnList);
             }
 
+            // get values from expressions
+            Value[] argsValues;
+            if (args.length == 1 && args[0] instanceof Subquery) {
+                Subquery q = (Subquery) args[0];
+                argsValues = q.getAllRows(session).toArray(new Value[0]);
+            } else {
+                argsValues = new Value[args.length];
+                for (int i = 0; i < args.length; i++) {
+                    Expression e = args[i];
+                    Value v = e.getValue(session);
+                    argsValues[i] = v;
+                }
+            }
+
             // allocate array for varArgs parameters
             Object varArg = null;
             if (varArgs) {
-                int len = args.length - params.length + 1 +
+                int len = argsValues.length - params.length + 1 +
                         (hasConnectionParam ? 1 : 0);
                 varArg = Array.newInstance(varArgClass, len);
                 params[params.length - 1] = varArg;
             }
 
-            for (int a = 0, len = args.length; a < len; a++, p++) {
+            for (int a = 0, len = argsValues.length; a < len; a++, p++) {
                 boolean currentIsVarArg = varArgs &&
                         p >= paramClasses.length - 1;
                 Class<?> paramClass;
@@ -401,7 +416,7 @@ public class FunctionAlias extends SchemaObjectBase {
                     paramClass = paramClasses[p];
                 }
                 int type = DataType.getTypeFromClass(paramClass);
-                Value v = args[a].getValue(session);
+                Value v = argsValues[a];
                 Object o;
                 if (Value.class.isAssignableFrom(paramClass)) {
                     o = v;

@@ -14,18 +14,11 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.logger.log4j;
-
-import org.apache.ignite.lang.IgniteClosure;
+package org.apache.ignite.internal.processors.bulkload;
 
 /**
- * Interface for those loggers and appenders that evaluate their file paths lazily.
+ * Represents location in {@code COPY FROM <location> INTO <location>}.
  */
-interface Log4jFileAware {
-    /**
-     * Sets closure that later evaluate file path.
-     *
-     * @param filePathClos Closure that generates actual file path.
-     */
-    void updateFilePath(IgniteClosure<String, String> filePathClos);
+public interface BulkLoadLocation {
+    // No-op.
 }

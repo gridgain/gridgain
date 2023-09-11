@@ -37,8 +37,8 @@ import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MemorizingAppender;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.log4j.Level;
-import org.apache.log4j.spi.LoggingEvent;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.LogEvent;
 import org.junit.Test;
 
 import static java.util.Collections.singletonList;
@@ -113,7 +113,9 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
 
         sendFailingMessage(server, clientNode);
 
-        LoggingEvent event = log4jAppender.singleEventSatisfying(evt -> evt.getRenderedMessage().startsWith("Failed to send message to remote node "));
+        LogEvent event = log4jAppender.singleEventSatisfying(
+                evt -> evt.getMessage().getFormattedMessage().startsWith("Failed to send message to remote node ")
+        );
 
         assertThat(event.getLevel(), is(Level.WARN));
     }

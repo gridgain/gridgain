@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Connection;
@@ -38,12 +40,15 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
@@ -73,6 +78,7 @@ import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.gridgain.internal.h2.api.AggregateFunction;
 import org.gridgain.internal.h2.engine.Constants;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.expression.aggregate.AggregateData;
@@ -1214,5 +1220,64 @@ public class H2Utils {
         GridQueryIndexing indexing = ctx.query().getIndexing();
 
         return indexing instanceof IgniteH2Indexing ? ((IgniteH2Indexing)indexing).dataHandler() : null;
+    }
+
+    /**
+     * Register custom SQL functions.
+     *
+     * @param schema Schema.
+     * @param clss   Classes.
+     * @throws IgniteCheckedException If failed.
+     */
+    public static void registerSqlFunctions(IgniteLogger log, ConnectionManager connMgr, String schema, Class<?>[] clss)
+            throws IgniteCheckedException {
+        if (F.isEmpty(clss))
+            return;
+
+        for (Class<?> cls : clss) {
+            for (Method m : cls.getDeclaredMethods()) {
+                QuerySqlFunction ann = m.getAnnotation(QuerySqlFunction.class);
+
+                if (ann != null) {
+                    int modifiers = m.getModifiers();
+
+                    if (!Modifier.isStatic(modifiers) || !Modifier.isPublic(modifiers))
+                        throw new IgniteCheckedException("Method " + m.getName() + " must be public static.");
+
+                    String alias = ann.alias().isEmpty() ? m.getName() : ann.alias();
+
+                    String clause = "CREATE ALIAS IF NOT EXISTS " + alias + (ann.deterministic() ?
+                            " DETERMINISTIC FOR \"" :
+                            " FOR \"") +
+                            cls.getName() + '.' + m.getName() + '"';
+
+                    connMgr.executeStatement(schema, clause);
+
+                    if (log != null && log.isDebugEnabled())
+                        log.debug("Sql function " + alias + "(" + cls.getName() + ") has been registered.");
+                }
+            }
+        }
+    }
+
+    /**
+     * Register custom aggregate function.
+     *
+     * @param fnName SQL function name.
+     * @param cls    Function implementation class.
+     * @throws IgniteCheckedException If failed.
+     */
+    public static void registerAggregateFunction(IgniteLogger log, ConnectionManager connMgr, String fnName, Class<? extends AggregateFunction> cls)
+            throws IgniteCheckedException {
+        Objects.requireNonNull(fnName, "Function name can't be null");
+        Objects.requireNonNull(cls, "Class name can't be null");
+
+        if (!AggregateFunction.class.isAssignableFrom(cls))
+            throw new IgniteSQLException("Aggregate function '" + cls.getName() + "' should implement '" + AggregateFunction.class.getName() + "'");
+
+        connMgr.executeStatement(null, "CREATE AGGREGATE " + fnName + " FOR \"" + cls.getName() + "\"");
+
+        if (log != null && log.isDebugEnabled())
+            log.debug("Aggregation function " + fnName + "(" + cls.getName() + ") has been registered.");
     }
 }

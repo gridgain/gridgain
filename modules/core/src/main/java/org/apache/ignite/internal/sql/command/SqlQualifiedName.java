@@ -25,8 +25,18 @@ public class SqlQualifiedName {
     /** Schema name. */
     private String schemaName;
 
+    /**
+     * Schema name is quoted.
+     */
+    private boolean schemaNameQuoted;
+
     /** Object name. */
     private String name;
+
+    /**
+     * Object name is quoted.
+     */
+    private boolean nameQuoted;
 
     /**
      * @return Schema name.
@@ -46,6 +56,18 @@ public class SqlQualifiedName {
     }
 
     /**
+     * @param schemaName Schema name.
+     * @param quoted is schema name quoted.
+     * @return This instance.
+     */
+    public SqlQualifiedName schemaName(String schemaName, boolean quoted) {
+        this.schemaName = schemaName;
+        this.schemaNameQuoted = quoted;
+
+        return this;
+    }
+
+    /**
      * @return Object name.
      */
     public String name() {
@@ -60,6 +82,26 @@ public class SqlQualifiedName {
         this.name = name;
 
         return this;
+    }
+
+    /**
+     * @param name Object name.
+     * @param quoted Object name quoted.
+     * @return This instance.
+     */
+    public SqlQualifiedName name(String name, boolean quoted) {
+        this.name = name;
+        this.nameQuoted = quoted;
+
+        return this;
+    }
+
+    public boolean isSchemaNameQuoted() {
+        return schemaNameQuoted;
+    }
+
+    public boolean isNameQuoted() {
+        return nameQuoted;
     }
 
     /** {@inheritDoc} */
