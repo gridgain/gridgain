@@ -22,7 +22,6 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -33,22 +32,26 @@ import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaNa
  * Test expose SPATIAL indexes through SQL system view INDEXES.
  */
 public class H2IndexesSystemViewTest extends GridCommonAbstractTest {
+    /** Client instance name. */
+    private static final String CLIENT = "client";
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration() throws Exception {
         return super.getConfiguration().setCacheConfiguration(new CacheConfiguration().setName(DEFAULT_CACHE_NAME));
     }
 
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        startGrid(getConfiguration());
+        startGrid(getConfiguration().setClientMode(true).setIgniteInstanceName(CLIENT));
+    }
+
     /**
      * Test indexes system view.
-     *
-     * @throws Exception in case of failure.
      */
     @Test
-    public void testIndexesView() throws Exception {
-        IgniteEx srv = startGrid(getConfiguration());
-
-        IgniteEx client = startGrid(getConfiguration().setClientMode(true).setIgniteInstanceName("CLIENT"));
-
+    public void testIndexesView() {
         execSql("CREATE TABLE PUBLIC.AFF_CACHE (ID1 INT, ID2 INT, GEOM GEOMETRY, PRIMARY KEY (ID1))");
 
         execSql("CREATE SPATIAL INDEX IDX_GEO_1 ON PUBLIC.AFF_CACHE(GEOM)");
@@ -66,9 +69,9 @@ public class H2IndexesSystemViewTest extends GridCommonAbstractTest {
             " INLINE_SIZE" +
             " FROM " + sysSchemaName() + ".INDEXES ORDER BY TABLE_NAME, INDEX_NAME";
 
-        List<List<?>> srvNodeIndexes = execSql(srv, idxSql);
+        List<List<?>> srvNodeIndexes = execSql(idxSql);
 
-        List<List<?>> clientNodeNodeIndexes = execSql(client, idxSql);
+        List<List<?>> clientNodeNodeIndexes = execSql(grid(CLIENT), idxSql);
 
         for (List<?> idx : clientNodeNodeIndexes)
             assertTrue(srvNodeIndexes.contains(idx));
@@ -96,24 +99,24 @@ public class H2IndexesSystemViewTest extends GridCommonAbstractTest {
 
     /**
      * Check precision and scale attributes for the {@code GEOMETRY} type in the {@code TABLE_COLUMNS} system view.
-     *
-     * @throws Exception in case of failure.
      */
     @Test
-    public void testGeometryColumnPrecisionAndScale() throws Exception {
-        IgniteEx srv = startGrid(getConfiguration());
+    public void testGeometryColumnPrecisionAndScale() {
+        try {
+            execSql("CREATE TABLE PUBLIC.TEST_GEOMETRY_COLUMN_META (ID INT PRIMARY KEY, GEOM GEOMETRY)");
 
-        execSql(srv, "CREATE TABLE PUBLIC.TEST_GEOMETRY_COLUMN_META (ID INT PRIMARY KEY, GEOM GEOMETRY)");
+            List<List<?>> rows = execSql("SELECT PRECISION, SCALE FROM " + sysSchemaName() +
+                ".TABLE_COLUMNS WHERE TABLE_NAME='TEST_GEOMETRY_COLUMN_META' and COLUMN_NAME='GEOM'");
 
-        List<List<?>> rows = execSql(srv, "SELECT PRECISION, SCALE FROM " + sysSchemaName() +
-            ".TABLE_COLUMNS WHERE TABLE_NAME='TEST_GEOMETRY_COLUMN_META' and COLUMN_NAME='GEOM'");
+            assertEquals(1, rows.size());
 
-        assertEquals(1, rows.size());
+            List<?> row = F.first(rows);
 
-        List<?> row = F.first(rows);
-
-        assertEquals(H2Utils.GEOMETRY_DEFAULT_PRECISION, row.get(0));
-        assertEquals(0, row.get(1));
+            assertEquals(H2Utils.GEOMETRY_DEFAULT_PRECISION, row.get(0));
+            assertEquals(0, row.get(1));
+        } finally {
+            execSql("DROP TABLE IF EXISTS PUBLIC.TEST_GEOMETRY_COLUMN_META");
+        }
     }
 
     /**
