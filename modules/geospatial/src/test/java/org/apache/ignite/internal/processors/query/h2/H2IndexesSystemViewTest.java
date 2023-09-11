@@ -23,6 +23,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -91,6 +92,28 @@ public class H2IndexesSystemViewTest extends GridCommonAbstractTest {
             for (int j = 0; j < expRow.length; j++)
                 assertEquals(expRow[j], resRow.get(j));
         }
+    }
+
+    /**
+     * Check precision and scale attributes for the {@code GEOMETRY} type in the {@code TABLE_COLUMNS} system view.
+     *
+     * @throws Exception in case of failure.
+     */
+    @Test
+    public void testGeometryColumnPrecisionAndScale() throws Exception {
+        IgniteEx srv = startGrid(getConfiguration());
+
+        execSql(srv, "CREATE TABLE PUBLIC.TEST_GEOMETRY_COLUMN_META (ID INT PRIMARY KEY, GEOM GEOMETRY)");
+
+        List<List<?>> rows = execSql(srv, "SELECT PRECISION, SCALE FROM " + sysSchemaName() +
+            ".TABLE_COLUMNS WHERE TABLE_NAME='TEST_GEOMETRY_COLUMN_META' and COLUMN_NAME='GEOM'");
+
+        assertEquals(1, rows.size());
+
+        List<?> row = F.first(rows);
+
+        assertEquals(H2Utils.GEOMETRY_DEFAULT_PRECISION, row.get(0));
+        assertEquals(0, row.get(1));
     }
 
     /**

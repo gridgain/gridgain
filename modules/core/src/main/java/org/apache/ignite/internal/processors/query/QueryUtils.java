@@ -122,12 +122,12 @@ public class QueryUtils {
     /** @see IgniteSystemProperties#IGNITE_INDEXING_DISCOVERY_HISTORY_SIZE */
     public static final int DFLT_INDEXING_DISCOVERY_HISTORY_SIZE = 1000;
 
+    /** */
+    public static final Class<?> GEOMETRY_CLASS = U.classForName("org.locationtech.jts.geom.Geometry", null);
+
     /** Discovery history size. */
     private static final int DISCO_HIST_SIZE = getInteger(IGNITE_INDEXING_DISCOVERY_HISTORY_SIZE,
         DFLT_INDEXING_DISCOVERY_HISTORY_SIZE);
-
-    /** */
-    private static final Class<?> GEOMETRY_CLASS = U.classForName("org.locationtech.jts.geom.Geometry", null);
 
     /** */
     private static final Set<Class<?>> SQL_TYPES = createSqlTypes();

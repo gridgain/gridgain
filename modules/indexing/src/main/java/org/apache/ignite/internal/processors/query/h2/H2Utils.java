@@ -140,6 +140,11 @@ public class H2Utils {
     public static final int BINARY_DEFAULT_PRECISION = Integer.MAX_VALUE;
 
     /**
+     * The default precision for a geometry value.
+     */
+    public static final int GEOMETRY_DEFAULT_PRECISION = Integer.MAX_VALUE;
+
+    /**
      * The default precision for a decimal value.
      */
     public static final int DECIMAL_DEFAULT_PRECISION = 65535;
@@ -1349,6 +1354,10 @@ public class H2Utils {
         dfltPrecisions.put(byte[].class, BINARY_DEFAULT_PRECISION);
 
         dfltPrecisions.put(UUID.class, UUID_DEFAULT_PRECISION);
+
+        if (QueryUtils.GEOMETRY_CLASS != null) {
+            dfltPrecisions.put(QueryUtils.GEOMETRY_CLASS, GEOMETRY_DEFAULT_PRECISION);
+        }
 
         return dfltPrecisions;
     }
