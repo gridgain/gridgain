@@ -42,7 +42,7 @@
     <discoverySpi type='TcpDiscoverySpi' joinTimeout='0:1:0' localAddress='192.168.1.1' localPort='6655'>
         <ipFinder type='TcpDiscoveryMulticastIpFinder' addressRequestAttempts='7' />
     </discoverySpi>
-    <communicationSpi type='TcpCommunicationSpi' ackSendThreshold='33' idleConnectionTimeout='0:1:2' />
+    <communicationSpi type='TcpCommunicationSpi' ackSendThreshold='33' ackSendThresholdBytes='10000' ackSendThresholdMillis='999' idleConnectionTimeout='0:1:2' />
     <jvmOptions>
         <string>-Xms1g</string>
         <string>-Xmx4g</string>

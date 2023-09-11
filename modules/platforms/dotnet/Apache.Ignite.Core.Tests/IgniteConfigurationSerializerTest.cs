@@ -215,6 +215,8 @@ namespace Apache.Ignite.Core.Tests
             var comm = cfg.CommunicationSpi as TcpCommunicationSpi;
             Assert.IsNotNull(comm);
             Assert.AreEqual(33, comm.AckSendThreshold);
+            Assert.AreEqual(10000, comm.AckSendThresholdBytes);
+            Assert.AreEqual(999, comm.AckSendThresholdMillis);
             Assert.AreEqual(new TimeSpan(0, 1, 2), comm.IdleConnectionTimeout);
 
             Assert.IsInstanceOf<TestLogger>(cfg.Logger);
@@ -898,6 +900,8 @@ namespace Apache.Ignite.Core.Tests
                     ReconnectCount = 33,
                     SocketReceiveBufferSize = 512,
                     AckSendThreshold = 99,
+                    AckSendThresholdBytes = 200000,
+                    AckSendThresholdMillis = 888,
                     DirectBuffer = false,
                     DirectSendBuffer = true,
                     LocalPortRange = 45,

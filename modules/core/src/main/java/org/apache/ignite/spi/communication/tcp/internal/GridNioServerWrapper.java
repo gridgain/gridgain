@@ -965,8 +965,11 @@ public class GridNioServerWrapper {
 
             int queueLimit = cfg.unackedMsgsBufferSize() != 0 ? cfg.unackedMsgsBufferSize() : (maxSize * 128);
 
-            GridNioRecoveryDescriptor old = recoveryDescs.putIfAbsent(key,
-                recovery = new GridNioRecoveryDescriptor(pairedConnections, queueLimit, node, log));
+            recovery = new GridNioRecoveryDescriptor(
+                pairedConnections, queueLimit, cfg.ackSendThresholdBytes(), node, log
+            );
+
+            GridNioRecoveryDescriptor old = recoveryDescs.putIfAbsent(key, recovery);
 
             if (old != null) {
                 recovery = old;

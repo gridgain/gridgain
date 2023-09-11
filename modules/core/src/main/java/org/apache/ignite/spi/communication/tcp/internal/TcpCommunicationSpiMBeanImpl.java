@@ -37,7 +37,7 @@ public class TcpCommunicationSpiMBeanImpl extends IgniteSpiMBeanAdapter implemen
 
     /** State provider. */
     private final ClusterStateProvider stateProvider;
-    
+
     /** {@inheritDoc} */
     public TcpCommunicationSpiMBeanImpl(
         IgniteSpiAdapter spiAdapter,
@@ -94,6 +94,16 @@ public class TcpCommunicationSpiMBeanImpl extends IgniteSpiMBeanAdapter implemen
     /** {@inheritDoc} */
     @Override public int getAckSendThreshold() {
         return cfg.ackSendThreshold();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getAckSendThresholdBytes() {
+        return cfg.ackSendThresholdBytes();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getAckSendThresholdMillis() {
+        return cfg.ackSendThresholdMillis();
     }
 
     /** {@inheritDoc} */

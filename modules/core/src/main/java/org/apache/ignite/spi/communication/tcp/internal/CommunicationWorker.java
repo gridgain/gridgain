@@ -64,7 +64,7 @@ public class CommunicationWorker extends GridWorker {
     private final AttributeNames attrs;
 
     /** */
-    private final BlockingQueue<DisconnectedSessionInfo> q = new LinkedBlockingQueue<>();
+    private final BlockingQueue<DisconnectedSessionInfo> disconnectRequestsQueue = new LinkedBlockingQueue<>();
 
     /** Client pool. */
     private final ConnectionClientPool clientPool;
@@ -135,7 +135,7 @@ public class CommunicationWorker extends GridWorker {
      * @param sesInfo Disconnected session information.
      */
     public void addProcessDisconnectRequest(DisconnectedSessionInfo sesInfo) {
-        boolean add = q.add(sesInfo);
+        boolean add = disconnectRequestsQueue.add(sesInfo);
 
         assert add;
     }
@@ -156,23 +156,38 @@ public class CommunicationWorker extends GridWorker {
 
         Throwable err = null;
 
+        long lastConnMaintenanceTs = U.currentTimeMillis();
+        long lastAckSendingTs = U.currentTimeMillis();
+
+        long awakeEachMs = Math.min(cfg.idleConnectionTimeout(), cfg.ackSendThresholdMillis());
+
         try {
             while (!isCancelled()) {
-                DisconnectedSessionInfo disconnectData;
+                DisconnectedSessionInfo disconnectRequest;
 
                 blockingSectionBegin();
 
                 try {
-                    disconnectData = q.poll(cfg.idleConnectionTimeout(), TimeUnit.MILLISECONDS);
+                    disconnectRequest = disconnectRequestsQueue.poll(awakeEachMs, TimeUnit.MILLISECONDS);
                 }
                 finally {
                     blockingSectionEnd();
                 }
 
-                if (disconnectData != null)
-                    processDisconnect(disconnectData);
-                else
-                    processIdle();
+                if (disconnectRequest != null)
+                    processDisconnect(disconnectRequest);
+
+                long now = U.currentTimeMillis();
+                if (now - lastConnMaintenanceTs > cfg.idleConnectionTimeout()) {
+                    sendAcksAndDoMaintenance();
+
+                    lastAckSendingTs = now;
+                    lastConnMaintenanceTs = now;
+                } else if (now - lastAckSendingTs > cfg.ackSendThresholdMillis()) {
+                    sendAcks();
+
+                    lastAckSendingTs = now;
+                }
 
                 onIdle();
             }
@@ -199,10 +214,29 @@ public class CommunicationWorker extends GridWorker {
     }
 
     /**
-     * Process idle.
+     * Sends acks for connections where there are unacked messages.
      */
-    private void processIdle() {
-        cleanupRecovery();
+    private void sendAcks() {
+        sendAcksAndMaybeDoMaintenance(false);
+    }
+
+    /**
+     * Sends acks for connections where there are unacked messages and does connection maintenance
+     * closing stale clients and idle connections and cleaning up recovery descriptors.
+     */
+    private void sendAcksAndDoMaintenance() {
+        sendAcksAndMaybeDoMaintenance(true);
+    }
+
+    /**
+     * Sends acks for connections where there are unacked messages and (if requested) does connection maintenance
+     * closing stale clients and idle connections and cleaning up recovery descriptors.
+     *
+     * @param doMaintenance Whether connection/client maintenance should be done.
+     */
+    private void sendAcksAndMaybeDoMaintenance(boolean doMaintenance) {
+        if (doMaintenance)
+            cleanupRecovery();
 
         for (Map.Entry<UUID, GridCommunicationClient[]> e : clientPool.entrySet()) {
             UUID nodeId = e.getKey();
@@ -214,102 +248,122 @@ public class CommunicationWorker extends GridWorker {
                 ClusterNode node = nodeGetter.apply(nodeId);
 
                 if (node == null) {
-                    if (log.isDebugEnabled())
-                        log.debug("Forcing close of non-existent node connection: " + nodeId);
-
-                    client.forceClose();
-
-                    clientPool.removeNodeClient(nodeId, client);
+                    if (doMaintenance)
+                        forceCloseAndRemove(client, nodeId);
 
                     continue;
                 }
 
                 GridNioRecoveryDescriptor recovery = null;
 
-                if (!(cfg.usePairedConnections() && usePairedConnections(node, attrs.pairedConnection())) && client instanceof GridTcpNioCommunicationClient) {
+                if (!usingPairedConnectionsWith(node) && client instanceof GridTcpNioCommunicationClient) {
                     recovery = nioSrvWrapper.recoveryDescs().get(new ConnectionKey(
                         node.id(), client.connectionIndex(), -1)
                     );
 
-                    if (recovery != null && recovery.lastAcknowledged() != recovery.received()) {
-                        RecoveryLastReceivedMessage msg = new RecoveryLastReceivedMessage(recovery.received());
+                    if (recovery != null) {
+                        synchronized (recovery.receiveAndAckMonitor()) {
+                            if (recovery.lastAcknowledged() != recovery.received()) {
+                                sendRecoveryAckOnTimeout(((GridTcpNioCommunicationClient) client).session(), recovery);
 
-                        if (log.isDebugEnabled())
-                            log.debug("Send recovery acknowledgement on timeout [rmtNode=" + nodeId +
-                                ", rcvCnt=" + msg.received() + ']');
-
-                        try {
-                            nioSrvWrapper.nio().sendSystem(((GridTcpNioCommunicationClient)client).session(), msg);
-
-                            recovery.lastAcknowledged(msg.received());
+                                continue;
+                            }
                         }
-                        catch (IgniteCheckedException err) {
-                            U.error(log, "Failed to send message: " + err, err);
-                        }
-
-                        continue;
                     }
                 }
 
-                long idleTime = client.getIdleTime();
-
-                if (idleTime >= cfg.idleConnectionTimeout()) {
-                    if (recovery == null && cfg.usePairedConnections() && usePairedConnections(node, attrs.pairedConnection()))
-                        recovery = nioSrvWrapper.outRecDescs().get(new ConnectionKey(
-                            node.id(), client.connectionIndex(), -1)
-                        );
-
-                    if (recovery != null &&
-                        recovery.nodeAlive(nodeGetter.apply(nodeId)) &&
-                        !recovery.messagesRequests().isEmpty()) {
-                        if (log.isDebugEnabled())
-                            log.debug("Node connection is idle, but there are unacknowledged messages, " +
-                                "will wait: " + nodeId);
-
-                        continue;
-                    }
-
-                    if (log.isDebugEnabled())
-                        log.debug("Closing idle node connection: " + nodeId);
-
-                    if (client.close() || client.closed())
-                        clientPool.removeNodeClient(nodeId, client);
-                }
+                if (doMaintenance)
+                    closeConnectionIfIdleAndHasNoUnackedMessages(nodeId, node, client, recovery);
             }
         }
 
-        for (GridNioSession ses : nioSrvWrapper.nio().sessions()) {
-            GridNioRecoveryDescriptor recovery = ses.inRecoveryDescriptor();
+        sendAcksOnSessionsUsingPairedConnections();
+    }
 
-            if (recovery != null && cfg.usePairedConnections() && usePairedConnections(recovery.node(), attrs.pairedConnection())) {
-                assert ses.accepted() : ses;
+    /***/
+    private void forceCloseAndRemove(GridCommunicationClient client, UUID nodeId) {
+        if (log.isDebugEnabled())
+            log.debug("Forcing close of non-existent node connection: " + nodeId);
 
-                sendAckOnTimeout(recovery, ses);
-            }
+        client.forceClose();
+
+        clientPool.removeNodeClient(nodeId, client);
+    }
+
+    /***/
+    private boolean usingPairedConnectionsWith(ClusterNode node) {
+        return cfg.usePairedConnections() && usePairedConnections(node, attrs.pairedConnection());
+    }
+
+    /***/
+    private void sendRecoveryAckOnTimeout(GridNioSession ses, GridNioRecoveryDescriptor recovery) {
+        RecoveryLastReceivedMessage msg = new RecoveryLastReceivedMessage(recovery.received());
+
+        if (log.isDebugEnabled()) {
+            log.debug("Send recovery acknowledgement on timeout [rmtNode=" + recovery.node().id() +
+                ", rcvCnt=" + msg.received() +
+                ", lastAcked=" + recovery.lastAcknowledged() + ']');
+        }
+
+        try {
+            nioSrvWrapper.nio().sendSystem(ses, msg);
+
+            recovery.lastAcknowledged(msg.received());
+        }
+        catch (IgniteCheckedException e) {
+            U.error(log, "Failed to send message: " + e, e);
         }
     }
 
-    /**
-     * @param recovery Recovery descriptor.
-     * @param ses Session.
-     */
-    private void sendAckOnTimeout(GridNioRecoveryDescriptor recovery, GridNioSession ses) {
-        if (recovery != null && recovery.lastAcknowledged() != recovery.received()) {
-            RecoveryLastReceivedMessage msg = new RecoveryLastReceivedMessage(recovery.received());
+    /***/
+    private void closeConnectionIfIdleAndHasNoUnackedMessages(
+        UUID nodeId,
+        ClusterNode node,
+        GridCommunicationClient client,
+        GridNioRecoveryDescriptor recovery
+    ) {
+        long idleTime = client.getIdleTime();
 
-            if (log.isDebugEnabled()) {
-                log.debug("Send recovery acknowledgement on timeout [rmtNode=" + recovery.node().id() +
-                    ", rcvCnt=" + msg.received() +
-                    ", lastAcked=" + recovery.lastAcknowledged() + ']');
-            }
+        if (idleTime < cfg.idleConnectionTimeout()) {
+            return;
+        }
 
-            try {
-                nioSrvWrapper.nio().sendSystem(ses, msg);
+        if (recovery == null && cfg.usePairedConnections() && usePairedConnections(node, attrs.pairedConnection()))
+            recovery = nioSrvWrapper.outRecDescs().get(new ConnectionKey(
+                node.id(), client.connectionIndex(), -1)
+            );
 
-                recovery.lastAcknowledged(msg.received());
-            }
-            catch (IgniteCheckedException e) {
-                U.error(log, "Failed to send message: " + e, e);
+        if (recovery != null &&
+            recovery.nodeAlive(nodeGetter.apply(nodeId)) &&
+            !recovery.messagesRequests().isEmpty()) {
+            if (log.isDebugEnabled())
+                log.debug("Node connection is idle, but there are unacknowledged messages, " +
+                    "will wait: " + nodeId);
+
+            return;
+        }
+
+        if (log.isDebugEnabled())
+            log.debug("Closing idle node connection: " + nodeId);
+
+        if (client.close() || client.closed())
+            clientPool.removeNodeClient(nodeId, client);
+    }
+
+    /***/
+    private void sendAcksOnSessionsUsingPairedConnections() {
+        for (GridNioSession ses : nioSrvWrapper.nio().sessions()) {
+            GridNioRecoveryDescriptor recovery = ses.inRecoveryDescriptor();
+
+            if (recovery != null && usingPairedConnectionsWith(recovery.node())) {
+                assert ses.accepted() : ses;
+
+                if (recovery != null) {
+                    synchronized (recovery.receiveAndAckMonitor()) {
+                        if (recovery.lastAcknowledged() != recovery.received())
+                            sendRecoveryAckOnTimeout(ses, recovery);
+                    }
+                }
             }
         }
     }
