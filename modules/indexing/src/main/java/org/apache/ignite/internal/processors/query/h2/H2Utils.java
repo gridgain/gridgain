@@ -1355,8 +1355,9 @@ public class H2Utils {
 
         dfltPrecisions.put(UUID.class, UUID_DEFAULT_PRECISION);
 
-        if (QueryUtils.GEOMETRY_CLASS != null) {
-            dfltPrecisions.put(QueryUtils.GEOMETRY_CLASS, GEOMETRY_DEFAULT_PRECISION);
+        Class<?> geometryCls = U.classForName("org.locationtech.jts.geom.Geometry", null);
+        if (geometryCls != null) {
+            dfltPrecisions.put(geometryCls, GEOMETRY_DEFAULT_PRECISION);
         }
 
         return dfltPrecisions;
