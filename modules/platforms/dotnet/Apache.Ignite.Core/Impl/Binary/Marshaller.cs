@@ -775,7 +775,8 @@ namespace Apache.Ignite.Core.Impl.Binary
 
                 serializer = new BinaryReflectiveSerializer
                 {
-                    ForceTimestamp = cfg != null && cfg.ForceTimestamp
+                    ForceTimestamp = cfg?.ForceTimestamp == true,
+                    UnwrapNullableValueTypes = cfg?.UnwrapNullableValueTypes == true
                 };
             }
 
