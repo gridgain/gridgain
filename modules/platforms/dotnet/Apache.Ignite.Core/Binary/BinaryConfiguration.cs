@@ -191,6 +191,7 @@ namespace Apache.Ignite.Core.Binary
         public bool ForceTimestamp { get; set; }
 
         // TODO: Tests for keys/values
+        // TODO: Tests for arrays of nullables - check how Java handles them
         // TODO: Test for Java interop
         // TODO: Print warning when not enabled
         // TODO: Same config per type? Yes, via BinaryReflectiveSerializer
