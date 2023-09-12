@@ -190,6 +190,8 @@ namespace Apache.Ignite.Core.Binary
         [DefaultValue(DefaultForceTimestamp)]
         public bool ForceTimestamp { get; set; }
 
+        // TODO: See logic in BinaryFieldAccessor, we need to ensure correct meta even for null values.
+        // TODO: ISerializable - can we do anything?
         // TODO: Tests for keys/values
         // TODO: Tests for arrays of nullables - check how Java handles them
         // TODO: Test for Java interop
