@@ -61,6 +61,9 @@ public class SqlKeyword {
     /** Keyword: BOOLEAN. */
     public static final String BOOLEAN = "BOOLEAN";
 
+    /** Keyword: BINARY. */
+    public static final String BINARY = "BINARY";
+
     /** Keyword: CASCADE. */
     public static final String CASCADE = "CASCADE";
 
@@ -270,6 +273,9 @@ public class SqlKeyword {
 
     /** Keyword: UUID. */
     public static final String UUID = "UUID";
+
+    /** Keyword: VARBINARY. */
+    public static final String VARBINARY = "VARBINARY";
 
     /** Keyword: VARCHAR. */
     public static final String VARCHAR = "VARCHAR";

@@ -18,6 +18,7 @@ package org.apache.ignite.spi.systemview.view;
 
 import org.apache.ignite.internal.managers.systemview.walker.Order;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
@@ -85,18 +86,12 @@ public class SqlTableColumnView {
 
     /** @return Precision. */
     public int precision() {
-        if (prop == null)
-            return -1;
-
-        return prop.precision();
+        return H2Utils.resolveDefaultPrecisionIfUndefined(prop);
     }
 
     /** @return Scale. */
     public int scale() {
-        if (prop == null)
-            return -1;
-
-        return prop.scale();
+        return H2Utils.resolveDefaultScaleIfUndefined(prop);
     }
 
     /** @return {@code True} if nullable field. */
