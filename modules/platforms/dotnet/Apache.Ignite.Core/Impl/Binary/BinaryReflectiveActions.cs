@@ -127,13 +127,14 @@ namespace Apache.Ignite.Core.Impl.Binary
                 // TODO: HandleNullablePrimitive.
                 if (underlyingType == typeof(int))
                 {
+                    // TODO: Conflicting extension methods used for configuration - rename
                     writeAction = raw
-                        ? GetRawWriter<int>(field, (w, o) => w.WriteInt(o))
-                        : GetWriter<int>(field, (f, w, o) => w.WriteInt(f, o));
+                        ? GetRawWriter<int?>(field, (w, o) => w.WriteIntNullable(o))
+                        : GetWriter<int?>(field, (f, w, o) => w.WriteIntNullable(f, o));
 
                     readAction = raw
-                        ? GetRawReader(field, r => r.ReadInt())
-                        : GetReader(field, (f, r) => r.ReadInt(f));
+                        ? GetRawReader(field, r => r.ReadIntNullable())
+                        : GetReader(field, (f, r) => r.ReadIntNullable(f));
                 }
                 else
                 {
@@ -615,7 +616,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Gets the reader with a specified write action.
         /// </summary>
         private static BinaryReflectiveWriteAction GetWriter<T>(FieldInfo field,
-            Expression<Action<string, IBinaryWriter, T>> write)
+            Expression<Action<string, BinaryWriter, T>> write)
         {
             Debug.Assert(field != null);
             Debug.Assert(field.DeclaringType != null);   // non-static
@@ -644,7 +645,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Gets the reader with a specified write action.
         /// </summary>
         private static BinaryReflectiveWriteAction GetRawWriter<T>(FieldInfo field,
-            Expression<Action<IBinaryRawWriter, T>> write)
+            Expression<Action<BinaryWriter, T>> write)
         {
             Debug.Assert(field != null);
             Debug.Assert(field.DeclaringType != null);   // non-static
@@ -747,7 +748,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Gets the reader with a specified read action.
         /// </summary>
         private static BinaryReflectiveReadAction GetRawReader<T>(FieldInfo field, 
-            Expression<Func<IBinaryRawReader, T>> read)
+            Expression<Func<BinaryReader, T>> read)
         {
             Debug.Assert(field != null);
             Debug.Assert(field.DeclaringType != null);   // non-static

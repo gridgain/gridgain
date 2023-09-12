@@ -336,6 +336,25 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /// <summary>
+        /// Write named int value.
+        /// </summary>
+        /// <param name="fieldName">Field name.</param>
+        /// <param name="val">Int value.</param>
+        public void WriteIntNullable(string fieldName, int? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Int);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteIntField(val.Value);
+            }
+        }
+
+        /// <summary>
         /// Writes the int field.
         /// </summary>
         /// <param name="val">The value.</param>
