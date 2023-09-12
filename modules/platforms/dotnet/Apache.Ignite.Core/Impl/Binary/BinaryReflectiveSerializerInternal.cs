@@ -122,9 +122,10 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="idMapper">ID mapper.</param>
         /// <param name="forceTimestamp">Force timestamp serialization for DateTime fields.</param>
         /// <param name="raw">Raw mode.</param>
+        /// <param name="unwrapNullable">Unwrap nullable mode.</param>
         /// <returns>Resulting serializer.</returns>
         internal static BinaryReflectiveSerializerInternal Create(Type type, int typeId, IBinaryNameMapper converter,
-            IBinaryIdMapper idMapper, bool forceTimestamp, bool raw)
+            IBinaryIdMapper idMapper, bool forceTimestamp, bool raw, bool unwrapNullable)
         {
             var fields = ReflectionUtils.GetAllFields(type).Where(x => !x.IsNotSerialized).ToList();
 
@@ -162,7 +163,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             for (int i = 0; i < fields.Count; i++)
             {
                 BinaryReflectiveActions.GetTypeActions(
-                    fields[i], out var writeAction, out var readAction, raw, forceTimestamp);
+                    fields[i], out var writeAction, out var readAction, raw, forceTimestamp, unwrapNullable);
 
                 wActions[i] = writeAction;
                 rActions[i] = readAction;

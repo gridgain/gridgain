@@ -138,9 +138,8 @@ namespace Apache.Ignite.Core.Binary
         {
             _isInUse = true;
 
-            // TODO: _unwrapNullableValueTypes
             return BinaryReflectiveSerializerInternal.Create(
-                type, typeId, converter, idMapper, _forceTimestamp, _rawMode);
+                type, typeId, converter, idMapper, _forceTimestamp, _rawMode, _unwrapNullableValueTypes);
         }
 
         /// <summary>

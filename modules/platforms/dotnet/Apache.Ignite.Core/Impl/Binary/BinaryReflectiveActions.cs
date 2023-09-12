@@ -106,8 +106,9 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="readAction">Read action.</param>
         /// <param name="raw">Raw mode.</param>
         /// <param name="forceTimestamp">Force timestamp serialization for DateTime fields..</param>
+        /// <param name="unwrapNullable">Write nullable value types with correct metadata.</param>
         public static void GetTypeActions(FieldInfo field, out BinaryReflectiveWriteAction writeAction,
-            out BinaryReflectiveReadAction readAction, bool raw, bool forceTimestamp)
+            out BinaryReflectiveReadAction readAction, bool raw, bool forceTimestamp, bool unwrapNullable)
         {
             Debug.Assert(field != null);
             Debug.Assert(field.DeclaringType != null);
@@ -118,7 +119,14 @@ namespace Apache.Ignite.Core.Impl.Binary
                              field.DeclaringType.GetCustomAttributes(typeof(TimestampAttribute), true).Any();
 
             if (type.IsPrimitive)
+            {
                 HandlePrimitive(field, out writeAction, out readAction, raw);
+            }
+            else if (unwrapNullable && Nullable.GetUnderlyingType(type) is { IsPrimitive: true } underlyingType)
+            {
+                // TODO: HandleNullablePrimitive.
+                throw new NotImplementedException("TODO");
+            }
             else if (type.IsArray)
             {
                 HandleArray(field, out writeAction, out readAction, raw);
