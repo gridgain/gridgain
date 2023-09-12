@@ -117,13 +117,13 @@ namespace Apache.Ignite.Core.Configuration
             TcpNoDelay = reader.ReadBoolean();
             MaxOpenCursorsPerConnection = reader.ReadInt();
             ThreadPoolSize = reader.ReadInt();
-            IdleTimeout = reader.ReadLongAsTimespan();
+            IdleTimeout = reader.ConfigReadLongAsTimespan();
 
             ThinClientEnabled = reader.ReadBoolean();
             OdbcEnabled = reader.ReadBoolean();
             JdbcEnabled = reader.ReadBoolean();
 
-            HandshakeTimeout = reader.ReadLongAsTimespan();
+            HandshakeTimeout = reader.ConfigReadLongAsTimespan();
 
             // Thin client configuration.
             if (reader.ReadBoolean())

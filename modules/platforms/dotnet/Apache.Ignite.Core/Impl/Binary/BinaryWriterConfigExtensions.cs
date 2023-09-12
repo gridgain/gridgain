@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ namespace Apache.Ignite.Core.Impl.Binary
 
     /// <summary>
     /// Writer extensions for configuration serialization.
+    /// <para />
+    /// See also <see cref="BinaryReaderConfigExtensions"/>.
     /// </summary>
     internal static class BinaryWriterConfigExtensions
     {

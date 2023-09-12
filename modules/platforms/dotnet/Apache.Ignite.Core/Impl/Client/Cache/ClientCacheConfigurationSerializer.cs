@@ -415,7 +415,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             cfg.EagerTtl = reader.ReadBoolean();
             cfg.EnableStatistics = reader.ReadBoolean();
             cfg.GroupName = reader.ReadString();
-            cfg.LockTimeout = reader.ReadLongAsTimespan();
+            cfg.LockTimeout = reader.ConfigReadLongAsTimespan();
             cfg.MaxConcurrentAsyncOperations = reader.ReadInt();
             cfg.MaxQueryIteratorsCount = reader.ReadInt();
             cfg.Name = reader.ReadString();
@@ -426,11 +426,11 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             cfg.ReadFromBackup = reader.ReadBoolean();
             cfg.RebalanceBatchSize = reader.ReadInt();
             cfg.RebalanceBatchesPrefetchCount = reader.ReadLong();
-            cfg.RebalanceDelay = reader.ReadLongAsTimespan();
+            cfg.RebalanceDelay = reader.ConfigReadLongAsTimespan();
             cfg.RebalanceMode = (CacheRebalanceMode)reader.ReadInt();
             cfg.RebalanceOrder = reader.ReadInt();
-            cfg.RebalanceThrottle = reader.ReadLongAsTimespan();
-            cfg.RebalanceTimeout = reader.ReadLongAsTimespan();
+            cfg.RebalanceThrottle = reader.ConfigReadLongAsTimespan();
+            cfg.RebalanceTimeout = reader.ConfigReadLongAsTimespan();
             cfg.SqlEscapeAll = reader.ReadBoolean();
             cfg.SqlIndexMaxInlineSize = reader.ReadInt();
             cfg.SqlSchema = reader.ReadString();

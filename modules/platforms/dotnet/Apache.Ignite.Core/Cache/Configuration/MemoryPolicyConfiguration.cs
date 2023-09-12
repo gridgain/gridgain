@@ -93,7 +93,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
             EmptyPagesPoolSize = reader.ReadInt();
             MetricsEnabled = reader.ReadBoolean();
             SubIntervals = reader.ReadInt();
-            RateTimeInterval = reader.ReadLongAsTimespan();
+            RateTimeInterval = reader.ConfigReadLongAsTimespan();
         }
 
         /// <summary>

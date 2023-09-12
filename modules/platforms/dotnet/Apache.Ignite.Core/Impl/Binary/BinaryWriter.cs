@@ -379,6 +379,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="val">Int value.</param>
         internal void WriteIntNullable(int? val)
         {
+            // TODO: Move to BinaryWriterNullableExtensions?
             if (val == null)
             {
                 WriteNullRawField();

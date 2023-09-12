@@ -728,29 +728,29 @@ namespace Apache.Ignite.Core
         private void ReadCore(BinaryReader r)
         {
             // Simple properties
-            _clientMode = r.ReadBooleanNullable();
+            _clientMode = r.ConfigReadBooleanNullable();
             IncludedEventTypes = r.ReadIntArray();
-            _metricsExpireTime = r.ReadTimeSpanNullable();
-            _metricsHistorySize = r.ReadIntNullable();
-            _metricsLogFrequency = r.ReadTimeSpanNullable();
-            _metricsUpdateFrequency = r.ReadTimeSpanNullable();
-            _networkSendRetryCount = r.ReadIntNullable();
-            _networkSendRetryDelay = r.ReadTimeSpanNullable();
-            _networkTimeout = r.ReadTimeSpanNullable();
+            _metricsExpireTime = r.ConfigReadTimeSpanNullable();
+            _metricsHistorySize = r.ConfigReadIntNullable();
+            _metricsLogFrequency = r.ConfigReadTimeSpanNullable();
+            _metricsUpdateFrequency = r.ConfigReadTimeSpanNullable();
+            _networkSendRetryCount = r.ConfigReadIntNullable();
+            _networkSendRetryDelay = r.ConfigReadTimeSpanNullable();
+            _networkTimeout = r.ConfigReadTimeSpanNullable();
             WorkDirectory = r.ReadString();
             Localhost = r.ReadString();
-            _isDaemon = r.ReadBooleanNullable();
-            _failureDetectionTimeout = r.ReadTimeSpanNullable();
-            _clientFailureDetectionTimeout = r.ReadTimeSpanNullable();
-            _longQueryWarningTimeout = r.ReadTimeSpanNullable();
-            _isActiveOnStart = r.ReadBooleanNullable();
-            _authenticationEnabled = r.ReadBooleanNullable();
-            _mvccVacuumFreq = r.ReadLongNullable();
-            _mvccVacuumThreadCnt = r.ReadIntNullable();
-            _sysWorkerBlockedTimeout = r.ReadTimeSpanNullable();
-            _sqlQueryHistorySize = r.ReadIntNullable();
-            _javaPeerClassLoadingEnabled = r.ReadBooleanNullable();
-            _asyncContinuationExecutor = (AsyncContinuationExecutor?) r.ReadIntNullable();
+            _isDaemon = r.ConfigReadBooleanNullable();
+            _failureDetectionTimeout = r.ConfigReadTimeSpanNullable();
+            _clientFailureDetectionTimeout = r.ConfigReadTimeSpanNullable();
+            _longQueryWarningTimeout = r.ConfigReadTimeSpanNullable();
+            _isActiveOnStart = r.ConfigReadBooleanNullable();
+            _authenticationEnabled = r.ConfigReadBooleanNullable();
+            _mvccVacuumFreq = r.ConfigReadLongNullable();
+            _mvccVacuumThreadCnt = r.ConfigReadIntNullable();
+            _sysWorkerBlockedTimeout = r.ConfigReadTimeSpanNullable();
+            _sqlQueryHistorySize = r.ConfigReadIntNullable();
+            _javaPeerClassLoadingEnabled = r.ConfigReadBooleanNullable();
+            _asyncContinuationExecutor = (AsyncContinuationExecutor?) r.ConfigReadIntNullable();
 
             int sqlSchemasCnt = r.ReadInt();
 
@@ -765,15 +765,15 @@ namespace Apache.Ignite.Core
             ConsistentId = r.ReadObject<object>();
 
             // Thread pools
-            _publicThreadPoolSize = r.ReadIntNullable();
-            _stripedThreadPoolSize = r.ReadIntNullable();
-            _serviceThreadPoolSize = r.ReadIntNullable();
-            _systemThreadPoolSize = r.ReadIntNullable();
-            _asyncCallbackThreadPoolSize = r.ReadIntNullable();
-            _managementThreadPoolSize = r.ReadIntNullable();
-            _dataStreamerThreadPoolSize = r.ReadIntNullable();
-            _utilityCacheThreadPoolSize = r.ReadIntNullable();
-            _queryThreadPoolSize = r.ReadIntNullable();
+            _publicThreadPoolSize = r.ConfigReadIntNullable();
+            _stripedThreadPoolSize = r.ConfigReadIntNullable();
+            _serviceThreadPoolSize = r.ConfigReadIntNullable();
+            _systemThreadPoolSize = r.ConfigReadIntNullable();
+            _asyncCallbackThreadPoolSize = r.ConfigReadIntNullable();
+            _managementThreadPoolSize = r.ConfigReadIntNullable();
+            _dataStreamerThreadPoolSize = r.ConfigReadIntNullable();
+            _utilityCacheThreadPoolSize = r.ConfigReadIntNullable();
+            _queryThreadPoolSize = r.ConfigReadIntNullable();
 
             // Cache config
             CacheConfiguration = r.ReadCollectionRaw(x => new CacheConfiguration(x));

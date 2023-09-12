@@ -109,7 +109,7 @@ namespace Apache.Ignite.Core.Configuration
             EmptyPagesPoolSize = reader.ReadInt();
             MetricsEnabled = reader.ReadBoolean();
             MetricsSubIntervalCount = reader.ReadInt();
-            MetricsRateTimeInterval = reader.ReadLongAsTimespan();
+            MetricsRateTimeInterval = reader.ConfigReadLongAsTimespan();
             CheckpointPageBufferSize = reader.ReadLong();
 
             LazyMemoryAllocation = reader.ReadBoolean();

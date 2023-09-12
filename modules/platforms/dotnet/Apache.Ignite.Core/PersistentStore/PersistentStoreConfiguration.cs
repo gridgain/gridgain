@@ -146,10 +146,10 @@ namespace Apache.Ignite.Core.PersistentStore
             Debug.Assert(reader != null);
 
             PersistentStorePath = reader.ReadString();
-            CheckpointingFrequency = reader.ReadLongAsTimespan();
+            CheckpointingFrequency = reader.ConfigReadLongAsTimespan();
             CheckpointingPageBufferSize = reader.ReadLong();
             CheckpointingThreads = reader.ReadInt();
-            LockWaitTime = reader.ReadLongAsTimespan();
+            LockWaitTime = reader.ConfigReadLongAsTimespan();
             WalHistorySize = reader.ReadInt();
             WalSegments = reader.ReadInt();
             WalSegmentSize = reader.ReadInt();
@@ -157,13 +157,13 @@ namespace Apache.Ignite.Core.PersistentStore
             WalArchivePath = reader.ReadString();
             WalMode = (WalMode)reader.ReadInt();
             TlbSize = reader.ReadInt();
-            WalFlushFrequency = reader.ReadLongAsTimespan();
+            WalFlushFrequency = reader.ConfigReadLongAsTimespan();
             WalFsyncDelayNanos = reader.ReadLong();
             WalRecordIteratorBufferSize = reader.ReadInt();
             AlwaysWriteFullPages = reader.ReadBoolean();
             MetricsEnabled = reader.ReadBoolean();
             SubIntervals = reader.ReadInt();
-            RateTimeInterval = reader.ReadLongAsTimespan();
+            RateTimeInterval = reader.ConfigReadLongAsTimespan();
             CheckpointWriteOrder = (CheckpointWriteOrder) reader.ReadInt();
             WriteThrottlingEnabled = reader.ReadBoolean();
         }

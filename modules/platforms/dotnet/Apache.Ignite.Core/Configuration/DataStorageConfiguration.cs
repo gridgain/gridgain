@@ -213,9 +213,9 @@ namespace Apache.Ignite.Core.Configuration
             Debug.Assert(reader != null);
 
             StoragePath = reader.ReadString();
-            CheckpointFrequency = reader.ReadLongAsTimespan();
+            CheckpointFrequency = reader.ConfigReadLongAsTimespan();
             CheckpointThreads = reader.ReadInt();
-            LockWaitTime = reader.ReadLongAsTimespan();
+            LockWaitTime = reader.ConfigReadLongAsTimespan();
             WalHistorySize = reader.ReadInt();
             WalSegments = reader.ReadInt();
             WalSegmentSize = reader.ReadInt();
@@ -223,13 +223,13 @@ namespace Apache.Ignite.Core.Configuration
             WalArchivePath = reader.ReadString();
             WalMode = (WalMode)reader.ReadInt();
             WalThreadLocalBufferSize = reader.ReadInt();
-            WalFlushFrequency = reader.ReadLongAsTimespan();
+            WalFlushFrequency = reader.ConfigReadLongAsTimespan();
             WalFsyncDelayNanos = reader.ReadLong();
             WalRecordIteratorBufferSize = reader.ReadInt();
             AlwaysWriteFullPages = reader.ReadBoolean();
             MetricsEnabled = reader.ReadBoolean();
             MetricsSubIntervalCount = reader.ReadInt();
-            MetricsRateTimeInterval = reader.ReadLongAsTimespan();
+            MetricsRateTimeInterval = reader.ConfigReadLongAsTimespan();
             CheckpointWriteOrder = (CheckpointWriteOrder)reader.ReadInt();
             WriteThrottlingEnabled = reader.ReadBoolean();
             WalCompactionEnabled = reader.ReadBoolean();
@@ -239,10 +239,10 @@ namespace Apache.Ignite.Core.Configuration
             SystemRegionMaxSize = reader.ReadLong();
             PageSize = reader.ReadInt();
             ConcurrencyLevel = reader.ReadInt();
-            WalAutoArchiveAfterInactivity = reader.ReadLongAsTimespan();
-            CheckpointReadLockTimeout = reader.ReadTimeSpanNullable();
+            WalAutoArchiveAfterInactivity = reader.ConfigReadLongAsTimespan();
+            CheckpointReadLockTimeout = reader.ConfigReadTimeSpanNullable();
             WalPageCompression = (DiskPageCompression)reader.ReadInt();
-            WalPageCompressionLevel = reader.ReadIntNullable();
+            WalPageCompressionLevel = reader.ConfigReadIntNullable();
 
             var count = reader.ReadInt();
 
