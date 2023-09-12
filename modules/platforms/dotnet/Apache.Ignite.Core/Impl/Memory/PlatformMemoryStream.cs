@@ -357,7 +357,13 @@ namespace Apache.Ignite.Core.Impl.Memory
 
             return *(_data + curPos);
         }
-        
+
+        /// <summary>
+        /// Get byte without moving position.
+        /// </summary>
+        /// <returns>Byte value.</returns>
+        public byte Peek() => *_data;
+
         /// <summary>
         /// Read byte array.
         /// </summary>

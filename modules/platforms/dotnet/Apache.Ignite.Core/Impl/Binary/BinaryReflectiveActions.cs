@@ -132,9 +132,10 @@ namespace Apache.Ignite.Core.Impl.Binary
                         ? GetRawWriter<int?>(field, (w, o) => w.WriteIntNullable(o))
                         : GetWriter<int?>(field, (f, w, o) => w.WriteIntNullable(f, o));
 
+                    // TODO: Nullable
                     readAction = raw
-                        ? GetRawReader(field, r => r.ReadIntNullable1())
-                        : GetReader(field, (f, r) => r.ReadIntNullable(f));
+                        ? GetRawReader(field, r => r.ReadInt())
+                        : GetReader(field, (f, r) => r.ReadInt(f));
                 }
                 else
                 {

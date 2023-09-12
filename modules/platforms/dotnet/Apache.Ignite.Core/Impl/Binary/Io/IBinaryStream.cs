@@ -65,6 +65,12 @@ namespace Apache.Ignite.Core.Impl.Binary.IO
         byte ReadByte();
 
         /// <summary>
+        /// Get byte without moving position.
+        /// </summary>
+        /// <returns>Byte value.</returns>
+        byte Peek();
+
+        /// <summary>
         /// Write byte array.
         /// </summary>
         /// <param name="val">Byte array.</param>
