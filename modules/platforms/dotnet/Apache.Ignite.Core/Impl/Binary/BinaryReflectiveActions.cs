@@ -48,55 +48,55 @@ namespace Apache.Ignite.Core.Impl.Binary
     {
         /** Method: read enum. */
         private static readonly MethodInfo MthdReadEnum =
-            typeof(BinaryReader).GetMethod("ReadEnum", new[] { typeof(string) });
+            typeof(IBinaryReader).GetMethod("ReadEnum", new[] { typeof(string) });
 
         /** Method: read enum. */
         private static readonly MethodInfo MthdReadEnumRaw = typeof (IBinaryRawReader).GetMethod("ReadEnum");
 
         /** Method: read enum array. */
         private static readonly MethodInfo MthdReadEnumArray =
-            typeof(BinaryReader).GetMethod("ReadEnumArray", new[] { typeof(string) });
+            typeof(IBinaryReader).GetMethod("ReadEnumArray", new[] { typeof(string) });
 
         /** Method: read enum array. */
-        private static readonly MethodInfo MthdReadEnumArrayRaw = typeof(BinaryReader).GetMethod("ReadEnumArray");
+        private static readonly MethodInfo MthdReadEnumArrayRaw = typeof(IBinaryRawReader).GetMethod("ReadEnumArray");
 
         /** Method: read array. */
         private static readonly MethodInfo MthdReadObjArray =
-            typeof(BinaryReader).GetMethod("ReadArray", new[] { typeof(string) });
+            typeof(IBinaryReader).GetMethod("ReadArray", new[] { typeof(string) });
 
         /** Method: read array. */
-        private static readonly MethodInfo MthdReadObjArrayRaw = typeof(BinaryReader).GetMethod("ReadArray");
+        private static readonly MethodInfo MthdReadObjArrayRaw = typeof(IBinaryRawReader).GetMethod("ReadArray");
 
         /** Method: read object. */
         private static readonly MethodInfo MthdReadObj=
-            typeof(BinaryReader).GetMethod("ReadObject", new[] { typeof(string) });
+            typeof(IBinaryReader).GetMethod("ReadObject", new[] { typeof(string) });
 
         /** Method: read object. */
-        private static readonly MethodInfo MthdReadObjRaw = typeof(BinaryReader).GetMethod("ReadObject");
+        private static readonly MethodInfo MthdReadObjRaw = typeof(IBinaryRawReader).GetMethod("ReadObject");
 
         /** Method: write enum array. */
-        private static readonly MethodInfo MthdWriteEnumArray = typeof(BinaryWriter).GetMethod("WriteEnumArray");
+        private static readonly MethodInfo MthdWriteEnumArray = typeof(IBinaryWriter).GetMethod("WriteEnumArray");
 
         /** Method: write enum array. */
-        private static readonly MethodInfo MthdWriteEnumArrayRaw = typeof(BinaryWriter).GetMethod("WriteEnumArray");
+        private static readonly MethodInfo MthdWriteEnumArrayRaw = typeof(IBinaryRawWriter).GetMethod("WriteEnumArray");
 
         /** Method: write array. */
-        private static readonly MethodInfo MthdWriteObjArray = typeof(BinaryWriter).GetMethod("WriteArray");
+        private static readonly MethodInfo MthdWriteObjArray = typeof(IBinaryWriter).GetMethod("WriteArray");
 
         /** Method: write array. */
-        private static readonly MethodInfo MthdWriteObjArrayRaw = typeof(BinaryWriter).GetMethod("WriteArray");
+        private static readonly MethodInfo MthdWriteObjArrayRaw = typeof(IBinaryRawWriter).GetMethod("WriteArray");
 
         /** Method: write object. */
-        private static readonly MethodInfo MthdWriteObj = typeof(BinaryWriter).GetMethod("WriteObject");
+        private static readonly MethodInfo MthdWriteObj = typeof(IBinaryWriter).GetMethod("WriteObject");
 
         /** Method: write object. */
-        private static readonly MethodInfo MthdWriteObjRaw = typeof(BinaryWriter).GetMethod("WriteObject");
+        private static readonly MethodInfo MthdWriteObjRaw = typeof(IBinaryRawWriter).GetMethod("WriteObject");
 
         /** Method: raw writer */
-        private static readonly MethodInfo MthdGetRawWriter = typeof(BinaryWriter).GetMethod("GetRawWriter");
+        private static readonly MethodInfo MthdGetRawWriter = typeof(IBinaryWriter).GetMethod("GetRawWriter");
 
         /** Method: raw writer */
-        private static readonly MethodInfo MthdGetRawReader = typeof(BinaryReader).GetMethod("GetRawReader");
+        private static readonly MethodInfo MthdGetRawReader = typeof(IBinaryReader).GetMethod("GetRawReader");
 
         /// <summary>
         /// Lookup read/write actions for the given type.
@@ -639,7 +639,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Gets the reader with a specified write action.
         /// </summary>
         private static BinaryReflectiveWriteAction GetRawWriter<T>(FieldInfo field,
-            Expression<Action<BinaryWriter, T>> write)
+            Expression<Action<IBinaryRawWriter, T>> write)
         {
             Debug.Assert(field != null);
             Debug.Assert(field.DeclaringType != null);   // non-static
@@ -654,7 +654,7 @@ namespace Apache.Ignite.Core.Impl.Binary
                 fldExpr = Expression.Convert(fldExpr, typeof (T));
 
             // Call Writer method
-            var writerParam = Expression.Parameter(typeof(BinaryWriter));
+            var writerParam = Expression.Parameter(typeof(IBinaryWriter));
             var writeExpr = Expression.Invoke(write, Expression.Call(writerParam, MthdGetRawWriter), fldExpr);
 
             // Compile and return
@@ -742,13 +742,13 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Gets the reader with a specified read action.
         /// </summary>
         private static BinaryReflectiveReadAction GetRawReader<T>(FieldInfo field, 
-            Expression<Func<BinaryReader, T>> read)
+            Expression<Func<IBinaryRawReader, T>> read)
         {
             Debug.Assert(field != null);
             Debug.Assert(field.DeclaringType != null);   // non-static
 
             // Call Reader method
-            var readerParam = Expression.Parameter(typeof(BinaryReader));
+            var readerParam = Expression.Parameter(typeof(IBinaryReader));
             Expression readExpr = Expression.Invoke(read, Expression.Call(readerParam, MthdGetRawReader));
 
             if (typeof(T) != field.FieldType)
