@@ -187,7 +187,7 @@ public class SqlParserBulkLoadSelfTest extends SqlParserAbstractSelfTest {
 
     @Test
     public void testCopyParseProperties() {
-        String sql = "COPY FROM 'a' INTO 'b' FORMAT ICEBERG PROPERTIES ('warehouse'='path', 'catalog-impl'= 'impl1', 'io-impl' = 'impl2')";
+        String sql = "COPY FROM 'a' INTO 'b' FORMAT ICEBERG PROPERTIES ('warehouse'='path', 'catalog-impl'= 'impl1', 'io-impl' = 'impl2', 'UPPER' = 'CASE')";
         SqlBulkLoadCommand cmd = (SqlBulkLoadCommand) new SqlParser(null, sql).nextCommand();
 
         Map<String, String> actual = cmd.properties();
@@ -196,9 +196,17 @@ public class SqlParserBulkLoadSelfTest extends SqlParserAbstractSelfTest {
         assertEquals(actual.get("catalog-impl"), "impl1");
         assertEquals(actual.get("io-impl"), "impl2");
 
-        GridTestUtils.assertThrows(log(), () -> actual.put("a", "b"), // unmodifiable
-                UnsupportedOperationException.class, null);
+        // case sensitive
+        assertNull(actual.get("WAREHOUSE"));
+        assertNull(actual.get("upper"));
+        assertEquals(actual.get("UPPER"), "CASE");
 
+        // immutable
+        GridTestUtils.assertThrows(log(), () -> actual.put("a", "b"),
+                UnsupportedOperationException.class, null);
+        assertEquals(actual.getClass().getSimpleName(), "UnmodifiableMap");
+
+        // quotes required
         GridTestUtils.assertThrows(log(),
                 () -> new SqlParser(null,"COPY FROM 'a' INTO 'b' FORMAT ICEBERG PROPERTIES (unquotedKey=unqotedVal)").nextCommand(),
                 SqlStrictParseException.class, "Unexpected token: \"=UNQOTEDVAL\" (expected: \"=\")");

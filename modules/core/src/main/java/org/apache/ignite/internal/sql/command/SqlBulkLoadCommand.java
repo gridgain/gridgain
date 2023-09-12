@@ -351,17 +351,20 @@ public class SqlBulkLoadCommand implements SqlCommand {
     }
 
     /**
-     * Parses the optional case-sensitive properties with syntax PROPERTIES ('k1' = 'v1', 'k2' = 'v2', ...)
+     * Parses the optional case-sensitive properties with syntax PROPERTIES ('k1' = 'v1', 'k2' = 'v2', ...).
      * @param lex The lexer.
-     * @return properties map.
+     * @return Immutable properties.
      */
     private static Map<String, String> parseProperties(SqlLexer lex) {
         if (!"PROPERTIES".equals(lex.lookAhead().token())) {
             return Collections.emptyMap();
         }
-        Map<String, String> props = new HashMap<>();
+
         skipIfMatchesKeyword(lex, "PROPERTIES");
         skipIfMatches(lex, SqlLexerTokenType.PARENTHESIS_LEFT);
+
+        Map<String, String> props = new HashMap<>();
+
         do {
             if (lex.lookAhead().tokenType() == SqlLexerTokenType.PARENTHESIS_RIGHT) {
                 continue;
@@ -460,7 +463,7 @@ public class SqlBulkLoadCommand implements SqlCommand {
      * Propertes (case-sensitive) passed to command.
      * Syntax: PROPERTIES ('k1' = 'v1', 'k2' = 'v2', ...)
      * Properties keys/values are case-sensitive.
-     * @return immutable properties
+     * @return Immutable properties.
      */
     public Map<String, String> properties() {
         return properties;
