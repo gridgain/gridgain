@@ -359,12 +359,6 @@ namespace Apache.Ignite.Core.Impl.Memory
         }
 
         /// <summary>
-        /// Get byte without moving position.
-        /// </summary>
-        /// <returns>Byte value.</returns>
-        public byte Peek() => *_data;
-
-        /// <summary>
         /// Read byte array.
         /// </summary>
         /// <param name="cnt">Count.</param>

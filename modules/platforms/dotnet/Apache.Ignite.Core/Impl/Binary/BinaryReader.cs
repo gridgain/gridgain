@@ -197,6 +197,11 @@ namespace Apache.Ignite.Core.Impl.Binary
             return ReadField(fieldName, ReadInt, BinaryTypeId.Int);
         }
 
+        internal int? ReadIntNullable(string fieldName)
+        {
+            return ReadField(fieldName, ReadInt, BinaryTypeId.Int);
+        }
+
         /** <inheritdoc /> */
         public int ReadInt()
         {
@@ -991,6 +996,21 @@ namespace Apache.Ignite.Core.Impl.Binary
                                                           "Expected: {0} but was: {1}", expHdr, hdr));
 
             return readFunc();
+        }
+
+        /// <summary>
+        /// Reads header and returns true if it indicates a null value; otherwise, returns false without affecting the
+        /// stream position.
+        /// </summary>
+        private bool TryReadNull()
+        {
+            if (ReadByte() == BinaryUtils.HdrNull)
+            {
+                return true;
+            }
+
+            Stream.Seek(-1, SeekOrigin.Current);
+            return false;
         }
 
         /// <summary>

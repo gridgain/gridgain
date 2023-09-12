@@ -974,12 +974,6 @@ namespace Apache.Ignite.Core.Impl.Binary.IO
         }
 
         /** <inheritdoc /> */
-        public byte Peek()
-        {
-            return _data[_pos];
-        }
-
-        /** <inheritdoc /> */
         [SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods")]
         public void WriteByteArray(byte[] val)
         {

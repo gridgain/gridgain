@@ -31,41 +31,31 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         /// <param name="reader">The reader.</param>
         /// <returns>TimeSpan.</returns>
-        public static TimeSpan ConfigReadLongAsTimespan(this IBinaryRawReader reader)
-        {
-            return BinaryUtils.LongToTimeSpan(reader.ReadLong());
-        }
+        public static TimeSpan ConfigReadLongAsTimespan(this IBinaryRawReader reader) =>
+            BinaryUtils.LongToTimeSpan(reader.ReadLong());
 
         /// <summary>
         /// Reads the nullable TimeSpan.
         /// </summary>
-        public static TimeSpan? ConfigReadTimeSpanNullable(this IBinaryRawReader reader)
-        {
-            return reader.ReadBoolean() ? reader.ConfigReadLongAsTimespan() : (TimeSpan?) null;
-        }
+        public static TimeSpan? ConfigReadTimeSpanNullable(this IBinaryRawReader reader) =>
+            reader.ReadBoolean() ? reader.ConfigReadLongAsTimespan() : (TimeSpan?) null;
 
         /// <summary>
         /// Reads the nullable int.
         /// </summary>
-        public static int? ConfigReadIntNullable(this IBinaryRawReader reader)
-        {
-            return reader.ReadBoolean() ? reader.ReadInt() : (int?) null;
-        }
+        public static int? ConfigReadIntNullable(this IBinaryRawReader reader) =>
+            reader.ReadBoolean() ? reader.ReadInt() : (int?) null;
 
         /// <summary>
         /// Reads the nullable long.
         /// </summary>
-        public static long? ConfigReadLongNullable(this IBinaryRawReader reader)
-        {
-            return reader.ReadBoolean() ? reader.ReadLong() : (long?) null;
-        }
+        public static long? ConfigReadLongNullable(this IBinaryRawReader reader) =>
+            reader.ReadBoolean() ? reader.ReadLong() : (long?) null;
 
         /// <summary>
         /// Reads the nullable bool.
         /// </summary>
-        public static bool? ConfigReadBooleanNullable(this IBinaryRawReader reader)
-        {
-            return reader.ReadBoolean() ? reader.ReadBoolean() : (bool?) null;
-        }
+        public static bool? ConfigReadBooleanNullable(this IBinaryRawReader reader) =>
+            reader.ReadBoolean() ? reader.ReadBoolean() : (bool?) null;
     }
 }
