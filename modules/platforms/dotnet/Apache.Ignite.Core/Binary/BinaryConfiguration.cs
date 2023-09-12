@@ -44,6 +44,11 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         public const bool DefaultForceTimestamp = false;
 
+        /// <summary>
+        /// Default <see cref="UnwrapNullableValueTypes"/> setting.
+        /// </summary>
+        public const bool DefaultUnwrapNullableValueTypes = false;
+
         /** Footer setting. */
         private bool? _compactFooter;
 
@@ -79,6 +84,7 @@ namespace Apache.Ignite.Core.Binary
             KeepDeserialized = cfg.KeepDeserialized;
             ForceTimestamp = cfg.ForceTimestamp;
             TimestampConverter = cfg.TimestampConverter;
+            UnwrapNullableValueTypes = cfg.UnwrapNullableValueTypes;
 
             if (cfg.Serializer != null)
             {
@@ -181,7 +187,24 @@ namespace Apache.Ignite.Core.Binary
         /// <para />
         /// See also <see cref="TimestampAttribute"/>, <see cref="BinaryReflectiveSerializer.ForceTimestamp"/>.
         /// </summary>
+        [DefaultValue(DefaultForceTimestamp)]
         public bool ForceTimestamp { get; set; }
+
+        // TODO: Tests for keys/values
+        // TODO: Test for Java interop
+        // TODO: Print warning when not enabled
+        // TODO: Same config per type? Not sure.
+        // TODO: Default value
+        /// <summary>
+        /// Gets or sets a value indicating whether all DateTime keys, values and object fields should be unwrapped and
+        /// written as underlying type, instead of using <see cref="IBinaryWriter.WriteObject{T}"/>.
+        /// <para />
+        /// This produces correct field type in binary metadata and is consistent with Java serializer behavior.
+        /// <para />
+        /// It is recommended to enable this setting, unless you need old behavior to preserve compatibility.
+        /// </summary>
+        [DefaultValue(DefaultUnwrapNullableValueTypes)]
+        public bool UnwrapNullableValueTypes { get; set; }
 
         /// <summary>
         /// Gets the compact footer internal nullable value.
