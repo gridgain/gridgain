@@ -30,9 +30,6 @@ namespace Apache.Ignite.Core.Impl.Binary
     /// </summary>
     internal sealed class BinaryReflectiveSerializerInternal : IBinarySerializerInternal
     {
-        /** Raw mode flag. */
-        private readonly bool _rawMode;
-
         /** Write actions to be performed. */
         private readonly BinaryReflectiveWriteAction[] _wActions;
 
@@ -46,7 +43,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Initializes a new instance of the <see cref="BinaryReflectiveSerializer"/> class.
         /// </summary>
         private BinaryReflectiveSerializerInternal(BinaryReflectiveWriteAction[] wActions, 
-            BinaryReflectiveReadAction[] rActions, bool raw, SerializableTypeDescriptor serializableDescriptor)
+            BinaryReflectiveReadAction[] rActions, SerializableTypeDescriptor serializableDescriptor)
         {
             Debug.Assert(wActions != null);
             Debug.Assert(rActions != null);
@@ -54,7 +51,6 @@ namespace Apache.Ignite.Core.Impl.Binary
 
             _wActions = wActions;
             _rActions = rActions;
-            _rawMode = raw;
             _serializableDescriptor = serializableDescriptor;
         }
 
@@ -165,10 +161,8 @@ namespace Apache.Ignite.Core.Impl.Binary
 
             for (int i = 0; i < fields.Count; i++)
             {
-                BinaryReflectiveWriteAction writeAction;
-                BinaryReflectiveReadAction readAction;
-
-                BinaryReflectiveActions.GetTypeActions(fields[i], out writeAction, out readAction, raw, forceTimestamp);
+                BinaryReflectiveActions.GetTypeActions(
+                    fields[i], out var writeAction, out var readAction, raw, forceTimestamp);
 
                 wActions[i] = writeAction;
                 rActions[i] = readAction;
@@ -176,7 +170,7 @@ namespace Apache.Ignite.Core.Impl.Binary
 
             var serDesc = SerializableTypeDescriptor.Get(type);
 
-            return new BinaryReflectiveSerializerInternal(wActions, rActions, raw, serDesc);
+            return new BinaryReflectiveSerializerInternal(wActions, rActions, serDesc);
         }
 
         /// <summary>
