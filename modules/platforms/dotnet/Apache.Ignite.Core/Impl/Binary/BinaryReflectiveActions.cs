@@ -32,14 +32,14 @@ namespace Apache.Ignite.Core.Impl.Binary
     /// </summary>
     /// <param name="obj">Target object.</param>
     /// <param name="writer">Writer.</param>
-    internal delegate void BinaryReflectiveWriteAction(object obj, IBinaryWriter writer);
+    internal delegate void BinaryReflectiveWriteAction(object obj, BinaryWriter writer);
 
     /// <summary>
     /// Read action delegate.
     /// </summary>
     /// <param name="obj">Target object.</param>
     /// <param name="reader">Reader.</param>
-    internal delegate void BinaryReflectiveReadAction(object obj, IBinaryReader reader);
+    internal delegate void BinaryReflectiveReadAction(object obj, BinaryReader reader);
 
     /// <summary>
     /// Routines for reflective reads and writes.
@@ -125,7 +125,20 @@ namespace Apache.Ignite.Core.Impl.Binary
             else if (unwrapNullable && Nullable.GetUnderlyingType(type) is { IsPrimitive: true } underlyingType)
             {
                 // TODO: HandleNullablePrimitive.
-                throw new NotImplementedException("TODO");
+                if (underlyingType == typeof(int))
+                {
+                    writeAction = raw
+                        ? GetRawWriter<int>(field, (w, o) => w.WriteInt(o))
+                        : GetWriter<int>(field, (f, w, o) => w.WriteInt(f, o));
+
+                    readAction = raw
+                        ? GetRawReader(field, r => r.ReadInt())
+                        : GetReader(field, (f, r) => r.ReadInt(f));
+                }
+                else
+                {
+                    throw new NotImplementedException("TODO");
+                }
             }
             else if (type.IsArray)
             {

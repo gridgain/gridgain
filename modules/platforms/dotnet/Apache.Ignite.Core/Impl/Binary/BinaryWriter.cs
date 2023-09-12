@@ -30,7 +30,7 @@ namespace Apache.Ignite.Core.Impl.Binary
     /// <summary>
     /// Binary writer implementation.
     /// </summary>
-    internal class BinaryWriter : IBinaryWriter, IBinaryRawWriter
+    internal sealed class BinaryWriter : IBinaryWriter, IBinaryRawWriter
     {
         /** Marshaller. */
         private readonly Marshaller _marsh;

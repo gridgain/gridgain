@@ -30,7 +30,7 @@ namespace Apache.Ignite.Core.Impl.Binary
     /// <summary>
     /// Binary reader implementation.
     /// </summary>
-    internal class BinaryReader : IBinaryReader, IBinaryRawReader
+    internal sealed class BinaryReader : IBinaryReader, IBinaryRawReader
     {
         /** Marshaller. */
         private readonly Marshaller _marsh;
