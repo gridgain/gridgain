@@ -47,7 +47,8 @@ public class DrResumeCommand extends
             DrCacheCommand.SenderGroup.ALL,
             null,
             DrCacheCommand.Action.START,
-            argIter.nextByteArg("remoteDataCenterId")
+            argIter.nextByteArg("remoteDataCenterId"),
+            false
         );
     }
 

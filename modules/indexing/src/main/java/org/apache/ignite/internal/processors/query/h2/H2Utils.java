@@ -34,12 +34,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -59,6 +59,7 @@ import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.QueryField;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RetryException;
@@ -131,17 +132,87 @@ public class H2Utils {
     /**
      * The default precision for a char/varchar value.
      */
-    static final int STRING_DEFAULT_PRECISION = Integer.MAX_VALUE;
+    public static final int STRING_DEFAULT_PRECISION = Integer.MAX_VALUE;
+
+    /**
+     * The default precision for a binary/varbinary value.
+     */
+    public static final int BINARY_DEFAULT_PRECISION = Integer.MAX_VALUE;
+
+    /**
+     * The default precision for a geometry value.
+     */
+    public static final int GEOMETRY_DEFAULT_PRECISION = Integer.MAX_VALUE;
 
     /**
      * The default precision for a decimal value.
      */
-    static final int DECIMAL_DEFAULT_PRECISION = 65535;
+    public static final int DECIMAL_DEFAULT_PRECISION = 65535;
 
     /**
      * The default scale for a decimal value.
      */
-    static final int DECIMAL_DEFAULT_SCALE = 32767;
+    public static final int DECIMAL_DEFAULT_SCALE = 32767;
+
+    /**
+     * The default precision for a boolean value (see {@link ValueBoolean}).
+     */
+    public static final int BOOLEAN_DEFAULT_PRECISION = ValueBoolean.PRECISION;
+
+    /**
+     * The default precision for a byte value (see {@link ValueByte}).
+     */
+    public static final int BYTE_DEFAULT_PRECISION = 3;
+
+    /**
+     * The default precision for a short value (see {@link ValueShort}).
+     */
+    public static final int SHORT_DEFAULT_PRECISION = 5;
+
+    /**
+     * The default precision for a integer value (see {@link ValueInt}).
+     */
+    public static final int INTEGER_DEFAULT_PRECISION = ValueInt.PRECISION;
+
+    /**
+     * The default precision for a long value (see {@link ValueLong}).
+     */
+    public static final int LONG_DEFAULT_PRECISION = ValueLong.PRECISION;
+
+    /**
+     * The default precision for a double value (see {@link ValueDouble}).
+     */
+    public static final int DOUBLE_DEFAULT_PRECISION = ValueDouble.PRECISION;
+
+    /**
+     * The default precision for real value (see {@link  ValueFloat}).
+     */
+    public static final int REAL_DEFAULT_PRECISION = 7;
+
+    /**
+     * The default precision for a uuid value (see {@link ValueUuid}).
+     */
+    public static final int UUID_DEFAULT_PRECISION = 16;
+
+    /**
+     * The default precision for a time value (see {@link ValueTime}).
+     */
+    public static final int TIME_DEFAULT_PRECISION = ValueTime.DEFAULT_PRECISION;
+
+    /**
+     * The default precision for a date value (see {@link ValueDate}).
+     */
+    public static final int DATE_DEFAULT_PRECISION = ValueDate.PRECISION;
+
+    /**
+     * The default precision for a timestamp value (see {@link ValueTimestamp}).
+     */
+    public static final int TIMESTAMP_DEFAULT_PRECISION = ValueTimestamp.DEFAULT_PRECISION;
+
+    /**
+     * The default scale for a timestamp value (see {@link ValueTimestamp}).
+     */
+    public static final int TIMESTAMP_DEFAULT_SCALE = 6;
 
     /** Dummy metadata for update result. */
     public static final List<GridQueryFieldMetadata> UPDATE_RESULT_META =
@@ -169,6 +240,12 @@ public class H2Utils {
      */
     private static boolean enableHashJoin
         = IgniteSystemProperties.getBoolean(IGNITE_ENABLE_HASH_JOIN, false);
+
+    /** Mapping of type to its default precision. */
+    private static final Map<Class<?>, Integer> defaultPrecisionsByType = knownDefaultPrecisions();
+
+    /** Mapping of type to its default scale. */
+    private static final Map<Class<?>, Integer> defaultScalesByType = knownDefaultScales();
 
     /**
      * @param c1 First column.
@@ -753,6 +830,46 @@ public class H2Utils {
     }
 
     /**
+     * Gets the precision for the descriptor.
+     *
+     * @param prop Query entity field descriptor.
+     * @return Precision of the query entity, if it has been set, or the default precision of the type.
+     */
+    public static int resolveDefaultPrecisionIfUndefined(GridQueryProperty prop) {
+        if (prop == null) {
+            return QueryField.UNDEFINED_PRECISION;
+        }
+
+        int precision = prop.precision();
+
+        if (precision != QueryField.UNDEFINED_PRECISION) {
+            return precision;
+        }
+
+        return defaultPrecisionsByType.getOrDefault(prop.type(), precision);
+    }
+
+    /**
+     * Gets the scale for the descriptor.
+     *
+     * @param prop Query entity field descriptor.
+     * @return Scale of the query entity, if it has been set, or the default scale of the type.
+     */
+    public static int resolveDefaultScaleIfUndefined(GridQueryProperty prop) {
+        if (prop == null) {
+            return QueryField.UNDEFINED_SCALE;
+        }
+
+        int scale = prop.scale();
+
+        if (scale != QueryField.UNDEFINED_SCALE) {
+            return scale;
+        }
+
+        return defaultScalesByType.getOrDefault(prop.type(), 0);
+    }
+
+    /**
      * Validates properties described by query types.
      *
      * @param type Type descriptor.
@@ -1214,5 +1331,44 @@ public class H2Utils {
         GridQueryIndexing indexing = ctx.query().getIndexing();
 
         return indexing instanceof IgniteH2Indexing ? ((IgniteH2Indexing)indexing).dataHandler() : null;
+    }
+
+    private static Map<Class<?>, Integer> knownDefaultPrecisions() {
+        HashMap<Class<?>, Integer> dfltPrecisions = new HashMap<>();
+
+        dfltPrecisions.put(Boolean.class, BOOLEAN_DEFAULT_PRECISION);
+        dfltPrecisions.put(Byte.class, BYTE_DEFAULT_PRECISION);
+        dfltPrecisions.put(Short.class, SHORT_DEFAULT_PRECISION);
+        dfltPrecisions.put(Integer.class, INTEGER_DEFAULT_PRECISION);
+        dfltPrecisions.put(Long.class, LONG_DEFAULT_PRECISION);
+        dfltPrecisions.put(BigDecimal.class, DECIMAL_DEFAULT_PRECISION);
+        dfltPrecisions.put(Double.class, DOUBLE_DEFAULT_PRECISION);
+        // H2 maps REAL to Float and FLOAT to Double,
+        dfltPrecisions.put(Float.class, REAL_DEFAULT_PRECISION);
+
+        dfltPrecisions.put(Time.class, TIME_DEFAULT_PRECISION);
+        dfltPrecisions.put(Date.class, DATE_DEFAULT_PRECISION);
+        dfltPrecisions.put(Timestamp.class, TIMESTAMP_DEFAULT_PRECISION);
+
+        dfltPrecisions.put(String.class, STRING_DEFAULT_PRECISION);
+        dfltPrecisions.put(byte[].class, BINARY_DEFAULT_PRECISION);
+
+        dfltPrecisions.put(UUID.class, UUID_DEFAULT_PRECISION);
+
+        Class<?> geometryCls = U.classForName("org.locationtech.jts.geom.Geometry", null);
+        if (geometryCls != null) {
+            dfltPrecisions.put(geometryCls, GEOMETRY_DEFAULT_PRECISION);
+        }
+
+        return dfltPrecisions;
+    }
+
+    private static Map<Class<?>, Integer> knownDefaultScales() {
+        HashMap<Class<?>, Integer> dfltScales = new HashMap<>();
+
+        dfltScales.put(BigDecimal.class, DECIMAL_DEFAULT_SCALE);
+        dfltScales.put(Timestamp.class, TIMESTAMP_DEFAULT_SCALE);
+
+        return dfltScales;
     }
 }

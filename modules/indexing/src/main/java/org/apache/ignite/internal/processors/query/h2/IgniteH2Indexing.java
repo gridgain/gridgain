@@ -2098,8 +2098,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                                 prop.type(),
                                 c.isNullable(),
                                 prop.defaultValue(),
-                                prop.precision(),
-                                prop.scale(),
+                                H2Utils.resolveDefaultPrecisionIfUndefined(prop),
+                                H2Utils.resolveDefaultScaleIfUndefined(prop),
                                 isAff);
                         });
                 }

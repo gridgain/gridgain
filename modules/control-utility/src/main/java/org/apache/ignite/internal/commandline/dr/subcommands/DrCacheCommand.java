@@ -42,6 +42,7 @@ import org.apache.ignite.internal.visor.dr.VisorDrCacheTaskResult;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.DELIM;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
+import static org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand.ParseStart.SYNC_MODE;
 
 /** */
 public class DrCacheCommand extends
@@ -89,6 +90,7 @@ public class DrCacheCommand extends
         SenderGroup sndGrp = SenderGroup.ALL;
         String sndGrpName = null;
         Action act = null;
+        boolean fstSyncMode = false;
 
         String nextArg;
 
@@ -147,13 +149,19 @@ public class DrCacheCommand extends
                     break;
                 }
 
+                case SYNC_MODE: {
+                    argIter.nextArg(null);
+
+                    fstSyncMode = true;
+                }
+
                 default:
                     //noinspection BreakStatementWithLabel
                     break args_loop;
             }
         }
 
-        return new DrCacheArguments(regex, pattern, cfg, metrics, cacheFilter, sndGrp, sndGrpName, act, (byte)0);
+        return new DrCacheArguments(regex, pattern, cfg, metrics, cacheFilter, sndGrp, sndGrpName, act, (byte)0, fstSyncMode);
     }
 
     /** {@inheritDoc} */
@@ -391,6 +399,9 @@ public class DrCacheCommand extends
         /** Action coordinator. */
         private UUID actionCoordinator;
 
+        /** FST sync mode. */
+        private boolean fstSyncMode;
+
         /** */
         public DrCacheArguments(
             String regex,
@@ -401,7 +412,8 @@ public class DrCacheCommand extends
             SenderGroup senderGroup,
             String senderGroupName,
             Action action,
-            byte remoteDataCenterId
+            byte remoteDataCenterId,
+            boolean fstSyncMode
         ) {
             this.regex = regex;
             this.pattern = pattern;
@@ -412,6 +424,7 @@ public class DrCacheCommand extends
             this.senderGroupName = senderGroupName;
             this.action = action;
             this.remoteDataCenterId = remoteDataCenterId;
+            this.fstSyncMode = fstSyncMode;
         }
 
         /** */
@@ -431,7 +444,8 @@ public class DrCacheCommand extends
                 action == null ? VisorDrCacheTaskArgs.ACTION_NONE : action.ordinal(),
                 remoteDataCenterId,
                 cacheNamesMap,
-                actionCoordinator
+                actionCoordinator,
+                fstSyncMode
             );
         }
     }

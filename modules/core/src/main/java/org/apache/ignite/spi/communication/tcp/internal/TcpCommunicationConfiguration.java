@@ -42,6 +42,8 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DFLT_ACK_SND_THRESHOLD;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DFLT_ACK_SND_THRESHOLD_BYTES;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DFLT_ACK_SND_THRESHOLD_MILLIS;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DFLT_CONN_PER_NODE;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DFLT_CONN_TIMEOUT;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DFLT_FILTER_REACHABLE_ADDRESSES;
@@ -128,6 +130,12 @@ public class TcpCommunicationConfiguration implements Serializable {
 
     /** Number of received messages after which acknowledgment is sent. */
     private int ackSndThreshold = DFLT_ACK_SND_THRESHOLD;
+
+    /** Accrued size of received messages after which acknowledgment is sent. */
+    private long ackSndThresholdBytes = DFLT_ACK_SND_THRESHOLD_BYTES;
+
+    /** Number of milliseconds after which acknowledgment is sent (if there are unacked messages). */
+    private long ackSndThresholdMillis = DFLT_ACK_SND_THRESHOLD_MILLIS;
 
     /** Maximum number of unacknowledged messages. */
     private int unackedMsgsBufSize;
@@ -430,6 +438,34 @@ public class TcpCommunicationConfiguration implements Serializable {
      */
     public void ackSendThreshold(int ackSndThreshold) {
         this.ackSndThreshold = ackSndThreshold;
+    }
+
+    /**
+     * @return Accrued size of received messages after which acknowledgment is sent.
+     */
+    public long ackSendThresholdBytes() {
+        return ackSndThresholdBytes;
+    }
+
+    /**
+     * @param ackSndThresholdBytes New accrued size of received messages after which acknowledgment is sent.
+     */
+    public void ackSendThresholdBytes(long ackSndThresholdBytes) {
+        this.ackSndThresholdBytes = ackSndThresholdBytes;
+    }
+
+    /**
+     * @return Number of milliseconds after which acknowledgment is sent (if there are unacked messages).
+     */
+    public long ackSendThresholdMillis() {
+        return ackSndThresholdMillis;
+    }
+
+    /**
+     * @param ackSndThresholdMillis Number of milliseconds after which acknowledgment is sent.
+     */
+    public void ackSendThresholdMillis(long ackSndThresholdMillis) {
+        this.ackSndThresholdMillis = ackSndThresholdMillis;
     }
 
     /**

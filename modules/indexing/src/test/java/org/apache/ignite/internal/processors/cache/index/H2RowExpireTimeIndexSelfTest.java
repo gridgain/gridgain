@@ -22,12 +22,17 @@ import java.util.concurrent.TimeUnit;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.h2.H2Cursor;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.gridgain.internal.h2.engine.Session;
@@ -53,7 +58,18 @@ public class H2RowExpireTimeIndexSelfTest extends GridCommonAbstractTest {
      * Start only one grid.
      */
     @Override protected void beforeTestsStarted() throws Exception {
+        cleanPersistenceDir();
+
         startGrids(1);
+    }
+
+    /** */
+    @Override protected void afterTestsStopped() throws Exception {
+        G.stopAll(true);
+
+        cleanPersistenceDir();
+
+        super.afterTestsStopped();
     }
 
     /**
@@ -225,4 +241,71 @@ public class H2RowExpireTimeIndexSelfTest extends GridCommonAbstractTest {
         Assert.assertTrue("Expired row should not be returned by sql. Result = " + expired, expired.isEmpty());
     }
 
+    @Test
+    public void testDataExpiredAfterInsertFromSelect() throws Exception {
+        int duration = 2_000;
+        IgniteEx grid = startGrid(1);
+
+        try {
+
+            CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>();
+            ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
+            ccfg.setCacheMode(CacheMode.REPLICATED);
+            ccfg.setName("temp");
+            ccfg.setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(Duration.ONE_DAY));
+            IgniteCache<Object, Object> cache = grid.getOrCreateCache(ccfg);
+
+            CacheConfiguration<Object, Object> ccfg1 = new CacheConfiguration<>();
+            ccfg1.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
+            ccfg1.setCacheMode(CacheMode.REPLICATED);
+            ccfg1.setName("person");
+            ccfg1.setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MILLISECONDS, duration)));
+            grid.getOrCreateCache(ccfg1);
+
+            FieldsQueryCursor<List<?>> res = cache.query(new SqlFieldsQuery(
+                "CREATE TABLE IF NOT EXISTS temp(\n" +
+                    "    id VARCHAR,\n" +
+                    "    updated TIMESTAMP,\n" +
+                    "    PRIMARY KEY (id)\n" +
+                    ") WITH \"\n" +
+                    "    value_type=person_type,\n" +
+                    "    cache_name=temp\n" +
+                    "\""));
+
+            assertNotNull(res);
+
+            res.close();
+
+            for (int i = 0; i < 10; ++i) {
+                cache.query(new SqlFieldsQuery(
+                    String.format("INSERT INTO temp(id, updated) VALUES ('%d', CURRENT_TIMESTAMP())", i)));
+            }
+
+            cache.query(new SqlFieldsQuery("CREATE TABLE IF NOT EXISTS person(\n" +
+                "    id VARCHAR,\n" +
+                "    updated TIMESTAMP,\n" +
+                "    PRIMARY KEY (id)\n" +
+                ") WITH \"\n" +
+                "    value_type=person_type,\n" +
+                "    cache_name=person\n" +
+                "\""));
+
+            cache.query(new SqlFieldsQuery("INSERT INTO person(id, updated)\n" +
+                "SELECT id, updated\n" +
+                "FROM temp;"));
+
+            cache.query(new SqlFieldsQuery("INSERT INTO person(id, updated) VALUES ('11', CURRENT_TIMESTAMP());"));
+
+            // wait all data will be expired.
+            U.sleep(2 * duration);
+
+            res = cache.query(new SqlFieldsQuery("SELECT * FROM person order by id;"));
+
+            assertTrue("Unexpected resultset.", res.getAll().isEmpty());
+
+            res.close();
+        } finally {
+            grid.close();
+        }
+    }
 }

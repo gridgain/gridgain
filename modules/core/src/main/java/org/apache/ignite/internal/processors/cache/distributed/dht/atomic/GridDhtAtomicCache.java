@@ -1468,7 +1468,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 // Optimistically expect that all keys are available locally (avoid creation of get future).
                 for (KeyCacheObject key : keys) {
                     if (readNoEntry) {
-                        CacheDataRow row = ctx.offheap().read(ctx, key);
+                        CacheDataRow row = skipVals ? ctx.offheap().find(ctx, key) : ctx.offheap().read(ctx, key);
 
                         if (row != null) {
                             long expireTime = row.expireTime();

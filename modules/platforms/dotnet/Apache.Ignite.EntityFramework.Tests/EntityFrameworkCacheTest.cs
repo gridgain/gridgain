@@ -474,6 +474,11 @@ namespace Apache.Ignite.EntityFramework.Tests
                 Thread.Sleep(300);
 
                 Assert.IsFalse(_cache.ContainsKey(key));
+
+                // ContainsKey doesn't trigger removal of exipred entry https://ggsystems.atlassian.net/browse/GG-36947
+                // We need explicitly read the key to trigger removal.
+                Assert.Throws<KeyNotFoundException>(() => _cache.Get(key));
+
                 Assert.AreEqual(0, _cache.GetSize());
                 Assert.AreEqual(2, _metaCache.GetSize());
             }

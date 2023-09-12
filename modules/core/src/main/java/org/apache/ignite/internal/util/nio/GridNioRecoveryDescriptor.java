@@ -53,6 +53,9 @@ public class GridNioRecoveryDescriptor {
     /** Number of received messages. */
     private long rcvCnt;
 
+    /** Number of received bytes. */
+    private long rcvBytes;
+
     /** Number of sent messages. */
     private long sentCnt;
 
@@ -61,6 +64,9 @@ public class GridNioRecoveryDescriptor {
 
     /** Last acknowledged message. */
     private long lastAck;
+
+    /** Number of received bytes at the moment of the last ack. */
+    private long lastAckRcvBytes;
 
     /** Node left flag. */
     private boolean nodeLeft;
@@ -80,6 +86,9 @@ public class GridNioRecoveryDescriptor {
     /** Maximum size of unacknowledged messages queue. */
     private final int queueLimit;
 
+    /** Number of accrued bytes of received messages to trigger an ack. */
+    private final long ackThresholdBytes;
+
     /** Number of descriptor reservations (for info purposes). */
     private int reserveCnt;
 
@@ -88,27 +97,39 @@ public class GridNioRecoveryDescriptor {
 
     /** Session for the descriptor. */
     @GridToStringExclude
+    @Nullable
     private GridNioSession ses;
+
+    /**
+     * Used to synchronize access to methods and fields used to determine whether an ack should be sent
+     * ({@link #rcvCnt}, {@link #rcvBytes}, {@link #lastAckRcvBytes}, {@link #onReceived()},
+     * {@link #lastAcknowledged()}) and sending acks back ({@link #lastAcknowledged(long)}.
+     */
+    private final Object receiveAndAckMonitor = new Object();
 
     /**
      * @param pairedConnections {@code True} if in/out connections pair is used for communication with node.
      * @param queueLimit Maximum size of unacknowledged messages queue.
+     * @param ackThresholdBytes Number of accrued bytes of received messages to trigger ack.
      * @param node Node.
      * @param log Logger.
      */
     public GridNioRecoveryDescriptor(
         boolean pairedConnections,
         int queueLimit,
+        long ackThresholdBytes,
         ClusterNode node,
         IgniteLogger log
     ) {
         assert !node.isLocal() : node;
         assert queueLimit > 0;
+        assert ackThresholdBytes > 0;
 
         msgReqs = new ArrayDeque<>(queueLimit);
 
         this.pairedConnections = pairedConnections;
         this.queueLimit = queueLimit;
+        this.ackThresholdBytes = ackThresholdBytes;
         this.node = node;
         this.log = log;
     }
@@ -137,10 +158,13 @@ public class GridNioRecoveryDescriptor {
     /**
      * Increments received messages counter.
      *
+     * @param currentBytesReceived Current bytesReceived on the session.
      * @return Number of received messages.
      */
-    public long onReceived() {
+    public long onReceived(long currentBytesReceived) {
         rcvCnt++;
+
+        rcvBytes = currentBytesReceived;
 
         return rcvCnt;
     }
@@ -149,7 +173,9 @@ public class GridNioRecoveryDescriptor {
      * @return Number of received messages.
      */
     public long received() {
-        return rcvCnt;
+        synchronized (receiveAndAckMonitor) {
+            return rcvCnt;
+        }
     }
 
     /**
@@ -164,13 +190,17 @@ public class GridNioRecoveryDescriptor {
      */
     public void lastAcknowledged(long lastAck) {
         this.lastAck = lastAck;
+
+        lastAckRcvBytes = rcvBytes;
     }
 
     /**
      * @return Last acknowledged message.
      */
     public long lastAcknowledged() {
-        return lastAck;
+        synchronized (receiveAndAckMonitor) {
+            return lastAck;
+        }
     }
 
     /**
@@ -195,8 +225,15 @@ public class GridNioRecoveryDescriptor {
 
                 return msgReqs.size() < queueLimit;
             }
-            else
+            else {
+                // Recovery is happening now and messages that were in #msgReqs at the moment the recovery was started
+                // are added for a resend. While #resendCnt is positive we ONLY get messages that were not acked, so
+                // they are already in #msgReqs, so we don't need to add them there again, so we just decrease
+                // #resendCnt. When it reaches zero, we'll switch to the 'normal' mode (as this will mean that all
+                // messages that were in #msgReqs at the moment when recovery started are passed through this method).
+
                 resendCnt--;
+            }
         }
 
         return true;
@@ -432,6 +469,21 @@ public class GridNioRecoveryDescriptor {
                 req.ackClosure().apply(cloErr);
             }
         }
+    }
+
+    /**
+     * @return {@code true} if enough received messages were accrued since last acknowledge to trigger an ack.
+     */
+    public boolean ackThresholdInBytesExceeded() {
+        return rcvBytes - lastAckRcvBytes >= ackThresholdBytes;
+    }
+
+    /**
+     * @return Monitor used to synchronize access to methods and fields used to determine whether an ack should be sent
+     * and sending acks back.
+     */
+    public Object receiveAndAckMonitor() {
+        return receiveAndAckMonitor;
     }
 
     /** {@inheritDoc} */

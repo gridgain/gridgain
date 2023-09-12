@@ -201,7 +201,7 @@ public abstract class ImpurityHistogramsComputer<S extends ImpurityComputer<Boot
         public Optional<NodeSplit> findBestSplit() {
             return perFeatureStatistics.values().stream()
                 .flatMap(x -> x.findBestSplit().map(Stream::of).orElse(Stream.empty()))
-                .min(Comparator.comparingDouble(NodeSplit::getImpurity));
+                .max(Comparator.comparingDouble(NodeSplit::getGain));
         }
     }
 }

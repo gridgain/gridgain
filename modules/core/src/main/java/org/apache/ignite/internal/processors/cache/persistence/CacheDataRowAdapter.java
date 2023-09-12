@@ -27,11 +27,11 @@ import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
+import org.apache.ignite.internal.processors.cache.CacheObjectShadow;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IncompleteCacheObject;
 import org.apache.ignite.internal.processors.cache.IncompleteObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTreeRuntimeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.CacheVersionIO;
@@ -440,7 +440,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
 
         // Read value.
         if (val == null) {
-            incomplete = readIncompleteValue(coctx, buf, (IncompleteCacheObject)incomplete);
+            incomplete = readIncompleteValue(coctx, buf, (IncompleteCacheObject) incomplete, rowData);
 
             if (val == null) {
                 assert incomplete != null;
@@ -496,7 +496,9 @@ public class CacheDataRowAdapter implements CacheDataRow {
         int len = PageUtils.getInt(addr, off);
         off += 4;
 
-        if (rowData != RowData.NO_KEY && rowData != RowData.NO_KEY_WITH_HINTS) {
+        if (rowData != RowData.NO_KEY && rowData != RowData.NO_KEY_WITH_HINTS &&
+            rowData != RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME) {
+
             byte type = PageUtils.getByte(addr, off);
             off++;
 
@@ -517,9 +519,13 @@ public class CacheDataRowAdapter implements CacheDataRow {
         byte type = PageUtils.getByte(addr, off);
         off++;
 
-        byte[] bytes = PageUtils.getBytes(addr, off, len);
+        if (rowData != RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME) {
+            byte[] bytes = PageUtils.getBytes(addr, off, len);
 
-        val = coctx.kernalContext().cacheObjects().toCacheObject(coctx, type, bytes);
+            val = coctx.kernalContext().cacheObjects().toCacheObject(coctx, type, bytes);
+        }
+        else
+            val = new CacheObjectShadow(type);
 
         off += len;
 
@@ -604,15 +610,19 @@ public class CacheDataRowAdapter implements CacheDataRow {
      * @param coctx Cache object context.
      * @param buf Buffer.
      * @param incomplete Incomplete object.
+     * @param rowData Required row data.
      * @return Incomplete object.
      * @throws IgniteCheckedException If failed.
      */
-    protected IncompleteCacheObject readIncompleteValue(
+    protected IncompleteObject<CacheObject> readIncompleteValue(
         CacheObjectContext coctx,
         ByteBuffer buf,
-        IncompleteCacheObject incomplete
+        IncompleteCacheObject incomplete,
+        RowData rowData
     ) throws IgniteCheckedException {
-        incomplete = coctx.kernalContext().cacheObjects().toCacheObject(coctx, buf, incomplete);
+        boolean createShadow = rowData == RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME;
+
+        incomplete = coctx.kernalContext().cacheObjects().toCacheObject(coctx, buf, incomplete, createShadow);
 
         if (incomplete.isReady()) {
             val = incomplete.object();
@@ -851,7 +861,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
 
     /** {@inheritDoc} */
     @Override public boolean tombstone() {
-        return value() == TombstoneCacheObject.INSTANCE;
+        return value().cacheObjectType() == CacheObject.TOMBSTONE;
     }
 
     /** {@inheritDoc} */
@@ -936,7 +946,10 @@ public class CacheDataRowAdapter implements CacheDataRow {
         FULL_WITH_HINTS,
 
         /** Force instant hints actualization for update operation with history (to avoid races with vacuum). */
-        NO_KEY_WITH_HINTS
+        NO_KEY_WITH_HINTS,
+
+        /** This mode represents reading a row that includes only value type and expiration time. */
+        NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME
     }
 
     /** {@inheritDoc} */

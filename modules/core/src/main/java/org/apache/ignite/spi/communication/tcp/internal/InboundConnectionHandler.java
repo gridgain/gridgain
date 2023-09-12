@@ -328,18 +328,23 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 GridNioRecoveryDescriptor recovery = ses.inRecoveryDescriptor();
 
                 if (recovery != null) {
-                    long rcvCnt = recovery.onReceived();
+                    synchronized (recovery.receiveAndAckMonitor()) {
+                        long rcvCnt = recovery.onReceived(ses.bytesReceived());
 
-                    if (rcvCnt % cfg.ackSendThreshold() == 0) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("Send recovery acknowledgement [rmtNode=" + connKey.nodeId() +
-                                ", connIdx=" + connKey.connectionIndex() +
-                                ", rcvCnt=" + rcvCnt + ']');
+                        boolean ackByCountThresholdTriggered = rcvCnt % cfg.ackSendThreshold() == 0;
+                        if (ackByCountThresholdTriggered || recovery.ackThresholdInBytesExceeded()) {
+                            if (log.isDebugEnabled()) {
+                                String reason = ackByCountThresholdTriggered ? "count" : "accrued size";
+
+                                log.debug("Send recovery acknowledgement by " + reason + " threshold [rmtNode=" +
+                                    connKey.nodeId() + ", connIdx=" + connKey.connectionIndex() +
+                                    ", rcvCnt=" + rcvCnt + ']');
+                            }
+
+                            ses.systemMessage(new RecoveryLastReceivedMessage(rcvCnt));
+
+                            recovery.lastAcknowledged(rcvCnt);
                         }
-
-                        ses.systemMessage(new RecoveryLastReceivedMessage(rcvCnt));
-
-                        recovery.lastAcknowledged(rcvCnt);
                     }
                 }
                 else if (connKey.dummy()) {
