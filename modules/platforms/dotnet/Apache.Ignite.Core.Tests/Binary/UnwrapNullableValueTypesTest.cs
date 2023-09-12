@@ -23,24 +23,76 @@ namespace Apache.Ignite.Core.Tests.Binary
     /// <summary>
     /// Tests for <see cref="BinaryConfiguration.UnwrapNullableValueTypes"/>.
     /// </summary>
-    public class UnwrapNullableValueTypesTest
+    public class UnwrapNullableValueTypesTest : TestBase
     {
+        protected override IgniteConfiguration GetConfig() =>
+            new IgniteConfiguration(base.GetConfig())
+            {
+                BinaryConfiguration = new BinaryConfiguration
+                {
+                    UnwrapNullableValueTypes = true
+                }
+            };
+
         [Test]
         public void TestPrimitiveKeyVal()
         {
-
+            Assert.Fail("TODO");
         }
 
         [Test]
-        public void TestPrimitiveFields()
+        public void TestPrimitiveFields([Values(true, false)] bool nullValues)
         {
+            var cache = Ignite.GetOrCreateCache<int, Primitives>(TestUtils.TestName);
 
+            var primitives = nullValues
+                ? new Primitives()
+                : new Primitives
+                {
+                    Byte = 1,
+                    Bytes = new byte?[] { 2 },
+                    Sbyte = 3,
+                    Sbytes = new sbyte?[] { 4 },
+                    Bool = true,
+                    Bools = new bool?[] { false },
+                    Char = 'a',
+                    Chars = new char?[] { 'b' },
+                    Short = 5,
+                    Shorts = new short?[] { 6 },
+                    Ushort = 7,
+                    Ushorts = new ushort?[] { 8 },
+                    Int = 9,
+                    Ints = new int?[] { 10 },
+                    Uint = 11,
+                    Uints = new uint?[] { 12 },
+                    Long = 13,
+                    Longs = new long?[] { 14 },
+                    Ulong = 15,
+                    Ulongs = new ulong?[] { 16 },
+                    Float = 17,
+                    Floats = new float?[] { 18 },
+                    Double = 19,
+                    Doubles = new double?[] { 20 },
+                    Decimal = 21,
+                    Decimals = new decimal?[] { 22 },
+                    Guid = Guid.NewGuid(),
+                    Guids = new Guid?[] { Guid.NewGuid() },
+                    DateTime = DateTime.Now,
+                    DateTimes = new DateTime?[] { DateTime.Now }
+                };
+
+            cache[1] = primitives;
+
+            var binaryType = Ignite.GetBinary().GetBinaryType(typeof(Primitives));
+
+            // TODO: Check all fields.
+            Assert.AreEqual("boolean", binaryType.GetFieldTypeName(nameof(Primitives.Bool)));
         }
 
         [Test]
         public void TestArrayFields()
         {
-
+            Assert.Fail("TODO");
         }
 
         private class Primitives
