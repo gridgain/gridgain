@@ -193,7 +193,7 @@ namespace Apache.Ignite.Core.Binary
         // TODO: Tests for keys/values
         // TODO: Test for Java interop
         // TODO: Print warning when not enabled
-        // TODO: Same config per type? Not sure.
+        // TODO: Same config per type? Yes, via BinaryReflectiveSerializer
         // TODO: Default value
         /// <summary>
         /// Gets or sets a value indicating whether all DateTime keys, values and object fields should be unwrapped and
@@ -202,6 +202,8 @@ namespace Apache.Ignite.Core.Binary
         /// This produces correct field type in binary metadata and is consistent with Java serializer behavior.
         /// <para />
         /// It is recommended to enable this setting, unless you need old behavior to preserve compatibility.
+        /// <para />
+        /// See also <see cref="BinaryReflectiveSerializer.UnwrapNullableValueTypes"/>.
         /// </summary>
         [DefaultValue(DefaultUnwrapNullableValueTypes)]
         public bool UnwrapNullableValueTypes { get; set; }
