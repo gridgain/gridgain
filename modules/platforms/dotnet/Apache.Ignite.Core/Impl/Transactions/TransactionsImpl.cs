@@ -142,7 +142,7 @@ namespace Apache.Ignite.Core.Impl.Transactions
             {
                 w.WriteInt((int) concurrency);
                 w.WriteInt((int) isolation);
-                w.WriteTimeSpanAsLong(timeout);
+                w.ConfigWriteTimeSpanAsLong(timeout);
                 w.WriteInt(txSize);
             }, s => s.ReadLong());
 

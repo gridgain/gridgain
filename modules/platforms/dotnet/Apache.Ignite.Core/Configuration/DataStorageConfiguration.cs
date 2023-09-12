@@ -268,9 +268,9 @@ namespace Apache.Ignite.Core.Configuration
             Debug.Assert(writer != null);
 
             writer.WriteString(StoragePath);
-            writer.WriteTimeSpanAsLong(CheckpointFrequency);
+            writer.ConfigWriteTimeSpanAsLong(CheckpointFrequency);
             writer.WriteInt(CheckpointThreads);
-            writer.WriteTimeSpanAsLong(LockWaitTime);
+            writer.ConfigWriteTimeSpanAsLong(LockWaitTime);
             writer.WriteInt(WalHistorySize);
             writer.WriteInt(WalSegments);
             writer.WriteInt(WalSegmentSize);
@@ -278,13 +278,13 @@ namespace Apache.Ignite.Core.Configuration
             writer.WriteString(WalArchivePath);
             writer.WriteInt((int)WalMode);
             writer.WriteInt(WalThreadLocalBufferSize);
-            writer.WriteTimeSpanAsLong(WalFlushFrequency);
+            writer.ConfigWriteTimeSpanAsLong(WalFlushFrequency);
             writer.WriteLong(WalFsyncDelayNanos);
             writer.WriteInt(WalRecordIteratorBufferSize);
             writer.WriteBoolean(AlwaysWriteFullPages);
             writer.WriteBoolean(MetricsEnabled);
             writer.WriteInt(MetricsSubIntervalCount);
-            writer.WriteTimeSpanAsLong(MetricsRateTimeInterval);
+            writer.ConfigWriteTimeSpanAsLong(MetricsRateTimeInterval);
             writer.WriteInt((int)CheckpointWriteOrder);
             writer.WriteBoolean(WriteThrottlingEnabled);
             writer.WriteBoolean(WalCompactionEnabled);
@@ -294,10 +294,10 @@ namespace Apache.Ignite.Core.Configuration
             writer.WriteLong(SystemRegionMaxSize);
             writer.WriteInt(PageSize);
             writer.WriteInt(ConcurrencyLevel);
-            writer.WriteTimeSpanAsLong(WalAutoArchiveAfterInactivity);
-            writer.WriteTimeSpanAsLongNullable(CheckpointReadLockTimeout);
+            writer.ConfigWriteTimeSpanAsLong(WalAutoArchiveAfterInactivity);
+            writer.ConfigWriteTimeSpanAsLongNullable(CheckpointReadLockTimeout);
             writer.WriteInt((int)WalPageCompression);
-            writer.WriteIntNullable(WalPageCompressionLevel);
+            writer.ConfigWriteIntNullable(WalPageCompressionLevel);
 
             if (DataRegionConfigurations != null)
             {

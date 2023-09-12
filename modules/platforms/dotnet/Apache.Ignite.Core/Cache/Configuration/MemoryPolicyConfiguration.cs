@@ -110,7 +110,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
             writer.WriteInt(EmptyPagesPoolSize);
             writer.WriteBoolean(MetricsEnabled);
             writer.WriteInt(SubIntervals);
-            writer.WriteTimeSpanAsLong(RateTimeInterval);
+            writer.ConfigWriteTimeSpanAsLong(RateTimeInterval);
         }
 
         /// <summary>

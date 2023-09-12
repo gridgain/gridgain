@@ -129,7 +129,7 @@ namespace Apache.Ignite.Core.Impl.Binary
                 {
                     // TODO: Conflicting extension methods used for configuration - rename
                     writeAction = raw
-                        ? GetRawWriter<int?>(field, (w, o) => w.WriteIntNullable(o))
+                        ? GetRawWriter<int?>(field, (w, o) => w.WriteIntNullable1(o))
                         : GetWriter<int?>(field, (f, w, o) => w.WriteIntNullable(f, o));
 
                     readAction = raw

@@ -152,13 +152,13 @@ namespace Apache.Ignite.Core.Configuration
             writer.WriteBoolean(TcpNoDelay);
             writer.WriteInt(MaxOpenCursorsPerConnection);
             writer.WriteInt(ThreadPoolSize);
-            writer.WriteTimeSpanAsLong(IdleTimeout);
+            writer.ConfigWriteTimeSpanAsLong(IdleTimeout);
 
             writer.WriteBoolean(ThinClientEnabled);
             writer.WriteBoolean(OdbcEnabled);
             writer.WriteBoolean(JdbcEnabled);
 
-            writer.WriteTimeSpanAsLong(HandshakeTimeout);
+            writer.ConfigWriteTimeSpanAsLong(HandshakeTimeout);
 
             // Thin client configuration.
             if (ThinClientConfiguration != null)

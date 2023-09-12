@@ -321,30 +321,30 @@ namespace Apache.Ignite.Core
             Debug.Assert(writer != null);
 
             // Simple properties
-            writer.WriteBooleanNullable(_clientMode);
+            writer.ConfigWriteBooleanNullable(_clientMode);
             writer.WriteIntArray(IncludedEventTypes == null ? null : IncludedEventTypes.ToArray());
 
-            writer.WriteTimeSpanAsLongNullable(_metricsExpireTime);
-            writer.WriteIntNullable(_metricsHistorySize);
-            writer.WriteTimeSpanAsLongNullable(_metricsLogFrequency);
-            writer.WriteTimeSpanAsLongNullable(_metricsUpdateFrequency);
-            writer.WriteIntNullable(_networkSendRetryCount);
-            writer.WriteTimeSpanAsLongNullable(_networkSendRetryDelay);
-            writer.WriteTimeSpanAsLongNullable(_networkTimeout);
+            writer.ConfigWriteTimeSpanAsLongNullable(_metricsExpireTime);
+            writer.ConfigWriteIntNullable(_metricsHistorySize);
+            writer.ConfigWriteTimeSpanAsLongNullable(_metricsLogFrequency);
+            writer.ConfigWriteTimeSpanAsLongNullable(_metricsUpdateFrequency);
+            writer.ConfigWriteIntNullable(_networkSendRetryCount);
+            writer.ConfigWriteTimeSpanAsLongNullable(_networkSendRetryDelay);
+            writer.ConfigWriteTimeSpanAsLongNullable(_networkTimeout);
             writer.WriteString(WorkDirectory);
             writer.WriteString(Localhost);
-            writer.WriteBooleanNullable(_isDaemon);
-            writer.WriteTimeSpanAsLongNullable(_failureDetectionTimeout);
-            writer.WriteTimeSpanAsLongNullable(_clientFailureDetectionTimeout);
-            writer.WriteTimeSpanAsLongNullable(_longQueryWarningTimeout);
-            writer.WriteBooleanNullable(_isActiveOnStart);
-            writer.WriteBooleanNullable(_authenticationEnabled);
-            writer.WriteLongNullable(_mvccVacuumFreq);
-            writer.WriteIntNullable(_mvccVacuumThreadCnt);
-            writer.WriteTimeSpanAsLongNullable(_sysWorkerBlockedTimeout);
-            writer.WriteIntNullable(_sqlQueryHistorySize);
-            writer.WriteBooleanNullable(_javaPeerClassLoadingEnabled);
-            writer.WriteIntNullable((int?) _asyncContinuationExecutor);
+            writer.ConfigWriteBooleanNullable(_isDaemon);
+            writer.ConfigWriteTimeSpanAsLongNullable(_failureDetectionTimeout);
+            writer.ConfigWriteTimeSpanAsLongNullable(_clientFailureDetectionTimeout);
+            writer.ConfigWriteTimeSpanAsLongNullable(_longQueryWarningTimeout);
+            writer.ConfigWriteBooleanNullable(_isActiveOnStart);
+            writer.ConfigWriteBooleanNullable(_authenticationEnabled);
+            writer.ConfigWriteLongNullable(_mvccVacuumFreq);
+            writer.ConfigWriteIntNullable(_mvccVacuumThreadCnt);
+            writer.ConfigWriteTimeSpanAsLongNullable(_sysWorkerBlockedTimeout);
+            writer.ConfigWriteIntNullable(_sqlQueryHistorySize);
+            writer.ConfigWriteBooleanNullable(_javaPeerClassLoadingEnabled);
+            writer.ConfigWriteIntNullable((int?) _asyncContinuationExecutor);
 
             if (SqlSchemas == null)
                 writer.WriteInt(0);
@@ -361,15 +361,15 @@ namespace Apache.Ignite.Core
             writer.WriteObjectDetached(ConsistentId);
 
             // Thread pools
-            writer.WriteIntNullable(_publicThreadPoolSize);
-            writer.WriteIntNullable(_stripedThreadPoolSize);
-            writer.WriteIntNullable(_serviceThreadPoolSize);
-            writer.WriteIntNullable(_systemThreadPoolSize);
-            writer.WriteIntNullable(_asyncCallbackThreadPoolSize);
-            writer.WriteIntNullable(_managementThreadPoolSize);
-            writer.WriteIntNullable(_dataStreamerThreadPoolSize);
-            writer.WriteIntNullable(_utilityCacheThreadPoolSize);
-            writer.WriteIntNullable(_queryThreadPoolSize);
+            writer.ConfigWriteIntNullable(_publicThreadPoolSize);
+            writer.ConfigWriteIntNullable(_stripedThreadPoolSize);
+            writer.ConfigWriteIntNullable(_serviceThreadPoolSize);
+            writer.ConfigWriteIntNullable(_systemThreadPoolSize);
+            writer.ConfigWriteIntNullable(_asyncCallbackThreadPoolSize);
+            writer.ConfigWriteIntNullable(_managementThreadPoolSize);
+            writer.ConfigWriteIntNullable(_dataStreamerThreadPoolSize);
+            writer.ConfigWriteIntNullable(_utilityCacheThreadPoolSize);
+            writer.ConfigWriteIntNullable(_queryThreadPoolSize);
 
             // Cache config
             writer.WriteCollectionRaw(CacheConfiguration);

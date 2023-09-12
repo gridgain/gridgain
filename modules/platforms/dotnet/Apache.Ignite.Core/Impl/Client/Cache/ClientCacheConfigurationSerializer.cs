@@ -243,7 +243,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             writer.WriteString(cfg.GroupName);
 
             code(Op.DefaultLockTimeout);
-            writer.WriteTimeSpanAsLong(cfg.LockTimeout);
+            writer.ConfigWriteTimeSpanAsLong(cfg.LockTimeout);
 
             code(Op.MaxConcurrentAsyncOperations);
             writer.WriteInt(cfg.MaxConcurrentAsyncOperations);
@@ -276,7 +276,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             writer.WriteLong(cfg.RebalanceBatchesPrefetchCount);
 
             code(Op.RebalanceDelay);
-            writer.WriteTimeSpanAsLong(cfg.RebalanceDelay);
+            writer.ConfigWriteTimeSpanAsLong(cfg.RebalanceDelay);
 
             code(Op.RebalanceMode);
             writer.WriteInt((int)cfg.RebalanceMode);
@@ -285,10 +285,10 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             writer.WriteInt(cfg.RebalanceOrder);
 
             code(Op.RebalanceThrottle);
-            writer.WriteTimeSpanAsLong(cfg.RebalanceThrottle);
+            writer.ConfigWriteTimeSpanAsLong(cfg.RebalanceThrottle);
 
             code(Op.RebalanceTimeout);
-            writer.WriteTimeSpanAsLong(cfg.RebalanceTimeout);
+            writer.ConfigWriteTimeSpanAsLong(cfg.RebalanceTimeout);
 
             code(Op.SqlEscapeAll);
             writer.WriteBoolean(cfg.SqlEscapeAll);

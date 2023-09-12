@@ -177,10 +177,10 @@ namespace Apache.Ignite.Core.PersistentStore
             Debug.Assert(writer != null);
 
             writer.WriteString(PersistentStorePath);
-            writer.WriteTimeSpanAsLong(CheckpointingFrequency);
+            writer.ConfigWriteTimeSpanAsLong(CheckpointingFrequency);
             writer.WriteLong(CheckpointingPageBufferSize);
             writer.WriteInt(CheckpointingThreads);
-            writer.WriteTimeSpanAsLong(LockWaitTime);
+            writer.ConfigWriteTimeSpanAsLong(LockWaitTime);
             writer.WriteInt(WalHistorySize);
             writer.WriteInt(WalSegments);
             writer.WriteInt(WalSegmentSize);
@@ -188,13 +188,13 @@ namespace Apache.Ignite.Core.PersistentStore
             writer.WriteString(WalArchivePath);
             writer.WriteInt((int)WalMode);
             writer.WriteInt(TlbSize);
-            writer.WriteTimeSpanAsLong(WalFlushFrequency);
+            writer.ConfigWriteTimeSpanAsLong(WalFlushFrequency);
             writer.WriteLong(WalFsyncDelayNanos);
             writer.WriteInt(WalRecordIteratorBufferSize);
             writer.WriteBoolean(AlwaysWriteFullPages);
             writer.WriteBoolean(MetricsEnabled);
             writer.WriteInt(SubIntervals);
-            writer.WriteTimeSpanAsLong(RateTimeInterval);
+            writer.ConfigWriteTimeSpanAsLong(RateTimeInterval);
             writer.WriteInt((int) CheckpointWriteOrder);
             writer.WriteBoolean(WriteThrottlingEnabled);
         }

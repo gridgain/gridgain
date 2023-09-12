@@ -131,7 +131,7 @@ namespace Apache.Ignite.Core.Configuration
             writer.WriteInt(EmptyPagesPoolSize);
             writer.WriteBoolean(MetricsEnabled);
             writer.WriteInt(MetricsSubIntervalCount);
-            writer.WriteTimeSpanAsLong(MetricsRateTimeInterval);
+            writer.ConfigWriteTimeSpanAsLong(MetricsRateTimeInterval);
             writer.WriteLong(CheckpointPageBufferSize);
             writer.WriteBoolean(LazyMemoryAllocation);
         }
