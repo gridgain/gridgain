@@ -30,15 +30,19 @@ namespace Apache.Ignite.Core.Tests.Binary
             {
                 BinaryConfiguration = new BinaryConfiguration
                 {
-                    UnwrapNullableValueTypes = true
+                    UnwrapNullableValueTypes = true,
+                    TypeConfigurations = new[]
+                    {
+                        new BinaryTypeConfiguration(typeof(Primitives2))
+                        {
+                            Serializer = new BinaryReflectiveSerializer
+                            {
+                                UnwrapNullableValueTypes = false
+                            }
+                        }
+                    }
                 }
             };
-
-        [Test]
-        public void TestPrimitiveKeyVal()
-        {
-            Assert.Fail("TODO");
-        }
 
         [Test]
         public void TestPrimitiveFields([Values(true, false)] bool nullValues)
@@ -95,6 +99,60 @@ namespace Apache.Ignite.Core.Tests.Binary
         }
 
         [Test]
+        public void TestPrimitiveFieldsUnwrapDisabled([Values(true, false)] bool nullValues)
+        {
+            var cache = Ignite.GetOrCreateCache<int, Primitives2>(TestUtils.TestName);
+
+            var primitives = nullValues
+                ? new Primitives2()
+                : new Primitives2
+                {
+                    Byte = 1,
+                    Bytes = new byte?[] { 2 },
+                    Sbyte = 3,
+                    Sbytes = new sbyte?[] { 4 },
+                    Bool = true,
+                    Bools = new bool?[] { false },
+                    Char = 'a',
+                    Chars = new char?[] { 'b' },
+                    Short = 5,
+                    Shorts = new short?[] { 6 },
+                    Ushort = 7,
+                    Ushorts = new ushort?[] { 8 },
+                    Int = 9,
+                    Ints = new int?[] { 10 },
+                    Uint = 11,
+                    Uints = new uint?[] { 12 },
+                    Long = 13,
+                    Longs = new long?[] { 14 },
+                    Ulong = 15,
+                    Ulongs = new ulong?[] { 16 },
+                    Float = 17,
+                    Floats = new float?[] { 18 },
+                    Double = 19,
+                    Doubles = new double?[] { 20 },
+                    Decimal = 21,
+                    Decimals = new decimal?[] { 22 },
+                    Guid = Guid.NewGuid(),
+                    Guids = new Guid?[] { Guid.NewGuid() },
+                    DateTime = DateTime.Now,
+                    DateTimes = new DateTime?[] { DateTime.Now }
+                };
+
+            cache[1] = primitives;
+            var res = cache[1];
+
+            AssertExtensions.ReflectionEqual(primitives, res);
+
+            var binaryType = Ignite.GetBinary().GetBinaryType(typeof(Primitives2));
+
+            // TODO: Check all fields equality and binary type name.
+            Assert.AreEqual("Object", binaryType.GetFieldTypeName(nameof(Primitives2.Byte)));
+            Assert.AreEqual("Object", binaryType.GetFieldTypeName(nameof(Primitives2.Sbyte)));
+            Assert.AreEqual("Object", binaryType.GetFieldTypeName(nameof(Primitives2.Bool)));
+        }
+
+        [Test]
         public void TestArrayFields()
         {
             Assert.Fail("TODO");
@@ -139,5 +197,8 @@ namespace Apache.Ignite.Core.Tests.Binary
             public DateTime? DateTime { get; set; }
             public DateTime?[] DateTimes { get; set; }
         }
+
+        private class Primitives2 : Primitives
+        { }
     }
 }
