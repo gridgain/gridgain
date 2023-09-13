@@ -114,8 +114,6 @@
             <id>all-scala</id><!-- used to update project versions and check all modules compilation -->
             <modules><!-- sorted alphabetically -->
                 <module>modules/ml/mleap-model-parser</module>
-                <module>modules/scalar-2.10</module>
-                <module>modules/scalar</module>
                 <module>modules/spark</module>
                 <module>modules/spark-2.4</module>
             </modules>
@@ -602,7 +600,6 @@
 
             <modules>
                 <module>modules/ml/mleap-model-parser</module>
-                <module>modules/scalar</module>
                 <module>modules/spark</module>
             </modules>
         </profile>
@@ -616,19 +613,6 @@
 
             <modules>
                 <module>modules/spark-2.4</module>
-                <module>modules/scalar</module>
-            </modules>
-        </profile>
-
-        <profile>
-            <id>scala-2.10</id>
-
-            <activation>
-                <property><name>scala-2.10</name></property>
-            </activation>
-
-            <modules>
-                <module>modules/scalar-2.10</module>
             </modules>
         </profile>
 
