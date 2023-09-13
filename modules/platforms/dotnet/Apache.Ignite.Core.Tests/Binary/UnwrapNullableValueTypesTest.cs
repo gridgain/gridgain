@@ -82,10 +82,15 @@ namespace Apache.Ignite.Core.Tests.Binary
                 };
 
             cache[1] = primitives;
+            var res = cache[1];
+
+            AssertExtensions.ReflectionEqual(primitives, res);
 
             var binaryType = Ignite.GetBinary().GetBinaryType(typeof(Primitives));
 
             // TODO: Check all fields equality and binary type name.
+            Assert.AreEqual("byte", binaryType.GetFieldTypeName(nameof(Primitives.Byte)));
+            Assert.AreEqual("byte", binaryType.GetFieldTypeName(nameof(Primitives.Sbyte)));
             Assert.AreEqual("boolean", binaryType.GetFieldTypeName(nameof(Primitives.Bool)));
         }
 
