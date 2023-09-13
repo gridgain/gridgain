@@ -85,7 +85,7 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             var binaryType = Ignite.GetBinary().GetBinaryType(typeof(Primitives));
 
-            // TODO: Check all fields.
+            // TODO: Check all fields equality and binary type name.
             Assert.AreEqual("boolean", binaryType.GetFieldTypeName(nameof(Primitives.Bool)));
         }
 
@@ -93,6 +93,12 @@ namespace Apache.Ignite.Core.Tests.Binary
         public void TestArrayFields()
         {
             Assert.Fail("TODO");
+        }
+
+        [Test]
+        public void TestJavaInterop()
+        {
+            Assert.Fail("TODO: Same model in Java - check roundtrip in both directions.");
         }
 
         private class Primitives
