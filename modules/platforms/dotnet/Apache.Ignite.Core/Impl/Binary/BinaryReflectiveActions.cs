@@ -124,16 +124,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             }
             else if (unwrapNullable && !raw && Nullable.GetUnderlyingType(type) is { IsPrimitive: true } underlyingType)
             {
-                // TODO: extract HandleNullablePrimitive.
-                if (underlyingType == typeof(int))
-                {
-                    writeAction = GetWriter<int?>(field, (f, w, o) => w.WriteIntNullable(f, o));
-                    readAction = GetReader(field, (f, r) => r.ReadIntNullable(f));
-                }
-                else
-                {
-                    throw new NotImplementedException("TODO: " + type);
-                }
+                HandlePrimitiveNullable(field, out writeAction, out readAction, underlyingType);
             }
             else if (type.IsArray)
             {
@@ -274,6 +265,120 @@ namespace Apache.Ignite.Core.Impl.Binary
             {
                 throw new IgniteException(string.Format("Unsupported primitive type '{0}' [Field={1}, " +
                                                         "DeclaringType={2}", type, field, field.DeclaringType));
+            }
+        }
+
+        private static void HandlePrimitiveNullable(FieldInfo field, out BinaryReflectiveWriteAction writeAction,
+            out BinaryReflectiveReadAction readAction, Type underlyingType)
+        {
+            if (underlyingType == typeof (bool))
+            {
+                writeAction = raw
+                    ? GetRawWriter<bool>(field, (w, o) => w.WriteBoolean(o))
+                    : GetWriter<bool>(field, (f, w, o) => w.WriteBoolean(f, o));
+                readAction = raw
+                    ? GetRawReader(field, r => r.ReadBoolean())
+                    : GetReader(field, (f, r) => r.ReadBoolean(f));
+            }
+            else if (underlyingType == typeof (sbyte))
+            {
+                writeAction = raw
+                    ? GetRawWriter<sbyte>(field, (w, o) => w.WriteByte(unchecked((byte) o)))
+                    : GetWriter<sbyte>(field, (f, w, o) => w.WriteByte(f, unchecked((byte) o)));
+                readAction = raw
+                    ? GetRawReader(field, r => unchecked ((sbyte) r.ReadByte()))
+                    : GetReader(field, (f, r) => unchecked ((sbyte) r.ReadByte(f)));
+            }
+            else if (underlyingType == typeof (byte))
+            {
+                writeAction = raw
+                    ? GetRawWriter<byte>(field, (w, o) => w.WriteByte(o))
+                    : GetWriter<byte>(field, (f, w, o) => w.WriteByte(f, o));
+                readAction = raw ? GetRawReader(field, r => r.ReadByte()) : GetReader(field, (f, r) => r.ReadByte(f));
+            }
+            else if (underlyingType == typeof (short))
+            {
+                writeAction = GetWriter<short?>(field, (f, w, o) => w.WriteShortNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadShortNullable(f));
+            }
+            else if (underlyingType == typeof (ushort))
+            {
+                writeAction = GetWriter<ushort?>(field, (f, w, o) => w.WriteShortNullable(f, unchecked((short?) o)));
+                readAction = GetReader(field, (f, r) => unchecked((ushort?) r.ReadShortNullable(f)));
+            }
+            else if (underlyingType == typeof (char))
+            {
+                writeAction = GetWriter<int?>(field, (f, w, o) => w.WriteCharNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadCharNullable(f));
+            }
+            else if (underlyingType == typeof (int))
+            {
+                writeAction = GetWriter<int?>(field, (f, w, o) => w.WriteIntNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadIntNullable(f));
+            }
+            else if (underlyingType == typeof (uint))
+            {
+                writeAction = raw
+                    ? GetRawWriter<uint>(field, (w, o) => w.WriteInt(unchecked((int) o)))
+                    : GetWriter<uint>(field, (f, w, o) => w.WriteInt(f, unchecked((int) o)));
+                readAction = raw
+                    ? GetRawReader(field, r => unchecked((uint) r.ReadInt()))
+                    : GetReader(field, (f, r) => unchecked((uint) r.ReadInt(f)));
+            }
+            else if (underlyingType == typeof (long))
+            {
+                writeAction = raw
+                    ? GetRawWriter<long>(field, (w, o) => w.WriteLong(o))
+                    : GetWriter<long>(field, (f, w, o) => w.WriteLong(f, o));
+                readAction = raw ? GetRawReader(field, r => r.ReadLong()) : GetReader(field, (f, r) => r.ReadLong(f));
+            }
+            else if (underlyingType == typeof (ulong))
+            {
+                writeAction = raw
+                    ? GetRawWriter<ulong>(field, (w, o) => w.WriteLong(unchecked((long) o)))
+                    : GetWriter<ulong>(field, (f, w, o) => w.WriteLong(f, unchecked((long) o)));
+                readAction = raw
+                    ? GetRawReader(field, r => unchecked((ulong) r.ReadLong()))
+                    : GetReader(field, (f, r) => unchecked((ulong) r.ReadLong(f)));
+            }
+            else if (underlyingType == typeof (float))
+            {
+                writeAction = raw
+                    ? GetRawWriter<float>(field, (w, o) => w.WriteFloat(o))
+                    : GetWriter<float>(field, (f, w, o) => w.WriteFloat(f, o));
+                readAction = raw ? GetRawReader(field, r => r.ReadFloat()) : GetReader(field, (f, r) => r.ReadFloat(f));
+            }
+            else if (underlyingType == typeof(double))
+            {
+                writeAction = raw
+                    ? GetRawWriter<double>(field, (w, o) => w.WriteDouble(o))
+                    : GetWriter<double>(field, (f, w, o) => w.WriteDouble(f, o));
+                readAction = raw
+                    ? GetRawReader(field, r => r.ReadDouble())
+                    : GetReader(field, (f, r) => r.ReadDouble(f));
+            }
+            else if (underlyingType == typeof(IntPtr))
+            {
+                writeAction = raw
+                    ? GetRawWriter<IntPtr>(field, (w, o) => w.WriteLong((long) o))
+                    : GetWriter<IntPtr>(field, (f, w, o) => w.WriteLong(f, (long) o));
+                readAction = raw
+                    ? GetRawReader(field, r => (IntPtr) r.ReadLong())
+                    : GetReader(field, (f, r) => (IntPtr) r.ReadLong(f));
+            }
+            else if (underlyingType == typeof(UIntPtr))
+            {
+                writeAction = raw
+                    ? GetRawWriter<UIntPtr>(field, (w, o) => w.WriteLong((long) o))
+                    : GetWriter<UIntPtr>(field, (f, w, o) => w.WriteLong(f, (long) o));
+                readAction = raw
+                    ? GetRawReader(field, r => (UIntPtr) r.ReadLong())
+                    : GetReader(field, (f, r) => (UIntPtr) r.ReadLong(f));
+            }
+            else
+            {
+                throw new IgniteException(string.Format("Unsupported primitive type '{0}' [Field={1}, " +
+                                                        "DeclaringType={2}", underlyingType, field, field.DeclaringType));
             }
         }
 
