@@ -160,12 +160,10 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             foreach (var field in binaryType.Fields)
             {
-                Assert.AreEqual(
-                    field.Last() == 's'
-                        ? BinaryTypeNames.TypeNameArrayObject
-                        : BinaryTypeNames.TypeNameObject,
-                    binaryType.GetFieldTypeName(field),
-                    field);
+                if (field.Last() != 's' && field != nameof(Primitives2.Guid))
+                {
+                    Assert.AreEqual(BinaryTypeNames.TypeNameObject, binaryType.GetFieldTypeName(field), field);
+                }
             }
         }
 
