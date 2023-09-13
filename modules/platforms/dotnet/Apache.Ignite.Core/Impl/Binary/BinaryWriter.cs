@@ -242,6 +242,20 @@ namespace Apache.Ignite.Core.Impl.Binary
             WriteShortField(val);
         }
 
+        internal void WriteShortNullable(string fieldName, short? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Short);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteShortField(val.Value);
+            }
+        }
+
         /// <summary>
         /// Write short field value.
         /// </summary>
@@ -303,6 +317,20 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             WriteFieldId(fieldName, BinaryTypeId.Char);
             WriteCharField(val);
+        }
+
+        internal void WriteCharNullable(string fieldName, char? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Char);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteCharField(val.Value);
+            }
         }
 
         /// <summary>
@@ -450,6 +478,20 @@ namespace Apache.Ignite.Core.Impl.Binary
             WriteLongField(val);
         }
 
+        internal void WriteLongNullable(string fieldName, long? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Long);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteLongField(val.Value);
+            }
+        }
+
         /// <summary>
         /// Writes the long field.
         /// </summary>
@@ -513,6 +555,20 @@ namespace Apache.Ignite.Core.Impl.Binary
             WriteFloatField(val);
         }
 
+        internal void WriteFloatNullable(string fieldName, float? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Float);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteFloatField(val.Value);
+            }
+        }
+
         /// <summary>
         /// Writes the float field.
         /// </summary>
@@ -574,6 +630,20 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             WriteFieldId(fieldName, BinaryTypeId.Double);
             WriteDoubleField(val);
+        }
+
+        internal void WriteDoubleNullable(string fieldName, double? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Double);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteDoubleField(val.Value);
+            }
         }
 
         /// <summary>

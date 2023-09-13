@@ -269,44 +269,46 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         private static void HandlePrimitiveNullable(FieldInfo field, out BinaryReflectiveWriteAction writeAction,
-            out BinaryReflectiveReadAction readAction, Type underlyingType)
+            out BinaryReflectiveReadAction readAction)
         {
-            if (underlyingType == typeof (bool))
+            var type = field.FieldType;
+
+            if (type == typeof (bool?))
             {
                 writeAction = GetWriter<bool?>(field, (f, w, o) => w.WriteBooleanNullable(f, o));
                 readAction = GetReader(field, (f, r) => r.ReadBooleanNullable(f));
             }
-            else if (underlyingType == typeof (sbyte))
+            else if (type == typeof (sbyte?))
             {
                 writeAction = GetWriter<sbyte?>(field, (f, w, o) => w.WriteByteNullable(f, unchecked((byte?)o)));
                 readAction = GetReader(field, (f, r) => unchecked((sbyte?)r.ReadByteNullable(f)));
             }
-            else if (underlyingType == typeof (byte))
+            else if (type == typeof (byte?))
             {
                 writeAction = GetWriter<byte?>(field, (f, w, o) => w.WriteByteNullable(f, o));
                 readAction = GetReader(field, (f, r) => r.ReadByteNullable(f));
             }
-            else if (underlyingType == typeof (short))
+            else if (type == typeof (short?))
             {
                 writeAction = GetWriter<short?>(field, (f, w, o) => w.WriteShortNullable(f, o));
                 readAction = GetReader(field, (f, r) => r.ReadShortNullable(f));
             }
-            else if (underlyingType == typeof (ushort))
+            else if (type == typeof (ushort?))
             {
                 writeAction = GetWriter<ushort?>(field, (f, w, o) => w.WriteShortNullable(f, unchecked((short?) o)));
                 readAction = GetReader(field, (f, r) => unchecked((ushort?) r.ReadShortNullable(f)));
             }
-            else if (underlyingType == typeof (char))
+            else if (type == typeof (char?))
             {
                 writeAction = GetWriter<int?>(field, (f, w, o) => w.WriteCharNullable(f, o));
                 readAction = GetReader(field, (f, r) => r.ReadCharNullable(f));
             }
-            else if (underlyingType == typeof (int))
+            else if (type == typeof (int?))
             {
                 writeAction = GetWriter<int?>(field, (f, w, o) => w.WriteIntNullable(f, o));
                 readAction = GetReader(field, (f, r) => r.ReadIntNullable(f));
             }
-            else if (underlyingType == typeof (uint))
+            else if (type == typeof (uint?))
             {
                 writeAction = raw
                     ? GetRawWriter<uint>(field, (w, o) => w.WriteInt(unchecked((int) o)))
@@ -315,14 +317,14 @@ namespace Apache.Ignite.Core.Impl.Binary
                     ? GetRawReader(field, r => unchecked((uint) r.ReadInt()))
                     : GetReader(field, (f, r) => unchecked((uint) r.ReadInt(f)));
             }
-            else if (underlyingType == typeof (long))
+            else if (type == typeof (long?))
             {
                 writeAction = raw
                     ? GetRawWriter<long>(field, (w, o) => w.WriteLong(o))
                     : GetWriter<long>(field, (f, w, o) => w.WriteLong(f, o));
                 readAction = raw ? GetRawReader(field, r => r.ReadLong()) : GetReader(field, (f, r) => r.ReadLong(f));
             }
-            else if (underlyingType == typeof (ulong))
+            else if (type == typeof (ulong?))
             {
                 writeAction = raw
                     ? GetRawWriter<ulong>(field, (w, o) => w.WriteLong(unchecked((long) o)))
@@ -331,14 +333,14 @@ namespace Apache.Ignite.Core.Impl.Binary
                     ? GetRawReader(field, r => unchecked((ulong) r.ReadLong()))
                     : GetReader(field, (f, r) => unchecked((ulong) r.ReadLong(f)));
             }
-            else if (underlyingType == typeof (float))
+            else if (type == typeof (float?))
             {
                 writeAction = raw
                     ? GetRawWriter<float>(field, (w, o) => w.WriteFloat(o))
                     : GetWriter<float>(field, (f, w, o) => w.WriteFloat(f, o));
                 readAction = raw ? GetRawReader(field, r => r.ReadFloat()) : GetReader(field, (f, r) => r.ReadFloat(f));
             }
-            else if (underlyingType == typeof(double))
+            else if (type == typeof(double?))
             {
                 writeAction = raw
                     ? GetRawWriter<double>(field, (w, o) => w.WriteDouble(o))
@@ -347,28 +349,10 @@ namespace Apache.Ignite.Core.Impl.Binary
                     ? GetRawReader(field, r => r.ReadDouble())
                     : GetReader(field, (f, r) => r.ReadDouble(f));
             }
-            else if (underlyingType == typeof(IntPtr))
-            {
-                writeAction = raw
-                    ? GetRawWriter<IntPtr>(field, (w, o) => w.WriteLong((long) o))
-                    : GetWriter<IntPtr>(field, (f, w, o) => w.WriteLong(f, (long) o));
-                readAction = raw
-                    ? GetRawReader(field, r => (IntPtr) r.ReadLong())
-                    : GetReader(field, (f, r) => (IntPtr) r.ReadLong(f));
-            }
-            else if (underlyingType == typeof(UIntPtr))
-            {
-                writeAction = raw
-                    ? GetRawWriter<UIntPtr>(field, (w, o) => w.WriteLong((long) o))
-                    : GetWriter<UIntPtr>(field, (f, w, o) => w.WriteLong(f, (long) o));
-                readAction = raw
-                    ? GetRawReader(field, r => (UIntPtr) r.ReadLong())
-                    : GetReader(field, (f, r) => (UIntPtr) r.ReadLong(f));
-            }
             else
             {
                 throw new IgniteException(string.Format("Unsupported primitive type '{0}' [Field={1}, " +
-                                                        "DeclaringType={2}", underlyingType, field, field.DeclaringType));
+                                                        "DeclaringType={2}", type, field, field.DeclaringType));
             }
         }
 
