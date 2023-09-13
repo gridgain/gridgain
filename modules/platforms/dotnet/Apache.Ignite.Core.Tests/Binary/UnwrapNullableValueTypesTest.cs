@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Binary
 {
     using System;
+    using System.Linq;
     using Apache.Ignite.Core.Binary;
     using NUnit.Framework;
 
@@ -151,16 +152,21 @@ namespace Apache.Ignite.Core.Tests.Binary
                 };
 
             cache[1] = primitives;
+
             var res = cache[1];
+            var binaryType = Ignite.GetBinary().GetBinaryType(typeof(Primitives2));
 
             AssertExtensions.ReflectionEqual(primitives, res);
 
-            var binaryType = Ignite.GetBinary().GetBinaryType(typeof(Primitives2));
-
-            // TODO: Check all fields equality and binary type name.
-            Assert.AreEqual("Object", binaryType.GetFieldTypeName(nameof(Primitives2.Byte)));
-            Assert.AreEqual("Object", binaryType.GetFieldTypeName(nameof(Primitives2.Sbyte)));
-            Assert.AreEqual("Object", binaryType.GetFieldTypeName(nameof(Primitives2.Bool)));
+            foreach (var field in binaryType.Fields)
+            {
+                Assert.AreEqual(
+                    field.Last() == 's'
+                        ? BinaryTypeNames.TypeNameArrayObject
+                        : BinaryTypeNames.TypeNameObject,
+                    binaryType.GetFieldTypeName(field),
+                    field);
+            }
         }
 
         [Test]
