@@ -122,7 +122,8 @@ namespace Apache.Ignite.Core.Impl.Binary
             {
                 HandlePrimitive(field, out writeAction, out readAction, raw);
             }
-            else if (unwrapNullable && !raw && Nullable.GetUnderlyingType(type) is { IsPrimitive: true })
+            else if (unwrapNullable && !raw && Nullable.GetUnderlyingType(type) is { } underlyingType
+                     && (underlyingType.IsPrimitive || underlyingType == typeof(decimal)))
             {
                 HandlePrimitiveNullable(field, out writeAction, out readAction);
             }
@@ -332,6 +333,11 @@ namespace Apache.Ignite.Core.Impl.Binary
             {
                 writeAction = GetWriter<double?>(field, (f, w, o) => w.WriteDoubleNullable(f, o));
                 readAction = GetReader(field, (f, r) => r.ReadDoubleNullable(f));
+            }
+            else if (type == typeof(decimal?))
+            {
+                writeAction = GetWriter<decimal?>(field, (f, w, o) => w.WriteDecimal(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadDecimal(f));
             }
             else
             {

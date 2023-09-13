@@ -32,6 +32,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 BinaryConfiguration = new BinaryConfiguration
                 {
                     UnwrapNullableValueTypes = true,
+                    ForceTimestamp = true,
                     TypeConfigurations = new[]
                     {
                         new BinaryTypeConfiguration(typeof(Primitives2))
@@ -82,8 +83,8 @@ namespace Apache.Ignite.Core.Tests.Binary
                     Decimals = new decimal?[] { 22 },
                     Guid = Guid.NewGuid(),
                     Guids = new Guid?[] { Guid.NewGuid() },
-                    DateTime = DateTime.Now,
-                    DateTimes = new DateTime?[] { DateTime.Now }
+                    DateTime = DateTime.UtcNow,
+                    DateTimes = new DateTime?[] { DateTime.UtcNow }
                 };
 
             cache[1] = primitives;
@@ -147,8 +148,8 @@ namespace Apache.Ignite.Core.Tests.Binary
                     Decimals = new decimal?[] { 22 },
                     Guid = Guid.NewGuid(),
                     Guids = new Guid?[] { Guid.NewGuid() },
-                    DateTime = DateTime.Now,
-                    DateTimes = new DateTime?[] { DateTime.Now }
+                    DateTime = DateTime.UtcNow,
+                    DateTimes = new DateTime?[] { DateTime.UtcNow }
                 };
 
             cache[1] = primitives;
