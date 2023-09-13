@@ -278,19 +278,13 @@ namespace Apache.Ignite.Core.Impl.Binary
             }
             else if (underlyingType == typeof (sbyte))
             {
-                writeAction = raw
-                    ? GetRawWriter<sbyte>(field, (w, o) => w.WriteByte(unchecked((byte) o)))
-                    : GetWriter<sbyte>(field, (f, w, o) => w.WriteByte(f, unchecked((byte) o)));
-                readAction = raw
-                    ? GetRawReader(field, r => unchecked ((sbyte) r.ReadByte()))
-                    : GetReader(field, (f, r) => unchecked ((sbyte) r.ReadByte(f)));
+                writeAction = GetWriter<sbyte?>(field, (f, w, o) => w.WriteByteNullable(f, unchecked((byte?)o)));
+                readAction = GetReader(field, (f, r) => unchecked((sbyte?)r.ReadByteNullable(f)));
             }
             else if (underlyingType == typeof (byte))
             {
-                writeAction = raw
-                    ? GetRawWriter<byte>(field, (w, o) => w.WriteByte(o))
-                    : GetWriter<byte>(field, (f, w, o) => w.WriteByte(f, o));
-                readAction = raw ? GetRawReader(field, r => r.ReadByte()) : GetReader(field, (f, r) => r.ReadByte(f));
+                writeAction = GetWriter<byte?>(field, (f, w, o) => w.WriteByteNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadByteNullable(f));
             }
             else if (underlyingType == typeof (short))
             {

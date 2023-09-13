@@ -130,6 +130,11 @@ namespace Apache.Ignite.Core.Impl.Binary
             return ReadField(fieldName, ReadByte, BinaryTypeId.Byte);
         }
 
+        internal byte? ReadByteNullable(string fieldName)
+        {
+            return ReadField<byte?>(fieldName, () => ReadByte(), BinaryTypeId.Byte);
+        }
+
         /** <inheritdoc /> */
         public byte ReadByte()
         {

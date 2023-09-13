@@ -165,6 +165,20 @@ namespace Apache.Ignite.Core.Impl.Binary
             WriteByteField(val);
         }
 
+        public void WriteByteNullable(string fieldName, byte? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Byte);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteByteField(val.Value);
+            }
+        }
+
         /// <summary>
         /// Write byte field value.
         /// </summary>
