@@ -101,6 +101,11 @@ namespace Apache.Ignite.Core.Impl.Binary
             return ReadField(fieldName, r => r.ReadBoolean(), BinaryTypeId.Bool);
         }
 
+        internal bool? ReadBooleanNullable(string fieldName)
+        {
+            return ReadField<bool?>(fieldName, r => r.ReadBoolean(), BinaryTypeId.Bool);
+        }
+
         /** <inheritdoc /> */
         public bool ReadBoolean()
         {
@@ -199,7 +204,7 @@ namespace Apache.Ignite.Core.Impl.Binary
 
         internal int? ReadIntNullable(string fieldName)
         {
-            return ReadField(fieldName, ReadInt, BinaryTypeId.Int);
+            return ReadField<int?>(fieldName, () => ReadInt(), BinaryTypeId.Int);
         }
 
         /** <inheritdoc /> */

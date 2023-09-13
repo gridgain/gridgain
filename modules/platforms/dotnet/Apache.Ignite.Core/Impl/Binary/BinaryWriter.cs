@@ -84,6 +84,25 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /// <summary>
+        /// Write named boolean value.
+        /// </summary>
+        /// <param name="fieldName">Field name.</param>
+        /// <param name="val">Boolean value.</param>
+        internal void WriteBooleanNullable(string fieldName, bool? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Bool);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteBooleanField(val.Value);
+            }
+        }
+
+        /// <summary>
         /// Writes the boolean field.
         /// </summary>
         /// <param name="val">if set to <c>true</c> [value].</param>

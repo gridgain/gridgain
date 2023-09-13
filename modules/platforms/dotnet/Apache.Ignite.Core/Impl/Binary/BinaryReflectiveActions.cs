@@ -273,12 +273,8 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             if (underlyingType == typeof (bool))
             {
-                writeAction = raw
-                    ? GetRawWriter<bool>(field, (w, o) => w.WriteBoolean(o))
-                    : GetWriter<bool>(field, (f, w, o) => w.WriteBoolean(f, o));
-                readAction = raw
-                    ? GetRawReader(field, r => r.ReadBoolean())
-                    : GetReader(field, (f, r) => r.ReadBoolean(f));
+                writeAction = GetWriter<bool?>(field, (f, w, o) => w.WriteBooleanNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadBooleanNullable(f));
             }
             else if (underlyingType == typeof (sbyte))
             {
