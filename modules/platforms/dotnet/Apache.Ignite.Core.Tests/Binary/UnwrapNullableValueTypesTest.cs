@@ -86,16 +86,27 @@ namespace Apache.Ignite.Core.Tests.Binary
                 };
 
             cache[1] = primitives;
+
             var res = cache[1];
+            var binaryType = Ignite.GetBinary().GetBinaryType(typeof(Primitives));
 
             AssertExtensions.ReflectionEqual(primitives, res);
 
-            var binaryType = Ignite.GetBinary().GetBinaryType(typeof(Primitives));
-
-            // TODO: Check all fields equality and binary type name.
-            Assert.AreEqual("byte", binaryType.GetFieldTypeName(nameof(Primitives.Byte)));
-            Assert.AreEqual("byte", binaryType.GetFieldTypeName(nameof(Primitives.Sbyte)));
-            Assert.AreEqual("boolean", binaryType.GetFieldTypeName(nameof(Primitives.Bool)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameByte, binaryType.GetFieldTypeName(nameof(Primitives.Byte)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameByte, binaryType.GetFieldTypeName(nameof(Primitives.Sbyte)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameBool, binaryType.GetFieldTypeName(nameof(Primitives.Bool)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameChar, binaryType.GetFieldTypeName(nameof(Primitives.Char)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameShort, binaryType.GetFieldTypeName(nameof(Primitives.Short)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameShort, binaryType.GetFieldTypeName(nameof(Primitives.Ushort)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameInt, binaryType.GetFieldTypeName(nameof(Primitives.Int)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameInt, binaryType.GetFieldTypeName(nameof(Primitives.Uint)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameLong, binaryType.GetFieldTypeName(nameof(Primitives.Long)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameLong, binaryType.GetFieldTypeName(nameof(Primitives.Ulong)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameFloat, binaryType.GetFieldTypeName(nameof(Primitives.Float)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameDouble, binaryType.GetFieldTypeName(nameof(Primitives.Double)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameDecimal, binaryType.GetFieldTypeName(nameof(Primitives.Decimal)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameGuid, binaryType.GetFieldTypeName(nameof(Primitives.Guid)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameTimestamp, binaryType.GetFieldTypeName(nameof(Primitives.DateTime)));
         }
 
         [Test]
