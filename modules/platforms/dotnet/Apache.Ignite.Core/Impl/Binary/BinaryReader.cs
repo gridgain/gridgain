@@ -130,10 +130,8 @@ namespace Apache.Ignite.Core.Impl.Binary
             return ReadField(fieldName, ReadByte, BinaryTypeId.Byte);
         }
 
-        internal byte? ReadByteNullable(string fieldName)
-        {
-            return ReadField<byte?>(fieldName, () => ReadByte(), BinaryTypeId.Byte);
-        }
+        internal byte? ReadByteNullable(string fieldName) =>
+            ReadField<byte?>(fieldName, () => ReadByte(), BinaryTypeId.Byte);
 
         /** <inheritdoc /> */
         public byte ReadByte()
@@ -159,6 +157,9 @@ namespace Apache.Ignite.Core.Impl.Binary
             return ReadField(fieldName, ReadShort, BinaryTypeId.Short);
         }
 
+        internal short? ReadShortNullable(string fieldName) =>
+            ReadField<short?>(fieldName, () => ReadShort(), BinaryTypeId.Short);
+
         /** <inheritdoc /> */
         public short ReadShort()
         {
@@ -182,6 +183,9 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             return ReadField(fieldName, ReadChar, BinaryTypeId.Char);
         }
+
+        internal char? ReadCharNullable(string fieldName) =>
+            ReadField<char?>(fieldName, () => ReadChar(), BinaryTypeId.Char);
 
         /** <inheritdoc /> */
         public char ReadChar()
@@ -207,10 +211,8 @@ namespace Apache.Ignite.Core.Impl.Binary
             return ReadField(fieldName, ReadInt, BinaryTypeId.Int);
         }
 
-        internal int? ReadIntNullable(string fieldName)
-        {
-            return ReadField<int?>(fieldName, () => ReadInt(), BinaryTypeId.Int);
-        }
+        internal int? ReadIntNullable(string fieldName) =>
+            ReadField<int?>(fieldName, () => ReadInt(), BinaryTypeId.Int);
 
         /** <inheritdoc /> */
         public int ReadInt()
@@ -236,6 +238,9 @@ namespace Apache.Ignite.Core.Impl.Binary
             return ReadField(fieldName, ReadLong, BinaryTypeId.Long);
         }
 
+        internal long? ReadLongNullable(string fieldName) =>
+            ReadField<long?>(fieldName, () => ReadLong(), BinaryTypeId.Long);
+
         /** <inheritdoc /> */
         public long ReadLong()
         {
@@ -260,6 +265,9 @@ namespace Apache.Ignite.Core.Impl.Binary
             return ReadField(fieldName, ReadFloat, BinaryTypeId.Float);
         }
 
+        internal float? ReadFloatNullable(string fieldName) =>
+            ReadField<float?>(fieldName, () => ReadFloat(), BinaryTypeId.Float);
+
         /** <inheritdoc /> */
         public float ReadFloat()
         {
@@ -283,6 +291,9 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             return ReadField(fieldName, ReadDouble, BinaryTypeId.Double);
         }
+
+        internal double? ReadDoubleNullable(string fieldName) =>
+            ReadField<double?>(fieldName, () => ReadDouble(), BinaryTypeId.Double);
 
         /** <inheritdoc /> */
         public double ReadDouble()

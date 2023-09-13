@@ -122,9 +122,9 @@ namespace Apache.Ignite.Core.Impl.Binary
             {
                 HandlePrimitive(field, out writeAction, out readAction, raw);
             }
-            else if (unwrapNullable && !raw && Nullable.GetUnderlyingType(type) is { IsPrimitive: true } underlyingType)
+            else if (unwrapNullable && !raw && Nullable.GetUnderlyingType(type) is { IsPrimitive: true })
             {
-                HandlePrimitiveNullable(field, out writeAction, out readAction, underlyingType);
+                HandlePrimitiveNullable(field, out writeAction, out readAction);
             }
             else if (type.IsArray)
             {
@@ -300,7 +300,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             }
             else if (type == typeof (char?))
             {
-                writeAction = GetWriter<int?>(field, (f, w, o) => w.WriteCharNullable(f, o));
+                writeAction = GetWriter<char?>(field, (f, w, o) => w.WriteCharNullable(f, o));
                 readAction = GetReader(field, (f, r) => r.ReadCharNullable(f));
             }
             else if (type == typeof (int?))
@@ -310,44 +310,28 @@ namespace Apache.Ignite.Core.Impl.Binary
             }
             else if (type == typeof (uint?))
             {
-                writeAction = raw
-                    ? GetRawWriter<uint>(field, (w, o) => w.WriteInt(unchecked((int) o)))
-                    : GetWriter<uint>(field, (f, w, o) => w.WriteInt(f, unchecked((int) o)));
-                readAction = raw
-                    ? GetRawReader(field, r => unchecked((uint) r.ReadInt()))
-                    : GetReader(field, (f, r) => unchecked((uint) r.ReadInt(f)));
+                writeAction = GetWriter<uint?>(field, (f, w, o) => w.WriteIntNullable(f, unchecked((int?)o)));
+                readAction = GetReader(field, (f, r) => r.ReadIntNullable(f));
             }
             else if (type == typeof (long?))
             {
-                writeAction = raw
-                    ? GetRawWriter<long>(field, (w, o) => w.WriteLong(o))
-                    : GetWriter<long>(field, (f, w, o) => w.WriteLong(f, o));
-                readAction = raw ? GetRawReader(field, r => r.ReadLong()) : GetReader(field, (f, r) => r.ReadLong(f));
+                writeAction = GetWriter<long?>(field, (f, w, o) => w.WriteLongNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadLongNullable(f));
             }
             else if (type == typeof (ulong?))
             {
-                writeAction = raw
-                    ? GetRawWriter<ulong>(field, (w, o) => w.WriteLong(unchecked((long) o)))
-                    : GetWriter<ulong>(field, (f, w, o) => w.WriteLong(f, unchecked((long) o)));
-                readAction = raw
-                    ? GetRawReader(field, r => unchecked((ulong) r.ReadLong()))
-                    : GetReader(field, (f, r) => unchecked((ulong) r.ReadLong(f)));
+                writeAction = GetWriter<ulong?>(field, (f, w, o) => w.WriteLongNullable(f, unchecked((long?)o)));
+                readAction = GetReader(field, (f, r) => unchecked((ulong?)r.ReadLongNullable(f)));
             }
             else if (type == typeof (float?))
             {
-                writeAction = raw
-                    ? GetRawWriter<float>(field, (w, o) => w.WriteFloat(o))
-                    : GetWriter<float>(field, (f, w, o) => w.WriteFloat(f, o));
-                readAction = raw ? GetRawReader(field, r => r.ReadFloat()) : GetReader(field, (f, r) => r.ReadFloat(f));
+                writeAction = GetWriter<float?>(field, (f, w, o) => w.WriteFloatNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadFloatNullable(f));
             }
             else if (type == typeof(double?))
             {
-                writeAction = raw
-                    ? GetRawWriter<double>(field, (w, o) => w.WriteDouble(o))
-                    : GetWriter<double>(field, (f, w, o) => w.WriteDouble(f, o));
-                readAction = raw
-                    ? GetRawReader(field, r => r.ReadDouble())
-                    : GetReader(field, (f, r) => r.ReadDouble(f));
+                writeAction = GetWriter<double?>(field, (f, w, o) => w.WriteDoubleNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadDoubleNullable(f));
             }
             else
             {
