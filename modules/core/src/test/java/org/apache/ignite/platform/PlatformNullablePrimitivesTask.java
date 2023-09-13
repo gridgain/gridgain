@@ -28,6 +28,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Task to test nullable primitives interop behavior.
@@ -59,5 +60,27 @@ public class PlatformNullablePrimitivesTask extends ComputeTaskAdapter<Object, L
             // TODO: Read/write nullable primitives to a specific cache.
             return null;
         }
+    }
+
+    public static class Primitives
+    {
+        public Byte Byte;
+        public Byte[] Bytes;
+        public Boolean Bool;
+        public Boolean[] Bools;
+        public Character Char;
+        public Character[] Chars;
+        public Short Short;
+        public Short[] Shorts;
+        public Integer Int;
+        public Integer[] Ints;
+        public Long Long;
+        public Long[] Longs;
+        public Float Float;
+        public Float[] Floats;
+        public Double Double;
+        public Double[] Doubles;
+        public UUID Guid;
+        public UUID[] Guids;
     }
 }
