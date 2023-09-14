@@ -16,12 +16,15 @@
 
 package org.apache.ignite.platform;
 
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobAdapter;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.resources.IgniteInstanceResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,10 +36,10 @@ import java.util.UUID;
 /**
  * Task to test nullable primitives interop behavior.
  */
-public class PlatformNullablePrimitivesTask extends ComputeTaskAdapter<Object, Long> {
+public class PlatformNullablePrimitivesTask extends ComputeTaskAdapter<String, Long> {
     /** {@inheritDoc} */
     @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
-        @Nullable Object arg) {
+        @Nullable String arg) {
         return Collections.singletonMap(new NullablePrimitivesJob(arg), F.first(subgrid));
     }
 
@@ -49,15 +52,60 @@ public class PlatformNullablePrimitivesTask extends ComputeTaskAdapter<Object, L
      * Job.
      */
     private static class NullablePrimitivesJob extends ComputeJobAdapter {
-        private final Object arg;
+        private final String arg;
 
-        public NullablePrimitivesJob(Object arg) {
+        @IgniteInstanceResource
+        private Ignite ignite;
+
+        public NullablePrimitivesJob(String arg) {
             this.arg = arg;
         }
 
         /** {@inheritDoc} */
         @Nullable @Override public Object execute() {
-            // TODO: Read/write nullable primitives to a specific cache.
+            String[] args = arg.split("\\|");
+            String cmd = args[0];
+            String cacheName = args[1];
+            boolean nulls = Boolean.parseBoolean(args[2]);
+
+            IgniteCache<Integer, Primitives> cache = ignite.cache(cacheName);
+
+            switch (cmd) {
+                case "put":
+                    Primitives primitives = new Primitives();
+
+                    if (!nulls) {
+                        primitives.Byte = 1;
+                        primitives.Bytes = new Byte[] {1, 2};
+                        primitives.Bool = true;
+                        primitives.Bools = new Boolean[] {true, false};
+                        primitives.Char = 'a';
+                        primitives.Chars = new Character[] {'a', 'b'};
+                        primitives.Short = 1;
+                        primitives.Shorts = new Short[] {1, 2};
+                        primitives.Int = 1;
+                        primitives.Ints = new Integer[] {1, 2};
+                        primitives.Long = 1L;
+                        primitives.Longs = new Long[] {1L, 2L};
+                        primitives.Float = 1.0f;
+                        primitives.Floats = new Float[] {1.0f, 2.0f};
+                        primitives.Double = 1.0;
+                        primitives.Doubles = new Double[] {1.0, 2.0};
+                        primitives.Guid = UUID.randomUUID();
+                        primitives.Guids = new UUID[] {UUID.randomUUID(), UUID.randomUUID()};
+                    }
+
+                    cache.put(1, primitives);
+                    break;
+
+                case "get":
+                    cache.get(1);
+                    break;
+
+                default:
+                    throw new IllegalArgumentException("Unknown command: " + cmd);
+            }
+
             return null;
         }
     }
