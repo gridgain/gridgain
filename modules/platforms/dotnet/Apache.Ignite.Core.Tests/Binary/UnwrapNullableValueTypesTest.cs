@@ -187,7 +187,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             ExecuteJavaTask(cache.Name, JavaTaskCommand.Put);
 
             // Get binary type from Java.
-            var javaBinaryType = Ignite.GetBinary().GetBinaryType("Primitives");
+            var javaBinaryType = Ignite.GetBinary().GetBinaryType(nameof(JavaNullableValueTypes));
 
             // Initialize .NET binary type.
             var dotNetBinaryType = Ignite.GetBinary().GetBinaryType(typeof(JavaNullableValueTypes));
