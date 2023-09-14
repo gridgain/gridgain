@@ -183,14 +183,14 @@ namespace Apache.Ignite.Core.Tests.Binary
         public void TestJavaInterop()
         {
             // TODO: Every test must use a separate type name to avoid meta conflict.
-            var cache = Ignite.GetOrCreateCache<int, NullableValueTypes>(TestUtils.TestName);
+            var cache = Ignite.GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
             ExecuteJavaTask(cache.Name, JavaTaskCommand.Put);
 
             // Get binary type from Java.
             var javaBinaryType = Ignite.GetBinary().GetBinaryType("Primitives");
 
             // Initialize .NET binary type.
-            var dotNetBinaryType = Ignite.GetBinary().GetBinaryType(typeof(NullableValueTypes));
+            var dotNetBinaryType = Ignite.GetBinary().GetBinaryType(typeof(JavaNullableValueTypes));
 
             var res = cache[1];
             Assert.AreEqual(1, res.Byte);
@@ -243,6 +243,9 @@ namespace Apache.Ignite.Core.Tests.Binary
         }
 
         private class NullableValueTypes2 : NullableValueTypes
+        { }
+
+        private class JavaNullableValueTypes : NullableValueTypes
         { }
     }
 }
