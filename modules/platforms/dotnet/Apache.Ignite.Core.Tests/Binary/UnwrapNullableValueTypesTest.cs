@@ -26,6 +26,9 @@ namespace Apache.Ignite.Core.Tests.Binary
     /// </summary>
     public class UnwrapNullableValueTypesTest : TestBase
     {
+        private const string PlatformNullablePrimitivesTask =
+            "org.apache.ignite.platform.PlatformNullablePrimitivesTask";
+
         protected override IgniteConfiguration GetConfig() =>
             new IgniteConfiguration(base.GetConfig())
             {
@@ -114,6 +117,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestPrimitiveFieldsUnwrapDisabled([Values(true, false)] bool nullValues)
         {
+            // Separate class to avoid meta conflict.
             var cache = Ignite.GetOrCreateCache<int, Primitives2>(TestUtils.TestName);
 
             var primitives = nullValues
@@ -177,7 +181,23 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestJavaInterop()
         {
-            Assert.Fail("TODO: Same model in Java - check roundtrip in both directions.");
+            var cache = Ignite.GetOrCreateCache<int, Primitives>(TestUtils.TestName);
+            ExecuteJavaTask(cache.Name, JavaTaskCommand.Put);
+
+            var res = cache[1];
+            Assert.AreEqual(1, res.Byte);
+        }
+
+        private void ExecuteJavaTask(string cacheName, JavaTaskCommand command, bool nullValues = false)
+        {
+            Ignite.GetCompute().ExecuteJavaTask<object>(
+                PlatformNullablePrimitivesTask, $"{command}|{cacheName}|{nullValues}");
+        }
+
+        private enum JavaTaskCommand
+        {
+            Put,
+            Get
         }
 
         private class Primitives
