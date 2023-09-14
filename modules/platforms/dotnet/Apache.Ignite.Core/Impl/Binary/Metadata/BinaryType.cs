@@ -419,8 +419,7 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
 
             sb.Append("]]");
 
-            return "BinaryType [TypeId=" + _typeId + ", TypeName=" + _typeName + ", AffinityKeyFieldName=" +
-                   _affinityKeyFieldName + ", Fields=" + _fields + "]";
+            return sb.ToString();
         }
     }
 }
