@@ -40,6 +40,7 @@ import java.util.Map;
 
 import static org.apache.ignite.internal.sql.SqlParserUtils.error;
 import static org.apache.ignite.internal.sql.SqlParserUtils.errorUnexpectedToken;
+import static org.apache.ignite.internal.sql.SqlParserUtils.matchesKeyword;
 import static org.apache.ignite.internal.sql.SqlParserUtils.parseBoolean;
 import static org.apache.ignite.internal.sql.SqlParserUtils.parseIdentifier;
 import static org.apache.ignite.internal.sql.SqlParserUtils.parseInt;
@@ -76,13 +77,12 @@ public class SqlBulkLoadCommand implements SqlCommand {
      * @return The parsed command object.
      */
     @Override public SqlCommand parse(SqlLexer lex) {
-        skipIfMatchesKeyword(lex, SqlKeyword.FROM); // COPY keyword is already parsed
+        // COPY keyword is already parsed
+        parseLocations(lex);
 
-        from = parseLocation(lex);
-
-        skipIfMatchesKeyword(lex, SqlKeyword.INTO);
-
-        into = parseLocation(lex);
+        if (from == null || into == null) {
+            throw error(lex, "(expected both locations: \"FROM\", \"INTO\")");
+        }
 
         parseFormat(lex);
 
@@ -91,6 +91,19 @@ public class SqlBulkLoadCommand implements SqlCommand {
         properties = parseProperties(lex);
 
         return this;
+    }
+
+    private void parseLocations(SqlLexer lex) {
+        for (int i = 0; i < 2; i++) {
+            lex.shift();
+            if (matchesKeyword(lex, SqlKeyword.FROM)) {
+                from = parseLocation(lex);
+            } else if (matchesKeyword(lex, SqlKeyword.INTO)) {
+                into = parseLocation(lex);
+            } else {
+                throw errorUnexpectedToken(lex, SqlKeyword.FROM, SqlKeyword.INTO);
+            }
+        }
     }
 
     private static BulkLoadLocation parseLocation(SqlLexer lex) {
