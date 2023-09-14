@@ -68,11 +68,11 @@ public class PlatformNullablePrimitivesTask extends ComputeTaskAdapter<String, L
             String cacheName = args[1];
             boolean nulls = Boolean.parseBoolean(args[2]);
 
-            IgniteCache<Integer, Primitives> cache = ignite.cache(cacheName);
+            IgniteCache<Integer, NullableValueTypes> cache = ignite.cache(cacheName);
 
             switch (cmd.toLowerCase()) {
                 case "put":
-                    Primitives primitives = new Primitives();
+                    NullableValueTypes primitives = new NullableValueTypes();
 
                     if (!nulls) {
                         primitives.Byte = 1;
@@ -110,7 +110,7 @@ public class PlatformNullablePrimitivesTask extends ComputeTaskAdapter<String, L
         }
     }
 
-    public static class Primitives
+    public static class NullableValueTypes
     {
         public Byte Byte;
         public Byte[] Bytes;

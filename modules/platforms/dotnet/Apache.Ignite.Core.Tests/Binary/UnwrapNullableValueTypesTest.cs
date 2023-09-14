@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                     ForceTimestamp = true,
                     TypeConfigurations = new[]
                     {
-                        new BinaryTypeConfiguration(typeof(Primitives2))
+                        new BinaryTypeConfiguration(typeof(NullableValueTypes2))
                         {
                             Serializer = new BinaryReflectiveSerializer
                             {
@@ -53,11 +53,11 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestPrimitiveFields([Values(true, false)] bool nullValues)
         {
-            var cache = Ignite.GetOrCreateCache<int, Primitives>(TestUtils.TestName);
+            var cache = Ignite.GetOrCreateCache<int, NullableValueTypes>(TestUtils.TestName);
 
             var primitives = nullValues
-                ? new Primitives()
-                : new Primitives
+                ? new NullableValueTypes()
+                : new NullableValueTypes
                 {
                     Byte = 1,
                     Bytes = new byte?[] { 2 },
@@ -94,36 +94,36 @@ namespace Apache.Ignite.Core.Tests.Binary
             cache[1] = primitives;
 
             var res = cache[1];
-            var binaryType = Ignite.GetBinary().GetBinaryType(typeof(Primitives));
+            var binaryType = Ignite.GetBinary().GetBinaryType(typeof(NullableValueTypes));
 
             AssertExtensions.ReflectionEqual(primitives, res);
 
-            Assert.AreEqual(BinaryTypeNames.TypeNameByte, binaryType.GetFieldTypeName(nameof(Primitives.Byte)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameByte, binaryType.GetFieldTypeName(nameof(Primitives.Sbyte)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameBool, binaryType.GetFieldTypeName(nameof(Primitives.Bool)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameChar, binaryType.GetFieldTypeName(nameof(Primitives.Char)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameShort, binaryType.GetFieldTypeName(nameof(Primitives.Short)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameShort, binaryType.GetFieldTypeName(nameof(Primitives.Ushort)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameInt, binaryType.GetFieldTypeName(nameof(Primitives.Int)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameInt, binaryType.GetFieldTypeName(nameof(Primitives.Uint)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameLong, binaryType.GetFieldTypeName(nameof(Primitives.Long)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameLong, binaryType.GetFieldTypeName(nameof(Primitives.Ulong)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameFloat, binaryType.GetFieldTypeName(nameof(Primitives.Float)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameDouble, binaryType.GetFieldTypeName(nameof(Primitives.Double)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameDecimal, binaryType.GetFieldTypeName(nameof(Primitives.Decimal)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameGuid, binaryType.GetFieldTypeName(nameof(Primitives.Guid)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameTimestamp, binaryType.GetFieldTypeName(nameof(Primitives.DateTime)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameByte, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Byte)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameByte, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Sbyte)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameBool, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Bool)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameChar, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Char)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameShort, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Short)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameShort, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Ushort)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameInt, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Int)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameInt, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Uint)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameLong, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Long)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameLong, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Ulong)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameFloat, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Float)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameDouble, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Double)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameDecimal, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Decimal)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameGuid, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Guid)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameTimestamp, binaryType.GetFieldTypeName(nameof(NullableValueTypes.DateTime)));
         }
 
         [Test]
         public void TestPrimitiveFieldsUnwrapDisabled([Values(true, false)] bool nullValues)
         {
             // Separate class to avoid meta conflict.
-            var cache = Ignite.GetOrCreateCache<int, Primitives2>(TestUtils.TestName);
+            var cache = Ignite.GetOrCreateCache<int, NullableValueTypes2>(TestUtils.TestName);
 
             var primitives = nullValues
-                ? new Primitives2()
-                : new Primitives2
+                ? new NullableValueTypes2()
+                : new NullableValueTypes2
                 {
                     Byte = 1,
                     Bytes = new byte?[] { 2 },
@@ -160,13 +160,13 @@ namespace Apache.Ignite.Core.Tests.Binary
             cache[1] = primitives;
 
             var res = cache[1];
-            var binaryType = Ignite.GetBinary().GetBinaryType(typeof(Primitives2));
+            var binaryType = Ignite.GetBinary().GetBinaryType(typeof(NullableValueTypes2));
 
             AssertExtensions.ReflectionEqual(primitives, res);
 
             foreach (var field in binaryType.Fields)
             {
-                if (field.Last() != 's' && field != nameof(Primitives2.Guid))
+                if (field.Last() != 's' && field != nameof(NullableValueTypes2.Guid))
                 {
                     Assert.AreEqual(BinaryTypeNames.TypeNameObject, binaryType.GetFieldTypeName(field), field);
                 }
@@ -182,14 +182,14 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestJavaInterop()
         {
-            var cache = Ignite.GetOrCreateCache<int, Primitives>(TestUtils.TestName);
+            var cache = Ignite.GetOrCreateCache<int, NullableValueTypes>(TestUtils.TestName);
             ExecuteJavaTask(cache.Name, JavaTaskCommand.Put);
 
             // Get binary type from Java.
             var javaBinaryType = Ignite.GetBinary().GetBinaryType("Primitives");
 
             // Initialize .NET binary type.
-            var dotNetBinaryType = Ignite.GetBinary().GetBinaryType(typeof(Primitives));
+            var dotNetBinaryType = Ignite.GetBinary().GetBinaryType(typeof(NullableValueTypes));
 
             var res = cache[1];
             Assert.AreEqual(1, res.Byte);
@@ -207,7 +207,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             Get
         }
 
-        private class Primitives
+        private class NullableValueTypes
         {
             public byte? Byte { get; set; }
             public byte?[] Bytes { get; set; }
@@ -241,7 +241,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             public DateTime?[] DateTimes { get; set; }
         }
 
-        private class Primitives2 : Primitives
+        private class NullableValueTypes2 : NullableValueTypes
         { }
     }
 }
