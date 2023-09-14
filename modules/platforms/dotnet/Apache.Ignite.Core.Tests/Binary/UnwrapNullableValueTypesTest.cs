@@ -45,7 +45,8 @@ namespace Apache.Ignite.Core.Tests.Binary
                                 UnwrapNullableValueTypes = false
                             }
                         }
-                    }
+                    },
+                    NameMapper = new BinaryBasicNameMapper { IsSimpleName = true }
                 }
             };
 
@@ -183,6 +184,12 @@ namespace Apache.Ignite.Core.Tests.Binary
         {
             var cache = Ignite.GetOrCreateCache<int, Primitives>(TestUtils.TestName);
             ExecuteJavaTask(cache.Name, JavaTaskCommand.Put);
+
+            // Get binary type from Java.
+            var javaBinaryType = Ignite.GetBinary().GetBinaryType("Primitives");
+
+            // Initialize .NET binary type.
+            var dotNetBinaryType = Ignite.GetBinary().GetBinaryType(typeof(Primitives));
 
             var res = cache[1];
             Assert.AreEqual(1, res.Byte);
