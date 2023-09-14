@@ -85,8 +85,6 @@ The following modules are available:
 - ignite-log4j2 (for Log4j 2 logging)
 - ignite-mesos (for integration with Apache Mesos cluster resource manager)
 - ignite-rest-http (for HTTP REST messages)
-- ignite-scalar (for ignite Scala API)
-- ignite-scalar_2.10 (for GridGain Scala 2.10 API)
 - ignite-schedule (for Cron-based task scheduling)
 - ignite-sl4j (for SL4J logging)
 - ignite-spark (for shared in-memory RDDs and faster SQL for Apache Spark 2.3)
