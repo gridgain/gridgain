@@ -70,7 +70,7 @@ public class PlatformNullablePrimitivesTask extends ComputeTaskAdapter<String, L
 
             IgniteCache<Integer, Primitives> cache = ignite.cache(cacheName);
 
-            switch (cmd) {
+            switch (cmd.toLowerCase()) {
                 case "put":
                     Primitives primitives = new Primitives();
 
