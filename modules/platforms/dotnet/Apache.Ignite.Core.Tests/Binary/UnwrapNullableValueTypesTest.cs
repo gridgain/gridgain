@@ -182,7 +182,6 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestJavaInterop()
         {
-            // TODO: Every test must use a separate type name to avoid meta conflict.
             var cache = Ignite.GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
             ExecuteJavaTask(cache.Name, JavaTaskCommand.Put);
 
@@ -190,10 +189,47 @@ namespace Apache.Ignite.Core.Tests.Binary
             var javaBinaryType = Ignite.GetBinary().GetBinaryType(nameof(JavaNullableValueTypes));
 
             // Initialize .NET binary type.
+            // TODO: This is wrong, we just get the same Java type?
             var dotNetBinaryType = Ignite.GetBinary().GetBinaryType(typeof(JavaNullableValueTypes));
+
+            CollectionAssert.AreEquivalent(javaBinaryType.Fields, dotNetBinaryType.Fields);
+
+            foreach (var field in javaBinaryType.Fields)
+            {
+                Assert.AreEqual(javaBinaryType.GetFieldTypeName(field), dotNetBinaryType.GetFieldTypeName(field));
+            }
 
             var res = cache[1];
             Assert.AreEqual(1, res.Byte);
+            Assert.AreEqual(1, res.Bytes[0]);
+            Assert.AreEqual(1, res.Sbyte);
+            Assert.AreEqual(1, res.Sbytes[0]);
+            Assert.AreEqual(true, res.Bool);
+            Assert.AreEqual(true, res.Bools[0]);
+            Assert.AreEqual('a', res.Char);
+            Assert.AreEqual('a', res.Chars[0]);
+            Assert.AreEqual(1, res.Short);
+            Assert.AreEqual(1, res.Shorts[0]);
+            Assert.AreEqual(1, res.Ushort);
+            Assert.AreEqual(1, res.Ushorts[0]);
+            Assert.AreEqual(1, res.Int);
+            Assert.AreEqual(1, res.Ints[0]);
+            Assert.AreEqual(1, res.Uint);
+            Assert.AreEqual(1, res.Uints[0]);
+            Assert.AreEqual(1, res.Long);
+            Assert.AreEqual(1, res.Longs[0]);
+            Assert.AreEqual(1, res.Ulong);
+            Assert.AreEqual(1, res.Ulongs[0]);
+            Assert.AreEqual(1, res.Float);
+            Assert.AreEqual(1, res.Floats[0]);
+            Assert.AreEqual(1, res.Double);
+            Assert.AreEqual(1, res.Doubles[0]);
+            Assert.AreEqual(1, res.Decimal);
+            Assert.AreEqual(1, res.Decimals[0]);
+            Assert.AreEqual(Guid.Empty, res.Guid);
+            Assert.AreEqual(Guid.Empty, res.Guids[0]);
+            Assert.AreEqual(DateTime.MinValue, res.DateTime);
+            Assert.AreEqual(DateTime.MinValue, res.DateTimes[0]);
         }
 
         private void ExecuteJavaTask(string cacheName, JavaTaskCommand command, bool nullValues = false)
