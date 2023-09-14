@@ -182,6 +182,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestJavaInterop()
         {
+            // TODO: Every test must use a separate type name to avoid meta conflict.
             var cache = Ignite.GetOrCreateCache<int, NullableValueTypes>(TestUtils.TestName);
             ExecuteJavaTask(cache.Name, JavaTaskCommand.Put);
 
