@@ -561,10 +561,6 @@
                                 <packages>org.apache.ignite.binary*</packages>
                             </group>
                             <group>
-                                <title>Visor Plugins</title>
-                                <packages>org.apache.ignite.visor.plugin</packages>
-                            </group>
-                            <group>
                                 <title>Spring Integration</title>
                                 <packages>org.apache.ignite.cache.spring:org.apache.ignite.transactions.spring</packages>
                             </group>
