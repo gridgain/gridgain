@@ -20,13 +20,14 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
+    using System.Text;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
     /// Binary metadata implementation.
     /// </summary>
-    internal class BinaryType : IBinaryType
+    internal sealed class BinaryType : IBinaryType
     {
         /** Empty metadata. */
         public static readonly BinaryType Empty =
@@ -395,6 +396,31 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
             }
 
             return BinaryUtils.GetEnumValues(desc.Type);
+        }
+
+        /** <inheritdoc /> */
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+
+            sb.Append("BinaryType [TypeId=").Append(_typeId)
+                .Append(", TypeName=").Append(_typeName)
+                .Append(", AffinityKeyFieldName=").Append(_affinityKeyFieldName)
+                .Append(", Fields=[");
+
+            foreach (KeyValuePair<string, BinaryField> field in _fields)
+            {
+                sb.Append("BinaryField [Name=").Append(field.Key)
+                    .Append(", Id=").Append(field.Value.FieldId)
+                    .Append(", TypeId=").Append(field.Value.TypeId)
+                    .Append(", TypeName=").Append(GetTypeName(field.Value.TypeId))
+                    .Append("], ");
+            }
+
+            sb.Append("]]");
+
+            return "BinaryType [TypeId=" + _typeId + ", TypeName=" + _typeName + ", AffinityKeyFieldName=" +
+                   _affinityKeyFieldName + ", Fields=" + _fields + "]";
         }
     }
 }
