@@ -184,18 +184,17 @@ namespace Apache.Ignite.Core.Tests.Binary
         {
             var cache = Ignite.GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
             ExecuteJavaTask(cache.Name, JavaTaskCommand.Put);
+            cache[2] = new JavaNullableValueTypes2();
 
             // Get binary type from Java.
             var javaBinaryType = Ignite.GetBinary().GetBinaryType(nameof(JavaNullableValueTypes));
 
             // Initialize .NET binary type.
-            // TODO: This is wrong, we just get the same Java type?
-            var dotNetBinaryType = Ignite.GetBinary().GetBinaryType(typeof(JavaNullableValueTypes));
+            var dotNetBinaryType = Ignite.GetBinary().GetBinaryType(typeof(JavaNullableValueTypes2));
 
-            CollectionAssert.AreEquivalent(javaBinaryType.Fields, dotNetBinaryType.Fields);
-
-            // Use two different types to ensure consistent behavior?
+            // Compare .NET and Java behavior for two different types with the same field set.
             Assert.AreNotEqual(javaBinaryType.TypeId, dotNetBinaryType.TypeId);
+            CollectionAssert.AreEquivalent(javaBinaryType.Fields, dotNetBinaryType.Fields);
 
             foreach (var field in javaBinaryType.Fields)
             {
@@ -285,6 +284,9 @@ namespace Apache.Ignite.Core.Tests.Binary
         { }
 
         private class JavaNullableValueTypes : NullableValueTypes
+        { }
+
+        private class JavaNullableValueTypes2 : JavaNullableValueTypes
         { }
     }
 }
