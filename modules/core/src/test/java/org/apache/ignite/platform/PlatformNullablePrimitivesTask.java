@@ -101,8 +101,8 @@ public class PlatformNullablePrimitivesTask extends ComputeTaskAdapter<String, L
                         primitives.Floats = new Float[] {1.0f, 2.0f};
                         primitives.Double = 1.0;
                         primitives.Doubles = new Double[] {1.0, 2.0};
-                        primitives.Guid = UUID.randomUUID();
-                        primitives.Guids = new UUID[] {UUID.randomUUID(), UUID.randomUUID()};
+                        primitives.Guid = new UUID(1, 2);
+                        primitives.Guids = new UUID[] {new UUID(1, 2), new UUID(2, 3)};
                         primitives.DateTime = new Timestamp(123);
                         primitives.DateTimes = new Timestamp[] {new Timestamp(123), new Timestamp(456)};
                         primitives.Decimal = new BigDecimal(1);
