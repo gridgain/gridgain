@@ -107,6 +107,22 @@ public class PlatformNullablePrimitivesTask extends ComputeTaskAdapter<String, L
                         primitives.DateTimes = new Timestamp[] {new Timestamp(123), new Timestamp(456)};
                         primitives.Decimal = new BigDecimal(1);
                         primitives.Decimals = new BigDecimal[] {new BigDecimal(1), new BigDecimal(2)};
+                    } else {
+                        primitives.Bytes = new Byte[] {null, 2};
+                        primitives.SBytes = new Byte[] {null, 2};
+                        primitives.Bools = new Boolean[] {null, false};
+                        primitives.Chars = new Character[] {null, 'b'};
+                        primitives.Shorts = new Short[] {null, 2};
+                        primitives.UShorts = new Short[] {null, 2};
+                        primitives.Ints = new Integer[] {null, 2};
+                        primitives.UInts = new Integer[] {null, 2};
+                        primitives.Longs = new Long[] {null, 2L};
+                        primitives.ULongs = new Long[] {null, 2L};
+                        primitives.Floats = new Float[] {null, 2.0f};
+                        primitives.Doubles = new Double[] {null, 2.0};
+                        primitives.Guids = new UUID[] {null, new UUID(2, 3)};
+                        primitives.DateTimes = new Timestamp[] {null, new Timestamp(456)};
+                        primitives.Decimals = new BigDecimal[] {null, new BigDecimal(2)};
                     }
 
                     cache.put(1, primitives);
