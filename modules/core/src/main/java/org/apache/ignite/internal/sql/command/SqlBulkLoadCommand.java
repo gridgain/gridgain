@@ -80,10 +80,6 @@ public class SqlBulkLoadCommand implements SqlCommand {
         // COPY keyword is already parsed
         parseLocations(lex);
 
-        if (from == null || into == null) {
-            throw error(lex, "(expected both locations: \"FROM\", \"INTO\")");
-        }
-
         parseFormat(lex);
 
         parseParameters(lex);
@@ -103,6 +99,10 @@ public class SqlBulkLoadCommand implements SqlCommand {
             } else {
                 throw errorUnexpectedToken(lex, SqlKeyword.FROM, SqlKeyword.INTO);
             }
+        }
+
+        if (from == null || into == null) {
+            throw error(lex, "(expected both locations: \"FROM\", \"INTO\")");
         }
     }
 
