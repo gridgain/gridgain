@@ -61,24 +61,24 @@ namespace Apache.Ignite.Core.Tests.Binary
                 {
                     Byte = 1,
                     Bytes = new byte?[] { 2 },
-                    Sbyte = 3,
-                    Sbytes = new sbyte?[] { 4 },
+                    SByte = 3,
+                    SBytes = new sbyte?[] { 4 },
                     Bool = true,
                     Bools = new bool?[] { false },
                     Char = 'a',
                     Chars = new char?[] { 'b' },
                     Short = 5,
                     Shorts = new short?[] { 6 },
-                    Ushort = 7,
-                    Ushorts = new ushort?[] { 8 },
+                    UShort = 7,
+                    UShorts = new ushort?[] { 8 },
                     Int = 9,
                     Ints = new int?[] { 10 },
-                    Uint = 11,
-                    Uints = new uint?[] { 12 },
+                    UInt = 11,
+                    UInts = new uint?[] { 12 },
                     Long = 13,
                     Longs = new long?[] { 14 },
-                    Ulong = 15,
-                    Ulongs = new ulong?[] { 16 },
+                    ULong = 15,
+                    ULongs = new ulong?[] { 16 },
                     Float = 17,
                     Floats = new float?[] { 18 },
                     Double = 19,
@@ -99,15 +99,15 @@ namespace Apache.Ignite.Core.Tests.Binary
             AssertExtensions.ReflectionEqual(primitives, res);
 
             Assert.AreEqual(BinaryTypeNames.TypeNameByte, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Byte)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameByte, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Sbyte)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameByte, binaryType.GetFieldTypeName(nameof(NullableValueTypes.SByte)));
             Assert.AreEqual(BinaryTypeNames.TypeNameBool, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Bool)));
             Assert.AreEqual(BinaryTypeNames.TypeNameChar, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Char)));
             Assert.AreEqual(BinaryTypeNames.TypeNameShort, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Short)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameShort, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Ushort)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameShort, binaryType.GetFieldTypeName(nameof(NullableValueTypes.UShort)));
             Assert.AreEqual(BinaryTypeNames.TypeNameInt, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Int)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameInt, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Uint)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameInt, binaryType.GetFieldTypeName(nameof(NullableValueTypes.UInt)));
             Assert.AreEqual(BinaryTypeNames.TypeNameLong, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Long)));
-            Assert.AreEqual(BinaryTypeNames.TypeNameLong, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Ulong)));
+            Assert.AreEqual(BinaryTypeNames.TypeNameLong, binaryType.GetFieldTypeName(nameof(NullableValueTypes.ULong)));
             Assert.AreEqual(BinaryTypeNames.TypeNameFloat, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Float)));
             Assert.AreEqual(BinaryTypeNames.TypeNameDouble, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Double)));
             Assert.AreEqual(BinaryTypeNames.TypeNameDecimal, binaryType.GetFieldTypeName(nameof(NullableValueTypes.Decimal)));
@@ -127,24 +127,24 @@ namespace Apache.Ignite.Core.Tests.Binary
                 {
                     Byte = 1,
                     Bytes = new byte?[] { 2 },
-                    Sbyte = 3,
-                    Sbytes = new sbyte?[] { 4 },
+                    SByte = 3,
+                    SBytes = new sbyte?[] { 4 },
                     Bool = true,
                     Bools = new bool?[] { false },
                     Char = 'a',
                     Chars = new char?[] { 'b' },
                     Short = 5,
                     Shorts = new short?[] { 6 },
-                    Ushort = 7,
-                    Ushorts = new ushort?[] { 8 },
+                    UShort = 7,
+                    UShorts = new ushort?[] { 8 },
                     Int = 9,
                     Ints = new int?[] { 10 },
-                    Uint = 11,
-                    Uints = new uint?[] { 12 },
+                    UInt = 11,
+                    UInts = new uint?[] { 12 },
                     Long = 13,
                     Longs = new long?[] { 14 },
-                    Ulong = 15,
-                    Ulongs = new ulong?[] { 16 },
+                    ULong = 15,
+                    ULongs = new ulong?[] { 16 },
                     Float = 17,
                     Floats = new float?[] { 18 },
                     Double = 19,
@@ -204,24 +204,24 @@ namespace Apache.Ignite.Core.Tests.Binary
             var res = cache[1];
             Assert.AreEqual(1, res.Byte);
             Assert.AreEqual(1, res.Bytes[0]);
-            Assert.AreEqual(1, res.Sbyte);
-            Assert.AreEqual(1, res.Sbytes[0]);
+            Assert.AreEqual(1, res.SByte);
+            Assert.AreEqual(1, res.SBytes[0]);
             Assert.AreEqual(true, res.Bool);
             Assert.AreEqual(true, res.Bools[0]);
             Assert.AreEqual('a', res.Char);
             Assert.AreEqual('a', res.Chars[0]);
             Assert.AreEqual(1, res.Short);
             Assert.AreEqual(1, res.Shorts[0]);
-            Assert.AreEqual(1, res.Ushort);
-            Assert.AreEqual(1, res.Ushorts[0]);
+            Assert.AreEqual(1, res.UShort);
+            Assert.AreEqual(1, res.UShorts[0]);
             Assert.AreEqual(1, res.Int);
             Assert.AreEqual(1, res.Ints[0]);
-            Assert.AreEqual(1, res.Uint);
-            Assert.AreEqual(1, res.Uints[0]);
+            Assert.AreEqual(1, res.UInt);
+            Assert.AreEqual(1, res.UInts[0]);
             Assert.AreEqual(1, res.Long);
             Assert.AreEqual(1, res.Longs[0]);
-            Assert.AreEqual(1, res.Ulong);
-            Assert.AreEqual(1, res.Ulongs[0]);
+            Assert.AreEqual(1, res.ULong);
+            Assert.AreEqual(1, res.ULongs[0]);
             Assert.AreEqual(1, res.Float);
             Assert.AreEqual(1, res.Floats[0]);
             Assert.AreEqual(1, res.Double);
@@ -250,24 +250,24 @@ namespace Apache.Ignite.Core.Tests.Binary
         {
             public byte? Byte { get; set; }
             public byte?[] Bytes { get; set; }
-            public sbyte? Sbyte { get; set; }
-            public sbyte?[] Sbytes { get; set; }
+            public sbyte? SByte { get; set; }
+            public sbyte?[] SBytes { get; set; }
             public bool? Bool { get; set; }
             public bool?[] Bools { get; set; }
             public char? Char { get; set; }
             public char?[] Chars { get; set; }
             public short? Short { get; set; }
             public short?[] Shorts { get; set; }
-            public ushort? Ushort { get; set; }
-            public ushort?[] Ushorts { get; set; }
+            public ushort? UShort { get; set; }
+            public ushort?[] UShorts { get; set; }
             public int? Int { get; set; }
             public int?[] Ints { get; set; }
-            public uint? Uint { get; set; }
-            public uint?[] Uints { get; set; }
+            public uint? UInt { get; set; }
+            public uint?[] UInts { get; set; }
             public long? Long { get; set; }
             public long?[] Longs { get; set; }
-            public ulong? Ulong { get; set; }
-            public ulong?[] Ulongs { get; set; }
+            public ulong? ULong { get; set; }
+            public ulong?[] ULongs { get; set; }
             public float? Float { get; set; }
             public float?[] Floats { get; set; }
             public double? Double { get; set; }
