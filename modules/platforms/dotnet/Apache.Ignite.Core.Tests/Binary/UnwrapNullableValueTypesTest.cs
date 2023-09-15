@@ -181,10 +181,10 @@ namespace Apache.Ignite.Core.Tests.Binary
         }
 
         [Test]
-        public void TestJavaInterop()
+        public void TestJavaWriteDotNetRead([Values(true, false)] bool nullValues)
         {
             var cache = Ignite.GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
-            ExecuteJavaTask(cache.Name, JavaTaskCommand.Put);
+            ExecuteJavaTask(cache.Name, JavaTaskCommand.Put, nullValues);
             cache[2] = new JavaNullableValueTypes2();
 
             // Get binary type from Java.
@@ -233,6 +233,47 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(new Guid(0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2), res.Guids[0]);
             Assert.AreEqual(DateTime.FromBinary(5233041986428617904), res.DateTime);
             Assert.AreEqual(DateTime.FromBinary(5233041986428617904), res.DateTimes[0]);
+        }
+
+        [Test]
+        public void TestDotNetWriteJavaRead()
+        {
+            var cache = Ignite.GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
+            cache[1] = new JavaNullableValueTypes
+            {
+                Byte = 1,
+                Bytes = new byte?[] { 2 },
+                SByte = 3,
+                SBytes = new sbyte?[] { 4 },
+                Bool = true,
+                Bools = new bool?[] { false },
+                Char = 'a',
+                Chars = new char?[] { 'b' },
+                Short = 5,
+                Shorts = new short?[] { 6 },
+                UShort = 7,
+                UShorts = new ushort?[] { 8 },
+                Int = 9,
+                Ints = new int?[] { 10 },
+                UInt = 11,
+                UInts = new uint?[] { 12 },
+                Long = 13,
+                Longs = new long?[] { 14 },
+                ULong = 15,
+                ULongs = new ulong?[] { 16 },
+                Float = 17,
+                Floats = new float?[] { 18 },
+                Double = 19,
+                Doubles = new double?[] { 20 },
+                Decimal = 21,
+                Decimals = new decimal?[] { 22 },
+                Guid = Guid.NewGuid(),
+                Guids = new Guid?[] { Guid.NewGuid() },
+                DateTime = DateTime.UtcNow,
+                DateTimes = new DateTime?[] { DateTime.UtcNow }
+            };
+
+            ExecuteJavaTask(cache.Name, JavaTaskCommand.Get);
         }
 
         private void ExecuteJavaTask(string cacheName, JavaTaskCommand command, bool nullValues = false)
