@@ -199,11 +199,13 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             foreach (var field in javaBinaryType.Fields)
             {
-                Assert.AreEqual(javaBinaryType.GetFieldTypeName(field), dotNetBinaryType.GetFieldTypeName(field), field);
+                Assert.AreEqual(
+                    javaBinaryType.GetFieldTypeName(field), dotNetBinaryType.GetFieldTypeName(field), field);
             }
 
             var res = cache[1];
-            Assert.AreEqual(1, res.Byte);
+
+            Assert.AreEqual(nullValues ? (int?)null : 1, res.Byte);
             Assert.AreEqual(1, res.Bytes[0]);
             Assert.AreEqual(1, res.SByte);
             Assert.AreEqual(1, res.SBytes[0]);
