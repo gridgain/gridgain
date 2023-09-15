@@ -122,7 +122,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             {
                 HandlePrimitive(field, out writeAction, out readAction, raw);
             }
-            else if (unwrapNullable && !raw && UnderlyingTypeIsSupportedPrimitive(type))
+            else if (unwrapNullable && !raw && UnderlyingNullableTypeIsSupportedPrimitive(type))
             {
                 HandlePrimitiveNullable(field, out writeAction, out readAction);
             }
@@ -372,6 +372,12 @@ namespace Apache.Ignite.Core.Impl.Binary
 
             var elemType = field.FieldType.GetElementType();
             Debug.Assert(elemType != null);
+
+            if (unwrapNullable && !raw && UnderlyingNullableTypeIsSupportedPrimitive(elemType))
+            {
+                HandleNullableArray(field, out writeAction, out readAction);
+                return;
+            }
 
             if (elemType == typeof (bool))
             {
@@ -891,7 +897,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             return Expression.Lambda<BinaryReflectiveReadAction>(assignExpr, targetParam, readerParam).Compile();
         }
 
-        private static bool UnderlyingTypeIsSupportedPrimitive(Type type)
+        private static bool UnderlyingNullableTypeIsSupportedPrimitive(Type type)
         {
             return Nullable.GetUnderlyingType(type) is { } underlyingType
                    && (underlyingType.IsPrimitive || underlyingType == typeof(decimal));
