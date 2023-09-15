@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Binary
     using System;
     using System.Linq;
     using Apache.Ignite.Core.Binary;
+    using Apache.Ignite.Core.Impl.Binary;
     using NUnit.Framework;
 
     /// <summary>
@@ -228,10 +229,10 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(1, res.Doubles[0]);
             Assert.AreEqual(1, res.Decimal);
             Assert.AreEqual(1, res.Decimals[0]);
-            Assert.AreEqual(Guid.Empty, res.Guid);
-            Assert.AreEqual(Guid.Empty, res.Guids[0]);
-            Assert.AreEqual(DateTime.MinValue, res.DateTime);
-            Assert.AreEqual(DateTime.MinValue, res.DateTimes[0]);
+            Assert.AreEqual(new Guid(0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2), res.Guid);
+            Assert.AreEqual(new Guid(0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2), res.Guids[0]);
+            Assert.AreEqual(DateTime.FromBinary(5233041986428617904), res.DateTime);
+            Assert.AreEqual(DateTime.FromBinary(5233041986428617904), res.DateTimes[0]);
         }
 
         private void ExecuteJavaTask(string cacheName, JavaTaskCommand command, bool nullValues = false)
