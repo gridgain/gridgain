@@ -218,7 +218,13 @@ public class SqlParserBulkLoadSelfTest extends SqlParserAbstractSelfTest {
                 "copy from 'any.file' into Person (_key, age, firstName, lastName) format csv")
                 .nextCommand();
         new SqlParser(null,
+                "copy from Person (_key, age, firstName, lastName) into 'any.file' format csv")
+                .nextCommand();
+        new SqlParser(null,
                 "copy into 'any.file' from Person (_key, age, firstName, lastName) format csv")
+                .nextCommand();
+        new SqlParser(null,
+                "copy into Person (_key, age, firstName, lastName) from 'any.file' format csv")
                 .nextCommand();
 
         assertParseError(null,
