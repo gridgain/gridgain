@@ -187,12 +187,6 @@ namespace Apache.Ignite.Core.Tests.Binary
         }
 
         [Test]
-        public void TestArrayFields()
-        {
-            Assert.Fail("TODO");
-        }
-
-        [Test]
         public void TestJavaWriteDotNetRead([Values(true, false)] bool nullValues)
         {
             var cache = _ignite.GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
