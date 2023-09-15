@@ -129,7 +129,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             }
             else if (type.IsArray)
             {
-                HandleArray(field, out writeAction, out readAction, raw);
+                HandleArray(field, out writeAction, out readAction, raw, unwrapNullable);
             }
             else
                 HandleOther(field, out writeAction, out readAction, raw, forceTimestamp);
@@ -353,8 +353,9 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="writeAction">Write action.</param>
         /// <param name="readAction">Read action.</param>
         /// <param name="raw">Raw mode.</param>
+        /// <param name="unwrapNullable">Unwrap nullable mode.</param>
         private static void HandleArray(FieldInfo field, out BinaryReflectiveWriteAction writeAction,
-            out BinaryReflectiveReadAction readAction, bool raw)
+            out BinaryReflectiveReadAction readAction, bool raw, bool unwrapNullable)
         {
             if (field.FieldType.GetArrayRank() > 1)
             {
@@ -507,6 +508,16 @@ namespace Apache.Ignite.Core.Impl.Binary
                 readAction = raw
                     ? GetRawReader(field, r => r.ReadGuidArray())
                     : GetReader(field, (f, r) => r.ReadGuidArray(f));
+            }
+            else if (elemType == typeof (DateTime?) && unwrapNullable)
+            {
+                // Can't enable this without unwrapNullable for compatibility reasons.
+                writeAction = raw
+                    ? GetRawWriter<DateTime?[]>(field, (w, o) => w.WriteTimestampArray(o))
+                    : GetWriter<DateTime?[]>(field, (f, w, o) => w.WriteTimestampArray(f, o));
+                readAction = raw
+                    ? GetRawReader(field, r => r.ReadTimestampArray())
+                    : GetReader(field, (f, r) => r.ReadTimestampArray(f));
             }
             else if (elemType.IsEnum)
             {
