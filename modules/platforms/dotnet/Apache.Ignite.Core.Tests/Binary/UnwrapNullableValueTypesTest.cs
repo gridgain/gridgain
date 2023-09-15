@@ -212,35 +212,35 @@ namespace Apache.Ignite.Core.Tests.Binary
             var res = cache[1];
 
             Assert.AreEqual(nullValues ? (int?)null : 1, res.Byte);
-            Assert.AreEqual(nullValues ? (byte?)null : 1, res.Bytes?[0]);
+            Assert.AreEqual(nullValues ? (byte?)null : 1, res.Bytes[0]);
             Assert.AreEqual(nullValues ? (sbyte?)null : 1, res.SByte);
-            Assert.AreEqual(nullValues ? (sbyte?)null : 1, res.SBytes?[0]);
+            Assert.AreEqual(nullValues ? (sbyte?)null : 1, res.SBytes[0]);
             Assert.AreEqual(nullValues ? (bool?)null : true, res.Bool);
-            Assert.AreEqual(nullValues ? (bool?)null : true, res.Bools?[0]);
+            Assert.AreEqual(nullValues ? (bool?)null : true, res.Bools[0]);
             Assert.AreEqual(nullValues ? (char?)null : 'a', res.Char);
-            Assert.AreEqual(nullValues ? (char?)null : 'a', res.Chars?[0]);
+            Assert.AreEqual(nullValues ? (char?)null : 'a', res.Chars[0]);
             Assert.AreEqual(nullValues ? (short?)null : 1, res.Short);
-            Assert.AreEqual(nullValues ? (short?)null : 1, res.Shorts?[0]);
+            Assert.AreEqual(nullValues ? (short?)null : 1, res.Shorts[0]);
             Assert.AreEqual(nullValues ? (ushort?)null : 1, res.UShort);
-            Assert.AreEqual(nullValues ? (ushort?)null : 1, res.UShorts?[0]);
+            Assert.AreEqual(nullValues ? (ushort?)null : 1, res.UShorts[0]);
             Assert.AreEqual(nullValues ? (int?)null : 1, res.Int);
-            Assert.AreEqual(nullValues ? (int?)null : 1, res.Ints?[0]);
+            Assert.AreEqual(nullValues ? (int?)null : 1, res.Ints[0]);
             Assert.AreEqual(nullValues ? (uint?)null : 1, res.UInt);
-            Assert.AreEqual(nullValues ? (uint?)null : 1, res.UInts?[0]);
+            Assert.AreEqual(nullValues ? (uint?)null : 1, res.UInts[0]);
             Assert.AreEqual(nullValues ? (long?)null : 1, res.Long);
-            Assert.AreEqual(nullValues ? (long?)null : 1, res.Longs?[0]);
+            Assert.AreEqual(nullValues ? (long?)null : 1, res.Longs[0]);
             Assert.AreEqual(nullValues ? (ulong?)null : 1, res.ULong);
-            Assert.AreEqual(nullValues ? (ulong?)null : 1, res.ULongs?[0]);
+            Assert.AreEqual(nullValues ? (ulong?)null : 1, res.ULongs[0]);
             Assert.AreEqual(nullValues ? (float?)null : 1, res.Float);
-            Assert.AreEqual(nullValues ? (float?)null : 1, res.Floats?[0]);
+            Assert.AreEqual(nullValues ? (float?)null : 1, res.Floats[0]);
             Assert.AreEqual(nullValues ? (double?)null : 1, res.Double);
-            Assert.AreEqual(nullValues ? (double?)null : 1, res.Doubles?[0]);
+            Assert.AreEqual(nullValues ? (double?)null : 1, res.Doubles[0]);
             Assert.AreEqual(nullValues ? (decimal?)null : 1, res.Decimal);
-            Assert.AreEqual(nullValues ? (decimal?)null : 1, res.Decimals?[0]);
+            Assert.AreEqual(nullValues ? (decimal?)null : 1, res.Decimals[0]);
             Assert.AreEqual(nullValues ? (Guid?)null : new Guid(0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2), res.Guid);
-            Assert.AreEqual(nullValues ? (Guid?)null : new Guid(0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2), res.Guids?[0]);
+            Assert.AreEqual(nullValues ? (Guid?)null : new Guid(0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2), res.Guids[0]);
             Assert.AreEqual(nullValues ? (DateTime?)null : DateTime.FromBinary(5233041986428617904), res.DateTime);
-            Assert.AreEqual(nullValues ? (DateTime?)null : DateTime.FromBinary(5233041986428617904), res.DateTimes?[0]);
+            Assert.AreEqual(nullValues ? (DateTime?)null : DateTime.FromBinary(5233041986428617904), res.DateTimes[0]);
         }
 
         [Test]
