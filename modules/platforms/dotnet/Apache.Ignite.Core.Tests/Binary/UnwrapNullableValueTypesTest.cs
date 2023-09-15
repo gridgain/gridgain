@@ -19,19 +19,22 @@ namespace Apache.Ignite.Core.Tests.Binary
     using System;
     using System.Linq;
     using Apache.Ignite.Core.Binary;
-    using Apache.Ignite.Core.Impl.Binary;
     using NUnit.Framework;
 
     /// <summary>
     /// Tests for <see cref="BinaryConfiguration.UnwrapNullableValueTypes"/>.
     /// </summary>
-    public class UnwrapNullableValueTypesTest : TestBase
+    public class UnwrapNullableValueTypesTest
     {
         private const string PlatformNullablePrimitivesTask =
             "org.apache.ignite.platform.PlatformNullablePrimitivesTask";
 
-        protected override IgniteConfiguration GetConfig() =>
-            new IgniteConfiguration(base.GetConfig())
+        private IIgnite _ignite;
+
+        [SetUp]
+        public void SetUp()
+        {
+            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
                 BinaryConfiguration = new BinaryConfiguration
                 {
@@ -51,10 +54,19 @@ namespace Apache.Ignite.Core.Tests.Binary
                 }
             };
 
+            _ignite = Ignition.Start(cfg);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            Ignition.StopAll(true);
+        }
+
         [Test]
         public void TestPrimitiveFields([Values(true, false)] bool nullValues)
         {
-            var cache = Ignite.GetOrCreateCache<int, NullableValueTypes>(TestUtils.TestName);
+            var cache = _ignite.GetOrCreateCache<int, NullableValueTypes>(TestUtils.TestName);
 
             var primitives = nullValues
                 ? new NullableValueTypes()
@@ -95,7 +107,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             cache[1] = primitives;
 
             var res = cache[1];
-            var binaryType = Ignite.GetBinary().GetBinaryType(typeof(NullableValueTypes));
+            var binaryType = _ignite.GetBinary().GetBinaryType(typeof(NullableValueTypes));
 
             AssertExtensions.ReflectionEqual(primitives, res);
 
@@ -120,7 +132,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         public void TestPrimitiveFieldsUnwrapDisabled([Values(true, false)] bool nullValues)
         {
             // Separate class to avoid meta conflict.
-            var cache = Ignite.GetOrCreateCache<int, NullableValueTypes2>(TestUtils.TestName);
+            var cache = _ignite.GetOrCreateCache<int, NullableValueTypes2>(TestUtils.TestName);
 
             var primitives = nullValues
                 ? new NullableValueTypes2()
@@ -161,7 +173,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             cache[1] = primitives;
 
             var res = cache[1];
-            var binaryType = Ignite.GetBinary().GetBinaryType(typeof(NullableValueTypes2));
+            var binaryType = _ignite.GetBinary().GetBinaryType(typeof(NullableValueTypes2));
 
             AssertExtensions.ReflectionEqual(primitives, res);
 
@@ -183,16 +195,15 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestJavaWriteDotNetRead([Values(true, false)] bool nullValues)
         {
-            // TODO: Restart node for every test for clean meta?
-            var cache = Ignite.GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
+            var cache = _ignite.GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
             ExecuteJavaTask(cache.Name, JavaTaskCommand.Put, nullValues);
             cache[2] = new JavaNullableValueTypes2();
 
             // Get binary type from Java.
-            var javaBinaryType = Ignite.GetBinary().GetBinaryType(nameof(JavaNullableValueTypes));
+            var javaBinaryType = _ignite.GetBinary().GetBinaryType(nameof(JavaNullableValueTypes));
 
             // Initialize .NET binary type.
-            var dotNetBinaryType = Ignite.GetBinary().GetBinaryType(typeof(JavaNullableValueTypes2));
+            var dotNetBinaryType = _ignite.GetBinary().GetBinaryType(typeof(JavaNullableValueTypes2));
 
             // Compare .NET and Java behavior for two different types with the same field set.
             Assert.AreNotEqual(javaBinaryType.TypeId, dotNetBinaryType.TypeId);
@@ -241,7 +252,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestDotNetWriteJavaRead()
         {
-            var cache = Ignite.GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
+            var cache = _ignite.GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
             cache[1] = new JavaNullableValueTypes
             {
                 Byte = 1,
@@ -281,7 +292,7 @@ namespace Apache.Ignite.Core.Tests.Binary
 
         private void ExecuteJavaTask(string cacheName, JavaTaskCommand command, bool nullValues = false)
         {
-            Ignite.GetCompute().ExecuteJavaTask<object>(
+            _ignite.GetCompute().ExecuteJavaTask<object>(
                 PlatformNullablePrimitivesTask, $"{command}|{cacheName}|{nullValues}");
         }
 
