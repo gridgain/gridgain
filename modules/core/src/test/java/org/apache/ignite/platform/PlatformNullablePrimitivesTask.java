@@ -28,6 +28,8 @@ import org.apache.ignite.resources.IgniteInstanceResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -77,22 +79,32 @@ public class PlatformNullablePrimitivesTask extends ComputeTaskAdapter<String, L
                     if (!nulls) {
                         primitives.Byte = 1;
                         primitives.Bytes = new Byte[] {1, 2};
+                        primitives.SByte = 1;
+                        primitives.SBytes = new Byte[] {1, 2};
                         primitives.Bool = true;
                         primitives.Bools = new Boolean[] {true, false};
                         primitives.Char = 'a';
                         primitives.Chars = new Character[] {'a', 'b'};
                         primitives.Short = 1;
                         primitives.Shorts = new Short[] {1, 2};
+                        primitives.UShort = 1;
+                        primitives.UShorts = new Short[] {1, 2};
                         primitives.Int = 1;
                         primitives.Ints = new Integer[] {1, 2};
+                        primitives.UInt = 1;
+                        primitives.UInts = new Integer[] {1, 2};
                         primitives.Long = 1L;
                         primitives.Longs = new Long[] {1L, 2L};
+                        primitives.ULong = 1L;
+                        primitives.ULongs = new Long[] {1L, 2L};
                         primitives.Float = 1.0f;
                         primitives.Floats = new Float[] {1.0f, 2.0f};
                         primitives.Double = 1.0;
                         primitives.Doubles = new Double[] {1.0, 2.0};
                         primitives.Guid = UUID.randomUUID();
                         primitives.Guids = new UUID[] {UUID.randomUUID(), UUID.randomUUID()};
+                        primitives.DateTime = new Timestamp(123);
+                        primitives.DateTimes = new Timestamp[] {new Timestamp(123), new Timestamp(456)};
                     }
 
                     cache.put(1, primitives);
@@ -114,21 +126,33 @@ public class PlatformNullablePrimitivesTask extends ComputeTaskAdapter<String, L
     {
         public Byte Byte;
         public Byte[] Bytes;
+        public Byte SByte;
+        public Byte[] SBytes;
         public Boolean Bool;
         public Boolean[] Bools;
         public Character Char;
         public Character[] Chars;
         public Short Short;
         public Short[] Shorts;
+        public Short UShort;
+        public Short[] UShorts;
         public Integer Int;
         public Integer[] Ints;
+        public Integer UInt;
+        public Integer[] UInts;
         public Long Long;
         public Long[] Longs;
+        public Long ULong;
+        public Long[] ULongs;
         public Float Float;
         public Float[] Floats;
         public Double Double;
         public Double[] Doubles;
         public UUID Guid;
         public UUID[] Guids;
+        public Timestamp DateTime;
+        public Timestamp[] DateTimes;
+        public BigDecimal Decimal;
+        public BigDecimal[] Decimals;
     }
 }
