@@ -122,8 +122,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             {
                 HandlePrimitive(field, out writeAction, out readAction, raw);
             }
-            else if (unwrapNullable && !raw && Nullable.GetUnderlyingType(type) is { } underlyingType
-                     && (underlyingType.IsPrimitive || underlyingType == typeof(decimal)))
+            else if (unwrapNullable && !raw && UnderlyingTypeIsSupportedPrimitive(type))
             {
                 HandlePrimitiveNullable(field, out writeAction, out readAction);
             }
@@ -890,6 +889,12 @@ namespace Apache.Ignite.Core.Impl.Binary
 
             // Compile and return
             return Expression.Lambda<BinaryReflectiveReadAction>(assignExpr, targetParam, readerParam).Compile();
+        }
+
+        private static bool UnderlyingTypeIsSupportedPrimitive(Type type)
+        {
+            return Nullable.GetUnderlyingType(type) is { } underlyingType
+                   && (underlyingType.IsPrimitive || underlyingType == typeof(decimal));
         }
     }
 }
