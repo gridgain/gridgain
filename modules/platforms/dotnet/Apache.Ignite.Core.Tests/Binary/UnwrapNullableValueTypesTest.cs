@@ -183,6 +183,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestJavaWriteDotNetRead([Values(true, false)] bool nullValues)
         {
+            // TODO: Restart node for every test for clean meta?
             var cache = Ignite.GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
             ExecuteJavaTask(cache.Name, JavaTaskCommand.Put, nullValues);
             cache[2] = new JavaNullableValueTypes2();
