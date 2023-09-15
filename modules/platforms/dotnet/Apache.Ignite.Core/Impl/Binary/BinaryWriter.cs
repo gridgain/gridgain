@@ -804,7 +804,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="val">Date array.</param>
         public void WriteTimestampArray(string fieldName, DateTime?[] val)
         {
-            WriteFieldId(fieldName, BinaryTypeId.Timestamp);
+            WriteFieldId(fieldName, BinaryTypeId.ArrayTimestamp);
 
             if (val == null)
                 WriteNullField();

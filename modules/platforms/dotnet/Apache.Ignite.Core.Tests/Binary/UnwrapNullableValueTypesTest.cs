@@ -198,12 +198,6 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             foreach (var field in javaBinaryType.Fields)
             {
-                if (field == nameof(NullableValueTypes.DateTimes))
-                {
-                    // TODO: Support arrays of DateTimes when UnwrapNullableValueTypes is enabled.
-                    continue;
-                }
-
                 Assert.AreEqual(javaBinaryType.GetFieldTypeName(field), dotNetBinaryType.GetFieldTypeName(field), field);
             }
 
