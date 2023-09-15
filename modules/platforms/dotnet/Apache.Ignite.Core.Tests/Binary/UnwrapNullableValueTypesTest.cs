@@ -246,6 +246,8 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestDotNetWriteJavaRead()
         {
+            // TODO: Nullables are registered as custom types by .NET when inside array, while Java writes them
+            // with primitive type ids.
             var cache = _ignite.GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
             cache[1] = new JavaNullableValueTypes
             {
