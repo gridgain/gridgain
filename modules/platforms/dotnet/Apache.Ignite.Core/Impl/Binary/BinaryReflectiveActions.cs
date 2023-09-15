@@ -118,11 +118,17 @@ namespace Apache.Ignite.Core.Impl.Binary
             forceTimestamp = forceTimestamp ||
                              field.DeclaringType.GetCustomAttributes(typeof(TimestampAttribute), true).Any();
 
+            if (raw)
+            {
+                // There is no field meta in raw mode, so unwrapNullable has no effect.
+                unwrapNullable = false;
+            }
+
             if (type.IsPrimitive)
             {
                 HandlePrimitive(field, out writeAction, out readAction, raw);
             }
-            else if (unwrapNullable && !raw && UnderlyingNullableTypeIsSupportedPrimitive(type))
+            else if (unwrapNullable && UnderlyingNullableTypeIsSupportedPrimitive(type))
             {
                 HandlePrimitiveNullable(field, out writeAction, out readAction);
             }
@@ -372,12 +378,6 @@ namespace Apache.Ignite.Core.Impl.Binary
 
             var elemType = field.FieldType.GetElementType();
             Debug.Assert(elemType != null);
-
-            if (unwrapNullable && !raw && UnderlyingNullableTypeIsSupportedPrimitive(elemType))
-            {
-                HandleNullableArray(field, out writeAction, out readAction);
-                return;
-            }
 
             if (elemType == typeof (bool))
             {
