@@ -194,6 +194,9 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             CollectionAssert.AreEquivalent(javaBinaryType.Fields, dotNetBinaryType.Fields);
 
+            // Use two different types to ensure consistent behavior?
+            Assert.AreNotEqual(javaBinaryType.TypeId, dotNetBinaryType.TypeId);
+
             foreach (var field in javaBinaryType.Fields)
             {
                 Assert.AreEqual(javaBinaryType.GetFieldTypeName(field), dotNetBinaryType.GetFieldTypeName(field));
