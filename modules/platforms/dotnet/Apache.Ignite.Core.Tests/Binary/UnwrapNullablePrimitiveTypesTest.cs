@@ -24,7 +24,7 @@ namespace Apache.Ignite.Core.Tests.Binary
     /// <summary>
     /// Tests for <see cref="BinaryConfiguration.UnwrapNullablePrimitiveTypes"/>.
     /// </summary>
-    public class UnwrapNullableValueTypesTest
+    public class UnwrapNullablePrimitiveTypesTest
     {
         private const string PlatformNullablePrimitivesTask =
             "org.apache.ignite.platform.PlatformNullablePrimitivesTask";
