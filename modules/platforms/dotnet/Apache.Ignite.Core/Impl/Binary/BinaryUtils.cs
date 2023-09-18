@@ -1832,6 +1832,14 @@ namespace Apache.Ignite.Core.Impl.Binary
             return res;
         }
 
+        public static Type GetSupportedPrimitiveUnderlyingNullableType(Type type)
+        {
+            return Nullable.GetUnderlyingType(type) is { } underlyingType
+                   && (underlyingType.IsPrimitive || underlyingType == typeof(decimal))
+                ? underlyingType
+                : null;
+        }
+
         /// <summary>
         /// Gets the enum value as int.
         /// </summary>
