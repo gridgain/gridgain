@@ -200,7 +200,11 @@ namespace Apache.Ignite.Core.Tests.Binary
             // Get binary type from Java.
             var javaBinaryType = _ignite.GetBinary().GetBinaryType(nameof(JavaNullableValueTypes));
 
-            // Initialize .NET binary type.
+            // Initialize corresponding .NET binary type and read data.
+            _ignite.GetBinary().GetBinaryType(typeof(JavaNullableValueTypes));
+            var res = cache[1];
+
+            // Get .NET binary type with different name but same properties to compare meta.
             var dotNetBinaryType = _ignite.GetBinary().GetBinaryType(typeof(JavaNullableValueTypes2));
 
             // Compare .NET and Java behavior for two different types with the same field set.
@@ -212,8 +216,6 @@ namespace Apache.Ignite.Core.Tests.Binary
                 Assert.AreEqual(
                     javaBinaryType.GetFieldTypeName(field), dotNetBinaryType.GetFieldTypeName(field), field);
             }
-
-            var res = cache[1];
 
             Assert.AreEqual(nullValues ? (int?)null : 1, res.Byte);
             Assert.AreEqual(nullValues ? (byte?)null : 1, res.Bytes[0]);
