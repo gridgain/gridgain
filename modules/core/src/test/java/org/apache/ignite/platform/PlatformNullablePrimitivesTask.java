@@ -129,6 +129,7 @@ public class PlatformNullablePrimitivesTask extends ComputeTaskAdapter<String, L
                     break;
 
                 case "get":
+                    ignite.binary().type(JavaNullableValueTypes.class); // Force type registration.
                     cache.get(1);
                     break;
 
