@@ -287,7 +287,6 @@ namespace Apache.Ignite.Core.Tests.Binary
                 DateTimes = new DateTime?[] { DateTime.UtcNow }
             };
 
-            // TODO: This works only when marshaller work dir has an entry for JavaNullableValueTypes class already.
             ExecuteJavaTask(cache.Name, JavaTaskCommand.Get);
         }
 
