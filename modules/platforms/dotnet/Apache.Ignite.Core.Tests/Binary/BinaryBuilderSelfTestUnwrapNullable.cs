@@ -19,11 +19,12 @@ namespace Apache.Ignite.Core.Tests.Binary
     using NUnit.Framework;
 
     /// <summary>
-    /// Binary test with unwrapped nullable primitives.
+    /// Binary builder self test with unwrapped nullable primitives.
     /// </summary>
     [TestFixture]
-    public class BinarySelfTestUnwrapNullable : BinarySelfTest
+    public class BinaryBuilderSelfTestUnwrapNullable : BinaryBuilderSelfTest
     {
+        /** <inheritdoc /> */
         protected override bool GetUnwrapNullablePrimitives()
         {
             return true;

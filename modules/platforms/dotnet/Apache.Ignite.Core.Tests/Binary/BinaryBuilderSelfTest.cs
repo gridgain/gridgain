@@ -57,6 +57,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                     IdMapper = new IdMapper(),
                     NameMapper = new NameMapper(GetNameMapper()),
                     CompactFooter = GetCompactFooter(),
+                    UnwrapNullablePrimitiveTypes = GetUnwrapNullablePrimitives()
                 }
             };
 
@@ -116,6 +117,15 @@ namespace Apache.Ignite.Core.Tests.Binary
         protected virtual IBinaryNameMapper GetNameMapper()
         {
             return BinaryBasicNameMapper.FullNameInstance;
+        }
+
+        /// <summary>
+        /// Gets the nullable mode.
+        /// </summary>
+        /// <returns></returns>
+        protected virtual bool GetUnwrapNullablePrimitives()
+        {
+            return false;
         }
 
         /// <summary>
