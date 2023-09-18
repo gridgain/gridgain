@@ -1102,6 +1102,15 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         public static int GetArrayElementTypeId(Type elemType, Marshaller marsh)
         {
+            if (marsh.UnwrapNullableValueTypes)
+            {
+                var typeId = BinaryTypeId.GetTypeId(Nullable.GetUnderlyingType(elemType) ?? elemType);
+                if (typeId != BinaryTypeId.Object)
+                {
+                    return typeId;
+                }
+            }
+
             return elemType == typeof(object)
                 ? ObjTypeId
                 : marsh.GetDescriptor(elemType).TypeId;

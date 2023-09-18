@@ -151,6 +151,11 @@ namespace Apache.Ignite.Core.Impl.Binary
             get { return _cfg.ForceTimestamp; }
         }
 
+        public bool UnwrapNullableValueTypes
+        {
+            get { return _cfg.UnwrapNullableValueTypes; }
+        }
+
         /// <summary>
         /// Gets date time converter.
         /// </summary>
@@ -478,15 +483,9 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </returns>
         public IBinaryTypeDescriptor GetDescriptor(Type type)
         {
-            if (_cfg.UnwrapNullableValueTypes &&
-                BinaryUtils.GetSupportedPrimitiveUnderlyingNullableType(type) is { } underlyingType &&
-                _typeToDesc.TryGetValue(underlyingType, out var underlyingDesc))
-            {
-                // Known nullable type - unwrap.
-                return underlyingDesc;
-            }
+            BinaryFullTypeDescriptor desc;
 
-            if (!_typeToDesc.TryGetValue(type, out var desc) || !desc.IsRegistered)
+            if (!_typeToDesc.TryGetValue(type, out desc) || !desc.IsRegistered)
             {
                 desc = RegisterType(type, desc);
             }
