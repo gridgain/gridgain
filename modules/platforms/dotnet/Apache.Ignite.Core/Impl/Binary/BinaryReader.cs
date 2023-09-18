@@ -1020,21 +1020,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /// <summary>
-        /// Reads header and returns true if it indicates a null value; otherwise, returns false without affecting the
-        /// stream position.
-        /// </summary>
-        private bool TryReadNull()
-        {
-            if (ReadByte() == BinaryUtils.HdrNull)
-            {
-                return true;
-            }
-
-            Stream.Seek(-1, SeekOrigin.Current);
-            return false;
-        }
-
-        /// <summary>
         /// Reads the enum.
         /// </summary>
         private static T ReadEnum0<T>(BinaryReader reader, bool keepBinary)
