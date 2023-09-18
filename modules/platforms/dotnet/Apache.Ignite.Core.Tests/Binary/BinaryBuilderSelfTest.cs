@@ -1011,18 +1011,27 @@ namespace Apache.Ignite.Core.Tests.Binary
             Guid? nGuid = Guid.NewGuid();
 
             // Generic setters.
-            var binObj = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
+            var builder = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
                 .SetField("fStr", "str")
                 .SetField("fNDate", nDate)
                 .SetTimestampField("fNTimestamp", nDate)
                 .SetField("fNGuid", nGuid)
                 .SetField("fEnum", TestEnum.One)
                 .SetStringArrayField("fStrArr", new[] { "str" })
-                .SetArrayField("fDateArr", new[] { nDate })
                 .SetTimestampArrayField("fTimestampArr", new[] { nDate })
                 .SetGuidArrayField("fGuidArr", new[] { nGuid })
-                .SetEnumArrayField("fEnumArr", new[] { TestEnum.One })
-                .Build();
+                .SetEnumArrayField("fEnumArr", new[] { TestEnum.One });
+
+            if (GetUnwrapNullablePrimitives())
+            {
+                builder.SetTimestampArrayField("fDateArr", new[] { nDate });
+            }
+            else
+            {
+                builder.SetArrayField("fDateArr", new[] { nDate });
+            }
+
+            var binObj = builder.Build();
 
             CheckStringDateGuidEnum1(binObj, nDate, nGuid);
 
@@ -1108,7 +1117,11 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(BinaryTypeNames.TypeNameGuid, meta.GetFieldTypeName("fNGuid"));
             Assert.AreEqual(BinaryTypeNames.TypeNameEnum, meta.GetFieldTypeName("fEnum"));
             Assert.AreEqual(BinaryTypeNames.TypeNameArrayString, meta.GetFieldTypeName("fStrArr"));
-            Assert.AreEqual(BinaryTypeNames.TypeNameArrayObject, meta.GetFieldTypeName("fDateArr"));
+            Assert.AreEqual(
+                GetUnwrapNullablePrimitives()
+                    ? BinaryTypeNames.TypeNameArrayTimestamp
+                    : BinaryTypeNames.TypeNameArrayObject,
+                meta.GetFieldTypeName("fDateArr"));
             Assert.AreEqual(BinaryTypeNames.TypeNameArrayTimestamp, meta.GetFieldTypeName("fTimestampArr"));
             Assert.AreEqual(BinaryTypeNames.TypeNameArrayGuid, meta.GetFieldTypeName("fGuidArr"));
             Assert.AreEqual(BinaryTypeNames.TypeNameArrayEnum, meta.GetFieldTypeName("fEnumArr"));
