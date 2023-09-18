@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Tests.Binary
 {
     using System;
     using System.Linq;
+    using System.Threading;
     using Apache.Ignite.Core.Binary;
     using NUnit.Framework;
 
@@ -34,6 +35,8 @@ namespace Apache.Ignite.Core.Tests.Binary
         [SetUp]
         public void SetUp()
         {
+            TestUtils.ClearMarshallerWorkDir();
+
             var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
                 BinaryConfiguration = new BinaryConfiguration
@@ -61,6 +64,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         public void TearDown()
         {
             Ignition.StopAll(true);
+            TestUtils.ClearMarshallerWorkDir();
         }
 
         [Test]
@@ -281,7 +285,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 DateTimes = new DateTime?[] { DateTime.UtcNow }
             };
 
-            // TODO: This fails when BinaryDynamicRegistration.TestJavaInterop test is executed before this fixture.
+            // TODO: This works only when marshaller work dir has an entry for JavaNullableValueTypes class already.
             ExecuteJavaTask(cache.Name, JavaTaskCommand.Get);
         }
 
