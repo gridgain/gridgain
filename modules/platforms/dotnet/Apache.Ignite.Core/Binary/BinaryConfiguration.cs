@@ -45,9 +45,9 @@ namespace Apache.Ignite.Core.Binary
         public const bool DefaultForceTimestamp = false;
 
         /// <summary>
-        /// Default <see cref="UnwrapNullableValueTypes"/> setting.
+        /// Default <see cref="UnwrapNullablePrimitiveTypes"/> setting.
         /// </summary>
-        public const bool DefaultUnwrapNullableValueTypes = false;
+        public const bool DefaultUnwrapNullablePrimitiveTypes = false;
 
         /** Footer setting. */
         private bool? _compactFooter;
@@ -84,7 +84,7 @@ namespace Apache.Ignite.Core.Binary
             KeepDeserialized = cfg.KeepDeserialized;
             ForceTimestamp = cfg.ForceTimestamp;
             TimestampConverter = cfg.TimestampConverter;
-            UnwrapNullableValueTypes = cfg.UnwrapNullableValueTypes;
+            UnwrapNullablePrimitiveTypes = cfg.UnwrapNullablePrimitiveTypes;
 
             if (cfg.Serializer != null)
             {
@@ -198,17 +198,17 @@ namespace Apache.Ignite.Core.Binary
         // TODO: Same config per type? Yes, via BinaryReflectiveSerializer
         // TODO: Default value
         /// <summary>
-        /// Gets or sets a value indicating whether all DateTime keys, values and object fields should be unwrapped and
+        /// Gets or sets a value indicating whether primitive nullable object fields should be unwrapped and
         /// written as underlying type, instead of using <see cref="IBinaryWriter.WriteObject{T}"/>.
         /// <para />
         /// This produces correct field type in binary metadata and is consistent with Java serializer behavior.
         /// <para />
         /// It is recommended to enable this setting, unless you need old behavior to preserve compatibility.
         /// <para />
-        /// See also <see cref="BinaryReflectiveSerializer.UnwrapNullableValueTypes"/>.
+        /// See also <see cref="BinaryReflectiveSerializer.UnwrapNullablePrimitiveTypes"/>.
         /// </summary>
-        [DefaultValue(DefaultUnwrapNullableValueTypes)]
-        public bool UnwrapNullableValueTypes { get; set; }
+        [DefaultValue(DefaultUnwrapNullablePrimitiveTypes)]
+        public bool UnwrapNullablePrimitiveTypes { get; set; }
 
         /// <summary>
         /// Gets the compact footer internal nullable value.

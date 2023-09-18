@@ -48,7 +48,7 @@ namespace Apache.Ignite.Core.Binary
         private bool _forceTimestamp;
 
         /** Unwrap nullable value types flag. */
-        private bool _unwrapNullableValueTypes;
+        private bool _unwrapNullablePrimitiveTypes;
 
         /// <summary>
         /// Write binary object.
@@ -110,23 +110,23 @@ namespace Apache.Ignite.Core.Binary
         }
 
         /// <summary>
-        /// Gets or sets a value indicating whether all DateTime keys, values and object fields should be unwrapped and
+        /// Gets or sets a value indicating whether primitive nullable object fields should be unwrapped and
         /// written as underlying type, instead of using <see cref="IBinaryWriter.WriteObject{T}"/>.
         /// <para />
         /// This produces correct field type in binary metadata and is consistent with Java serializer behavior.
         /// <para />
         /// It is recommended to enable this setting, unless you need old behavior to preserve compatibility.
         /// <para />
-        /// See also <see cref="BinaryConfiguration.UnwrapNullableValueTypes"/>.
+        /// See also <see cref="BinaryConfiguration.UnwrapNullablePrimitiveTypes"/>.
         /// </summary>
-        public bool UnwrapNullableValueTypes
+        public bool UnwrapNullablePrimitiveTypes
         {
-            get => _unwrapNullableValueTypes;
+            get => _unwrapNullablePrimitiveTypes;
             set
             {
                 ThrowIfInUse();
 
-                _unwrapNullableValueTypes = value;
+                _unwrapNullablePrimitiveTypes = value;
             }
         }
 
@@ -139,7 +139,7 @@ namespace Apache.Ignite.Core.Binary
             _isInUse = true;
 
             return BinaryReflectiveSerializerInternal.Create(
-                type, typeId, converter, idMapper, _forceTimestamp, _rawMode, _unwrapNullableValueTypes);
+                type, typeId, converter, idMapper, _forceTimestamp, _rawMode, _unwrapNullablePrimitiveTypes);
         }
 
         /// <summary>

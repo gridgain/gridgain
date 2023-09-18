@@ -153,7 +153,7 @@ namespace Apache.Ignite.Core.Impl.Binary
 
         public bool UnwrapNullableValueTypes
         {
-            get { return _cfg.UnwrapNullableValueTypes; }
+            get { return _cfg.UnwrapNullablePrimitiveTypes; }
         }
 
         /// <summary>
@@ -781,7 +781,7 @@ namespace Apache.Ignite.Core.Impl.Binary
                 serializer = new BinaryReflectiveSerializer
                 {
                     ForceTimestamp = cfg?.ForceTimestamp == true,
-                    UnwrapNullableValueTypes = cfg?.UnwrapNullableValueTypes == true
+                    UnwrapNullablePrimitiveTypes = cfg?.UnwrapNullablePrimitiveTypes == true
                 };
             }
 

@@ -22,7 +22,7 @@ namespace Apache.Ignite.Core.Tests.Binary
     using NUnit.Framework;
 
     /// <summary>
-    /// Tests for <see cref="BinaryConfiguration.UnwrapNullableValueTypes"/>.
+    /// Tests for <see cref="BinaryConfiguration.UnwrapNullablePrimitiveTypes"/>.
     /// </summary>
     public class UnwrapNullableValueTypesTest
     {
@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             {
                 BinaryConfiguration = new BinaryConfiguration
                 {
-                    UnwrapNullableValueTypes = true,
+                    UnwrapNullablePrimitiveTypes = true,
                     ForceTimestamp = true,
                     TypeConfigurations = new[]
                     {
@@ -46,7 +46,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                         {
                             Serializer = new BinaryReflectiveSerializer
                             {
-                                UnwrapNullableValueTypes = false
+                                UnwrapNullablePrimitiveTypes = false
                             }
                         }
                     },
