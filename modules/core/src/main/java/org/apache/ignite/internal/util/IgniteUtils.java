@@ -314,6 +314,8 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_DATE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CACHE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DATA_REGIONS_OFFHEAP_SIZE;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DATA_REGIONS_TOTAL_ALLOCATED_SIZE;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_HOST_RAM_SIZE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_JVM_PID;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
 import static org.apache.ignite.internal.util.GridUnsafe.objectFieldOffset;
@@ -1447,6 +1449,45 @@ public abstract class IgniteUtils {
         }
 
         return roundedHeapSize(totalOffheap, precision);
+    }
+
+    /**
+     * Gets total allocated persistence size in GB rounded to specified precision.
+     *
+     * @param nodes Nodes.
+     * @param precision Precision.
+     * @return Total allocated PDS size in GB.
+     */
+    public static double allocatedPDSSize(Iterable<ClusterNode> nodes, int precision) {
+        double totalAllocatedPDS = .0;
+
+        for (ClusterNode n : nodes) {
+            if (n.isClient())
+                continue;
+
+            Long val = n.<Long>attribute(ATTR_DATA_REGIONS_TOTAL_ALLOCATED_SIZE);
+
+            if (val != null)
+                totalAllocatedPDS += val;
+        }
+
+        return roundedHeapSize(totalAllocatedPDS, precision);
+    }
+
+    public static double hostRamSize(Iterable<ClusterNode> nodes, int precision) {
+        double totalHostRamSize = .0;
+
+        for (Collection<ClusterNode> nodesPerHost : neighborhood(nodes).values()) {
+            ClusterNode first = F.first(nodesPerHost);
+            if (first != null) {
+                Long val = first.<Long>attribute(ATTR_HOST_RAM_SIZE);
+
+                if (val != null)
+                    totalHostRamSize += val;
+            }
+        }
+
+        return roundedHeapSize(totalHostRamSize, precision);
     }
 
     /**
