@@ -281,7 +281,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 DateTimes = new DateTime?[] { DateTime.UtcNow }
             };
 
-            // TODO: This fails when BinaryDynamicRegistration test is executed before this fixture.
+            // TODO: This fails when BinaryDynamicRegistration.TestJavaInterop test is executed before this fixture.
             ExecuteJavaTask(cache.Name, JavaTaskCommand.Get);
         }
 
