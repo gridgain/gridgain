@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Tests.Binary
 {
     using System;
     using System.Linq;
-    using System.Threading;
     using Apache.Ignite.Core.Binary;
     using NUnit.Framework;
 
