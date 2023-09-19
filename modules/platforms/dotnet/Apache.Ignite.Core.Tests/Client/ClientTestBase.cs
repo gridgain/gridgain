@@ -83,9 +83,8 @@ namespace Apache.Ignite.Core.Tests.Client
             _enableSsl = enableSsl;
             _enablePartitionAwareness = enablePartitionAwareness;
             _enableServerListLogging = enableServerListLogging;
-            _serverListLoggerLevels =
-                serverListLoggerLevels ?? new[] { LogLevel.Trace, LogLevel.Debug, LogLevel.Warn, LogLevel.Error };
-            UseBinaryArray = useBinaryArray;
+            _serverListLoggerLevels = serverListLoggerLevels ??
+                                      new[] { LogLevel.Trace, LogLevel.Debug, LogLevel.Warn, LogLevel.Error };
         }
 
         /// <summary>
