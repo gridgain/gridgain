@@ -41,14 +41,11 @@ namespace Apache.Ignite.Core.Tests.Binary
         }
 
         [TearDown]
-        public void ClientTearDown()
-        {
-            _client.Dispose();
-        }
+        public void ClientTearDown() => _client.Dispose();
 
-        protected override ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(string name)
-        {
-            return _client.GetOrCreateCache<TK, TV>(name);
-        }
+        protected override ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(string name) =>
+            _client.GetOrCreateCache<TK, TV>(name);
+
+        protected override IBinary GetBinary() => _client.GetBinary();
     }
 }

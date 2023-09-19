@@ -53,10 +53,10 @@ namespace Apache.Ignite.Core.Tests.Binary
             TestUtils.ClearMarshallerWorkDir();
         }
 
-        protected virtual ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(string name)
-        {
-            return _ignite.GetOrCreateCache<TK, TV>(name).AsCacheClient();
-        }
+        protected virtual ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(string name) =>
+            _ignite.GetOrCreateCache<TK, TV>(name).AsCacheClient();
+
+        protected virtual IBinary GetBinary() => _ignite.GetBinary();
 
         protected static BinaryConfiguration GetBinaryConfiguration()
         {
@@ -122,7 +122,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             cache[1] = primitives;
 
             var res = cache[1];
-            var binaryType = _ignite.GetBinary().GetBinaryType(typeof(NullableValueTypes));
+            var binaryType = GetBinary().GetBinaryType(typeof(NullableValueTypes));
 
             AssertExtensions.ReflectionEqual(primitives, res);
 
@@ -188,7 +188,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             cache[1] = primitives;
 
             var res = cache[1];
-            var binaryType = _ignite.GetBinary().GetBinaryType(typeof(NullableValueTypes2));
+            var binaryType = GetBinary().GetBinaryType(typeof(NullableValueTypes2));
 
             AssertExtensions.ReflectionEqual(primitives, res);
 
@@ -209,14 +209,14 @@ namespace Apache.Ignite.Core.Tests.Binary
             cache[2] = new JavaNullableValueTypes2();
 
             // Get binary type from Java.
-            var javaBinaryType = _ignite.GetBinary().GetBinaryType(nameof(JavaNullableValueTypes));
+            var javaBinaryType = GetBinary().GetBinaryType(nameof(JavaNullableValueTypes));
 
             // Initialize corresponding .NET binary type and read data.
-            _ignite.GetBinary().GetBinaryType(typeof(JavaNullableValueTypes));
+            GetBinary().GetBinaryType(typeof(JavaNullableValueTypes));
             var res = cache[1];
 
             // Get .NET binary type with different name but same properties to compare meta.
-            var dotNetBinaryType = _ignite.GetBinary().GetBinaryType(typeof(JavaNullableValueTypes2));
+            var dotNetBinaryType = GetBinary().GetBinaryType(typeof(JavaNullableValueTypes2));
 
             // Compare .NET and Java behavior for two different types with the same field set.
             Assert.AreNotEqual(javaBinaryType.TypeId, dotNetBinaryType.TypeId);
