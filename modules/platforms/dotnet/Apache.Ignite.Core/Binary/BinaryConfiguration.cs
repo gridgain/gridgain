@@ -191,13 +191,7 @@ namespace Apache.Ignite.Core.Binary
         [DefaultValue(DefaultForceTimestamp)]
         public bool ForceTimestamp { get; set; }
 
-        // TODO: See logic in BinaryFieldAccessor, we need to ensure correct meta even for null values.
-        // TODO: ISerializable - can we do anything? Don't care?
-        // TODO: Tests for arrays of nullables - check how Java handles them
-        // TODO: Test for Java interop
         // TODO: Print warning when not enabled
-        // TODO: Same config per type? Yes, via BinaryReflectiveSerializer
-        // TODO: Default value
         /// <summary>
         /// Gets or sets a value indicating whether primitive nullable object fields should be unwrapped and
         /// written as underlying type, instead of using <see cref="IBinaryWriter.WriteObject{T}"/>.
