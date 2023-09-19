@@ -21,16 +21,16 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <artifactId>community.parent</artifactId>
-        <groupId>org.gridgain</groupId>
-        <version>1</version>
-        <relativePath>../../parent/pom.xml</relativePath>
-    </parent>
     <modelVersion>4.0.0</modelVersion>
 
+    <parent>
+        <groupId>org.gridgain</groupId>
+        <artifactId>ignite-parent-internal</artifactId>
+        <version>${revision}</version>
+        <relativePath>../../parent-internal/pom.xml</relativePath>
+    </parent>
+
     <artifactId>ignite-tensorflow</artifactId>
-    <version>8.8.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <build>
