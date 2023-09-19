@@ -191,7 +191,6 @@ namespace Apache.Ignite.Core.Binary
         [DefaultValue(DefaultForceTimestamp)]
         public bool ForceTimestamp { get; set; }
 
-        // TODO: Print warning when not enabled
         /// <summary>
         /// Gets or sets a value indicating whether primitive nullable object fields should be unwrapped and
         /// written as underlying type, instead of using <see cref="IBinaryWriter.WriteObject{T}"/>.
