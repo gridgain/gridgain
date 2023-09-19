@@ -367,6 +367,14 @@ namespace Apache.Ignite.Core
                              "To enable alternate stack check on .NET Core 3+ and .NET 5+, " +
                              "set {0} environment variable to 1.", EnvEnableAlternateStackCheck);
                 }
+
+                if (cfg.BinaryConfiguration == null || !cfg.BinaryConfiguration.UnwrapNullablePrimitiveTypes)
+                {
+                    log.Warn(
+                        $"{nameof(BinaryConfiguration)}.{nameof(BinaryConfiguration.UnwrapNullablePrimitiveTypes)} " +
+                        "is not enabled. It is recommended to enable this setting, " +
+                        "unless old behavior is required for compatibility reasons.");
+                }
             }
         }
 
