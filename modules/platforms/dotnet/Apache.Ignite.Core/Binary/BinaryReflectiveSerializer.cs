@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Binary
 {
     using System;
+    using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Binary;
 
     /// <summary>
@@ -119,6 +120,7 @@ namespace Apache.Ignite.Core.Binary
         /// <para />
         /// See also <see cref="BinaryConfiguration.UnwrapNullablePrimitiveTypes"/>.
         /// </summary>
+        [IgniteExperimental]
         public bool UnwrapNullablePrimitiveTypes
         {
             get => _unwrapNullablePrimitiveTypes;

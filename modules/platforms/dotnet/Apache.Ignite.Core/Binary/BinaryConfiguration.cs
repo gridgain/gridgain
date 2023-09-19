@@ -22,6 +22,7 @@ namespace Apache.Ignite.Core.Binary
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
+    using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
@@ -208,6 +209,7 @@ namespace Apache.Ignite.Core.Binary
         /// See also <see cref="BinaryReflectiveSerializer.UnwrapNullablePrimitiveTypes"/>.
         /// </summary>
         [DefaultValue(DefaultUnwrapNullablePrimitiveTypes)]
+        [IgniteExperimental]
         public bool UnwrapNullablePrimitiveTypes { get; set; }
 
         /// <summary>
