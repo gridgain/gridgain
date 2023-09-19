@@ -916,7 +916,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".CLIENT_CONNECTIONS.TYPE.null.2147483647",
                 sysSchemaName() + ".CLIENT_CONNECTIONS.USER.null.2147483647",
                 sysSchemaName() + ".CLIENT_CONNECTIONS.VERSION.null.2147483647",
-                sysSchemaName() + ".CLIENT_CONNECTION_ATTRIBUTES.CONNECTION_ID.null.2147483647",
+                sysSchemaName() + ".CLIENT_CONNECTION_ATTRIBUTES.CONNECTION_ID.null.19",
                 sysSchemaName() + ".CLIENT_CONNECTION_ATTRIBUTES.NAME.null.2147483647",
                 sysSchemaName() + ".CLIENT_CONNECTION_ATTRIBUTES.VALUE.null.2147483647",
                 sysSchemaName() + ".TRANSACTIONS.LOCAL_NODE_ID.null.16",
