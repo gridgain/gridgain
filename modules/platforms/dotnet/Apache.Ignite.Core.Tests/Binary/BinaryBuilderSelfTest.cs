@@ -1098,18 +1098,27 @@ namespace Apache.Ignite.Core.Tests.Binary
             CheckStringDateGuidEnum2(binObj, nDate, nGuid);
 
             // Overwrite with specific setters
-            binObj2 = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
+            var builder4 = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
                 .SetStringField("fStr", "str2")
                 .SetField("fNDate", nDate)
                 .SetTimestampField("fNTimestamp", nDate)
                 .SetGuidField("fNGuid", nGuid)
                 .SetEnumField("fEnum", TestEnum.Two)
                 .SetStringArrayField("fStrArr", new[] { "str2" })
-                .SetArrayField("fDateArr", new[] { nDate })
                 .SetTimestampArrayField("fTimestampArr", new[] { nDate })
                 .SetGuidArrayField("fGuidArr", new[] { nGuid })
-                .SetEnumArrayField("fEnumArr", new[] { TestEnum.Two })
-                .Build();
+                .SetEnumArrayField("fEnumArr", new[] { TestEnum.Two });
+
+            if (GetUnwrapNullablePrimitives())
+            {
+                builder4.SetTimestampArrayField("fDateArr", new[] { nDate });
+            }
+            else
+            {
+                builder4.SetArrayField("fDateArr", new[] { nDate });
+            }
+
+            binObj2 = builder4.Build();
 
             CheckStringDateGuidEnum2(binObj2, nDate, nGuid);
 
