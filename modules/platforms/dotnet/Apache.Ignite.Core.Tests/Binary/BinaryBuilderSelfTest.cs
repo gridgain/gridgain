@@ -1041,18 +1041,27 @@ namespace Apache.Ignite.Core.Tests.Binary
             CheckStringDateGuidEnum1(binObj, nDate, nGuid);
 
             // Specific setters.
-            var binObj2 = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
+            var builder2 = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
                 .SetStringField("fStr", "str")
                 .SetField("fNDate", nDate)
                 .SetTimestampField("fNTimestamp", nDate)
                 .SetGuidField("fNGuid", nGuid)
                 .SetEnumField("fEnum", TestEnum.One)
                 .SetStringArrayField("fStrArr", new[] { "str" })
-                .SetArrayField("fDateArr", new[] { nDate })
                 .SetTimestampArrayField("fTimestampArr", new[] { nDate })
                 .SetGuidArrayField("fGuidArr", new[] { nGuid })
-                .SetEnumArrayField("fEnumArr", new[] { TestEnum.One })
-                .Build();
+                .SetEnumArrayField("fEnumArr", new[] { TestEnum.One });
+
+            if (GetUnwrapNullablePrimitives())
+            {
+                builder2.SetTimestampArrayField("fDateArr", new[] { nDate });
+            }
+            else
+            {
+                builder2.SetArrayField("fDateArr", new[] { nDate });
+            }
+
+            var binObj2 = builder.Build();
 
             CheckStringDateGuidEnum1(binObj2, nDate, nGuid);
 
@@ -1064,18 +1073,27 @@ namespace Apache.Ignite.Core.Tests.Binary
             nDate = DateTime.Now.ToUniversalTime();
             nGuid = Guid.NewGuid();
 
-            binObj = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
+            var builder3 = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
                 .SetField("fStr", "str2")
                 .SetField("fNDate", nDate)
                 .SetTimestampField("fNTimestamp", nDate)
                 .SetField("fNGuid", nGuid)
                 .SetField("fEnum", TestEnum.Two)
                 .SetField("fStrArr", new[] { "str2" })
-                .SetArrayField("fDateArr", new[] { nDate })
                 .SetTimestampArrayField("fTimestampArr", new[] { nDate })
                 .SetField("fGuidArr", new[] { nGuid })
-                .SetField("fEnumArr", new[] { TestEnum.Two })
-                .Build();
+                .SetField("fEnumArr", new[] { TestEnum.Two });
+
+            if (GetUnwrapNullablePrimitives())
+            {
+                builder3.SetTimestampArrayField("fDateArr", new[] { nDate });
+            }
+            else
+            {
+                builder3.SetArrayField("fDateArr", new[] { nDate });
+            }
+
+            binObj = builder3.Build();
 
             CheckStringDateGuidEnum2(binObj, nDate, nGuid);
 
