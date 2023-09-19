@@ -324,7 +324,7 @@ namespace Apache.Ignite.Core.Tests.Client.Binary
         private static void AssertNoLogWarnings(ListLogger logger)
         {
             var entries = logger.Entries.Where(
-                e => e.Level > LogLevel.Info && !e.Message.Contains(nameof(BinaryConfiguration.UnwrapNullablePrimitiveTypes), StringComparison.Ordinal));
+                e => e.Level > LogLevel.Info && !e.Message.Contains(nameof(BinaryConfiguration.UnwrapNullablePrimitiveTypes)));
 
             Assert.IsEmpty(entries);
         }
