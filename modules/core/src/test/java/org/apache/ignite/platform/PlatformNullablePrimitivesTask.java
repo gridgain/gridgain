@@ -144,34 +144,63 @@ public class PlatformNullablePrimitivesTask extends ComputeTaskAdapter<String, L
     public static class JavaNullableValueTypes
     {
         public Byte Byte;
+
         public Byte[] Bytes;
+
         public Byte SByte;
+
         public Byte[] SBytes;
+
         public Boolean Bool;
+
         public Boolean[] Bools;
+
         public Character Char;
+
         public Character[] Chars;
+
         public Short Short;
+
         public Short[] Shorts;
+
         public Short UShort;
+
         public Short[] UShorts;
+
         public Integer Int;
+
         public Integer[] Ints;
+
         public Integer UInt;
+
         public Integer[] UInts;
+
         public Long Long;
+
         public Long[] Longs;
+
         public Long ULong;
+
         public Long[] ULongs;
+
         public Float Float;
+
         public Float[] Floats;
+
         public Double Double;
+
         public Double[] Doubles;
+
         public UUID Guid;
+
         public UUID[] Guids;
+
         public Timestamp DateTime;
+
         public Timestamp[] DateTimes;
+
         public BigDecimal Decimal;
+
         public BigDecimal[] Decimals;
     }
 }
