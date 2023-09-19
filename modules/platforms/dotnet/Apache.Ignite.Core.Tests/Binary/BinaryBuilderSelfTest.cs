@@ -1253,7 +1253,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         /// <summary>
         /// Checks the string date guid enum values.
         /// </summary>
-        private static void CheckStringDateGuidEnum2(IBinaryObject binObj, DateTime? nDate, Guid? nGuid)
+        private void CheckStringDateGuidEnum2(IBinaryObject binObj, DateTime? nDate, Guid? nGuid)
         {
             Assert.AreEqual("str2", binObj.GetField<string>("fStr"));
             Assert.AreEqual(nDate, binObj.GetField<IBinaryObject>("fNDate").Deserialize<DateTime?>());
@@ -1261,8 +1261,17 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(nGuid, binObj.GetField<Guid?>("fNGuid"));
             Assert.AreEqual(TestEnum.Two, binObj.GetField<IBinaryObject>("fEnum").Deserialize<TestEnum>());
             Assert.AreEqual(new[] { "str2" }, binObj.GetField<string[]>("fStrArr"));
-            Assert.AreEqual(new[] {nDate}, binObj.GetField<IBinaryObject[]>("fDateArr")
-                .Select(x => x.Deserialize<DateTime?>()));
+
+            if (GetUnwrapNullablePrimitives())
+            {
+                Assert.AreEqual(new[] {nDate}, binObj.GetField<DateTime?[]>("fDateArr"));
+            }
+            else
+            {
+                Assert.AreEqual(new[] {nDate}, binObj.GetField<IBinaryObject[]>("fDateArr")
+                    .Select(x => x.Deserialize<DateTime?>()));
+            }
+
             Assert.AreEqual(new[] { nDate }, binObj.GetField<DateTime?[]>("fTimestampArr"));
             Assert.AreEqual(new[] { nGuid }, binObj.GetField<Guid?[]>("fGuidArr"));
             Assert.AreEqual(new[] {TestEnum.Two},
