@@ -75,7 +75,7 @@ namespace Apache.Ignite.Core
         /** */
         private static readonly object SyncRoot = new object();
 
-        /** GC warning flag. */
+        /** Warning printed flag (we print them only for the first node to reduce noise). */
         private static int _diagPrinted;
 
         /** */
@@ -368,13 +368,26 @@ namespace Apache.Ignite.Core
                              "set {0} environment variable to 1.", EnvEnableAlternateStackCheck);
                 }
 
-                if (cfg.BinaryConfiguration == null || !cfg.BinaryConfiguration.UnwrapNullablePrimitiveTypes)
-                {
-                    log.Warn(
-                        $"{nameof(BinaryConfiguration)}.{nameof(BinaryConfiguration.UnwrapNullablePrimitiveTypes)} " +
-                        "is not enabled. It is recommended to enable this setting, " +
-                        "unless old behavior is required for compatibility reasons.");
-                }
+                LogBinaryConfigurationDiagnostics(cfg.BinaryConfiguration, log);
+            }
+        }
+
+        /// <summary>
+        /// Performs binary configuration checks and logs diagnostic messages.
+        /// </summary>
+        /// <param name="cfg">Configuration.</param>
+        /// <param name="log">Log.</param>
+        internal static void LogBinaryConfigurationDiagnostics(BinaryConfiguration cfg, ILogger log)
+        {
+            if (log == null)
+                return;
+
+            if (cfg == null || !cfg.UnwrapNullablePrimitiveTypes)
+            {
+                log.Warn(
+                    $"{nameof(BinaryConfiguration)}.{nameof(BinaryConfiguration.UnwrapNullablePrimitiveTypes)} " +
+                    "is not enabled. It is recommended to enable this setting, " +
+                    "unless old behavior is required for compatibility reasons.");
             }
         }
 
