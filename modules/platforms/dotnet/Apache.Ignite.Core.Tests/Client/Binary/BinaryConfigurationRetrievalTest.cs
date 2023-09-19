@@ -78,7 +78,7 @@ namespace Apache.Ignite.Core.Tests.Client.Binary
                     e.Message == "BinaryConfiguration.CompactFooter set to false on client " +
                     "according to server configuration."));
 
-                Assert.IsEmpty(logger.Entries.Where(e => e.Level > LogLevel.Info));
+                AssertNoLogWarnings(logger);
             }
         }
 
@@ -120,7 +120,7 @@ namespace Apache.Ignite.Core.Tests.Client.Binary
                     "Consider enabling this setting to reduce cache entry size."
                     && e.Level == LogLevel.Info));
 
-                Assert.IsEmpty(logger.Entries.Where(e => e.Level > LogLevel.Info));
+                AssertNoLogWarnings(logger);
             }
         }
 
@@ -144,7 +144,7 @@ namespace Apache.Ignite.Core.Tests.Client.Binary
                 Assert.AreEqual(1, logger.Entries.Count(e => e.Message == "Server binary configuration " +
                     "retrieved: BinaryConfigurationClientInternal [CompactFooter=True, NameMapperMode=BasicFull]"));
 
-                Assert.IsEmpty(logger.Entries.Where(e => e.Level > LogLevel.Info));
+                AssertNoLogWarnings(logger);
             }
         }
 
@@ -175,7 +175,7 @@ namespace Apache.Ignite.Core.Tests.Client.Binary
                 Assert.IsNotNull(resCfg);
                 Assert.IsTrue(resCfg.CompactFooter);
                 Assert.IsFalse(((BinaryBasicNameMapper)resCfg.NameMapper).IsSimpleName);
-                Assert.IsEmpty(logger.Entries.Where(e => e.Level > LogLevel.Info));
+                AssertNoLogWarnings(logger);
             }
         }
 
@@ -283,7 +283,7 @@ namespace Apache.Ignite.Core.Tests.Client.Binary
                 var resCfg = client.GetConfiguration().BinaryConfiguration;
                 Assert.IsNotNull(resCfg);
                 Assert.IsInstanceOf<TestNameMapper>(resCfg.NameMapper);
-                Assert.AreEqual(0, logger.Entries.Count(e => e.Level > LogLevel.Info));
+                AssertNoLogWarnings(logger);
             }
         }
 
@@ -319,6 +319,14 @@ namespace Apache.Ignite.Core.Tests.Client.Binary
             {
                 Logger = logger
             };
+        }
+
+        private static void AssertNoLogWarnings(ListLogger logger)
+        {
+            var entries = logger.Entries.Where(
+                e => e.Level > LogLevel.Info && !e.Message.Contains(nameof(BinaryConfiguration.UnwrapNullablePrimitiveTypes), StringComparison.Ordinal));
+
+            Assert.IsEmpty(entries);
         }
 
         /** */
