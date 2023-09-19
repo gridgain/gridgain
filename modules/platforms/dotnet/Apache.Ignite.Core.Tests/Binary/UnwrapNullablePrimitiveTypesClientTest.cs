@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Tests.Binary
 {
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
+    using Apache.Ignite.Core.Client.Cache;
     using NUnit.Framework;
 
     /// <summary>
@@ -31,13 +32,23 @@ namespace Apache.Ignite.Core.Tests.Binary
         [SetUp]
         public void ClientSetUp()
         {
-            _client = Ignition.StartClient(new IgniteClientConfiguration("localhost:10800"));
+            var cfg = new IgniteClientConfiguration("localhost:10800")
+            {
+                BinaryConfiguration = GetBinaryConfiguration()
+            };
+
+            _client = Ignition.StartClient(cfg);
         }
 
         [TearDown]
         public void ClientTearDown()
         {
             _client.Dispose();
+        }
+
+        protected override ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(string name)
+        {
+            return _client.GetOrCreateCache<TK, TV>(name);
         }
     }
 }

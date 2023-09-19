@@ -19,6 +19,8 @@ namespace Apache.Ignite.Core.Tests.Binary
     using System;
     using System.Linq;
     using Apache.Ignite.Core.Binary;
+    using Apache.Ignite.Core.Client.Cache;
+    using Apache.Ignite.Core.Tests.Client;
     using NUnit.Framework;
 
     /// <summary>
@@ -38,22 +40,7 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
-                BinaryConfiguration = new BinaryConfiguration
-                {
-                    UnwrapNullablePrimitiveTypes = true,
-                    ForceTimestamp = true,
-                    TypeConfigurations = new[]
-                    {
-                        new BinaryTypeConfiguration(typeof(NullableValueTypes2))
-                        {
-                            Serializer = new BinaryReflectiveSerializer
-                            {
-                                UnwrapNullablePrimitiveTypes = false
-                            }
-                        }
-                    },
-                    NameMapper = new BinaryBasicNameMapper { IsSimpleName = true }
-                }
+                BinaryConfiguration = GetBinaryConfiguration()
             };
 
             _ignite = Ignition.Start(cfg);
@@ -66,10 +53,35 @@ namespace Apache.Ignite.Core.Tests.Binary
             TestUtils.ClearMarshallerWorkDir();
         }
 
+        protected virtual ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(string name)
+        {
+            return _ignite.GetOrCreateCache<TK, TV>(name).AsCacheClient();
+        }
+
+        protected static BinaryConfiguration GetBinaryConfiguration()
+        {
+            return new BinaryConfiguration
+            {
+                UnwrapNullablePrimitiveTypes = true,
+                ForceTimestamp = true,
+                TypeConfigurations = new[]
+                {
+                    new BinaryTypeConfiguration(typeof(NullableValueTypes2))
+                    {
+                        Serializer = new BinaryReflectiveSerializer
+                        {
+                            UnwrapNullablePrimitiveTypes = false
+                        }
+                    }
+                },
+                NameMapper = new BinaryBasicNameMapper { IsSimpleName = true }
+            };
+        }
+
         [Test]
         public void TestPrimitiveFields([Values(true, false)] bool nullValues)
         {
-            var cache = _ignite.GetOrCreateCache<int, NullableValueTypes>(TestUtils.TestName);
+            var cache = GetOrCreateCache<int, NullableValueTypes>(TestUtils.TestName);
 
             var primitives = nullValues
                 ? new NullableValueTypes()
@@ -135,7 +147,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         public void TestPrimitiveFieldsUnwrapDisabled([Values(true, false)] bool nullValues)
         {
             // Separate class to avoid meta conflict.
-            var cache = _ignite.GetOrCreateCache<int, NullableValueTypes2>(TestUtils.TestName);
+            var cache = GetOrCreateCache<int, NullableValueTypes2>(TestUtils.TestName);
 
             var primitives = nullValues
                 ? new NullableValueTypes2()
@@ -192,7 +204,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestJavaWriteDotNetRead([Values(true, false)] bool nullValues)
         {
-            var cache = _ignite.GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
+            var cache = GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
             ExecuteJavaTask(cache.Name, JavaTaskCommand.Put, nullValues);
             cache[2] = new JavaNullableValueTypes2();
 
@@ -251,7 +263,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestDotNetWriteJavaRead()
         {
-            var cache = _ignite.GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
+            var cache = GetOrCreateCache<int, JavaNullableValueTypes>(TestUtils.TestName);
             cache[1] = new JavaNullableValueTypes
             {
                 Byte = 1,
