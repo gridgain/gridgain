@@ -711,6 +711,19 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
+        /// Clears the marshaller work dir.
+        /// </summary>
+        public static void ClearMarshallerWorkDir()
+        {
+            // Delete all *.classname files within IGNITE_HOME
+            var home = IgniteHome.Resolve();
+
+            var files = Directory.GetFiles(home, "*.classname*", SearchOption.AllDirectories);
+
+            files.ToList().ForEach(File.Delete);
+        }
+
+        /// <summary>
         /// Logs to test progress. Produces immediate console output on .NET Core.
         /// </summary>
         public class TestContextLogger : ILogger

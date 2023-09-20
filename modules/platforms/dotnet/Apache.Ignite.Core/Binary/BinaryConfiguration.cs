@@ -22,6 +22,7 @@ namespace Apache.Ignite.Core.Binary
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
+    using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
@@ -43,6 +44,11 @@ namespace Apache.Ignite.Core.Binary
         /// Default <see cref="ForceTimestamp"/> setting.
         /// </summary>
         public const bool DefaultForceTimestamp = false;
+
+        /// <summary>
+        /// Default <see cref="UnwrapNullablePrimitiveTypes"/> setting.
+        /// </summary>
+        public const bool DefaultUnwrapNullablePrimitiveTypes = false;
 
         /** Footer setting. */
         private bool? _compactFooter;
@@ -79,6 +85,7 @@ namespace Apache.Ignite.Core.Binary
             KeepDeserialized = cfg.KeepDeserialized;
             ForceTimestamp = cfg.ForceTimestamp;
             TimestampConverter = cfg.TimestampConverter;
+            UnwrapNullablePrimitiveTypes = cfg.UnwrapNullablePrimitiveTypes;
 
             if (cfg.Serializer != null)
             {
@@ -181,7 +188,22 @@ namespace Apache.Ignite.Core.Binary
         /// <para />
         /// See also <see cref="TimestampAttribute"/>, <see cref="BinaryReflectiveSerializer.ForceTimestamp"/>.
         /// </summary>
+        [DefaultValue(DefaultForceTimestamp)]
         public bool ForceTimestamp { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether primitive nullable object fields should be unwrapped and
+        /// written as underlying type, instead of using <see cref="IBinaryWriter.WriteObject{T}"/>.
+        /// <para />
+        /// This produces correct field type in binary metadata and is consistent with Java serializer behavior.
+        /// <para />
+        /// It is recommended to enable this setting, unless you need old behavior to preserve compatibility.
+        /// <para />
+        /// See also <see cref="BinaryReflectiveSerializer.UnwrapNullablePrimitiveTypes"/>.
+        /// </summary>
+        [DefaultValue(DefaultUnwrapNullablePrimitiveTypes)]
+        [IgniteExperimental]
+        public bool UnwrapNullablePrimitiveTypes { get; set; }
 
         /// <summary>
         /// Gets the compact footer internal nullable value.

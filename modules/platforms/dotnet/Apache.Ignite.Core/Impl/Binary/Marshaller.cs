@@ -151,6 +151,11 @@ namespace Apache.Ignite.Core.Impl.Binary
             get { return _cfg.ForceTimestamp; }
         }
 
+        public bool UnwrapNullableValueTypes
+        {
+            get { return _cfg.UnwrapNullablePrimitiveTypes; }
+        }
+
         /// <summary>
         /// Gets date time converter.
         /// </summary>
@@ -775,7 +780,8 @@ namespace Apache.Ignite.Core.Impl.Binary
 
                 serializer = new BinaryReflectiveSerializer
                 {
-                    ForceTimestamp = cfg != null && cfg.ForceTimestamp
+                    ForceTimestamp = cfg?.ForceTimestamp == true,
+                    UnwrapNullablePrimitiveTypes = cfg?.UnwrapNullablePrimitiveTypes == true
                 };
             }
 

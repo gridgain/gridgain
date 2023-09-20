@@ -66,7 +66,8 @@ namespace Apache.Ignite.Core.Tests.Binary
             _marsh = new Marshaller(new BinaryConfiguration
             {
                 CompactFooter = GetCompactFooter(),
-                NameMapper = GetNameMapper()
+                NameMapper = GetNameMapper(),
+                UnwrapNullablePrimitiveTypes = GetUnwrapNullablePrimitives()
             });
         }
 
@@ -84,6 +85,15 @@ namespace Apache.Ignite.Core.Tests.Binary
         protected virtual IBinaryNameMapper GetNameMapper()
         {
             return BinaryBasicNameMapper.FullNameInstance;
+        }
+
+        /// <summary>
+        /// Gets the nullable mode.
+        /// </summary>
+        /// <returns></returns>
+        protected virtual bool GetUnwrapNullablePrimitives()
+        {
+            return false;
         }
 
         /**
