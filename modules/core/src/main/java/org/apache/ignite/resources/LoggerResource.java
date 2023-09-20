@@ -34,6 +34,8 @@ import java.lang.annotation.Target;
  * <li>{@link org.apache.ignite.lifecycle.LifecycleBean}</li>
  * </ul>
  * <p>
+ * <b>WARNING:</b> unlike other injectable resources, logger resources won't be cleaned on node stop!
+ * <p>
  * Here is how injection would typically happen:
  * <pre name="code" class="java">
  * public class MyGridJob implements ComputeJob {
