@@ -357,7 +357,7 @@ namespace Apache.Ignite.Core.Impl.Memory
 
             return *(_data + curPos);
         }
-        
+
         /// <summary>
         /// Read byte array.
         /// </summary>

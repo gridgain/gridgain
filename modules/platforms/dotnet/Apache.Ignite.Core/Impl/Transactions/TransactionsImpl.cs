@@ -109,8 +109,8 @@ namespace Apache.Ignite.Core.Impl.Transactions
             var res = target.OutStream(OpCacheConfigParameters, reader => Tuple.Create(
                 (TransactionConcurrency) reader.ReadInt(),
                 (TransactionIsolation) reader.ReadInt(),
-                reader.ReadLongAsTimespan(),
-                reader.ReadLongAsTimespan()
+                reader.ConfigReadLongAsTimespan(),
+                reader.ConfigReadLongAsTimespan()
             ));
 
             _dfltConcurrency = res.Item1;
@@ -142,7 +142,7 @@ namespace Apache.Ignite.Core.Impl.Transactions
             {
                 w.WriteInt((int) concurrency);
                 w.WriteInt((int) isolation);
-                w.WriteTimeSpanAsLong(timeout);
+                w.ConfigWriteTimeSpanAsLong(timeout);
                 w.WriteInt(txSize);
             }, s => s.ReadLong());
 
@@ -207,7 +207,7 @@ namespace Apache.Ignite.Core.Impl.Transactions
 
                     var isolation = reader.ReadInt();
 
-                    var timeout = reader.ReadLongAsTimespan();
+                    var timeout = reader.ConfigReadLongAsTimespan();
 
                     var label = reader.ReadString();
 
