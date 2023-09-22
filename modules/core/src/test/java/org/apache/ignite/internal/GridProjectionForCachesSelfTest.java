@@ -17,6 +17,7 @@
 package org.apache.ignite.internal;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.apache.ignite.Ignite;
@@ -278,6 +279,19 @@ public class GridProjectionForCachesSelfTest extends GridCommonAbstractTest {
         catch (NullPointerException ignored) {
             // No-op.
         }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testProjectionWithBadId() {
+        ClusterNode locNode = ignite.cluster().localNode();
+
+        ClusterGroup prj = ignite.cluster().forNodeId(UUID.randomUUID(), locNode.id());
+        Collection<ClusterNode> nodes = prj.nodes();
+
+        assertEquals(1, nodes.size());
     }
 
     /**
