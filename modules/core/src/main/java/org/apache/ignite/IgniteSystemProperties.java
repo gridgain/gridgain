@@ -1457,7 +1457,7 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_LOADED_PAGES_BACKWARD_SHIFT_MAP = "IGNITE_LOADED_PAGES_BACKWARD_SHIFT_MAP";
 
     /**
-     * Property for setup percentage of archive size for checkpoint trigger. Default value is 0.25
+     * Property for setup percentage of archive size for checkpoint trigger. Default value is 0.75
      */
     @SystemProperty(value = "Percentage of archive size for checkpoint trigger",
         type = Double.class, defaults = "" + DFLT_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE)

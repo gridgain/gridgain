@@ -209,7 +209,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     public static final int DFLT_WAL_COMPRESSOR_WORKER_THREAD_CNT = 4;
 
     /** @see IgniteSystemProperties#IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE */
-    public static final double DFLT_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE = 0.25;
+    public static final double DFLT_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE = 0.75;
 
     /** @see IgniteSystemProperties#IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE */
     public static final double DFLT_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE = 0.5;
