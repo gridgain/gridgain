@@ -52,6 +52,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.CacheManager.DFLT_JCACHE_DEFAULT_ISOLATED;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_USE_ASYNC_FILE_IO_FACTORY;
+import static org.apache.ignite.internal.IgniteKernal.DFLT_BINARY_SORT_OBJECT_FIELDS;
 import static org.apache.ignite.internal.IgniteKernal.DFLT_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.internal.IgniteKernal.DFLT_LOG_CLASSPATH_CONTENT_ON_STARTUP;
 import static org.apache.ignite.internal.IgniteKernal.DFLT_LONG_OPERATIONS_DUMP_TIMEOUT;
@@ -1096,8 +1097,9 @@ public final class IgniteSystemProperties {
      * <p>
      * NOTICE: Should be the default in Apache Ignite 3.0
      */
-    @SystemProperty("Enables fields to be written by BinaryMarshaller in sorted order. " +
-        "By default, the natural order is used")
+    @SystemProperty(value = "Enables fields to be written by BinaryMarshaller in sorted order. " +
+        "By default, the natural order is used",
+        defaults = "" + DFLT_BINARY_SORT_OBJECT_FIELDS)
     public static final String IGNITE_BINARY_SORT_OBJECT_FIELDS = "IGNITE_BINARY_SORT_OBJECT_FIELDS";
 
     /**

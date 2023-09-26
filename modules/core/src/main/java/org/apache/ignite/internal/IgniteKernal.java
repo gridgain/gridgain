@@ -354,6 +354,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** @see IgniteSystemProperties#IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP */
     public static final boolean DFLT_LOG_CLASSPATH_CONTENT_ON_STARTUP = true;
 
+    /** @see IgniteSystemProperties#IGNITE_BINARY_SORT_OBJECT_FIELDS */
+    public static final boolean DFLT_BINARY_SORT_OBJECT_FIELDS = true;
+
     /** Long jvm pause detector. */
     private LongJVMPauseDetector longJVMPauseDetector;
 
