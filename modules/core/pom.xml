@@ -24,13 +24,13 @@
 
     <parent>
         <groupId>org.gridgain</groupId>
-        <artifactId>community.parent</artifactId>
-        <version>1</version>
-        <relativePath>../../parent</relativePath>
+        <artifactId>ignite-parent-internal</artifactId>
+        <version>8.8.127-SNAPSHOT</version>
+        <relativePath>../../parent-internal/pom.xml</relativePath>
     </parent>
 
     <artifactId>ignite-core</artifactId>
-    <version>8.8.127-SNAPSHOT</version>
+
     <url>http://ignite.apache.org</url>
 
     <repositories>
@@ -494,7 +494,7 @@
                                 <IGNITE_QUIET>false</IGNITE_QUIET>
                             </systemPropertyVariables>
                             <excludes>
-                                <exclude>**/org/apache/ignite/**/*Test.java</exclude>
+                                <exclude>**/org/apache/ignite/**/*.java</exclude>
                                 <exclude>**/annotation/*Test.java</exclude>
                                 <exclude>**/ClientServerTest.java</exclude>
                             </excludes>

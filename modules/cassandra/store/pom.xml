@@ -26,11 +26,11 @@
         <groupId>org.gridgain</groupId>
         <artifactId>ignite-cassandra</artifactId>
         <version>8.8.127-SNAPSHOT</version>
-        <relativePath>..</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>ignite-cassandra-store</artifactId>
-    <version>8.8.127-SNAPSHOT</version>
+
     <url>http://ignite.apache.org</url>
 
     <properties>

@@ -24,13 +24,12 @@
 
     <parent>
         <groupId>org.gridgain</groupId>
-        <artifactId>community.parent</artifactId>
-        <version>1</version>
-        <relativePath>parent</relativePath>
+        <artifactId>ignite-parent</artifactId>
+        <version>8.8.127-SNAPSHOT</version>
+        <relativePath>parent/pom.xml</relativePath>
     </parent>
 
     <artifactId>apache-ignite</artifactId>
-    <version>8.8.127-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <scm>
@@ -42,6 +41,8 @@
 
     <modules>
         <module>modules/apache-license-gen</module>
+        <module>parent</module>
+        <module>parent-internal</module>
         <module>modules/tools</module>
         <module>modules/core</module>
         <module>modules/compress</module>
