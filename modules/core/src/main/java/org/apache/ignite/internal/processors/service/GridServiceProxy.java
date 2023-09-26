@@ -40,6 +40,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.events.ServiceEvent;
 import org.apache.ignite.internal.GridClosureCallMode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
@@ -59,6 +60,9 @@ import org.apache.ignite.services.Service;
 import org.apache.ignite.services.ServiceCallContext;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.events.EventType.EVT_SERVICE_METHOD_INVOCATION_FAILED;
+import static org.apache.ignite.events.EventType.EVT_SERVICE_METHOD_INVOCATION_FAILED_OVER;
+import static org.apache.ignite.events.EventType.EVT_SERVICE_METHOD_INVOKED;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_IO_POLICY;
 
 /**
@@ -201,6 +205,8 @@ public class GridServiceProxy<T> implements Serializable {
             while (true) {
                 ClusterNode node = null;
 
+                String mtdName = methodName(mtd);
+
                 try {
                     node = nodeForService(name, sticky);
 
@@ -214,6 +220,8 @@ public class GridServiceProxy<T> implements Serializable {
                         if (svcCtx != null) {
                             Service svc = svcCtx.service();
 
+                            recordEvent(node, mtdName, EVT_SERVICE_METHOD_INVOKED, "Service method has been invoked locally.");
+
                             if (svc != null)
                                 return callServiceLocally(svc, mtd, args, callCtx);
                         }
@@ -221,10 +229,13 @@ public class GridServiceProxy<T> implements Serializable {
                     else {
                         ctx.task().setThreadContext(TC_IO_POLICY, GridIoPolicy.SERVICE_POOL);
 
+                        if (ctx.event().isRecordable(EVT_SERVICE_METHOD_INVOKED))
+                            recordEvent(node, mtdName, EVT_SERVICE_METHOD_INVOKED, "Service method has been invoked remotely.");
+
                         // Execute service remotely.
                         return ctx.closure().callAsyncNoFailover(
                             GridClosureCallMode.BROADCAST,
-                            new ServiceProxyCallable(methodName(mtd), name, mtd.getParameterTypes(), args, callCtx),
+                            new ServiceProxyCallable(mtdName, name, mtd.getParameterTypes(), args, callCtx),
                             Collections.singleton(node),
                             false,
                             waitTimeout,
@@ -232,10 +243,13 @@ public class GridServiceProxy<T> implements Serializable {
                     }
                 }
                 catch (InvocationTargetException e) {
+                    recordEvent(node, mtdName, EVT_SERVICE_METHOD_INVOCATION_FAILED, "");
                     // For local services rethrow original exception.
                     throw e.getTargetException();
                 }
                 catch (RuntimeException | Error e) {
+                    recordEvent(node, mtdName, EVT_SERVICE_METHOD_INVOCATION_FAILED, "");
+
                     throw e;
                 }
                 catch (IgniteCheckedException e) {
@@ -246,15 +260,27 @@ public class GridServiceProxy<T> implements Serializable {
                         ignorableCause = X.cause(e, GridServiceNotFoundException.class);
 
                     if (ignorableCause != null) {
+                        recordEvent(node, mtdName, EVT_SERVICE_METHOD_INVOCATION_FAILED,
+                            "Service was not found or topology changed (will retry): " +
+                                ignorableCause.getMessage());
+
                         if (log.isDebugEnabled())
-                            log.debug("Service was not found or topology changed (will retry): " + ignorableCause.getMessage());
+                            log.debug("Service was not found or topology changed (will retry): " +
+                                ignorableCause.getMessage());
                     }
                     else {
                         // Rethrow original service method exception so that calling user code can handle it correctly.
                         ServiceProxyException svcProxyE = X.cause(e, ServiceProxyException.class);
 
-                        if (svcProxyE != null)
+                        if (svcProxyE != null) {
+                            recordEvent(node, mtdName, EVT_SERVICE_METHOD_INVOCATION_FAILED,
+                                "Service method invocation failed due to exception [ex=" + svcProxyE);
+
                             throw svcProxyE.getCause();
+                        }
+
+                        recordEvent(node, mtdName, EVT_SERVICE_METHOD_INVOCATION_FAILED,
+                            "Service method invocation failed due to exception [ex=" + e);
 
                         throw U.convertException(e);
                     }
@@ -278,13 +304,35 @@ public class GridServiceProxy<T> implements Serializable {
                     throw new IgniteException(e);
                 }
 
-                if (waitTimeout > 0 && U.currentTimeMillis() - startTime >= waitTimeout)
+                if (waitTimeout > 0 && U.currentTimeMillis() - startTime >= waitTimeout) {
+                    recordEvent(node, mtdName, EVT_SERVICE_METHOD_INVOCATION_FAILED_OVER,
+                        "Service acquire timeout was reached, stopping. [timeout=" + waitTimeout + "]");
+
                     throw new IgniteException("Service acquire timeout was reached, stopping. [timeout=" + waitTimeout + "]");
+                }
             }
         }
         finally {
             ctx.gateway().readUnlock();
         }
+    }
+
+    /**
+     * @param evtType Event type.
+     * @param msg Message.
+     */
+    private void recordEvent(ClusterNode node, String mtdName, int evtType, @Nullable String msg) {
+        assert ctx.event().isRecordable(evtType);
+
+        ServiceEvent evt = new ServiceEvent();
+
+        evt.message(msg);
+        evt.node(ctx.discovery().localNode());
+        evt.svcName(name);
+        evt.mtdName(mtdName);
+        evt.type(evtType);
+
+        ctx.event().record(evt);
     }
 
     /**

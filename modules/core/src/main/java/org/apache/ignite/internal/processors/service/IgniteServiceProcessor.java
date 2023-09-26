@@ -1243,6 +1243,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
                 @Override public void run() {
                     try {
                         srvc.execute(srvcCtx);
+                        // execute service
                     }
                     catch (InterruptedException | IgniteInterruptedCheckedException ignore) {
                         if (log.isDebugEnabled())

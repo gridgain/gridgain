@@ -57,6 +57,8 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  * @see EventType#EVT_TASK_DEPLOY_FAILED
  * @see EventType#EVT_TASK_DEPLOYED
  * @see EventType#EVT_TASK_UNDEPLOYED
+ * @see EventType#EVT_SERVICE_DEPLOYED
+ * @see EventType#EVT_SERVICE_UNDEPLOYED
  * @see EventType#EVTS_DEPLOYMENT
  */
 public class DeploymentEvent extends EventAdapter {

@@ -897,6 +897,86 @@ public interface EventType {
     public static final int EVT_CLUSTER_ID_UPDATED = 149;
 
     /**
+     * Built-in event type: service deployed.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see DeploymentEvent
+     */
+    public static final int EVT_SERVICE_DEPLOYED = 160;
+
+    /**
+     * Built-in event type: service undeployed.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see DeploymentEvent
+     */
+    public static final int EVT_SERVICE_UNDEPLOYED = 161;
+
+    /**
+     * Built-in event type: service deployment failed.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see DeploymentEvent
+     */
+    public static final int EVT_SERVICE_DEPLOY_FAILED = 162;
+
+    /**
+     * Built-in event type: grid service started.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see ServiceEvent
+     */
+    public static final int EVT_SERVICE_STARTED = 163;
+
+    /**
+     * Built-in event type: service method invoked.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see ServiceEvent
+     */
+    public static final int EVT_SERVICE_METHOD_INVOKED = 164;
+
+    /**
+     * Built-in event type: service method invocation failed.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see ServiceEvent
+     */
+    public static final int EVT_SERVICE_METHOD_INVOCATION_FAILED = 165;
+
+    /**
+     * Built-in event type: service method invocation failed over.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see ServiceEvent
+     */
+    public static final int EVT_SERVICE_METHOD_INVOCATION_FAILED_OVER = 166;
+
+    /**
+     * Built-in event type: service cancelled.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see ServiceEvent
+     */
+    public static final int EVT_SERVICE_CANCELLED = 167;
+
+    /**
      * All checkpoint events. This array can be directly passed into
      * {@link IgniteEvents#localListen(IgnitePredicate, int...)} method to
      * subscribe to all checkpoint events.
@@ -923,7 +1003,10 @@ public interface EventType {
         EVT_CLASS_DEPLOY_FAILED,
         EVT_TASK_DEPLOYED,
         EVT_TASK_UNDEPLOYED,
-        EVT_TASK_DEPLOY_FAILED
+        EVT_TASK_DEPLOY_FAILED,
+        EVT_SERVICE_DEPLOYED,
+        EVT_SERVICE_UNDEPLOYED,
+        EVT_SERVICE_DEPLOY_FAILED
     };
 
     /**
@@ -943,7 +1026,10 @@ public interface EventType {
         EVT_TASK_DEPLOYED,
         EVT_TASK_UNDEPLOYED,
         EVT_CACHE_REBALANCE_STARTED,
-        EVT_CACHE_REBALANCE_STOPPED
+        EVT_CACHE_REBALANCE_STOPPED,
+        EVT_SERVICE_DEPLOY_FAILED,
+        EVT_SERVICE_METHOD_INVOCATION_FAILED,
+        EVT_SERVICE_CANCELLED
     };
 
     /**
@@ -1018,6 +1104,20 @@ public interface EventType {
         EVT_TASK_TIMEDOUT,
         EVT_TASK_SESSION_ATTR_SET,
         EVT_TASK_REDUCED
+    };
+
+    /**
+     * All grid service execution events. This array can be directly passed into
+     * {@link IgniteEvents#localListen(IgnitePredicate, int...)} method to
+     * subscribe to all grid service execution events.
+     *
+     * @see ServiceEvent
+     */
+    public static final int[] EVTS_SERVICE_EXECUTION = {
+        EVT_SERVICE_STARTED,
+        EVT_SERVICE_METHOD_INVOKED,
+        EVT_SERVICE_METHOD_INVOCATION_FAILED,
+        EVT_SERVICE_CANCELLED
     };
 
     /**
