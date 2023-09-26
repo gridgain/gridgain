@@ -3077,7 +3077,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (oldRow != null && oldRow.version().updateCounter() != 0) {
-                if (oldTombstone && tombstoneRow == null)
+                if (isIncrementalDrEnabled(cctx) && oldTombstone && tombstoneRow == null)
                     cctx.dr().onTombstoneCleaned(partId, oldRow.version().updateCounter());
 
                 removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
