@@ -55,7 +55,7 @@ public class TransactionConfiguration implements Serializable {
     public static final long DFLT_TRANSACTION_TIMEOUT = 0;
 
     /** Transaction timeout on partition map synchronization. */
-    public static final long TX_TIMEOUT_ON_PARTITION_MAP_EXCHANGE = 0;
+    public static final long TX_TIMEOUT_ON_PARTITION_MAP_EXCHANGE = 60_000;
 
     /** Default timeout before starting deadlock detection. */
     public static final long DFLT_DEADLOCK_TIMEOUT = 10_000;
@@ -233,8 +233,9 @@ public class TransactionConfiguration implements Serializable {
      * This property allows to rollback such long transactions to let Ignite acquire the lock faster and initiate the
      * partition map exchange process. The timeout is enforced only at the time of the partition map exchange process.
      * <p>
-     * If not set, default value is {@link #TX_TIMEOUT_ON_PARTITION_MAP_EXCHANGE} which means transactions will never be
-     * rolled back on partition map exchange.
+     * 0 means transactions will never be rolled back on partition map exchange.
+     * <p>
+     * Default value is {@link TransactionConfiguration#TX_TIMEOUT_ON_PARTITION_MAP_EXCHANGE}.
      *
      * @return Transaction timeout for partition map synchronization in milliseconds.
      */
@@ -243,7 +244,8 @@ public class TransactionConfiguration implements Serializable {
     }
 
     /**
-     * Sets the transaction timeout that will be enforced if the partition map exchange process starts.
+     * Sets transaction timeout on partition map exchange.
+     * 0 means transactions will never be rolled back on partition map exchange.
      *
      * @param txTimeoutOnPartitionMapExchange Transaction timeout value in milliseconds.
      * @return {@code this} for chaining.
