@@ -3073,7 +3073,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0 &&
                     replicationRequire(tombstoneRow.version()))
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
-
             }
 
             if (oldRow != null && oldRow.version().updateCounter() != 0) {
