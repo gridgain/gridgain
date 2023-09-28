@@ -57,6 +57,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                     IdMapper = new IdMapper(),
                     NameMapper = new NameMapper(GetNameMapper()),
                     CompactFooter = GetCompactFooter(),
+                    UnwrapNullablePrimitiveTypes = GetUnwrapNullablePrimitives()
                 }
             };
 
@@ -116,6 +117,15 @@ namespace Apache.Ignite.Core.Tests.Binary
         protected virtual IBinaryNameMapper GetNameMapper()
         {
             return BinaryBasicNameMapper.FullNameInstance;
+        }
+
+        /// <summary>
+        /// Gets the nullable mode.
+        /// </summary>
+        /// <returns></returns>
+        protected virtual bool GetUnwrapNullablePrimitives()
+        {
+            return false;
         }
 
         /// <summary>
@@ -1001,18 +1011,27 @@ namespace Apache.Ignite.Core.Tests.Binary
             Guid? nGuid = Guid.NewGuid();
 
             // Generic setters.
-            var binObj = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
+            var builder = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
                 .SetField("fStr", "str")
                 .SetField("fNDate", nDate)
                 .SetTimestampField("fNTimestamp", nDate)
                 .SetField("fNGuid", nGuid)
                 .SetField("fEnum", TestEnum.One)
                 .SetStringArrayField("fStrArr", new[] { "str" })
-                .SetArrayField("fDateArr", new[] { nDate })
                 .SetTimestampArrayField("fTimestampArr", new[] { nDate })
                 .SetGuidArrayField("fGuidArr", new[] { nGuid })
-                .SetEnumArrayField("fEnumArr", new[] { TestEnum.One })
-                .Build();
+                .SetEnumArrayField("fEnumArr", new[] { TestEnum.One });
+
+            if (GetUnwrapNullablePrimitives())
+            {
+                builder.SetTimestampArrayField("fDateArr", new[] { nDate });
+            }
+            else
+            {
+                builder.SetArrayField("fDateArr", new[] { nDate });
+            }
+
+            var binObj = builder.Build();
 
             CheckStringDateGuidEnum1(binObj, nDate, nGuid);
 
@@ -1022,18 +1041,27 @@ namespace Apache.Ignite.Core.Tests.Binary
             CheckStringDateGuidEnum1(binObj, nDate, nGuid);
 
             // Specific setters.
-            var binObj2 = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
+            var builder2 = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
                 .SetStringField("fStr", "str")
                 .SetField("fNDate", nDate)
                 .SetTimestampField("fNTimestamp", nDate)
                 .SetGuidField("fNGuid", nGuid)
                 .SetEnumField("fEnum", TestEnum.One)
                 .SetStringArrayField("fStrArr", new[] { "str" })
-                .SetArrayField("fDateArr", new[] { nDate })
                 .SetTimestampArrayField("fTimestampArr", new[] { nDate })
                 .SetGuidArrayField("fGuidArr", new[] { nGuid })
-                .SetEnumArrayField("fEnumArr", new[] { TestEnum.One })
-                .Build();
+                .SetEnumArrayField("fEnumArr", new[] { TestEnum.One });
+
+            if (GetUnwrapNullablePrimitives())
+            {
+                builder2.SetTimestampArrayField("fDateArr", new[] { nDate });
+            }
+            else
+            {
+                builder2.SetArrayField("fDateArr", new[] { nDate });
+            }
+
+            var binObj2 = builder.Build();
 
             CheckStringDateGuidEnum1(binObj2, nDate, nGuid);
 
@@ -1045,34 +1073,52 @@ namespace Apache.Ignite.Core.Tests.Binary
             nDate = DateTime.Now.ToUniversalTime();
             nGuid = Guid.NewGuid();
 
-            binObj = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
+            var builder3 = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
                 .SetField("fStr", "str2")
                 .SetField("fNDate", nDate)
                 .SetTimestampField("fNTimestamp", nDate)
                 .SetField("fNGuid", nGuid)
                 .SetField("fEnum", TestEnum.Two)
                 .SetField("fStrArr", new[] { "str2" })
-                .SetArrayField("fDateArr", new[] { nDate })
                 .SetTimestampArrayField("fTimestampArr", new[] { nDate })
                 .SetField("fGuidArr", new[] { nGuid })
-                .SetField("fEnumArr", new[] { TestEnum.Two })
-                .Build();
+                .SetField("fEnumArr", new[] { TestEnum.Two });
+
+            if (GetUnwrapNullablePrimitives())
+            {
+                builder3.SetTimestampArrayField("fDateArr", new[] { nDate });
+            }
+            else
+            {
+                builder3.SetArrayField("fDateArr", new[] { nDate });
+            }
+
+            binObj = builder3.Build();
 
             CheckStringDateGuidEnum2(binObj, nDate, nGuid);
 
             // Overwrite with specific setters
-            binObj2 = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
+            var builder4 = _grid.GetBinary().GetBuilder(typeof(StringDateGuidEnum))
                 .SetStringField("fStr", "str2")
                 .SetField("fNDate", nDate)
                 .SetTimestampField("fNTimestamp", nDate)
                 .SetGuidField("fNGuid", nGuid)
                 .SetEnumField("fEnum", TestEnum.Two)
                 .SetStringArrayField("fStrArr", new[] { "str2" })
-                .SetArrayField("fDateArr", new[] { nDate })
                 .SetTimestampArrayField("fTimestampArr", new[] { nDate })
                 .SetGuidArrayField("fGuidArr", new[] { nGuid })
-                .SetEnumArrayField("fEnumArr", new[] { TestEnum.Two })
-                .Build();
+                .SetEnumArrayField("fEnumArr", new[] { TestEnum.Two });
+
+            if (GetUnwrapNullablePrimitives())
+            {
+                builder4.SetTimestampArrayField("fDateArr", new[] { nDate });
+            }
+            else
+            {
+                builder4.SetArrayField("fDateArr", new[] { nDate });
+            }
+
+            binObj2 = builder4.Build();
 
             CheckStringDateGuidEnum2(binObj2, nDate, nGuid);
 
@@ -1098,7 +1144,11 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(BinaryTypeNames.TypeNameGuid, meta.GetFieldTypeName("fNGuid"));
             Assert.AreEqual(BinaryTypeNames.TypeNameEnum, meta.GetFieldTypeName("fEnum"));
             Assert.AreEqual(BinaryTypeNames.TypeNameArrayString, meta.GetFieldTypeName("fStrArr"));
-            Assert.AreEqual(BinaryTypeNames.TypeNameArrayObject, meta.GetFieldTypeName("fDateArr"));
+            Assert.AreEqual(
+                GetUnwrapNullablePrimitives()
+                    ? BinaryTypeNames.TypeNameArrayTimestamp
+                    : BinaryTypeNames.TypeNameArrayObject,
+                meta.GetFieldTypeName("fDateArr"));
             Assert.AreEqual(BinaryTypeNames.TypeNameArrayTimestamp, meta.GetFieldTypeName("fTimestampArr"));
             Assert.AreEqual(BinaryTypeNames.TypeNameArrayGuid, meta.GetFieldTypeName("fGuidArr"));
             Assert.AreEqual(BinaryTypeNames.TypeNameArrayEnum, meta.GetFieldTypeName("fEnumArr"));
@@ -1109,8 +1159,17 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(nGuid, binObj.GetField<Guid?>("fNGuid"));
             Assert.AreEqual(TestEnum.One, binObj.GetField<IBinaryObject>("fEnum").Deserialize<TestEnum>());
             Assert.AreEqual(new[] {"str"}, binObj.GetField<string[]>("fStrArr"));
-            Assert.AreEqual(new[] {nDate}, binObj.GetField<IBinaryObject[]>("fDateArr")
-                .Select(x => x.Deserialize<DateTime?>()));
+
+            if (GetUnwrapNullablePrimitives())
+            {
+                Assert.AreEqual(new[] {nDate}, binObj.GetField<DateTime?[]>("fDateArr"));
+            }
+            else
+            {
+                Assert.AreEqual(new[] {nDate}, binObj.GetField<IBinaryObject[]>("fDateArr")
+                    .Select(x => x.Deserialize<DateTime?>()));
+            }
+
             Assert.AreEqual(new[] {nDate}, binObj.GetField<DateTime?[]>("fTimestampArr"));
             Assert.AreEqual(new[] {nGuid}, binObj.GetField<Guid?[]>("fGuidArr"));
             Assert.AreEqual(new[] {TestEnum.One},
@@ -1137,8 +1196,17 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(nGuid, builder.GetField<Guid?>("fNGuid"));
             Assert.AreEqual(TestEnum.One, builder.GetField<IBinaryObject>("fEnum").Deserialize<TestEnum>());
             Assert.AreEqual(new[] {"str"}, builder.GetField<string[]>("fStrArr"));
-            Assert.AreEqual(new[] {nDate}, builder.GetField<IBinaryObjectBuilder[]>("fDateArr")
-                .Select(x => x.Build().Deserialize<DateTime?>()));
+
+            if (GetUnwrapNullablePrimitives())
+            {
+                Assert.AreEqual(new[] {nDate}, builder.GetField<DateTime?[]>("fDateArr"));
+            }
+            else
+            {
+                Assert.AreEqual(new[] {nDate}, builder.GetField<IBinaryObjectBuilder[]>("fDateArr")
+                    .Select(x => x.Build().Deserialize<DateTime?>()));
+            }
+
             Assert.AreEqual(new[] {nDate}, builder.GetField<DateTime?[]>("fTimestampArr"));
             Assert.AreEqual(new[] {nGuid}, builder.GetField<Guid?[]>("fGuidArr"));
             Assert.AreEqual(new[] {TestEnum.One},
@@ -1153,8 +1221,17 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(nGuid, binObj.GetField<Guid?>("fNGuid"));
             Assert.AreEqual(TestEnum.One, binObj.GetField<IBinaryObject>("fEnum").Deserialize<TestEnum>());
             Assert.AreEqual(new[] {"str"}, binObj.GetField<string[]>("fStrArr"));
-            Assert.AreEqual(new[] {nDate}, binObj.GetField<IBinaryObject[]>("fDateArr")
-                .Select(x => x.Deserialize<DateTime?>()));
+
+            if (GetUnwrapNullablePrimitives())
+            {
+                Assert.AreEqual(new[] { nDate }, binObj.GetField<DateTime?[]>("fDateArr"));
+            }
+            else
+            {
+                Assert.AreEqual(new[] { nDate }, binObj.GetField<IBinaryObject[]>("fDateArr")
+                    .Select(x => x.Deserialize<DateTime?>()));
+            }
+
             Assert.AreEqual(new[] {nDate}, binObj.GetField<DateTime?[]>("fTimestampArr"));
             Assert.AreEqual(new[] {nGuid}, binObj.GetField<Guid?[]>("fGuidArr"));
             Assert.AreEqual(new[] { TestEnum.One },
@@ -1176,7 +1253,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         /// <summary>
         /// Checks the string date guid enum values.
         /// </summary>
-        private static void CheckStringDateGuidEnum2(IBinaryObject binObj, DateTime? nDate, Guid? nGuid)
+        private void CheckStringDateGuidEnum2(IBinaryObject binObj, DateTime? nDate, Guid? nGuid)
         {
             Assert.AreEqual("str2", binObj.GetField<string>("fStr"));
             Assert.AreEqual(nDate, binObj.GetField<IBinaryObject>("fNDate").Deserialize<DateTime?>());
@@ -1184,8 +1261,17 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(nGuid, binObj.GetField<Guid?>("fNGuid"));
             Assert.AreEqual(TestEnum.Two, binObj.GetField<IBinaryObject>("fEnum").Deserialize<TestEnum>());
             Assert.AreEqual(new[] { "str2" }, binObj.GetField<string[]>("fStrArr"));
-            Assert.AreEqual(new[] {nDate}, binObj.GetField<IBinaryObject[]>("fDateArr")
-                .Select(x => x.Deserialize<DateTime?>()));
+
+            if (GetUnwrapNullablePrimitives())
+            {
+                Assert.AreEqual(new[] {nDate}, binObj.GetField<DateTime?[]>("fDateArr"));
+            }
+            else
+            {
+                Assert.AreEqual(new[] {nDate}, binObj.GetField<IBinaryObject[]>("fDateArr")
+                    .Select(x => x.Deserialize<DateTime?>()));
+            }
+
             Assert.AreEqual(new[] { nDate }, binObj.GetField<DateTime?[]>("fTimestampArr"));
             Assert.AreEqual(new[] { nGuid }, binObj.GetField<Guid?[]>("fGuidArr"));
             Assert.AreEqual(new[] {TestEnum.Two},

@@ -52,48 +52,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /// <summary>
-        /// Reads long as timespan with range checks.
-        /// </summary>
-        /// <param name="reader">The reader.</param>
-        /// <returns>TimeSpan.</returns>
-        public static TimeSpan ReadLongAsTimespan(this IBinaryRawReader reader)
-        {
-            return BinaryUtils.LongToTimeSpan(reader.ReadLong());
-        }
-
-        /// <summary>
-        /// Reads the nullable TimeSpan.
-        /// </summary>
-        public static TimeSpan? ReadTimeSpanNullable(this IBinaryRawReader reader)
-        {
-            return reader.ReadBoolean() ? reader.ReadLongAsTimespan() : (TimeSpan?) null;
-        }
-
-        /// <summary>
-        /// Reads the nullable int.
-        /// </summary>
-        public static int? ReadIntNullable(this IBinaryRawReader reader)
-        {
-            return reader.ReadBoolean() ? reader.ReadInt() : (int?) null;
-        }
-
-        /// <summary>
-        /// Reads the nullable long.
-        /// </summary>
-        public static long? ReadLongNullable(this IBinaryRawReader reader)
-        {
-            return reader.ReadBoolean() ? reader.ReadLong() : (long?) null;
-        }
-
-        /// <summary>
-        /// Reads the nullable bool.
-        /// </summary>
-        public static bool? ReadBooleanNullable(this IBinaryRawReader reader)
-        {
-            return reader.ReadBoolean() ? reader.ReadBoolean() : (bool?) null;
-        }
-
-        /// <summary>
         /// Reads the object either as a normal object or as a [typeName+props] wrapper.
         /// </summary>
         public static T ReadObjectEx<T>(this IBinaryRawReader reader)

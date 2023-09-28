@@ -107,11 +107,11 @@ namespace Apache.Ignite.Core.Discovery.Tcp
         {
             IpFinder = reader.ReadBoolean() ? TcpDiscoveryIpFinderBase.ReadInstance(reader) : null;
 
-            SocketTimeout = reader.ReadLongAsTimespan();
-            AckTimeout = reader.ReadLongAsTimespan();
-            MaxAckTimeout = reader.ReadLongAsTimespan();
-            NetworkTimeout = reader.ReadLongAsTimespan();
-            JoinTimeout = reader.ReadLongAsTimespan();
+            SocketTimeout = reader.ConfigReadLongAsTimespan();
+            AckTimeout = reader.ConfigReadLongAsTimespan();
+            MaxAckTimeout = reader.ConfigReadLongAsTimespan();
+            NetworkTimeout = reader.ConfigReadLongAsTimespan();
+            JoinTimeout = reader.ConfigReadLongAsTimespan();
 
             ForceServerMode = reader.ReadBoolean();
             ClientReconnectDisabled = reader.ReadBoolean();
@@ -119,8 +119,8 @@ namespace Apache.Ignite.Core.Discovery.Tcp
             ReconnectCount = reader.ReadInt();
             LocalPort = reader.ReadInt();
             LocalPortRange = reader.ReadInt();
-            StatisticsPrintFrequency = reader.ReadLongAsTimespan();
-            IpFinderCleanFrequency = reader.ReadLongAsTimespan();
+            StatisticsPrintFrequency = reader.ConfigReadLongAsTimespan();
+            IpFinderCleanFrequency = reader.ConfigReadLongAsTimespan();
             ThreadPriority = reader.ReadInt();
             TopologyHistorySize = reader.ReadInt();
         }

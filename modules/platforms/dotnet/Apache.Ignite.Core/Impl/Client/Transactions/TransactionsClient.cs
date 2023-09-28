@@ -164,7 +164,7 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
                 {
                     ctx.Writer.WriteByte((byte) concurrency);
                     ctx.Writer.WriteByte((byte) isolation);
-                    ctx.Writer.WriteTimeSpanAsLong(timeout);
+                    ctx.Writer.ConfigWriteTimeSpanAsLong(timeout);
                     ctx.Writer.WriteString(label);
                 },
                 ctx => new TransactionClient(

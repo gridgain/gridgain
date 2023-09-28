@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
- Copyright 2019 GridGain Systems, Inc. and Contributors.
+ Copyright 2023 GridGain Systems, Inc. and Contributors.
 
  Licensed under the GridGain Community Edition License (the "License");
  you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 -->
 
 <!DOCTYPE log4j:configuration PUBLIC "-//APACHE//DTD LOG4J 1.2//EN"
-    "http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/xml/doc-files/log4j.dtd">
+        "http://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/xml/doc-files/log4j.dtd">
 <!--
     Default log4j configuration for Ignite.
 -->

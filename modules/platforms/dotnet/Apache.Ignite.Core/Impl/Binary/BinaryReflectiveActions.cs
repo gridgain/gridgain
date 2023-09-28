@@ -32,14 +32,14 @@ namespace Apache.Ignite.Core.Impl.Binary
     /// </summary>
     /// <param name="obj">Target object.</param>
     /// <param name="writer">Writer.</param>
-    internal delegate void BinaryReflectiveWriteAction(object obj, IBinaryWriter writer);
+    internal delegate void BinaryReflectiveWriteAction(object obj, BinaryWriter writer);
 
     /// <summary>
     /// Read action delegate.
     /// </summary>
     /// <param name="obj">Target object.</param>
     /// <param name="reader">Reader.</param>
-    internal delegate void BinaryReflectiveReadAction(object obj, IBinaryReader reader);
+    internal delegate void BinaryReflectiveReadAction(object obj, BinaryReader reader);
 
     /// <summary>
     /// Routines for reflective reads and writes.
@@ -106,8 +106,9 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="readAction">Read action.</param>
         /// <param name="raw">Raw mode.</param>
         /// <param name="forceTimestamp">Force timestamp serialization for DateTime fields..</param>
+        /// <param name="unwrapNullable">Write nullable value types with correct metadata.</param>
         public static void GetTypeActions(FieldInfo field, out BinaryReflectiveWriteAction writeAction,
-            out BinaryReflectiveReadAction readAction, bool raw, bool forceTimestamp)
+            out BinaryReflectiveReadAction readAction, bool raw, bool forceTimestamp, bool unwrapNullable)
         {
             Debug.Assert(field != null);
             Debug.Assert(field.DeclaringType != null);
@@ -117,11 +118,23 @@ namespace Apache.Ignite.Core.Impl.Binary
             forceTimestamp = forceTimestamp ||
                              field.DeclaringType.GetCustomAttributes(typeof(TimestampAttribute), true).Any();
 
+            if (raw)
+            {
+                // There is no field meta in raw mode, so unwrapNullable has no effect.
+                unwrapNullable = false;
+            }
+
             if (type.IsPrimitive)
+            {
                 HandlePrimitive(field, out writeAction, out readAction, raw);
+            }
+            else if (unwrapNullable && BinaryUtils.GetSupportedPrimitiveUnderlyingNullableType(type) != null)
+            {
+                HandlePrimitiveNullable(field, out writeAction, out readAction);
+            }
             else if (type.IsArray)
             {
-                HandleArray(field, out writeAction, out readAction, raw);
+                HandleArray(field, out writeAction, out readAction, raw, unwrapNullable);
             }
             else
                 HandleOther(field, out writeAction, out readAction, raw, forceTimestamp);
@@ -261,6 +274,83 @@ namespace Apache.Ignite.Core.Impl.Binary
             }
         }
 
+        private static void HandlePrimitiveNullable(FieldInfo field, out BinaryReflectiveWriteAction writeAction,
+            out BinaryReflectiveReadAction readAction)
+        {
+            var type = field.FieldType;
+
+            if (type == typeof (bool?))
+            {
+                writeAction = GetWriter<bool?>(field, (f, w, o) => w.WriteBooleanNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadBooleanNullable(f));
+            }
+            else if (type == typeof (sbyte?))
+            {
+                writeAction = GetWriter<sbyte?>(field, (f, w, o) => w.WriteByteNullable(f, unchecked((byte?)o)));
+                readAction = GetReader(field, (f, r) => unchecked((sbyte?)r.ReadByteNullable(f)));
+            }
+            else if (type == typeof (byte?))
+            {
+                writeAction = GetWriter<byte?>(field, (f, w, o) => w.WriteByteNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadByteNullable(f));
+            }
+            else if (type == typeof (short?))
+            {
+                writeAction = GetWriter<short?>(field, (f, w, o) => w.WriteShortNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadShortNullable(f));
+            }
+            else if (type == typeof (ushort?))
+            {
+                writeAction = GetWriter<ushort?>(field, (f, w, o) => w.WriteShortNullable(f, unchecked((short?) o)));
+                readAction = GetReader(field, (f, r) => unchecked((ushort?) r.ReadShortNullable(f)));
+            }
+            else if (type == typeof (char?))
+            {
+                writeAction = GetWriter<char?>(field, (f, w, o) => w.WriteCharNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadCharNullable(f));
+            }
+            else if (type == typeof (int?))
+            {
+                writeAction = GetWriter<int?>(field, (f, w, o) => w.WriteIntNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadIntNullable(f));
+            }
+            else if (type == typeof (uint?))
+            {
+                writeAction = GetWriter<uint?>(field, (f, w, o) => w.WriteIntNullable(f, unchecked((int?)o)));
+                readAction = GetReader(field, (f, r) => r.ReadIntNullable(f));
+            }
+            else if (type == typeof (long?))
+            {
+                writeAction = GetWriter<long?>(field, (f, w, o) => w.WriteLongNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadLongNullable(f));
+            }
+            else if (type == typeof (ulong?))
+            {
+                writeAction = GetWriter<ulong?>(field, (f, w, o) => w.WriteLongNullable(f, unchecked((long?)o)));
+                readAction = GetReader(field, (f, r) => unchecked((ulong?)r.ReadLongNullable(f)));
+            }
+            else if (type == typeof (float?))
+            {
+                writeAction = GetWriter<float?>(field, (f, w, o) => w.WriteFloatNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadFloatNullable(f));
+            }
+            else if (type == typeof(double?))
+            {
+                writeAction = GetWriter<double?>(field, (f, w, o) => w.WriteDoubleNullable(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadDoubleNullable(f));
+            }
+            else if (type == typeof(decimal?))
+            {
+                writeAction = GetWriter<decimal?>(field, (f, w, o) => w.WriteDecimal(f, o));
+                readAction = GetReader(field, (f, r) => r.ReadDecimal(f));
+            }
+            else
+            {
+                throw new IgniteException(string.Format("Unsupported primitive type '{0}' [Field={1}, " +
+                                                        "DeclaringType={2}", type, field, field.DeclaringType));
+            }
+        }
+
         /// <summary>
         /// Handle array type.
         /// </summary>
@@ -268,8 +358,9 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="writeAction">Write action.</param>
         /// <param name="readAction">Read action.</param>
         /// <param name="raw">Raw mode.</param>
+        /// <param name="unwrapNullable">Unwrap nullable mode.</param>
         private static void HandleArray(FieldInfo field, out BinaryReflectiveWriteAction writeAction,
-            out BinaryReflectiveReadAction readAction, bool raw)
+            out BinaryReflectiveReadAction readAction, bool raw, bool unwrapNullable)
         {
             if (field.FieldType.GetArrayRank() > 1)
             {
@@ -422,6 +513,16 @@ namespace Apache.Ignite.Core.Impl.Binary
                 readAction = raw
                     ? GetRawReader(field, r => r.ReadGuidArray())
                     : GetReader(field, (f, r) => r.ReadGuidArray(f));
+            }
+            else if (elemType == typeof (DateTime?) && unwrapNullable)
+            {
+                // Can't enable this without unwrapNullable for compatibility reasons.
+                writeAction = raw
+                    ? GetRawWriter<DateTime?[]>(field, (w, o) => w.WriteTimestampArray(o))
+                    : GetWriter<DateTime?[]>(field, (f, w, o) => w.WriteTimestampArray(f, o));
+                readAction = raw
+                    ? GetRawReader(field, r => r.ReadTimestampArray())
+                    : GetReader(field, (f, r) => r.ReadTimestampArray(f));
             }
             else if (elemType.IsEnum)
             {
@@ -594,7 +695,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Gets the reader with a specified write action.
         /// </summary>
         private static BinaryReflectiveWriteAction GetWriter<T>(FieldInfo field,
-            Expression<Action<string, IBinaryWriter, T>> write)
+            Expression<Action<string, BinaryWriter, T>> write)
         {
             Debug.Assert(field != null);
             Debug.Assert(field.DeclaringType != null);   // non-static
@@ -611,7 +712,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             }
 
             // Call Writer method
-            var writerParam = Expression.Parameter(typeof(IBinaryWriter));
+            var writerParam = Expression.Parameter(typeof(BinaryWriter));
             var fldNameParam = Expression.Constant(BinaryUtils.CleanFieldName(field.Name));
             var writeExpr = Expression.Invoke(write, fldNameParam, writerParam, fldExpr);
 
@@ -699,13 +800,13 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Gets the reader with a specified read action.
         /// </summary>
         private static BinaryReflectiveReadAction GetReader<T>(FieldInfo field, 
-            Expression<Func<string, IBinaryReader, T>> read)
+            Expression<Func<string, BinaryReader, T>> read)
         {
             Debug.Assert(field != null);
             Debug.Assert(field.DeclaringType != null);   // non-static
 
             // Call Reader method
-            var readerParam = Expression.Parameter(typeof(IBinaryReader));
+            var readerParam = Expression.Parameter(typeof(BinaryReader));
             var fldNameParam = Expression.Constant(BinaryUtils.CleanFieldName(field.Name));
             Expression readExpr = Expression.Invoke(read, fldNameParam, readerParam);
 

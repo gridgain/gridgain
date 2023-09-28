@@ -37,11 +37,11 @@ namespace Apache.Ignite.Core.Impl
             WalWritingRate = reader.ReadFloat();
             WalArchiveSegments = reader.ReadInt();
             WalFsyncTimeAverage = reader.ReadFloat();
-            LastCheckpointDuration = reader.ReadLongAsTimespan();
-            LastCheckpointLockWaitDuration = reader.ReadLongAsTimespan();
-            LastCheckpointMarkDuration = reader.ReadLongAsTimespan();
-            LastCheckpointPagesWriteDuration = reader.ReadLongAsTimespan();
-            LastCheckpointFsyncDuration = reader.ReadLongAsTimespan();
+            LastCheckpointDuration = reader.ConfigReadLongAsTimespan();
+            LastCheckpointLockWaitDuration = reader.ConfigReadLongAsTimespan();
+            LastCheckpointMarkDuration = reader.ConfigReadLongAsTimespan();
+            LastCheckpointPagesWriteDuration = reader.ConfigReadLongAsTimespan();
+            LastCheckpointFsyncDuration = reader.ConfigReadLongAsTimespan();
             LastCheckpointTotalPagesNumber = reader.ReadLong();
             LastCheckpointDataPagesNumber = reader.ReadLong();
             LastCheckpointCopiedOnWritePagesNumber = reader.ReadLong();

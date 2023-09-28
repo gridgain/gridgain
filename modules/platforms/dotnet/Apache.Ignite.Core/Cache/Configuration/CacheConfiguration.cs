@@ -294,22 +294,22 @@ namespace Apache.Ignite.Core.Cache.Configuration
             Invalidate = reader.ReadBoolean();
             KeepBinaryInStore = reader.ReadBoolean();
             LoadPreviousValue = reader.ReadBoolean();
-            LockTimeout = reader.ReadLongAsTimespan();
+            LockTimeout = reader.ConfigReadLongAsTimespan();
 #pragma warning disable 618
-            LongQueryWarningTimeout = reader.ReadLongAsTimespan();
+            LongQueryWarningTimeout = reader.ConfigReadLongAsTimespan();
 #pragma warning restore 618
             MaxConcurrentAsyncOperations = reader.ReadInt();
             Name = reader.ReadString();
             ReadFromBackup = reader.ReadBoolean();
             RebalanceBatchSize = reader.ReadInt();
-            RebalanceDelay = reader.ReadLongAsTimespan();
+            RebalanceDelay = reader.ConfigReadLongAsTimespan();
             RebalanceMode = (CacheRebalanceMode) reader.ReadInt();
-            RebalanceThrottle = reader.ReadLongAsTimespan();
-            RebalanceTimeout = reader.ReadLongAsTimespan();
+            RebalanceThrottle = reader.ConfigReadLongAsTimespan();
+            RebalanceTimeout = reader.ConfigReadLongAsTimespan();
             SqlEscapeAll = reader.ReadBoolean();
             WriteBehindBatchSize = reader.ReadInt();
             WriteBehindEnabled = reader.ReadBoolean();
-            WriteBehindFlushFrequency = reader.ReadLongAsTimespan();
+            WriteBehindFlushFrequency = reader.ConfigReadLongAsTimespan();
             WriteBehindFlushSize = reader.ReadInt();
             WriteBehindFlushThreadCount = reader.ReadInt();
             WriteBehindCoalescing = reader.ReadBoolean();

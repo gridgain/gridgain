@@ -74,7 +74,8 @@ namespace Apache.Ignite.Core.Tests.Client.Compute
 
             foreach (var entry in entries)
             {
-                if (entry.Level >= LogLevel.Warn)
+                if (entry.Level >= LogLevel.Warn &&
+                    !entry.Message.Contains(nameof(BinaryConfiguration.UnwrapNullablePrimitiveTypes)))
                 {
                     Assert.Fail(entry.Message);
                 }

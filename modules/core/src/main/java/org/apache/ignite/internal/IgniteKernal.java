@@ -2300,7 +2300,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     private long allocatedPDSSize() {
-        if (ctx.clientNode())
+        if (ctx.clientNode() || ctx.grid().cluster().state() == ClusterState.INACTIVE)
             return 0;
 
         DataStorageConfiguration dsCfg = ctx.config().getDataStorageConfiguration();

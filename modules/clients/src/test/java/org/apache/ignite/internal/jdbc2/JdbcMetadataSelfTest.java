@@ -337,6 +337,7 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             "TASKS",
             "JOBS",
             "CLIENT_CONNECTIONS",
+            "CLIENT_CONNECTION_ATTRIBUTES",
             "TRANSACTIONS",
             "VIEWS",
             "TABLE_COLUMNS",
