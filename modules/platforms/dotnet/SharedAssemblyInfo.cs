@@ -24,5 +24,5 @@ using System.Reflection;
 [assembly: AssemblyCulture("")]
 
 [assembly: AssemblyVersion("8.8.127.50721")]
-[assembly: AssemblyFileVersion("8.8.127.50721")]
-[assembly: AssemblyInformationalVersion("8.8.127")]
+[assembly: AssemblyFileVersion("8.9.127.76616")]
+[assembly: AssemblyInformationalVersion("8.9.127")]
