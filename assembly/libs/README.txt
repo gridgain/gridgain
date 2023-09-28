@@ -87,8 +87,6 @@ The following modules are available:
 - ignite-rest-http (for HTTP REST messages)
 - ignite-schedule (for Cron-based task scheduling)
 - ignite-sl4j (for SL4J logging)
-- ignite-spark (for shared in-memory RDDs and faster SQL for Apache Spark 2.3)
-- ignite-spark-2.4 (for shared in-memory RDDs and faster SQL for Apache Spark 2.4)
 - ignite-spring (for Spring-based configuration support)
 - ignite-ssh (for starting grid nodes on remote machines)
 - ignite-urideploy (for URI-based deployment)
