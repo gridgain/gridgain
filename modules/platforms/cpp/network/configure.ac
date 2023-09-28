@@ -17,7 +17,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([Apache Ignite network library for C++], [8.8.127.50721], [dev@ignite.apache.org], [ignite-network], [ignite.apache.org])
+AC_INIT([Apache Ignite network library for C++], [8.9.127.76616], [dev@ignite.apache.org], [ignite-network], [ignite.apache.org])
 AC_CONFIG_SRCDIR(src)
 
 AC_CANONICAL_SYSTEM
