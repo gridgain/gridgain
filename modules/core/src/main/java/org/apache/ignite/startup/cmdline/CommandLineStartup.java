@@ -126,19 +126,19 @@ public final class CommandLineStartup {
 
         String quiteStr = System.getProperty(IgniteSystemProperties.IGNITE_QUIET);
 
-        boolean quite = true;
+        boolean quite = false;
 
         if (quiteStr != null) {
             quiteStr = quiteStr.trim();
 
             if (!quiteStr.isEmpty()) {
-                if ("false".equalsIgnoreCase(quiteStr))
-                    quite = false;
-                else if (!"true".equalsIgnoreCase(quiteStr)) {
+                if ("true".equalsIgnoreCase(quiteStr))
+                    quite = true;
+                else if (!"false".equalsIgnoreCase(quiteStr)) {
                     System.err.println("Invalid value for '" + IgniteSystemProperties.IGNITE_QUIET +
                         "' VM parameter (must be {true|false}): " + quiteStr);
 
-                    quite = false;
+                    quite = true;
                 }
             }
         }

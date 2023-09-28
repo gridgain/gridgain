@@ -76,7 +76,7 @@ public class PlatformLogger implements IgniteLogger {
 
     /** Quiet flag. */
     @GridToStringInclude
-    private final boolean isQuiet = Boolean.valueOf(System.getProperty(IGNITE_QUIET, "true"));
+    private final boolean isQuiet = Boolean.valueOf(System.getProperty(IGNITE_QUIET, "false"));
 
     /**
      * Ctor.

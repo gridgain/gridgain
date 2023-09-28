@@ -327,7 +327,7 @@ public final class IgniteSystemProperties {
      */
     @SystemProperty(value = "In quiet mode, only warning and errors are printed into the log additionally to a " +
         "shortened version of standard output on the start. Note that if you use ignite.{sh|bat} scripts to start " +
-        "Ignite they start by default in quiet mode. You can supply -v flag to override it", defaults = "true")
+        "Ignite they start by default in quiet mode. You can supply -v flag to override it", defaults = "false")
     public static final String IGNITE_QUIET = "IGNITE_QUIET";
 
     /**

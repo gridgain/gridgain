@@ -98,7 +98,7 @@ public class JclLogger implements IgniteLogger {
 
         this.impl = impl;
 
-        quiet = Boolean.valueOf(System.getProperty(IGNITE_QUIET, "true"));
+        quiet = Boolean.valueOf(System.getProperty(IGNITE_QUIET, "false"));
     }
 
     /** {@inheritDoc} */
