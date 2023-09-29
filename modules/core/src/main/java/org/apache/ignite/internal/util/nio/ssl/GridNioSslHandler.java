@@ -608,7 +608,7 @@ class GridNioSslHandler extends ReentrantLock {
         int iter = 0;
 
         do {
-            System.out.println("unwrap0 loop iter: " + iter++);
+            System.out.println("unwrap0 loop iter: " + iter++ + ", Pos: " + inNetBuf.position() + ", Lim: " + inNetBuf.limit() + ", Hash: " + System.identityHashCode(inNetBuf));
             res = sslEngine.unwrap(inNetBuf, appBuf);
             System.out.println("Pos: " + appBuf.position() + ", Lim: " + appBuf.limit() + ", Cap: " + appBuf.capacity());
 
