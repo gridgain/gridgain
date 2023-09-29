@@ -142,7 +142,7 @@ class GridNioSslHandler extends ReentrantLock {
         handshakeStatus = sslEngine.getHandshakeStatus();
 
         // Allocate a little bit more so SSL engine would not return buffer overflow status.
-        int netBufSize = sslEngine.getSession().getPacketBufferSize() + 50;
+        int netBufSize = 1000;
 
         outNetBuf = directBuf ? ByteBuffer.allocateDirect(netBufSize) : ByteBuffer.allocate(netBufSize);
 
@@ -162,7 +162,7 @@ class GridNioSslHandler extends ReentrantLock {
         outNetBuf.position(0);
         outNetBuf.limit(0);
 
-        int appBufSize = Math.max(sslEngine.getSession().getApplicationBufferSize() + 50, netBufSize * 2);
+        int appBufSize = 10;
 
         appBuf = directBuf ? ByteBuffer.allocateDirect(appBufSize) : ByteBuffer.allocate(appBufSize);
 
@@ -214,7 +214,7 @@ class GridNioSslHandler extends ReentrantLock {
             boolean loop = true;
 
             while (loop) {
-                System.out.println("handshake loop: " + handshakeStatus + ", ses=" + ses + ']');
+                // System.out.println("handshake loop: " + handshakeStatus + ", ses=" + ses + ']');
 
                 switch (handshakeStatus) {
                     case NOT_HANDSHAKING:
@@ -629,6 +629,7 @@ class GridNioSslHandler extends ReentrantLock {
                         + ", thisHash: " + System.identityHashCode(this));
             }
 
+            // TODO: Force BUFFER_OVERFLOW to force long-running loop here
             res = sslEngine.unwrap(inNetBuf, appBuf);
 //            System.out.println("Pos: " + appBuf.position() + ", Lim: " + appBuf.limit() + ", Cap: " + appBuf.capacity());
 //
