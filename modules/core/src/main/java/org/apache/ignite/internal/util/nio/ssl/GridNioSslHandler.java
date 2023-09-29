@@ -336,7 +336,7 @@ class GridNioSslHandler extends ReentrantLock {
         // Print buffer data as hex string
         System.out.println(">>>>> BUFFER DATA");
         for (int i = 0; i < buf.limit(); i++) {
-            System.out.print(String.format("%02X ", buf.get(i)));
+            System.out.print(buf.get(i) + ", ");
         }
         System.out.println("\n<<<<< BUFFER DATA");
 
