@@ -43,7 +43,7 @@ fi
 
 CONFIG=${DEFAULT_CONFIG:-}
 INTERACTIVE="0"
-QUIET="-DIGNITE_QUIET=true"
+QUIET="-DIGNITE_QUIET=false"
 JVM_XOPTS=""
 
 while [ $# -gt 0 ]

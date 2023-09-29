@@ -53,10 +53,9 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
  * logger in your task/job code. See {@link org.apache.ignite.resources.LoggerResource} annotation about logger
  * injection.
  * <h1 class="header">Quiet Mode</h1>
- * By default Ignite starts in "quiet" mode suppressing {@code INFO} and {@code DEBUG}
- * log output. If system property {@code IGNITE_QUIET} is set to {@code false} than Ignition
- * will operate in normal un-suppressed logging mode. Note that all output in "quiet" mode is
- * done through standard output (STDOUT).
+ * By default Ignite starts in un-suppressed logging mode. If system property {@code IGNITE_QUIET} is set to
+ * {@code true} than Ignition will suppress {@code INFO} and {@code DEBUG} log output. Note that all output in "quiet"
+ * mode is done through standard output (STDOUT).
  * <p>
  * Note that Ignite's standard startup scripts <tt>$IGNITE_HOME/bin/ignite.{sh|bat}</tt> start
  * by default in "quiet" mode. Both scripts accept {@code -v} arguments to turn off "quiet" mode.
