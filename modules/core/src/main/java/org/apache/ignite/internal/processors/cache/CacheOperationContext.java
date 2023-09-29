@@ -30,8 +30,11 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_ALLOW_ATOMIC_OPS_I
  * Cache operation context.
  */
 public class CacheOperationContext implements Serializable {
-    /** */
-    public static final boolean allowAtomicOpsInTx() {
+    /**
+     * Returns the default value that indicates whether atomic operations are allowed to be used inside transaction or not.
+     * @see IgniteSystemProperties#IGNITE_ALLOW_ATOMIC_OPS_IN_TX
+     **/
+    public static final boolean defaultAllowAtomicOpsInTx() {
         return IgniteSystemProperties.getBoolean(IGNITE_ALLOW_ATOMIC_OPS_IN_TX);
     }
 
@@ -82,7 +85,7 @@ public class CacheOperationContext implements Serializable {
 
         dataCenterId = null;
 
-        allowAtomicOpsInTx = allowAtomicOpsInTx();
+        allowAtomicOpsInTx = defaultAllowAtomicOpsInTx();
     }
 
     /**

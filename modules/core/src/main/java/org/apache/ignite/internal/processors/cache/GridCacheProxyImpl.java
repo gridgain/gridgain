@@ -51,7 +51,7 @@ import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.processors.cache.CacheOperationContext.allowAtomicOpsInTx;
+import static org.apache.ignite.internal.processors.cache.CacheOperationContext.defaultAllowAtomicOpsInTx;
 
 /**
  * Cache proxy.
@@ -337,7 +337,7 @@ public class GridCacheProxyImpl<K, V> implements IgniteInternalCache<K, V>, Exte
                     false,
                     null,
                     false,
-                    allowAtomicOpsInTx()));
+                    defaultAllowAtomicOpsInTx()));
     }
 
     /** {@inheritDoc} */
@@ -358,7 +358,7 @@ public class GridCacheProxyImpl<K, V> implements IgniteInternalCache<K, V>, Exte
                         false,
                         null,
                         false,
-                        allowAtomicOpsInTx()));
+                        defaultAllowAtomicOpsInTx()));
         }
         finally {
             onLeave(prev);
@@ -381,7 +381,7 @@ public class GridCacheProxyImpl<K, V> implements IgniteInternalCache<K, V>, Exte
                     false,
                     null,
                     false,
-                    allowAtomicOpsInTx()));
+                    defaultAllowAtomicOpsInTx()));
     }
 
     /** {@inheritDoc} */
@@ -1637,7 +1637,7 @@ public class GridCacheProxyImpl<K, V> implements IgniteInternalCache<K, V>, Exte
                         false,
                         null,
                         false,
-                        allowAtomicOpsInTx()));
+                        defaultAllowAtomicOpsInTx()));
         }
         finally {
             onLeave(prev);
@@ -1658,7 +1658,7 @@ public class GridCacheProxyImpl<K, V> implements IgniteInternalCache<K, V>, Exte
                     true,
                     null,
                     false,
-                    allowAtomicOpsInTx()));
+                    defaultAllowAtomicOpsInTx()));
         }
         finally {
             onLeave(prev);
