@@ -31,11 +31,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_ALLOW_ATOMIC_OPS_I
  */
 public class CacheOperationContext implements Serializable {
     /** */
-    private static final boolean DFLT_ALLOW_ATOMIC_OPS_IN_TX = false;
-
-    /** */
     public static final boolean allowAtomicOpsInTx() {
-        return IgniteSystemProperties.getBoolean(IGNITE_ALLOW_ATOMIC_OPS_IN_TX, DFLT_ALLOW_ATOMIC_OPS_IN_TX);
+        return IgniteSystemProperties.getBoolean(IGNITE_ALLOW_ATOMIC_OPS_IN_TX);
     }
 
     /** */
