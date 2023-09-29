@@ -111,11 +111,10 @@ public class GridNioSslSelfTest extends GridNioSelfTest {
 
             // Write payload byte by byte
             for (byte b : payload) {
-                Thread.sleep(1);
+                Thread.sleep(100);
                 outputStream.write(b);
+                outputStream.flush();
             }
-
-            outputStream.flush();
         }
 
         assert latch.await(5, SECONDS);

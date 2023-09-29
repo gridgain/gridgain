@@ -331,14 +331,14 @@ class GridNioSslHandler extends ReentrantLock {
                     appBuf.capacity() + ", ses=" + ses + ", ");
         }
 
-        System.out.println("messageReceived: " + buf.limit() + " bytes");
-
-        // Print buffer data as hex string
-        System.out.println(">>>>> BUFFER DATA");
-        for (int i = 0; i < buf.limit(); i++) {
-            System.out.print(buf.get(i) + ", ");
-        }
-        System.out.println("\n<<<<< BUFFER DATA");
+//        System.out.println("messageReceived: " + buf.limit() + " bytes");
+//
+//        // Print buffer data as hex string
+//        System.out.println(">>>>> BUFFER DATA");
+//        for (int i = 0; i < buf.limit(); i++) {
+//            System.out.print(buf.get(i) + ", ");
+//        }
+//        System.out.println("\n<<<<< BUFFER DATA");
 
         // append buf to inNetBuffer
         inNetBuf.put(buf);
@@ -618,20 +618,22 @@ class GridNioSslHandler extends ReentrantLock {
      * @throws SSLException If SSL exception occurs.
      */
     private SSLEngineResult unwrap0() throws SSLException {
-        System.out.println("unwrap0");
+        // System.out.println("unwrap0");
         SSLEngineResult res;
         int iter = 0;
 
         do {
-            System.out.println("unwrap0 loop iter: " + iter++ + ", Pos: " + inNetBuf.position() + ", Lim: " + inNetBuf.limit()
-                    + ", inNetBufHash: " + System.identityHashCode(inNetBuf)
-                    + ", thisHash: " + System.identityHashCode(this));
+            if (iter > 0) {
+                System.out.println("unwrap0 loop iter: " + iter++ + ", Pos: " + inNetBuf.position() + ", Lim: " + inNetBuf.limit()
+                        + ", inNetBufHash: " + System.identityHashCode(inNetBuf)
+                        + ", thisHash: " + System.identityHashCode(this));
+            }
 
             res = sslEngine.unwrap(inNetBuf, appBuf);
-            System.out.println("Pos: " + appBuf.position() + ", Lim: " + appBuf.limit() + ", Cap: " + appBuf.capacity());
-
-            System.out.println("Unwrapped raw data [status=" + res.getStatus() + ", handshakeStatus=" +
-                    res.getHandshakeStatus() + ", ses=" + ses + ']');
+//            System.out.println("Pos: " + appBuf.position() + ", Lim: " + appBuf.limit() + ", Cap: " + appBuf.capacity());
+//
+//            System.out.println("Unwrapped raw data [status=" + res.getStatus() + ", handshakeStatus=" +
+//                    res.getHandshakeStatus() + ", ses=" + ses + ']');
 
             if (log.isDebugEnabled())
                 log.debug("Unwrapped raw data [status=" + res.getStatus() + ", handshakeStatus=" +
@@ -640,13 +642,13 @@ class GridNioSslHandler extends ReentrantLock {
             if (res.getStatus() == Status.BUFFER_OVERFLOW) {
                 appBuf = expandBuffer(appBuf, appBuf.capacity() * 2);
 
-                System.out.println("unwrap0 BUFFER_OVERFLOW");
+                // System.out.println("unwrap0 BUFFER_OVERFLOW");
             }
         }
         while ((res.getStatus() == Status.OK || res.getStatus() == Status.BUFFER_OVERFLOW) &&
             (handshakeFinished || res.getHandshakeStatus() == NEED_UNWRAP));
 
-        System.out.println("unwrap0 EXIT: " + res);
+        // System.out.println("unwrap0 EXIT: " + res);
 
         return res;
     }
