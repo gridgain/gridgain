@@ -333,6 +333,13 @@ class GridNioSslHandler extends ReentrantLock {
 
         System.out.println("messageReceived: " + buf.limit() + " bytes");
 
+        // Print buffer data as hex string
+        System.out.println(">>>>> BUFFER DATA");
+        for (int i = 0; i < buf.limit(); i++) {
+            System.out.print(String.format("%02X ", buf.get(i)));
+        }
+        System.out.println("\n<<<<< BUFFER DATA");
+
         // append buf to inNetBuffer
         inNetBuf.put(buf);
 
