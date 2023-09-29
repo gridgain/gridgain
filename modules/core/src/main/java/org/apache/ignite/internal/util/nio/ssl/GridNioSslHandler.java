@@ -142,7 +142,7 @@ class GridNioSslHandler extends ReentrantLock {
         handshakeStatus = sslEngine.getHandshakeStatus();
 
         // Allocate a little bit more so SSL engine would not return buffer overflow status.
-        int netBufSize = 1000;
+        int netBufSize = sslEngine.getSession().getPacketBufferSize() + 50;
 
         outNetBuf = directBuf ? ByteBuffer.allocateDirect(netBufSize) : ByteBuffer.allocate(netBufSize);
 
@@ -162,7 +162,7 @@ class GridNioSslHandler extends ReentrantLock {
         outNetBuf.position(0);
         outNetBuf.limit(0);
 
-        int appBufSize = 10;
+        int appBufSize = Math.max(sslEngine.getSession().getApplicationBufferSize() + 50, netBufSize * 2);
 
         appBuf = directBuf ? ByteBuffer.allocateDirect(appBufSize) : ByteBuffer.allocate(appBufSize);
 
@@ -205,7 +205,6 @@ class GridNioSslHandler extends ReentrantLock {
         if (log.isDebugEnabled())
             log.debug("Entered handshake(): [handshakeStatus=" + handshakeStatus + ", ses=" + ses + ']');
 
-        System.out.println("Entered handshake(): [handshakeStatus=" + handshakeStatus + ", ses=" + ses + ']');
         long startTs = U.currentTimeMillis();
 
         lock();
@@ -214,8 +213,6 @@ class GridNioSslHandler extends ReentrantLock {
             boolean loop = true;
 
             while (loop) {
-                // System.out.println("handshake loop: " + handshakeStatus + ", ses=" + ses + ']');
-
                 switch (handshakeStatus) {
                     case NOT_HANDSHAKING:
                     case FINISHED: {
@@ -306,8 +303,6 @@ class GridNioSslHandler extends ReentrantLock {
             }
         }
 
-        System.out.println("Exit handshake(): [handshakeStatus=" + handshakeStatus + ", ses=" + ses + ']');
-
         if (log.isDebugEnabled())
             log.debug("Leaved handshake(): [handshakeStatus=" + handshakeStatus + ", ses=" + ses + ']');
     }
@@ -321,7 +316,6 @@ class GridNioSslHandler extends ReentrantLock {
      */
     void messageReceived(ByteBuffer buf) throws IgniteCheckedException, SSLException {
         if (buf.limit() > inNetBuf.remaining()) {
-
             inNetBuf = expandBuffer(inNetBuf, inNetBuf.capacity() + buf.limit() * 2);
 
             appBuf = expandBuffer(appBuf, inNetBuf.capacity() * 2);
@@ -330,15 +324,6 @@ class GridNioSslHandler extends ReentrantLock {
                 log.debug("Expanded buffers [inNetBufCapacity=" + inNetBuf.capacity() + ", appBufCapacity=" +
                     appBuf.capacity() + ", ses=" + ses + ", ");
         }
-
-//        System.out.println("messageReceived: " + buf.limit() + " bytes");
-//
-//        // Print buffer data as hex string
-//        System.out.println(">>>>> BUFFER DATA");
-//        for (int i = 0; i < buf.limit(); i++) {
-//            System.out.print(buf.get(i) + ", ");
-//        }
-//        System.out.println("\n<<<<< BUFFER DATA");
 
         // append buf to inNetBuffer
         inNetBuf.put(buf);
@@ -618,38 +603,20 @@ class GridNioSslHandler extends ReentrantLock {
      * @throws SSLException If SSL exception occurs.
      */
     private SSLEngineResult unwrap0() throws SSLException {
-        // System.out.println("unwrap0");
         SSLEngineResult res;
-        int iter = 0;
 
         do {
-            if (iter > 0) {
-                System.out.println("unwrap0 loop iter: " + iter++ + ", Pos: " + inNetBuf.position() + ", Lim: " + inNetBuf.limit()
-                        + ", inNetBufHash: " + System.identityHashCode(inNetBuf)
-                        + ", thisHash: " + System.identityHashCode(this));
-            }
-
-            // TODO: Force BUFFER_OVERFLOW to force long-running loop here
             res = sslEngine.unwrap(inNetBuf, appBuf);
-//            System.out.println("Pos: " + appBuf.position() + ", Lim: " + appBuf.limit() + ", Cap: " + appBuf.capacity());
-//
-//            System.out.println("Unwrapped raw data [status=" + res.getStatus() + ", handshakeStatus=" +
-//                    res.getHandshakeStatus() + ", ses=" + ses + ']');
 
             if (log.isDebugEnabled())
                 log.debug("Unwrapped raw data [status=" + res.getStatus() + ", handshakeStatus=" +
                     res.getHandshakeStatus() + ", ses=" + ses + ']');
 
-            if (res.getStatus() == Status.BUFFER_OVERFLOW) {
+            if (res.getStatus() == Status.BUFFER_OVERFLOW)
                 appBuf = expandBuffer(appBuf, appBuf.capacity() * 2);
-
-                // System.out.println("unwrap0 BUFFER_OVERFLOW");
-            }
         }
         while ((res.getStatus() == Status.OK || res.getStatus() == Status.BUFFER_OVERFLOW) &&
             (handshakeFinished || res.getHandshakeStatus() == NEED_UNWRAP));
-
-        // System.out.println("unwrap0 EXIT: " + res);
 
         return res;
     }
