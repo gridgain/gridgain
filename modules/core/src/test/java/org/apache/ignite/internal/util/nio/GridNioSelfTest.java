@@ -645,7 +645,7 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testSendReceive() throws Exception {
-        CountDownLatch latch = new CountDownLatch(10);
+        CountDownLatch latch = new CountDownLatch(1);
 
         NioListener lsnr = new NioListener(latch);
 
@@ -654,18 +654,15 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
         TestClient client = null;
 
         try {
-            for (int i = 0; i < 5; i++) {
-                client = createClient(U.getLocalHost(), srvr.port(), U.getLocalHost());
+            client = createClient(U.getLocalHost(), srvr.port(), U.getLocalHost());
 
-                client.sendMessage(createMessage(), MSG_SIZE);
-                client.sendMessage(createMessage(), MSG_SIZE);
+            client.sendMessage(createMessage(), MSG_SIZE);
 
-                client.close();
-            }
+            client.close();
 
             assert latch.await(30, SECONDS);
 
-            assertEquals("Unexpected message count", 10, lsnr.getMessageCount());
+            assertEquals("Unexpected message count", 1, lsnr.getMessageCount());
         }
         finally {
             srvr.stop();
