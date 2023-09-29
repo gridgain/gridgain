@@ -205,6 +205,7 @@ class GridNioSslHandler extends ReentrantLock {
         if (log.isDebugEnabled())
             log.debug("Entered handshake(): [handshakeStatus=" + handshakeStatus + ", ses=" + ses + ']');
 
+        System.out.println("Entered handshake(): [handshakeStatus=" + handshakeStatus + ", ses=" + ses + ']');
         long startTs = U.currentTimeMillis();
 
         lock();
@@ -213,6 +214,8 @@ class GridNioSslHandler extends ReentrantLock {
             boolean loop = true;
 
             while (loop) {
+                System.out.println("handshake loop: " + handshakeStatus + ", ses=" + ses + ']');
+
                 switch (handshakeStatus) {
                     case NOT_HANDSHAKING:
                     case FINISHED: {
@@ -302,6 +305,8 @@ class GridNioSslHandler extends ReentrantLock {
                     ", ses=" + ses + ']');
             }
         }
+
+        System.out.println("Exit handshake(): [handshakeStatus=" + handshakeStatus + ", ses=" + ses + ']');
 
         if (log.isDebugEnabled())
             log.debug("Leaved handshake(): [handshakeStatus=" + handshakeStatus + ", ses=" + ses + ']');
