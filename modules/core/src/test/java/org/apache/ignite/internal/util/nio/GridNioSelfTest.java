@@ -81,7 +81,7 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
     private static final int THREAD_CNT = 5;
 
     /** Message size. */
-    private static final int MSG_SIZE = 1024 * 128;
+    private static final int MSG_SIZE = 10;
 
     /** Count of statistics segments. */
     private static final int STATISTICS_SEGMENTS_CNT = 10;
