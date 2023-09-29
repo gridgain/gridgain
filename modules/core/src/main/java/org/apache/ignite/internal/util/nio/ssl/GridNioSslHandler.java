@@ -316,6 +316,7 @@ class GridNioSslHandler extends ReentrantLock {
      */
     void messageReceived(ByteBuffer buf) throws IgniteCheckedException, SSLException {
         if (buf.limit() > inNetBuf.remaining()) {
+
             inNetBuf = expandBuffer(inNetBuf, inNetBuf.capacity() + buf.limit() * 2);
 
             appBuf = expandBuffer(appBuf, inNetBuf.capacity() * 2);
@@ -324,6 +325,8 @@ class GridNioSslHandler extends ReentrantLock {
                 log.debug("Expanded buffers [inNetBufCapacity=" + inNetBuf.capacity() + ", appBufCapacity=" +
                     appBuf.capacity() + ", ses=" + ses + ", ");
         }
+
+        System.out.println("messageReceived: " + buf.limit() + " bytes");
 
         // append buf to inNetBuffer
         inNetBuf.put(buf);
@@ -608,7 +611,10 @@ class GridNioSslHandler extends ReentrantLock {
         int iter = 0;
 
         do {
-            System.out.println("unwrap0 loop iter: " + iter++ + ", Pos: " + inNetBuf.position() + ", Lim: " + inNetBuf.limit() + ", Hash: " + System.identityHashCode(inNetBuf));
+            System.out.println("unwrap0 loop iter: " + iter++ + ", Pos: " + inNetBuf.position() + ", Lim: " + inNetBuf.limit()
+                    + ", inNetBufHash: " + System.identityHashCode(inNetBuf)
+                    + ", thisHash: " + System.identityHashCode(this));
+
             res = sslEngine.unwrap(inNetBuf, appBuf);
             System.out.println("Pos: " + appBuf.position() + ", Lim: " + appBuf.limit() + ", Cap: " + appBuf.capacity());
 
