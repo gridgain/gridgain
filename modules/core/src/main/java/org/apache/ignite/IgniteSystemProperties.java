@@ -323,11 +323,12 @@ public final class IgniteSystemProperties {
      * additionally to a shortened version of standard output on the start.
      * <p>
      * Note that if you use <tt>ignite.{sh|bat}</tt> scripts to start Ignite they
-     * start by default in quiet mode. You can supply <tt>-v</tt> flag to override it.
+     * start by default in verbose mode. You can supply <tt>-J-DIGNITE_QUIET=true</tt> flag to override it.
      */
     @SystemProperty(value = "In quiet mode, only warning and errors are printed into the log additionally to a " +
         "shortened version of standard output on the start. Note that if you use ignite.{sh|bat} scripts to start " +
-        "Ignite they start by default in quiet mode. You can supply -v flag to override it", defaults = "false")
+        "Ignite they start by default in verbose mode. You can supply -J-DIGNITE_QUIET=true flag to override it",
+        defaults = "false")
     public static final String IGNITE_QUIET = "IGNITE_QUIET";
 
     /**
