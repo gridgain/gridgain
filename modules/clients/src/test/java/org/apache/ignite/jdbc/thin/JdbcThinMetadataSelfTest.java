@@ -37,7 +37,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.AffinityKey;
@@ -61,7 +60,6 @@ import static java.sql.Types.DECIMAL;
 import static java.sql.Types.INTEGER;
 import static java.sql.Types.OTHER;
 import static java.sql.Types.VARCHAR;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.processors.query.QueryUtils.DFLT_SCHEMA;
@@ -414,6 +412,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
     public void testGetAllView() throws Exception {
         HashSet<String> expViews = new HashSet<>(Arrays.asList(
                 sysSchemaName() + ".METRICS",
+                sysSchemaName() + ".SERVICES",
                 sysSchemaName() + ".CACHE_GROUPS",
                 sysSchemaName() + ".CACHES",
                 sysSchemaName() + ".TASKS",
@@ -454,9 +453,9 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".DS_REENTRANTLOCKS"
         ));
 
-        if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
-            expViews.add("IGNITE.SERVICES");
-        }
+//        if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
+//            expViews.add("IGNITE.SERVICES");
+//        }
 
         testGetTables(new String[] {"VIEW"}, expViews);
     }
@@ -1110,21 +1109,19 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".DS_SETS.SIZE.null.10"
             ));
 
-            if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
-                expectedCols.addAll(Arrays.asList(
-                        sysSchemaName() + ".SERVICES.SERVICE_ID.null.2147483647",
-                        sysSchemaName() + ".SERVICES.NAME.null.2147483647",
-                        sysSchemaName() + ".SERVICES.SERVICE_CLASS.null.2147483647",
-                        sysSchemaName() + ".SERVICES.CACHE_NAME.null.2147483647",
-                        sysSchemaName() + ".SERVICES.ORIGIN_NODE_ID.null.2147483647",
-                        sysSchemaName() + ".SERVICES.TOTAL_COUNT.null.10",
-                        sysSchemaName() + ".SERVICES.MAX_PER_NODE_COUNT.null.10",
-                        sysSchemaName() + ".SERVICES.AFFINITY_KEY.null.2147483647",
-                        sysSchemaName() + ".SERVICES.NODE_FILTER.null.2147483647",
-                        sysSchemaName() + ".SERVICES.STATICALLY_CONFIGURED.null.1",
-                        sysSchemaName() + ".SERVICES.SERVICE_ID.null.2147483647"
-                ));
-            }
+            expectedCols.addAll(Arrays.asList(
+                    sysSchemaName() + ".SERVICES.SERVICE_ID.null.2147483647",
+                    sysSchemaName() + ".SERVICES.NAME.null.2147483647",
+                    sysSchemaName() + ".SERVICES.SERVICE_CLASS.null.2147483647",
+                    sysSchemaName() + ".SERVICES.CACHE_NAME.null.2147483647",
+                    sysSchemaName() + ".SERVICES.ORIGIN_NODE_ID.null.16",
+                    sysSchemaName() + ".SERVICES.TOTAL_COUNT.null.10",
+                    sysSchemaName() + ".SERVICES.MAX_PER_NODE_COUNT.null.10",
+                    sysSchemaName() + ".SERVICES.AFFINITY_KEY.null.2147483647",
+                    sysSchemaName() + ".SERVICES.NODE_FILTER.null.2147483647",
+                    sysSchemaName() + ".SERVICES.STATICALLY_CONFIGURED.null.1",
+                    sysSchemaName() + ".SERVICES.SERVICE_ID.null.2147483647"
+            ));
 
             Assert.assertEquals(expectedCols, actualSystemCols);
         }
