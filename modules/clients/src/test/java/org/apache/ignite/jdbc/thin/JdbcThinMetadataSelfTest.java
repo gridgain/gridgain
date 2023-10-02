@@ -453,10 +453,6 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".DS_REENTRANTLOCKS"
         ));
 
-//        if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
-//            expViews.add("IGNITE.SERVICES");
-//        }
-
         testGetTables(new String[] {"VIEW"}, expViews);
     }
 
