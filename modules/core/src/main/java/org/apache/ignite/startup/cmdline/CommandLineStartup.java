@@ -218,10 +218,11 @@ public final class CommandLineStartup {
 
             X.error(
                 "Usage:",
-                "    " + runner + (ignite ? " [?]|[path {-v}{-np}]|[-i]" : " [?]|[-v]"),
+                "    " + runner + (ignite ? " [?]|[path {-v}{-q}{-np}]|[-i]" : " [?]|[-v][-q]"),
                 "    Where:",
                 "    ?, /help, -help, - show this message.",
                 "    -v               - verbose mode.",
+                "    -q               - quiet mode (default mode).",
                 "    -np              - no pause on exit (pause by default)",
                 "    " + PRINT_PROPS_COMMAND + "     - prints Ignite system properties info.");
 

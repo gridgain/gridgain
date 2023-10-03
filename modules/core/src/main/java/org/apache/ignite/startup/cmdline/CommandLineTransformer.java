@@ -128,6 +128,11 @@ public class CommandLineTransformer {
 
                     break;
 
+                case "-q":
+                    verbose = false;
+
+                    break;
+
                 case "-np":
                     noPause = true;
 

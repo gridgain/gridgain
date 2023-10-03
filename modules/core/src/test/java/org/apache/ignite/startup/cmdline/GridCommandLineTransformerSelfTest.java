@@ -123,4 +123,15 @@ public class GridCommandLineTransformerSelfTest extends GridCommonAbstractTest {
             CommandLineTransformer.transform("-i", "-np", "-v", "-J-Xmx1g", "-J-Xms1m",
                 "\"c:\\path to\\русский каталог\""));
     }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testTransformQuietArgument() throws Exception {
+        assertEquals(
+            "\"INTERACTIVE=0\" \"QUIET=-DIGNITE_QUIET=true\" \"NO_PAUSE=0\" " +
+                "\"JVM_XOPTS=-Dfile.encoding=UTF-8\" \"CONFIG=\"",
+            CommandLineTransformer.transform("-q"));
+    }
 }

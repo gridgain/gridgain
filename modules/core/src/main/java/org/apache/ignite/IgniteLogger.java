@@ -58,7 +58,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
  * mode is done through standard output (STDOUT).
  * <p>
  * Note that Ignite's standard startup scripts <tt>$IGNITE_HOME/bin/ignite.{sh|bat}</tt> start
- * by default in "verbose" mode. Both scripts accept {@code -J-DIGNITE_QUIET=true} arguments to turn on "quiet" mode.
+ * by default in "verbose" mode. Both scripts accept {@code -q} arguments to turn on "quiet" mode.
  */
 @GridToStringExclude
 public interface IgniteLogger {

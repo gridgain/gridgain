@@ -51,6 +51,7 @@ do
     case "$1" in
         -i) INTERACTIVE="1";;
         -v) QUIET="-DIGNITE_QUIET=false";;
+        -q) QUIET="-DIGNITE_QUIET=true";;
         -J*) JVM_XOPTS="$JVM_XOPTS ${1:2}";;
         *) CONFIG="$1";;
     esac
