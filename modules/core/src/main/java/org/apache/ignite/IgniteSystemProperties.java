@@ -648,9 +648,10 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED = "IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED";
 
     /**
-     * Flag indicating whether atomic operations allowed for use inside transactions.
+     * Flag indicating whether atomic operations allowed to be used inside transactions.
+     * Since 8.9.0 atomic operations inside transactions are not allowed by default.
      */
-    @SystemProperty(value = "Allows atomic operations inside transactions", defaults = "true")
+    @SystemProperty(value = "Allows atomic operations inside transactions", defaults = "false")
     public static final String IGNITE_ALLOW_ATOMIC_OPS_IN_TX = "IGNITE_ALLOW_ATOMIC_OPS_IN_TX";
 
     /**

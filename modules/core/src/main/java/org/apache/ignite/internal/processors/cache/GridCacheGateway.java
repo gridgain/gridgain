@@ -361,7 +361,10 @@ public class GridCacheGateway<K, V> {
         if (ctx.atomic() && !opCtx.allowedAtomicOpsInTx()) {
             if (ctx.grid().transactions().tx() != null) {
                 throw new IgniteException("Transaction spans operations on atomic cache " +
-                    "(don't use atomic cache inside transaction or set up flag by cache.allowedAtomicOpsInTx()).");
+                    "(don't use atomic cache inside transaction or set up flag by cache.allowedAtomicOpsInTx()). " +
+                    "Since 8.9.0 atomic operations inside transactions are not allowed by default. " +
+                    "To return the previous behaviour and to allow operations with atomic caches in transactions " +
+                    "you can set system property IGNITE_ALLOW_ATOMIC_OPS_IN_TX to true.");
             }
         }
     }
