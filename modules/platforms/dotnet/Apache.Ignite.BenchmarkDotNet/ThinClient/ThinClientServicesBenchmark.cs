@@ -25,7 +25,8 @@ namespace Apache.Ignite.BenchmarkDotNet.ThinClient
     /// Thin client services benchmark.
     /// <para />
     /// NOTE: IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED settings affects the performance dramatically,
-    /// it is enabled by default in Ignite, and disabled by default in GridGain.
+    /// it is enabled by default in Ignite, disabled by default in GridGain,
+    /// and enabled by default in GridGain 8.9+.
     /// <para />
     /// .NET Core 3.1.7, IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED=true
     /// |         Method |      Mean |     Error |    StdDev |    Median |  Gen 0 | Gen 1 | Gen 2 | Allocated |

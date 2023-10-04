@@ -30,8 +30,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
-
 /**
  * Tests for continuous query deployment to client nodes.
  */
@@ -85,8 +83,8 @@ public class CacheContinuousQueryDeploymentToClientTest extends GridCommonAbstra
 
         GridContinuousProcessor proc = client2.context().continuous();
 
-        assertInfosMap(U.field(proc, "locInfos"));
-        assertInfosMap(U.field(proc, "rmtInfos"));
+        assertEquals(0, ((Map<?, ?>)U.field(proc, "locInfos")).size());
+        assertEquals(0, ((Map<?, ?>)U.field(proc, "rmtInfos")).size());
         assertEquals(0, ((Map<?, ?>)U.field(proc, "startFuts")).size());
         assertEquals(0, ((Map<?, ?>)U.field(proc, "stopFuts")).size());
         assertEquals(0, ((Map<?, ?>)U.field(proc, "bufCheckThreads")).size());
@@ -120,25 +118,10 @@ public class CacheContinuousQueryDeploymentToClientTest extends GridCommonAbstra
 
         GridContinuousProcessor proc = client2.context().continuous();
 
-        assertInfosMap(U.field(proc, "locInfos"));
-        assertInfosMap(U.field(proc, "rmtInfos"));
+        assertEquals(0, ((Map<?, ?>)U.field(proc, "locInfos")).size());
+        assertEquals(0, ((Map<?, ?>)U.field(proc, "rmtInfos")).size());
         assertEquals(0, ((Map<?, ?>)U.field(proc, "startFuts")).size());
         assertEquals(0, ((Map<?, ?>)U.field(proc, "stopFuts")).size());
         assertEquals(0, ((Map<?, ?>)U.field(proc, "bufCheckThreads")).size());
-    }
-
-    /**
-     * @param infos Infos map
-     */
-    private void assertInfosMap(Map<?, ?> infos) {
-        assertEquals(1, infos.size());
-
-        Object info = infos.values().iterator().next();
-
-        CacheContinuousQueryHandler hnd = U.field(info, "hnd");
-
-        assertEquals(UTILITY_CACHE_NAME, hnd.cacheName());
-
-        assertEquals(true, (boolean)U.field(hnd, "internal"));
     }
 }
