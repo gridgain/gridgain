@@ -1193,6 +1193,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             SqlFieldsQuery remainingQry = qry;
 
+            boolean changeCancel = false;
+
             while (remainingQry != null) {
                 Span qrySpan = ctx.tracing().create(SQL_QRY, MTC.span())
                     .addTag(SQL_SCHEMA, () -> schemaName);
@@ -1249,8 +1251,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             newQryDesc,
                             newQryParams,
                             dml,
-                            cancel
+                            changeCancel ? new GridQueryCancel() : cancel
                         );
+
+                        changeCancel = true;
 
                         res.addAll(dmlRes);
                     }
@@ -1266,7 +1270,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             newQryParams,
                             select,
                             keepBinary,
-                            cancel
+                            changeCancel ? new GridQueryCancel() : cancel
                         );
 
                         res.addAll(qryRes);

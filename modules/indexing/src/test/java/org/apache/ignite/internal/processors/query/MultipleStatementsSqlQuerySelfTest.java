@@ -93,6 +93,38 @@ public class MultipleStatementsSqlQuerySelfTest extends AbstractIndexingCommonTe
         }
     }
 
+    @Test
+    public void testCorrectWithLazy() {
+        GridQueryProcessor qryProc = node.context().query();
+
+        SqlFieldsQuery qry = new SqlFieldsQuery(
+            "DROP TABLE IF EXISTS CITY;\n" +
+                "CREATE TABLE CITY (\n" +
+                "  ID INT,\n" +
+                "  Name VARCHAR,\n" +
+                "  CountryCode CHAR(3),\n" +
+                "  District VARCHAR,\n" +
+                "  Population INT,\n" +
+                "  TimeS TIMESTAMP,\n" +
+                "  PRIMARY KEY (ID)\n" +
+                ");" +
+                "" +
+                "INSERT INTO City(ID, Name, CountryCode, District, Population, TimeS) VALUES (1,'Kabul','AFG','Kabol',1780000,CURRENT_TIMESTAMP());\n" +
+                "INSERT INTO City(ID, Name, CountryCode, District, Population, TimeS) VALUES (2,'Qandahar','AFG','Qandahar',237500,CURRENT_TIMESTAMP());\n" +
+                "SELECT * FROM City;" +
+                "SELECT * FROM City;" +
+                "INSERT INTO City(ID, Name, CountryCode, District, Population, TimeS) VALUES (3,'Herat','AFG','Herat',186800,null);" +
+                "SELECT * FROM City;");
+
+        qry.setLazy(true);
+
+        List<FieldsQueryCursor<List<?>>> res = qryProc.querySqlFields(qry, true, false);
+
+        res.get(4).close();
+        assertFalse(res.get(5).getAll().isEmpty());
+        assertEquals(3, res.get(7).getAll().size());
+    }
+
     /**
      * Test query without caches.
      */
@@ -146,7 +178,7 @@ public class MultipleStatementsSqlQuerySelfTest extends AbstractIndexingCommonTe
 
         GridTestUtils.assertThrows(log,
             new Callable<Object>() {
-                @Override public Object call() throws Exception {
+                @Override public Object call() {
                     node.context().query().querySqlFields(qry, true, true);
 
                     return null;
