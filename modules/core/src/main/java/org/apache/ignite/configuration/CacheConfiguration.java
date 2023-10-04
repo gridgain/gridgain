@@ -177,7 +177,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     public static final boolean DFLT_LOAD_PREV_VAL = false;
 
     /** Default value for 'readFromBackup' flag. */
-    public static final boolean DFLT_READ_FROM_BACKUP = true;
+    public static final boolean DFLT_READ_FROM_BACKUP = false;
 
     /** Filter that accepts all nodes. */
     public static final IgnitePredicate<ClusterNode> ALL_NODES = new IgniteAllNodesPredicate();
