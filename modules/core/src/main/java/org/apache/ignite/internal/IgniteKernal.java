@@ -2295,7 +2295,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         }
     }
 
-    /** */
+    /**
+     * Collects allocated pds size of all data regions.
+     *
+     * @return Allocated PDS size.
+     */
     private long allocatedPDSSize() {
         if (ctx.clientNode() || ctx.grid().cluster().state() == ClusterState.INACTIVE)
             return 0;
