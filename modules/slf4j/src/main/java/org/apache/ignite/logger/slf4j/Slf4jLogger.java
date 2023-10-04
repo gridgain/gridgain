@@ -67,7 +67,7 @@ public class Slf4jLogger implements IgniteLogger {
 
         this.impl = impl;
 
-        quiet = Boolean.parseBoolean(System.getProperty(IGNITE_QUIET, "true"));
+        quiet = Boolean.parseBoolean(System.getProperty(IGNITE_QUIET, "false"));
 
         if (!SLF4JBridgeHandler.isInstalled()) {
             java.util.logging.Logger rootLog = getJulRootLogger();

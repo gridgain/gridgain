@@ -233,7 +233,7 @@ public class JavaLogger implements IgniteLogger, LoggerNodeIdAndApplicationAware
 
             defaultConfiguration();
 
-            boolean quiet = Boolean.valueOf(System.getProperty(IGNITE_QUIET, "true"));
+            boolean quiet = Boolean.valueOf(System.getProperty(IGNITE_QUIET, "false"));
             boolean useConsoleAppender = Boolean.valueOf(System.getProperty(IGNITE_CONSOLE_APPENDER, "true"));
 
             if (useConsoleAppender) {

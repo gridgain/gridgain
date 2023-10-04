@@ -325,7 +325,7 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAndApplicationAwa
             // Init logger impl.
             impl = initLogClo.apply(true);
 
-            boolean quiet = Boolean.valueOf(System.getProperty(IGNITE_QUIET, "true"));
+            boolean quiet = Boolean.valueOf(System.getProperty(IGNITE_QUIET, "false"));
 
             boolean consoleAppenderFound = false;
             Logger rootLogger = null;
