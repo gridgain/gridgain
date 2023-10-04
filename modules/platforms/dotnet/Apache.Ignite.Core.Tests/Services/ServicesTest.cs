@@ -1020,6 +1020,22 @@ namespace Apache.Ignite.Core.Tests.Services
         /// </summary>
         private void DoTestService(IJavaService svc)
         {
+            Assert.IsTrue(TestUtils.WaitForCondition(() =>
+            {
+                try
+                {
+                    return svc.isInitialized();
+                }
+                catch (Exception ex)
+                {
+                    // Wait for the service deployment.
+                    if (ex.ToString().Contains("Failed to find deployed service"))
+                        return false;
+
+                    throw;
+                }
+            }, 1000));
+
             // Basics
             Assert.IsTrue(svc.isInitialized());
             Assert.IsTrue(TestUtils.WaitForCondition(() => svc.isExecuted(), 500));

@@ -348,7 +348,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     private static final long PERIODIC_COLLECTION_PDS_ALLOCATION_SIZE_DELAY = 60_000L;
 
     /** @see IgniteSystemProperties#IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED */
-    public static final boolean DFLT_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED = false;
+    public static final boolean DFLT_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED = true;
 
     /** @see IgniteSystemProperties#IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP */
     public static final boolean DFLT_LOG_CLASSPATH_CONTENT_ON_STARTUP = true;
