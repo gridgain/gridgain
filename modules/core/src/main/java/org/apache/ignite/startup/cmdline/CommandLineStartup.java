@@ -221,8 +221,8 @@ public final class CommandLineStartup {
                 "    " + runner + (ignite ? " [?]|[path {-v}{-q}{-np}]|[-i]" : " [?]|[-v][-q]"),
                 "    Where:",
                 "    ?, /help, -help, - show this message.",
-                "    -v               - verbose mode.",
-                "    -q               - quiet mode (default mode).",
+                "    -v               - verbose mode (default mode).",
+                "    -q               - quiet mode.",
                 "    -np              - no pause on exit (pause by default)",
                 "    " + PRINT_PROPS_COMMAND + "     - prints Ignite system properties info.");
 
