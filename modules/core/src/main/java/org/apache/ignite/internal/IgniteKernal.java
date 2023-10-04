@@ -244,7 +244,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_STARVATION_CHECK_I
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SUCCESS_FILE;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.snapshot;
-import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_DATA_REG_DEFAULT_NAME;
 import static org.apache.ignite.internal.GridKernalState.DISCONNECTED;
 import static org.apache.ignite.internal.GridKernalState.STARTED;
 import static org.apache.ignite.internal.GridKernalState.STARTING;
@@ -2296,13 +2295,16 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         }
     }
 
+    /** */
     private long allocatedPDSSize() {
         if (ctx.clientNode() || ctx.grid().cluster().state() == ClusterState.INACTIVE)
             return 0;
 
         DataStorageConfiguration dsCfg = ctx.config().getDataStorageConfiguration();
 
-        long res = ctx.grid().dataRegionMetrics(DFLT_DATA_REG_DEFAULT_NAME).getTotalAllocatedSize();
+        long res = ctx.grid()
+            .dataRegionMetrics(dsCfg.getDefaultDataRegionConfiguration().getName())
+            .getTotalAllocatedSize();
 
         DataRegionConfiguration[] dataRegions = dsCfg.getDataRegionConfigurations();
 
