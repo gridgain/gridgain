@@ -126,19 +126,19 @@ public final class CommandLineStartup {
 
         String quiteStr = System.getProperty(IgniteSystemProperties.IGNITE_QUIET);
 
-        boolean quite = true;
+        boolean quite = false;
 
         if (quiteStr != null) {
             quiteStr = quiteStr.trim();
 
             if (!quiteStr.isEmpty()) {
-                if ("false".equalsIgnoreCase(quiteStr))
-                    quite = false;
-                else if (!"true".equalsIgnoreCase(quiteStr)) {
+                if ("true".equalsIgnoreCase(quiteStr))
+                    quite = true;
+                else if (!"false".equalsIgnoreCase(quiteStr)) {
                     System.err.println("Invalid value for '" + IgniteSystemProperties.IGNITE_QUIET +
                         "' VM parameter (must be {true|false}): " + quiteStr);
 
-                    quite = false;
+                    quite = true;
                 }
             }
         }
@@ -218,10 +218,11 @@ public final class CommandLineStartup {
 
             X.error(
                 "Usage:",
-                "    " + runner + (ignite ? " [?]|[path {-v}{-np}]|[-i]" : " [?]|[-v]"),
+                "    " + runner + (ignite ? " [?]|[path {-v}{-q}{-np}]|[-i]" : " [?]|[-v][-q]"),
                 "    Where:",
                 "    ?, /help, -help, - show this message.",
-                "    -v               - verbose mode (quiet by default).",
+                "    -v               - verbose mode (default mode).",
+                "    -q               - quiet mode.",
                 "    -np              - no pause on exit (pause by default)",
                 "    " + PRINT_PROPS_COMMAND + "     - prints Ignite system properties info.");
 

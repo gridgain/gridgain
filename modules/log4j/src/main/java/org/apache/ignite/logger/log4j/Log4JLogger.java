@@ -386,7 +386,7 @@ public class Log4JLogger implements IgniteLogger, LoggerNodeIdAndApplicationAwar
                 // Init logger impl.
                 impl = implInitC.apply(true);
 
-            boolean quiet = Boolean.valueOf(System.getProperty(IGNITE_QUIET, "true"));
+            boolean quiet = Boolean.valueOf(System.getProperty(IGNITE_QUIET, "false"));
 
             boolean consoleAppenderFound = false;
             Category rootCategory = null;

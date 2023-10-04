@@ -296,7 +296,7 @@ public class GridTestLog4jLogger implements IgniteLogger, LoggerNodeIdAndApplica
                 // Init logger impl.
                 impl = implInitC.apply(true);
 
-            boolean quiet = Boolean.valueOf(System.getProperty(IGNITE_QUIET, "true"));
+            boolean quiet = Boolean.valueOf(System.getProperty(IGNITE_QUIET, "false"));
 
             boolean consoleAppenderFound = false;
             Category rootCategory = null;

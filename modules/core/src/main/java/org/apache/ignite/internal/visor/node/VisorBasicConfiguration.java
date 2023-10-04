@@ -188,7 +188,7 @@ public class VisorBasicConfiguration extends VisorDataTransferObject {
         noDiscoOrder = boolValue(IGNITE_NO_DISCO_ORDER, false);
         noShutdownHook = boolValue(IGNITE_NO_SHUTDOWN_HOOK, false);
         progName = getProperty(IGNITE_PROG_NAME);
-        quiet = boolValue(IGNITE_QUIET, true);
+        quiet = boolValue(IGNITE_QUIET, false);
         successFile = getProperty(IGNITE_SUCCESS_FILE);
         updateNtf = boolValue(IGNITE_UPDATE_NOTIFIER, DFLT_UPDATE_NOTIFIER);
         activeOnStart = c.isActiveOnStart();
