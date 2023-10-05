@@ -106,6 +106,7 @@ public class CacheGetInsideLockChangingTopologyTest extends GridCommonAbstractTe
         ccfg.setAtomicityMode(atomicityMode);
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setBackups(1);
+        ccfg.setReadFromBackup(true);
 
         return ccfg;
     }
