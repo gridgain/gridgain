@@ -166,8 +166,19 @@ public class TimeoutTest extends AbstractThinClientTest {
      * Test client timeout on operation.
      */
     @Test
-    @SuppressWarnings("ThrowableNotThrown")
     public void testClientTimeoutOnOperation() throws Exception {
+        testClientTimeoutOnOperation(false);
+    }
+
+    /**
+     * Test client timeout on async operation.
+     */
+    @Test
+    public void testClientTimeoutOnAsyncOperation() throws Exception {
+        testClientTimeoutOnOperation(true);
+    }
+
+    private void testClientTimeoutOnOperation(boolean async) throws Exception {
         try (Ignite ignite = startGrid(0)) {
             try (IgniteClient client = startClient(0)) {
                 ClientCache<Object, Object> cache = client.getOrCreateCache(new ClientCacheConfiguration()
@@ -199,7 +210,8 @@ public class TimeoutTest extends AbstractThinClientTest {
 
                 try (ClientTransaction tx = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
                     try {
-                        GridTestUtils.assertThrowsWithCause(() -> cache.put(0, 0), ClientException.class);
+                        Throwable ex = GridTestUtils.assertThrowsWithCause(() -> cache.put(0, 0), ClientException.class);
+                        assertEquals("x", ex.getMessage());
                     }
                     finally {
                         // To unlock another thread.

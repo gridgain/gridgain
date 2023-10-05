@@ -464,6 +464,7 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
             }
         }));
 
+        // TODO: orTimeout() is not supported in Java 8. Write tests, then refactor to a custom implementation.
         return fut.orTimeout(timeout, TimeUnit.MILLISECONDS);
     }
 
