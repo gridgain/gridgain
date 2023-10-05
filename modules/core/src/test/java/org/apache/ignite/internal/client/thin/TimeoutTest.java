@@ -47,6 +47,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import static org.apache.ignite.configuration.ClientConnectorConfiguration.DFLT_PORT;
+import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
@@ -222,7 +223,11 @@ public class TimeoutTest extends AbstractThinClientTest {
                                 cache.put(0, 0);
                             }
                         }, ClientException.class);
-                        assertEquals("x", ex.getMessage());
+
+                        assertContains(
+                                null,
+                                ex.getMessage(),
+                                async ? "TimeoutException" : "Timeout was reached");
                     }
                     finally {
                         // To unlock another thread.
