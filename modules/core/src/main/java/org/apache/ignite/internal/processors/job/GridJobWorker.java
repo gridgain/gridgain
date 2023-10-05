@@ -641,7 +641,7 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
                     if (X.hasCause(e, GridInternalException.class)) {
                         // Print exception for internal errors only if debug is enabled.
                         if (log.isDebugEnabled())
-                            U.error(log, "Failed to execute job [jobId=" + ses.getJobId() + ", ses=" + ses + ']', e);
+                            U.warn(log, "Failed to execute job [jobId=" + ses.getJobId() + ", ses=" + ses + ']', e);
                     }
                     else if (X.hasCause(e, InterruptedException.class)) {
                         String msg = "Job was cancelled [jobId=" + ses.getJobId() + ", ses=" + ses + ']';
@@ -654,7 +654,7 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
                     else if (X.hasCause(e, GridServiceNotFoundException.class) ||
                         X.hasCause(e, ClusterTopologyCheckedException.class))
                         // Should be throttled, because GridServiceProxy continuously retry getting service.
-                        LT.error(log, e, "Failed to execute job [jobId=" + ses.getJobId() + ", ses=" + ses + ']');
+                        LT.warn(log, "Failed to execute job [jobId=" + ses.getJobId() + ", ses=" + ses + ']', e);
                     else {
                         String logMessage = "Failed to execute job [jobId=" + ses.getJobId() + ", ses=" + ses + ']';
 
@@ -664,7 +664,7 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
                             if (log.isDebugEnabled())
                                 log.debug(logMessage + U.nl() + X.getFullStackTrace(e));
                         } else
-                            U.error(log, logMessage, e);
+                            U.warn(log, logMessage, e);
 
                         if (X.hasCause(e, OutOfMemoryError.class))
                             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
