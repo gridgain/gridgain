@@ -33,7 +33,8 @@ public class GridCommandHandlerPartitionReconciliationAtomicTest extends
             .setAffinity(new RendezvousAffinityFunction(false, 16))
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
             .setCacheMode(CacheMode.PARTITIONED)
-            .setBackups(3));
+            .setBackups(3)
+            .setReadFromBackup(true));
 
         try (IgniteDataStreamer streamer = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
             for (int i = 0; i < INVALID_KEY; i++)
