@@ -25,8 +25,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -169,9 +167,6 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     /** Send/receive timeout in milliseconds. */
     private final int timeout;
 
-    /** Heartbeat timer. */
-    private final Timer heartbeatTimer; // TODO: Remove, use scheduler
-
     /** Heartbeat and timeout scheduler. */
     private final ScheduledExecutorService scheduler =
             Executors.newScheduledThreadPool(
@@ -249,9 +244,9 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
 
         connDesc = new ConnectionDescription(sock.localAddress(), sock.remoteAddress(), protocolCtx.toString(), srvNodeId);
 
-        heartbeatTimer = protocolCtx.isFeatureSupported(HEARTBEAT) && cfg.getHeartbeatEnabled()
-                ? initHeartbeat(cfg.getHeartbeatInterval())
-                : null;
+        if (protocolCtx.isFeatureSupported(HEARTBEAT) && cfg.getHeartbeatEnabled()) {
+            initHeartbeat(cfg.getHeartbeatInterval());
+        }
     }
 
     /** {@inheritDoc} */
@@ -285,9 +280,6 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
                 eventListener.onConnectionClosed(connDesc0, cause);
 
             scheduler.shutdown();
-
-            if (heartbeatTimer != null)
-                heartbeatTimer.cancel();
 
             U.closeQuiet(sock);
 
@@ -929,16 +921,25 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
      * Initializes heartbeats.
      *
      * @param configuredInterval Configured heartbeat interval, in milliseconds.
-     * @return Heartbeat timer.
      */
-    private Timer initHeartbeat(long configuredInterval) {
+    private void initHeartbeat(long configuredInterval) {
         long heartbeatInterval = getHeartbeatInterval(configuredInterval);
 
-        Timer timer = new Timer("tcp-client-channel-heartbeats-" + hashCode());
-
-        timer.schedule(new HeartbeatTask(heartbeatInterval), heartbeatInterval, heartbeatInterval);
-
-        return timer;
+        scheduler.scheduleWithFixedDelay(
+                () -> {
+                    try {
+                        // Only send heartbeats when the channel is idle (no requests during the interval).
+                        if (System.currentTimeMillis() - lastSendMillis > heartbeatInterval) {
+                            service(ClientOperation.HEARTBEAT, null, null);
+                        }
+                    }
+                    catch (Throwable ignored) {
+                        // Ignore failed heartbeats.
+                    }
+                },
+                heartbeatInterval,
+                heartbeatInterval,
+                TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -993,30 +994,6 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
             this.requestId = requestId;
             operation = op;
             this.startTimeNanos = startTimeNanos;
-        }
-    }
-
-    /**
-     * Sends heartbeat messages.
-     */
-    private class HeartbeatTask extends TimerTask {
-        /** Heartbeat interval. */
-        private final long interval;
-
-        /** Constructor. */
-        public HeartbeatTask(long interval) {
-            this.interval = interval;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void run() {
-            try {
-                if (System.currentTimeMillis() - lastSendMillis > interval)
-                    service(ClientOperation.HEARTBEAT, null, null);
-            }
-            catch (Throwable ignored) {
-                // Ignore failed heartbeats.
-            }
         }
     }
 }
