@@ -23,6 +23,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
@@ -210,7 +211,17 @@ public class TimeoutTest extends AbstractThinClientTest {
 
                 try (ClientTransaction tx = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
                     try {
-                        Throwable ex = GridTestUtils.assertThrowsWithCause(() -> cache.put(0, 0), ClientException.class);
+                        Throwable ex = GridTestUtils.assertThrowsWithCause(() -> {
+                            if (async) {
+                                try {
+                                    cache.putAsync(0, 0).get();
+                                } catch (InterruptedException | ExecutionException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            } else {
+                                cache.put(0, 0);
+                            }
+                        }, ClientException.class);
                         assertEquals("x", ex.getMessage());
                     }
                     finally {
