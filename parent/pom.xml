@@ -771,10 +771,10 @@
                         <requireJavaVersion>
                             <!--Detected JDK Version: 1.8.0 is not in the allowed range [1.7,1.8),[1.8.0-40,).-->
                             <message>
-                                [INFO] ------------------------------------------------------------------------
-                                [ERROR] You are trying to compile Apache Ignite with inappropriate JDK version!
-                                [ERROR] Detected JDK Version: ${java.runtime.version}
-                                [ERROR] JDK version should be 1.7.0-* or >= 1.8.0-u40.
+[INFO] ------------------------------------------------------------------------
+[ERROR] You are trying to compile Apache Ignite with inappropriate JDK version!
+[ERROR] Detected JDK Version: ${java.runtime.version}
+[ERROR] JDK version should be 1.7.0-* or >= 1.8.0-u40.
                             </message>
                             <version>[1.7,1.8),[1.8.0-40,)</version>
                         </requireJavaVersion>
@@ -846,7 +846,7 @@
                 <configuration>
                     <format>html</format>
                     <rulesets>
-                        <ruleset>checkrules/pmd-ruleset.xml</ruleset>
+                            <ruleset>checkrules/pmd-ruleset.xml</ruleset>
                     </rulesets>
                     <aggregate>true</aggregate>
                 </configuration>

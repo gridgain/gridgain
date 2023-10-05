@@ -82,8 +82,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
     private boolean replicatedOnly;
 
     /**
-     * Lazy mode is default since GG 8.9.
-     * @deprecated Use {@link #setPageSize(int)} instead.
+     * Lazy mode is default since GG 8.9.1.
      */
     private boolean lazy = DFLT_LAZY;
 
@@ -375,7 +374,6 @@ public class SqlFieldsQuery extends Query<List<?>> {
      *
      * @param lazy Lazy query execution flag.
      * @return {@code this} For chaining.
-     * @deprecated Use {@link #setPageSize(int)} instead.
      */
     public SqlFieldsQuery setLazy(boolean lazy) {
         this.lazy = lazy;
@@ -389,7 +387,6 @@ public class SqlFieldsQuery extends Query<List<?>> {
      * See {@link #setLazy(boolean)} for more information.
      *
      * @return Lazy flag.
-     * @deprecated Use {@link #getPageSize()} instead.
      */
     public boolean isLazy() {
         return lazy;
