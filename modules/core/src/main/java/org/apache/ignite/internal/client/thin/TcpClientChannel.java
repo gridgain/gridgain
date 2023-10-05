@@ -33,8 +33,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -75,6 +79,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.logger.NullLogger;
+import org.apache.ignite.thread.IgniteThreadFactory;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.client.thin.ProtocolBitmaskFeature.HEARTBEAT;
@@ -165,7 +170,13 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     private final int timeout;
 
     /** Heartbeat timer. */
-    private final Timer heartbeatTimer;
+    private final Timer heartbeatTimer; // TODO: Remove, use scheduler
+
+    /** Heartbeat and timeout scheduler. */
+    private final ScheduledExecutorService scheduler =
+            Executors.newScheduledThreadPool(
+                    1,
+                    new IgniteThreadFactory("thin-client", "thin-client-maintenance"));
 
     /** Log. */
     private final IgniteLogger log;
@@ -272,6 +283,8 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
             ConnectionDescription connDesc0 = connDesc;
             if (connDesc0 != null)
                 eventListener.onConnectionClosed(connDesc0, cause);
+
+            scheduler.shutdown();
 
             if (heartbeatTimer != null)
                 heartbeatTimer.cancel();
@@ -441,6 +454,13 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
         ClientOperation op = pendingReq.operation;
         long startTimeNanos = pendingReq.startTimeNanos;
 
+        final ScheduledFuture<Boolean> timeoutFut = timeout <= 0
+                ? null
+                : scheduler.schedule(
+                    () -> fut.completeExceptionally(new TimeoutException("Operation timed out")),
+                    timeout,
+                    TimeUnit.MILLISECONDS);
+
         pendingReq.listen(payloadFut -> asyncContinuationExecutor.execute(() -> {
             try {
                 ByteBuffer payload = payloadFut.get();
@@ -451,6 +471,9 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
 
                 eventListener.onRequestSuccess(connDesc, requestId, op.code(), op.name(), System.nanoTime() - startTimeNanos);
 
+                if (timeoutFut != null) {
+                    timeoutFut.cancel(true);
+                }
                 fut.complete(res);
             }
             catch (Throwable t) {
@@ -460,12 +483,14 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
 
                 eventListener.onRequestFail(connDesc, requestId, op.code(), op.name(), System.nanoTime() - startTimeNanos, err);
 
+                if (timeoutFut != null) {
+                    timeoutFut.cancel(true);
+                }
                 fut.completeExceptionally(err);
             }
         }));
 
-        // TODO: orTimeout() is not supported in Java 8. Write tests, then refactor to a custom implementation.
-        return fut.orTimeout(timeout, TimeUnit.MILLISECONDS);
+        return fut;
     }
 
     /**
