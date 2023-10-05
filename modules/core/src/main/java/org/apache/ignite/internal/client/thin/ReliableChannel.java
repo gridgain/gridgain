@@ -977,12 +977,12 @@ final class ReliableChannel implements AutoCloseable {
             if (close)
                 throw new ClientConnectionException("Channel is closed");
 
-            if (ch == null) {
+            if (ch == null || ch.closed()) {
                 synchronized (this) {
                     if (close)
                         throw new ClientConnectionException("Channel is closed");
 
-                    if (ch != null)
+                    if (ch != null && !ch.closed())
                         return ch;
 
                     if (!ignoreThrottling && applyReconnectionThrottling())
