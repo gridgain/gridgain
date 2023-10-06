@@ -188,8 +188,8 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
         ColumnStatistics timeStats = getTypesStats().columnStatistics(colName);
 
         assertEquals(SMALL_SIZE - 1, timeStats.distinct());
-        assertEquals("12:00:01", timeStats.min().getTime().toString());
-        assertEquals("12:01:39", timeStats.max().getTime().toString());
+        assertEquals("12:00:01", timeStats.min().getTime(null).toString());
+        assertEquals("12:01:39", timeStats.max().getTime(null).toString());
         assertEquals(4, timeStats.size());
     }
 
@@ -202,8 +202,8 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
         ColumnStatistics dateStats = getTypesStats().columnStatistics(colName);
 
         assertEquals(SMALL_SIZE - 1, dateStats.distinct());
-        assertEquals("1970-01-02", dateStats.min().getDate().toString());
-        assertEquals("1970-04-10", dateStats.max().getDate().toString());
+        assertEquals("1970-01-02", dateStats.min().getDate(null).toString());
+        assertEquals("1970-04-10", dateStats.max().getDate(null).toString());
         assertEquals(4, dateStats.size());
     }
 
@@ -216,8 +216,8 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
         ColumnStatistics timestampStats = getTypesStats().columnStatistics(colName);
 
         assertEquals(SMALL_SIZE - 1, timestampStats.distinct());
-        assertEquals("1970-01-01 12:00:01.0", timestampStats.min().getTimestamp().toString());
-        assertEquals("1970-01-01 12:01:39.0", timestampStats.max().getTimestamp().toString());
+        assertEquals("1970-01-01 12:00:01.0", timestampStats.min().getTimestamp(null).toString());
+        assertEquals("1970-01-01 12:01:39.0", timestampStats.max().getTimestamp(null).toString());
         assertEquals(4, timestampStats.size());
     }
 

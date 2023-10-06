@@ -211,8 +211,9 @@ public final class DateTimeFunctions {
             if (!(v instanceof ValueTimestampTimeZone)) {
                 throw DbException.getUnsupportedException("DATEADD " + part);
             }
-            count += ((ValueTimestampTimeZone) v).getTimeZoneOffsetMins();
-            return ValueTimestampTimeZone.fromDateValueAndNanos(dateValue, timeNanos, (short) count);
+            count *= 60;
+            count += ((ValueTimestampTimeZone) v).getTimeZoneOffsetSeconds();
+            return ValueTimestampTimeZone.fromDateValueAndNanos(dateValue, timeNanos, (int) count);
         }
         default:
             throw DbException.getUnsupportedException("DATEADD " + part);
@@ -313,22 +314,22 @@ public final class DateTimeFunctions {
             return DateTimeUtils.yearFromDateValue(dateValue2) - DateTimeUtils.yearFromDateValue(dateValue1);
         case TIMEZONE_HOUR:
         case TIMEZONE_MINUTE: {
-            int offsetMinutes1;
+            int offsetSeconds1;
             if (v1 instanceof ValueTimestampTimeZone) {
-                offsetMinutes1 = ((ValueTimestampTimeZone) v1).getTimeZoneOffsetMins();
+                offsetSeconds1 = ((ValueTimestampTimeZone) v1).getTimeZoneOffsetSeconds();
             } else {
-                offsetMinutes1 = DateTimeUtils.getTimeZoneOffsetMillis(null, dateValue1, a1[1]);
+                offsetSeconds1 = DateTimeUtils.getTimeZoneOffset(dateValue1, a1[1]);
             }
-            int offsetMinutes2;
+            int offsetSeconds2;
             if (v2 instanceof ValueTimestampTimeZone) {
-                offsetMinutes2 = ((ValueTimestampTimeZone) v2).getTimeZoneOffsetMins();
+                offsetSeconds2 = ((ValueTimestampTimeZone) v2).getTimeZoneOffsetSeconds();
             } else {
-                offsetMinutes2 = DateTimeUtils.getTimeZoneOffsetMillis(null, dateValue2, a2[1]);
+                offsetSeconds2 = DateTimeUtils.getTimeZoneOffset(dateValue2, a2[1]);
             }
             if (field == TIMEZONE_HOUR) {
-                return (offsetMinutes2 / 60) - (offsetMinutes1 / 60);
+                return (offsetSeconds2 / 3_600) - (offsetSeconds1 / 3_600);
             } else {
-                return offsetMinutes2 - offsetMinutes1;
+                return (offsetSeconds2 / 60) - (offsetSeconds1 / 60);
             }
         }
         default:
@@ -396,16 +397,15 @@ public final class DateTimeFunctions {
                 result = ValueDecimal.get(numberOfDays.multiply(secondsPerDay));
 
             } else if (value instanceof ValueTimestampTimeZone) {
-
                 // Case where the value is a of type ValueTimestampTimeZone
                 // ('2000:01:01 10:00:00+05').
-                // We retrieve the time zone offset in minutes
+                // We retrieve the time zone offset in seconds
                 ValueTimestampTimeZone v = (ValueTimestampTimeZone) value;
-                BigDecimal timeZoneOffsetSeconds = new BigDecimal(v.getTimeZoneOffsetMins() * 60);
                 // Sum the time in nanoseconds and the total number of days in seconds
                 // and adding the timeZone offset in seconds.
                 result = ValueDecimal.get(timeNanosBigDecimal.divide(nanosSeconds)
-                        .add(numberOfDays.multiply(secondsPerDay)).subtract(timeZoneOffsetSeconds));
+                        .add(numberOfDays.multiply(secondsPerDay))
+                    .subtract(BigDecimal.valueOf(v.getTimeZoneOffsetSeconds())));
 
             } else {
 
@@ -559,7 +559,7 @@ public final class DateTimeFunctions {
             // Case we create a timestamp with timezone with the dateValue and
             // timeNanos computed.
             ValueTimestampTimeZone vTmp = (ValueTimestampTimeZone) valueDate;
-            result = ValueTimestampTimeZone.fromDateValueAndNanos(dateValue, timeNanos, vTmp.getTimeZoneOffsetMins());
+            result = ValueTimestampTimeZone.fromDateValueAndNanos(dateValue, timeNanos, vTmp.getTimeZoneOffsetSeconds());
 
         } else {
 
@@ -714,7 +714,7 @@ public final class DateTimeFunctions {
                 return dow;
             }
             case WEEK:
-                GregorianCalendar gc = DateTimeUtils.getCalendar();
+                GregorianCalendar gc = DateTimeUtils.createGregorianCalendar();
                 return DateTimeUtils.getWeekOfYear(dateValue, gc.getFirstDayOfWeek() - 1,
                         gc.getMinimalDaysInFirstWeek());
             case QUARTER:
@@ -727,16 +727,16 @@ public final class DateTimeFunctions {
                 return DateTimeUtils.getIsoDayOfWeek(dateValue);
             case TIMEZONE_HOUR:
             case TIMEZONE_MINUTE: {
-                int offsetMinutes;
+                int offsetSeconds;
                 if (date instanceof ValueTimestampTimeZone) {
-                    offsetMinutes = ((ValueTimestampTimeZone) date).getTimeZoneOffsetMins();
+                    offsetSeconds = ((ValueTimestampTimeZone) date).getTimeZoneOffsetSeconds();
                 } else {
-                    offsetMinutes = DateTimeUtils.getTimeZoneOffsetMillis(null, dateValue, timeNanos);
+                    offsetSeconds = DateTimeUtils.getTimeZoneOffset(dateValue, timeNanos);
                 }
                 if (field == TIMEZONE_HOUR) {
-                    return offsetMinutes / 60;
+                    return offsetSeconds / 3_600;
                 }
-                return offsetMinutes % 60;
+                return offsetSeconds % 3_600 / 60;
             }
             }
         }

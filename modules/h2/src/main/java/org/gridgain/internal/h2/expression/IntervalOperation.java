@@ -5,22 +5,12 @@
  */
 package org.gridgain.internal.h2.expression;
 
-import static org.gridgain.internal.h2.util.DateTimeUtils.NANOS_PER_DAY;
-import static org.gridgain.internal.h2.util.DateTimeUtils.NANOS_PER_HOUR;
-import static org.gridgain.internal.h2.util.DateTimeUtils.NANOS_PER_MINUTE;
-import static org.gridgain.internal.h2.util.DateTimeUtils.absoluteDayFromDateValue;
-import static org.gridgain.internal.h2.util.DateTimeUtils.dateAndTimeFromValue;
-import static org.gridgain.internal.h2.util.DateTimeUtils.dateTimeToValue;
-import static org.gridgain.internal.h2.util.DateTimeUtils.dateValueFromAbsoluteDay;
-import static org.gridgain.internal.h2.util.IntervalUtils.NANOS_PER_DAY_BI;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
-
-import org.gridgain.internal.h2.expression.function.DateTimeFunctions;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.api.IntervalQualifier;
 import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.expression.function.DateTimeFunctions;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.table.ColumnResolver;
 import org.gridgain.internal.h2.table.TableFilter;
@@ -33,6 +23,15 @@ import org.gridgain.internal.h2.value.ValueInterval;
 import org.gridgain.internal.h2.value.ValueNull;
 import org.gridgain.internal.h2.value.ValueTime;
 import org.gridgain.internal.h2.value.ValueTimestampTimeZone;
+
+import static org.gridgain.internal.h2.util.DateTimeUtils.NANOS_PER_DAY;
+import static org.gridgain.internal.h2.util.DateTimeUtils.NANOS_PER_HOUR;
+import static org.gridgain.internal.h2.util.DateTimeUtils.NANOS_PER_SECOND;
+import static org.gridgain.internal.h2.util.DateTimeUtils.absoluteDayFromDateValue;
+import static org.gridgain.internal.h2.util.DateTimeUtils.dateAndTimeFromValue;
+import static org.gridgain.internal.h2.util.DateTimeUtils.dateTimeToValue;
+import static org.gridgain.internal.h2.util.DateTimeUtils.dateValueFromAbsoluteDay;
+import static org.gridgain.internal.h2.util.IntervalUtils.NANOS_PER_DAY_BI;
 
 /**
  * A mathematical operation with intervals.
@@ -188,8 +187,8 @@ public class IntervalOperation extends Expression {
                 if (lType == Value.TIMESTAMP_TZ || rType == Value.TIMESTAMP_TZ) {
                     l = l.convertTo(Value.TIMESTAMP_TZ);
                     r = r.convertTo(Value.TIMESTAMP_TZ);
-                    diff = diff.add(BigInteger.valueOf((((ValueTimestampTimeZone) r).getTimeZoneOffsetMins()
-                            - ((ValueTimestampTimeZone) l).getTimeZoneOffsetMins()) * NANOS_PER_MINUTE));
+                    diff = diff.add(BigInteger.valueOf((((ValueTimestampTimeZone) r).getTimeZoneOffsetSeconds()
+                        - ((ValueTimestampTimeZone) l).getTimeZoneOffsetSeconds()) * NANOS_PER_SECOND));
                 }
                 return IntervalUtils.intervalFromAbsolute(IntervalQualifier.DAY_TO_SECOND, diff);
             }

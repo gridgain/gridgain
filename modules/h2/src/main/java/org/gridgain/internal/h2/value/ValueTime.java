@@ -8,9 +8,12 @@ package org.gridgain.internal.h2.value;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Time;
+import java.sql.Types;
+import java.util.TimeZone;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.util.DateTimeUtils;
+import org.gridgain.internal.h2.util.LocalDateTimeUtils;
 
 /**
  * Implementation of the TIME data type.
@@ -70,12 +73,14 @@ public class ValueTime extends Value {
     /**
      * Get or create a time value for the given time.
      *
+     * @param timeZone time zone, or {@code null} for default
      * @param time the time
      * @return the value
      */
-    public static ValueTime get(Time time) {
+    public static ValueTime get(TimeZone timeZone, Time time) {
         long ms = time.getTime();
-        return fromNanos(DateTimeUtils.nanosFromLocalMillis(ms + DateTimeUtils.getTimeZoneOffset(ms)));
+        return fromNanos(DateTimeUtils.nanosFromLocalMillis(
+            ms + (timeZone == null ? DateTimeUtils.getTimeZoneOffsetMillis(ms) : timeZone.getOffset(ms))));
     }
 
     /**
@@ -86,7 +91,7 @@ public class ValueTime extends Value {
      * @return the value
      */
     public static ValueTime fromMillis(long ms) {
-        return fromNanos(DateTimeUtils.nanosFromLocalMillis(ms + DateTimeUtils.getTimeZoneOffset(ms)));
+        return fromNanos(DateTimeUtils.nanosFromLocalMillis(ms + DateTimeUtils.getTimeZoneOffsetMillis(ms)));
     }
 
     /**
@@ -112,10 +117,9 @@ public class ValueTime extends Value {
     }
 
     @Override
-    public Time getTime() {
-        return DateTimeUtils.convertNanoToTime(nanos);
+    public Time getTime(TimeZone timeZone) {
+        return new Time(DateTimeUtils.getMillis(timeZone, DateTimeUtils.EPOCH_DATE_VALUE, nanos));
     }
-
     @Override
     public TypeInfo getType() {
         return TypeInfo.TYPE_TIME;
@@ -185,13 +189,20 @@ public class ValueTime extends Value {
 
     @Override
     public Object getObject() {
-        return getTime();
+        return getTime(null);
     }
 
     @Override
-    public void set(PreparedStatement prep, int parameterIndex)
-            throws SQLException {
-        prep.setTime(parameterIndex, getTime());
+    public void set(PreparedStatement prep, int parameterIndex) throws SQLException {
+        if (LocalDateTimeUtils.isJava8DateApiPresent()) {
+            try {
+                prep.setObject(parameterIndex, LocalDateTimeUtils.valueToLocalTime(this), Types.TIME);
+                return;
+            } catch (SQLException ignore) {
+                // Nothing to do
+            }
+        }
+        prep.setTime(parameterIndex, getTime(null));
     }
 
     @Override

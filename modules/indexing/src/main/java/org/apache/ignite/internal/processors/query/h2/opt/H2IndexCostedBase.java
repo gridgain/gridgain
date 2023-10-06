@@ -1107,13 +1107,13 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     return new BigDecimal(value.getFloat());
 
                 case Value.DATE:
-                    return new BigDecimal(value.getDate().getTime());
+                    return new BigDecimal(value.getDate(null).getTime());
 
                 case Value.TIME:
-                    return new BigDecimal(value.getTime().getTime());
+                    return new BigDecimal(value.getTime(null).getTime());
 
                 case Value.TIMESTAMP:
-                    return new BigDecimal(value.getTimestamp().getTime());
+                    return new BigDecimal(value.getTimestamp(null).getTime());
 
                 case Value.BYTES:
                     BigInteger bigInteger = new BigInteger(1, value.getBytes());

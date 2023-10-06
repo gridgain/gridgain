@@ -67,6 +67,7 @@ public class GridH2ValueMessageFactory implements MessageFactoryProvider {
         factory.register((short)-55, GridH2DmlRequest::new);
         factory.register((short)-56, GridH2DmlResponse::new);
         factory.register((short)-57, GridH2SelectForUpdateTxDetails::new);
+        factory.register((short)-58, GridH2TimestampLocalTimezone::new);
 
         // Statistics related messages.
         factory.register(StatisticsKeyMessage.TYPE_CODE, StatisticsKeyMessage::new);
@@ -158,6 +159,9 @@ public class GridH2ValueMessageFactory implements MessageFactoryProvider {
 
             case Value.TIMESTAMP:
                 return new GridH2Timestamp(v);
+
+            case Value.TIMESTAMP_TZ:
+                return new GridH2TimestampLocalTimezone(v);
 
             case Value.BYTES:
                 return new GridH2Bytes(v);

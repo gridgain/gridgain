@@ -82,7 +82,10 @@ public enum H2DatabaseType {
     GEOMETRY("GEOMETRY"),
 
     /** */
-    OTHER("OTHER");
+    OTHER("OTHER"),
+
+    /** */
+    TIMESTAMP_TZ("TIMESTAMP WITH TIME ZONE");
 
     /** Map of Class to enum. */
     private static final Map<Class<?>, H2DatabaseType> map = new HashMap<>();
@@ -148,6 +151,8 @@ public enum H2DatabaseType {
             return TIME;
         else if (LocalDateTimeUtils.LOCAL_DATE_TIME == cls)
             return TIMESTAMP;
+        else if (LocalDateTimeUtils.INSTANT == cls)
+            return TIMESTAMP_TZ;
 
         return cls.isArray() && !cls.getComponentType().isPrimitive() ? ARRAY : OTHER;
     }

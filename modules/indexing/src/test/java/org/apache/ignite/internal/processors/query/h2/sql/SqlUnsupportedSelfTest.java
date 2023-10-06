@@ -57,15 +57,11 @@ public class SqlUnsupportedSelfTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testUnsupportedTypes() {
-        assertSqlUnsupported("CREATE TABLE test (id integer PRIMARY KEY, val TIMESTAMP WITH TIME ZONE)");
         assertSqlUnsupported("CREATE TABLE test (id integer PRIMARY KEY, val ENUM ('A', 'B', 'C'))");
 
         execSql("CREATE TABLE test (id integer PRIMARY KEY, val TIMESTAMP)");
 
-        assertSqlUnsupported("SELECT CAST (val as TIMESTAMP WITH TIME ZONE) FROM test ");
-
-        // H2 bug. Fixed at H2 version 1.4.198
-        // assertSqlUnsupported("SELECT CAST (id AS ENUM('A', 'B')) FROM test ");
+        assertSqlUnsupported("SELECT CAST (id AS ENUM('A', 'B')) FROM test ");
     }
 
 

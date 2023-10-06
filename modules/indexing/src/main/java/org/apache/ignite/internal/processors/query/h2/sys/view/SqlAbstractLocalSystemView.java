@@ -148,7 +148,7 @@ public abstract class SqlAbstractLocalSystemView extends SqlAbstractSystemView {
         if (millis <= 0L || millis == Long.MAX_VALUE)
             return ValueNull.INSTANCE;
         else
-            return ValueTimestamp.fromMillis(millis);
+            return ValueTimestamp.fromMillis(millis, 0);
     }
 
     /**

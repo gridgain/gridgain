@@ -463,11 +463,13 @@ public final class DmlAstUtils {
         if (dt.decimal)
             dfltVal = ValueInt.get(0).convertTo(type);
         else if (dt.type == Value.TIMESTAMP)
-            dfltVal = ValueTimestamp.fromMillis(U.currentTimeMillis());
+            dfltVal = ValueTimestamp.fromMillis(U.currentTimeMillis(), 0);
         else if (dt.type == Value.TIME)
             dfltVal = ValueTime.fromNanos(0);
         else if (dt.type == Value.DATE)
             dfltVal = ValueDate.fromMillis(U.currentTimeMillis());
+        else if (dt.type == Value.TIMESTAMP_TZ)
+            dfltVal = ValueTimestamp.fromMillis(U.currentTimeMillis(), 0);
         else
             dfltVal = ValueString.get("").convertTo(type);
 

@@ -29,14 +29,20 @@ public class TimestampWithTimeZone implements Serializable, Cloneable {
      */
     private final long timeNanos;
     /**
-     * Time zone offset from UTC in minutes, range of -12hours to +12hours
+     * Time zone offset from UTC in seconds, range of -18 hours to +18 hours. This
+     * range is compatible with OffsetDateTime from JSR-310.
      */
-    private final short timeZoneOffsetMins;
+    private final int timeZoneOffsetSeconds;
 
+    @Deprecated
     public TimestampWithTimeZone(long dateValue, long timeNanos, short timeZoneOffsetMins) {
+        this(dateValue, timeNanos, timeZoneOffsetMins * 60);
+    }
+
+    public TimestampWithTimeZone(long dateValue, long timeNanos, int timeZoneOffsetSeconds) {
         this.dateValue = dateValue;
         this.timeNanos = timeNanos;
-        this.timeZoneOffsetMins = timeZoneOffsetMins;
+        this.timeZoneOffsetSeconds = timeZoneOffsetSeconds;
     }
 
     /**
@@ -99,19 +105,24 @@ public class TimestampWithTimeZone implements Serializable, Cloneable {
         return timeNanos;
     }
 
+    @Deprecated
+    public short getTimeZoneOffsetMins() {
+        return (short) (timeZoneOffsetSeconds / 60);
+    }
+
     /**
-     * The time zone offset in minutes.
+     * The time zone offset in seconds.
      *
      * @return the offset
      */
-    public short getTimeZoneOffsetMins() {
-        return timeZoneOffsetMins;
+    public int getTimeZoneOffsetSeconds() {
+        return timeZoneOffsetSeconds;
     }
 
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder(ValueTimestampTimeZone.MAXIMUM_PRECISION);
-        DateTimeUtils.appendTimestampTimeZone(builder, dateValue, timeNanos, timeZoneOffsetMins);
+        DateTimeUtils.appendTimestampTimeZone(builder, dateValue, timeNanos, timeZoneOffsetSeconds);
         return builder.toString();
     }
 
@@ -121,7 +132,7 @@ public class TimestampWithTimeZone implements Serializable, Cloneable {
         int result = 1;
         result = prime * result + (int) (dateValue ^ (dateValue >>> 32));
         result = prime * result + (int) (timeNanos ^ (timeNanos >>> 32));
-        result = prime * result + timeZoneOffsetMins;
+        result = prime * result + timeZoneOffsetSeconds;
         return result;
     }
 
@@ -143,7 +154,7 @@ public class TimestampWithTimeZone implements Serializable, Cloneable {
         if (timeNanos != other.timeNanos) {
             return false;
         }
-        if (timeZoneOffsetMins != other.timeZoneOffsetMins) {
+        if (timeZoneOffsetSeconds != other.timeZoneOffsetSeconds) {
             return false;
         }
         return true;

@@ -10,9 +10,9 @@ package org.gridgain.internal.h2.util;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
-import java.sql.Timestamp;
 import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
+import org.gridgain.internal.h2.api.ErrorCode;
+import org.gridgain.internal.h2.api.IntervalQualifier;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.value.DataType;
 import org.gridgain.internal.h2.value.Value;
@@ -21,8 +21,6 @@ import org.gridgain.internal.h2.value.ValueInterval;
 import org.gridgain.internal.h2.value.ValueTime;
 import org.gridgain.internal.h2.value.ValueTimestamp;
 import org.gridgain.internal.h2.value.ValueTimestampTimeZone;
-import org.gridgain.internal.h2.api.ErrorCode;
-import org.gridgain.internal.h2.api.IntervalQualifier;
 
 /**
  * This utility class contains time conversion functions for Java 8
@@ -36,13 +34,19 @@ import org.gridgain.internal.h2.api.IntervalQualifier;
  * Direct conversion is simpler, faster, and it does not inherit limitations
  * and issues from java.sql classes and conversion methods provided by JDK.</p>
  *
- * <p>The only one exclusion is a conversion between {@link Timestamp} and
- * Instant.</p>
- *
  * <p>Once the driver requires Java 8 and Android API 26 all the reflection
  * can be removed.</p>
  */
 public class LocalDateTimeUtils {
+    private static final long MIN_DATE_VALUE =
+        (-999_999_999L << DateTimeUtils.SHIFT_YEAR) + (1 << DateTimeUtils.SHIFT_MONTH) + 1;
+
+    private static final long MAX_DATE_VALUE =
+        (999_999_999L << DateTimeUtils.SHIFT_YEAR) + (12 << DateTimeUtils.SHIFT_MONTH) + 31;
+
+    private static final long MIN_INSTANT_SECOND = -31_557_014_167_219_200L;
+
+    private static final long MAX_INSTANT_SECOND = 31_556_889_864_403_199L;
 
     /**
      * {@code Class<java.time.LocalDate>} or {@code null}.
@@ -64,6 +68,16 @@ public class LocalDateTimeUtils {
      * {@code Class<java.time.OffsetDateTime>} or {@code null}.
      */
     public static final Class<?> OFFSET_DATE_TIME;
+
+    /**
+     * {@code Class<java.time.ZonedDateTime>} or {@code null}.
+     */
+    public static final Class<?> ZONED_DATE_TIME;
+
+    /**
+     * {@code Class<java.time.ZoneId>} or {@code null}.
+     */
+    private static final Class<?> ZONE_ID;
 
     /**
      * {@code Class<java.time.ZoneOffset>} or {@code null}.
@@ -120,9 +134,9 @@ public class LocalDateTimeUtils {
      */
     private static final Method INSTANT_GET_NANO;
     /**
-     * {@code java.sql.Timestamp.toInstant()} or {@code null}.
+     * {@code java.time.Instant#ofEpochSecond(long, long)} or {@code null}.
      */
-    private static final Method TIMESTAMP_TO_INSTANT;
+    private static final Method INSTANT_OF_EPOCH_SECOND;
 
     /**
      * {@code java.time.LocalDateTime#plusNanos(long)} or {@code null}.
@@ -155,6 +169,20 @@ public class LocalDateTimeUtils {
      * {@code java.time.OffsetDateTime#getOffset()} or {@code null}.
      */
     private static final Method OFFSET_DATE_TIME_GET_OFFSET;
+
+    /**
+     * {@code java.time.ZonedDateTime#of(LocalDateTime, ZoneId)} or
+     * {@code null}.
+     */
+    private static final Method ZONED_DATE_TIME_OF_LOCAL_DATE_TIME_ZONE_ID;
+    /**
+     * {@code java.time.ZonedDateTime#toLocalDateTime()} or {@code null}.
+     */
+    private static final Method ZONED_DATE_TIME_TO_LOCAL_DATE_TIME;
+    /**
+     * {@code java.time.ZonedDateTime#getOffset()} or {@code null}.
+     */
+    private static final Method ZONED_DATE_TIME_GET_OFFSET;
 
     /**
      * {@code java.time.ZoneOffset#getTotalSeconds()} or {@code null}.
@@ -204,12 +232,15 @@ public class LocalDateTimeUtils {
         LOCAL_DATE_TIME = tryGetClass("java.time.LocalDateTime");
         INSTANT = tryGetClass("java.time.Instant");
         OFFSET_DATE_TIME = tryGetClass("java.time.OffsetDateTime");
+        ZONED_DATE_TIME = tryGetClass("java.time.ZonedDateTime");
+        ZONE_ID = tryGetClass("java.time.ZoneId");
         ZONE_OFFSET = tryGetClass("java.time.ZoneOffset");
         PERIOD = tryGetClass("java.time.Period");
         DURATION = tryGetClass("java.time.Duration");
         IS_JAVA8_DATE_API_PRESENT = LOCAL_DATE != null && LOCAL_TIME != null &&
                 LOCAL_DATE_TIME != null && INSTANT != null &&
-                OFFSET_DATE_TIME != null && ZONE_OFFSET != null && PERIOD != null && DURATION != null;
+                OFFSET_DATE_TIME != null && ZONED_DATE_TIME != null &&
+                ZONE_ID != null && ZONE_OFFSET != null && PERIOD != null && DURATION != null;
 
         if (IS_JAVA8_DATE_API_PRESENT) {
             LOCAL_TIME_OF_NANO = getMethod(LOCAL_TIME, "ofNanoOfDay", long.class);
@@ -225,7 +256,7 @@ public class LocalDateTimeUtils {
 
             INSTANT_GET_EPOCH_SECOND = getMethod(INSTANT, "getEpochSecond");
             INSTANT_GET_NANO = getMethod(INSTANT, "getNano");
-            TIMESTAMP_TO_INSTANT = getMethod(Timestamp.class, "toInstant");
+            INSTANT_OF_EPOCH_SECOND = getMethod(INSTANT, "ofEpochSecond", long.class, long.class);
 
             LOCAL_DATE_TIME_PLUS_NANOS = getMethod(LOCAL_DATE_TIME, "plusNanos", long.class);
             LOCAL_DATE_TIME_TO_LOCAL_DATE = getMethod(LOCAL_DATE_TIME, "toLocalDate");
@@ -233,10 +264,14 @@ public class LocalDateTimeUtils {
 
             ZONE_OFFSET_OF_TOTAL_SECONDS = getMethod(ZONE_OFFSET, "ofTotalSeconds", int.class);
 
+            OFFSET_DATE_TIME_OF_LOCAL_DATE_TIME_ZONE_OFFSET = getMethod(
+                OFFSET_DATE_TIME, "of", LOCAL_DATE_TIME, ZONE_OFFSET);
             OFFSET_DATE_TIME_TO_LOCAL_DATE_TIME = getMethod(OFFSET_DATE_TIME, "toLocalDateTime");
             OFFSET_DATE_TIME_GET_OFFSET = getMethod(OFFSET_DATE_TIME, "getOffset");
-            OFFSET_DATE_TIME_OF_LOCAL_DATE_TIME_ZONE_OFFSET = getMethod(
-                    OFFSET_DATE_TIME, "of", LOCAL_DATE_TIME, ZONE_OFFSET);
+
+            ZONED_DATE_TIME_OF_LOCAL_DATE_TIME_ZONE_ID = getMethod(ZONED_DATE_TIME, "of", LOCAL_DATE_TIME, ZONE_ID);
+            ZONED_DATE_TIME_TO_LOCAL_DATE_TIME = getMethod(ZONED_DATE_TIME, "toLocalDateTime");
+            ZONED_DATE_TIME_GET_OFFSET = getMethod(ZONED_DATE_TIME, "getOffset");
 
             ZONE_OFFSET_GET_TOTAL_SECONDS = getMethod(ZONE_OFFSET, "getTotalSeconds");
 
@@ -258,14 +293,17 @@ public class LocalDateTimeUtils {
             LOCAL_DATE_AT_START_OF_DAY = null;
             INSTANT_GET_EPOCH_SECOND = null;
             INSTANT_GET_NANO = null;
-            TIMESTAMP_TO_INSTANT = null;
+            INSTANT_OF_EPOCH_SECOND = null;
             LOCAL_DATE_TIME_PLUS_NANOS = null;
             LOCAL_DATE_TIME_TO_LOCAL_DATE = null;
             LOCAL_DATE_TIME_TO_LOCAL_TIME = null;
             ZONE_OFFSET_OF_TOTAL_SECONDS = null;
+            OFFSET_DATE_TIME_OF_LOCAL_DATE_TIME_ZONE_OFFSET = null;
             OFFSET_DATE_TIME_TO_LOCAL_DATE_TIME = null;
             OFFSET_DATE_TIME_GET_OFFSET = null;
-            OFFSET_DATE_TIME_OF_LOCAL_DATE_TIME_ZONE_OFFSET = null;
+            ZONED_DATE_TIME_OF_LOCAL_DATE_TIME_ZONE_ID = null;
+            ZONED_DATE_TIME_TO_LOCAL_DATE_TIME = null;
+            ZONED_DATE_TIME_GET_OFFSET = null;
             ZONE_OFFSET_GET_TOTAL_SECONDS = null;
             PERIOD_OF = null;
             PERIOD_GET_YEARS = null;
@@ -321,8 +359,14 @@ public class LocalDateTimeUtils {
      * @return the LocalDate
      */
     public static Object valueToLocalDate(Value value) {
+        long dateValue = ((ValueDate) value.convertTo(Value.DATE)).getDateValue();
+        if (dateValue > MAX_DATE_VALUE) {
+            dateValue = MAX_DATE_VALUE;
+        } else if (dateValue < MIN_DATE_VALUE) {
+            dateValue = MIN_DATE_VALUE;
+        }
         try {
-            return localDateFromDateValue(((ValueDate) value.convertTo(Value.DATE)).getDateValue());
+            return localDateFromDateValue(dateValue);
         } catch (IllegalAccessException e) {
             throw DbException.convert(e);
         } catch (InvocationTargetException e) {
@@ -379,8 +423,22 @@ public class LocalDateTimeUtils {
      * @return the Instant
      */
     public static Object valueToInstant(Value value) {
+        ValueTimestampTimeZone valueTimestampTimeZone = (ValueTimestampTimeZone) value.convertTo(Value.TIMESTAMP_TZ);
+        long timeNanos = valueTimestampTimeZone.getTimeNanos();
+        long epochSecond = DateTimeUtils.absoluteDayFromDateValue( //
+            valueTimestampTimeZone.getDateValue()) * DateTimeUtils.SECONDS_PER_DAY //
+            + timeNanos / DateTimeUtils.NANOS_PER_SECOND //
+            - valueTimestampTimeZone.getTimeZoneOffsetSeconds();
+        timeNanos %= DateTimeUtils.NANOS_PER_SECOND;
+        if (epochSecond > MAX_INSTANT_SECOND) {
+            epochSecond = MAX_INSTANT_SECOND;
+            timeNanos = DateTimeUtils.NANOS_PER_SECOND - 1;
+        } else if (epochSecond < MIN_INSTANT_SECOND) {
+            epochSecond = MIN_INSTANT_SECOND;
+            timeNanos = 0;
+        }
         try {
-            return TIMESTAMP_TO_INSTANT.invoke(value.getTimestamp());
+            return INSTANT_OF_EPOCH_SECOND.invoke(null, epochSecond, timeNanos);
         } catch (IllegalAccessException e) {
             throw DbException.convert(e);
         } catch (InvocationTargetException e) {
@@ -397,19 +455,35 @@ public class LocalDateTimeUtils {
      * @return the OffsetDateTime
      */
     public static Object valueToOffsetDateTime(Value value) {
+        return valueToOffsetDateTime(value, false);
+    }
+
+    /**
+     * Converts a value to a ZonedDateTime.
+     *
+     * <p>This method should only called from Java 8 or later.</p>
+     *
+     * @param value the value to convert
+     * @return the ZonedDateTime
+     */
+    public static Object valueToZonedDateTime(Value value) {
+        return valueToOffsetDateTime(value, true);
+    }
+
+    private static Object valueToOffsetDateTime(Value value, boolean zoned) {
         ValueTimestampTimeZone valueTimestampTimeZone = (ValueTimestampTimeZone) value.convertTo(Value.TIMESTAMP_TZ);
         long dateValue = valueTimestampTimeZone.getDateValue();
         long timeNanos = valueTimestampTimeZone.getTimeNanos();
         try {
             Object localDateTime = localDateTimeFromDateNanos(dateValue, timeNanos);
 
-            short timeZoneOffsetMins = valueTimestampTimeZone.getTimeZoneOffsetMins();
-            int offsetSeconds = (int) TimeUnit.MINUTES.toSeconds(timeZoneOffsetMins);
+            int timeZoneOffsetSeconds = valueTimestampTimeZone.getTimeZoneOffsetSeconds();
 
-            Object offset = ZONE_OFFSET_OF_TOTAL_SECONDS.invoke(null, offsetSeconds);
+            Object offset = ZONE_OFFSET_OF_TOTAL_SECONDS.invoke(null, timeZoneOffsetSeconds);
 
-            return OFFSET_DATE_TIME_OF_LOCAL_DATE_TIME_ZONE_OFFSET.invoke(null,
-                    localDateTime, offset);
+            return (zoned ? ZONED_DATE_TIME_OF_LOCAL_DATE_TIME_ZONE_ID
+                : OFFSET_DATE_TIME_OF_LOCAL_DATE_TIME_ZONE_OFFSET)
+                .invoke(null, localDateTime, offset);
         } catch (IllegalAccessException e) {
             throw DbException.convert(e);
         } catch (InvocationTargetException e) {
@@ -542,7 +616,7 @@ public class LocalDateTimeUtils {
             }
             long timeNanos = (epochSecond - absoluteDay * 86_400) * 1_000_000_000 + nano;
             return ValueTimestampTimeZone.fromDateValueAndNanos(
-                    DateTimeUtils.dateValueFromAbsoluteDay(absoluteDay), timeNanos, (short) 0);
+                    DateTimeUtils.dateValueFromAbsoluteDay(absoluteDay), timeNanos, 0);
         } catch (IllegalAccessException e) {
             throw DbException.convert(e);
         } catch (InvocationTargetException e) {
@@ -557,23 +631,39 @@ public class LocalDateTimeUtils {
      * @return the value
      */
     public static ValueTimestampTimeZone offsetDateTimeToValue(Object offsetDateTime) {
-        try {
-            Object localDateTime = OFFSET_DATE_TIME_TO_LOCAL_DATE_TIME.invoke(offsetDateTime);
-            Object localDate = LOCAL_DATE_TIME_TO_LOCAL_DATE.invoke(localDateTime);
-            Object zoneOffset = OFFSET_DATE_TIME_GET_OFFSET.invoke(offsetDateTime);
+        return offsetDateTimeToValue(offsetDateTime, false);
+    }
 
-            long dateValue = dateValueFromLocalDate(localDate);
+    /**
+     * Converts a ZonedDateTime to a Value.
+     *
+     * @param zonedDateTime the ZonedDateTime to convert, not {@code null}
+     * @return the value
+     */
+    public static ValueTimestampTimeZone zonedDateTimeToValue(Object zonedDateTime) {
+        return offsetDateTimeToValue(zonedDateTime, true);
+    }
+
+    public static ValueTimestampTimeZone offsetDateTimeToValue(Object dateTime, boolean zoned) {
+        try {
+            Object localDateTime, zoneOffset;
+            if (zoned) {
+                localDateTime = ZONED_DATE_TIME_TO_LOCAL_DATE_TIME.invoke(dateTime);
+                zoneOffset = ZONED_DATE_TIME_GET_OFFSET.invoke(dateTime);
+            } else {
+                localDateTime = OFFSET_DATE_TIME_TO_LOCAL_DATE_TIME.invoke(dateTime);
+                zoneOffset = OFFSET_DATE_TIME_GET_OFFSET.invoke(dateTime);
+            }
+            long dateValue = dateValueFromLocalDate(LOCAL_DATE_TIME_TO_LOCAL_DATE.invoke(localDateTime));
             long timeNanos = timeNanosFromLocalDateTime(localDateTime);
-            short timeZoneOffsetMins = zoneOffsetToOffsetMinute(zoneOffset);
-            return ValueTimestampTimeZone.fromDateValueAndNanos(dateValue,
-                    timeNanos, timeZoneOffsetMins);
+            int timeZoneOffsetSeconds = zoneOffsetToOffsetSeconds(zoneOffset);
+            return ValueTimestampTimeZone.fromDateValueAndNanos(dateValue, timeNanos, timeZoneOffsetSeconds);
         } catch (IllegalAccessException e) {
             throw DbException.convert(e);
         } catch (InvocationTargetException e) {
-            throw DbException.convertInvocation(e, "time conversion failed");
+            throw DbException.convertInvocation(e, "datetime conversion failed");
         }
     }
-
     private static long dateValueFromLocalDate(Object localDate)
                     throws IllegalAccessException, InvocationTargetException {
         int year = (Integer) LOCAL_DATE_GET_YEAR.invoke(localDate);
@@ -588,31 +678,29 @@ public class LocalDateTimeUtils {
         return (Long) LOCAL_TIME_TO_NANO.invoke(localTime);
     }
 
-    private static short zoneOffsetToOffsetMinute(Object zoneOffset)
-                    throws IllegalAccessException, InvocationTargetException {
+    private static int zoneOffsetToOffsetSeconds(Object zoneOffset)
+        throws IllegalAccessException, InvocationTargetException {
         int totalSeconds = (Integer) ZONE_OFFSET_GET_TOTAL_SECONDS.invoke(zoneOffset);
-        return (short) TimeUnit.SECONDS.toMinutes(totalSeconds);
+        return totalSeconds;
     }
 
     private static Object localDateFromDateValue(long dateValue)
                     throws IllegalAccessException, InvocationTargetException {
-
         int year = DateTimeUtils.yearFromDateValue(dateValue);
         int month = DateTimeUtils.monthFromDateValue(dateValue);
         int day = DateTimeUtils.dayFromDateValue(dateValue);
-        try {
-            return LOCAL_DATE_OF_YEAR_MONTH_DAY.invoke(null, year, month, day);
-        } catch (InvocationTargetException e) {
-            if (year <= 1500 && (year & 3) == 0 && month == 2 && day == 29) {
-                // If proleptic Gregorian doesn't have such date use the next day
-                return LOCAL_DATE_OF_YEAR_MONTH_DAY.invoke(null, year, 3, 1);
-            }
-            throw e;
-        }
+        return LOCAL_DATE_OF_YEAR_MONTH_DAY.invoke(null, year, month, day);
     }
 
     private static Object localDateTimeFromDateNanos(long dateValue, long timeNanos)
                     throws IllegalAccessException, InvocationTargetException {
+        if (dateValue > MAX_DATE_VALUE) {
+            dateValue = MAX_DATE_VALUE;
+            timeNanos = DateTimeUtils.NANOS_PER_DAY - 1;
+        } else if (dateValue < MIN_DATE_VALUE) {
+            dateValue = MIN_DATE_VALUE;
+            timeNanos = 0;
+        }
         Object localDate = localDateFromDateValue(dateValue);
         Object localDateTime = LOCAL_DATE_AT_START_OF_DAY.invoke(localDate);
         return LOCAL_DATE_TIME_PLUS_NANOS.invoke(localDateTime, timeNanos);

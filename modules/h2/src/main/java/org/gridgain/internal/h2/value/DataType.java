@@ -24,20 +24,19 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
-
-import org.gridgain.internal.h2.engine.Mode;
-import org.gridgain.internal.h2.engine.SessionInterface;
-import org.gridgain.internal.h2.engine.SysProperties;
-import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.api.Interval;
 import org.gridgain.internal.h2.api.IntervalQualifier;
 import org.gridgain.internal.h2.api.TimestampWithTimeZone;
+import org.gridgain.internal.h2.engine.Mode;
+import org.gridgain.internal.h2.engine.SessionInterface;
+import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.jdbc.JdbcArray;
 import org.gridgain.internal.h2.jdbc.JdbcBlob;
 import org.gridgain.internal.h2.jdbc.JdbcClob;
 import org.gridgain.internal.h2.jdbc.JdbcConnection;
 import org.gridgain.internal.h2.jdbc.JdbcLob;
+import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.util.JdbcUtils;
 import org.gridgain.internal.h2.util.LocalDateTimeUtils;
 import org.gridgain.internal.h2.util.Utils;
@@ -268,8 +267,8 @@ public class DataType {
         // Types.TIMESTAMP_WITH_TIMEZONE once Java 1.8 is required.
         add(Value.TIMESTAMP_TZ, 2014,
                 createDate(ValueTimestampTimeZone.MAXIMUM_PRECISION, ValueTimestampTimeZone.DEFAULT_PRECISION,
-                        "TIMESTAMP_TZ", true, ValueTimestampTimeZone.DEFAULT_SCALE,
-                        ValueTimestampTimeZone.MAXIMUM_SCALE),
+                        "TIMESTAMP_TZ", true, ValueTimestamp.DEFAULT_SCALE,
+                    ValueTimestamp.MAXIMUM_SCALE),
                 new String[]{"TIMESTAMP WITH TIME ZONE"}
         );
         add(Value.BYTES, Types.VARBINARY,
@@ -572,33 +571,68 @@ public class DataType {
                 break;
             }
             case Value.DATE: {
+                if (LocalDateTimeUtils.isJava8DateApiPresent()) {
+                    try {
+                        Object value = rs.getObject(columnIndex, LocalDateTimeUtils.LOCAL_DATE);
+                        v = value == null ? ValueNull.INSTANCE : LocalDateTimeUtils.localDateToDateValue(value);
+                        break;
+                    } catch (SQLException ignore) {
+                        // Nothing to do
+                    }
+                }
                 Date value = rs.getDate(columnIndex);
-                v = value == null ? (Value) ValueNull.INSTANCE :
-                    ValueDate.get(value);
+                v = value == null ? ValueNull.INSTANCE : ValueDate.get(null, value);
                 break;
             }
             case Value.TIME: {
+                if (LocalDateTimeUtils.isJava8DateApiPresent()) {
+                    try {
+                        Object value = rs.getObject(columnIndex, LocalDateTimeUtils.LOCAL_TIME);
+                        v = value == null ? ValueNull.INSTANCE : LocalDateTimeUtils.localTimeToTimeValue(value);
+                        break;
+                    } catch (SQLException ignore) {
+                        // Nothing to do
+                    }
+                }
                 Time value = rs.getTime(columnIndex);
-                v = value == null ? (Value) ValueNull.INSTANCE :
-                    ValueTime.get(value);
+                v = value == null ? ValueNull.INSTANCE : ValueTime.get(null, value);
                 break;
             }
             case Value.TIMESTAMP: {
+                if (LocalDateTimeUtils.isJava8DateApiPresent()) {
+                    try {
+                        Object value = rs.getObject(columnIndex, LocalDateTimeUtils.LOCAL_DATE_TIME);
+                        v = value == null ? ValueNull.INSTANCE : LocalDateTimeUtils.localDateTimeToValue(value);
+                        break;
+                    } catch (SQLException ignore) {
+                        // Nothing to do
+                    }
+                }
                 Timestamp value = rs.getTimestamp(columnIndex);
-                v = value == null ? (Value) ValueNull.INSTANCE :
-                    ValueTimestamp.get(value);
+                v = value == null ? ValueNull.INSTANCE : ValueTimestamp.get(null, value);
                 break;
             }
             case Value.TIMESTAMP_TZ: {
+                if (LocalDateTimeUtils.isJava8DateApiPresent()) {
+                    try {
+                        Object value = rs.getObject(columnIndex, LocalDateTimeUtils.OFFSET_DATE_TIME);
+                        v = value == null ? ValueNull.INSTANCE : LocalDateTimeUtils.offsetDateTimeToValue(value);
+                        break;
+                    } catch (SQLException ignore) {
+                        // Nothing to do
+                    }
+                }
                 Object obj = rs.getObject(columnIndex);
                 if (obj == null) {
                     v = ValueNull.INSTANCE;
                 } else if (LocalDateTimeUtils.isJava8DateApiPresent()
                         && LocalDateTimeUtils.OFFSET_DATE_TIME.isInstance(obj)) {
                     v = LocalDateTimeUtils.offsetDateTimeToValue(obj);
+                } else if (LocalDateTimeUtils.isJava8DateApiPresent()
+                    && LocalDateTimeUtils.ZONED_DATE_TIME.isInstance(obj)) {
+                    v = LocalDateTimeUtils.zonedDateTimeToValue(obj);
                 } else {
-                    TimestampWithTimeZone value = (TimestampWithTimeZone) obj;
-                    v = ValueTimestampTimeZone.get(value);
+                    v = ValueTimestampTimeZone.get((TimestampWithTimeZone)obj);
                 }
                 break;
             }
@@ -834,7 +868,7 @@ public class DataType {
                 return LocalDateTimeUtils.OFFSET_DATE_TIME.getName();
             }
             // "org.gridgain.internal.h2.api.TimestampWithTimeZone";
-            return TimestampWithTimeZone.class.getName();
+            return LocalDateTimeUtils.INSTANT.getName();
         case Value.BYTES:
         case Value.UUID:
             // "[B", not "byte[]";
@@ -1170,13 +1204,13 @@ public class DataType {
         } else if (x instanceof byte[]) {
             return ValueBytes.get((byte[]) x);
         } else if (x instanceof Date) {
-            return ValueDate.get((Date) x);
+            return ValueDate.get(null, (Date) x);
         } else if (x instanceof Time) {
-            return ValueTime.get((Time) x);
+            return ValueTime.get(null, (Time) x);
         } else if (x instanceof Timestamp) {
-            return ValueTimestamp.get((Timestamp) x);
+            return ValueTimestamp.get(null, (Timestamp) x);
         } else if (x instanceof java.util.Date) {
-            return ValueTimestamp.fromMillis(((java.util.Date) x).getTime());
+            return ValueTimestamp.fromMillis(((java.util.Date) x).getTime(), 0);
         } else if (x instanceof java.io.Reader) {
             Reader r = new BufferedReader((java.io.Reader) x);
             return session.getDataHandler().getLobStorage().
@@ -1247,6 +1281,8 @@ public class DataType {
             return LocalDateTimeUtils.instantToValue(x);
         } else if (clazz == LocalDateTimeUtils.OFFSET_DATE_TIME) {
             return LocalDateTimeUtils.offsetDateTimeToValue(x);
+        } else if (clazz == LocalDateTimeUtils.ZONED_DATE_TIME) {
+            return LocalDateTimeUtils.zonedDateTimeToValue(x);
         } else if (x instanceof TimestampWithTimeZone) {
             return ValueTimestampTimeZone.get((TimestampWithTimeZone) x);
         } else if (x instanceof Interval) {
