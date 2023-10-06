@@ -446,6 +446,7 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
         ClientOperation op = pendingReq.operation;
         long startTimeNanos = pendingReq.startTimeNanos;
 
+        // Can't use orTimeout() - requires Java 9.
         final ScheduledFuture<Boolean> timeoutFut = timeout <= 0
                 ? null
                 : scheduler.schedule(
