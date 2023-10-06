@@ -25,15 +25,18 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -74,6 +77,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.logger.NullLogger;
+import org.apache.ignite.thread.IgniteThreadFactory;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.client.thin.ProtocolBitmaskFeature.HEARTBEAT;
@@ -163,8 +167,11 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     /** Send/receive timeout in milliseconds. */
     private final int timeout;
 
-    /** Heartbeat timer. */
-    private final Timer heartbeatTimer;
+    /** Heartbeat and timeout scheduler. */
+    private final ScheduledExecutorService scheduler =
+            Executors.newScheduledThreadPool(
+                    1,
+                    new IgniteThreadFactory("thin-client", "thin-client-maintenance"));
 
     /** Log. */
     private final IgniteLogger log;
@@ -237,9 +244,9 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
 
         connDesc = new ConnectionDescription(sock.localAddress(), sock.remoteAddress(), protocolCtx.toString(), srvNodeId);
 
-        heartbeatTimer = protocolCtx.isFeatureSupported(HEARTBEAT) && cfg.getHeartbeatEnabled()
-                ? initHeartbeat(cfg.getHeartbeatInterval())
-                : null;
+        if (protocolCtx.isFeatureSupported(HEARTBEAT) && cfg.getHeartbeatEnabled()) {
+            initHeartbeat(cfg.getHeartbeatInterval());
+        }
     }
 
     /** {@inheritDoc} */
@@ -272,8 +279,7 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
             if (connDesc0 != null)
                 eventListener.onConnectionClosed(connDesc0, cause);
 
-            if (heartbeatTimer != null)
-                heartbeatTimer.cancel();
+            scheduler.shutdown();
 
             U.closeQuiet(sock);
 
@@ -440,6 +446,14 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
         ClientOperation op = pendingReq.operation;
         long startTimeNanos = pendingReq.startTimeNanos;
 
+        // Can't use orTimeout() - requires Java 9.
+        final ScheduledFuture<Boolean> timeoutFut = timeout <= 0
+                ? null
+                : scheduler.schedule(
+                    () -> fut.completeExceptionally(new TimeoutException("Operation timed out")),
+                    timeout,
+                    TimeUnit.MILLISECONDS);
+
         pendingReq.listen(payloadFut -> asyncContinuationExecutor.execute(() -> {
             try {
                 ByteBuffer payload = payloadFut.get();
@@ -450,6 +464,9 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
 
                 eventListener.onRequestSuccess(connDesc, requestId, op.code(), op.name(), System.nanoTime() - startTimeNanos);
 
+                if (timeoutFut != null) {
+                    timeoutFut.cancel(true);
+                }
                 fut.complete(res);
             }
             catch (Throwable t) {
@@ -459,6 +476,9 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
 
                 eventListener.onRequestFail(connDesc, requestId, op.code(), op.name(), System.nanoTime() - startTimeNanos, err);
 
+                if (timeoutFut != null) {
+                    timeoutFut.cancel(true);
+                }
                 fut.completeExceptionally(err);
             }
         }));
@@ -902,16 +922,25 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
      * Initializes heartbeats.
      *
      * @param configuredInterval Configured heartbeat interval, in milliseconds.
-     * @return Heartbeat timer.
      */
-    private Timer initHeartbeat(long configuredInterval) {
+    private void initHeartbeat(long configuredInterval) {
         long heartbeatInterval = getHeartbeatInterval(configuredInterval);
 
-        Timer timer = new Timer("tcp-client-channel-heartbeats-" + hashCode());
-
-        timer.schedule(new HeartbeatTask(heartbeatInterval), heartbeatInterval, heartbeatInterval);
-
-        return timer;
+        scheduler.scheduleWithFixedDelay(
+                () -> {
+                    try {
+                        // Only send heartbeats when the channel is idle (no requests during the interval).
+                        if (System.currentTimeMillis() - lastSendMillis > heartbeatInterval) {
+                            service(ClientOperation.HEARTBEAT, null, null);
+                        }
+                    }
+                    catch (Throwable ignored) {
+                        // Ignore failed heartbeats.
+                    }
+                },
+                heartbeatInterval,
+                heartbeatInterval,
+                TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -966,30 +995,6 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
             this.requestId = requestId;
             operation = op;
             this.startTimeNanos = startTimeNanos;
-        }
-    }
-
-    /**
-     * Sends heartbeat messages.
-     */
-    private class HeartbeatTask extends TimerTask {
-        /** Heartbeat interval. */
-        private final long interval;
-
-        /** Constructor. */
-        public HeartbeatTask(long interval) {
-            this.interval = interval;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void run() {
-            try {
-                if (System.currentTimeMillis() - lastSendMillis > interval)
-                    service(ClientOperation.HEARTBEAT, null, null);
-            }
-            catch (Throwable ignored) {
-                // Ignore failed heartbeats.
-            }
         }
     }
 }
