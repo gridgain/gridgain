@@ -459,6 +459,8 @@ public class HibernateL2CacheSelfTest extends GridCommonAbstractTest {
 
         cfg.setStatisticsEnabled(true);
 
+        cfg.setReadFromBackup(true);
+
         //cfg.setAffinity(new RendezvousAffinityFunction(false, 10));
 
         return cfg;
@@ -482,6 +484,8 @@ public class HibernateL2CacheSelfTest extends GridCommonAbstractTest {
         cfg.setBackups(1);
 
         cfg.setStatisticsEnabled(true);
+
+        cfg.setReadFromBackup(true);
 
         cfg.setAffinity(new RendezvousAffinityFunction(false, 10));
 
