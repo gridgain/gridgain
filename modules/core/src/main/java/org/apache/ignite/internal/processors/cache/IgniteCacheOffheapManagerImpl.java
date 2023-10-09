@@ -1928,10 +1928,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                         incrementSize(cctx.cacheId());
                     }
 
-                    if (isIncrementalDrEnabled(cctx)) {
-                        if (oldRow.version().updateCounter() != 0)
-                            removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                    if (oldRow.version().updateCounter() != 0)
+                        removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
 
+                    if (isIncrementalDrEnabled(cctx)) {
                         if (newRow.version().updateCounter() != 0)
                             addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
                     }
@@ -2867,10 +2867,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 clearPendingEntries(cctx, oldRow);
             }
 
-            if (isIncrementalDrEnabled(cctx)) {
-                if (oldRow != null && oldRow.version().updateCounter() != 0)
-                    removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+            if (oldRow != null && oldRow.version().updateCounter() != 0)
+                removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
 
+            if (isIncrementalDrEnabled(cctx)) {
                 // Ignore entry initial value.
                 if (newRow.version().updateCounter() != 0 && replicationRequire(newRow.version()))
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
@@ -3073,13 +3073,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0 &&
                     replicationRequire(tombstoneRow.version()))
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
+            }
 
-                if (oldRow != null && oldRow.version().updateCounter() != 0) {
-                    if (oldTombstone && tombstoneRow == null)
-                        cctx.dr().onTombstoneCleaned(partId, oldRow.version().updateCounter());
+            if (oldRow != null && oldRow.version().updateCounter() != 0) {
+                if (isIncrementalDrEnabled(cctx) && oldTombstone && tombstoneRow == null)
+                    cctx.dr().onTombstoneCleaned(partId, oldRow.version().updateCounter());
 
-                    removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
-                }
+                removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
             }
 
             if (oldRow != null && (tombstoneRow == null || tombstoneRow.link() != oldRow.link()))
@@ -3460,7 +3460,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private void removeFromLog(UpdateLogRow row) throws IgniteCheckedException {
             assert row.updateCounter() > 0;
 
-            logTree.remove(row);
+            logTree.removex(row);
         }
 
         /**

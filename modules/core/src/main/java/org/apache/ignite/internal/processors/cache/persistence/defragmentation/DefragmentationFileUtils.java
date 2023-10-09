@@ -48,13 +48,13 @@ public class DefragmentationFileUtils {
     /** Link mapping file template. */
     private static final String DFRG_LINK_MAPPING_FILE_TEMPLATE = DFRG_LINK_MAPPING_FILE_PREFIX + "%d" + FILE_SUFFIX;
 
-    /** Defragmentation complation marker file name. */
+    /** Defragmentation completion marker file name. */
     private static final String DFRG_COMPLETION_MARKER_FILE_NAME = "dfrg-completion-marker";
 
-    /** Name of defragmentated index partition file. */
+    /** Name of defragmented index partition file. */
     private static final String DFRG_INDEX_FILE_NAME = INDEX_FILE_PREFIX + "-dfrg" + FILE_SUFFIX;
 
-    /** Name of defragmentated index partition temporary file. */
+    /** Name of defragmented index partition temporary file. */
     private static final String DFRG_INDEX_TMP_FILE_NAME = DFRG_INDEX_FILE_NAME + TMP_SUFFIX;
 
     /** Prefix for defragmented partition files. */

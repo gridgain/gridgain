@@ -588,7 +588,11 @@ public class CachePartitionDefragmentationManager {
         };
 
         GridFutureAdapter<?> cpFut = defragmentationCheckpoint
-            .forceCheckpoint("partition defragmented", null)
+            .forceCheckpoint(S.toString(
+                "partition defragmented",
+                "grpId", grpId, false,
+                "partId", partId, false
+            ), null)
             .futureFor(FINISHED);
 
         cpFut.listen(cpLsnr);
@@ -878,10 +882,25 @@ public class CachePartitionDefragmentationManager {
         PartitionLogTree oldLogTree = partCtx.oldCacheDataStore.logTree();
         PartitionLogTree newLogTree = partCtx.newCacheDataStore.logTree();
 
+        AtomicBoolean warningPrinted = new AtomicBoolean();
+
         treeIter.iterate(oldLogTree, partCtx.cachePageMemory, (tree, io, pageAddr, idx) -> {
             UpdateLogRow oldRow = tree.getRow(io, pageAddr, idx);
 
             long newLink = partCtx.linkMap.get(oldRow.link());
+
+            if (newLink == 0L) {
+                if (warningPrinted.compareAndSet(false, true)) {
+                    log.warning(S.toString(
+                        "Broken link found in partition log tree. Some entries will be skipped." +
+                            " Please consider rebuilding partition log tree.",
+                        "grpId", partCtx.grpId, false,
+                        "partId", partCtx.partId, false
+                    ));
+                }
+
+                return true;
+            }
 
             UpdateLogRow newRow = new UpdateLogRow(oldRow.cacheId(), oldRow.updateCounter(), newLink);
 
