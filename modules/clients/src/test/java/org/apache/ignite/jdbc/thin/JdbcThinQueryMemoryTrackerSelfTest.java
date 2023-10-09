@@ -34,6 +34,7 @@ import org.junit.Test;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Query memory manager for local queries.
@@ -77,7 +78,9 @@ public class JdbcThinQueryMemoryTrackerSelfTest extends JdbcQueryMemoryTrackerSe
             }
         }
 
-        assertEquals(localResults.size(), closedResultCntr.get());
+        // A wait is required because the query cancel request handler runs asynchronously.
+        boolean success = waitForCondition(() -> localResults.size() == closedResultCntr.get(), getTestTimeout());
+        assertTrue(success);
 
         Throwable err = localResultErr.get();
 
