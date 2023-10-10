@@ -79,7 +79,7 @@ public class JdbcThinQueryMemoryTrackerSelfTest extends JdbcQueryMemoryTrackerSe
         }
 
         // A wait is required because the query cancel request handler runs asynchronously.
-        boolean success = waitForCondition(() -> localResults.size() == closedResultCntr.get(), getTestTimeout());
+        boolean success = waitForCondition(() -> localResults.size() == closedResultCntr.get(), 10_000);
         assertTrue(success);
 
         Throwable err = localResultErr.get();
