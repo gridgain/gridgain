@@ -639,6 +639,12 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         /** {@inheritDoc} */
         @Override public void run() {
+            if (!state.compareAndSet(null, Boolean.TRUE)) {
+                assert finishFut.isDone() : "Finish future must be completed [fut=" + finishFut + ", state=" + state + ']';
+
+                return;
+            }
+
             if (grpEvictionCtx.grp.cacheObjectContext().kernalContext().isStopping()) {
                 finishFut.onDone(new NodeStoppingException("Node is stopping"));
 
@@ -710,9 +716,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
          * @return {@code True} if the task was submitted for execution.
          */
         public boolean start() {
-            if (!state.compareAndSet(null, Boolean.TRUE))
-                return false;
-
             try {
                 executor.submit(this);
             }
