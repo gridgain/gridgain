@@ -145,7 +145,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
     private static final int REMAP_SEMAPHORE_PERMISSIONS_COUNT = Integer.MAX_VALUE;
 
     /** Cache receiver. */
-    private StreamReceiver<K, V> rcvr = ISOLATED_UPDATER;
+    private StreamReceiver<K, V> rcvr = DataStreamerCacheUpdaters.<K, V>individual();
 
     /** */
     private byte[] updaterBytes;
