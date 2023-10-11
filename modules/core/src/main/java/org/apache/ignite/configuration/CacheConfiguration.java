@@ -427,15 +427,17 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      */
     private EntryCompressionConfiguration entryCompressionCfg;
 
-    /** Empty constructor (all values are initialized to their defaults). */
+    /** Constructor (all values are initialized to their defaults). */
     public CacheConfiguration() {
-        /* No-op. */
+        super.setStatisticsEnabled(true);
     }
 
     /**
      * @param name Cache name.
      */
     public CacheConfiguration(String name) {
+        super.setStatisticsEnabled(true);
+
         this.name = name;
     }
 
