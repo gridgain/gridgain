@@ -345,7 +345,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             Assert.AreEqual(TransactionState.Active, tx.State);
             Assert.IsTrue(tx.StartTime.Ticks > 0);
             Assert.AreEqual(tx.NodeId, GetIgnite(0).GetCluster().GetLocalNode().Id);
-            Assert.AreEqual(Transactions.DefaultTimeoutOnPartitionMapExchange, TimeSpan.Zero);
+            Assert.AreEqual(Transactions.DefaultTimeoutOnPartitionMapExchange, TimeSpan.FromMilliseconds(60000));
 
             DateTime startTime1 = tx.StartTime;
 
