@@ -429,14 +429,14 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
 
     /** Constructor (all values are initialized to their defaults). */
     public CacheConfiguration() {
-        super.setStatisticsEnabled(true);
+        this.isStatisticsEnabled = true;
     }
 
     /**
      * @param name Cache name.
      */
     public CacheConfiguration(String name) {
-        super.setStatisticsEnabled(true);
+        this.isStatisticsEnabled = true;
 
         this.name = name;
     }
@@ -526,6 +526,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
         sqlOnheapCache = cc.isSqlOnheapCacheEnabled();
         sqlOnheapCacheMaxSize = cc.getSqlOnheapCacheMaxSize();
         evtsDisabled = cc.isEventsDisabled();
+        isStatisticsEnabled = cc.isStatisticsEnabled();
     }
 
     /**
