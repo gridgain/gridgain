@@ -109,8 +109,8 @@ public class MultipleStatementsSqlQuerySelfTest extends AbstractIndexingCommonTe
                 "  PRIMARY KEY (ID)\n" +
                 ");" +
                 "" +
-                "INSERT INTO City(ID, Name, CountryCode, District, Population, TimeS) VALUES (1,'Kabul','AFG','Kabol',1780000,CURRENT_TIMESTAMP());\n" +
-                "INSERT INTO City(ID, Name, CountryCode, District, Population, TimeS) VALUES (2,'Qandahar','AFG','Qandahar',237500,CURRENT_TIMESTAMP());\n" +
+                "INSERT INTO City(ID, Name, CountryCode, District, Population, TimeS) VALUES (1,'Kabul','AFG','Kabol',1780000, CURRENT_TIMESTAMP());\n" +
+                "INSERT INTO City(ID, Name, CountryCode, District, Population, TimeS) VALUES (2,'Qandahar','AFG','Qandahar',237500, CURRENT_TIMESTAMP());\n" +
                 "SELECT * FROM City;" +
                 "SELECT * FROM City;" +
                 "INSERT INTO City(ID, Name, CountryCode, District, Population, TimeS) VALUES (3,'Herat','AFG','Herat',186800,null);" +

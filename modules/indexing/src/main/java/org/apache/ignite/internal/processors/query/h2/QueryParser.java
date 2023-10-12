@@ -211,7 +211,7 @@ public class QueryParser {
      * @return Parsing result that contains Parsed leading query and remaining sql script.
      */
     private QueryParserResult parse0(String schemaName, SqlFieldsQuery qry, boolean remainingAllowed) {
-        QueryDescriptor qryDesc = queryDescriptor(schemaName, qry);
+        QueryDescriptor qryDesc = queryDescriptor(schemaName, qry, remainingAllowed);
 
         QueryParserCacheEntry cached = cache.get(qryDesc);
 
@@ -296,7 +296,7 @@ public class QueryParser {
 
             SqlFieldsQuery newQry = cloneFieldsQuery(qry).setSql(parser.lastCommandSql());
 
-            QueryDescriptor newPlanKey = queryDescriptor(schemaName, newQry);
+            QueryDescriptor newPlanKey = queryDescriptor(schemaName, newQry, remainingAllowed);
 
             SqlFieldsQuery remainingQry = null;
 
@@ -413,7 +413,7 @@ public class QueryParser {
 
                 newQry.setArgs(args);
 
-                QueryDescriptor newQryDesc = queryDescriptor(schemaName, newQry);
+                QueryDescriptor newQryDesc = queryDescriptor(schemaName, newQry, remainingAllowed);
 
                 if (remainingQry != null)
                     remainingQry.setArgs(remainingArgs);
@@ -798,9 +798,10 @@ public class QueryParser {
      *
      * @param schemaName Schema name.
      * @param qry Query.
+     * @param remainingAllowed Multistatement query.
      * @return Plan key.
      */
-    private static QueryDescriptor queryDescriptor(String schemaName, SqlFieldsQuery qry) {
+    private static QueryDescriptor queryDescriptor(String schemaName, SqlFieldsQuery qry, boolean remainingAllowed) {
         boolean batched = false;
 
         if (qry instanceof SqlFieldsQueryEx) {
@@ -818,7 +819,8 @@ public class QueryParser {
             qry.isLocal(),
             !qry.isLocal() && qry.isSkipReducerOnUpdate(),
             batched,
-            qry.getQueryInitiatorId()
+            qry.getQueryInitiatorId(),
+            remainingAllowed
         );
     }
 }
