@@ -1117,6 +1117,7 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
         ccfg.setNodeFilter(cfg.getNodeFilter());
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setRebalanceMode(SYNC);
+        ccfg.setStatisticsEnabled(false);
 
         return ccfg;
     }
