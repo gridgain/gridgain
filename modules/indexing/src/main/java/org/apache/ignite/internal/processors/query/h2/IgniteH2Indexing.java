@@ -1298,7 +1298,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             GridNearTxLocal tx = ctx.cache().context().tm().tx();
 
             if (tx != null && tx.mvccSnapshot() != null &&
-                (!(e instanceof IgniteSQLException) || /* Parsing errors should not roll back Tx. */
+                (!(e instanceof IgniteSQLException) || /* Parsing errors should not rollback Tx. */
                     ((IgniteSQLException)e).sqlState() != SqlStateCode.PARSING_EXCEPTION)
             )
                 tx.setRollbackOnly();
