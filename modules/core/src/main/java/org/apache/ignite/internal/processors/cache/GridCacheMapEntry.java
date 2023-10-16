@@ -1723,10 +1723,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (metrics && cctx.statisticsEnabled()) {
                 cctx.cache().metrics0().onRemove();
 
-                T2<GridCacheOperation, CacheObject> entryProcRes = tx.entry(txKey()).entryProcessorCalculatedValue();
+                if (tx != null) {
+                    T2<GridCacheOperation, CacheObject> entryProcRes = tx.entry(txKey()).entryProcessorCalculatedValue();
 
-                if (entryProcRes != null && DELETE.equals(entryProcRes.get1()))
-                    cctx.cache().metrics0().onInvokeRemove(old != null);
+                    if (entryProcRes != null && DELETE.equals(entryProcRes.get1()))
+                        cctx.cache().metrics0().onInvokeRemove(old != null);
+                }
             }
 
             if (tx == null)
