@@ -74,6 +74,7 @@ public class GridCachePartitionedGetSelfTest extends GridCommonAbstractTest {
         cc.setRebalanceMode(SYNC);
         cc.setWriteSynchronizationMode(FULL_SYNC);
         cc.setNearConfiguration(null);
+        cc.setReadFromBackup(true);
 
         return cc;
     }

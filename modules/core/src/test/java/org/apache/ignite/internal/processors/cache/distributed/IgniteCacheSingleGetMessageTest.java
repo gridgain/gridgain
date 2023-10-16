@@ -320,6 +320,7 @@ public class IgniteCacheSingleGetMessageTest extends GridCommonAbstractTest {
         ccfg.setCacheMode(cacheMode);
         ccfg.setAtomicityMode(atomicityMode);
         ccfg.setWriteSynchronizationMode(syncMode);
+        ccfg.setReadFromBackup(true);
 
         if (cacheMode == PARTITIONED)
             ccfg.setBackups(backups);
