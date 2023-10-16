@@ -47,9 +47,6 @@ public class QueryDescriptor {
     /** Query initiator identifier. */
     private final String qryInitiatorId;
 
-    /** Identify miltistatement case. */
-    private final boolean remainingAllowed;
-
     /**
      * @param schemaName Schema name.
      * @param sql Sql.
@@ -59,7 +56,6 @@ public class QueryDescriptor {
      * @param loc Query is local flag.
      * @param skipReducerOnUpdate Skip reducer on update flag.
      * @param batched Batched flag.
-     * @param remainingAllowed If {@code true} query is the part of multistatement query.
      */
     QueryDescriptor(
         String schemaName,
@@ -70,8 +66,7 @@ public class QueryDescriptor {
         boolean loc,
         boolean skipReducerOnUpdate,
         boolean batched,
-        String qryInitiatorId,
-        boolean remainingAllowed
+        String qryInitiatorId
     ) {
         this.schemaName = schemaName;
         this.sql = sql;
@@ -82,7 +77,6 @@ public class QueryDescriptor {
         this.skipReducerOnUpdate = skipReducerOnUpdate;
         this.batched = batched;
         this.qryInitiatorId = qryInitiatorId;
-        this.remainingAllowed = remainingAllowed;
     }
 
     /**
@@ -90,11 +84,6 @@ public class QueryDescriptor {
      */
     public String schemaName() {
         return schemaName;
-    }
-
-    /** Return {@code true} if query is the part of multistatement, {@code false} otherwise. */
-    public boolean remainingAllowed() {
-        return remainingAllowed;
     }
 
     /**

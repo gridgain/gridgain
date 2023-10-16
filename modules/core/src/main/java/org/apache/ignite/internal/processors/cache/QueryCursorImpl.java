@@ -27,7 +27,6 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
-import org.apache.ignite.internal.processors.query.GridMultiStatementQueryCancel;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResult;
@@ -156,8 +155,11 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
             }
 
             if (STATE_UPDATER.compareAndSet(this, EXECUTING, CLOSED)) {
-                if (cancel != null && !(cancel instanceof GridMultiStatementQueryCancel))
-                    cancel.cancel();
+                if (cancel != null && !cancel.multiStatement()) {
+                    if (!cancel.multiStatement() || (cancel.multiStatement() && cancel.last())) {
+                        cancel.cancel();
+                    }
+                }
 
                 closeIter();
 

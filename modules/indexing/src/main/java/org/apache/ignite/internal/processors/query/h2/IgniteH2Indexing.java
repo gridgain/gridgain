@@ -104,7 +104,6 @@ import org.apache.ignite.internal.processors.odbc.SqlStateCode;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcParameterMeta;
 import org.apache.ignite.internal.processors.query.ColumnInformation;
 import org.apache.ignite.internal.processors.query.EnlistOperation;
-import org.apache.ignite.internal.processors.query.GridMultiStatementQueryCancel;
 import org.apache.ignite.internal.processors.query.GridQueryCacheObjectsIterator;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
@@ -1194,6 +1193,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             SqlFieldsQuery remainingQry = qry;
 
+            if (!failOnMultipleStmts) {
+                cancel.multiStatement(true);
+            }
+
             while (remainingQry != null) {
                 Span qrySpan = ctx.tracing().create(SQL_QRY, MTC.span())
                     .addTag(SQL_SCHEMA, () -> schemaName);
@@ -1246,17 +1249,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         assert dml != null;
 
-                        GridQueryCancel cancel0 = cancel;
-
-                        if (newQryDesc.remainingAllowed()) {
-                            cancel0 = wrapCancel(cancel);
+                        if (cancel.multiStatement()) {
+                            cancel.last(remainingQry == null);
                         }
 
                         List<? extends FieldsQueryCursor<List<?>>> dmlRes = executeDml(
                             newQryDesc,
                             newQryParams,
                             dml,
-                            cancel0
+                            cancel
                         );
 
                         res.addAll(dmlRes);
@@ -1268,10 +1269,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         assert select != null;
 
-                        GridQueryCancel cancel0 = cancel;
-
-                        if (newQryDesc.remainingAllowed()) {
-                            cancel0 = wrapCancel(cancel);
+                        if (cancel.multiStatement()) {
+                            cancel.last(remainingQry == null);
                         }
 
                         List<? extends FieldsQueryCursor<List<?>>> qryRes = executeSelect(
@@ -1279,7 +1278,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             newQryParams,
                             select,
                             keepBinary,
-                            cancel0
+                            cancel
                         );
 
                         res.addAll(qryRes);
@@ -1305,18 +1304,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             throw e;
         }
-    }
-
-    /** Initiate new cancel holder, chaining cancelation activity with previous state. */
-    private GridQueryCancel wrapCancel(GridQueryCancel inst) {
-        GridQueryCancel cancel0 = new GridMultiStatementQueryCancel();
-        try {
-            inst.add(cancel0::cancel);
-            cancel0.add(inst::cancel);
-        } catch (Exception e) {
-            throw U.convertException((IgniteCheckedException)e);
-        }
-        return cancel0;
     }
 
     /**
