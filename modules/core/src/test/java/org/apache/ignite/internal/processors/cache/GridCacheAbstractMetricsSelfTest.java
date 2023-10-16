@@ -71,6 +71,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
     @Override protected CacheConfiguration cacheConfiguration(String igniteInstanceName) throws Exception {
         CacheConfiguration configuration = super.cacheConfiguration(igniteInstanceName);
         configuration.setStatisticsEnabled(true);
+        configuration.setReadFromBackup(true);
         return configuration;
     }
 

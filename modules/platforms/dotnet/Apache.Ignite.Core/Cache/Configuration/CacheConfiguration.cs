@@ -112,7 +112,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         public const bool DefaultLoadPreviousValue = false;
 
         /// <summary> Default value for 'readFromBackup' flag. </summary>
-        public const bool DefaultReadFromBackup = true;
+        public const bool DefaultReadFromBackup = false;
 
         /// <summary> Default timeout after which long query warning will be printed. </summary>
         public static readonly TimeSpan DefaultLongQueryWarningTimeout = TimeSpan.FromMilliseconds(3000);

@@ -102,6 +102,8 @@ public abstract class IgniteCacheStoreValueAbstractTest extends IgniteCacheAbstr
 
         ccfg.setInterceptor(new TestInterceptor());
 
+        ccfg.setReadFromBackup(true);
+
         return ccfg;
     }
 

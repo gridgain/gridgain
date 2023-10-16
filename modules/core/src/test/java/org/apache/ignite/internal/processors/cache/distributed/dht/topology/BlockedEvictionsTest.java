@@ -20,21 +20,25 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -45,10 +49,15 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.tree.PendingRow;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lifecycle.LifecycleBean;
+import org.apache.ignite.lifecycle.LifecycleEventType;
+import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -56,12 +65,18 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader.PRELOADER_FORCE_CLEAR;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 
 /**
  * Tests various scenarios while partition eviction is blocked.
  */
 public class BlockedEvictionsTest extends GridCommonAbstractTest {
+    /** */
+    private static final long SYS_WORKER_BLOCKED_TIMEOUT = 3_000;
+
     /** */
     private boolean persistence;
 
@@ -70,6 +85,15 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
     /** */
     private int sysPoolSize;
+
+    /** Lifecycle bean that is used for additional configuration of a node on start. */
+    private LifecycleBean lifecycleBean;
+
+    /** Custorm failure handler. */
+    private FailureHandler failureHandler;
+
+    /** Number of backups. */
+    private int backups = 1;
 
     /**
      * {@inheritDoc}
@@ -86,6 +110,14 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
             dsCfg.getDefaultDataRegionConfiguration().setPersistenceEnabled(persistence).setMaxSize(100 * 1024 * 1024);
             cfg.setDataStorageConfiguration(dsCfg);
         }
+
+        cfg.setSystemWorkerBlockedTimeout(SYS_WORKER_BLOCKED_TIMEOUT);
+
+        if (lifecycleBean != null)
+            cfg.setLifecycleBeans(lifecycleBean);
+
+        if (failureHandler != null)
+            cfg.setFailureHandler(failureHandler);
 
         return cfg;
     }
@@ -107,6 +139,92 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    @Test
+    @WithSystemProperty(key = PRELOADER_FORCE_CLEAR, value = "true")
+    public void testCancellationEvictionTasks() throws Exception {
+        persistence = true;
+        backups = 2;
+
+        IgniteEx ignite = (IgniteEx) startGridsMultiThreaded(3);
+
+        ignite.cluster().state(ACTIVE);
+
+        IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(cacheConfiguration());
+
+        // Initial loading.
+        for (int i = 0; i < 128; i++)
+            cache.put(i, i);
+
+        // Stop one node and update data in the cache in order to get rebalancing on restarting the node.
+        // It is assumed that the rebalanncing (full rebalance) will trigger partitions clearing.
+        stopGrid(2);
+
+        for (int i = 0; i < 128; i++)
+            cache.put(i, i);
+
+        CountDownLatch rebalanceLatch = new CountDownLatch(1);
+
+        // Lifecycle bean is needed in order to block rebalance thread pool.
+        lifecycleBean = new LifecycleBean() {
+            /** Ignite instance. */
+            @IgniteInstanceResource
+            IgniteEx ignite;
+
+            /** {@inheritDoc} */
+            @Override public void onLifecycleEvent(LifecycleEventType evt) throws IgniteException {
+                if (evt == LifecycleEventType.BEFORE_NODE_START) {
+                    ignite.context().internalSubscriptionProcessor()
+                        .registerDistributedMetastorageListener(new DistributedMetastorageLifecycleListener() {
+                            @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
+                                ExecutorService service = ignite.context().pools().getRebalanceExecutorService();
+
+                                int poolSize = ignite.configuration().getRebalanceThreadPoolSize();
+
+                                // These tasks will block the rebalance pool to emulate the situation
+                                // when the pool is busy with clearing partitions.
+                                for (int i = 0; i < poolSize; i++) {
+                                    service.execute(() -> {
+                                        try {
+                                            rebalanceLatch.await();
+                                        }
+                                        catch (InterruptedException e) {
+                                            Thread.currentThread().interrupt();
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                }
+            }
+        };
+
+        // This failure handler is needed in order to check that the exchange worker is not blocked.
+        AtomicReference<FailureContext> failureContext = new AtomicReference<>();
+        failureHandler = new FailureHandler() {
+            @Override public boolean onFailure(Ignite ignite, FailureContext failureCtx) {
+                failureContext.set(failureCtx);
+                return false;
+            }
+        };
+
+        // Restart the node and initiate rebalancing.
+        startGrid(2);
+
+        // Stop additional node to initiate a new round of rebalancing
+        // and therefore cancelling the previously submitted task to clear partitions.
+        stopGrid(1);
+
+        // Wait for SYS_WORKER_BLOCKED_TIMEOUT * 2 seconds to be sure that
+        // the failure processor had enough time to detect a possible starvation of the exchange thread.
+        doSleep(SYS_WORKER_BLOCKED_TIMEOUT * 2);
+
+        assertNull("Critical failure detected [ctx=" + failureContext.get() + ']', failureContext.get());
+
+        rebalanceLatch.countDown();
+
+        awaitPartitionMapExchange();
     }
 
     /**
@@ -151,7 +269,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         AtomicReference<IgniteInternalFuture> ref = new AtomicReference<>();
 
         testOperationDuringEviction(false, 1, p -> {
-            IgniteInternalFuture fut = runAsync(() -> grid(0).cluster().state(ClusterState.INACTIVE));
+            IgniteInternalFuture fut = runAsync(() -> grid(0).cluster().state(INACTIVE));
 
             ref.set(fut);
 
@@ -162,7 +280,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
         ref.get().get();
 
-        assertTrue(grid(0).cluster().state() == ClusterState.INACTIVE);
+        assertTrue(grid(0).cluster().state() == INACTIVE);
     }
 
     /**
@@ -173,7 +291,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         AtomicReference<IgniteInternalFuture> ref = new AtomicReference<>();
 
         testOperationDuringEviction(true, 1, p -> {
-            IgniteInternalFuture fut = runAsync(() -> grid(0).cluster().state(ClusterState.INACTIVE));
+            IgniteInternalFuture fut = runAsync(() -> grid(0).cluster().state(INACTIVE));
 
             ref.set(fut);
 
@@ -184,7 +302,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
         ref.get().get();
 
-        assertTrue(grid(0).cluster().state() == ClusterState.INACTIVE);
+        assertTrue(grid(0).cluster().state() == INACTIVE);
     }
 
     /** */
@@ -357,7 +475,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        IgniteCache<Object, Object> cache = g0.getOrCreateCache(cacheConfiguration());
+        IgniteCache<Integer, Integer> cache = g0.getOrCreateCache(cacheConfiguration());
 
         int p0 = evictingPartitionsAfterJoin(g0, cache, 1).get(0);
         holder.set(p0);
@@ -420,7 +538,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         ref.get().get();
 
         IgniteEx crd = startGrids(3);
-        crd.cluster().state(ClusterState.ACTIVE);
+        crd.cluster().state(ACTIVE);
 
         awaitPartitionMapExchange();
     }
@@ -534,11 +652,11 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         startGrid(1);
 
         if (persistence)
-            g0.cluster().state(ClusterState.ACTIVE);
+            g0.cluster().state(ACTIVE);
 
         awaitPartitionMapExchange(true, true, null);
 
-        IgniteCache<Object, Object> cache = g0.getOrCreateCache(cacheConfiguration());
+        IgniteCache<Integer, Integer> cache = g0.getOrCreateCache(cacheConfiguration());
 
         List<Integer> allEvicting = evictingPartitionsAfterJoin(g0, cache, 1024);
         int p0 = allEvicting.get(0);
@@ -561,11 +679,11 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
     }
 
     /** */
-    protected CacheConfiguration<Object, Object> cacheConfiguration() {
-        return new CacheConfiguration<>(DEFAULT_CACHE_NAME).
+    protected CacheConfiguration<Integer, Integer> cacheConfiguration() {
+        return new CacheConfiguration<Integer, Integer>(DEFAULT_CACHE_NAME).
             setCacheMode(CacheMode.PARTITIONED).
             setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC).
-            setBackups(1).
+            setBackups(backups).
             setStatisticsEnabled(stats).
             setAffinity(new RendezvousAffinityFunction(false, persistence ? 64 : 1024));
     }
@@ -580,7 +698,7 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
 
         List<Integer> keys = partitionKeys(g0.cache(DEFAULT_CACHE_NAME), part, cnt, 0);
 
-        try (IgniteDataStreamer<Object, Object> ds = g0.dataStreamer(DEFAULT_CACHE_NAME)) {
+        try (IgniteDataStreamer<Integer, Integer> ds = g0.dataStreamer(DEFAULT_CACHE_NAME)) {
             for (Integer key : keys)
                 ds.addData(key, key);
         }

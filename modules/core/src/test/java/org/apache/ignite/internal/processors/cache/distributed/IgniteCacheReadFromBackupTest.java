@@ -462,6 +462,7 @@ public class IgniteCacheReadFromBackupTest extends GridCommonAbstractTest {
 
         ccfg.setCacheMode(cacheMode);
         ccfg.setAtomicityMode(atomicityMode);
+        ccfg.setReadFromBackup(true);
 
         if (cacheMode != REPLICATED) {
             ccfg.setBackups(backups);
