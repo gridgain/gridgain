@@ -155,7 +155,7 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
             }
 
             if (STATE_UPDATER.compareAndSet(this, EXECUTING, CLOSED)) {
-                if (cancel != null && !cancel.multiStatement()) {
+                if (cancel != null) {
                     if (!cancel.multiStatement() || (cancel.multiStatement() && cancel.last())) {
                         cancel.cancel();
                     }
