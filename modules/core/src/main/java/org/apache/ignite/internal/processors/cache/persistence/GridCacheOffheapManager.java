@@ -136,6 +136,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.lang.Boolean.TRUE;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
@@ -711,23 +712,25 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         long res = 0;
 
-        if (log.isDebugEnabled())
-            log.debug("Started restoring partition state [grp=" + grp.cacheOrGroupName() + ", p=" + p + ']');
+        boolean logDebug = log.isDebugEnabled(); //!grp.cacheOrGroupName().startsWith("ignite-sys");
+
+        if (logDebug)
+            log.warning(">>>>> Started restoring partition state [grp=" + grp.cacheOrGroupName() + ", p=" + p + ']');
 
         if (ctx.pageStore().exists(grp.groupId(), p)) {
             ctx.pageStore().ensure(grp.groupId(), p);
 
             if (ctx.pageStore().pages(grp.groupId(), p) <= 1) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Skipping partition on recovery (pages less than or equals 1) " +
+                if (logDebug) {
+                    log.warning(">>>>> Skipping partition on recovery (pages less than or equals 1) " +
                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ']');
                 }
 
                 return 0;
             }
 
-            if (log.isDebugEnabled()) {
-                log.debug("Creating partition on recovery (exists in page store) " +
+            if (logDebug) {
+                log.warning(">>>>> Creating partition on recovery (exists in page store) " +
                     "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ']');
             }
 
@@ -755,8 +758,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                             updateState(part, recoveryState);
 
-                            if (log.isDebugEnabled()) {
-                                log.debug("Restored partition state (from WAL) " +
+                            if (logDebug) {
+                                log.warning(">>>>> Restored partition state (from WAL) " +
                                     "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
                                     ", updCntr=" + part.initialUpdateCounter() +
                                     ", size=" + part.fullSize() + ']');
@@ -767,12 +770,22 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                             updateState(part, stateId);
 
-                            if (log.isDebugEnabled()) {
-                                log.debug("Restored partition state (from page memory) " +
+                            if (logDebug) {
+                                log.warning(">>>>> Restored partition state (from page memory) " +
                                     "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
                                     ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + stateId +
                                     ", size=" + part.fullSize() + ']');
+
+                                assert part.state() != LOST : ">>>>> Restored partition state (from page memory) " +
+                                    "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
+                                    ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + stateId +
+                                    ", size=" + part.fullSize() + ']';
                             }
+
+                            throw new AssertionError(">>>>> Restored partition state (from page memory) " +
+                                "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
+                                ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + stateId +
+                                ", size=" + part.fullSize() + ']');
                         }
                     }
                     finally {
@@ -796,22 +809,22 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             res = U.currentTimeMillis() - startTime;
 
-            if (log.isDebugEnabled()) {
-                log.debug("Restored partition state (from WAL) " +
+            if (logDebug) {
+                log.warning (">>>>> Restored partition state (from WAL) " +
                     "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
                     ", updCntr=" + part.initialUpdateCounter() +
                     ", size=" + part.fullSize() + ']');
             }
         }
         else {
-            if (log.isDebugEnabled()) {
-                log.debug("Skipping partition on recovery (no page store OR wal state) " +
+            if (logDebug) {
+                log.warning(">>>>> Skipping partition on recovery (no page store OR wal state) " +
                     "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ']');
             }
         }
 
-        if (log.isDebugEnabled()) {
-            log.debug("Finished restoring partition state " +
+        if (logDebug) {
+            log.warning(">>>>> Finished restoring partition state " +
                 "[grp=" + grp.cacheOrGroupName() + ", p=" + p +
                 ", time=" + U.humanReadableDuration(U.currentTimeMillis() - startTime) + ']');
         }
