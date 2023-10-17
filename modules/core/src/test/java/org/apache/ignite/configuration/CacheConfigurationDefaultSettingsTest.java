@@ -24,7 +24,9 @@ import javax.cache.configuration.MutableConfiguration;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
-import junit.framework.TestCase;
+import org.apache.ignite.testframework.junits.JUnitAssertAware;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -35,7 +37,13 @@ import static org.junit.Assert.assertThat;
 /**
  * Tests default settings of the {@link CacheConfiguration}.
  */
-public class CacheConfigurationDefaultSettingsTest extends TestCase {
+public class CacheConfigurationDefaultSettingsTest extends JUnitAssertAware {
+    private static final String CACHE_NAME_1 = "cache_name_1";
+
+    private static final String CACHE_NAME_2 = "cache_name_2";
+
+    private CacheManager cacheManager;
+
     /**
      * Tests default settings of the {@link CacheConfiguration}.
      */
@@ -49,7 +57,17 @@ public class CacheConfigurationDefaultSettingsTest extends TestCase {
      */
     @Test
     public void testDefaulCacheConfigurationConstructorWithCacheName() {
-        careteCache(new CacheConfiguration<>("cache_name"));
+        careteCache(new CacheConfiguration<>(CACHE_NAME_1));
+    }
+
+    @Before
+    public void beforeTest() {
+        cacheManager = Caching.getCachingProvider().getCacheManager();
+    }
+
+    @After
+    public void afterTest() {
+        cacheManager.destroyCache(CACHE_NAME_2);
     }
 
     /**
@@ -57,9 +75,7 @@ public class CacheConfigurationDefaultSettingsTest extends TestCase {
      * from an implementation of the base Configuration interface.
      */
     private void careteCache(CacheConfiguration cfg) {
-        CacheManager cacheManager = Caching.getCachingProvider().getCacheManager();
-
-        Cache<Object, Object> cache = cacheManager.createCache("basicCache_" + cfg.getName(), cfg);
+        Cache<Object, Object> cache = cacheManager.createCache(CACHE_NAME_2, cfg);
 
         CompleteConfiguration newCfg = cache.getConfiguration(CompleteConfiguration.class);
 
