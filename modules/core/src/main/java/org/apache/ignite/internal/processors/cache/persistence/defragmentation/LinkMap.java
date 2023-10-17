@@ -107,11 +107,15 @@ public class LinkMap {
     /**
      * Get new link by old link.
      *
-     * @param oldLink Old link.
+     * @param oldLink Old link, or {@code 0L} if link is not found.
      */
     public long get(long oldLink) throws IgniteCheckedException {
         LinkMapping get = new LinkMapping(oldLink, 0);
         LinkMapping found = tree.findOne(get);
+
+        if (found == null) {
+            return 0L;
+        }
 
         return found.getNewLink();
     }
