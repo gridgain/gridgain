@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.QueryCursor;
@@ -103,11 +102,7 @@ public class IgniteCacheQueryStopOnCancelOrTimeoutDistributedJoinSelfTest extend
         } else {
             cursor = cache.query(qry);
 
-            ignite.scheduler().runLocal(new Runnable() {
-                @Override public void run() {
-                    cursor.close();
-                }
-            }, timeoutUnits, timeUnit);
+            ignite.scheduler().runLocal(cursor::close, timeoutUnits, timeUnit);
         }
 
         try (QueryCursor<List<?>> ignored = cursor) {
@@ -131,7 +126,7 @@ public class IgniteCacheQueryStopOnCancelOrTimeoutDistributedJoinSelfTest extend
     /**
      * Validates clean state on all participating nodes after query cancellation.
      */
-    private void checkCleanState() throws IgniteCheckedException {
+    private void checkCleanState() {
         for (int i = 0; i < GRID_CNT; i++) {
             IgniteEx grid = grid(i);
 
