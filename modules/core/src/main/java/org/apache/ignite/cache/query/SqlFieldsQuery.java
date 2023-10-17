@@ -55,9 +55,9 @@ public class SqlFieldsQuery extends Query<List<?>> {
     /** Default value of Query timeout. Default is -1 means no timeout is set. */
     private static final int DFLT_QUERY_TIMEOUT = -1;
 
-    /** Do not remove. For tests only. */
+    /** Lazy mode. */
     @SuppressWarnings("NonConstantFieldWithUpperCaseName")
-    private static boolean DFLT_LAZY;
+    public static boolean DFLT_LAZY = true;
 
     /** SQL Query. */
     private String sql;
@@ -81,7 +81,9 @@ public class SqlFieldsQuery extends Query<List<?>> {
     /** */
     private boolean replicatedOnly;
 
-    /** Lazy mode is default since Ignite v.2.8. */
+    /**
+     * Lazy mode is default since GG 8.9.1.
+     */
     private boolean lazy = DFLT_LAZY;
 
     /** Partitions for query */
@@ -360,15 +362,15 @@ public class SqlFieldsQuery extends Query<List<?>> {
     /**
      * Sets lazy query execution flag.
      * <p>
-     * By default Ignite attempts to fetch the whole query result set to memory and send it to the client. For small
+     * If {@code lazy=false} Ignite will attempt to fetch the whole query result set to memory and send it to the client. For small
      * and medium result sets this provides optimal performance and minimize duration of internal database locks, thus
      * increasing concurrency.
      * <p>
      * If result set is too big to fit in available memory this could lead to excessive GC pauses and even
-     * OutOfMemoryError. Use this flag as a hint for Ignite to fetch result set lazily, thus minimizing memory
+     * {@link OutOfMemoryError}. Use this flag as a hint for Ignite to fetch result set lazily, thus minimizing memory
      * consumption at the cost of moderate performance hit.
      * <p>
-     * Defaults to {@code false}, meaning that the whole result set is fetched to memory eagerly.
+     * Defaults to {@code true}, meaning that the only first page of result set is fetched to memory.
      *
      * @param lazy Lazy query execution flag.
      * @return {@code this} For chaining.

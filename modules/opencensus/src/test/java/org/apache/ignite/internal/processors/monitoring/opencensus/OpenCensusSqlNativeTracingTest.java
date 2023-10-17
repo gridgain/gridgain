@@ -341,9 +341,7 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
                 assertEquals(expParts, parts);
             });
 
-            SpanId execSpan = checkChildSpan(SQL_QRY_EXECUTE, execReqSpan);
-
-            List<SpanId> distrLookupReqSpans = findChildSpans(SQL_IDX_RANGE_REQ, execSpan);
+            List<SpanId> distrLookupReqSpans = findChildSpans(SQL_IDX_RANGE_REQ, null);
 
             for (SpanId span : distrLookupReqSpans) {
                 SpanData data = handler().spanById(span);
@@ -353,7 +351,12 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
                 if (Status.UNAVAILABLE == data.getStatus())
                     continue;
 
-                idxRangeReqRows += parseInt(getAttribute(span, SQL_IDX_RANGE_ROWS));
+                String attr = getAttribute(span, SQL_IDX_RANGE_ROWS);
+
+                if (attr == null || data.getParentSpanId() == null)
+                    continue;
+
+                idxRangeReqRows += parseInt(attr);
 
                 checkChildSpan(SQL_IDX_RANGE_RESP, span);
             }
@@ -397,7 +400,7 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
 
         assertEquals(TEST_TABLE_POPULATION, fetchedRows);
         assertEquals(TEST_TABLE_POPULATION, preparedRows);
-        assertEquals(TEST_TABLE_POPULATION, idxRangeReqRows);
+        assertEquals(GRID_CNT * TEST_TABLE_POPULATION, idxRangeReqRows);
 
         checkSpan(SQL_QRY_CANCEL_REQ, rootSpan, mapNodesCount(), null);
 
@@ -690,7 +693,7 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
      * @return Id of the the child span.
      */
     protected SpanId checkChildSpan(SpanType type, SpanId parentSpan) {
-        return checkSpan(type, parentSpan,1, null).get(0);
+        return checkSpan(type, parentSpan, 1, null).get(0);
     }
 
     /**
@@ -771,6 +774,7 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
             .setSkipReducerOnUpdate(skipReducerOnUpdate)
             .setDistributedJoins(distributedJoins)
             .setPageSize(PAGE_SIZE)
+            .setLazy(false)
             .setSchema(schema);
 
         reducer().context().query().querySqlFields(qry, false).getAll();
