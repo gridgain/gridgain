@@ -1195,6 +1195,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             SqlFieldsQuery remainingQry = qry;
 
+            if (!failOnMultipleStmts) {
+                cancel.multiStatement(true);
+            }
+
             while (remainingQry != null) {
                 Span qrySpan = ctx.tracing().create(SQL_QRY, MTC.span())
                     .addTag(SQL_SCHEMA, () -> schemaName);
@@ -1247,6 +1251,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         assert dml != null;
 
+                        if (cancel.multiStatement()) {
+                            cancel.last(remainingQry == null);
+                        }
+
                         List<? extends FieldsQueryCursor<List<?>>> dmlRes = executeDml(
                             newQryDesc,
                             newQryParams,
@@ -1262,6 +1270,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         QueryParserResultSelect select = parseRes.select();
 
                         assert select != null;
+
+                        if (cancel.multiStatement()) {
+                            cancel.last(remainingQry == null);
+                        }
 
                         List<? extends FieldsQueryCursor<List<?>>> qryRes = executeSelect(
                             newQryDesc,

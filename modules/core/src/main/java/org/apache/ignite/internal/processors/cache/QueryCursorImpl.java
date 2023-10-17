@@ -100,7 +100,7 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
 
         iter = iterExec.iterator();
 
-        if (!lazy && !STATE_UPDATER.compareAndSet(this, EXECUTING, COMPLETED)) {
+        if (!lazy() && !STATE_UPDATER.compareAndSet(this, EXECUTING, COMPLETED)) {
             // Handle race with cancel and make sure the iterator resources are freed correctly.
             closeIter();
 
@@ -109,7 +109,7 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
 
         assert iter != null;
 
-        if (lazy)
+        if (lazy())
             iter = new LazyIterator<>(iter);
 
         return iter;
@@ -155,8 +155,11 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
             }
 
             if (STATE_UPDATER.compareAndSet(this, EXECUTING, CLOSED)) {
-                if (cancel != null)
-                    cancel.cancel();
+                if (cancel != null) {
+                    if (!cancel.multiStatement() || (cancel.multiStatement() && cancel.last())) {
+                        cancel.cancel();
+                    }
+                }
 
                 closeIter();
 
