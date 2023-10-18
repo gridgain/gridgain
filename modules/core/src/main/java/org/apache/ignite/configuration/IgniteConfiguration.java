@@ -144,7 +144,7 @@ public class IgniteConfiguration {
     /** Default discovery startup delay in milliseconds (value is {@code 60,000ms}). */
     public static final long DFLT_DISCOVERY_STARTUP_DELAY = 60000;
 
-    /** Default deployment mode (value is {@link DeploymentMode#SHARED}). */
+    /** Default deployment mode (value is {@link DeploymentMode#ISOLATED}). */
     public static final DeploymentMode DFLT_DEPLOYMENT_MODE = DeploymentMode.ISOLATED;
 
     /** Default cache size for missed resources. */
