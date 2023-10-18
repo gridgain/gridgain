@@ -39,6 +39,9 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * Tests default settings of the {@link CacheConfiguration}.
+ * These tests are analog of
+ * {@link javax.cache.configuration.ConfigurationTest#testValidateFromBasicConfigurationRetrievedFromCache} test.
+ * It was replaced because default value of {@link CacheConfiguration.isStatisticsEnabled} is true.
  */
 public class CacheConfigurationDefaultSettingsTest {
     private static final String CACHE_NAME_1 = "cache_name_1";
@@ -59,7 +62,7 @@ public class CacheConfigurationDefaultSettingsTest {
      * Tests default settings of the {@link CacheConfiguration}.
      */
     @Test
-    public void testDefaulCacheConfigurationConstructorWithCacheName() {
+    public void testCacheConfigurationConstructorWithCacheName() {
         checkCacheConfiguration(new CacheConfiguration<>(CACHE_NAME_1));
     }
 
@@ -86,8 +89,7 @@ public class CacheConfigurationDefaultSettingsTest {
     }
 
     /**
-     * This method was copied from
-     * {@link javax.cache.configuration.ConfigurationTest#testValidateFromBasicConfigurationRetrievedFromCache} test.
+     * This method was copied from {@link javax.cache.configuration.ConfigurationTest} test.
      *
      * @param cfg configuration
      */
