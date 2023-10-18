@@ -24,7 +24,6 @@ import javax.cache.configuration.MutableConfiguration;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
-import org.apache.ignite.testframework.junits.JUnitAssertAware;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,12 +31,16 @@ import org.junit.Test;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests default settings of the {@link CacheConfiguration}.
  */
-public class CacheConfigurationDefaultSettingsTest extends JUnitAssertAware {
+public class CacheConfigurationDefaultSettingsTest {
     private static final String CACHE_NAME_1 = "cache_name_1";
 
     private static final String CACHE_NAME_2 = "cache_name_2";
@@ -49,7 +52,7 @@ public class CacheConfigurationDefaultSettingsTest extends JUnitAssertAware {
      */
     @Test
     public void testCacheConfigurationDefaultConstructor() {
-        careteCache(new CacheConfiguration<>());
+        checkCacheConfiguration(new CacheConfiguration<>());
     }
 
     /**
@@ -57,7 +60,7 @@ public class CacheConfigurationDefaultSettingsTest extends JUnitAssertAware {
      */
     @Test
     public void testDefaulCacheConfigurationConstructorWithCacheName() {
-        careteCache(new CacheConfiguration<>(CACHE_NAME_1));
+        checkCacheConfiguration(new CacheConfiguration<>(CACHE_NAME_1));
     }
 
     @Before
@@ -74,7 +77,7 @@ public class CacheConfigurationDefaultSettingsTest extends JUnitAssertAware {
      * Ensure that a {@link MutableConfiguration} correctly uses the defaults
      * from an implementation of the base Configuration interface.
      */
-    private void careteCache(CacheConfiguration cfg) {
+    private void checkCacheConfiguration(CacheConfiguration cfg) {
         Cache<Object, Object> cache = cacheManager.createCache(CACHE_NAME_2, cfg);
 
         CompleteConfiguration newCfg = cache.getConfiguration(CompleteConfiguration.class);
