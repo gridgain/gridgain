@@ -17,7 +17,6 @@
 package org.apache.ignite.configuration;
 
 import javax.cache.Cache;
-import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.MutableConfiguration;
@@ -25,7 +24,6 @@ import javax.cache.expiry.Duration;
 import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -48,8 +46,6 @@ public class CacheConfigurationDefaultSettingsTest {
 
     private static final String CACHE_NAME_2 = "cache_name_2";
 
-    private CacheManager cacheManager;
-
     /**
      * Tests default settings of the {@link CacheConfiguration}.
      */
@@ -66,14 +62,9 @@ public class CacheConfigurationDefaultSettingsTest {
         checkCacheConfiguration(new CacheConfiguration<>(CACHE_NAME_1));
     }
 
-    @Before
-    public void beforeTest() {
-        cacheManager = Caching.getCachingProvider().getCacheManager();
-    }
-
     @After
     public void afterTest() {
-        cacheManager.destroyCache(CACHE_NAME_2);
+        Caching.getCachingProvider().close();
     }
 
     /**
@@ -81,7 +72,7 @@ public class CacheConfigurationDefaultSettingsTest {
      * from an implementation of the base Configuration interface.
      */
     private void checkCacheConfiguration(CacheConfiguration cfg) {
-        Cache<Object, Object> cache = cacheManager.createCache(CACHE_NAME_2, cfg);
+        Cache<Object, Object> cache = Caching.getCachingProvider().getCacheManager().createCache(CACHE_NAME_2, cfg);
 
         CompleteConfiguration newCfg = cache.getConfiguration(CompleteConfiguration.class);
 
