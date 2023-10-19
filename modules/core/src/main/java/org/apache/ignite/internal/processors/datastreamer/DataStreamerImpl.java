@@ -120,6 +120,8 @@ import org.apache.ignite.stream.StreamReceiver;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DATA_STREAMER_ALLOW_OVERWRITE;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridTopic.TOPIC_DATASTREAM;
@@ -145,7 +147,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
     private static final int REMAP_SEMAPHORE_PERMISSIONS_COUNT = Integer.MAX_VALUE;
 
     /** Cache receiver. */
-    private StreamReceiver<K, V> rcvr = DataStreamerCacheUpdaters.<K, V>individual();
+    private StreamReceiver<K, V> rcvr;
 
     /** */
     private byte[] updaterBytes;
@@ -315,6 +317,13 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
         this.cacheName = cacheName;
         this.flushQ = flushQ;
+
+        if (getBoolean(IGNITE_DATA_STREAMER_ALLOW_OVERWRITE)) {
+            rcvr = DataStreamerCacheUpdaters.individual();
+        }
+        else {
+            rcvr = ISOLATED_UPDATER;
+        }
 
         discoLsnr = new GridLocalEventListener() {
             @Override public void onEvent(Event evt) {
