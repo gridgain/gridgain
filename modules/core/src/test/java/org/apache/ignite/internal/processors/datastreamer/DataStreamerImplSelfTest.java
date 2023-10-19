@@ -262,6 +262,8 @@ public class DataStreamerImplSelfTest extends GridCommonAbstractTest {
             IgniteFuture fut = null;
 
             try (IgniteDataStreamer<Integer, String> streamer = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
+                streamer.allowOverwrite(false);
+
                 streamer.perThreadBufferSize(1);
 
                 fut = streamer.addData(1, "1");
@@ -500,6 +502,8 @@ public class DataStreamerImplSelfTest extends GridCommonAbstractTest {
         ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
 
         IgniteDataStreamer<Object, Object> streamer = ignite.dataStreamer(DEFAULT_CACHE_NAME);
+
+        streamer.allowOverwrite(false);
 
         streamer.perThreadBufferSize(1);
 

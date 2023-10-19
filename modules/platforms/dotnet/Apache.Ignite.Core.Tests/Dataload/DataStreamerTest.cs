@@ -110,11 +110,11 @@ namespace Apache.Ignite.Core.Tests.Dataload
                 Assert.AreEqual(9, ldr.AutoFlushInterval.TotalSeconds);
 #pragma warning restore 618 // Type or member is obsolete
 
-                Assert.IsFalse(ldr.AllowOverwrite);
-                ldr.AllowOverwrite = true;
                 Assert.IsTrue(ldr.AllowOverwrite);
                 ldr.AllowOverwrite = false;
                 Assert.IsFalse(ldr.AllowOverwrite);
+                ldr.AllowOverwrite = true;
+                Assert.IsTrue(ldr.AllowOverwrite);
 
                 Assert.IsFalse(ldr.SkipStore);
                 ldr.SkipStore = true;
@@ -160,6 +160,8 @@ namespace Apache.Ignite.Core.Tests.Dataload
 
             using (var ldr = _grid.GetDataStreamer<int, int>(CacheName))
             {
+                ldr.AllowOverwrite = false;
+
                 ldr.Remove(1);
             }
 
