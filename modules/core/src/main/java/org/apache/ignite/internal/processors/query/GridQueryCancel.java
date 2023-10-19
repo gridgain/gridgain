@@ -31,6 +31,12 @@ public class GridQueryCancel {
     /** */
     private boolean canceled;
 
+    /** Last statement in multi statement. */
+    private boolean last;
+
+    /** Multistatement cancel tag. */
+    private boolean multiStatement;
+
     /**
      * Adds a cancel action.
      *
@@ -43,6 +49,27 @@ public class GridQueryCancel {
             throw new QueryCancelledException();
 
         cancelActions.add(clo);
+    }
+
+    /** Set {@code true} if this is last statement in multiple statement request. */
+    public void last(boolean lastQuery) {
+        assert multiStatement : "unexpected last flag";
+        last = lastQuery;
+    }
+
+    /** Return {@code true} if this is last statement in multiple statement request. */
+    public boolean last() {
+        return last;
+    }
+
+    /** Set {@code true} if this instance belongs to multiple statement request. */
+    public void multiStatement(boolean multi) {
+        multiStatement = multi;
+    }
+
+    /** Return {@code true} if this instance belongs to multiple statement request. */
+    public boolean multiStatement() {
+        return multiStatement;
     }
 
     /**

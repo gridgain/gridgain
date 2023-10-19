@@ -318,7 +318,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
         this.cacheName = cacheName;
         this.flushQ = flushQ;
 
-        if (getBoolean(IGNITE_DATA_STREAMER_ALLOW_OVERWRITE)) {
+        if (getBoolean(IGNITE_DATA_STREAMER_ALLOW_OVERWRITE, true)) {
             rcvr = DataStreamerCacheUpdaters.individual();
         }
         else {

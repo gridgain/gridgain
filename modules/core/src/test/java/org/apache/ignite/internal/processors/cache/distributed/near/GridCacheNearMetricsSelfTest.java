@@ -103,6 +103,7 @@ public class GridCacheNearMetricsSelfTest extends GridCacheAbstractSelfTest {
 
         cc.setCacheMode(CacheMode.PARTITIONED);
         cc.setBackups(1);
+        cc.setReadFromBackup(true);
 
         return cc;
     }

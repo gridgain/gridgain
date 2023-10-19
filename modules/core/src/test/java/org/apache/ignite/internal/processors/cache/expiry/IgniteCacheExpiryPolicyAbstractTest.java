@@ -114,6 +114,8 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
 
         cfg.setExpiryPolicyFactory(factory);
 
+        cfg.setReadFromBackup(true);
+
         if (disableEagerTtl)
             cfg.setEagerTtl(false);
 
