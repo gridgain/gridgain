@@ -88,9 +88,18 @@ class SegmentTruncateStorage {
     }
 
     /**
+     * Returns absolute index of a segment with a checkpoint record of the last successful checkpoint.
+     *
+     * @return Absolute index of a segment containing last successful checkpoint's record.
+     */
+    synchronized long lastCheckpointIdx() {
+        return lastCpIdx;
+    }
+
+    /**
      * Getting last truncated segment.
      *
-     * @return Absolut segment index.
+     * @return Absolute segment index.
      */
     synchronized long lastTruncatedIdx() {
         return lastTruncatedIdx;
