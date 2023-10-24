@@ -615,21 +615,25 @@ public class RecordUtils {
 
     /** **/
     public static OutOfOrderDataRecord buildOutOfOrderRecord() {
+        DataEntry entry = createDataEntry();
+
+        return new OutOfOrderDataRecord(entry);
+    }
+
+    private static DataEntry createDataEntry() {
         KeyCacheObjectImpl key = new KeyCacheObjectImpl(0L, new byte[] { NULL }, 0);
 
-        DataEntry entry = new DataEntry(
-            CU.cacheId("test-cache"),
+        return new DataEntry(
+            CU.cacheId(TEST_CACHE_NAME),
             key,
             null,
             GridCacheOperation.DELETE,
-            null,
+            new GridCacheVersion(1, 1, 1, 0),
             new GridCacheVersion(1, 1, 1, 0),
             -1L,
             0,
             123,
             (byte)0);
-
-        return new OutOfOrderDataRecord(entry);
     }
 
     /**
@@ -649,7 +653,7 @@ public class RecordUtils {
      */
     public static IndexRenameRootPageRecord buildIndexRenameRootPageRecord() {
         return new IndexRenameRootPageRecord(
-            CU.cacheId("test-cache"),
+            CU.cacheId(TEST_CACHE_NAME),
             "oldTreeName",
             "newTreeName",
             666
@@ -678,7 +682,7 @@ public class RecordUtils {
 
     /** **/
     public static CdcDataRecord buildCdcDataRecord() {
-        return new CdcDataRecord(new DataEntry(1, null, null, GridCacheOperation.READ, null, null, 1, 1, 1, (byte) 1));
+        return new CdcDataRecord(createDataEntry());
     }
 
     /**
