@@ -50,6 +50,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static java.util.stream.Collectors.toSet;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.ZIP_SUFFIX;
 
 /**
@@ -159,22 +160,16 @@ public class WalCompactionTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void testApplyingUpdatesFromCompactedWal(boolean switchOffCompressor) throws Exception {
-        IgniteEx ig = (IgniteEx)startGrids(3);
+        IgniteEx ig = startGrids(3);
 
         ig.cluster().baselineAutoAdjustEnabled(false);
-        ig.cluster().active(true);
+        ig.cluster().state(ACTIVE);
 
         IgniteCache<Integer, byte[]> cache = ig.cache(CACHE_NAME);
 
         final int pageSize = ig.cachex(CACHE_NAME).context().dataRegion().pageMemory().pageSize();
 
-        for (int i = 0; i < ENTRIES; i++) { // At least 20MB of raw data in total.
-            final byte[] val = new byte[20000];
-
-            val[i] = 1;
-
-            cache.put(i, val);
-        }
+        loadData(cache, ENTRIES);
 
         byte[] dummyPage = dummyPage(pageSize);
 
@@ -185,8 +180,9 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         }
 
         // WAL archive segment is allowed to be compressed when it's at least one checkpoint away from current WAL head.
-        ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
-        ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
+        forceCheckpoint(ig);
+        loadData(cache, ENTRIES);
+        forceCheckpoint(ig);
 
         String nodeFolderName = ig.context().pdsFolderResolver().resolveFolders().folderName();
 
@@ -226,7 +222,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
 
         compactionEnabled = !switchOffCompressor;
 
-        ig = (IgniteEx)startGrids(3);
+        ig = startGrids(3);
 
         awaitPartitionMapExchange();
 
@@ -256,8 +252,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         Ignite ignite = startGrids(2);
-
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         resetBaselineTopology();
 
@@ -297,17 +292,11 @@ public class WalCompactionTest extends GridCommonAbstractTest {
 
         IgniteEx ig = (IgniteEx)startGrid(getTestIgniteInstanceName(0), optimize(icfg), null);
 
-        ig.cluster().active(true);
+        ig.cluster().state(ACTIVE);
 
         IgniteCache<Integer, byte[]> cache = ig.cache(CACHE_NAME);
 
-        for (int i = 0; i < 2500; i++) { // At least 50MB of raw data in total.
-            final byte[] val = new byte[20000];
-
-            val[i] = 1;
-
-            cache.put(i, val);
-        }
+        loadData(cache, 2500); // At least 50MB of raw data in total.
 
         IgniteWriteAheadLogManager walMgr = ig.context().cache().context().wal();
 
@@ -359,21 +348,13 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         compactionEnabled = false;
 
         IgniteEx ig = startGrid(0);
-        ig.cluster().active(true);
+        ig.cluster().state(ACTIVE);
 
-        IgniteCache<Integer, byte[]> cache = ig.cache(CACHE_NAME);
-
-        for (int i = 0; i < 2500; i++) { // At least 50MB of raw data in total.
-            final byte[] val = new byte[20000];
-
-            val[i] = 1;
-
-            cache.put(i, val);
-        }
+        loadData(ig.cache(CACHE_NAME), ENTRIES); // At least 20MB of raw data in total.
 
         // WAL archive segment is allowed to be compressed when it's at least one checkpoint away from current WAL head.
-        ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
-        ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
+        forceCheckpoint(ig);
+        forceCheckpoint(ig);
 
         String nodeFolderName = ig.context().pdsFolderResolver().resolveFolders().folderName();
 
@@ -407,7 +388,10 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         compactionEnabled = true;
 
         ig = startGrid(0);
-        ig.cluster().active(true);
+        ig.cluster().state(ACTIVE);
+
+        loadData(ig.cache(CACHE_NAME), ENTRIES);
+        forceCheckpoint(ig);
 
         // Allow compressor to compress WAL segments.
         assertTrue(GridTestUtils.waitForCondition(zippedWalSegment::exists, 15_000));
@@ -438,7 +422,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
             for (File f : list)
                 log.info(f.getAbsolutePath());
 
-            // Failed to compress WAL segment shoudn't be deleted.
+            // Failed to compress WAL segment shouldn't be deleted.
             fail("File " + walSegment.getAbsolutePath() + " does not exist.");
         }
     }
@@ -449,20 +433,14 @@ public class WalCompactionTest extends GridCommonAbstractTest {
     @Test
     public void testSeekingStartInCompactedSegment() throws Exception {
         IgniteEx ig = startGrids(3);
-        ig.cluster().active(true);
+        ig.cluster().state(ACTIVE);
 
         IgniteCache<Integer, byte[]> cache = ig.cache(CACHE_NAME);
 
-        for (int i = 0; i < 100; i++) {
-            final byte[] val = new byte[20000];
+        loadData(cache, ENTRIES);
 
-            val[i] = 1;
-
-            cache.put(i, val);
-        }
-
-        ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
-        ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
+        forceCheckpoint(ig);
+        forceCheckpoint(ig);
 
         String nodeFolderName = ig.context().pdsFolderResolver().resolveFolders().folderName();
 
@@ -498,8 +476,8 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         }
 
         // WAL archive segment is allowed to be compressed when it's at least one checkpoint away from current WAL head.
-        ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
-        ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
+        forceCheckpoint(ig);
+        forceCheckpoint(ig);
 
         File nodeArchiveDir = dbDir.toPath().resolve(Paths.get("wal", "archive", nodeFolderName)).toFile();
         File unzippedWalSegment = new File(nodeArchiveDir, FileDescriptor.fileName(0));
@@ -566,6 +544,22 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         }
 
         assertFalse(fail);
+    }
+
+    /** */
+    private void loadData(IgniteCache<Integer, byte[]> cache, int numberOfEntries) {
+        for (int i = 0; i < numberOfEntries; i++) { // At least 20MB of raw data in total.
+            final byte[] val = new byte[20000];
+
+            val[i] = 1;
+
+            cache.put(i, val);
+        }
+    }
+
+    /** */
+    private void forceCheckpoint(IgniteEx ig) throws IgniteCheckedException {
+        ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
     }
 
     /**
