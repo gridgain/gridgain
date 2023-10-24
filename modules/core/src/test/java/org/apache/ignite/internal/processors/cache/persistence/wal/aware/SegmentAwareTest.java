@@ -431,6 +431,7 @@ public class SegmentAwareTest {
     public void testFinishWaitSegmentToCompress_WhenSetLastArchivedSegment() throws IgniteCheckedException, InterruptedException {
         //given: thread which awaited segment.
         SegmentAware aware = segmentAware(10, true);
+        aware.lastCheckpointIdx(8);
 
         aware.onSegmentCompressed(5);
 
@@ -450,6 +451,7 @@ public class SegmentAwareTest {
     public void testFinishWaitSegmentToCompress_WhenMarkLastArchivedSegment() throws IgniteCheckedException, InterruptedException {
         //given: thread which awaited segment.
         SegmentAware aware = segmentAware(10, true);
+        aware.lastCheckpointIdx(8);
 
         aware.onSegmentCompressed(5);
 
@@ -468,6 +470,7 @@ public class SegmentAwareTest {
     @Test
     public void testCorrectCalculateNextCompressSegment() throws IgniteCheckedException, InterruptedException {
         SegmentAware aware = segmentAware(10, true);
+        aware.lastCheckpointIdx(8);
 
         aware.setLastArchivedAbsoluteIndex(6);
 
@@ -499,6 +502,8 @@ public class SegmentAwareTest {
     @Test
     public void testLastCompressedIdxProperOrdering() throws IgniteInterruptedCheckedException {
         SegmentAware aware = segmentAware(10, true);
+
+        aware.lastCheckpointIdx(8);
 
         for (int i = 0; i < 5; i++) {
             aware.setLastArchivedAbsoluteIndex(i);

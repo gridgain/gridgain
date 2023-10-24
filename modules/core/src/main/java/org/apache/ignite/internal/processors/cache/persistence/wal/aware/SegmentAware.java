@@ -145,11 +145,8 @@ public class SegmentAware {
     public long waitNextSegmentToCompress() throws IgniteInterruptedCheckedException {
         long idx;
 
-        while ((idx = segmentCompressStorage.nextSegmentToCompressOrWait()) <=
-                Math.min(lastTruncatedArchiveIdx(), lastCpIdx() - 1))
-        {
+        while ((idx = segmentCompressStorage.nextSegmentToCompressOrWait()) <= lastTruncatedArchiveIdx())
             onSegmentCompressed(idx);
-        }
 
         return idx;
     }
@@ -195,10 +192,6 @@ public class SegmentAware {
      */
     public long lastTruncatedArchiveIdx() {
         return truncateStorage.lastTruncatedIdx();
-    }
-
-    public long lastCpIdx() {
-        return truncateStorage.lastCheckpointIdx();
     }
 
     /**
@@ -377,6 +370,7 @@ public class SegmentAware {
     public void lastCheckpointIdx(long absIdx) {
         truncateStorage.lastCheckpointIdx(absIdx);
         archiveSizeStorage.lastCheckpointIdx(absIdx);
+        segmentCompressStorage.lastCheckpointIdx(absIdx);
     }
 
     /**
