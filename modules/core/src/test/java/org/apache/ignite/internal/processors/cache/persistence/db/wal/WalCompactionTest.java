@@ -58,7 +58,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
  */
 public class WalCompactionTest extends GridCommonAbstractTest {
     /** Wal segment size. */
-    private static final int WAL_SEGMENT_SIZE = 4 * 1024 * 1024;
+    private static final int WAL_SEGMENT_SIZE = 1024 * 1024;
 
     /** Cache name. */
     public static final String CACHE_NAME = "cache";
@@ -379,7 +379,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
                 break;
 
             if (U.currentTimeMillis() - start >= 10000)
-                throw new IgniteCheckedException("Can't trucate: " + walSegment.getAbsolutePath());
+                throw new IgniteCheckedException("Can't truncate: " + walSegment.getAbsolutePath());
 
             Thread.yield();
         }
