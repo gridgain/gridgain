@@ -136,7 +136,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.lang.Boolean.TRUE;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
+//import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
@@ -363,6 +363,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
      * @throws IgniteCheckedException If failed.
      */
     public void syncMetadata(Context ctx, Executor execSvc, boolean needSnapshot) throws IgniteCheckedException {
+//        if (grp.cacheOrGroupName().equals("default")) {
+//            String reason = ctx == null ? "NA" : ctx.progress().reason();
+//            U.dumpStack(
+//                log,
+//                ">>>>> syncMetadata [name=" + grp.cacheOrGroupName() + ", ctx=" + ctx +
+//                    ", reason=" + reason + ", needSnapshot=" + needSnapshot + ']');
+//        }
+
         if (execSvc == null) {
             reuseList.saveMetadata(grp.statisticsHolderData());
 
@@ -435,6 +443,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                         if (part != null && part.state() != GridDhtPartitionState.EVICTED)
                             state = part.state();
+
+                        if (part != null && part.state() == GridDhtPartitionState.LOST)
+                            state = OWNING;
                     }
 
                     // Do not save meta for evicted partitions on next checkpoints.
@@ -712,7 +723,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         long res = 0;
 
-        boolean logDebug = log.isDebugEnabled(); //!grp.cacheOrGroupName().startsWith("ignite-sys");
+        boolean logDebug = log.isDebugEnabled();//!grp.cacheOrGroupName().startsWith("ignite-sys");
 
         if (logDebug)
             log.warning(">>>>> Started restoring partition state [grp=" + grp.cacheOrGroupName() + ", p=" + p + ']');
@@ -776,16 +787,16 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                                     ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + stateId +
                                     ", size=" + part.fullSize() + ']');
 
-                                assert part.state() != LOST : ">>>>> Restored partition state (from page memory) " +
-                                    "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
-                                    ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + stateId +
-                                    ", size=" + part.fullSize() + ']';
+//                                assert part.state() != LOST : ">>>>> Restored partition state (from page memory) " +
+//                                    "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
+//                                    ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + stateId +
+//                                    ", size=" + part.fullSize() + ']';
                             }
 
-                            throw new AssertionError(">>>>> Restored partition state (from page memory) " +
-                                "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
-                                ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + stateId +
-                                ", size=" + part.fullSize() + ']');
+//                            throw new IgniteException(">>>>> Restored partition state (from page memory) " +
+//                                "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
+//                                ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + stateId +
+//                                ", size=" + part.fullSize() + ']');
                         }
                     }
                     finally {
@@ -859,6 +870,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             assert state != null;
 
+//            part.restoreState(state == EVICTED ? RENTING : state == LOST ? OWNING : state);
             part.restoreState(state == EVICTED ? RENTING : state);
         }
     }
