@@ -51,6 +51,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_GRP_STATE_LAZY_STORE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 
 /**
  * Tests if reservation of corrupted checkpoint works correctly, also checks correct behaviour for corrupted zip wal file
@@ -167,7 +168,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         IgniteEx ig0 = grid(0);
 
-        ig0.cluster().active(true);
+        ig0.cluster().state(ACTIVE);
 
         generateCps(ig0);
 
