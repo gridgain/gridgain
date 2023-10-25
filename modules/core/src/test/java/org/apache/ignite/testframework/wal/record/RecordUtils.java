@@ -200,6 +200,7 @@ public class RecordUtils {
             put(PAGE_RECORD, RecordUtils::buildPageSnapshot);
             put(DATA_RECORD, RecordUtils::buildDataRecord);
             put(DATA_RECORD_V2, RecordUtils::buildDataRecord);
+            put(CDC_DATA_RECORD, RecordUtils::buildDataRecord);
             put(CHECKPOINT_RECORD, RecordUtils::buildCheckpointRecord);
             put(HEADER_RECORD, buildUpsupportedWalRecord(HEADER_RECORD));
             put(INIT_NEW_PAGE_RECORD, RecordUtils::buildInitNewPageRecord);
@@ -274,7 +275,6 @@ public class RecordUtils {
             put(CLUSTER_SNAPSHOT, RecordUtils::buildClusterSnapshotRecord);
             put(INCREMENTAL_SNAPSHOT_START_RECORD, RecordUtils::buildIncrementedSnapshotStartRecord);
             put(INCREMENTAL_SNAPSHOT_FINISH_RECORD, RecordUtils::buildIncrementedSnapshoFinishRecord);
-            put(CDC_DATA_RECORD, RecordUtils::buildCdcDataRecord);
         }};
 
     /** **/
