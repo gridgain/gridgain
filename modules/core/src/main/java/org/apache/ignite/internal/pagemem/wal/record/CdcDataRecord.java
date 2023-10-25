@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.pagemem.wal.record;
 
+import java.util.List;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -25,6 +26,11 @@ public class CdcDataRecord extends DataRecord {
     /** */
     public CdcDataRecord(DataEntry writeEntry) {
         super(writeEntry);
+    }
+
+    /** */
+    public CdcDataRecord(List<DataEntry> writeEntries) {
+        super(writeEntries);
     }
 
     /** {@inheritDoc} */
