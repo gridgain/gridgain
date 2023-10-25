@@ -53,7 +53,6 @@ public class DataStreamerCacheUpdaters {
         return INDIVIDUAL;
     }
 
-
     /**
      * Updates cache using batched methods {@link IgniteCache#putAll(Map)}and
      * {@link IgniteCache#removeAll()}. Can cause deadlocks if the same keys are getting
