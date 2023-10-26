@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.file.OpenOption;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -30,7 +29,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -38,7 +36,6 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -50,7 +47,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory;
 import org.apache.ignite.internal.processors.cache.persistence.file.AbstractFileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
@@ -76,7 +72,6 @@ import org.junit.Test;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CORRUPTED_DATA_FILES_MNTC_TASK_NAME;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
-import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
@@ -114,25 +109,23 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
                         .setMaxSize(DataStorageConfiguration.DFLT_DATA_REGION_INITIAL_SIZE)
                 )
                 // Test verifies checkpoint count, so it is essential that no checkpoint is triggered by timeout
-                //.setCheckpointFrequency(999_999_999_999L)
+                .setCheckpointFrequency(999_999_999_999L)
                 .setWalMode(WALMode.LOG_ONLY)
-                //.setFileIOFactory(new TestFileIOFactory(new DataStorageConfiguration().getFileIOFactory()))
+                .setFileIOFactory(new TestFileIOFactory(new DataStorageConfiguration().getFileIOFactory()))
         );
 
         cfg.setCacheConfiguration(
             new CacheConfiguration(DEFAULT_CACHE_NAME)
-                .setAtomicityMode(CacheAtomicityMode.ATOMIC)
+                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
                 // Test checks internal state before and after rebalance, so it is configured to be triggered manually
-                //.setRebalanceDelay(-1)
-                .setAffinity(new RendezvousAffinityFunction(false, 8))
-                .setBackups(dfltCacheBackupCnt)
-                .setReadFromBackup(true)
-//            ,
+                .setRebalanceDelay(-1)
+                .setAffinity(new RendezvousAffinityFunction(false, 32))
+                .setBackups(dfltCacheBackupCnt),
 
-//            new CacheConfiguration(REPL_CACHE)
-//                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-//                .setRebalanceDelay(-1)
-//                .setCacheMode(CacheMode.REPLICATED)
+            new CacheConfiguration(REPL_CACHE)
+                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+                .setRebalanceDelay(-1)
+                .setCacheMode(CacheMode.REPLICATED)
         );
 
         cfg.setCommunicationSpi(new TcpCommunicationSpi() {
@@ -185,9 +178,6 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
 
         System.setProperty(IgniteSystemProperties.IGNITE_PENDING_TX_TRACKER_ENABLED,
             Boolean.toString(enablePendingTxTracker));
-
-        cfg.setFailureDetectionTimeout(600_000);
-        cfg.setClientFailureDetectionTimeout(600_000);
 
         return cfg;
     }
@@ -609,7 +599,6 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
 
         ig0.cluster().baselineAutoAdjustEnabled(false);
         ig0.cluster().state(ACTIVE);
-        log.warning(">>>>> Cluster activated!");
 
         IgniteCache<Integer, Integer> cache = ig0.cache(DEFAULT_CACHE_NAME);
 
@@ -618,101 +607,27 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
 
         GridCacheDatabaseSharedManager dbMrg0 = (GridCacheDatabaseSharedManager) ig0.context().cache().context().database();
         GridCacheDatabaseSharedManager dbMrg1 = (GridCacheDatabaseSharedManager) ig1.context().cache().context().database();
-//
-//        dbMrg0.forceCheckpoint("cp").futureFor(CheckpointState.FINISHED).get();
-//        dbMrg1.forceCheckpoint("cp").futureFor(CheckpointState.FINISHED).get();
 
-        log.warning(">>>>> Initial loading!");
-
-        printPartitionStatuses(ig1, ">>>>> Parts on grid(1) before stopping!");
-        printPartitionStatuses(ig0, ">>>>> Parts on grid(0) before stopping!");
+        dbMrg0.forceCheckpoint("cp").futureFor(CheckpointState.FINISHED).get();
+        dbMrg1.forceCheckpoint("cp").futureFor(CheckpointState.FINISHED).get();
 
         stopGrid(1);
 
-        log.warning(">>>>> Stopped grid 1");
-
         for (int k = 2500; k < 5000; k++)
             cache.put(k, k);
-
-        printPartitionStatuses(ig0, ">>>>> Parts on grid(0) before restarting!");
-
-        log.warning(">>>>> Restarting grid 1");
-
-        CountDownLatch rebalanceLatch = new CountDownLatch(1);
-        supplyMessageLatch.set(rebalanceLatch);
 
         ig1 = startGrid(1);
 
         awaitExchange(ig1);
 
-        printPartitionStatuses(ig1, ">>>>> Parts on grid(1) before stopping coordinator!");
+        stopAllGrids(false);
 
-        log.warning(">>>>> Stopping the cluster");
-
-        stopGrid(0, false);
-
-        printPartitionStatuses(ig1, ">>>>> Parts on grid(1) after stopping coordinator!");
-
-        dbMrg1 = (GridCacheDatabaseSharedManager) ig1.context().cache().context().database();
-        grid(1).context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME)).localWalEnabled(true, true);
-        // **************************************************************
-        dbMrg1.forceCheckpoint("cp-test").futureFor(CheckpointState.MARKER_STORED_TO_DISK).listen(f -> {
-            log.warning(">>>>> Checkpoint started!");
-            runAsync(
-                () -> {
-                    stopGrid(1, true);
-                }
-            );
-           // doSleep(15_000);
-        });
-
-        doSleep(30_000);
-//        stopGrid(1, false);
-
-        rebalanceLatch.countDown();
-
-//        stopAllGrids(false);
-
-        supplyMessageLatch.set(null);
-        log.warning(">>>>> Restarting grid 1*");
-        ig0 = startGrid(0);
         ig1 = startGrid(1);
-        log.warning(">>>>> activating grid 1");
-//        ig1.cluster().state(ACTIVE);
+        ig1.cluster().state(ACTIVE);
 
-        doSleep(12_000);
+        ig1.resetLostPartitions(Arrays.asList(DEFAULT_CACHE_NAME));
 
-        printPartitionStatuses(ig0, ">>>>> Parts on grid(0) after restaring cluster");
-        printPartitionStatuses(ig1, ">>>>> Parts on grid(1) after restaring cluster");
-
-//        ig1.cache(DEFAULT_CACHE_NAME).rebalance().get();
-//        doSleep(12_000);
-//
-//        sb.append(U.nl()).append(">>>>> Parts on grid(0) after rebalancing").append(U.nl());
-//        primaries = Arrays.stream(ig0.affinity(DEFAULT_CACHE_NAME).primaryPartitions(ig0.localNode()))
-//            .boxed()
-//            .collect(Collectors.toList());
-//        for (GridDhtLocalPartition p: ig0.context().cache().cache(DEFAULT_CACHE_NAME).context().topology().localPartitions()) {
-//            sb.append(">>>>> p= " + p.id() + " state=" + p.state() + (primaries.contains(p.id())? " primary":" backup")).append(U.nl());
-//        }
-//        info(sb.toString()); sb.setLength(0);
-//        sb.append(U.nl()).append(">>>>> Parts on grid(1) after rebalancing").append(U.nl());
-//        primaries = Arrays.stream(ig1.affinity(DEFAULT_CACHE_NAME).primaryPartitions(ig1.localNode()))
-//            .boxed()
-//            .collect(Collectors.toList());
-//        for (GridDhtLocalPartition p: ig1.context().cache().cache(DEFAULT_CACHE_NAME).context().topology().localPartitions()) {
-//            sb.append(">>>>> p= " + p.id() + " state=" + p.state() + (primaries.contains(p.id())? " primary":" backup")).append(U.nl());
-//        }
-//        info(sb.toString()); sb.setLength(0);
-
-//        log.warning(">>>>> resetting lost partitions");
-//        ig0.resetLostPartitions(Arrays.asList(DEFAULT_CACHE_NAME));
-//
-//        awaitExchange(ig1);
-//        doSleep(12_000);
-//
-//        printPartitionStatuses(ig0, ">>>>> Parts on grid(0) after resetting lost partitions");
-//        printPartitionStatuses(ig1, ">>>>> Parts on grid(1) after resetting lost partitions");
+        awaitExchange(ig1);
 
         cache = ig1.cache(DEFAULT_CACHE_NAME);
 
@@ -720,47 +635,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
             assertTrue(cache.containsKey(k));
 
         for (int k = 2500; k < 5000; k++)
-            assertTrue(cache.containsKey(k));
-    }
-/*
-        String ig0Folder = srv.context().pdsFolderResolver().resolveFolders().folderName();
-        File dbDir = U.resolveWorkDirectory(srv.configuration().getWorkDirectory(), "db", false);
-
-        File ig0LfsDir = new File(dbDir, ig0Folder);
-        File ig0CpDir = new File(ig0LfsDir, "cp");
-
-        srv.cluster().state(ACTIVE);
-
-        IgniteCache cache1 = srv.getOrCreateCache(cacheConfig(CACHE_NAME, PARTITIONED, TRANSACTIONAL));
-
-        srv.cluster().disableWal(CACHE_NAME);
-
-        for (int i = 0; i < 10; i++)
-            cache1.put(i, i);
-
-        stopAllGrids(true);
-
-        File[] cpMarkers = ig0CpDir.listFiles();
-
-        for (File cpMark : cpMarkers) {
-            if (cpMark.getName().contains("-END"))
-                cpMark.delete();
-        }
- */
-    private void printPartitionStatuses(IgniteEx node, String msg) {
-        List<Integer> primaries = Arrays.stream(node.affinity(DEFAULT_CACHE_NAME).primaryPartitions(node.localNode()))
-            .boxed()
-            .collect(Collectors.toList());
-
-        StringBuilder sb = new StringBuilder();
-        sb.append(U.nl()).append(msg).append(U.nl());
-        sb.append("\t>>>>> [");
-        for (GridDhtLocalPartition p: node.context().cache().cache(DEFAULT_CACHE_NAME).context().topology().localPartitions()) {
-            sb.append("p=" + p.id() + " state=" + p.state() + (primaries.contains(p.id())? "(primary)":"(backup)") +
-                ", updCntr=" + p.updateCounter() + ", size=" + p.fullSize()).append(", ");
-        }
-        sb.append(']');
-        log.warning(sb.toString());
+            assertFalse(cache.containsKey(k));
     }
 
     /**
