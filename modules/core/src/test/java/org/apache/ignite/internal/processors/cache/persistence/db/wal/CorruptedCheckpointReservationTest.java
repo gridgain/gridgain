@@ -19,8 +19,15 @@ package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 import com.google.common.collect.Lists;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -250,23 +257,31 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
      * @param corruptedCp Corrupted checkpoint.
      */
     @NotNull private Optional<FileDescriptor> getFileDescriptor(boolean segmentCompressed,
-        IgniteWriteAheadLogManager walMgr, FileWALPointer corruptedCp) {
-
-        IgniteWalIteratorFactory iterFactory = new IgniteWalIteratorFactory();
+        IgniteWriteAheadLogManager walMgr, FileWALPointer corruptedCp) throws IOException {
 
         File walArchiveDir = U.field(walMgr, "walArchiveDir");
 
-        List<FileDescriptor> walFiles = getWalFiles(walArchiveDir, iterFactory);
-
-        log.info("Wal files: " + walFiles);
-
         String suffix = segmentCompressed ? FilePageStoreManager.ZIP_SUFFIX : FileDescriptor.WAL_SEGMENT_FILE_EXT;
+        AtomicReference<File> wantedFile = new AtomicReference<>();
+        String corruptedIdx = Long.toString(corruptedCp.index());
+        Files.walkFileTree(walArchiveDir.toPath(), new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) {
+                String fileName = path.toFile().getName();
 
-        return walFiles.stream().filter(
-            w -> {
-                log.info("Going through segment: " + w.idx() + ", its name " + w.file().getName() + "; corruptedCp index " + corruptedCp.index());
-                return w.idx() == corruptedCp.index() && w.file().getName().endsWith(suffix); }
-        ).findFirst();
+                if (fileName.endsWith(suffix) &&  fileName.contains(corruptedIdx)) {
+                    wantedFile.set(path.toFile());
+
+                    return FileVisitResult.TERMINATE;
+                }
+
+                return FileVisitResult.CONTINUE;
+            }
+        });
+
+        log.info("Wanted file found: " + wantedFile.get());
+
+        return Optional.ofNullable(wantedFile.get() != null ? new FileDescriptor(wantedFile.get()) : null);
     }
 
     /**
