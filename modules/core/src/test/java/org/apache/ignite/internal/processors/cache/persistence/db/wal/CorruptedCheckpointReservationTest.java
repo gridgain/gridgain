@@ -225,7 +225,10 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         FileWALPointer corruptedCp = getCp(ig, cpIdx);
 
-        GridTestUtils.waitForCondition(() -> walMgr(ig).lastCompactedSegment() >= corruptedCp.index(), getTestTimeout());
+        log.info("Looking for cpIdx " + corruptedCp.index());
+
+        if (segmentCompressed)
+            GridTestUtils.waitForCondition(() -> walMgr(ig).lastCompactedSegment() >= corruptedCp.index(), getTestTimeout());
 
         Optional<FileDescriptor> cpSegment = getFileDescriptor(segmentCompressed, walMgr, corruptedCp);
 
