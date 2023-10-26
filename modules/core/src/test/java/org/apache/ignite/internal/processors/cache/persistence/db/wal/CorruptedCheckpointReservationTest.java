@@ -225,10 +225,10 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         FileWALPointer corruptedCp = getCp(ig, cpIdx);
 
-        log.info("Looking for cpIdx " + corruptedCp.index());
+        log.info("Looking for cpIdx " + corruptedCp.index() + "; segmentCompressed: " + segmentCompressed);
 
         if (segmentCompressed)
-            GridTestUtils.waitForCondition(() -> walMgr(ig).lastCompactedSegment() >= corruptedCp.index(), getTestTimeout());
+            GridTestUtils.waitForCondition(() -> walMgr.lastCompactedSegment() >= corruptedCp.index(), getTestTimeout());
 
         Optional<FileDescriptor> cpSegment = getFileDescriptor(segmentCompressed, walMgr, corruptedCp);
 
@@ -258,10 +258,14 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         List<FileDescriptor> walFiles = getWalFiles(walArchiveDir, iterFactory);
 
+        log.info("Wal files: " + walFiles);
+
         String suffix = segmentCompressed ? FilePageStoreManager.ZIP_SUFFIX : FileDescriptor.WAL_SEGMENT_FILE_EXT;
 
         return walFiles.stream().filter(
-            w -> w.idx() == corruptedCp.index() && w.file().getName().endsWith(suffix)
+            w -> {
+                log.info("Going through segment: " + w.idx() + ", its name " + w.file().getName() + "; corruptedCp index " + corruptedCp.index());
+                return w.idx() == corruptedCp.index() && w.file().getName().endsWith(suffix); }
         ).findFirst();
     }
 
