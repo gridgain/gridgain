@@ -101,6 +101,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.transactions.TransactionState;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.NULL;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.BTREE_EXISTING_PAGE_SPLIT;
@@ -200,7 +201,7 @@ public class RecordUtils {
             put(PAGE_RECORD, RecordUtils::buildPageSnapshot);
             put(DATA_RECORD, RecordUtils::buildDataRecord);
             put(DATA_RECORD_V2, RecordUtils::buildDataRecord);
-            put(CDC_DATA_RECORD, RecordUtils::buildDataRecord);
+            put(CDC_DATA_RECORD, RecordUtils::buildCdcDataRecord);
             put(CHECKPOINT_RECORD, RecordUtils::buildCheckpointRecord);
             put(HEADER_RECORD, buildUpsupportedWalRecord(HEADER_RECORD));
             put(INIT_NEW_PAGE_RECORD, RecordUtils::buildInitNewPageRecord);
@@ -682,7 +683,7 @@ public class RecordUtils {
 
     /** **/
     public static CdcDataRecord buildCdcDataRecord() {
-        return new CdcDataRecord(createDataEntry());
+        return new CdcDataRecord(emptyList());
     }
 
     /**
