@@ -44,6 +44,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.reader.Ignite
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.WalFilters;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
@@ -124,7 +125,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         IgniteEx ig0 = grid(0);
 
-        ig0.cluster().active(true);
+        ig0.cluster().state(ACTIVE);
 
         generateCps(ig0);
 
@@ -146,7 +147,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         IgniteEx ig0 = grid(0);
 
-        ig0.cluster().active(true);
+        ig0.cluster().state(ACTIVE);
 
         generateCps(ig0);
 
@@ -223,6 +224,8 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
         IgniteWriteAheadLogManager walMgr = ig.context().cache().context().wal();
 
         FileWALPointer corruptedCp = getCp(ig, cpIdx);
+
+        GridTestUtils.waitForCondition(() -> walMgr(ig).lastCompactedSegment() >= corruptedCp.index(), getTestTimeout());
 
         Optional<FileDescriptor> cpSegment = getFileDescriptor(segmentCompressed, walMgr, corruptedCp);
 
