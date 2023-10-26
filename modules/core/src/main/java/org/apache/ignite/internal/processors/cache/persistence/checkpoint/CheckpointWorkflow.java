@@ -396,17 +396,14 @@ public class CheckpointWorkflow {
 
                 for (GridDhtLocalPartition part : parts) {
                     GridDhtPartitionState partState = part.state();
-                    long updCntr = part.updateCounter();
 
-                    if (partState == LOST) {
+                    if (partState == LOST)
                         partState = OWNING;
-                        //updCntr = 0;
-                    }
 
                     state.addPartitionState(
                         part.id(),
                         part.dataStore().fullSize(),
-                        updCntr,
+                        part.updateCounter(),
                         (byte)partState.ordinal()
                     );
                 }
