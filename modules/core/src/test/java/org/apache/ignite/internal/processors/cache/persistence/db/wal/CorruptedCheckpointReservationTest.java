@@ -264,11 +264,10 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
         AtomicReference<File> wantedFile = new AtomicReference<>();
         String corruptedIdx = Long.toString(corruptedCp.index());
         Files.walkFileTree(walArchiveDir.toPath(), new SimpleFileVisitor<Path>() {
-            @Override
-            public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) {
+            @Override public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) {
                 String fileName = path.toFile().getName();
 
-                if (fileName.endsWith(suffix) &&  fileName.contains(corruptedIdx)) {
+                if (fileName.endsWith(suffix) && fileName.contains(corruptedIdx)) {
                     wantedFile.set(path.toFile());
 
                     return FileVisitResult.TERMINATE;
