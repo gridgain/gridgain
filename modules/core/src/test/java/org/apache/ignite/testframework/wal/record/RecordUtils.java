@@ -201,7 +201,6 @@ public class RecordUtils {
             put(PAGE_RECORD, RecordUtils::buildPageSnapshot);
             put(DATA_RECORD, RecordUtils::buildDataRecord);
             put(DATA_RECORD_V2, RecordUtils::buildDataRecord);
-            put(CDC_DATA_RECORD, RecordUtils::buildCdcDataRecord);
             put(CHECKPOINT_RECORD, RecordUtils::buildCheckpointRecord);
             put(HEADER_RECORD, buildUpsupportedWalRecord(HEADER_RECORD));
             put(INIT_NEW_PAGE_RECORD, RecordUtils::buildInitNewPageRecord);
@@ -276,6 +275,7 @@ public class RecordUtils {
             put(CLUSTER_SNAPSHOT, RecordUtils::buildClusterSnapshotRecord);
             put(INCREMENTAL_SNAPSHOT_START_RECORD, RecordUtils::buildIncrementedSnapshotStartRecord);
             put(INCREMENTAL_SNAPSHOT_FINISH_RECORD, RecordUtils::buildIncrementedSnapshoFinishRecord);
+            put(CDC_DATA_RECORD, RecordUtils::buildCdcDataRecord);
         }};
 
     /** **/
@@ -616,25 +616,21 @@ public class RecordUtils {
 
     /** **/
     public static OutOfOrderDataRecord buildOutOfOrderRecord() {
-        DataEntry entry = createDataEntry();
-
-        return new OutOfOrderDataRecord(entry);
-    }
-
-    private static DataEntry createDataEntry() {
         KeyCacheObjectImpl key = new KeyCacheObjectImpl(0L, new byte[] { NULL }, 0);
 
-        return new DataEntry(
+        DataEntry entry = new DataEntry(
             CU.cacheId(TEST_CACHE_NAME),
             key,
             null,
             GridCacheOperation.DELETE,
-            new GridCacheVersion(1, 1, 1, 0),
+            null,
             new GridCacheVersion(1, 1, 1, 0),
             -1L,
             0,
             123,
             (byte)0);
+
+        return new OutOfOrderDataRecord(entry);
     }
 
     /**
