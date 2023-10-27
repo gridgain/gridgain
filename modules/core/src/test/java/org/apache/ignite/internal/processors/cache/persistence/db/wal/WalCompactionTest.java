@@ -21,12 +21,15 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteIllegalStateException;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -34,6 +37,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
@@ -42,7 +46,9 @@ import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.RolloverType;
 import org.apache.ignite.internal.processors.cache.persistence.DummyPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.db.CheckpointFailingIoFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -51,7 +57,10 @@ import org.junit.Test;
 
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_SEGMENTS;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.ZIP_SUFFIX;
+import static org.apache.ignite.testframework.GridTestUtils.database;
+import static org.apache.ignite.testframework.GridTestUtils.wal;
 
 /**
  *
@@ -69,6 +78,12 @@ public class WalCompactionTest extends GridCommonAbstractTest {
     /** Compaction enabled flag. */
     private boolean compactionEnabled;
 
+    /** Number of WAL segments. */
+    private int walSegments = DFLT_WAL_SEGMENTS;
+
+    /** */
+    private CheckpointFailingIoFactory fileIoFactory;
+
     /** Wal mode. */
     private WALMode walMode;
 
@@ -84,14 +99,20 @@ public class WalCompactionTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
 
-        cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setPersistenceEnabled(true)
                 .setMaxSize(200L * 1024 * 1024))
             .setWalMode(walMode)
+            .setWalSegments(walSegments)
             .setWalSegmentSize(WAL_SEGMENT_SIZE)
-            .setWalHistorySize(500)
-            .setWalCompactionEnabled(compactionEnabled));
+            .setMaxWalArchiveSize(-1) //Unlimited WAL archive size
+            .setWalCompactionEnabled(compactionEnabled);
+
+        if (fileIoFactory != null)
+            dsCfg.setFileIOFactory(fileIoFactory);
+
+        cfg.setDataStorageConfiguration(dsCfg);
 
         CacheConfiguration ccfg = new CacheConfiguration();
 
@@ -103,6 +124,8 @@ public class WalCompactionTest extends GridCommonAbstractTest {
 
         cfg.setCacheConfiguration(ccfg);
         cfg.setConsistentId(name);
+
+        cfg.setFailureHandler(new StopNodeFailureHandler());
 
         return cfg;
     }
@@ -133,6 +156,70 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    /**
+     * Test vefiries that 
+     */
+    @Test
+    public void testBinaryRecoveryAfterFullCompaction() throws Exception {
+        int minNumberOfSegmentsToCompress = 5;
+
+        walSegments = minNumberOfSegmentsToCompress;
+        fileIoFactory = new CheckpointFailingIoFactory(false);
+
+        final IgniteEx ig = startGrid(0);
+        ig.cluster().state(ACTIVE);
+
+        IgniteCache<Integer, byte[]> cache = ig.cache(CACHE_NAME);
+        loadData(cache, ENTRIES / 2);
+
+        assertTrue(GridTestUtils.waitForCondition(
+                () -> wal(ig).lastArchivedSegment() >= minNumberOfSegmentsToCompress,
+                getTestTimeout()));
+
+        forceCheckpoint(ig);
+
+        loadData(cache, ENTRIES);
+
+        long lastCpIdx = ((FileWALPointer) database(ig).lastCheckpointMarkWalPointer()).index();
+        forceCheckpoint(ig);
+
+        assertTrue(GridTestUtils.waitForCondition(
+                () -> wal(ig).lastArchivedSegment() > lastCpIdx,
+                getTestTimeout()));
+
+        Collection<?> queue = GridTestUtils.getFieldValue(wal(ig), "segmentAware", "segmentCompressStorage", "segmentsToCompress");
+
+        assertTrue(GridTestUtils.waitForCondition(queue::isEmpty, getTestTimeout()));
+
+        fileIoFactory.startFailing();
+        fileIoFactory = null;
+
+        try {
+            forceCheckpoint(ig);
+        }
+        catch (Exception ignored) {
+            // ..
+        }
+
+        // Wait until node will leave cluster.
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                grid(0);
+            }
+            catch (IgniteIllegalStateException e) {
+                return true;
+            }
+
+            return false;
+        }, getTestTimeout());
+
+        log.info("Starting grid back");
+
+        IgniteEx ig0 = startGrid(0);
+
+        assertTrue(ig0.cache(CACHE_NAME).size(CachePeekMode.PRIMARY) > 0);
     }
 
     /**
@@ -175,7 +262,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
 
         // Spam WAL to move all data records to compressible WAL zone.
         for (int i = 0; i < WAL_SEGMENT_SIZE / pageSize * 2; i++) {
-            ig.context().cache().context().wal().log(new PageSnapshot(new FullPageId(-1, -1), dummyPage,
+            wal(ig).log(new PageSnapshot(new FullPageId(-1, -1), dummyPage,
                 pageSize));
         }
 
@@ -298,7 +385,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
 
         loadData(cache, 2500); // At least 50MB of raw data in total.
 
-        IgniteWriteAheadLogManager walMgr = ig.context().cache().context().wal();
+        IgniteWriteAheadLogManager walMgr = wal(ig);
 
         IgniteCacheDatabaseSharedManager dbMgr = ig.context().cache().context().database();
 
@@ -459,7 +546,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
 
             cache.put(i, val);
 
-            //It trigger checkout in the middle of put that it shifts 'keepUncompressedIdx'
+            //It triggers checkout in the middle of put that it shifts 'keepUncompressedIdx'
             // to allow the compressor to delete unzipped segments.
             if (i % 100 == 0)
                 ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
@@ -471,8 +558,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
 
         // Spam WAL to move all data records to compressible WAL zone.
         for (int i = 0; i < WAL_SEGMENT_SIZE / pageSize * 2; i++) {
-            ig.context().cache().context().wal().log(new PageSnapshot(new FullPageId(-1, -1), dummyPage,
-                pageSize));
+            wal(ig).log(new PageSnapshot(new FullPageId(-1, -1), dummyPage, pageSize));
         }
 
         // WAL archive segment is allowed to be compressed when it's at least one checkpoint away from current WAL head.
@@ -559,7 +645,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
 
     /** */
     private void forceCheckpoint(IgniteEx ig) throws IgniteCheckedException {
-        ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
+        database(ig).wakeupForCheckpoint("Forced checkpoint").get();
     }
 
     /**

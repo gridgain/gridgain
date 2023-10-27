@@ -60,6 +60,7 @@ import org.junit.Test;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_GRP_STATE_LAZY_STORE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.testframework.GridTestUtils.wal;
 
 /**
  * Tests if reservation of corrupted checkpoint works correctly, also checks correct behaviour for corrupted zip wal file
@@ -228,7 +229,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
      * @param cpIdx Checkpoint index.
      */
     private void corruptWalRecord(IgniteEx ig, int cpIdx, boolean segmentCompressed) throws IgniteCheckedException, IOException {
-        IgniteWriteAheadLogManager walMgr = ig.context().cache().context().wal();
+        IgniteWriteAheadLogManager walMgr = wal(ig);
 
         FileWALPointer corruptedCp = getCp(ig, cpIdx);
 
@@ -285,7 +286,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
      * @param cpIdx Checkpoint index.
      */
     private void corruptCompressedWalSegment(IgniteEx ig, int cpIdx) throws IgniteCheckedException, IOException {
-        IgniteWriteAheadLogManager walMgr = ig.context().cache().context().wal();
+        IgniteWriteAheadLogManager walMgr = wal(ig);
 
         FileWALPointer corruptedCp = getCp(ig, cpIdx);
 
@@ -301,7 +302,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
      * @param cpIdx Checkpoint index.
      */
     private FileWALPointer getCp(IgniteEx ig, int cpIdx) throws IgniteCheckedException {
-        IgniteWriteAheadLogManager walMgr = ig.context().cache().context().wal();
+        IgniteWriteAheadLogManager walMgr = wal(ig);
 
         List<IgniteBiTuple<WALPointer, WALRecord>> checkpoints;
 
