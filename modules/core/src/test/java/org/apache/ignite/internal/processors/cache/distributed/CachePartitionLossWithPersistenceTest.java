@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -23,6 +26,8 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
@@ -34,12 +39,17 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiPredicate;
@@ -48,9 +58,14 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
+import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntryType.END;
 
 /**
  *
@@ -64,6 +79,9 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
 
     /** */
     private PartitionLossPolicy lossPlc;
+
+    /** Predicate that allows to block GridDhtPartitionSupplyMessage from the supplier node. */
+    private IgniteBiPredicate<ClusterNode, Message> supplyMessagePred;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -90,6 +108,8 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
             setPartitionLossPolicy(lossPlc).
             setBackups(1).
             setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)));
+
+        cfg.setSegmentCheckFrequency(60_000);
 
         return cfg;
     }
@@ -160,6 +180,142 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
     @Test
     public void testConsistencyAfterResettingLostPartitions_3() throws Exception {
         doTestConsistencyAfterResettingLostPartitions(2, false);
+    }
+
+    /**
+     * Tests data recovery after restarting the cluster with disabled WAL on rebalancing.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConsistencyAfterClusterRestartWithDisabledWalOnRebalancing() throws Exception {
+        doTestConsistencyAfterClusterRestartWithDisabledWalOnRebalancing(false);
+    }
+
+    /**
+     * Tests data recovery after restarting the cluster in the case where one node of the cluster was stopped in the middle of checkpoint.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testConsistencyAfterClusterRestart() throws Exception {
+        doTestConsistencyAfterClusterRestartWithDisabledWalOnRebalancing(true);
+    }
+
+    /**
+     * Tests data recovery after restarting the cluster with disabled WAL on rebalancing.
+     *
+     * @throws Exception If failed.
+     */
+    public void doTestConsistencyAfterClusterRestartWithDisabledWalOnRebalancing(boolean stopInTheMiddleOfCheckpoint) throws Exception {
+        lossPlc = READ_WRITE_SAFE;
+
+        IgniteEx ig0 = startGrids(2);
+
+        ig0.cluster().state(ACTIVE);
+
+        IgniteCache<Integer, Integer> cache = ig0.cache(DEFAULT_CACHE_NAME);
+
+        // Initial load.
+        for (int k = 0; k < 2500; k++)
+            cache.put(k, k);
+
+        // Stop the second node and update data in the cache to trigger rebalancing when the node will be restarted.
+        stopGrid(1);
+
+        int owningPartId = 12;
+
+        // Rewrite data to trigger further rebalance.
+        for (int k = 2500; k < 5000; k++) {
+            if (stopInTheMiddleOfCheckpoint) {
+                // Should skip one random partition to be sure that after restarting the second node,
+                // it will have at least one partition in OWNING state, and so WAL will not be disabled while rebalancing.
+                if (ig0.affinity(DEFAULT_CACHE_NAME).partition(k) != owningPartId)
+                    cache.put(k, k);
+            }
+            else {
+                // Update all partitions in oder to disable WAL on rebalancing.
+                // It is possible when there are no partitions in OWNING state.
+                cache.put(k, k);
+            }
+        }
+
+        // Block supply messages to prevent partitions from being moved to the second node.
+        TestRecordingCommunicationSpi spi0 = (TestRecordingCommunicationSpi) ig0.configuration().getCommunicationSpi();
+        spi0.blockMessages(TestRecordingCommunicationSpi.blockSupplyMessageForGroup(CU.cacheId(DEFAULT_CACHE_NAME)));
+
+        // Restart the second node.
+        IgniteEx ig1 = startGrid(1);
+
+        // Wait for exchange. All partitions should be moved to the MOVING state.
+        ig1.context().cache().context().exchange().lastTopologyFuture().get();
+
+        // Stopping the coordinator node leads to moving all partitions to the LOST state.
+        stopGrid(0);
+
+        for (int partId = 0; partId < PARTS_CNT; partId++) {
+            if (stopInTheMiddleOfCheckpoint && partId == owningPartId)
+                continue;
+
+            checkLostPartitionAcrossCluster(DEFAULT_CACHE_NAME, partId);
+        }
+
+        assertEquals(
+            "WAL should be " + (stopInTheMiddleOfCheckpoint ? "enabled" : "disabled") + " for the cache + " + DEFAULT_CACHE_NAME,
+            stopInTheMiddleOfCheckpoint,
+            ig1.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME)).localWalEnabled());
+
+        if (stopInTheMiddleOfCheckpoint) {
+            GridCacheDatabaseSharedManager dbMgr1 = (GridCacheDatabaseSharedManager) ig1.context().cache().context().database();
+
+            IgniteInternalFuture<?> cpFinishFut = dbMgr1.forceCheckpoint("force checkpoint").futureFor(FINISHED);
+
+            cpFinishFut = cpFinishFut.chain(fut -> {
+                CheckpointEntry cpEntry = dbMgr1.checkpointHistory().lastCheckpoint();
+
+                String cpEndFileName = CheckpointMarkersStorage.checkpointFileName(cpEntry, END);
+
+                GridFutureAdapter<Void> fut0 = new GridFutureAdapter<>();
+
+                try {
+                    Files.delete(Paths.get(dbMgr1.checkpointDirectory().getAbsolutePath(), cpEndFileName));
+                }
+                catch (IOException e) {
+                    fut0.onDone(new IgniteException("Failed to remove checkpoint end marker.", e));
+                }
+                finally {
+                    fut0.onDone();
+                }
+
+                return fut0;
+            });
+
+            cpFinishFut.get(10, SECONDS);
+
+            stopGrid(1, true);
+        }
+        else
+            stopGrid(1);
+
+        // Restart the cluster and check that all partitions are restored.
+        ig0 = startGrid(0);
+        ig1 = startGrid(1);
+
+        awaitPartitionMapExchange();
+
+        // Check that there are no lost partitions.
+        for (int partId = 0; partId < PARTS_CNT; partId++)
+            checkNoLostPartitionAcrossCluster(DEFAULT_CACHE_NAME, partId);
+
+        assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
+
+        // Check that WAL is enabled on all nodes.
+        assertTrue(
+            "WAL should be enabled for the cache + " + DEFAULT_CACHE_NAME,
+            ig0.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME)).localWalEnabled());
+        assertTrue(
+            "WAL should be enabled for the cache + " + DEFAULT_CACHE_NAME,
+            ig1.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME)).localWalEnabled());
     }
 
     /**
@@ -277,11 +433,10 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
     }
 
     /**
-     * Checks partition states on all nodes.
+     * Checks the given partition has {@code LOST} state on all nodes in the cluster.
      *
      * @param cacheName Cache name to check.
      * @param partId Partition to check.
-     * @return {@code true} if partition state of the given partition equals to {@code state} on all nodes.
      */
     public static void checkLostPartitionAcrossCluster(String cacheName, int partId) {
         for (Ignite grid : G.allGrids()) {
@@ -316,6 +471,48 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
                         fail("Unexpected partition state [partId=" + partId + ", nodeId=" + g.localNode().id() +
                             ", node2partNodeId=" + n.localNode().id() +
                             ", node2partState=" + s + ", expectedPartState=" + LOST + ", markedAsLost=true]");
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Checks that the given partition for the given cache is not in {@code LOST} state on any node.
+     *
+     * @param cacheName Cache name to check.
+     * @param partId Partition to check.
+     */
+    public static void checkNoLostPartitionAcrossCluster(String cacheName, int partId) {
+        for (Ignite grid : G.allGrids()) {
+            IgniteEx g = (IgniteEx)grid;
+
+            GridDhtPartitionTopology top = g.context().cache().cacheGroup(CU.cacheId(cacheName)).topology();
+
+            if (!top.lostPartitions().isEmpty())
+                fail("Unexpected partition states [lostParts=" + top.lostPartitions() + ']');
+
+            GridDhtLocalPartition p = top.localPartition(partId);
+
+            if (p != null) {
+                GridDhtPartitionState actualState = p.state();
+
+                // check actual partition state
+                if (actualState == LOST) {
+                    fail("Unexpected partition state [partId=" + partId + ", nodeId=" + g.localNode().id() +
+                        ", actualPartState=" + actualState + ", expectedPartState=" + OWNING + ']');
+                }
+
+                // check node2part mapping
+                for (Ignite node : G.allGrids()) {
+                    IgniteEx n = (IgniteEx)node;
+
+                    GridDhtPartitionState s = top.partitionState(n.localNode().id(), partId);
+
+                    if (s == LOST) {
+                        fail("Unexpected partition state [partId=" + partId + ", nodeId=" + g.localNode().id() +
+                            ", node2partNodeId=" + n.localNode().id() +
+                            ", node2partState=" + s + ", expectedPartState=" + OWNING + ", markedAsLost=true]");
                     }
                 }
             }
