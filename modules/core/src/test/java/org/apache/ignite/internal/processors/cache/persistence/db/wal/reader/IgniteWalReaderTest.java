@@ -258,7 +258,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         int cacheObjectsToWrite = 10_000;
 
-        putDummyRecords(ignite0, cacheObjectsToWrite, false);
+        putDummyRecords(ignite0, cacheObjectsToWrite);
 
         stopGrid();
 
@@ -391,7 +391,18 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
             return true;
         }, evtType);
 
-        putDummyRecords(ignite, 5_000, true);
+        IgniteCache<Object, Object> cache0 = ignite.cache(CACHE_NAME);
+
+        //we need two checkpoints here to let Compaction feature to start working
+        for (int i = 0; i < 1000; i++)
+            cache0.put(i, new IndexedObject(i));
+
+        forceCheckpoint(ignite);
+
+        for (int i = 0; i < 1000; i++)
+            cache0.put(i, new IndexedObject(i));
+
+        forceCheckpoint(ignite);
 
         stopGrid();
 
@@ -431,7 +442,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
             return true;
         }, EVT_WAL_SEGMENT_ARCHIVED);
 
-        putDummyRecords(ignite, 100, false);
+        putDummyRecords(ignite, 100);
 
         waitingForEvt.set(true); // Flag for skipping regular log() and rollOver().
 
@@ -881,7 +892,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         int cntEntries = 100;
 
-        putDummyRecords(ignite, cntEntries, false);
+        putDummyRecords(ignite, cntEntries);
 
         String workDir = U.defaultWorkDirectory();
 
@@ -1915,20 +1926,11 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
      * @param ignite ignite instance.
      * @param recordsToWrite count.
      */
-    private void putDummyRecords(Ignite ignite, int recordsToWrite, boolean forceCheckpoint) throws IgniteCheckedException {
+    private void putDummyRecords(Ignite ignite, int recordsToWrite) {
         IgniteCache<Object, Object> cache0 = ignite.cache(CACHE_NAME);
 
-        for (int i = 0; i < recordsToWrite / 2; i++)
+        for (int i = 0; i < recordsToWrite; i++)
             cache0.put(i, new IndexedObject(i));
-
-        if (forceCheckpoint)
-            forceCheckpoint();
-
-        for (int i = recordsToWrite / 2; i < recordsToWrite; i++)
-            cache0.put(i, new IndexedObject(i));
-
-        if (forceCheckpoint)
-            forceCheckpoint();
     }
 
     /**
