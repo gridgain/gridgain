@@ -291,7 +291,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
         }
 
         // Restart the cluster and check that all partitions are restored.
-        ig0 =startGrid(0);
+        ig0 = startGrid(0);
         ig1 = startGrid(1);
 
         awaitPartitionMapExchange();
