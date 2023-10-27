@@ -99,6 +99,7 @@ import org.apache.ignite.internal.client.ssl.GridSslBasicContextFactory;
 import org.apache.ignite.internal.client.ssl.GridSslContextFactory;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
+import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
@@ -1551,6 +1552,22 @@ public final class GridTestUtils {
      */
     public static <K, V> GridNearCacheAdapter<K, V> near(IgniteCache<K, V> cache) {
         return cacheContext(cache).near();
+    }
+
+    /**
+     * @param ig Ignite node to extract {@link IgniteWriteAheadLogManager} from.
+     * @return Instance of {@link IgniteWriteAheadLogManager} associated with the given Ignite node.
+     */
+    public static IgniteWriteAheadLogManager wal(IgniteEx ig) {
+        return ig.context().cache().context().wal();
+    }
+
+    /**
+     * @param ig Ignite node to extract {@link IgniteCacheDatabaseSharedManager} from.
+     * @@return Instance of {@link IgniteCacheDatabaseSharedManager} associated with the given Ignite node.
+     */
+    public static IgniteCacheDatabaseSharedManager database(IgniteEx ig) {
+        return ig.context().cache().context().database();
     }
 
     /**
