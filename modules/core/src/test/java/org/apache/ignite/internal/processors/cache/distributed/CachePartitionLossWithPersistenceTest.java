@@ -16,16 +16,18 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
@@ -37,6 +39,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
@@ -44,9 +47,11 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -59,8 +64,8 @@ import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
-import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.MARKER_STORED_TO_DISK;
-import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
+import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntryType.END;
 
 /**
  *
@@ -103,6 +108,8 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
             setPartitionLossPolicy(lossPlc).
             setBackups(1).
             setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)));
+
+        cfg.setSegmentCheckFrequency(60_000);
 
         return cfg;
     }
@@ -220,16 +227,16 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
 
         // Rewrite data to trigger further rebalance.
         for (int k = 2500; k < 5000; k++) {
-            if (!stopInTheMiddleOfCheckpoint) {
-                // Update all partitions in oder to disable WAL on rebalancing.
-                // It is possible when there are no partitions in OWNING state.
-                cache.put(k, k);
-            }
-            else {
+            if (stopInTheMiddleOfCheckpoint) {
                 // Should skip one random partition to be sure that after restarting the second node,
                 // it will have at least one partition in OWNING state, and so WAL will not be disabled while rebalancing.
                 if (ig0.affinity(DEFAULT_CACHE_NAME).partition(k) != owningPartId)
                     cache.put(k, k);
+            }
+            else {
+                // Update all partitions in oder to disable WAL on rebalancing.
+                // It is possible when there are no partitions in OWNING state.
+                cache.put(k, k);
             }
         }
 
@@ -258,37 +265,37 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
             stopInTheMiddleOfCheckpoint,
             ig1.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME)).localWalEnabled());
 
-        if (!stopInTheMiddleOfCheckpoint)
-            stopGrid(1);
-        else {
-            String ig0Folder = ig1.context().pdsFolderResolver().resolveFolders().folderName();
-            File dbDir = U.resolveWorkDirectory(ig1.configuration().getWorkDirectory(), "db", false);
+        if (stopInTheMiddleOfCheckpoint) {
+            GridCacheDatabaseSharedManager dbMgr1 = (GridCacheDatabaseSharedManager) ig1.context().cache().context().database();
 
-            File ig0LfsDir = new File(dbDir, ig0Folder);
-            File ig0CpDir = new File(ig0LfsDir, "cp");
+            IgniteInternalFuture<?> cpFinishFut = dbMgr1.forceCheckpoint("force checkpoint").futureFor(FINISHED);
 
-            CountDownLatch stopLatch = new CountDownLatch(1);
+            cpFinishFut = cpFinishFut.chain(fut -> {
+                CheckpointEntry cpEntry = dbMgr1.checkpointHistory().lastCheckpoint();
 
-            GridCacheDatabaseSharedManager dbMrg1 = (GridCacheDatabaseSharedManager) ig1.context().cache().context().database();
-            dbMrg1.forceCheckpoint("test-checkpoint").futureFor(MARKER_STORED_TO_DISK).listen(f -> {
-                runAsync(
-                    () -> {
-                        stopGrid(1, true);
-                        stopLatch.countDown();
-                    }
-                );
+                String cpEndFileName = CheckpointMarkersStorage.checkpointFileName(cpEntry, END);
+
+                GridFutureAdapter<Void> fut0 = new GridFutureAdapter<>();
+
+                try {
+                    Files.delete(Paths.get(dbMgr1.checkpointDirectory().getAbsolutePath(), cpEndFileName));
+                }
+                catch (IOException e) {
+                    fut0.onDone(new IgniteException("Failed to remove checkpoint end marker.", e));
+                }
+                finally {
+                    fut0.onDone();
+                }
+
+                return fut0;
             });
 
-            assertTrue("Failed to stop the node in 10 sec.", stopLatch.await(10, SECONDS));
+            cpFinishFut.get(10, SECONDS);
 
-            // Make sure that the checkpoint end marker does not exixst.
-            File[] cpMarkers = ig0CpDir.listFiles();
-
-            for (File cpMark : cpMarkers) {
-                if (cpMark.getName().contains("-END"))
-                    cpMark.delete();
-            }
+            stopGrid(1, true);
         }
+        else
+            stopGrid(1);
 
         // Restart the cluster and check that all partitions are restored.
         ig0 = startGrid(0);
@@ -308,7 +315,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
             ig0.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME)).localWalEnabled());
         assertTrue(
             "WAL should be enabled for the cache + " + DEFAULT_CACHE_NAME,
-            ig0.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME)).localWalEnabled());
+            ig1.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME)).localWalEnabled());
     }
 
     /**
