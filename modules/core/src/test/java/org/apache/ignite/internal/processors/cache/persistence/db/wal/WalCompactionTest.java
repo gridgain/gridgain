@@ -159,7 +159,10 @@ public class WalCompactionTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test vefiries that 
+     * Test vefiries that compression process stops on segment with the last successful CP
+     * and doesn't proceed to the end of WAL archive.
+     *
+     * @throws Exception If failed.
      */
     @Test
     public void testBinaryRecoveryAfterFullCompaction() throws Exception {
@@ -200,7 +203,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
             forceCheckpoint(ig);
         }
         catch (Exception ignored) {
-            // ..
+            //..
         }
 
         // Wait until node will leave cluster.
@@ -219,6 +222,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
 
         IgniteEx ig0 = startGrid(0);
 
+        //check that binary recovery finished successfully and data is available
         assertTrue(ig0.cache(CACHE_NAME).size(CachePeekMode.PRIMARY) > 0);
     }
 
