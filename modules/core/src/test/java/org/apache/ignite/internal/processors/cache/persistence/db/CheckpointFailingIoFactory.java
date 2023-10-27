@@ -29,7 +29,7 @@ import java.nio.file.OpenOption;
 /**
  *
  */
-class CheckpointFailingIoFactory implements FileIOFactory {
+public class CheckpointFailingIoFactory implements FileIOFactory {
     /** */
     private volatile boolean fail;
 

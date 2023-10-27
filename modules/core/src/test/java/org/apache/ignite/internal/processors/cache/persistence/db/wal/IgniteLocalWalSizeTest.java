@@ -29,7 +29,10 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.filehandle.FileWriteHandle;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -162,6 +165,10 @@ public class IgniteLocalWalSizeTest extends GridCommonAbstractTest {
         IntStream.range(0, 10_000).forEach(i -> c.put(i, i));
 
         forceCheckpoint();
+        IntStream.range(10_001, 20_000).forEach(i -> c.put(i, i));
+        forceCheckpoint();
+        IntStream.range(20_001, 30_000).forEach(i -> c.put(i, i));
+
         checkLocalSegmentSizes(n);
 
         stopGrid(cfg.getIgniteInstanceName());
@@ -197,8 +204,13 @@ public class IgniteLocalWalSizeTest extends GridCommonAbstractTest {
         }
 
         if (n.context().config().getDataStorageConfiguration().isWalCompactionEnabled()) {
+            CheckpointHistory cpHist = ((GridCacheDatabaseSharedManager)n.context().cache().context().database())
+                    .checkpointHistory();
+
+            long lastCpIdx = ((FileWALPointer) cpHist.lastCheckpoint().checkpointMark()).index();
+
             assertTrue(waitForCondition(
-                () -> walMgr(n).lastCompactedSegment() == walMgr(n).lastArchivedSegment(), getTestTimeout()));
+                () -> walMgr(n).lastCompactedSegment() == lastCpIdx - 1, getTestTimeout()));
         }
 
         File walWorkDir = getFieldValue(walMgr(n), "walWorkDir");

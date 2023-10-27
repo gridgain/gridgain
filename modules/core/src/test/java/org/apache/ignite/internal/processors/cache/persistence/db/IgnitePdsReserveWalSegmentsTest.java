@@ -131,6 +131,9 @@ public class IgnitePdsReserveWalSegmentsTest extends GridCommonAbstractTest {
         // Reserve previous WAL segment.
         wal.reserve(new FileWALPointer(resIdx - 1, 0, 0));
 
+        if (compactionEnabled(n))
+            waitForCondition(() -> wal.lastCompactedSegment() == lowPtr.index() - 1, getTestTimeout());
+
         int numDel = wal.truncate(lowPtr);
 
         int expNumDel = (int)resIdx - 1;
