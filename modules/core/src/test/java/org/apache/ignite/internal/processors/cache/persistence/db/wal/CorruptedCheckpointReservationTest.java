@@ -232,8 +232,6 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         FileWALPointer corruptedCp = getCp(ig, cpIdx);
 
-        log.info("Looking for cpIdx " + corruptedCp.index() + "; segmentCompressed: " + segmentCompressed);
-
         if (segmentCompressed)
             GridTestUtils.waitForCondition(() -> walMgr.lastCompactedSegment() >= corruptedCp.index(), getTestTimeout());
 
@@ -278,8 +276,6 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
                 return FileVisitResult.CONTINUE;
             }
         });
-
-        log.info("Wanted file found: " + wantedFile.get());
 
         return Optional.ofNullable(wantedFile.get() != null ? new FileDescriptor(wantedFile.get()) : null);
     }
