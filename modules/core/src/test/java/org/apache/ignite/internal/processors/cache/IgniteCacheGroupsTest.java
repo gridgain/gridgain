@@ -2071,6 +2071,166 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    public void testCacheApiAtomicPartitioned1() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned2() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned3() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned4() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned5() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned6() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned7() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned8() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned9() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned10() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned11() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned12() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned13() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned14() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned15() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned16() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned17() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned18() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned19() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheApiAtomicPartitioned20() throws Exception {
+        cacheApiTest(PARTITIONED, ATOMIC);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     public void testCacheApiAtomicReplicated() throws Exception {
         cacheApiTest(REPLICATED, ATOMIC);
     }
@@ -2494,7 +2654,7 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
 
         cache.put(key, val1);
 
-        Object val0 = cache.getAndPutAsync(key, val2).get(ASYNC_TIMEOUT);
+        Object val0 = cache.getAndPutAsync(key, val2).get(ASYNC_TIMEOUT);//упал один раз из 50 прогонов.
 
         assertEquals(val1, val0);
 
