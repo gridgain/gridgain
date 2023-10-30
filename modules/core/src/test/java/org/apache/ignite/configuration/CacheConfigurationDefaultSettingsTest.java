@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,101 +16,65 @@
 
 package org.apache.ignite.configuration;
 
-import javax.cache.Cache;
-import javax.cache.Caching;
-import javax.cache.configuration.CompleteConfiguration;
-import javax.cache.configuration.MutableConfiguration;
-import javax.cache.expiry.Duration;
-import javax.cache.expiry.EternalExpiryPolicy;
-import javax.cache.expiry.ExpiryPolicy;
-import org.junit.After;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_JCACHE_COMPLIANCE;
 
 /**
- * Tests default settings of the {@link CacheConfiguration}.
- * These tests are analog of
- * {@link javax.cache.configuration.ConfigurationTest#testValidateFromBasicConfigurationRetrievedFromCache} test.
- * It was replaced because default value of {@link CacheConfiguration.isStatisticsEnabled} is true.
+ * Tests value of {@link CacheConfiguration.isStatisticsEnabled}} depends on {@link IGNITE_JCACHE_COMPLIANCE}.
  */
-public class CacheConfigurationDefaultSettingsTest {
-    private static final String CACHE_NAME_1 = "cache_name_1";
-
-    private static final String CACHE_NAME_2 = "cache_name_2";
-
-    /**
-     * Tests default settings of the {@link CacheConfiguration}.
-     */
+public class CacheConfigurationDefaultSettingsTest extends GridCommonAbstractTest {
+    /** */
     @Test
-    public void testCacheConfigurationDefaultConstructor() {
-        checkCacheConfiguration(new CacheConfiguration<>());
+    @WithSystemProperty(key = IGNITE_JCACHE_COMPLIANCE, value = "true")
+    public void testIgniteJcacheComplianceSystemPropertyTrueDefaultConstructor() {
+        CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>();
+
+        assertFalse(cfg.isStatisticsEnabled());
     }
 
-    /**
-     * Tests default settings of the {@link CacheConfiguration}.
-     */
+    /** */
     @Test
-    public void testCacheConfigurationConstructorWithCacheName() {
-        checkCacheConfiguration(new CacheConfiguration<>(CACHE_NAME_1));
+    @WithSystemProperty(key = IGNITE_JCACHE_COMPLIANCE, value = "true")
+    public void testIgniteJcacheComplianceSystemPropertyTrueConstructorWithCacheName() {
+        CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>();
+
+        assertFalse(cfg.isStatisticsEnabled());
     }
 
-    @After
-    public void afterTest() {
-        Caching.getCachingProvider().close();
-    }
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_JCACHE_COMPLIANCE, value = "false")
+    public void testIgniteJcacheComplianceSystemPropertyFalseDefaultConstructor() {
+        CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>();
 
-    /**
-     * Ensure that a {@link MutableConfiguration} correctly uses the defaults
-     * from an implementation of the base Configuration interface.
-     */
-    private void checkCacheConfiguration(CacheConfiguration cfg) {
-        Cache<Object, Object> cache = Caching.getCachingProvider().getCacheManager().createCache(CACHE_NAME_2, cfg);
-
-        CompleteConfiguration newCfg = cache.getConfiguration(CompleteConfiguration.class);
-
-        validateDefaults(newCfg);
-    }
-
-    /**
-     * This method was copied from {@link javax.cache.configuration.ConfigurationTest} test.
-     *
-     * @param cfg configuration
-     */
-    private void validateDefaults(CompleteConfiguration<?, ?> cfg) {
-        assertEquals(Object.class, cfg.getKeyType());
-        assertEquals(Object.class, cfg.getValueType());
-        assertFalse(cfg.isReadThrough());
-        assertFalse(cfg.isWriteThrough());
-        assertTrue(cfg.isStoreByValue());
         assertTrue(cfg.isStatisticsEnabled());
-        assertFalse(cfg.isManagementEnabled());
-        assertTrue(getConfigurationCacheEntryListenerConfigurationSize(cfg) == 0);
-        assertNull(cfg.getCacheLoaderFactory());
-        assertNull(cfg.getCacheWriterFactory());
-
-        //expiry policies
-        ExpiryPolicy expiryPolicy = cfg.getExpiryPolicyFactory().create();
-        assertTrue(expiryPolicy instanceof EternalExpiryPolicy);
-        assertThat(Duration.ETERNAL, equalTo(expiryPolicy.getExpiryForCreation()));
-        assertThat(expiryPolicy.getExpiryForAccess(), is(nullValue()));
-        assertThat(expiryPolicy.getExpiryForUpdate(), is(nullValue()));
     }
 
-    private int getConfigurationCacheEntryListenerConfigurationSize(CompleteConfiguration<?, ?> cfg) {
-        int i = 0;
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_JCACHE_COMPLIANCE, value = "false")
+    public void testIgniteJcacheComplianceSystemPropertyFalseConstructorWithCacheName() {
+        CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>();
 
-        for (Object listenerConfig : cfg.getCacheEntryListenerConfigurations()) {
-            i++;
-        }
+        assertTrue(cfg.isStatisticsEnabled());
+    }
 
-        return i;
+    /** */
+    @Test
+    public void testDefaultConstructor() {
+        CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>();
+
+        assertTrue(cfg.isStatisticsEnabled());
+    }
+
+    /** */
+    @Test
+    public void testIgniteConstructorWithCacheName() {
+        CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>();
+
+        assertTrue(cfg.isStatisticsEnabled());
     }
 }
