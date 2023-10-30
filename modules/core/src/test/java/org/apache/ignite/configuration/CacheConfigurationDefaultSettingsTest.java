@@ -26,6 +26,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_JCACHE_COMPLIANCE;
  * Tests value of {@link CacheConfiguration.isStatisticsEnabled}} depends on {@link IGNITE_JCACHE_COMPLIANCE}.
  */
 public class CacheConfigurationDefaultSettingsTest extends GridCommonAbstractTest {
+    private static final String CACHE_NAME = "cache_name";
+
     /** */
     @Test
     @WithSystemProperty(key = IGNITE_JCACHE_COMPLIANCE, value = "true")
@@ -39,7 +41,7 @@ public class CacheConfigurationDefaultSettingsTest extends GridCommonAbstractTes
     @Test
     @WithSystemProperty(key = IGNITE_JCACHE_COMPLIANCE, value = "true")
     public void testIgniteJcacheComplianceSystemPropertyTrueConstructorWithCacheName() {
-        CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>();
+        CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>(CACHE_NAME);
 
         assertFalse(cfg.isStatisticsEnabled());
     }
@@ -57,7 +59,7 @@ public class CacheConfigurationDefaultSettingsTest extends GridCommonAbstractTes
     @Test
     @WithSystemProperty(key = IGNITE_JCACHE_COMPLIANCE, value = "false")
     public void testIgniteJcacheComplianceSystemPropertyFalseConstructorWithCacheName() {
-        CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>();
+        CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>(CACHE_NAME);
 
         assertTrue(cfg.isStatisticsEnabled());
     }
@@ -72,8 +74,8 @@ public class CacheConfigurationDefaultSettingsTest extends GridCommonAbstractTes
 
     /** */
     @Test
-    public void testIgniteConstructorWithCacheName() {
-        CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>();
+    public void testConstructorWithCacheName() {
+        CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>(CACHE_NAME);
 
         assertTrue(cfg.isStatisticsEnabled());
     }
