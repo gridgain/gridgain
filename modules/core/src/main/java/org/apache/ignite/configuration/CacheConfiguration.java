@@ -515,6 +515,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
         sqlEscapeAll = cc.isSqlEscapeAll();
         sqlFuncCls = cc.getSqlFunctionClasses();
         sqlIdxMaxInlineSize = cc.getSqlIndexMaxInlineSize();
+        sqlOnheapCache = cc.isSqlOnheapCacheEnabled();
         sqlOnheapCacheMaxSize = cc.getSqlOnheapCacheMaxSize();
         sqlSchema = cc.getSqlSchema();
         storeConcurrentLoadAllThreshold = cc.getStoreConcurrentLoadAllThreshold();
