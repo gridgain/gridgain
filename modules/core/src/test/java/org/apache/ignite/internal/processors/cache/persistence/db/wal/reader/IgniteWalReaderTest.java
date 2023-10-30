@@ -391,7 +391,18 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
             return true;
         }, evtType);
 
-        putDummyRecords(ignite, 5_000);
+        IgniteCache<Object, Object> cache0 = ignite.cache(CACHE_NAME);
+
+        //we need two checkpoints here to let Compaction feature to start working
+        for (int i = 0; i < 1000; i++)
+            cache0.put(i, new IndexedObject(i));
+
+        forceCheckpoint(ignite);
+
+        for (int i = 0; i < 1000; i++)
+            cache0.put(i, new IndexedObject(i));
+
+        forceCheckpoint(ignite);
 
         stopGrid();
 

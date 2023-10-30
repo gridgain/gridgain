@@ -50,6 +50,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Logger;
@@ -262,6 +263,8 @@ public class DataStreamerImplSelfTest extends GridCommonAbstractTest {
             IgniteFuture fut = null;
 
             try (IgniteDataStreamer<Integer, String> streamer = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
+                streamer.allowOverwrite(false);
+
                 streamer.perThreadBufferSize(1);
 
                 fut = streamer.addData(1, "1");
@@ -501,6 +504,8 @@ public class DataStreamerImplSelfTest extends GridCommonAbstractTest {
 
         IgniteDataStreamer<Object, Object> streamer = ignite.dataStreamer(DEFAULT_CACHE_NAME);
 
+        streamer.allowOverwrite(false);
+
         streamer.perThreadBufferSize(1);
 
         ((DataStreamerImpl)streamer).maxRemapCount(0);
@@ -541,6 +546,36 @@ public class DataStreamerImplSelfTest extends GridCommonAbstractTest {
         }
 
         assertEquals(Integer.valueOf(0), cache.get(0));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = "IGNITE_DATA_STREAMER_ALLOW_OVERWRITE", value = "true")
+    public void testAllowOverwriteSystemPropertyTrue() throws Exception {
+        cnt = 0;
+
+        final Ignite ignite = startGrid(0);
+
+        try (IgniteDataStreamer<Integer, Integer> ldr = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
+            assertTrue(ldr.allowOverwrite());
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = "IGNITE_DATA_STREAMER_ALLOW_OVERWRITE", value = "false")
+    public void testAllowOverwriteSystemPropertyFalse() throws Exception {
+        cnt = 0;
+
+        final Ignite ignite = startGrid(0);
+
+        try (IgniteDataStreamer<Integer, Integer> ldr = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
+            assertFalse(ldr.allowOverwrite());
+        }
     }
 
     /**

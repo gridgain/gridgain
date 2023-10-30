@@ -2202,6 +2202,9 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_DISABLE_MAINTENANCE_CLEAR_FOLDER_TASK =
         "IGNITE_DISABLE_MAINTENANCE_CLEAR_FOLDER_TASK";
 
+    @SystemProperty(value = "Enables an allow overwrite mode for a data streamer", defaults = "true")
+    public static final String IGNITE_DATA_STREAMER_ALLOW_OVERWRITE = "IGNITE_DATA_STREAMER_ALLOW_OVERWRITE";
+
     /**
      * Enforces singleton.
      */

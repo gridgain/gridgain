@@ -43,6 +43,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
@@ -469,10 +470,12 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
         while (walMgr(n0).lastArchivedSegment() < 3)
             n0.cache("cache").put(ThreadLocalRandom.current().nextLong(), new byte[(int)(32 * U.KB)]);
 
-        waitForCondition(
-            () -> walMgr(n0).lastArchivedSegment() == walMgr(n0).lastCompactedSegment(),
-            getTestTimeout()
-        );
+        CheckpointHistory cpHist = ((GridCacheDatabaseSharedManager)n0.context().cache().context().database())
+                .checkpointHistory();
+
+        long lastCpIdx = ((FileWALPointer) cpHist.lastCheckpoint().checkpointMark()).index();
+
+        waitForCondition( () -> walMgr(n0).lastCompactedSegment() == lastCpIdx - 1, getTestTimeout());
 
         assertCorrectWalCompressedBytesMetrics(n0);
 
