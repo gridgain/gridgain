@@ -51,6 +51,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescripto
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -61,11 +62,15 @@ import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.ZIP_SUFFIX;
 import static org.apache.ignite.testframework.GridTestUtils.database;
 import static org.apache.ignite.testframework.GridTestUtils.wal;
+import static org.junit.Assume.assumeFalse;
 
 /**
  *
  */
 public class WalCompactionTest extends GridCommonAbstractTest {
+    /** Direct IO Plugin Provide class name. */
+    private static final String DIRECT_IO_PROVIDER_NAME = "LinuxNativeIoPluginProvider";
+
     /** Wal segment size. */
     private static final int WAL_SEGMENT_SIZE = 1024 * 1024;
 
@@ -172,6 +177,9 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         fileIoFactory = new CheckpointFailingIoFactory(false);
 
         final IgniteEx ig = startGrid(0);
+
+        assumeFalse(isDirectIOPluginPresented(ig.context().plugins().allProviders()));
+
         ig.cluster().state(ACTIVE);
 
         IgniteCache<Integer, byte[]> cache = ig.cache(CACHE_NAME);
@@ -224,6 +232,12 @@ public class WalCompactionTest extends GridCommonAbstractTest {
 
         //check that binary recovery finished successfully and data is available
         assertTrue(ig0.cache(CACHE_NAME).size(CachePeekMode.PRIMARY) > 0);
+    }
+
+    /** Method to check whether Direct IO feature is presented. */
+    private boolean isDirectIOPluginPresented(Collection<PluginProvider> providers) {
+        return providers.stream().anyMatch(
+                p -> p.getClass().getSimpleName().equals(DIRECT_IO_PROVIDER_NAME));
     }
 
     /**
