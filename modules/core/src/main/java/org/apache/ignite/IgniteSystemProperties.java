@@ -2205,6 +2205,9 @@ public final class IgniteSystemProperties {
     @SystemProperty(value = "Enables an allow overwrite mode for a data streamer", defaults = "true")
     public static final String IGNITE_DATA_STREAMER_ALLOW_OVERWRITE = "IGNITE_DATA_STREAMER_ALLOW_OVERWRITE";
 
+    @SystemProperty(value = "Enables compliance with the JCache standard (JSR-107)", defaults = "false")
+    public static final String IGNITE_JCACHE_COMPLIANCE = "IGNITE_JCACHE_COMPLIANCE";
+
     /**
      * Enforces singleton.
      */
