@@ -33,6 +33,14 @@ public class CdcDataRecord extends DataRecord {
         super(writeEntries);
     }
 
+    /**
+     * @param writeEntries Write entries.
+     * @param timestamp TimeStamp.
+     */
+    public CdcDataRecord(List<DataEntry> writeEntries, long timestamp) {
+        super(writeEntries, timestamp);
+    }
+
     /** {@inheritDoc} */
     @Override public RecordType type() {
         return RecordType.CDC_DATA_RECORD;
