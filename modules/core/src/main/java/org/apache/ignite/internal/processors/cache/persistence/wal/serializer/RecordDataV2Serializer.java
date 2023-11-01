@@ -29,6 +29,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.managers.encryption.EncryptionCacheKeyProvider;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.wal.record.CacheState;
+import org.apache.ignite.internal.pagemem.wal.record.CdcDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.ConsistentCutRecord;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
@@ -177,7 +178,6 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
 
             case DATA_RECORD:
             case DATA_RECORD_V2:
-            case CDC_DATA_RECORD:
                 int entryCnt = in.readInt();
                 long timeStamp = in.readLong();
 
@@ -187,6 +187,9 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
                     entries.add(readPlainDataEntry(in, type));
 
                 return new DataRecord(entries, timeStamp);
+
+            case CDC_DATA_RECORD:
+                return new CdcDataRecord(Collections.emptyList());
 
             case MVCC_DATA_RECORD:
                 entryCnt = in.readInt();

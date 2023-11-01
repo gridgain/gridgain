@@ -127,7 +127,6 @@ import org.apache.ignite.spi.encryption.EncryptionSpi;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.CDC_DATA_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_RECORD_V2;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_DATA_RECORD_V2;
@@ -2185,8 +2184,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
         int partId = in.readInt();
         long partCntr = in.readLong();
         long expireTime = in.readLong();
-        byte flags = type == DATA_RECORD_V2 || type == OUT_OF_ORDER_UPDATE || type == CDC_DATA_RECORD ?
-            in.readByte() : 0;
+        byte flags = type == DATA_RECORD_V2 || type == OUT_OF_ORDER_UPDATE ? in.readByte() : 0;
 
         GridCacheContext cacheCtx = cctx.cacheContext(cacheId);
 
