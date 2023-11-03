@@ -1174,17 +1174,17 @@ namespace Apache.Ignite.Core.Tests.Services
             cache.Put(5, dt3);
             cache.Put(6, dt4);
 
-            Assert.AreEqual(TimestampConverter.ToUniversal(dt3), cache.Get(5).ToUniversalTime());
-            Assert.AreEqual(TimestampConverter.ToUniversal(dt4), cache.Get(6).ToUniversalTime());
+            Assert.AreEqual(TimestampConverter.ToUniversal(dt3), cache.Get(5));
+            Assert.AreEqual(TimestampConverter.ToUniversal(dt4), cache.Get(6));
 
             svc.testLocalDateFromCache();
 
-            Assert.AreEqual(dt3, cache.Get(7).ToLocalTime());
-            Assert.AreEqual(dt4, cache.Get(8).ToLocalTime());
+            Assert.AreEqual(TimestampConverter.ToUniversal(dt3), cache.Get(7));
+            Assert.AreEqual(TimestampConverter.ToUniversal(dt4), cache.Get(8));
 
             var now = DateTime.Now;
             cache.Put(9, now);
-            Assert.AreEqual(now.ToUniversalTime(), cache.Get(9).ToUniversalTime());
+            Assert.AreEqual(TimestampConverter.ToUniversal(now), cache.Get(9));
 #endif
         }
 
