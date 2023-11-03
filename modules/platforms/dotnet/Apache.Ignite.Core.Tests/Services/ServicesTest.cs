@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Tests.Services
 {
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.IO;
     using System.Linq;
     using System.Threading;
@@ -1165,6 +1166,8 @@ namespace Apache.Ignite.Core.Tests.Services
             Assert.AreEqual("value", svc.contextAttribute("attr"));
 
 #if NETCOREAPP
+            DateTimeOffset dtOffset = new DateTimeOffset(1982, 4, 1, 0, 0, 0, 0, TimeSpan.FromHours(3));
+
             //This Date in Europe/Moscow have offset +4.
             DateTime dt3 = new DateTime(1982, 4, 1, 1, 0, 0, 0, DateTimeKind.Local);
             //This Date in Europe/Moscow have offset +3.
@@ -1962,7 +1965,11 @@ namespace Apache.Ignite.Core.Tests.Services
             public void ToJavaTicks(DateTime date, out long high, out int low)
             {
                 if (date.Kind == DateTimeKind.Local)
-                    date = date.ToUniversalTime();
+                {
+                    date = TimeZoneInfo.ConvertTimeToUtc(
+                        dateTime: DateTime.SpecifyKind(date, DateTimeKind.Unspecified),
+                        sourceTimeZone: TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
+                }
 
                 BinaryUtils.ToJavaDate(date, out high, out low);
             }
