@@ -1166,8 +1166,6 @@ namespace Apache.Ignite.Core.Tests.Services
             Assert.AreEqual("value", svc.contextAttribute("attr"));
 
 #if NETCOREAPP
-            DateTimeOffset dtOffset = new DateTimeOffset(1982, 4, 1, 0, 0, 0, 0, TimeSpan.FromHours(3));
-
             //This Date in Europe/Moscow have offset +4.
             DateTime dt3 = new DateTime(1982, 4, 1, 1, 0, 0, 0, DateTimeKind.Local);
             //This Date in Europe/Moscow have offset +3.
@@ -1176,8 +1174,8 @@ namespace Apache.Ignite.Core.Tests.Services
             cache.Put(5, dt3);
             cache.Put(6, dt4);
 
-            Assert.AreEqual(dt3.ToUniversalTime(), cache.Get(5).ToUniversalTime());
-            Assert.AreEqual(dt4.ToUniversalTime(), cache.Get(6).ToUniversalTime());
+            Assert.AreEqual(TimestampConverter.ToUniversal(dt3), cache.Get(5).ToUniversalTime());
+            Assert.AreEqual(TimestampConverter.ToUniversal(dt4), cache.Get(6).ToUniversalTime());
 
             svc.testLocalDateFromCache();
 
@@ -1966,9 +1964,7 @@ namespace Apache.Ignite.Core.Tests.Services
             {
                 if (date.Kind == DateTimeKind.Local)
                 {
-                    date = TimeZoneInfo.ConvertTimeToUtc(
-                        dateTime: DateTime.SpecifyKind(date, DateTimeKind.Unspecified),
-                        sourceTimeZone: TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
+                    date = ToUniversal(date);
                 }
 
                 BinaryUtils.ToJavaDate(date, out high, out low);
@@ -1980,6 +1976,13 @@ namespace Apache.Ignite.Core.Tests.Services
                 return new DateTime(
                     BinaryUtils.JavaDateTicks + high * TimeSpan.TicksPerMillisecond + low / 100,
                     DateTimeKind.Utc);
+            }
+
+            public static DateTime ToUniversal(DateTime date)
+            {
+                return TimeZoneInfo.ConvertTimeToUtc(
+                    dateTime: DateTime.SpecifyKind(date, DateTimeKind.Unspecified),
+                    sourceTimeZone: TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
             }
         }
 #endif
