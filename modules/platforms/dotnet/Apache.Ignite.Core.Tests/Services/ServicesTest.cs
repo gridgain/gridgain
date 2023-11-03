@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Tests.Services
 {
     using System;
     using System.Collections.Generic;
-    using System.Globalization;
     using System.IO;
     using System.Linq;
     using System.Threading;
@@ -1174,17 +1173,17 @@ namespace Apache.Ignite.Core.Tests.Services
             cache.Put(5, dt3);
             cache.Put(6, dt4);
 
-            Assert.AreEqual(TimestampConverter.ToUniversal(dt3), cache.Get(5));
-            Assert.AreEqual(TimestampConverter.ToUniversal(dt4), cache.Get(6));
+            Assert.AreEqual(ServiceTestUtils.MoscowToUniversal(dt3), cache.Get(5));
+            Assert.AreEqual(ServiceTestUtils.MoscowToUniversal(dt4), cache.Get(6));
 
             svc.testLocalDateFromCache();
 
-            Assert.AreEqual(TimestampConverter.ToUniversal(dt3), cache.Get(7));
-            Assert.AreEqual(TimestampConverter.ToUniversal(dt4), cache.Get(8));
+            Assert.AreEqual(ServiceTestUtils.MoscowToUniversal(dt3), cache.Get(7));
+            Assert.AreEqual(ServiceTestUtils.MoscowToUniversal(dt4), cache.Get(8));
 
             var now = DateTime.Now;
             cache.Put(9, now);
-            Assert.AreEqual(TimestampConverter.ToUniversal(now), cache.Get(9));
+            Assert.AreEqual(ServiceTestUtils.MoscowToUniversal(now), cache.Get(9));
 #endif
         }
 
@@ -1964,7 +1963,7 @@ namespace Apache.Ignite.Core.Tests.Services
             {
                 if (date.Kind == DateTimeKind.Local)
                 {
-                    date = ToUniversal(date);
+                    date = ServiceTestUtils.MoscowToUniversal(date);
                 }
 
                 BinaryUtils.ToJavaDate(date, out high, out low);
@@ -1976,13 +1975,6 @@ namespace Apache.Ignite.Core.Tests.Services
                 return new DateTime(
                     BinaryUtils.JavaDateTicks + high * TimeSpan.TicksPerMillisecond + low / 100,
                     DateTimeKind.Utc);
-            }
-
-            public static DateTime ToUniversal(DateTime date)
-            {
-                return TimeZoneInfo.ConvertTimeToUtc(
-                    dateTime: DateTime.SpecifyKind(date, DateTimeKind.Unspecified),
-                    sourceTimeZone: TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
             }
         }
 #endif
