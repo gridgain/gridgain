@@ -221,7 +221,7 @@ public class IgnitePdsReserveWalSegmentsTest extends GridCommonAbstractTest {
 
         IgniteCache<Object, Object> cache = ig0.cache(DEFAULT_CACHE_NAME);
 
-        for (int k = 0; k < 1_000; k++) {
+        for (int k = 0; k < 2_000; k++) {
             cache.put(k, new byte[1024]);
 
             if (k % 100 == 0)
