@@ -149,6 +149,7 @@ public class ReliabilityTest extends AbstractThinClientTest {
                     try (QueryCursor<Cache.Entry<Integer, String>> cur = cache.query(qry)) {
                         List<Cache.Entry<Integer, String>> res = cur.getAll();
 
+                        // TODO java.lang.AssertionError: Unexpected number of entries expected:<1000> but was:<676>
                         assertEquals("Unexpected number of entries", data.size(), res.size());
 
                         Map<Integer, String> act = res.stream()
