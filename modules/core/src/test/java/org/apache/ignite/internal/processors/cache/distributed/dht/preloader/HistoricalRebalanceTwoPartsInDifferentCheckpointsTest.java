@@ -115,6 +115,8 @@ public class HistoricalRebalanceTwoPartsInDifferentCheckpointsTest extends GridC
         // The reason for that requirement is the fact that historical rebalance is never used for "empty" partitions.
         // It can be achieved by using full_sync write sync mode or by using a data streamer with allowOverwrite == false.
         try (IgniteDataStreamer streamer = ignite0.dataStreamer(DEFAULT_CACHE_NAME)) {
+            streamer.allowOverwrite(false);
+
             partKeys.forEach(key -> streamer.addData(key, key));
         }
 

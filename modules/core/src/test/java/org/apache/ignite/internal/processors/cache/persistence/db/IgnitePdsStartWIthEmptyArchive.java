@@ -126,6 +126,8 @@ public class IgnitePdsStartWIthEmptyArchive extends GridCommonAbstractTest {
 
         // Populate data for generate WAL archive segments.
         try (IgniteDataStreamer<Integer, byte[]> st = ig.dataStreamer(DEFAULT_CACHE_NAME)) {
+            st.allowOverwrite(false);
+
             int entries = 1000;
 
             for (int i = 0; i < entries; i++)

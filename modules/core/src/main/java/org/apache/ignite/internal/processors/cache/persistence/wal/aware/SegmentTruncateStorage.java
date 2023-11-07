@@ -43,7 +43,7 @@ class SegmentTruncateStorage {
     /**
      * Update last truncated segment.
      *
-     * @param absIdx Absolut segment index.
+     * @param absIdx Absolute segment index.
      */
     synchronized void lastTruncatedIdx(long absIdx) {
         lastTruncatedIdx = absIdx;
@@ -55,7 +55,7 @@ class SegmentTruncateStorage {
      * Update minimum reserved segment.
      * Protected from deletion.
      *
-     * @param absIdx Absolut segment index.
+     * @param absIdx Absolute segment index.
      */
     synchronized void minReservedIdx(long absIdx) {
         minReservedIdx = absIdx;
@@ -67,7 +67,7 @@ class SegmentTruncateStorage {
      * Update segment of last completed checkpoint.
      * Required for binary recovery.
      *
-     * @param absIdx Absolut segment index.
+     * @param absIdx Absolute segment index.
      */
     synchronized void lastCheckpointIdx(long absIdx) {
         lastCpIdx = absIdx;
@@ -79,7 +79,7 @@ class SegmentTruncateStorage {
      * Update last archived segment.
      * Needed to restart the node correctly.
      *
-     * @param absIdx Absolut segment index.
+     * @param absIdx Absolute segment index.
      */
     synchronized void lastArchivedIdx(long absIdx) {
         lastArchivedIdx = absIdx;
@@ -90,7 +90,7 @@ class SegmentTruncateStorage {
     /**
      * Getting last truncated segment.
      *
-     * @return Absolut segment index.
+     * @return Absolute segment index.
      */
     synchronized long lastTruncatedIdx() {
         return lastTruncatedIdx;

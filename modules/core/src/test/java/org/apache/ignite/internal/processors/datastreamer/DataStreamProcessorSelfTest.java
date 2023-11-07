@@ -372,6 +372,8 @@ public class DataStreamProcessorSelfTest extends GridCommonAbstractTest {
             final int threads = GridTestUtils.SF.applyLB(10, 5);
 
             try (final IgniteDataStreamer<Integer, Integer> ldr = g1.dataStreamer(DEFAULT_CACHE_NAME)) {
+                ldr.allowOverwrite(false);
+
                 final AtomicInteger idxGen = new AtomicInteger();
 
                 IgniteInternalFuture<?> f1 = multithreadedAsync(new Callable<Object>() {
