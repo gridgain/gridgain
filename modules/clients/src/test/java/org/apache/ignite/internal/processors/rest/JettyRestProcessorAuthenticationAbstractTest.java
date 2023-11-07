@@ -66,9 +66,9 @@ public abstract class JettyRestProcessorAuthenticationAbstractTest extends Jetty
         cfg.setAuthenticationEnabled(true);
 
         // For now persistence is needed because of current authentication implementation.
-        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+        DataStorageConfiguration dsCfg = cfg.getDataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-                .setMaxSize(100 * 1024 * 1024))
+            .setMaxSize(100 * 1024 * 1024))
             .setWalMode(NONE);
 
         DataRegionConfiguration testDataRegionCfg = new DataRegionConfiguration();
