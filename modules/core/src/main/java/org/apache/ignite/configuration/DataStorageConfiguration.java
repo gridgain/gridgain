@@ -111,7 +111,7 @@ public class DataStorageConfiguration implements Serializable {
     public static final int DFLT_LOCK_WAIT_TIME = 10 * 1000;
 
     /** */
-    public static final boolean DFLT_METRICS_ENABLED = false;
+    public static final boolean DFLT_METRICS_ENABLED = true;
 
     /** Default amount of sub intervals to calculate rate-based metric. */
     public static final int DFLT_SUB_INTERVALS = 5;

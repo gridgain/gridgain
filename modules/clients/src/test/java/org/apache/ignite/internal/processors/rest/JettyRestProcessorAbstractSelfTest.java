@@ -2418,6 +2418,12 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
      */
     @Test
     public void testDataStorageMetricsDisabled() throws Exception {
+        if (memoryMetricsEnabled) {
+            memoryMetricsEnabled = false;
+
+            restartGrid();
+        }
+
         String ret = content(F.asMap("cmd", GridRestCommand.DATA_STORAGE_METRICS.key()));
 
         JsonNode res = validateJsonResponse(ret);
@@ -2433,9 +2439,9 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
     @Test
     public void testDataStorageMetricsEnabled() throws Exception {
         if (!memoryMetricsEnabled) {
-            restartGrid();
-
             memoryMetricsEnabled = true;
+
+            restartGrid();
         }
 
         String ret = content(F.asMap("cmd", GridRestCommand.DATA_STORAGE_METRICS.key()));
@@ -3529,6 +3535,8 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
 
         if (memoryMetricsEnabled)
             dsCfg.setMetricsEnabled(true).setWalMode(NONE);
+        else
+            dsCfg.setMetricsEnabled(false);
 
         cfg.setDataStorageConfiguration(dsCfg);
 
