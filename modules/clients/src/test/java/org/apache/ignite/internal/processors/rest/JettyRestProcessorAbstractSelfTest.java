@@ -2446,9 +2446,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
 
         String ret = content(F.asMap("cmd", GridRestCommand.DATA_STORAGE_METRICS.key()));
 
-        JsonNode res = validateJsonResponse(ret);
-
-        assertNotNull(res);
+        assertNotNull(validateJsonResponse(ret));
 
         info(GridRestCommand.DATA_STORAGE_METRICS.key().toUpperCase() + " command result: " + ret);
     }
