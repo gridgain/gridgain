@@ -744,6 +744,16 @@ public interface GridCacheEntryEx {
         throws GridCacheEntryRemovedException, IgniteCheckedException;
 
     /**
+     * Returns number of bytes that required by a value for the given {@code key} in the off-heap storage,
+     * without loading the value into cache.
+     *
+     * @param topVer Topology version.
+     * @return Entry size in bytes.
+     * @throws GridCacheEntryRemovedException If entry has been removed.
+     */
+    public long localSize(AffinityTopologyVersion topVer) throws GridCacheEntryRemovedException, IgniteCheckedException;
+
+    /**
      * Sets new value if current version is <tt>0</tt>
      *
      * @param val New value.

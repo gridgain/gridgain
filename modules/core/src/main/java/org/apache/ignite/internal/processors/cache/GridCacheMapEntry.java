@@ -3114,6 +3114,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         return peek(true, false, topVer, null);
     }
 
+    /** {@inheritDoc} */
+    @Override public long localSize(AffinityTopologyVersion topVer) throws GridCacheEntryRemovedException, IgniteCheckedException {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
     /**
      * TODO: IGNITE-3500: do we need to generate event and invalidate value?
      *
