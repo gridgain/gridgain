@@ -4650,7 +4650,54 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
     /** {@inheritDoc} */
     @Override public long localEntrySize(K key) throws IgniteCheckedException {
-        throw new UnsupportedOperationException("not implemented yet");
+        A.notNull(key, "key");
+
+        if (ctx.mvccEnabled())
+            throw new IgniteException("Operation is not supported");
+
+        ctx.checkSecurity(SecurityPermission.CACHE_READ);
+
+        KeyCacheObject cacheKey = ctx.toCacheKeyObject(key);
+
+        if (!ctx.isLocal()) {
+            AffinityTopologyVersion topVer = ctx.affinity().affinityTopologyVersion();
+
+            int part = ctx.affinity().partition(cacheKey);
+
+            boolean keyPrimary = ctx.affinity().primaryByPartition(ctx.localNode(), part, topVer);
+            boolean keyBackup = ctx.affinity().partitionBelongs(ctx.localNode(), part, topVer);
+
+            if (!keyPrimary && !keyBackup)
+                return 0;
+
+            GridCacheEntryEx e;
+            GridCacheContext ctx0;
+
+            while (true) {
+                ctx0 = ctx.isNear() ? ctx.near().dht().context() : ctx;
+                e = ctx0.cache().entryEx(key);
+
+                ctx.shared().database().checkpointReadLock();
+
+                try {
+                    return e.localSize(topVer);
+                }
+                catch (GridCacheEntryRemovedException ignore) {
+                    if (log.isDebugEnabled())
+                        log.debug("Got removed entry during 'peek': " + key);
+
+                    continue;
+                }
+                finally {
+                    e.touch();
+
+                    ctx.shared().database().checkpointReadUnlock();
+                }
+            }
+        }
+        else {
+            throw new UnsupportedOperationException("Not implemented yet");
+        }
     }
 
     /**
