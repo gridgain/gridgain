@@ -276,7 +276,19 @@ public abstract class WALRecord {
         PARTITION_CLEARING_START_RECORD(73, LOGICAL),
 
         /** Ecnrypted out-of-order update which is used by atomic caches on backup nodes. */
-        ENCRYPTED_OUT_OF_ORDER_UPDATE(74, LOGICAL);
+        ENCRYPTED_OUT_OF_ORDER_UPDATE(74, LOGICAL),
+
+        /** ClusterSnapshot start. */
+        CLUSTER_SNAPSHOT(75, LOGICAL),
+
+        /** Incremental snapshot start record. */
+        INCREMENTAL_SNAPSHOT_START_RECORD(76, LOGICAL),
+
+        /** Incremental snapshot finish record. */
+        INCREMENTAL_SNAPSHOT_FINISH_RECORD(77, LOGICAL),
+
+        /** CDC data record. */
+        CDC_DATA_RECORD(78, CUSTOM);
 
         /** Index for serialization. Should be consistent throughout all versions. */
         private final int idx;

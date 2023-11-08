@@ -29,6 +29,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.managers.encryption.EncryptionCacheKeyProvider;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.wal.record.CacheState;
+import org.apache.ignite.internal.pagemem.wal.record.CdcDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.ConsistentCutRecord;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
@@ -57,6 +58,8 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.ByteBufferBac
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.record.HeaderRecord;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.CDC_DATA_RECORD;
 
 /**
  * Record data V2 serializer.
@@ -99,6 +102,7 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
                 return 18 + cacheStatesSize + (walPtr == null ? 0 : 16);
 
             case MVCC_DATA_RECORD:
+            case CDC_DATA_RECORD:
                 return 4/*entry count*/ + 8/*timestamp*/ + dataSize((DataRecord)rec);
 
             case DATA_RECORD_V2:
@@ -176,6 +180,7 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
 
             case DATA_RECORD:
             case DATA_RECORD_V2:
+            case CDC_DATA_RECORD:
                 int entryCnt = in.readInt();
                 long timeStamp = in.readLong();
 
@@ -184,7 +189,10 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
                 for (int i = 0; i < entryCnt; i++)
                     entries.add(readPlainDataEntry(in, type));
 
-                return new DataRecord(entries, timeStamp);
+                if (type != CDC_DATA_RECORD)
+                    return new DataRecord(entries, timeStamp);
+                else
+                    return new CdcDataRecord(entries, timeStamp);
 
             case MVCC_DATA_RECORD:
                 entryCnt = in.readInt();
@@ -308,6 +316,7 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
             case MVCC_DATA_RECORD:
             case DATA_RECORD_V2:
             case OUT_OF_ORDER_UPDATE:
+            case CDC_DATA_RECORD:
                 DataRecord dataRec = (DataRecord)rec;
 
                 buf.putInt(dataRec.writeEntries().size());
