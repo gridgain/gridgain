@@ -4648,6 +4648,11 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         return true;
     }
 
+    /** {@inheritDoc} */
+    @Override public long localEntrySize(K key) throws IgniteCheckedException {
+        throw new UnsupportedOperationException("not implemented yet");
+    }
+
     /**
      *
      */

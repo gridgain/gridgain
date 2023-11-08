@@ -274,6 +274,11 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
         return true;
     }
 
+    /** {@inheritDoc} */
+    @Override public long localEntrySize(K key)  throws IgniteCheckedException {
+        throw new UnsupportedOperationException("not implemented yet");
+    }
+
     /**
      * @param keys Keys.
      * @param forcePrimary Force primary.

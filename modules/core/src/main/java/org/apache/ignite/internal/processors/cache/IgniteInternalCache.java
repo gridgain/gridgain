@@ -1834,4 +1834,20 @@ public interface IgniteInternalCache<K, V> extends Iterable<Cache.Entry<K, V>> {
      * @throws IgniteCheckedException If failed.
      */
     public boolean localPreloadPartition(int part) throws IgniteCheckedException;
+
+    /**
+     * Returns number of bytes that required by a value for the given {@code key} in the off-heap storage,
+     * without loading the value into cache.
+     *
+     * <p>
+     * This method will not load a value from the configured {@link CacheStore} or from a remote node.
+     * <h2 class="header">Transactions</h2>
+     * This method does not participate in any transactions.
+     *
+     * @param key Entry key.
+     * @return Size of the entry for the given {@code key} or {@code 0} if entry is not found.
+     * @throws NullPointerException If key is {@code null}.
+     * @throws IgniteCheckedException If failed.
+     */
+    public long localEntrySize(K key) throws IgniteCheckedException;
 }
