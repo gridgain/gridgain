@@ -128,6 +128,8 @@ public interface IgniteCacheOffheapManager {
      */
     @Nullable public CacheDataRow read(GridCacheMapEntry entry) throws IgniteCheckedException;
 
+    @Nullable public CacheDataRow find(GridCacheMapEntry entry) throws IgniteCheckedException;
+
     /**
      * @param cctx Cache context.
      * @param key Key.

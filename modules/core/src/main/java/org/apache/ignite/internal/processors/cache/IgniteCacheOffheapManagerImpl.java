@@ -673,6 +673,18 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /** {@inheritDoc} */
+    @Override @Nullable public CacheDataRow find(GridCacheMapEntry entry)
+        throws IgniteCheckedException {
+        KeyCacheObject key = entry.key();
+
+        assert grp.isLocal() || entry.localPartition() != null : entry;
+
+        GridCacheContext<Object, Object> cctx = entry.context();
+
+        return find(cctx, key);
+    }
+
+    /** {@inheritDoc} */
     @Nullable @Override public CacheDataRow read(GridCacheContext cctx, KeyCacheObject key)
         throws IgniteCheckedException {
         CacheDataStore dataStore = dataStore(cctx, key);
