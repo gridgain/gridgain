@@ -79,6 +79,11 @@ namespace Apache.Ignite.Core.Configuration
         public const bool DefaultLazyMemoryAllocation = true;
 
         /// <summary>
+        /// Default value for <see cref="MetricsEnabled"/>.
+        /// </summary>
+        public const bool DefaultMetricsEnabled = true;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="DataRegionConfiguration"/> class.
         /// </summary>
         public DataRegionConfiguration()
@@ -91,6 +96,7 @@ namespace Apache.Ignite.Core.Configuration
             MetricsSubIntervalCount = DefaultMetricsSubIntervalCount;
             MetricsRateTimeInterval = DefaultMetricsRateTimeInterval;
             LazyMemoryAllocation = DefaultLazyMemoryAllocation;
+            MetricsEnabled = DefaultMetricsEnabled;
         }
 
         /// <summary>
@@ -197,6 +203,7 @@ namespace Apache.Ignite.Core.Configuration
         /// <para />
         /// Metrics can be retrieved with <see cref="IIgnite.GetDataRegionMetrics()"/> method.
         /// </summary>
+        [DefaultValue(DefaultMetricsEnabled)]
         public bool MetricsEnabled { get; set; }
 
         /// <summary>

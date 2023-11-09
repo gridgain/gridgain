@@ -645,6 +645,7 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(DataRegionConfiguration.DefaultPersistenceEnabled, cfg.PersistenceEnabled);
             Assert.AreEqual(DataRegionConfiguration.DefaultMetricsRateTimeInterval, cfg.MetricsRateTimeInterval);
             Assert.AreEqual(DataRegionConfiguration.DefaultMetricsSubIntervalCount, cfg.MetricsSubIntervalCount);
+            Assert.AreEqual(DataRegionConfiguration.DefaultMetricsEnabled, cfg.MetricsEnabled);
             Assert.AreEqual(default(long), cfg.CheckpointPageBufferSize);
 
             if (DataRegionConfiguration.DefaultMaxSize != cfg.MaxSize)
