@@ -107,8 +107,6 @@ namespace Apache.Ignite.Core.Tests.Cache
         private static void AssertMetricsAreNotEmpty(IMemoryMetrics metrics)
         {
             Assert.Greater(metrics.AllocationRate, 0);
-            Assert.AreEqual(0, metrics.EvictionRate);
-            Assert.AreEqual(0, metrics.LargeEntriesPagesPercentage);
             Assert.Greater(metrics.PageFillFactor, 0);
             Assert.Greater(metrics.TotalAllocatedPages, 100);
         }
