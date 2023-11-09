@@ -571,12 +571,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 assert row == null || Objects.equals(row.key(), key) :
                     "Unexpected row key [row.key=" + row.key() + ", cacheEntry.key=" + key + "]";
 
-                CacheDataRow read;
-
-                if (readVal)
-                    read = row == null ? cctx.offheap().read(this) : row;
-                else
-                    read = row == null ? cctx.offheap().find(this) : row;
+                CacheDataRow read = row == null ? cctx.offheap().read(this, readVal) : row;
 
                 flags |= IS_UNSWAPPED_MASK;
 
@@ -4444,7 +4439,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             checkObsolete();
 
-            CacheDataRow row = cctx.offheap().read(this);
+            CacheDataRow row = cctx.offheap().read(this, true);
 
             if (row == null || row.tombstone())
                 return;
