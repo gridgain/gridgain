@@ -22,6 +22,7 @@ namespace Apache.Ignite.Core.Tests
     using System.Text.RegularExpressions;
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Communication.Tcp;
+    using Apache.Ignite.Core.Tests.Binary;
     using NUnit.Framework;
 
     /// <summary>
@@ -29,6 +30,9 @@ namespace Apache.Ignite.Core.Tests
     /// </summary>
     public class ConsoleRedirectTest
     {
+        /** */
+        private const string ConsoleWriteTask = "org.apache.ignite.platform.PlatformConsoleWriteTask";
+
 #if !NETCOREAPP
         /** */
         private const string PrintlnTask = "org.apache.ignite.platform.PlatformPrintlnTask";
@@ -103,6 +107,35 @@ namespace Apache.Ignite.Core.Tests
 
             var ex = Assert.Throws<IgniteException>(() => Ignition.Start(TestUtils.GetTestConfiguration()));
             Assert.AreEqual("foo", ex.Message);
+        }
+
+        [Test]
+        public void TestConsoleWriteSpecialStrings()
+        {
+            var ignite = Ignition.Start(TestUtils.GetTestConfiguration());
+
+            foreach (var val in BinarySelfTest.SpecialStrings)
+            {
+                MyStringWriter.LastValue = null;
+
+                // Send to Java as UTF-16 to avoid dealing with IGNITE_BINARY_MARSHALLER_USE_STRING_SERIALIZATION_VER_2
+                var bytes = Encoding.Unicode.GetBytes(MyStringWriter.Prefix + val);
+                ignite.GetCompute().ExecuteJavaTask<string>(ConsoleWriteTask, bytes);
+
+                var expectedStr = GetExpectedStr(val);
+                Assert.AreEqual(expectedStr, MyStringWriter.LastValue, message: val);
+                StringAssert.Contains(expectedStr, _outSb.ToString(), message: val);
+
+                // Test Env.NewString
+                MyStringWriter.LastValue = null;
+                TestUtilsJni.Println(MyStringWriter.Prefix + val);
+
+                Assert.AreEqual(expectedStr.Length, MyStringWriter.LastValue?.Length, message: val);
+                if (val != BinarySelfTest.SpecialStrings[0])
+                {
+                    Assert.AreEqual(expectedStr, MyStringWriter.LastValue, message: val);
+                }
+            }
         }
 
         /// <summary>
@@ -241,9 +274,25 @@ namespace Apache.Ignite.Core.Tests
         }
 #endif
 
+        private static string GetExpectedStr(string val)
+        {
+            if (val != BinarySelfTest.SpecialStrings[0])
+            {
+                return val;
+            }
+
+            // Some special strings are not equal to themselves after UTF16 roundtrip,
+            // even though they contain exactly the same bytes.
+            return Encoding.Unicode.GetString(Encoding.Unicode.GetBytes(val));
+        }
+
         private class MyStringWriter : StringWriter
         {
+            public const string Prefix = "[MyStringWriter]";
+
             public static bool Throw { get; set; }
+
+            public static string LastValue { get; set; }
 
             public MyStringWriter(StringBuilder sb) : base(sb)
             {
@@ -258,6 +307,11 @@ namespace Apache.Ignite.Core.Tests
                 }
 
                 base.Write(value);
+
+                if (!string.IsNullOrWhiteSpace(value) && value.StartsWith(Prefix))
+                {
+                    LastValue = value.Substring(Prefix.Length);
+                }
             }
         }
     }
