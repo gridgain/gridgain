@@ -173,6 +173,11 @@ namespace Apache.Ignite.Core.Configuration
         public const DiskPageCompression DefaultWalPageCompression = DiskPageCompression.Disabled;
 
         /// <summary>
+        /// Default value for <see cref="MetricsEnabled"/>.
+        /// </summary>
+        public const bool DefaultMetricsEnabled = true;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="DataStorageConfiguration"/> class.
         /// </summary>
         public DataStorageConfiguration()
@@ -202,6 +207,7 @@ namespace Apache.Ignite.Core.Configuration
             MaxWalArchiveSize = DefaultMaxWalArchiveSize;
             WalPageCompression = DefaultWalPageCompression;
             ConcurrencyLevel = DefaultConcurrencyLevel;
+            MetricsEnabled = DefaultMetricsEnabled;
         }
 
         /// <summary>
@@ -426,6 +432,7 @@ namespace Apache.Ignite.Core.Configuration
         /// Gets or sets a value indicating whether to enable data storage metrics.
         /// See <see cref="IIgnite.GetDataStorageMetrics"/>.
         /// </summary>
+        [DefaultValue(DefaultMetricsEnabled)]
         public bool MetricsEnabled { get; set; }
 
         /// <summary>

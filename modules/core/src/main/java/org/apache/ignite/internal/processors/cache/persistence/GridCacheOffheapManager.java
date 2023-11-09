@@ -136,6 +136,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.lang.Boolean.TRUE;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
@@ -428,12 +429,12 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                 if (!grp.isLocal()) {
                     if (beforeDestroy)
-                        state = GridDhtPartitionState.EVICTED;
+                        state = EVICTED;
                     else {
                         part = getPartition(store);
 
-                        if (part != null && part.state() != GridDhtPartitionState.EVICTED)
-                            state = part.state();
+                        if (part != null && part.state() != EVICTED)
+                            state = part.state() == LOST ? OWNING : part.state();
                     }
 
                     // Do not save meta for evicted partitions on next checkpoints.

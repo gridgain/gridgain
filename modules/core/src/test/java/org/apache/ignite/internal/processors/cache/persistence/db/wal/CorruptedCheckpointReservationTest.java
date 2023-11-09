@@ -19,8 +19,15 @@ package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 import com.google.common.collect.Lists;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -44,6 +51,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.reader.Ignite
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.WalFilters;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
@@ -51,6 +59,8 @@ import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_GRP_STATE_LAZY_STORE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.testframework.GridTestUtils.wal;
 
 /**
  * Tests if reservation of corrupted checkpoint works correctly, also checks correct behaviour for corrupted zip wal file
@@ -123,7 +133,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         IgniteEx ig0 = grid(0);
 
-        ig0.cluster().active(true);
+        ig0.cluster().state(ACTIVE);
 
         generateCps(ig0);
 
@@ -145,7 +155,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         IgniteEx ig0 = grid(0);
 
-        ig0.cluster().active(true);
+        ig0.cluster().state(ACTIVE);
 
         generateCps(ig0);
 
@@ -167,7 +177,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         IgniteEx ig0 = grid(0);
 
-        ig0.cluster().active(true);
+        ig0.cluster().state(ACTIVE);
 
         generateCps(ig0);
 
@@ -219,9 +229,12 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
      * @param cpIdx Checkpoint index.
      */
     private void corruptWalRecord(IgniteEx ig, int cpIdx, boolean segmentCompressed) throws IgniteCheckedException, IOException {
-        IgniteWriteAheadLogManager walMgr = ig.context().cache().context().wal();
+        IgniteWriteAheadLogManager walMgr = wal(ig);
 
         FileWALPointer corruptedCp = getCp(ig, cpIdx);
+
+        if (segmentCompressed)
+            GridTestUtils.waitForCondition(() -> walMgr.lastCompactedSegment() >= corruptedCp.index(), getTestTimeout());
 
         Optional<FileDescriptor> cpSegment = getFileDescriptor(segmentCompressed, walMgr, corruptedCp);
 
@@ -243,19 +256,28 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
      * @param corruptedCp Corrupted checkpoint.
      */
     @NotNull private Optional<FileDescriptor> getFileDescriptor(boolean segmentCompressed,
-        IgniteWriteAheadLogManager walMgr, FileWALPointer corruptedCp) {
-
-        IgniteWalIteratorFactory iterFactory = new IgniteWalIteratorFactory();
+        IgniteWriteAheadLogManager walMgr, FileWALPointer corruptedCp) throws IOException {
 
         File walArchiveDir = U.field(walMgr, "walArchiveDir");
 
-        List<FileDescriptor> walFiles = getWalFiles(walArchiveDir, iterFactory);
-
         String suffix = segmentCompressed ? FilePageStoreManager.ZIP_SUFFIX : FileDescriptor.WAL_SEGMENT_FILE_EXT;
+        AtomicReference<File> wantedFile = new AtomicReference<>();
+        String corruptedIdx = Long.toString(corruptedCp.index());
+        Files.walkFileTree(walArchiveDir.toPath(), new SimpleFileVisitor<Path>() {
+            @Override public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) {
+                String fileName = path.toFile().getName();
 
-        return walFiles.stream().filter(
-            w -> w.idx() == corruptedCp.index() && w.file().getName().endsWith(suffix)
-        ).findFirst();
+                if (fileName.endsWith(suffix) && fileName.contains(corruptedIdx)) {
+                    wantedFile.set(path.toFile());
+
+                    return FileVisitResult.TERMINATE;
+                }
+
+                return FileVisitResult.CONTINUE;
+            }
+        });
+
+        return Optional.ofNullable(wantedFile.get() != null ? new FileDescriptor(wantedFile.get()) : null);
     }
 
     /**
@@ -263,7 +285,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
      * @param cpIdx Checkpoint index.
      */
     private void corruptCompressedWalSegment(IgniteEx ig, int cpIdx) throws IgniteCheckedException, IOException {
-        IgniteWriteAheadLogManager walMgr = ig.context().cache().context().wal();
+        IgniteWriteAheadLogManager walMgr = wal(ig);
 
         FileWALPointer corruptedCp = getCp(ig, cpIdx);
 
@@ -279,7 +301,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
      * @param cpIdx Checkpoint index.
      */
     private FileWALPointer getCp(IgniteEx ig, int cpIdx) throws IgniteCheckedException {
-        IgniteWriteAheadLogManager walMgr = ig.context().cache().context().wal();
+        IgniteWriteAheadLogManager walMgr = wal(ig);
 
         List<IgniteBiTuple<WALPointer, WALRecord>> checkpoints;
 

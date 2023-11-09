@@ -492,6 +492,7 @@
                                 <javax.cache.Cache.Entry>org.apache.ignite.internal.processors.cache.CacheEntryImpl</javax.cache.Cache.Entry>
                                 <javax.cache.annotation.CacheInvocationContext>javax.cache.annotation.impl.cdi.CdiCacheKeyInvocationContextImpl</javax.cache.annotation.CacheInvocationContext>
                                 <IGNITE_QUIET>false</IGNITE_QUIET>
+                                <IGNITE_JCACHE_COMPLIANCE>true</IGNITE_JCACHE_COMPLIANCE>
                             </systemPropertyVariables>
                             <excludes>
                                 <exclude>**/org/apache/ignite/**/*.java</exclude>

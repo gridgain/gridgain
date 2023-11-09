@@ -104,6 +104,8 @@ public class LoadDataStreamerDuringExchangeTest extends GridCommonAbstractTest {
 
         IgniteDataStreamer streamer = ignite0.dataStreamer(DEFAULT_CACHE_NAME);
 
+        streamer.allowOverwrite(false);
+
         for (int i = 0; i < LOAD_LOOP / 2; i++)
             streamer.addData(keys.get(i), String.valueOf(keys.get(i)));
 
@@ -192,6 +194,8 @@ public class LoadDataStreamerDuringExchangeTest extends GridCommonAbstractTest {
         List<Integer> keys = movingKeysAfterJoin(ignite0, DEFAULT_CACHE_NAME, LOAD_LOOP, null, getTestIgniteInstanceName(2));
 
         IgniteDataStreamer streamer = ignite0.dataStreamer(DEFAULT_CACHE_NAME);
+
+        streamer.allowOverwrite(false);
 
         for (int i = 0; i < LOAD_LOOP / 2; i++)
             streamer.addData(keys.get(i), String.valueOf(keys.get(i)));
