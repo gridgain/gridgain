@@ -72,7 +72,7 @@ public final class DataRegionConfiguration implements Serializable {
     private static final long serialVersionUID = 0L;
 
     /** Default metrics enabled flag. */
-    public static final boolean DFLT_METRICS_ENABLED = false;
+    public static final boolean DFLT_METRICS_ENABLED = true;
 
     /** Default amount of sub intervals to calculate {@link DataRegionMetrics#getAllocationRate()} metric. */
     public static final int DFLT_SUB_INTERVALS = 5;
