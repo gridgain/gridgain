@@ -3902,9 +3902,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (!(expireTime0 > 0 && expireTime0 <= expireTime))
                 return false;
 
-            if (markObsolete0(obsoleteVer, true, null))
-                obsolete = true;
-
             if (this.val != null) { // Do not trigger events for tombstones.
                 if (isRecordableEvents) {
                     cctx.events().addEvent(partition(),
@@ -3926,6 +3923,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 this.val = null;
             }
+
+            if (markObsolete0(obsoleteVer, true, null))
+                obsolete = true;
 
             removeExpiredValue(obsoleteVer);
 
