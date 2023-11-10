@@ -3902,12 +3902,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (!(expireTime0 > 0 && expireTime0 <= expireTime))
                 return false;
 
-            CacheObject expiredVal = this.val;
-
             if (markObsolete0(obsoleteVer, true, null))
                 obsolete = true;
 
-            if (expiredVal != null) { // Do not trigger events for tombstones.
+            if (this.val != null) { // Do not trigger events for tombstones.
                 if (isRecordableEvents) {
                     cctx.events().addEvent(partition(),
                         key,
@@ -3916,15 +3914,15 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         EVT_CACHE_OBJECT_EXPIRED,
                         null,
                         false,
-                        expiredVal,
-                        expiredVal != null,
+                        this.val,
+                        true,
                         null,
                         null,
                         null,
                         true);
                 }
 
-                cctx.continuousQueries().onEntryExpired(this, key, expiredVal);
+                cctx.continuousQueries().onEntryExpired(this, key, this.val);
 
                 this.val = null;
             }
