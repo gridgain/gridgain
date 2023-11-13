@@ -54,7 +54,7 @@ public class GridDhtDetachedCacheEntry extends GridDistributedCacheEntry {
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public CacheDataRow unswap(CacheDataRow row, boolean checkExpire, boolean readVal) throws IgniteCheckedException {
+    @Nullable @Override public CacheDataRow unswap(CacheDataRow row, boolean checkExpire) throws IgniteCheckedException {
         return null;
     }
 

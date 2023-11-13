@@ -1015,10 +1015,6 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
         }
     }
 
-    public int listenersCount() {
-        return lsnrCnt.get();
-    }
-
     /**
      *
      */

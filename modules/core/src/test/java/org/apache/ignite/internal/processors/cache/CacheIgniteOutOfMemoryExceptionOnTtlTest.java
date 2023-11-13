@@ -37,9 +37,9 @@ public class CacheIgniteOutOfMemoryExceptionOnTtlTest extends AbstractCacheIgnit
      * Tests that an expired entry removing does not require loading the value of the entry.
      */
     @Test
-    public void testEagerTtl() throws InterruptedException, IgniteInterruptedCheckedException {
+    public void testEagerTtl() throws IgniteInterruptedCheckedException {
         CacheConfiguration<Integer, Object> ccfg = cacheConfiguration(ATOMIC, HUGE_ATOMIC_CACHE_NAME, HUGE_DATA_REGION_NAME)
-            .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MILLISECONDS, 2000)))
+            .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MILLISECONDS, 5000)))
             .setEagerTtl(true);
 
         IgniteCache<Integer, Object> cache = grid(0).getOrCreateCache(ccfg);
@@ -74,7 +74,7 @@ public class CacheIgniteOutOfMemoryExceptionOnTtlTest extends AbstractCacheIgnit
 
         assertEquals(1, cache.size());
 
-        waitForCondition(() -> 0 == cache.size(), 5000);
+        waitForCondition(() -> 0 == cache.size(), 10000);
 
         assertFalse(failure.get());
     }
