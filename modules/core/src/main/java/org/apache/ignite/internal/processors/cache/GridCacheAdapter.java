@@ -4677,8 +4677,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 ctx0 = ctx.isNear() ? ctx.near().dht().context() : ctx;
                 e = ctx0.cache().entryEx(key);
 
-                ctx.shared().database().checkpointReadLock();
-
+                // There is no need to acquire checkpoint read lock
+                // due to the fact that this operation is read only and doesn't modify any pages.
                 try {
                     return e.localSize(topVer);
                 }
@@ -4690,8 +4690,6 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 }
                 finally {
                     e.touch();
-
-                    ctx.shared().database().checkpointReadUnlock();
                 }
             }
         }
