@@ -195,6 +195,10 @@ public class GridCacheEntryMemorySizeSelfTest extends GridCommonAbstractTest {
                 internalCache.entryEx(1).memorySize());
             assertEquals(KEY_SIZE + NULL_REF_SIZE + ENTRY_OVERHEAD + extrasSize(internalCache.entryEx(2)),
                 internalCache.entryEx(2).memorySize());
+
+            assertEquals(0, internalCache.localEntrySize(0));
+            assertEquals(KEY_SIZE + ONE_KB_VAL_SIZE, internalCache.localEntrySize(1));
+            assertEquals(KEY_SIZE + TWO_KB_VAL_SIZE, internalCache.localEntrySize(2));
         }
         finally {
             ignite(0).destroyCache(cache.getName());
@@ -219,6 +223,10 @@ public class GridCacheEntryMemorySizeSelfTest extends GridCommonAbstractTest {
                 extrasSize(internalCache.entryEx(1)), internalCache.entryEx(1).memorySize());
             assertEquals(KEY_SIZE + NULL_REF_SIZE + ENTRY_OVERHEAD + REPLICATED_ENTRY_OVERHEAD +
                 extrasSize(internalCache.entryEx(2)), internalCache.entryEx(2).memorySize());
+
+            assertEquals(0, internalCache.localEntrySize(0));
+            assertEquals(KEY_SIZE + ONE_KB_VAL_SIZE, internalCache.localEntrySize(1));
+            assertEquals(KEY_SIZE + TWO_KB_VAL_SIZE, internalCache.localEntrySize(2));
         }
         finally {
             ignite(0).destroyCache(cache.getName());
@@ -266,6 +274,10 @@ public class GridCacheEntryMemorySizeSelfTest extends GridCommonAbstractTest {
             assertEquals(KEY_SIZE + TWO_KB_VAL_SIZE + ENTRY_OVERHEAD + DHT_ENTRY_OVERHEAD + READER_SIZE +
                 extrasSize(cache0.entryEx(keys[2])), cache0.entryEx(keys[2]).memorySize());
 
+            assertEquals(0, cache0.localEntrySize(keys[0]));
+            assertEquals(KEY_SIZE + ONE_KB_VAL_SIZE, cache0.localEntrySize(keys[1]));
+            assertEquals(KEY_SIZE + TWO_KB_VAL_SIZE, cache0.localEntrySize(keys[2]));
+
             GridCacheAdapter<Object, Object> cache1 = near(jcache(1));
 
             assertEquals(KEY_SIZE + NULL_REF_SIZE + ENTRY_OVERHEAD + NEAR_ENTRY_OVERHEAD +
@@ -274,6 +286,10 @@ public class GridCacheEntryMemorySizeSelfTest extends GridCommonAbstractTest {
                 extrasSize(cache1.entryEx(keys[1])), cache1.entryEx(keys[1]).memorySize());
             assertEquals(KEY_SIZE + TWO_KB_VAL_SIZE + ENTRY_OVERHEAD + NEAR_ENTRY_OVERHEAD +
                 extrasSize(cache1.entryEx(keys[2])), cache1.entryEx(keys[2]).memorySize());
+
+            assertEquals(0, cache1.localEntrySize(keys[0]));
+            assertEquals(0, cache1.localEntrySize(keys[1]));
+            assertEquals(0, cache1.localEntrySize(keys[2]));
         }
         finally {
             ignite(0).destroyCache(cache.getName());
@@ -318,6 +334,16 @@ public class GridCacheEntryMemorySizeSelfTest extends GridCommonAbstractTest {
                 extrasSize(cache0.entryEx(keys[1])), cache0.entryEx(keys[1]).memorySize());
             assertEquals(KEY_SIZE + NULL_REF_SIZE + ENTRY_OVERHEAD + DHT_ENTRY_OVERHEAD +
                 extrasSize(cache0.entryEx(keys[2])), cache0.entryEx(keys[2]).memorySize());
+
+            assertEquals(0, cache0.localEntrySize(keys[0]));
+            assertEquals(KEY_SIZE + ONE_KB_VAL_SIZE, cache0.localEntrySize(keys[1]));
+            assertEquals(KEY_SIZE + TWO_KB_VAL_SIZE, cache0.localEntrySize(keys[2]));
+
+            // Check entry size on non-affinity node.
+            GridCacheAdapter<Object, Object> cache1 = dht(jcache(1));
+            assertEquals(0, cache1.localEntrySize(keys[0]));
+            assertEquals(0, cache1.localEntrySize(keys[1]));
+            assertEquals(0, cache1.localEntrySize(keys[2]));
 
             // Do not test other node since there are no backups.
         }
