@@ -2204,7 +2204,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
     }
 
     /** {@inheritDoc} */
-    @Override public long localEntrySize(K key) {
+    @Override public int localEntrySize(K key) {
         IgniteInternalCache<K, V> delegate = getDelegateSafe();
 
         try {

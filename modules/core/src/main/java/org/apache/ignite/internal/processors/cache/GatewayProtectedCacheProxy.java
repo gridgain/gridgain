@@ -1528,7 +1528,7 @@ public class GatewayProtectedCacheProxy<K, V> extends AsyncSupportAdapter<Ignite
     }
 
     /** {@inheritDoc} */
-    @Override public long localEntrySize(K key) {
+    @Override public int localEntrySize(K key) {
         CacheOperationGate opGate = onEnter();
 
         try {

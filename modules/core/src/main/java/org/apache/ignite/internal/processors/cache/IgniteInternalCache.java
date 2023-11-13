@@ -1836,8 +1836,11 @@ public interface IgniteInternalCache<K, V> extends Iterable<Cache.Entry<K, V>> {
     public boolean localPreloadPartition(int part) throws IgniteCheckedException;
 
     /**
-     * Returns number of bytes that required by a value for the given {@code key} in the off-heap storage,
-     * without loading the value into cache.
+     * Returns number of bytes that required by the given {@code key} and corresponding value in the off-heap storage.
+     * The returned value does not include an overhead of the off-heap storage that is required for
+     *  - cache id (4 bytes when the cache id is stored in data pages, 0 otherwise),
+     *  - entry version (up to 41 bytes, see {@link org.apache.ignite.internal.processors.cache.persistence.tree.io.CacheVersionIO}),
+     *  - expiration time (8 bytes).
      *
      * <p>
      * This method will not load a value from the configured {@link CacheStore} or from a remote node.
@@ -1849,5 +1852,5 @@ public interface IgniteInternalCache<K, V> extends Iterable<Cache.Entry<K, V>> {
      * @throws NullPointerException If key is {@code null}.
      * @throws IgniteCheckedException If failed.
      */
-    public long localEntrySize(K key) throws IgniteCheckedException;
+    public int localEntrySize(K key) throws IgniteCheckedException;
 }

@@ -751,7 +751,7 @@ public interface GridCacheEntryEx {
      * @return Entry size in bytes.
      * @throws GridCacheEntryRemovedException If entry has been removed.
      */
-    public long localSize(AffinityTopologyVersion topVer) throws GridCacheEntryRemovedException, IgniteCheckedException;
+    public int localSize(AffinityTopologyVersion topVer) throws GridCacheEntryRemovedException, IgniteCheckedException;
 
     /**
      * Sets new value if current version is <tt>0</tt>

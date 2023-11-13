@@ -3115,7 +3115,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public long localSize(AffinityTopologyVersion topVer) throws GridCacheEntryRemovedException, IgniteCheckedException {
+    @Override public int localSize(AffinityTopologyVersion topVer) throws GridCacheEntryRemovedException, IgniteCheckedException {
         lockEntry();
 
         try {
@@ -3137,7 +3137,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     isExpired = checkExpired();
 
                 if (val == null || isExpired)
-                    return 0L;
+                    return 0;
 
                 key.prepareMarshal(cctx.cacheObjectContext());
 
@@ -3151,7 +3151,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         }
 
         // Entry is not valid. Just return zero value.
-        return 0L;
+        return 0;
     }
 
     /**

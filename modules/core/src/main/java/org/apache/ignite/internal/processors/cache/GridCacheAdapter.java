@@ -4649,7 +4649,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
     }
 
     /** {@inheritDoc} */
-    @Override public long localEntrySize(K key) throws IgniteCheckedException {
+    @Override public int localEntrySize(K key) throws IgniteCheckedException {
         A.notNull(key, "key");
 
         if (ctx.mvccEnabled())

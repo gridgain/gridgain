@@ -657,7 +657,7 @@ public class HibernateCacheProxy implements IgniteInternalCache<Object, Object> 
     }
 
     /** {@inheritDoc} */
-    @Override public long localEntrySize(Object key) throws IgniteCheckedException {
+    @Override public int localEntrySize(Object key) throws IgniteCheckedException {
         return delegate.get().localEntrySize(keyTransformer.transform(key));
     }
 

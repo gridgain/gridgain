@@ -326,7 +326,7 @@ public class GridCacheProxyImpl<K, V> implements IgniteInternalCache<K, V>, Exte
     }
 
     /** {@inheritDoc} */
-    @Override public long localEntrySize(K key) throws IgniteCheckedException {
+    @Override public int localEntrySize(K key) throws IgniteCheckedException {
         CacheOperationContext prev = onEnter(opCtx);
 
         try {
