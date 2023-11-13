@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 GridGain Systems, Inc. and Contributors.
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,9 @@ import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 
+/**
+ * Tests behavior of IgniteCache when {@link IgniteOutOfMemoryException} is thrown.
+ */
 @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable implicit clearing on cache op.
 @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable background cleanup.
 @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
@@ -68,7 +71,7 @@ public class CacheIgniteOutOfMemoryExceptionTest extends AbstractCacheIgniteOutO
             grid(0).cache(ATOMIC.name()).put(0, new byte[(int)(possibleAvailablePages * PAGE_SIZE)]);
 
             fail("The implementation should reserve at least 256 pages for internal needs " +
-                "[maxPages=" + maxPages + ", totalUsed=" + getDefaultRegionMetrics().getTotalUsedPages() + ']');
+                    "[maxPages=" + maxPages + ", totalUsed=" + getDefaultRegionMetrics().getTotalUsedPages() + ']');
         }
         catch (Exception e) {
             assertTrue(

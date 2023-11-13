@@ -25,6 +25,7 @@ import javax.cache.expiry.Duration;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.junit.Test;
@@ -32,6 +33,9 @@ import org.junit.Test;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
+/**
+ * Tests behavior of IgniteCache when {@link IgniteOutOfMemoryException} is thrown.
+ */
 public class CacheIgniteOutOfMemoryExceptionOnTtlTest extends AbstractCacheIgniteOutOfMemoryExceptionTest {
     /**
      * Tests that an expired entry removing does not require loading the value of the entry.
@@ -59,7 +63,7 @@ public class CacheIgniteOutOfMemoryExceptionOnTtlTest extends AbstractCacheIgnit
                     unused.add(new byte[(int) (50 * U.MB)]);
                 } catch (OutOfMemoryError e) {
                     // We don't have enough space to allocate a new continous block.
-                    // Let's remove one blob in order to have enough memory to process the request
+                    // Let's remove some blobs in order to have enough memory to process the request
                     // and to remove entry whe it is expired.
                     unused.remove(unused.size() - 1);
                     unused.remove(unused.size() - 1);
