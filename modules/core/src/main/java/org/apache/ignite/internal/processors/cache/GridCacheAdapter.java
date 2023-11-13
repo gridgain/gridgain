@@ -4684,7 +4684,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 }
                 catch (GridCacheEntryRemovedException ignore) {
                     if (log.isDebugEnabled())
-                        log.debug("Got removed entry during 'peek': " + key);
+                        log.debug("Got removed entry during calculating entry size: " + key);
 
                     continue;
                 }
@@ -4696,7 +4696,24 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             }
         }
         else {
-            throw new UnsupportedOperationException("Not implemented yet");
+            while (true) {
+                try {
+                    GridCacheEntryEx e = entryEx(key);
+
+                    if (e != null) {
+                        try {
+                            return e.localSize(AffinityTopologyVersion.NONE);
+                        }
+                        finally {
+                            e.touch();
+                        }
+                    }
+                }
+                catch (GridCacheEntryRemovedException ignore) {
+                    if (log.isDebugEnabled())
+                        log.debug("Got removed entry during calculating entry size: " + key);
+                }
+            }
         }
     }
 
