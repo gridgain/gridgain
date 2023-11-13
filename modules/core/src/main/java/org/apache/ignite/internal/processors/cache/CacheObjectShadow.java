@@ -32,6 +32,9 @@ public class CacheObjectShadow extends CacheObjectAdapter {
     /** Type of cache object. */
     private byte type;
 
+    /** Values size in bytes. */
+    private int valSize;
+
     /**
      * Default constructor.
      */
@@ -43,10 +46,12 @@ public class CacheObjectShadow extends CacheObjectAdapter {
      * Creates a new instance of CacheObjectShadow with the given type.
      *
      * @param type Type of cache object.
+     * @param size Size of cache object in bytes.
      **/
-    public CacheObjectShadow(byte type) {
+    public CacheObjectShadow(byte type, int size) {
         this.type = type;
         valBytes = EMPTY_BYTES;
+        valSize = size;
     }
 
     /** {@inheritDoc} */
@@ -67,6 +72,11 @@ public class CacheObjectShadow extends CacheObjectAdapter {
     /** {@inheritDoc} */
     @Override public byte[] valueBytes(CacheObjectValueContext ctx) throws IgniteCheckedException {
         return EMPTY_BYTES;
+    }
+
+    @Override
+    public int valueBytesLength(CacheObjectContext ctx) throws IgniteCheckedException {
+        return valSize;
     }
 
     /** {@inheritDoc} */

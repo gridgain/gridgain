@@ -1280,9 +1280,8 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         @Nullable IncompleteCacheObject incompleteObj,
         boolean createCacheObjectShadow
     ) {
-        if (incompleteObj == null) {
+        if (incompleteObj == null)
             incompleteObj = createCacheObjectShadow ? new IncompleteCacheObjectShadow(buf) : new IncompleteCacheObject(buf);
-        }
 
         if (incompleteObj.isReady())
             return incompleteObj;
@@ -1290,7 +1289,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         incompleteObj.readData(buf);
 
         if (incompleteObj.isReady()) {
-            CacheObject obj = createCacheObjectShadow ? new CacheObjectShadow(incompleteObj.type()) :
+            CacheObject obj = createCacheObjectShadow ? new CacheObjectShadow(incompleteObj.type(), incompleteObj.dataLength()) :
                 toCacheObject(ctx, incompleteObj.type(), incompleteObj.data());
 
             incompleteObj.object(obj);

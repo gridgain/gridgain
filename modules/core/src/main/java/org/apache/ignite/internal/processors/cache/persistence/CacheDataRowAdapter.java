@@ -525,7 +525,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
             val = coctx.kernalContext().cacheObjects().toCacheObject(coctx, type, bytes);
         }
         else
-            val = new CacheObjectShadow(type);
+            val = new CacheObjectShadow(type, len);
 
         off += len;
 

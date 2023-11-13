@@ -83,11 +83,14 @@ public class IncompleteCacheObjectShadow extends IncompleteCacheObject {
         return headerReady && off == valLen;
     }
 
-    /**
-     * @return Data array.
-     */
+    /** {@inheritDoc} */
     @Override public byte[] data() {
         throw new UnsupportedOperationException("Incomplete cache object shadow does not support materialization");
+    }
+
+    /** {@inheritDoc} */
+    @Override public int dataLength() {
+        return valLen;
     }
 
     /** {@inheritDoc} */

@@ -129,9 +129,16 @@ public interface IgniteCacheOffheapManager {
     @Nullable public CacheDataRow read(GridCacheMapEntry entry) throws IgniteCheckedException;
 
     /**
+     * @param entry Cache entry.
+     * @return Cached row, if available, null otherwise.
+     * @throws IgniteCheckedException If failed.
+     */
+    @Nullable public CacheDataRow find(GridCacheMapEntry entry) throws IgniteCheckedException;
+
+    /**
      * @param cctx Cache context.
      * @param key Key.
-     * @return Cached row, if available, null otherwise.
+     * @return Cached row, if available, null otherwise. In case of a row represents a tomstome, the method returns {@code null} as well.
      * @throws IgniteCheckedException If failed.
      */
     @Nullable public CacheDataRow read(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
@@ -142,7 +149,7 @@ public interface IgniteCacheOffheapManager {
      *
      * @param cctx Cache context.
      * @param key Key.
-     * @return Cached row, if available, null otherwise.
+     * @return Cached row, if available, null otherwise. In case of a row represents a tomstome, the method returns {@code null} as well.
      * @throws IgniteCheckedException If failed.
      */
     @Nullable public CacheDataRow find(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;

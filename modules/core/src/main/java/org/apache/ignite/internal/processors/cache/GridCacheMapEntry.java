@@ -3116,7 +3116,42 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public long localSize(AffinityTopologyVersion topVer) throws GridCacheEntryRemovedException, IgniteCheckedException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        lockEntry();
+
+        try {
+            checkObsolete();
+
+            if (valid(topVer)) {
+                CacheObject val = this.val;
+                boolean isExpired = false;
+
+                if (val == null) {
+                    CacheDataRow row = cctx.offheap().find(this);
+
+                    if (row != null && !row.tombstone()) {
+                        val = row.value();
+                        isExpired = row.expireTime() > 0 && row.expireTime() < U.currentTimeMillis();
+                    }
+                }
+                else
+                    isExpired = checkExpired();
+
+                if (val == null || isExpired)
+                    return 0L;
+
+                key.prepareMarshal(cctx.cacheObjectContext());
+
+                val.prepareMarshal(cctx.cacheObjectContext());
+
+                return key.valueBytesLength(cctx.cacheObjectContext()) + val.valueBytesLength(cctx.cacheObjectContext());
+            }
+        }
+        finally {
+            unlockEntry();
+        }
+
+        // Entry is not valid. Just return zero value.
+        return 0L;
     }
 
     /**
