@@ -74,6 +74,11 @@ public class CacheObjectShadow extends CacheObjectAdapter {
         return EMPTY_BYTES;
     }
 
+    /** {@inheritDoc} */
+    @Override public int valueBytesOriginLength(CacheObjectValueContext ctx) throws IgniteCheckedException {
+        return valSize;
+    }
+
     @Override
     public int valueBytesLength(CacheObjectContext ctx) throws IgniteCheckedException {
         return valSize;

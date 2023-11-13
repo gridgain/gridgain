@@ -3143,7 +3143,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 val.prepareMarshal(cctx.cacheObjectContext());
 
-                return key.valueBytesLength(cctx.cacheObjectContext()) + val.valueBytesLength(cctx.cacheObjectContext());
+                return key.valueBytesOriginLength(cctx.cacheObjectContext()) + val.valueBytesOriginLength(cctx.cacheObjectContext());
             }
         }
         finally {
