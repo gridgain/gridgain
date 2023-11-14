@@ -129,19 +129,19 @@ public interface IgniteCacheOffheapManager {
     @Nullable public CacheDataRow read(GridCacheMapEntry entry) throws IgniteCheckedException;
 
     /**
-     * @param entry Cache entry.
-     * @return Cached row, if available, null otherwise.
-     * @throws IgniteCheckedException If failed.
-     */
-    @Nullable public CacheDataRow find(GridCacheMapEntry entry) throws IgniteCheckedException;
-
-    /**
      * @param cctx Cache context.
      * @param key Key.
      * @return Cached row, if available, null otherwise. In case of a row represents a tombstone, the method returns {@code null} as well.
      * @throws IgniteCheckedException If failed.
      */
     @Nullable public CacheDataRow read(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
+
+    /**
+     * @param entry Cache entry.
+     * @return Cached row, if available, null otherwise.
+     * @throws IgniteCheckedException If failed.
+     */
+    @Nullable public CacheDataRow find(GridCacheMapEntry entry) throws IgniteCheckedException;
 
     /**
      * Finds and returns a row for the given key.

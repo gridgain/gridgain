@@ -673,15 +673,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /** {@inheritDoc} */
-    @Override @Nullable public CacheDataRow find(GridCacheMapEntry entry) throws IgniteCheckedException {
-        KeyCacheObject key = entry.key();
-
-        assert grp.isLocal() || entry.localPartition() != null : entry;
-
-        return dataStore(entry.localPartition()).find(entry.context(), key, NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME);
-    }
-
-    /** {@inheritDoc} */
     @Nullable @Override public CacheDataRow read(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
         CacheDataStore dataStore = dataStore(cctx, key);
 
@@ -693,6 +684,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         assert row == null || row.value() != null : row;
 
         return row;
+    }
+
+    /** {@inheritDoc} */
+    @Override @Nullable public CacheDataRow find(GridCacheMapEntry entry) throws IgniteCheckedException {
+        KeyCacheObject key = entry.key();
+
+        assert grp.isLocal() || entry.localPartition() != null : entry;
+
+        return dataStore(entry.localPartition()).find(entry.context(), key, NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME);
     }
 
     /** {@inheritDoc} */
