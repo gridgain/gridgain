@@ -156,6 +156,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_RETRIES_COUNT;
+import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.internal.GridClosureCallMode.BROADCAST;
 import static org.apache.ignite.internal.processors.cache.CacheOperationContext.defaultAllowAtomicOpsInTx;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
@@ -4652,8 +4653,10 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
     @Override public int localEntrySize(K key) throws IgniteCheckedException {
         A.notNull(key, "key");
 
-        if (ctx.mvccEnabled())
-            throw new IgniteException("Operation is not supported");
+        if (ctx.mvccEnabled()) {
+            throw new UnsupportedOperationException(
+                "Operation is not supported for " + TRANSACTIONAL_SNAPSHOT + " cache [name=" + name() + ']');
+        }
 
         ctx.checkSecurity(SecurityPermission.CACHE_READ);
 
