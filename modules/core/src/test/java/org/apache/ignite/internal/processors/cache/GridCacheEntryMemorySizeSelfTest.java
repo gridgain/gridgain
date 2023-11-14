@@ -42,6 +42,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 
 /**
  *
@@ -294,6 +295,18 @@ public class GridCacheEntryMemorySizeSelfTest extends GridCommonAbstractTest {
         finally {
             ignite(0).destroyCache(cache.getName());
         }
+    }
+
+    /**
+     * Tests that {@link GridCacheAdapter#localEntrySize(Object)} throws {@link NullPointerException} if key is null.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testLocalEntrySizeNullKey() {
+        IgniteCache<Integer, Value> cache = createCache(false, PARTITIONED);
+
+        assertThrowsWithCause(() -> cache.localEntrySize(null), NullPointerException.class);
     }
 
     /** @throws Exception If failed. */
