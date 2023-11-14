@@ -1694,7 +1694,7 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
     public boolean localPreloadPartition(int partition);
 
     /**
-     * Returns number of bytes that required by the given {@code key} and corresponding value in the off-heap storage.
+     * Returns approximate number of bytes that required by the given {@code key} and corresponding value in the off-heap storage.
      *
      * <p>
      * This method will not load a value from the configured {@link CacheStore} or from a remote node.
