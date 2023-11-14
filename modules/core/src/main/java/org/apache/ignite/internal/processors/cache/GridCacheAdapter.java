@@ -4688,8 +4688,6 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 catch (GridCacheEntryRemovedException ignore) {
                     if (log.isDebugEnabled())
                         log.debug("Got removed entry during calculating entry size: " + key);
-
-                    continue;
                 }
                 finally {
                     e.touch();
