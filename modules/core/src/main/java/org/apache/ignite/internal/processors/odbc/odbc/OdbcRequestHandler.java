@@ -97,7 +97,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
     private final GridSpinBusyLock busyLock;
 
     /** Worker. */
-    private final OdbcRequestHandlerWorker worker;
+    private OdbcRequestHandlerWorker worker;
 
     /** Maximum allowed cursors. */
     private final int maxCursors;
@@ -300,8 +300,11 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
                 try {
                     worker.join();
                 }
-                catch (InterruptedException e) {
+                catch (InterruptedException ignored) {
                     // No-op.
+                }
+                finally {
+                    worker = null;
                 }
             }
 
