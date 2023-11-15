@@ -326,6 +326,18 @@ public class GridCacheProxyImpl<K, V> implements IgniteInternalCache<K, V>, Exte
     }
 
     /** {@inheritDoc} */
+    @Override public int localEntrySize(K key) throws IgniteCheckedException {
+        CacheOperationContext prev = onEnter(opCtx);
+
+        try {
+            return delegate.localEntrySize(key);
+        }
+        finally {
+            onLeave(prev);
+        }
+    }
+
+    /** {@inheritDoc} */
     @Override public GridCacheProxyImpl<K, V> forSubjectId(UUID subjId) {
         return new GridCacheProxyImpl<>(ctx, delegate,
             opCtx != null ? opCtx.forSubjectId(subjId) :

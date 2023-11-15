@@ -942,6 +942,11 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     }
 
     /** {@inheritDoc} */
+    @Override public int localSize(AffinityTopologyVersion topVer) {
+        return 0;
+    }
+
+    /** {@inheritDoc} */
     @Override public void lockEntry() {
         // No-op.
     }
