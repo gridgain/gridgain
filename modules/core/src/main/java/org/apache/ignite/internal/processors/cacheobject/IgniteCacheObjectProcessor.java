@@ -186,7 +186,10 @@ public interface IgniteCacheObjectProcessor extends GridProcessor {
      * @param ctx Cache object context.
      * @param buf Buffer.
      * @param incompleteObj Incomplete cache object or {@code null} if it's a first read.
-     * @param createCacheObjectShadow If {@code true} then cache object shadow will be created.
+     * @param createShadow If {@code true} then cache object shadow will be created.
+     * @param completeShadowFast If {@code true} then shadow object will be considered as ready
+     *                           when the value type and length are read from the buffer.
+     *                           If {@code false} then the object will be considered as ready when all value bytes are read.
      * @return Incomplete cache object.
      * @throws IgniteCheckedException If fail.
      */
@@ -194,7 +197,8 @@ public interface IgniteCacheObjectProcessor extends GridProcessor {
         CacheObjectContext ctx,
         ByteBuffer buf,
         @Nullable IncompleteCacheObject incompleteObj,
-        boolean createCacheObjectShadow
+        boolean createShadow,
+        boolean completeShadowFast
     ) throws IgniteCheckedException;
 
     /**
