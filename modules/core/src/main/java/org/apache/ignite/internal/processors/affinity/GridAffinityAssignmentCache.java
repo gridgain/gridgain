@@ -55,6 +55,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MIN_AFFINITY_HISTORY_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PART_DISTRIBUTION_WARN_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.getFloat;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
@@ -68,6 +69,9 @@ import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVE
  */
 public class GridAffinityAssignmentCache {
     /** @see IgniteSystemProperties#IGNITE_AFFINITY_HISTORY_SIZE */
+    public static final int DFLT_MIN_AFFINITY_HISTORY_SIZE = 2;
+
+    /** @see IgniteSystemProperties#IGNITE_MIN_AFFINITY_HISTORY_SIZE */
     public static final int DFLT_AFFINITY_HISTORY_SIZE = 25;
 
     /** @see IgniteSystemProperties#IGNITE_PART_DISTRIBUTION_WARN_THRESHOLD */
@@ -93,7 +97,8 @@ public class GridAffinityAssignmentCache {
      * {@link GridCachePartitionExchangeManager#lastAffinityChangedTopologyVersion} in case cluster has experienced
      * too many client joins / client leaves / local cache starts.
      */
-    private final int MIN_NON_SHALLOW_HIST_SIZE = 2;
+    private final int MIN_NON_SHALLOW_HIST_SIZE =
+        getInteger(IGNITE_MIN_AFFINITY_HISTORY_SIZE, DFLT_MIN_AFFINITY_HISTORY_SIZE);
 
     /** Partition distribution. */
     private final float partDistribution = getFloat(IGNITE_PART_DISTRIBUTION_WARN_THRESHOLD,
