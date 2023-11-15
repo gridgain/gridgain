@@ -260,7 +260,7 @@ public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
 
         GridAffinityAssignmentCache aff = GridTestUtils.getFieldValue(cctx.affinity(), "aff");
 
-        AffinityTopologyVersion ver0 = aff.lastVersion();
+        AffinityTopologyVersion ver = aff.lastVersion();
 
         stopGrid(1);
         startGrid(1);
@@ -271,9 +271,9 @@ public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
         }
 
         if (isRemoved)
-            assertThrowsWithCause(() -> aff.nodes(0, ver0), IllegalStateException.class);
+            assertThrowsWithCause(() -> aff.nodes(0, ver), IllegalStateException.class);
         else
-            assertEquals(1, aff.nodes(0, ver0).size());
+            assertEquals(1, aff.nodes(0, ver).size());
     }
 
     /**

@@ -69,10 +69,10 @@ import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVE
  */
 public class GridAffinityAssignmentCache {
     /** @see IgniteSystemProperties#IGNITE_AFFINITY_HISTORY_SIZE */
-    public static final int DFLT_MIN_AFFINITY_HISTORY_SIZE = 2;
+    public static final int DFLT_AFFINITY_HISTORY_SIZE = 25;
 
     /** @see IgniteSystemProperties#IGNITE_MIN_AFFINITY_HISTORY_SIZE */
-    public static final int DFLT_AFFINITY_HISTORY_SIZE = 25;
+    public static final int DFLT_MIN_AFFINITY_HISTORY_SIZE = 2;
 
     /** @see IgniteSystemProperties#IGNITE_PART_DISTRIBUTION_WARN_THRESHOLD */
     public static final float DFLT_PART_DISTRIBUTION_WARN_THRESHOLD = 50f;
