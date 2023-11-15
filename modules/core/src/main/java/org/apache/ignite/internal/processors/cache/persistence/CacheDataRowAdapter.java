@@ -447,6 +447,9 @@ public class CacheDataRowAdapter implements CacheDataRow {
                 return incomplete;
             }
 
+            if (rowData == RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME)
+                return null; // The value is ready - we are done!
+
             incomplete = null;
         }
 
@@ -497,7 +500,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
         off += 4;
 
         if (rowData != RowData.NO_KEY && rowData != RowData.NO_KEY_WITH_HINTS &&
-            rowData != RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME) {
+            rowData != RowData.NO_KEY_WITH_VALUE_META_INFO && rowData != RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME) {
 
             byte type = PageUtils.getByte(addr, off);
             off++;
@@ -519,7 +522,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
         byte type = PageUtils.getByte(addr, off);
         off++;
 
-        if (rowData != RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME) {
+        if (rowData != RowData.NO_KEY_WITH_VALUE_META_INFO && rowData != RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME) {
             byte[] bytes = PageUtils.getBytes(addr, off, len);
 
             val = coctx.kernalContext().cacheObjects().toCacheObject(coctx, type, bytes);
@@ -620,9 +623,10 @@ public class CacheDataRowAdapter implements CacheDataRow {
         IncompleteCacheObject incomplete,
         RowData rowData
     ) throws IgniteCheckedException {
-        boolean createShadow = rowData == RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME;
+        boolean createShadow = rowData == RowData.NO_KEY_WITH_VALUE_META_INFO;
+        boolean completeShadowFast = rowData == RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME;
 
-        incomplete = coctx.kernalContext().cacheObjects().toCacheObject(coctx, buf, incomplete, createShadow);
+        incomplete = coctx.kernalContext().cacheObjects().toCacheObject(coctx, buf, incomplete, createShadow, completeShadowFast);
 
         if (incomplete.isReady()) {
             val = incomplete.object();
@@ -948,8 +952,11 @@ public class CacheDataRowAdapter implements CacheDataRow {
         /** Force instant hints actualization for update operation with history (to avoid races with vacuum). */
         NO_KEY_WITH_HINTS,
 
+        /** This mode represents reading a row that includes only value type, expiration time and entry's version. */
+        NO_KEY_WITH_VALUE_META_INFO,
+
         /** This mode represents reading a row that includes only value type and expiration time. */
-        NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME
+        NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME,
     }
 
     /** {@inheritDoc} */

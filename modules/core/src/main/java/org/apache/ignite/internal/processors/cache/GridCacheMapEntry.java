@@ -3126,7 +3126,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 boolean isExpired = false;
 
                 if (val == null) {
-                    CacheDataRow row = cctx.offheap().find(this);
+                    CacheDataRow row = cctx.offheap().find(this, false);
 
                     if (row != null && !row.tombstone()) {
                         val = row.value();

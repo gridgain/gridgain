@@ -29,9 +29,22 @@ public class IncompleteCacheObjectShadow extends IncompleteCacheObject {
     private boolean headerReady;
 
     /**
-     * @param buf Byte buffer.
+     * This flags indicates when the shadow is completed.
+     * If {@code true} then the object will be considered as ready when the value type and length are read.
      */
-    public IncompleteCacheObjectShadow(final ByteBuffer buf) {
+    private boolean completeWhenHeaderReady;
+
+    /**
+     * Creates a new instance of incomplete cache object shadow.
+     *
+     * @param buf Byte buffer.
+     * @param completeWhenValueLengthReady If {@code true} then the object will be considered as ready
+     *                                     when the value type and length are read.
+     *                                     If {@code false} then the object will be considered as ready when all value bytes are read.
+     */
+    public IncompleteCacheObjectShadow(final ByteBuffer buf, boolean completeWhenValueLengthReady) {
+        completeWhenHeaderReady = completeWhenValueLengthReady;
+
         if (buf.remaining() >= HEAD_LEN) {
             valLen = buf.getInt();
             type = buf.get();
@@ -42,6 +55,16 @@ public class IncompleteCacheObjectShadow extends IncompleteCacheObject {
         // Start partial read of header.
         else
             head = new byte[HEAD_LEN];
+    }
+
+    /**
+     * Creates a new instance of incomplete cache object shadow.
+     * The object will be considered as ready when all value bytes are read.
+     *
+     * @param buf Byte buffer.
+     */
+    public IncompleteCacheObjectShadow(final ByteBuffer buf) {
+        this(buf, false);
     }
 
     /** {@inheritDoc} */
@@ -80,7 +103,7 @@ public class IncompleteCacheObjectShadow extends IncompleteCacheObject {
      * @return {@code True} if cache object is fully assembled.
      */
     @Override public boolean isReady() {
-        return headerReady && off == valLen;
+        return headerReady && (completeWhenHeaderReady || off == valLen);
     }
 
     /** {@inheritDoc} */
