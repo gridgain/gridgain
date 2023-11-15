@@ -186,7 +186,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         int minNumberOfSegmentsToCompress = 5;
 
         //checking that at least one segment is deleted eventually
-        LogListener logLsnr = LogListener.matches("The following raw segments were removed after compression: [0")
+        LogListener logLsnr = LogListener.matches("Raw segments removed after compression [deletedSegments=[0")
                 .build();
 
         listeningLog = new ListeningTestLogger(false, GridAbstractTest.log);

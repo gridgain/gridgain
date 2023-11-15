@@ -1067,16 +1067,19 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         int deleted = 0;
 
+        List<String> deletedSegments = new ArrayList<>();
+        long lastCpIdx = lastCheckpointPtr.index();
+
         for (FileDescriptor desc : descs) {
             long archivedAbsIdx = segmentAware.lastArchivedAbsoluteIndex();
 
             long lastArchived = archivedAbsIdx >= 0 ? archivedAbsIdx : lastArchivedIndex();
 
-            if (desc.idx >= lastCheckpointPtr.index() // We cannot delete segments needed for binary recovery.
+            if (desc.idx >= lastCpIdx // We cannot delete segments needed for binary recovery.
                 || desc.idx >= lastArchived // We cannot delete last segment, it is needed at start of node and avoid gaps.
                 || desc.idx >= highPtr.index() // We cannot delete segments larger than the border.
                 || !segmentAware.minReserveIndex(desc.idx)) // We cannot delete reserved segment.
-                return deleted;
+                break;
 
             long len = desc.file.length();
 
@@ -1086,6 +1089,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             }
             else {
                 deleted++;
+
+                deletedSegments.add(desc.file().getName());
 
                 long idx = desc.idx();
 
@@ -1098,6 +1103,11 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 segmentAware.lastTruncatedArchiveIdx(desc.idx);
 
             cctx.kernalContext().encryption().onWalSegmentRemoved(desc.idx);
+        }
+
+        if (log.isInfoEnabled() && !deletedSegments.isEmpty()) {
+            log.info("Segments removed after WAL archive cleaning [cleanedSegments=" + deletedSegments
+                + ", lastCpIdx=" + lastCpIdx + ", highIdx=" + highPtr.index() + ']');
         }
 
         return deleted;
@@ -2440,8 +2450,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             }
 
             if (log.isInfoEnabled() && !deletedRawSegments.isEmpty()) {
-                log.info("The following raw segments were removed after compression: " + deletedRawSegments
-                    + ", index of the last successful checkpoint: " + lastCpIndex);
+                log.info("Raw segments removed after compression [deletedSegments=" + deletedRawSegments
+                    + ", lastCpIndex=" + lastCpIndex +']');
             }
         }
     }
