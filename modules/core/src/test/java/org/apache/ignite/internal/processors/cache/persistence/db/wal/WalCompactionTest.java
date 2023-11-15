@@ -53,6 +53,9 @@ import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -92,6 +95,9 @@ public class WalCompactionTest extends GridCommonAbstractTest {
     /** Wal mode. */
     private WALMode walMode;
 
+    /** Test logger. */
+    private ListeningTestLogger listeningLog;
+
     /** */
     private static class RolloverRecord extends CheckpointRecord {
         /** */
@@ -103,6 +109,9 @@ public class WalCompactionTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
+
+        if (listeningLog != null)
+            cfg.setGridLogger(listeningLog);
 
         DataStorageConfiguration dsCfg = new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
@@ -176,6 +185,13 @@ public class WalCompactionTest extends GridCommonAbstractTest {
     public void testBinaryRecoveryAfterFullCompaction() throws Exception {
         int minNumberOfSegmentsToCompress = 5;
 
+        //checking that at least one segment is deleted eventually
+        LogListener logLsnr = LogListener.matches("The following raw segments were removed after compression: [0")
+                .build();
+
+        listeningLog = new ListeningTestLogger(false, GridAbstractTest.log);
+        listeningLog.registerListener(logLsnr);
+
         walSegments = minNumberOfSegmentsToCompress;
         fileIoFactory = new CheckpointFailingIoFactory(false);
 
@@ -192,6 +208,9 @@ public class WalCompactionTest extends GridCommonAbstractTest {
                 () -> wal(ig).lastArchivedSegment() >= minNumberOfSegmentsToCompress,
                 getTestTimeout()));
 
+        // no raw segments are compressed/deleted until a cp covering at least one wal segment happens
+        assertFalse(logLsnr.check());
+
         forceCheckpoint(ig);
 
         loadData(cache, ENTRIES);
@@ -203,7 +222,11 @@ public class WalCompactionTest extends GridCommonAbstractTest {
                 () -> wal(ig).lastArchivedSegment() > lastCpIdx,
                 getTestTimeout()));
 
-        Collection<?> queue = GridTestUtils.getFieldValue(wal(ig), "segmentAware", "segmentCompressStorage", "segmentsToCompress");
+        //after the second checkpoint there are some wal segments that could be compressed and deleted
+        assertTrue(logLsnr.check());
+
+        Collection<?> queue = GridTestUtils.getFieldValue(wal(ig),
+                "segmentAware", "segmentCompressStorage", "segmentsToCompress");
 
         assertTrue(GridTestUtils.waitForCondition(queue::isEmpty, getTestTimeout()));
 

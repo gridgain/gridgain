@@ -2412,10 +2412,14 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             Set<Long> indices = new HashSet<>();
             Set<Long> duplicateIndices = new HashSet<>();
 
+            long lastCpIndex = lastCheckpointPtr.index();
+
             for (FileDescriptor desc : descs) {
                 if (!indices.add(desc.idx))
                     duplicateIndices.add(desc.idx);
             }
+
+            List<Long> deletedRawSegments = new ArrayList<>();
 
             for (FileDescriptor desc : descs) {
                 if (desc.isCompressed())
@@ -2423,10 +2427,21 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
                 // Do not delete reserved or locked segment and any segment after it.
                 if (segmentReservedOrLocked(desc.idx))
-                    return;
+                    break;
 
-                if (desc.idx < lastCheckpointPtr.index() && duplicateIndices.contains(desc.idx))
-                    segmentAware.addSize(desc.idx, -deleteArchiveFiles(desc.file));
+                if (desc.idx < lastCpIndex && duplicateIndices.contains(desc.idx)) {
+                    long cleanedUpSize = deleteArchiveFiles(desc.file);
+
+                    if (cleanedUpSize > 0)
+                        deletedRawSegments.add(desc.idx);
+
+                    segmentAware.addSize(desc.idx, -cleanedUpSize);
+                }
+            }
+
+            if (log.isInfoEnabled() && !deletedRawSegments.isEmpty()) {
+                log.info("The following raw segments were removed after compression: " + deletedRawSegments
+                    + ", index of the last successful checkpoint: " + lastCpIndex);
             }
         }
     }
