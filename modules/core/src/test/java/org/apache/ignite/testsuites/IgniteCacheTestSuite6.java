@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.apache.ignite.cache.affinity.PendingExchangeTest;
+import org.apache.ignite.internal.processors.cache.CacheIgniteOutOfMemoryExceptionOnTtlTest;
 import org.apache.ignite.internal.processors.cache.CacheIgniteOutOfMemoryExceptionTest;
 import org.apache.ignite.internal.processors.cache.CacheNoAffinityExchangeTest;
 import org.apache.ignite.internal.processors.cache.ClientFastReplyCoordinatorFailureTest;
@@ -123,6 +124,7 @@ public class IgniteCacheTestSuite6 {
 //        TODO enable this test after IGNITE-6753, now it takes too long
 //        GridTestUtils.addTestIfNeeded(suite, IgniteOutOfMemoryPropagationTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CacheIgniteOutOfMemoryExceptionTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, CacheIgniteOutOfMemoryExceptionOnTtlTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, ReplicatedAtomicCacheGetsDistributionTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ReplicatedTransactionalOptimisticCacheGetsDistributionTest.class, ignoredTests);
