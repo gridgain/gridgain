@@ -41,9 +41,6 @@ public class GridCachePartitionedTxMultiThreadedSelfTest extends IgniteTxMultiTh
 
         CacheConfiguration cc = defaultCacheConfiguration();
 
-        // TODO GG-37743
-        cc.setStatisticsEnabled(false);
-
         cc.setCacheMode(PARTITIONED);
         cc.setBackups(1);
 
