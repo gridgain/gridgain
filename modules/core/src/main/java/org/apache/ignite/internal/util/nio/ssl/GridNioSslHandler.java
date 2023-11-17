@@ -28,6 +28,7 @@ import javax.net.ssl.SSLSession;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.nio.GridNioEmbeddedFuture;
 import org.apache.ignite.internal.util.nio.GridNioException;
 import org.apache.ignite.internal.util.nio.GridNioFuture;
@@ -49,7 +50,9 @@ import static org.apache.ignite.internal.util.nio.ssl.GridNioSslFilter.HANDSHAKE
 /**
  * Class that encapsulate the per-session SSL state, encoding and decoding logic.
  */
-class GridNioSslHandler extends ReentrantLock {
+public class GridNioSslHandler extends ReentrantLock {
+    public static final long DFLT_SSL_HANDSHAKE_TIMEOUT_MS = 3000;
+
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -57,7 +60,8 @@ class GridNioSslHandler extends ReentrantLock {
     private static final long LONG_HANDSHAKE_THRESHOLD_MS = 1000;
 
     /** Handshake timeout; exception is thrown when exceeded. */
-    private static final long HANDSHAKE_TIMEOUT_MS = 3000;
+    private static final long HANDSHAKE_TIMEOUT_MS = IgniteSystemProperties.getLong(
+        IgniteSystemProperties.IGNITE_SSL_HANDSHAKE_TIMEOUT, DFLT_SSL_HANDSHAKE_TIMEOUT_MS);
 
     /** Grid logger. */
     private IgniteLogger log;
