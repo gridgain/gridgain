@@ -189,7 +189,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         LogListener logLsnr = LogListener.matches("Raw segments removed after compression [deletedSegments=[0")
                 .build();
 
-        listeningLog = new ListeningTestLogger(false, GridAbstractTest.log);
+        listeningLog = new ListeningTestLogger(GridAbstractTest.log);
         listeningLog.registerListener(logLsnr);
 
         walSegments = minNumberOfSegmentsToCompress;
