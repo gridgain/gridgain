@@ -2214,7 +2214,6 @@ public final class IgniteSystemProperties {
             defaults = DFLT_SSL_HANDSHAKE_TIMEOUT_MS + " milliseconds")
     public static final String IGNITE_SSL_HANDSHAKE_TIMEOUT = "IGNITE_SSL_HANDSHAKE_TIMEOUT";
 
-
     /**
      * Enforces singleton.
      */
