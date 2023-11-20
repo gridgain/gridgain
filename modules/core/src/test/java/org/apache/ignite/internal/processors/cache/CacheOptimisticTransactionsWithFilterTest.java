@@ -460,9 +460,6 @@ public class CacheOptimisticTransactionsWithFilterTest extends GridCommonAbstrac
         ccfg.setAtomicityMode(TRANSACTIONAL);
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
 
-        // TODO GG-37743
-        ccfg.setStatisticsEnabled(false);
-
         if (cacheMode == PARTITIONED)
             ccfg.setBackups(backups);
 

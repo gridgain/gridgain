@@ -1720,13 +1720,17 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             drReplicate(drType, null, newVer, topVer);
 
-            if (metrics && cctx.statisticsEnabled()) {
+            if (metrics && cctx.statisticsEnabled() && tx != null) {
                 cctx.cache().metrics0().onRemove();
 
-                T2<GridCacheOperation, CacheObject> entryProcRes = tx.entry(txKey()).entryProcessorCalculatedValue();
+                IgniteTxEntry txEntry = tx.entry(txKey());
 
-                if (entryProcRes != null && DELETE.equals(entryProcRes.get1()))
-                    cctx.cache().metrics0().onInvokeRemove(old != null);
+                if (txEntry != null) {
+                    T2<GridCacheOperation, CacheObject> entryProcRes = txEntry.entryProcessorCalculatedValue();
+
+                    if (entryProcRes != null && DELETE.equals(entryProcRes.get1()))
+                        cctx.cache().metrics0().onInvokeRemove(old != null);
+                }
             }
 
             if (tx == null)
