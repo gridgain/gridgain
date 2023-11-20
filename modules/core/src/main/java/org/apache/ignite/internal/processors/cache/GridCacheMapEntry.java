@@ -3114,6 +3114,46 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         return peek(true, false, topVer, null);
     }
 
+    /** {@inheritDoc} */
+    @Override public int localSize(AffinityTopologyVersion topVer) throws GridCacheEntryRemovedException, IgniteCheckedException {
+        lockEntry();
+
+        try {
+            checkObsolete();
+
+            if (valid(topVer)) {
+                CacheObject val = this.val;
+                boolean isExpired = false;
+
+                if (val == null) {
+                    CacheDataRow row = cctx.offheap().find(this, false);
+
+                    if (row != null && !row.tombstone()) {
+                        val = row.value();
+                        isExpired = row.expireTime() > 0 && row.expireTime() < U.currentTimeMillis();
+                    }
+                }
+                else
+                    isExpired = checkExpired();
+
+                if (val == null || isExpired)
+                    return 0;
+
+                key.prepareMarshal(cctx.cacheObjectContext());
+
+                val.prepareMarshal(cctx.cacheObjectContext());
+
+                return key.valueBytesOriginLength(cctx.cacheObjectContext()) + val.valueBytesOriginLength(cctx.cacheObjectContext());
+            }
+        }
+        finally {
+            unlockEntry();
+        }
+
+        // Entry is not valid. Just return zero value.
+        return 0;
+    }
+
     /**
      * TODO: IGNITE-3500: do we need to generate event and invalidate value?
      *
@@ -3892,14 +3932,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (!(expireTime0 > 0 && expireTime0 <= expireTime))
                 return false;
 
-            CacheObject expiredVal = this.val;
-
-            if (markObsolete0(obsoleteVer, true, null))
-                obsolete = true;
-
-            removeExpiredValue(obsoleteVer);
-
-            if (expiredVal != null) { // Do not trigger events for tombstones.
+            if (this.val != null) { // Do not trigger events for tombstones.
                 if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
                     cctx.events().addEvent(partition(),
                         key,
@@ -3908,16 +3941,21 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         EVT_CACHE_OBJECT_EXPIRED,
                         null,
                         false,
-                        expiredVal,
-                        expiredVal != null,
+                        this.val,
+                        true,
                         null,
                         null,
                         null,
                         true);
                 }
 
-                cctx.continuousQueries().onEntryExpired(this, key, expiredVal);
+                cctx.continuousQueries().onEntryExpired(this, key, this.val);
             }
+
+            if (markObsolete0(obsoleteVer, true, null))
+                obsolete = true;
+
+            removeExpiredValue(obsoleteVer);
 
             updatePlatformCache(null, null);
         }

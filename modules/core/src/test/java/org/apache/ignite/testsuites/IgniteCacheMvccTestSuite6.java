@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.processors.cache.CacheIgniteOutOfMemoryExceptionOnTtlTest;
 import org.apache.ignite.internal.processors.cache.CacheIgniteOutOfMemoryExceptionTest;
 import org.apache.ignite.internal.processors.cache.PartitionedAtomicCacheGetsDistributionTest;
 import org.apache.ignite.internal.processors.cache.PartitionedMvccTxPessimisticCacheGetsDistributionTest;
@@ -89,6 +90,7 @@ public class IgniteCacheMvccTestSuite6 {
         ignoredTests.add(CacheParallelStartTest.class);
         ignoredTests.add(IgniteCache150ClientsTest.class);
         ignoredTests.add(CacheIgniteOutOfMemoryExceptionTest.class);
+        ignoredTests.add(CacheIgniteOutOfMemoryExceptionOnTtlTest.class);
         ignoredTests.add(OnePhaseCommitAndNodeLeftTest.class);
 
         // Mixed local/dht tx test.
