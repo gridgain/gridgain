@@ -27,6 +27,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache;
+import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.util.typedef.F;
@@ -232,7 +233,7 @@ public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_AFFINITY_HISTORY_SIZE, value = "10")
+    @WithSystemProperty(key = IGNITE_AFFINITY_HISTORY_SIZE, value = "1")
     @WithSystemProperty(key = IGNITE_MIN_AFFINITY_HISTORY_SIZE, value = "2")
     public void testOldNonShallowAffinityHistoryIsRemoved() throws Exception {
         testNonShallowAffinityHistory(true);
@@ -242,7 +243,7 @@ public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_AFFINITY_HISTORY_SIZE, value = "10")
+    @WithSystemProperty(key = IGNITE_AFFINITY_HISTORY_SIZE, value = "1")
     @WithSystemProperty(key = IGNITE_MIN_AFFINITY_HISTORY_SIZE, value = "3")
     public void testNonShallowAffinityHistoryIsNotRemoved() throws Exception {
         testNonShallowAffinityHistory(false);
@@ -258,22 +259,19 @@ public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
 
         GridCacheContext<Object, Object> cctx = proc.context().cacheContext(CU.cacheId(DEFAULT_CACHE_NAME));
 
-        GridAffinityAssignmentCache aff = GridTestUtils.getFieldValue(cctx.affinity(), "aff");
+        GridCacheAffinityManager affMgr = cctx.affinity();
 
-        AffinityTopologyVersion ver = aff.lastVersion();
+        AffinityTopologyVersion topVer = affMgr.affinityTopologyVersion();
 
         stopGrid(1);
         startGrid(1);
 
-        for (int i = 0; i < 50; i++) {
-            ignite.createCache("cache" + i);
-            ignite.destroyCache("cache" + i);
-        }
+        ignite.createCache("cache1");
 
         if (isRemoved)
-            assertThrowsWithCause(() -> aff.nodes(0, ver), IllegalStateException.class);
+            assertThrowsWithCause(() -> affMgr.nodesByPartition(0, topVer), IllegalStateException.class);
         else
-            assertEquals(1, aff.nodes(0, ver).size());
+            assertEquals(1, affMgr.nodesByPartition(0, topVer).size());
     }
 
     /**
