@@ -2683,7 +2683,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                     if (!F.isEmpty(txEntry.entryProcessors()))
                                         val = txEntry.applyEntryProcessors(val);
 
-                                    if (val != null)
+                                    if (val != null) {
                                         cacheCtx.addResult(map,
                                             key,
                                             val,
@@ -2697,6 +2697,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                                             0,
                                             needVer,
                                             U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
+                                    }
                                 }
                                 else
                                     missed.put(key, txEntry.cached().version());
