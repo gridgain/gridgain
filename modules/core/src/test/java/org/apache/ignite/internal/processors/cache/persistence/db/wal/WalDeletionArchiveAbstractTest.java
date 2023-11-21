@@ -95,7 +95,7 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
     }
 
     /**
-     * Start grid with override default configuration via customConfigurator and default logger.
+     * Start grid with overridden default configuration via customConfigurator and default logger.
      */
     private Ignite startGrid(Consumer<DataStorageConfiguration> customConfigurator) throws Exception {
         return startGrid(customConfigurator, null);
