@@ -78,7 +78,7 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
 
         dbCfg.setWalMode(walMode());
         dbCfg.setWalSegmentSize(512 * 1024);
-        dbCfg.setCheckpointFrequency(60 * 1000);//too high value for turn off triggering checkpoint by timeout.
+        dbCfg.setCheckpointFrequency(60 * 1000); // very high value to disable triggering checkpoint by timeout.
         dbCfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
             .setMaxSize(100 * 1024 * 1024)
             .setPersistenceEnabled(true));
