@@ -1067,7 +1067,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         int deleted = 0;
 
-        List<String> deletedSegments = new ArrayList<>();
+        List<String> deletedSegments = null;
         long lastCpIdx = lastCheckpointPtr.index();
 
         for (FileDescriptor desc : descs) {
@@ -1090,6 +1090,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             else {
                 deleted++;
 
+                if (deletedSegments == null)
+                    deletedSegments = new ArrayList<>();
+
                 deletedSegments.add(desc.file().getName());
 
                 long idx = desc.idx();
@@ -1105,7 +1108,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             cctx.kernalContext().encryption().onWalSegmentRemoved(desc.idx);
         }
 
-        if (log.isInfoEnabled() && !deletedSegments.isEmpty()) {
+        if (log.isInfoEnabled() && deletedSegments != null) {
             log.info("Segments removed after WAL archive cleaning [cleanedSegments=" + deletedSegments
                 + ", lastCpIdx=" + lastCpIdx + ", highIdx=" + highPtr.index() + ']');
         }
@@ -2429,7 +2432,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     duplicateIndices.add(desc.idx);
             }
 
-            List<Long> deletedRawSegments = new ArrayList<>();
+            List<Long> deletedRawSegments = null;
 
             for (FileDescriptor desc : descs) {
                 if (desc.isCompressed())
@@ -2442,10 +2445,14 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 if (desc.idx < lastCpIndex && duplicateIndices.contains(desc.idx)) {
                     long cleanedUpSize = deleteArchiveFiles(desc.file);
 
-                    if (cleanedUpSize > 0)
+                    if (cleanedUpSize > 0) {
+                        if (deletedRawSegments == null)
+                            deletedRawSegments = new ArrayList<>();
+
                         deletedRawSegments.add(desc.idx);
 
-                    segmentAware.addSize(desc.idx, -cleanedUpSize);
+                        segmentAware.addSize(desc.idx, -cleanedUpSize);
+                    }
                 }
             }
 

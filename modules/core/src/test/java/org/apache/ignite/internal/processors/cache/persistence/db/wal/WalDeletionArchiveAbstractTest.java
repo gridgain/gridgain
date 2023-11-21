@@ -47,6 +47,7 @@ import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE;
@@ -68,7 +69,9 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
     /**
      * Start grid with overridden default configuration via customConfigurator and with custom logger (if provided).
      */
-    private Ignite startGrid(Consumer<DataStorageConfiguration> customConfigurator, IgniteLogger customLog) throws Exception {
+    private Ignite startGrid(Consumer<DataStorageConfiguration> customConfigurator,
+                             @Nullable IgniteLogger customLog
+    ) throws Exception {
         IgniteConfiguration configuration = getConfiguration(getTestIgniteInstanceName());
 
         if (customLog != null)
