@@ -66,7 +66,7 @@ import static org.hamcrest.Matchers.lessThan;
  */
 public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractTest {
     /**
-     * Start grid with override default configuration via customConfigurator and with custom logger (if provided).
+     * Start grid with overridden default configuration via customConfigurator and with custom logger (if provided).
      */
     private Ignite startGrid(Consumer<DataStorageConfiguration> customConfigurator, IgniteLogger customLog) throws Exception {
         IgniteConfiguration configuration = getConfiguration(getTestIgniteInstanceName());
