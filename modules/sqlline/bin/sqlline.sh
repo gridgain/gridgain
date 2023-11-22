@@ -62,7 +62,7 @@ osname=`uname`
 if [ $osname = "OS/390" ] ; then
     export TERM=dumb
     JVM_OPTS="-Dfile.encoding=IBM-1047 $JVM_OPTS"
-    JVM_OPTS="-Dcom.ibm.jsse2.overrideDefaultTLS=true -Dssl.KeyManagerFactory.algorithm=IbmX509 $JVM_OPTS"
+    JVM_OPTS="$(getIbmSslOpts $version) $JVM_OPTS"
 fi
 
 #
