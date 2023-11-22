@@ -23,18 +23,23 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache;
+import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MIN_AFFINITY_HISTORY_SIZE;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 
 /**
  *
@@ -222,6 +227,51 @@ public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
         }
 
         assert cnt > 4;
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_AFFINITY_HISTORY_SIZE, value = "1")
+    @WithSystemProperty(key = IGNITE_MIN_AFFINITY_HISTORY_SIZE, value = "2")
+    public void testOldNonShallowAffinityHistoryIsRemoved() throws Exception {
+        testNonShallowAffinityHistory(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_AFFINITY_HISTORY_SIZE, value = "1")
+    @WithSystemProperty(key = IGNITE_MIN_AFFINITY_HISTORY_SIZE, value = "3")
+    public void testNonShallowAffinityHistoryIsNotRemoved() throws Exception {
+        testNonShallowAffinityHistory(false);
+    }
+
+    private void testNonShallowAffinityHistory(boolean isRemoved) throws Exception {
+        IgniteEx ignite = startGrids(2);
+
+        ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setAffinity(new RendezvousAffinityFunction(false, 1)));
+
+        GridCacheProcessor proc = ignite.context().cache();
+
+        GridCacheContext<Object, Object> cctx = proc.context().cacheContext(CU.cacheId(DEFAULT_CACHE_NAME));
+
+        GridCacheAffinityManager affMgr = cctx.affinity();
+
+        AffinityTopologyVersion topVer = affMgr.affinityTopologyVersion();
+
+        stopGrid(1);
+        startGrid(1);
+
+        ignite.createCache("cache1");
+
+        if (isRemoved)
+            assertThrowsWithCause(() -> affMgr.nodesByPartition(0, topVer), IllegalStateException.class);
+        else
+            assertEquals(1, affMgr.nodesByPartition(0, topVer).size());
     }
 
     /**
