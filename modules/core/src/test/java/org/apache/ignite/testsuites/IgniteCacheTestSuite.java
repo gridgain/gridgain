@@ -38,6 +38,7 @@ import org.apache.ignite.cache.store.jdbc.GridCacheJdbcBlobStoreSelfTest;
 import org.apache.ignite.cache.store.jdbc.JdbcTypesDefaultTransformerTest;
 import org.apache.ignite.internal.processors.cache.CacheAffinityCallSelfTest;
 import org.apache.ignite.internal.processors.cache.CacheAffinityKeyConfigurationMismatchTest;
+import org.apache.ignite.internal.processors.cache.CacheEntryProcessorSelfTest;
 import org.apache.ignite.internal.processors.cache.CacheFutureExceptionSelfTest;
 import org.apache.ignite.internal.processors.cache.CacheWithDifferentDataRegionConfigurationTest;
 import org.apache.ignite.internal.processors.cache.DataStorageConfigurationValidationTest;
@@ -153,6 +154,7 @@ public class IgniteCacheTestSuite {
         // Test fails due to incorrect handling of CacheConfiguration#getCopyOnRead() and
         // CacheObjectContext#storeValue() properties. Heap storage should be redesigned in this ticket.
         //GridTestUtils.addTestIfNeeded(suite, CacheEntryProcessorCopySelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, CacheEntryProcessorSelfTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, IgnitePutAllLargeBatchSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgnitePutAllUpdateNonPreloadedPartitionSelfTest.class, ignoredTests);
