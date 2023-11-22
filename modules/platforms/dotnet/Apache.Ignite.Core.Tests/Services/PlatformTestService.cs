@@ -599,11 +599,11 @@ namespace Apache.Ignite.Core.Tests.Services
         {
             var cache = _ignite.GetCache<int, DateTime>("net-dates");
 
-            var ts1 = new DateTime(1982, 4, 1, 1, 0, 0, 0, DateTimeKind.Local).ToUniversalTime();
-            var ts2 = new DateTime(1982, 3, 31, 22, 0, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var ts1 = new DateTime(1982, 4, 1, 1, 0, 0, 0, DateTimeKind.Local);
+            var ts2 = new DateTime(1982, 3, 31, 22, 0, 0, 0, DateTimeKind.Local);
 
-            Assert.AreEqual(ts1, cache.Get(5));
-            Assert.AreEqual(ts2, cache.Get(6));
+            Assert.AreEqual(ServiceTestUtils.MoscowToUniversal(ts1), cache.Get(5));
+            Assert.AreEqual(ServiceTestUtils.MoscowToUniversal(ts2), cache.Get(6));
 
             cache.Put(7, ts1);
             cache.Put(8, ts2);
