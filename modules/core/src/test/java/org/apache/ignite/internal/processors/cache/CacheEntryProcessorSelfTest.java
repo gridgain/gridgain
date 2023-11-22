@@ -43,8 +43,9 @@ public class CacheEntryProcessorSelfTest extends GridCommonAbstractTest {
             IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(cacheCfg);
 
             int key = 1;
+            int val = 10;
 
-            cache.put(key, 10);
+            cache.put(key, val);
 
             try (Transaction tx = ignite.transactions().txStart(TransactionConcurrency.OPTIMISTIC,
                 TransactionIsolation.SERIALIZABLE, 5000, 0)) {
@@ -59,10 +60,11 @@ public class CacheEntryProcessorSelfTest extends GridCommonAbstractTest {
 
                 assertNull(cache.get(key));
 
-                tx.commit();
+                tx.rollback();
             }
 
-            assertNull(cache.get(key));
+            assertNotNull(cache.get(key));
+            assertEquals(val, (int) cache.get(key));
         }
     }
 }
