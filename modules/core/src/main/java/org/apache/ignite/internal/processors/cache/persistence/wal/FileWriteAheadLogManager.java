@@ -2456,7 +2456,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 }
             }
 
-            if (log.isInfoEnabled() && !deletedRawSegments.isEmpty()) {
+            if (log.isInfoEnabled() && deletedRawSegments != null) {
                 log.info("Raw segments removed after compression [deletedSegments=" + deletedRawSegments
                     + ", lastCpIndex=" + lastCpIndex + ']');
             }
