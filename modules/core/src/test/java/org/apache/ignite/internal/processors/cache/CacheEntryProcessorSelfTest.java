@@ -50,21 +50,35 @@ public class CacheEntryProcessorSelfTest extends GridCommonAbstractTest {
             try (Transaction tx = ignite.transactions().txStart(TransactionConcurrency.OPTIMISTIC,
                 TransactionIsolation.SERIALIZABLE, 5000, 0)) {
 
-                cache.invoke(key, (entry, object) -> {
-                    Integer oldValue = entry.getValue();
-
-                    entry.remove();
-
-                    return oldValue;
-                });
-
-                assertNull(cache.get(key));
+                removeAndGetEntryInInvoke(cache, key);
 
                 tx.rollback();
             }
 
             assertNotNull(cache.get(key));
             assertEquals(val, (int) cache.get(key));
+
+            try (Transaction tx = ignite.transactions().txStart(TransactionConcurrency.OPTIMISTIC,
+                TransactionIsolation.SERIALIZABLE, 5000, 0)) {
+
+                removeAndGetEntryInInvoke(cache, key);
+
+                tx.commit();
+            }
+
+            assertNull(cache.get(key));
         }
+    }
+
+    private void removeAndGetEntryInInvoke(IgniteCache<Integer, Integer> cache, int key) {
+        cache.invoke(key, (entry, object) -> {
+            Integer oldValue = entry.getValue();
+
+            entry.remove();
+
+            return oldValue;
+        });
+
+        assertNull(cache.get(key));
     }
 }
