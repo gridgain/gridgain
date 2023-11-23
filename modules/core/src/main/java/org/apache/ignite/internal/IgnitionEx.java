@@ -148,6 +148,7 @@ import static org.apache.ignite.configuration.MemoryConfiguration.DFLT_MEMORY_PO
 import static org.apache.ignite.configuration.MemoryConfiguration.DFLT_MEM_PLC_DEFAULT_NAME;
 import static org.apache.ignite.internal.IgniteComponentType.SPRING;
 import static org.apache.ignite.plugin.segmentation.SegmentationPolicy.RESTART_JVM;
+import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.*;
 
 /**
  * This class is part of an internal API and can be modified at any time without backward compatibility.
@@ -2094,7 +2095,9 @@ public class IgnitionEx {
                 if (tcpDisco.getIpFinder() == null) {
                     TcpDiscoveryVmIpFinder vmIpFinder = new TcpDiscoveryVmIpFinder(true);
 
-                    vmIpFinder.setAddresses(Collections.singletonList("127.0.0.1:47500..47600"));
+                    String addr = DFLT_IP_ADDR + ':' + DFLT_PORT + ".." + (DFLT_PORT + DFLT_PORT_RANGE);
+
+                    vmIpFinder.setAddresses(Collections.singletonList(addr));
 
                     tcpDisco.setIpFinder(vmIpFinder);
                 }
