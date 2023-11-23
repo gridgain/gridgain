@@ -62,6 +62,7 @@ import org.junit.Test;
 
 import static java.util.Arrays.asList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.metric.SystemViewSelfTest.TEST_PREDICATE;
 import static org.apache.ignite.internal.metric.SystemViewSelfTest.TEST_TRANSFORMER;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheGroupId;
@@ -109,7 +110,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
         ignite0 = startGrid(0);
         ignite1 = startGrid(1);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
     }
 
     /** {@inheritDoc} */
