@@ -113,7 +113,7 @@ import org.apache.ignite.spi.collision.noop.NoopCollisionSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.deployment.local.LocalDeploymentSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder;
+import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.apache.ignite.spi.eventstorage.NoopEventStorageSpi;
 import org.apache.ignite.spi.failover.always.AlwaysFailoverSpi;
@@ -2091,8 +2091,13 @@ public class IgnitionEx {
             if (cfg.getDiscoverySpi() instanceof TcpDiscoverySpi) {
                 TcpDiscoverySpi tcpDisco = (TcpDiscoverySpi)cfg.getDiscoverySpi();
 
-                if (tcpDisco.getIpFinder() == null)
-                    tcpDisco.setIpFinder(new TcpDiscoveryMulticastIpFinder());
+                if (tcpDisco.getIpFinder() == null) {
+                    TcpDiscoveryVmIpFinder vmIpFinder = new TcpDiscoveryVmIpFinder(true);
+
+                    vmIpFinder.setAddresses(Collections.singletonList("127.0.0.1:47500..47600"));
+
+                    tcpDisco.setIpFinder(vmIpFinder);
+                }
             }
 
             if (cfg.getCommunicationSpi() == null)
