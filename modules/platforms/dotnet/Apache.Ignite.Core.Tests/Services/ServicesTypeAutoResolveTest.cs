@@ -159,6 +159,18 @@ namespace Apache.Ignite.Core.Tests.Services
 
             var svc = _client.GetServices().GetServiceProxy<IJavaService>(javaSvcName, false);
 
+            TestUtils.WaitForTrueCondition(() =>
+            {
+                try
+                {
+                    return svc.isInitialized();
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            }, 3000, "Failed to wait for service initialization: " + javaSvcName);
+
             DoTestService(svc);
 
             DoTestDepartments(svc);

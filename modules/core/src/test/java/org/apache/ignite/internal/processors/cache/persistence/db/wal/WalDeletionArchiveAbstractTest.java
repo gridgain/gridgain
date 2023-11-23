@@ -21,9 +21,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -41,8 +43,11 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAhea
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE;
@@ -62,16 +67,21 @@ import static org.hamcrest.Matchers.lessThan;
  */
 public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractTest {
     /**
-     * Start grid with override default configuration via customConfigurator.
+     * Start grid with overridden default configuration via customConfigurator and with custom logger (if provided).
      */
-    private Ignite startGrid(Consumer<DataStorageConfiguration> customConfigurator) throws Exception {
+    private Ignite startGrid(Consumer<DataStorageConfiguration> customConfigurator,
+                             @Nullable IgniteLogger customLog
+    ) throws Exception {
         IgniteConfiguration configuration = getConfiguration(getTestIgniteInstanceName());
+
+        if (customLog != null)
+            configuration.setGridLogger(customLog);
 
         DataStorageConfiguration dbCfg = new DataStorageConfiguration();
 
         dbCfg.setWalMode(walMode());
         dbCfg.setWalSegmentSize(512 * 1024);
-        dbCfg.setCheckpointFrequency(60 * 1000);//too high value for turn off frequency checkpoint.
+        dbCfg.setCheckpointFrequency(60 * 1000); // very high value to disable triggering checkpoint by timeout.
         dbCfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
             .setMaxSize(100 * 1024 * 1024)
             .setPersistenceEnabled(true));
@@ -85,6 +95,13 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
         ignite.cluster().state(ClusterState.ACTIVE);
 
         return ignite;
+    }
+
+    /**
+     * Start grid with overridden default configuration via customConfigurator and default logger.
+     */
+    private Ignite startGrid(Consumer<DataStorageConfiguration> customConfigurator) throws Exception {
+        return startGrid(customConfigurator, null);
     }
 
     /** */
@@ -125,9 +142,16 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
      */
     @Test
     public void testCorrectDeletedArchivedWalFiles() throws Exception {
+        ListeningTestLogger listeningLog = new ListeningTestLogger(GridAbstractTest.log);
+        //"Segments removed after WAL archive cleaning [cleanedSegments=["
+        LogListener listener = LogListener
+            .matches(Pattern.compile("Segments removed after WAL archive cleaning \\[cleanedSegments=\\[\\d+.wal"))
+            .build();
+        listeningLog.registerListener(listener);
+
         //given: configured grid with setted max wal archive size
         long maxWalArchiveSize = 2 * 1024 * 1024;
-        Ignite ignite = startGrid(dbCfg -> dbCfg.setMaxWalArchiveSize(maxWalArchiveSize));
+        Ignite ignite = startGrid(dbCfg -> dbCfg.setMaxWalArchiveSize(maxWalArchiveSize), listeningLog);
 
         GridCacheDatabaseSharedManager dbMgr = gridDatabase(ignite);
 
@@ -158,6 +182,8 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
         assertFalse(Stream.of(files).anyMatch(desc -> desc.file().getName().endsWith("00001.wal")));
 
         assertTrue(!hist.checkpoints().isEmpty());
+
+        assertTrue(listener.check());
     }
 
     /**
