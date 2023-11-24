@@ -33,6 +33,8 @@ import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -47,6 +49,9 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCaus
 public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
     /** */
     private boolean client;
+
+    /** */
+    private static ListeningTestLogger srvTestLog;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -67,12 +72,18 @@ public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
 
         cfg.setClientMode(client);
 
+        if (srvTestLog != null)
+            cfg.setGridLogger(srvTestLog);
+
         return cfg;
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
+
+        if (srvTestLog != null)
+            srvTestLog.clearListeners();
 
         super.afterTest();
     }
@@ -272,6 +283,53 @@ public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
             assertThrowsWithCause(() -> affMgr.nodesByPartition(0, topVer), IllegalStateException.class);
         else
             assertEquals(1, affMgr.nodesByPartition(0, topVer).size());
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_AFFINITY_HISTORY_SIZE, value = "1")
+    public void testDebugLoggingOnRemovingAffinityVersions() throws Exception {
+        setRootLoggerDebugLevel();
+
+        srvTestLog = new ListeningTestLogger(log);
+
+        LogListener logLsnr0 = LogListener.matches(
+                "Removed affinity assignment versions for cache or cache group cacheOrGrpName=default: " +
+                    "[topVer=3, minorTopVer=0]."
+            )
+            .atLeast(1)
+            .build();
+
+        LogListener logLsnr1 = LogListener.matches(
+                "Removed affinity assignment versions for cache or cache group cacheOrGrpName=default: " +
+                    "[topVer=4, minorTopVer=0-11]."
+            )
+            .times(1)
+            .build();
+
+        srvTestLog.registerListener(logLsnr0);
+        srvTestLog.registerListener(logLsnr1);
+
+        IgniteEx ignite = startGrids(2);
+
+        ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setAffinity(new RendezvousAffinityFunction(false, 1)));
+
+        stopGrid(1);
+        startGrid(1);
+
+        for (int i = 0; i < 5; i++) {
+            ignite.createCache("cache1");
+            ignite.destroyCache("cache1");
+        }
+
+        stopGrid(1);
+        startGrid(1);
+
+        assertTrue(logLsnr0.check());
+        assertTrue(logLsnr1.check());
     }
 
     /**

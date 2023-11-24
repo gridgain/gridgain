@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -51,6 +52,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
@@ -830,13 +832,15 @@ public class GridAffinityAssignmentCache {
 
             if (cache.topologyVersion().compareTo(topVer) > 0) {
                 throw new IllegalStateException("Getting affinity for too old topology version that is already " +
-                    "out of history (try to increase '" + IGNITE_AFFINITY_HISTORY_SIZE + "' system property)" +
+                    "out of history (try to increase '" + IGNITE_MIN_AFFINITY_HISTORY_SIZE + "' or '" +
+                    IGNITE_AFFINITY_HISTORY_SIZE + "' system properties)" +
                     " [locNode=" + ctx.discovery().localNode() +
                     ", grp=" + cacheOrGrpName +
                     ", topVer=" + topVer +
                     ", lastAffChangeTopVer=" + lastAffChangeTopVer +
                     ", head=" + head.get().topologyVersion() +
                     ", history=" + affCache.keySet() +
+                    ", minNonShallowHistorySize=" + MIN_NON_SHALLOW_HIST_SIZE +
                     ", maxNonShallowHistorySize=" + MAX_NON_SHALLOW_HIST_SIZE +
                     ']');
             }
@@ -974,6 +978,9 @@ public class GridAffinityAssignmentCache {
         if (shouldContinueCleanup(nonShallowSize, totalSize)) {
             int initNonShallowSize = nonShallowSize;
 
+            // topVer -> [minMinorVer, maxMinorVer].
+            Map<Long, IgniteBiTuple<Integer,Integer>> removedVersions = new TreeMap<>();
+
             Iterator<HistoryAffinityAssignment> it = affCache.values().iterator();
 
             while (it.hasNext()) {
@@ -988,6 +995,8 @@ public class GridAffinityAssignmentCache {
                         // GridAffinityProcessor#affMap has the same size and instance set as #affCache.
                         ctx.affinity().removeCachedAffinity(aff0.topologyVersion());
 
+                        printRemovedTopologyVersions(removedVersions);
+
                         return;
                     }
 
@@ -997,9 +1006,73 @@ public class GridAffinityAssignmentCache {
                 totalSize--;
 
                 it.remove();
+
+                mapTopologyVersions(removedVersions, aff0);
             }
 
             assert false : "All elements have been removed from affinity cache during cleanup";
+        }
+    }
+
+    /**
+     * Aggregates removed affinity assignment versions.
+     */
+    private void mapTopologyVersions(
+        Map<Long, IgniteBiTuple<Integer, Integer>> removedVersions,
+        HistoryAffinityAssignment aff
+    ) {
+        if (log.isDebugEnabled()) {
+            long topVer = aff.topologyVersion().topologyVersion();
+            int minorVer = aff.topologyVersion().minorTopologyVersion();
+
+            removedVersions.compute(topVer, (key, val) -> {
+                IgniteBiTuple<Integer, Integer> newVal = val;
+
+                if (newVal == null)
+                    newVal = new IgniteBiTuple<>(minorVer, minorVer);
+                else
+                    newVal.set2(minorVer);
+
+                return newVal;
+            });
+        }
+    }
+
+    /**
+     * Prints removed affinity assignment versions.
+     */
+    private void printRemovedTopologyVersions(Map<Long, IgniteBiTuple<Integer, Integer>> rmvVersions) {
+        if (log.isDebugEnabled() && !rmvVersions.isEmpty()) {
+            StringBuilder msg = new StringBuilder("Removed affinity assignment versions for cache or cache group ");
+            msg.append("cacheOrGrpName=");
+            msg.append(cacheOrGrpName);
+            msg.append(":");
+
+            Iterator<Map.Entry<Long, IgniteBiTuple<Integer, Integer>>> iter =
+                rmvVersions.entrySet().iterator();
+
+            while (iter.hasNext()) {
+                Map.Entry<Long, IgniteBiTuple<Integer, Integer>> rmvVer = iter.next();
+
+                msg.append(" [topVer=");
+                msg.append(rmvVer.getKey());
+                msg.append(", minorTopVer=");
+                msg.append(rmvVer.getValue().get1());
+
+                if (!rmvVer.getValue().get1().equals(rmvVer.getValue().get2())) {
+                    msg.append('-');
+                    msg.append(rmvVer.getValue().get2());
+                }
+
+                msg.append("]");
+
+                if (iter.hasNext())
+                    msg.append(",");
+            }
+
+            msg.append(".");
+
+            log.debug(msg.toString());
         }
     }
 
