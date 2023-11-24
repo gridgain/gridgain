@@ -148,7 +148,9 @@ import static org.apache.ignite.configuration.MemoryConfiguration.DFLT_MEMORY_PO
 import static org.apache.ignite.configuration.MemoryConfiguration.DFLT_MEM_PLC_DEFAULT_NAME;
 import static org.apache.ignite.internal.IgniteComponentType.SPRING;
 import static org.apache.ignite.plugin.segmentation.SegmentationPolicy.RESTART_JVM;
-import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.*;
+import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_IP_ADDR;
+import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_PORT;
+import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_PORT_RANGE;
 
 /**
  * This class is part of an internal API and can be modified at any time without backward compatibility.
