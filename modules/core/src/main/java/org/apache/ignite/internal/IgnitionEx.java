@@ -2093,7 +2093,13 @@ public class IgnitionEx {
                 TcpDiscoverySpi tcpDisco = (TcpDiscoverySpi)cfg.getDiscoverySpi();
 
                 if (tcpDisco.getIpFinder() == null) {
-                    tcpDisco.setIpFinder(new TcpDiscoveryVmIpFinder(true));
+                    TcpDiscoveryVmIpFinder vmIpFinder = new TcpDiscoveryVmIpFinder(true);
+
+                    String addr = DFLT_IP_ADDR + ':' + DFLT_PORT + ".." + (DFLT_PORT + DFLT_PORT_RANGE);
+
+                    vmIpFinder.setAddresses(Collections.singletonList(addr));
+
+                    tcpDisco.setIpFinder(vmIpFinder);
                 }
             }
 
