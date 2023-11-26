@@ -425,6 +425,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
             if (!isReuseBucket(b))
                 dataPages += size;
+            else
+                reusePages = size;
 
             if (dumpBucketsInfo) {
                 Stripe[] stripes = getBucket(b);
@@ -448,8 +450,6 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                         ", stripesEmpty=" + empty + ']');
             }
         }
-
-        reusePages = bucketsSize.get(REUSE_BUCKET);
 
         if (reusePages > 0) {
             if (log.isInfoEnabled())
