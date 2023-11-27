@@ -170,6 +170,7 @@ public class TcpClientDiscoverySpiSelfTest extends GridCommonAbstractTest {
                 .setConnectTimeout(500)
                 .setMaxConnectTimeout(1000)
                 .setReconnectCount(2)
+                .setMessageQueueLimit(128)
         );
 
         TcpDiscoverySpi disco = getDiscoverySpi();
