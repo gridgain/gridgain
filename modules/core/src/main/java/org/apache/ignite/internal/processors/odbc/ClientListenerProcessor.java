@@ -581,6 +581,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
         assertParameter(cfg.getSocketReceiveBufferSize() >= 0, "socketReceiveBufferSize > 0");
         assertParameter(cfg.getMaxOpenCursorsPerConnection() >= 0, "maxOpenCursorsPerConnection() >= 0");
         assertParameter(cfg.getThreadPoolSize() > 0, "threadPoolSize > 0");
+        assertParameter(cfg.getMaxConnectionCnt() > 0, "maxConnectionCnt >= 0");
     }
 
     /**

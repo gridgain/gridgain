@@ -74,7 +74,10 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     public static final int CONN_CTX_META_KEY = GridNioSessionMetaKey.nextUniqueKey();
 
     /** Next connection id. */
-    private static AtomicInteger nextConnId = new AtomicInteger(1);
+    private static final AtomicInteger nextConnId = new AtomicInteger(1);
+
+    /** Current count of active connections. */
+    private static final AtomicInteger connectionsCnt = new AtomicInteger(0);
 
     /** Busy lock. */
     private final GridSpinBusyLock busyLock;
@@ -140,6 +143,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
             connCtx.onDisconnected();
 
             metrics.onDisconnect(connCtx.clientType());
+            connectionsCnt.decrementAndGet();
         }
 
         if (log.isDebugEnabled()) {
@@ -208,7 +212,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
             if (authCtx != null)
                 AuthorizationContext.context(authCtx);
 
-            try (OperationSecurityContext s = ctx.security().withContext(connCtx.securityContext())) {
+            try (OperationSecurityContext ignored = ctx.security().withContext(connCtx.securityContext())) {
                 ClientListenerResponse resp = handler.handle(req);
 
             if (resp != null) {
@@ -336,6 +340,10 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
         ClientListenerConnectionContext connCtx = null;
 
         try {
+            int maxConn = cliConnCfg.getMaxConnectionCnt();
+            if (maxConn > 0 && connectionsCnt.get() >= maxConn)
+                throw new IgniteCheckedException("Connection limit reached: " + maxConn);
+
             connCtx = prepareContext(clientType, ses);
 
             ensureClientPermissions(clientType);
@@ -353,6 +361,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
             connCtx.handler().writeHandshake(writer);
 
             metrics.onHandshakeAccept(clientType);
+            connectionsCnt.incrementAndGet();
 
             if (log.isDebugEnabled()) {
                 String login = connCtx.securityContext() == null ? null :
