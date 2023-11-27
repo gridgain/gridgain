@@ -288,19 +288,22 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override public void afterCheckpointEnd(Context ctx) throws IgniteCheckedException {
-        persStoreMetrics.onStorageSizeChanged(
-            forAllPageStores(PageStore::size),
-            forAllPageStores(PageStore::getSparseSize)
-        );
-    }
+    @Override public void afterCheckpointEnd(Context emptyCtx) throws IgniteCheckedException {
+        Collection<CacheGroupContext> cacheGroupCtx = ctx.cache().cacheGroups();
 
-    /**
-     * @param f Consumer.
-     * @return Accumulated result for all page stores.
-     */
-    private long forAllPageStores(ToLongFunction<PageStore> f) {
-        return forGroupPageStores(grp, f);
+        long storageSize = 0;
+        long sparseStorageSize = 0;
+
+        if(!F.isEmpty(cacheGroupCtx)){
+            for (CacheGroupContext gCtx : cacheGroupCtx){
+
+                storageSize += forGroupPageStores(gCtx, PageStore::size);
+
+                sparseStorageSize += forGroupPageStores(gCtx, PageStore::getSparseSize);
+            }
+        }
+
+        persStoreMetrics.onStorageSizeChanged(storageSize, sparseStorageSize);
     }
 
     /**
