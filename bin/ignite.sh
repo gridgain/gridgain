@@ -169,7 +169,7 @@ do
                  -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} "${CONFIG}" && ERRORCODE="$?" || ERRORCODE="$?"
             ;;
             OS/390*)
-                echo "$JAVA" ${QUIET} ${JVM_OPTS} "${RESTART_SUCCESS_OPT}" \
+                "$JAVA" ${QUIET} ${JVM_OPTS} "${RESTART_SUCCESS_OPT}" \
                  -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" -DIGNITE_WAL_MMAP=false \
                  $(getIbmSslOpts $version) \
                  -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} "${CONFIG}" && ERRORCODE="$?" || ERRORCODE="$?"
