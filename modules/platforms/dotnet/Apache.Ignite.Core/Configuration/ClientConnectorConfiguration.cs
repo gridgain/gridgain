@@ -249,7 +249,7 @@ namespace Apache.Ignite.Core.Configuration
         public TimeSpan HandshakeTimeout { get; set; }
 
         /// <summary>
-        /// Gets or sets max allowed number of active connections per node.
+        /// Gets or sets maximum allowed number of active connections per node.
         /// Zero means no limit. Negative values are not allowed.
         /// </summary>
         public int MaxConnections { get; set; }
