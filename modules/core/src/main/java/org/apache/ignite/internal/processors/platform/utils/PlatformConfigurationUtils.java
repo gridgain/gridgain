@@ -1968,7 +1968,7 @@ public class PlatformConfigurationUtils {
             w.writeBoolean(cfg.isJdbcEnabled());
 
             w.writeLong(cfg.getHandshakeTimeout());
-            w.writeLong(cfg.getMaxConnectionCnt());
+            w.writeInt(cfg.getMaxConnectionCnt());
 
             ThinClientConfiguration thinCfg = cfg.getThinClientConfiguration();
 
