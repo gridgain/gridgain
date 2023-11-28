@@ -73,6 +73,18 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     /** Connection-related metadata key. */
     public static final int CONN_CTX_META_KEY = GridNioSessionMetaKey.nextUniqueKey();
 
+    /** Connection-related metadata key. */
+    public static final int CONN_STATE_META_KEY = GridNioSessionMetaKey.nextUniqueKey();
+
+    /** Connection is not established. */
+    public static final Integer CONN_STATE_DISCONNECTED = 0;
+
+    /** Phisical level connection is established. */
+    public static final Integer CONN_STATE_PHISICAL_CONNECTED = 1;
+
+    /** Logical level connection is established. */
+    public static final Integer CONN_STATE_HANDSHAKE_ACCEPTED = 2;
+
     /** Next connection id. */
     private static final AtomicInteger nextConnId = new AtomicInteger(1);
 
@@ -126,6 +138,14 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
 
     /** {@inheritDoc} */
     @Override public void onConnected(GridNioSession ses) {
+        Integer connState = ses.meta(CONN_STATE_META_KEY);
+
+        // It means connection was already processed.
+        if (connState != null)
+            return;
+
+        ses.addMeta(CONN_STATE_META_KEY, CONN_STATE_PHISICAL_CONNECTED);
+
         if (log.isDebugEnabled())
             log.debug("Client connected: " + ses.remoteAddress());
 
@@ -137,13 +157,22 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
 
     /** {@inheritDoc} */
     @Override public void onDisconnected(GridNioSession ses, @Nullable Exception e) {
+        Integer connState = ses.meta(CONN_STATE_META_KEY);
+
+        // It means connection was never properly established or already processed.
+        if (connState == null || connState.equals(CONN_STATE_DISCONNECTED))
+            return;
+
+        ses.addMeta(CONN_STATE_META_KEY, CONN_STATE_DISCONNECTED);
+        if (connState.equals(CONN_STATE_HANDSHAKE_ACCEPTED))
+            connectionsCnt.decrementAndGet();
+
         ClientListenerConnectionContext connCtx = ses.meta(CONN_CTX_META_KEY);
 
         if (connCtx != null) {
             connCtx.onDisconnected();
 
             metrics.onDisconnect(connCtx.clientType());
-            connectionsCnt.decrementAndGet();
         }
 
         if (log.isDebugEnabled()) {
@@ -360,8 +389,10 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
 
             connCtx.handler().writeHandshake(writer);
 
-            metrics.onHandshakeAccept(clientType);
+            ses.addMeta(CONN_STATE_META_KEY, CONN_STATE_HANDSHAKE_ACCEPTED);
             connectionsCnt.incrementAndGet();
+
+            metrics.onHandshakeAccept(clientType);
 
             if (log.isDebugEnabled()) {
                 String login = connCtx.securityContext() == null ? null :
