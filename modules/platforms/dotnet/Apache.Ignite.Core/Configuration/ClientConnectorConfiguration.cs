@@ -70,7 +70,7 @@ namespace Apache.Ignite.Core.Configuration
         /// <summary>
         /// Default max connection count. Zero means no limit. Negative values are not allowed.
         /// </summary>
-        public static readonly int DefaultMaxConnections = 0;
+        public const int DefaultMaxConnections = 0;
 
         /// <summary>
         /// Default value for <see cref="ThinClientEnabled"/> property.
