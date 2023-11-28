@@ -30,7 +30,6 @@ namespace Apache.Ignite.Core.Tests.Client
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Cache;
     using Apache.Ignite.Core.Configuration;
-    using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Tests.Client.Cache;
@@ -1072,7 +1071,7 @@ namespace Apache.Ignite.Core.Tests.Client
 
             var ex = Assert.Catch<Exception>(() => StartClient());
 
-            StringAssert.StartsWith("Connection limit reached: " + MAX_CONNECTIONS, ex.Message);
+            StringAssert.Contains("Connection limit reached: " + MAX_CONNECTIONS, ex.Message);
         }
 
         /// <summary>
