@@ -1068,7 +1068,7 @@ namespace Apache.Ignite.Core.Tests.Client
             try
             {
                 clients.AddRange(Enumerable.Range(1, maxConnections).Select(_ => StartClient()));
-                var ex = Assert.Catch<Exception>(() => StartClient());
+                var ex = Assert.Catch<Exception>(() => clients.Add(StartClient()));
                 StringAssert.Contains("Connection limit reached: " + maxConnections, ex.Message);
             }
             finally
