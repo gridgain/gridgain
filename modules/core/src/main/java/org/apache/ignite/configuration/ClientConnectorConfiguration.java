@@ -361,8 +361,8 @@ public class ClientConnectorConfiguration {
      * Gets maximum allowed number of active connections per node.
      * <p>
      * Defaults to {@link #DFLT_MAX_CONNECTION_CNT}.
-     * Zero means no limit.
-     * Negative values are not allowed.
+     * This applies to any connections that use thin client protocol - thin clients, ODBC, thin JDBC connections.
+     * Zero means no limit. Negative values are not allowed.
      *
      * @return Maximum allowed number of active connections.
      */
@@ -372,6 +372,9 @@ public class ClientConnectorConfiguration {
 
     /**
      * Sets maximum allowed number of active connections per node.
+     * <p>
+     * This applies to any connections that use thin client protocol - thin clients, ODBC, thin JDBC connections.
+     * Zero means no limit. Negative values are not allowed.
      *
      * @param maxConnectionCnt Maximum allowed number of active connections.
      * @return This instance for chaining.
