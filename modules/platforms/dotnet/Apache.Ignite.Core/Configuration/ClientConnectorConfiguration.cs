@@ -251,6 +251,7 @@ namespace Apache.Ignite.Core.Configuration
         /// <summary>
         /// Gets or sets maximum allowed number of active client connections per node.
         /// This applies to any connections that use thin client protocol: thin clients, ODBC, thin JDBC connections.
+        /// The total number of all connections (ODBC+JDBC+thin client) can not exceed this limit.
         /// Zero means no limit. Negative values are not allowed.
         /// </summary>
         public int MaxConnections { get; set; }
