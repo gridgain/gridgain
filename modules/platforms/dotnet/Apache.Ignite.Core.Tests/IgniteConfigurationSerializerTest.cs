@@ -284,6 +284,7 @@ namespace Apache.Ignite.Core.Tests
             Assert.IsTrue(client.TcpNoDelay);
             Assert.AreEqual(14, client.MaxOpenCursorsPerConnection);
             Assert.AreEqual(15, client.ThreadPoolSize);
+            Assert.AreEqual(16, client.MaxConnections);
             Assert.AreEqual(19, client.IdleTimeout.TotalSeconds);
             Assert.AreEqual(20, client.ThinClientConfiguration.MaxActiveTxPerConnection);
             Assert.AreEqual(21, client.ThinClientConfiguration.MaxActiveComputeTasksPerConnection);
@@ -973,7 +974,8 @@ namespace Apache.Ignite.Core.Tests
                     {
                         MaxActiveTxPerConnection = 8,
                         MaxActiveComputeTasksPerConnection = 9
-                    }
+                    },
+                    MaxConnections = 10
                 },
                 PersistentStoreConfiguration = new PersistentStoreConfiguration
                 {
