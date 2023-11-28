@@ -296,15 +296,15 @@ public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
         srvTestLog = new ListeningTestLogger(log);
 
         LogListener logLsnr0 = LogListener.matches(
-                "Removed affinity assignment versions for cache or cache group cacheOrGrpName=default: " +
-                    "[topVer=3, minorTopVer=0]."
+                "Removed affinity assignments for group [name=default, nonShallowSize=3, totalSize=14," +
+                    " version=[topVer=3, minorTopVer=0]]"
             )
-            .atLeast(1)
+            .times(1)
             .build();
 
         LogListener logLsnr1 = LogListener.matches(
-                "Removed affinity assignment versions for cache or cache group cacheOrGrpName=default: " +
-                    "[topVer=4, minorTopVer=0-11]."
+                "Removed affinity assignments for group [name=default, nonShallowSize=3, totalSize=14," +
+                    " from=[topVer=4, minorTopVer=0], to=[topVer=4, minorTopVer=11]]"
             )
             .times(1)
             .build();

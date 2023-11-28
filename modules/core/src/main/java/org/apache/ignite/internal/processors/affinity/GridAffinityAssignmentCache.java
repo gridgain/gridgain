@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -52,7 +51,6 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
@@ -975,11 +973,15 @@ public class GridAffinityAssignmentCache {
 
         int totalSize = affCache.size();
 
+        int originNonShallowSize = nonShallowSize;
+
+        int originTotalSize = totalSize;
+
         if (shouldContinueCleanup(nonShallowSize, totalSize)) {
             int initNonShallowSize = nonShallowSize;
 
-            // topVer -> [minMinorVer, maxMinorVer].
-            Map<Long, IgniteBiTuple<Integer,Integer>> removedVersions = new TreeMap<>();
+            AffinityTopologyVersion firstVer = null;
+            AffinityTopologyVersion lastVer = null;
 
             Iterator<HistoryAffinityAssignment> it = affCache.values().iterator();
 
@@ -995,7 +997,27 @@ public class GridAffinityAssignmentCache {
                         // GridAffinityProcessor#affMap has the same size and instance set as #affCache.
                         ctx.affinity().removeCachedAffinity(aff0.topologyVersion());
 
-                        printRemovedTopologyVersions(removedVersions);
+                        if (log.isDebugEnabled()) {
+                            String msg = String.format(
+                                "Removed affinity assignments for group [name=%s, nonShallowSize=%s, totalSize=%s",
+                                cacheOrGrpName, originNonShallowSize, originTotalSize
+                            );
+
+                            if (lastVer == null) {
+                                msg += String.format(", version=[topVer=%s, minorTopVer=%s]]",
+                                    firstVer.topologyVersion(), firstVer.minorTopologyVersion()
+                                );
+                            }
+                            else {
+                                msg += String.format(", from=[topVer=%s, minorTopVer=%s], " +
+                                        "to=[topVer=%s, minorTopVer=%s]]",
+                                    firstVer.topologyVersion(), firstVer.minorTopologyVersion(),
+                                    lastVer.topologyVersion(), lastVer.minorTopologyVersion()
+                                );
+                            }
+
+                            log.debug(msg);
+                        }
 
                         return;
                     }
@@ -1007,72 +1029,15 @@ public class GridAffinityAssignmentCache {
 
                 it.remove();
 
-                mapTopologyVersions(removedVersions, aff0);
+                if (log.isDebugEnabled()) {
+                    if (firstVer == null)
+                        firstVer = aff0.topologyVersion();
+                    else
+                        lastVer = aff0.topologyVersion();
+                }
             }
 
             assert false : "All elements have been removed from affinity cache during cleanup";
-        }
-    }
-
-    /**
-     * Aggregates removed affinity assignment versions.
-     */
-    private void mapTopologyVersions(
-        Map<Long, IgniteBiTuple<Integer, Integer>> removedVersions,
-        HistoryAffinityAssignment aff
-    ) {
-        if (log.isDebugEnabled()) {
-            long topVer = aff.topologyVersion().topologyVersion();
-            int minorVer = aff.topologyVersion().minorTopologyVersion();
-
-            removedVersions.compute(topVer, (key, val) -> {
-                IgniteBiTuple<Integer, Integer> newVal = val;
-
-                if (newVal == null)
-                    newVal = new IgniteBiTuple<>(minorVer, minorVer);
-                else
-                    newVal.set2(minorVer);
-
-                return newVal;
-            });
-        }
-    }
-
-    /**
-     * Prints removed affinity assignment versions.
-     */
-    private void printRemovedTopologyVersions(Map<Long, IgniteBiTuple<Integer, Integer>> rmvVersions) {
-        if (log.isDebugEnabled() && !rmvVersions.isEmpty()) {
-            StringBuilder msg = new StringBuilder("Removed affinity assignment versions for cache or cache group ");
-            msg.append("cacheOrGrpName=");
-            msg.append(cacheOrGrpName);
-            msg.append(":");
-
-            Iterator<Map.Entry<Long, IgniteBiTuple<Integer, Integer>>> iter =
-                rmvVersions.entrySet().iterator();
-
-            while (iter.hasNext()) {
-                Map.Entry<Long, IgniteBiTuple<Integer, Integer>> rmvVer = iter.next();
-
-                msg.append(" [topVer=");
-                msg.append(rmvVer.getKey());
-                msg.append(", minorTopVer=");
-                msg.append(rmvVer.getValue().get1());
-
-                if (!rmvVer.getValue().get1().equals(rmvVer.getValue().get2())) {
-                    msg.append('-');
-                    msg.append(rmvVer.getValue().get2());
-                }
-
-                msg.append("]");
-
-                if (iter.hasNext())
-                    msg.append(",");
-            }
-
-            msg.append(".");
-
-            log.debug(msg.toString());
         }
     }
 
