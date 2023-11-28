@@ -68,6 +68,11 @@ namespace Apache.Ignite.Core.Configuration
         public static readonly TimeSpan DefaultHandshakeTimeout = TimeSpan.FromSeconds(10);
 
         /// <summary>
+        /// Default max connection count. Zero means no limit. Negative values are not allowed.
+        /// </summary>
+        public static readonly int DefaultMaxConnections = 0;
+
+        /// <summary>
         /// Default value for <see cref="ThinClientEnabled"/> property.
         /// </summary>
         public const bool DefaultThinClientEnabled = true;
@@ -96,6 +101,7 @@ namespace Apache.Ignite.Core.Configuration
             ThreadPoolSize = DefaultThreadPoolSize;
             IdleTimeout = DefaultIdleTimeout;
             HandshakeTimeout = DefaultHandshakeTimeout;
+            MaxConnections = DefaultMaxConnections;
 
             ThinClientEnabled = DefaultThinClientEnabled;
             OdbcEnabled = DefaultOdbcEnabled;
@@ -124,6 +130,7 @@ namespace Apache.Ignite.Core.Configuration
             JdbcEnabled = reader.ReadBoolean();
 
             HandshakeTimeout = reader.ConfigReadLongAsTimespan();
+            MaxConnections = reader.ReadInt();
 
             // Thin client configuration.
             if (reader.ReadBoolean())
@@ -159,6 +166,7 @@ namespace Apache.Ignite.Core.Configuration
             writer.WriteBoolean(JdbcEnabled);
 
             writer.ConfigWriteTimeSpanAsLong(HandshakeTimeout);
+            writer.WriteInt(MaxConnections);
 
             // Thin client configuration.
             if (ThinClientConfiguration != null)
@@ -239,6 +247,12 @@ namespace Apache.Ignite.Core.Configuration
         /// the connection is closed.
         /// </summary>
         public TimeSpan HandshakeTimeout { get; set; }
+
+        /// <summary>
+        /// Gets or sets max allowed number of active connections per node.
+        /// Zero means no limit. Negative values are not allowed.
+        /// </summary>
+        public int MaxConnections { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether thin client connector is enabled.
