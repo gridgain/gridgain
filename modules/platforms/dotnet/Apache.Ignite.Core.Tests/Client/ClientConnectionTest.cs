@@ -30,6 +30,7 @@ namespace Apache.Ignite.Core.Tests.Client
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Cache;
     using Apache.Ignite.Core.Configuration;
+    using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Tests.Client.Cache;
@@ -1043,6 +1044,35 @@ namespace Apache.Ignite.Core.Tests.Client
 
             StringAssert.StartsWith("Remote job threw user exception", ex.Message);
             StringAssert.Contains("at org.apache.ignite.platform.PlatformComputeEchoTask$EchoJob.execute", ex.Message);
+        }
+
+        /// <summary>
+        /// Tests that server rejects new connections when the connection limit reached.
+        /// </summary>
+        [Test]
+        public void TestRejectOnClientLimitReached()
+        {
+            const int MAX_CONNECTIONS = 4;
+            
+            var ignite = Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration())
+            {
+                ClientConnectorConfiguration = new ClientConnectorConfiguration
+                {
+                    MaxConnections = MAX_CONNECTIONS
+                }
+            });
+
+            Assert.AreEqual(MAX_CONNECTIONS, ignite.GetConfiguration().ClientConnectorConfiguration.MaxConnections);
+
+            var clients = new IIgniteClient[MAX_CONNECTIONS];
+            for (var i = 0; i < MAX_CONNECTIONS; ++i)
+            {
+                clients[i] = StartClient();
+            }
+
+            var ex = Assert.Catch<Exception>(() => StartClient());
+
+            StringAssert.StartsWith("Connection limit reached: " + MAX_CONNECTIONS, ex.Message);
         }
 
         /// <summary>
