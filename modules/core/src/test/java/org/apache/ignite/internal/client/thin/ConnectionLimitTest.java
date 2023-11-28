@@ -35,7 +35,7 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName).setClientConnectorConfiguration(
-            new ClientConnectorConfiguration().setMaxConnectionCnt(MAX_CONNECTIONS));
+            new ClientConnectorConfiguration().setMaxConnectionCount(MAX_CONNECTIONS));
     }
 
     /** */

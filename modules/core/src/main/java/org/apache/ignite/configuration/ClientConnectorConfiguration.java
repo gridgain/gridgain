@@ -143,7 +143,7 @@ public class ClientConnectorConfiguration {
         tcpNoDelay = cfg.isTcpNoDelay();
         threadPoolSize = cfg.getThreadPoolSize();
         selectorCnt = cfg.getSelectorCount();
-        maxConnectionCnt = cfg.getMaxConnectionCnt();
+        maxConnectionCnt = cfg.getMaxConnectionCount();
         idleTimeout = cfg.getIdleTimeout();
         handshakeTimeout = cfg.getHandshakeTimeout();
         jdbcEnabled = cfg.jdbcEnabled;
@@ -366,7 +366,7 @@ public class ClientConnectorConfiguration {
      *
      * @return Maximum allowed number of active connections.
      */
-    public int getMaxConnectionCnt() {
+    public int getMaxConnectionCount() {
         return maxConnectionCnt;
     }
 
@@ -376,7 +376,7 @@ public class ClientConnectorConfiguration {
      * @param maxConnectionCnt Maximum allowed number of active connections.
      * @return This instance for chaining.
      */
-    public ClientConnectorConfiguration setMaxConnectionCnt(int maxConnectionCnt) {
+    public ClientConnectorConfiguration setMaxConnectionCount(int maxConnectionCnt) {
         this.maxConnectionCnt = maxConnectionCnt;
 
         return this;

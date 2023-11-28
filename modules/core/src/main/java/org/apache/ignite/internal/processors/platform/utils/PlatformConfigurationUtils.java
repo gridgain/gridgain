@@ -1929,7 +1929,7 @@ public class PlatformConfigurationUtils {
                 .setOdbcEnabled(in.readBoolean())
                 .setJdbcEnabled(in.readBoolean())
                 .setHandshakeTimeout(in.readLong())
-                .setMaxConnectionCnt(in.readInt());
+                .setMaxConnectionCount(in.readInt());
 
         if (in.readBoolean()) {
             cfg.setThinClientConfiguration(new ThinClientConfiguration()
@@ -1968,7 +1968,7 @@ public class PlatformConfigurationUtils {
             w.writeBoolean(cfg.isJdbcEnabled());
 
             w.writeLong(cfg.getHandshakeTimeout());
-            w.writeInt(cfg.getMaxConnectionCnt());
+            w.writeInt(cfg.getMaxConnectionCount());
 
             ThinClientConfiguration thinCfg = cfg.getThinClientConfiguration();
 

@@ -340,7 +340,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
         ClientListenerConnectionContext connCtx = null;
 
         try {
-            int maxConn = cliConnCfg.getMaxConnectionCnt();
+            int maxConn = cliConnCfg.getMaxConnectionCount();
             if (maxConn > 0 && connectionsCnt.get() >= maxConn)
                 throw new IgniteCheckedException("Connection limit reached: " + maxConn);
 
