@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Client
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Net;
@@ -1051,27 +1052,29 @@ namespace Apache.Ignite.Core.Tests.Client
         [Test]
         public void TestRejectOnClientLimitReached()
         {
-            const int MAX_CONNECTIONS = 4;
+            const int maxConnections = 4;
             
             var ignite = Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
                 ClientConnectorConfiguration = new ClientConnectorConfiguration
                 {
-                    MaxConnections = MAX_CONNECTIONS
+                    MaxConnections = maxConnections
                 }
             });
 
-            Assert.AreEqual(MAX_CONNECTIONS, ignite.GetConfiguration().ClientConnectorConfiguration.MaxConnections);
+            Assert.AreEqual(maxConnections, ignite.GetConfiguration().ClientConnectorConfiguration.MaxConnections);
 
-            var clients = new IIgniteClient[MAX_CONNECTIONS];
-            for (var i = 0; i < MAX_CONNECTIONS; ++i)
+            var clients = new List<IIgniteClient>();
+            try
             {
-                clients[i] = StartClient();
+                clients.AddRange(Enumerable.Range(1, maxConnections).Select(_ => StartClient()));
+                var ex = Assert.Catch<Exception>(() => StartClient());
+                StringAssert.Contains("Connection limit reached: " + maxConnections, ex.Message);
             }
-
-            var ex = Assert.Catch<Exception>(() => StartClient());
-
-            StringAssert.Contains("Connection limit reached: " + MAX_CONNECTIONS, ex.Message);
+            finally
+            {
+                clients.ForEach(c => c.Dispose());
+            }
         }
 
         /// <summary>

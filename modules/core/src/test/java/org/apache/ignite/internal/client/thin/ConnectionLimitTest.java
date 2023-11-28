@@ -23,6 +23,9 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Thin client connections limit tests.
  */
@@ -39,20 +42,23 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
     }
 
     /** */
-    @SuppressWarnings("MismatchedReadAndWriteOfArray")
     @Test
     public void testConnectionsRejectedOnLimitReached() throws Exception {
         try (Ignite ignored = startGrid(0)) {
-            IgniteClient[] clients = new IgniteClient[MAX_CONNECTIONS];
-            for (int i = 0; i < MAX_CONNECTIONS; ++i) {
-                //noinspection resource
-                clients[i] = startClient(0);
-            }
+            List<IgniteClient> clients = new ArrayList<>();
+            try {
+                for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+                    clients.add(startClient(0));
+                }
 
-            GridTestUtils.assertThrows(log(),
-                    () -> startClient(0),
-                    ClientProtocolError.class,
-                    "Connection limit reached: " + MAX_CONNECTIONS);
+                GridTestUtils.assertThrows(log(),
+                        () -> startClient(0),
+                        ClientProtocolError.class,
+                        "Connection limit reached: " + MAX_CONNECTIONS);
+            }
+            finally {
+                clients.forEach(IgniteClient::close);
+            }
         }
     }
 }
