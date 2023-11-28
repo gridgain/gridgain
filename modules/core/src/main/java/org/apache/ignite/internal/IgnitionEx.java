@@ -113,7 +113,7 @@ import org.apache.ignite.spi.collision.noop.NoopCollisionSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.deployment.local.LocalDeploymentSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder;
+import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.apache.ignite.spi.eventstorage.NoopEventStorageSpi;
 import org.apache.ignite.spi.failover.always.AlwaysFailoverSpi;
@@ -148,6 +148,9 @@ import static org.apache.ignite.configuration.MemoryConfiguration.DFLT_MEMORY_PO
 import static org.apache.ignite.configuration.MemoryConfiguration.DFLT_MEM_PLC_DEFAULT_NAME;
 import static org.apache.ignite.internal.IgniteComponentType.SPRING;
 import static org.apache.ignite.plugin.segmentation.SegmentationPolicy.RESTART_JVM;
+import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_IP_ADDR;
+import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_PORT;
+import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_PORT_RANGE;
 
 /**
  * This class is part of an internal API and can be modified at any time without backward compatibility.
@@ -2091,8 +2094,15 @@ public class IgnitionEx {
             if (cfg.getDiscoverySpi() instanceof TcpDiscoverySpi) {
                 TcpDiscoverySpi tcpDisco = (TcpDiscoverySpi)cfg.getDiscoverySpi();
 
-                if (tcpDisco.getIpFinder() == null)
-                    tcpDisco.setIpFinder(new TcpDiscoveryMulticastIpFinder());
+                if (tcpDisco.getIpFinder() == null) {
+                    TcpDiscoveryVmIpFinder vmIpFinder = new TcpDiscoveryVmIpFinder(true);
+
+                    String addr = DFLT_IP_ADDR + ':' + DFLT_PORT + ".." + (DFLT_PORT + DFLT_PORT_RANGE);
+
+                    vmIpFinder.setAddresses(Collections.singletonList(addr));
+
+                    tcpDisco.setIpFinder(vmIpFinder);
+                }
             }
 
             if (cfg.getCommunicationSpi() == null)
