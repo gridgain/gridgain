@@ -247,6 +247,9 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     /** Default port to listen (value is <tt>47500</tt>). */
     public static final int DFLT_PORT = 47500;
 
+    /** Default IP address to seek other nodes at. */
+    public static final String DFLT_IP_ADDR = "127.0.0.1";
+
     /** Default timeout for joining topology (value is <tt>0</tt>). */
     public static final long DFLT_JOIN_TIMEOUT = 0;
 
