@@ -17,8 +17,6 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.io.Serializable;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -94,8 +92,8 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CACHE_PROC;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
 import static org.apache.ignite.internal.processors.cache.GridCacheProcessor.CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT;
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.containsInvalidFileNameChars;
 import static org.apache.ignite.internal.processors.cache.GridLocalConfigManager.validateIncomingConfiguration;
-import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.cacheDirName;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
 
 /**
@@ -1087,18 +1085,14 @@ public class ClusterCachesInfo {
             }
         }
 
-        if (containsInvalidFileNameChars(ccfg)) {
+        if (containsInvalidFileNameChars(ccfg, ctx.config().getDataStorageConfiguration())) {
             err = new IgniteCheckedException("Cache start failed. Cache or group name contains the characters " +
                 "that are not allowed in file names [cache=" +
                 (ccfg.getGroupName() == null ? "" : ", group=" + ccfg.getGroupName()) + ']');
-
-            if (persistedCfgs)
-                res.errs.add(err);
-            else
-                ctx.cache().completeCacheStartFuture(req, false, err);
-
-            return false;
         }
+
+        if (!validateStartNewCache(err, persistedCfgs, res, req))
+            return false;
 
         assert req.cacheType() != null : req;
         assert F.eq(ccfg.getName(), cacheName) : req;
@@ -1151,21 +1145,6 @@ public class ClusterCachesInfo {
         exchangeActions.addCacheToStart(req, startDesc);
 
         return true;
-    }
-
-    /** @return {@code True} if cache directory contains the characters that are not allowed in file names. */
-    private boolean containsInvalidFileNameChars(CacheConfiguration<?, ?> ccfg) {
-        if (!CU.isPersistentCache(ccfg, ctx.config().getDataStorageConfiguration()))
-            return false;
-
-        String expDir = cacheDirName(ccfg);
-
-        try {
-            return !expDir.equals(Paths.get(expDir).toFile().getName());
-        }
-        catch (InvalidPathException ignored) {
-            return true;
-        }
     }
 
     /**

@@ -81,22 +81,12 @@ public class CacheDirectoryNameTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void testCacheDirectoryContainsInvalidFileNameChars() throws Exception {
+    public void testDynamicCacheDirectoryContainsInvalidFileNameChars() throws Exception {
         IgniteEx srv = startGrid();
 
         srv.cluster().state(ClusterState.ACTIVE);
 
-        List<String> illegalNames = new ArrayList<>();
-
-        illegalNames.add("/");
-        illegalNames.add("a/b");
-
-        if (U.isWindows()) {
-            illegalNames.add("a>b");
-            illegalNames.add("a\\b");
-        }
-
-        for (String name : illegalNames) {
+        for (String name : illegalCacheNames()) {
             CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
             if (checkGroup)
@@ -113,5 +103,54 @@ public class CacheDirectoryNameTest extends GridCommonAbstractTest {
                 srv.destroyCache(cfg.getName());
             }
         }
+    }
+
+    /** */
+    @Test
+    public void testStaticCacheDirectoryContainsInvalidFileNameChars() throws Exception {
+        IgniteEx srv = startGrid();
+
+        srv.cluster().state(ClusterState.ACTIVE);
+
+        int num = 0;
+
+        for (String name : illegalCacheNames()) {
+            CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME + num++);
+
+            if (checkGroup)
+                cfg.setGroupName(name);
+            else
+                cfg.setName(name);
+
+            String clientNodeName = testNodeName(10);
+
+            IgniteConfiguration clietnCfg = getConfiguration(clientNodeName);
+
+            clietnCfg.setCacheConfiguration(cfg);
+
+            if (persistenceEnabled) {
+                assertThrows(log, () -> startClientGrid(optimize(clietnCfg)), IgniteCheckedException.class,
+                    "Cache start failed. Cache or group name contains the characters that are not allowed in file names");
+            }
+            else {
+                startClientGrid(optimize(clietnCfg));
+                stopGrid(clientNodeName);
+            }
+        }
+    }
+
+    /** */
+    private static List<String> illegalCacheNames() {
+        List<String> illegalNames = new ArrayList<>();
+
+        illegalNames.add("/");
+        illegalNames.add("a/b");
+
+        if (U.isWindows()) {
+            illegalNames.add("a>b");
+            illegalNames.add("a\\b");
+        }
+
+        return illegalNames;
     }
 }

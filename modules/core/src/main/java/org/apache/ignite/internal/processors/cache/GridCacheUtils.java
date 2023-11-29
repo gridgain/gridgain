@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.nio.file.InvalidPathException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -131,6 +133,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC
 import static org.apache.ignite.configuration.CacheConfiguration.DFLT_CACHE_MODE;
 import static org.apache.ignite.internal.GridTopic.TOPIC_REPLICATION;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
+import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.cacheDirName;
 
 /**
  * Cache utility methods.
@@ -2252,6 +2255,27 @@ public class GridCacheUtils {
                 .setSqlSchema(sqlSchema)
                 .setSqlEscapeAll(isSqlEscape)
                 .setQueryParallelism(qryParallelism);
+    }
+
+    /**
+     * Checks if the cache directory path contains invalid chars.
+     *
+     * @param ccfg Cache configuration
+     * @param dscfg Data storage configuration.
+     * @return {@code True} if cache directory contains the characters that are not allowed in file names.
+     */
+    public static boolean containsInvalidFileNameChars(CacheConfiguration<?, ?> ccfg, DataStorageConfiguration dscfg) {
+        if (!CU.isPersistentCache(ccfg, dscfg))
+            return false;
+
+        String expDir = cacheDirName(ccfg);
+
+        try {
+            return !expDir.equals(Paths.get(expDir).toFile().getName());
+        }
+        catch (InvalidPathException ignored) {
+            return true;
+        }
     }
 
     /**
