@@ -2123,7 +2123,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         IgniteEx node = startGrids(2);
 
-        node.cluster().active(true);
+        node.cluster().state(ACTIVE);
 
         IgniteCache cache = node.createCache(new CacheConfiguration<>()
             .setAffinity(new RendezvousAffinityFunction(false, 32))
