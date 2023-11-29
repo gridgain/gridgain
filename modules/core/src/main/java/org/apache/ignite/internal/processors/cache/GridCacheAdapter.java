@@ -156,6 +156,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_RETRIES_COUNT;
+import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.internal.GridClosureCallMode.BROADCAST;
 import static org.apache.ignite.internal.processors.cache.CacheOperationContext.defaultAllowAtomicOpsInTx;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
@@ -4646,6 +4647,73 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         }
 
         return true;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int localEntrySize(K key) throws IgniteCheckedException {
+        A.notNull(key, "key");
+
+        if (ctx.mvccEnabled()) {
+            throw new UnsupportedOperationException(
+                "Operation is not supported for " + TRANSACTIONAL_SNAPSHOT + " cache [name=" + name() + ']');
+        }
+
+        ctx.checkSecurity(SecurityPermission.CACHE_READ);
+
+        KeyCacheObject cacheKey = ctx.toCacheKeyObject(key);
+
+        if (!ctx.isLocal()) {
+            AffinityTopologyVersion topVer = ctx.affinity().affinityTopologyVersion();
+
+            int part = ctx.affinity().partition(cacheKey);
+
+            boolean keyPrimary = ctx.affinity().primaryByPartition(ctx.localNode(), part, topVer);
+            boolean keyBackup = ctx.affinity().partitionBelongs(ctx.localNode(), part, topVer);
+
+            if (!keyPrimary && !keyBackup)
+                return 0;
+
+            GridCacheEntryEx e;
+            GridCacheContext ctx0;
+
+            while (true) {
+                ctx0 = ctx.isNear() ? ctx.near().dht().context() : ctx;
+                e = ctx0.cache().entryEx(key);
+
+                // There is no need to acquire checkpoint read lock
+                // due to the fact that this operation is read only and doesn't modify any pages.
+                try {
+                    return e.localSize(topVer);
+                }
+                catch (GridCacheEntryRemovedException ignore) {
+                    if (log.isDebugEnabled())
+                        log.debug("Got removed entry during calculating entry size: " + key);
+                }
+                finally {
+                    e.touch();
+                }
+            }
+        }
+        else {
+            while (true) {
+                try {
+                    GridCacheEntryEx e = entryEx(key);
+
+                    if (e != null) {
+                        try {
+                            return e.localSize(AffinityTopologyVersion.NONE);
+                        }
+                        finally {
+                            e.touch();
+                        }
+                    }
+                }
+                catch (GridCacheEntryRemovedException ignore) {
+                    if (log.isDebugEnabled())
+                        log.debug("Got removed entry during calculating entry size: " + key);
+                }
+            }
+        }
     }
 
     /**

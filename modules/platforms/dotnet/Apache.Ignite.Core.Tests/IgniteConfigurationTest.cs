@@ -617,7 +617,7 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(DataStorageConfiguration.DefaultWalSegmentSize, cfg.WalSegmentSize);
             Assert.AreEqual(DataStorageConfiguration.DefaultWalSegments, cfg.WalSegments);
             Assert.AreEqual(DataStorageConfiguration.DefaultWalMode, cfg.WalMode);
-            Assert.IsFalse(cfg.MetricsEnabled);
+            Assert.AreEqual(DataStorageConfiguration.DefaultMetricsEnabled, cfg.MetricsEnabled);
             Assert.AreEqual(DataStorageConfiguration.DefaultMetricsSubIntervalCount, cfg.MetricsSubIntervalCount);
             Assert.AreEqual(DataStorageConfiguration.DefaultMetricsRateTimeInterval, cfg.MetricsRateTimeInterval);
             Assert.AreEqual(DataStorageConfiguration.DefaultWalPath, cfg.WalPath);
@@ -645,6 +645,7 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(DataRegionConfiguration.DefaultPersistenceEnabled, cfg.PersistenceEnabled);
             Assert.AreEqual(DataRegionConfiguration.DefaultMetricsRateTimeInterval, cfg.MetricsRateTimeInterval);
             Assert.AreEqual(DataRegionConfiguration.DefaultMetricsSubIntervalCount, cfg.MetricsSubIntervalCount);
+            Assert.AreEqual(DataRegionConfiguration.DefaultMetricsEnabled, cfg.MetricsEnabled);
             Assert.AreEqual(default(long), cfg.CheckpointPageBufferSize);
 
             if (DataRegionConfiguration.DefaultMaxSize != cfg.MaxSize)

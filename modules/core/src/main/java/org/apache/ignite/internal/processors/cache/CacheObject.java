@@ -68,6 +68,18 @@ public interface CacheObject extends Message {
     public byte[] valueBytes(CacheObjectValueContext ctx) throws IgniteCheckedException;
 
     /**
+     * Returns the original length of the value in bytes.
+     * In general, this method is equivalent to {@code valueBytes(ctx).length}, except shadow objects {@link CacheObjectShadow}.
+     *
+     * @param ctx Context.
+     * @return Value bytes.
+     * @throws IgniteCheckedException If failed.
+     */
+    public default int valueBytesOriginLength(CacheObjectValueContext ctx) throws IgniteCheckedException {
+        return valueBytes(ctx).length;
+    }
+
+    /**
      * @param ctx Cache object context.
      * @return Size required to store this value object.
      * @throws IgniteCheckedException If failed.

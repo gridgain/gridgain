@@ -23,9 +23,11 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -39,6 +41,8 @@ import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.EncryptedRecord;
+import org.apache.ignite.internal.pagemem.wal.record.IncrementalSnapshotFinishRecord;
+import org.apache.ignite.internal.pagemem.wal.record.IncrementalSnapshotStartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.IndexRenameRootPageRecord;
 import org.apache.ignite.internal.pagemem.wal.record.LazyDataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.MasterKeyChangeRecordV2;
@@ -52,6 +56,7 @@ import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType;
 import org.apache.ignite.internal.pagemem.wal.record.WalRecordCacheGroupAware;
+import org.apache.ignite.internal.pagemem.wal.record.delta.ClusterSnapshotRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageInsertFragmentRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageInsertRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccMarkUpdatedRecord;
@@ -122,6 +127,7 @@ import org.apache.ignite.spi.encryption.EncryptionSpi;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.CDC_DATA_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_RECORD_V2;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_DATA_RECORD_V2;
@@ -562,6 +568,15 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
             case PARTITION_CLEARING_START_RECORD:
                 return 4 + 4 + 8;
+
+            case CLUSTER_SNAPSHOT:
+                return 4 + ((ClusterSnapshotRecord)record).clusterSnapshotName().getBytes().length;
+
+            case INCREMENTAL_SNAPSHOT_START_RECORD:
+                return 16;
+
+            case INCREMENTAL_SNAPSHOT_FINISH_RECORD:
+                return ((IncrementalSnapshotFinishRecord)record).dataSize();
 
             default:
                 throw new UnsupportedOperationException("Type: " + record.type());
@@ -1286,6 +1301,36 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 break;
 
+            case CLUSTER_SNAPSHOT:
+                int snpNameLen = in.readInt();
+
+                byte[] snpName = new byte[snpNameLen];
+
+                in.readFully(snpName);
+
+                res = new ClusterSnapshotRecord(new String(snpName));
+
+                break;
+
+            case INCREMENTAL_SNAPSHOT_START_RECORD:
+                long mst = in.readLong();
+                long lst = in.readLong();
+
+                res = new IncrementalSnapshotStartRecord(new UUID(mst, lst));
+
+                break;
+
+            case INCREMENTAL_SNAPSHOT_FINISH_RECORD:
+                long mstSignBits = in.readLong();
+                long lstSignBits = in.readLong();
+
+                Set<GridCacheVersion> included = readVersions(in);
+                Set<GridCacheVersion> excluded = readVersions(in);
+
+                res = new IncrementalSnapshotFinishRecord(new UUID(mstSignBits, lstSignBits), included, excluded);
+
+                break;
+
             default:
                 throw new UnsupportedOperationException("Type: " + type);
         }
@@ -1934,6 +1979,40 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 break;
 
+            case INCREMENTAL_SNAPSHOT_START_RECORD:
+                IncrementalSnapshotStartRecord startRec = (IncrementalSnapshotStartRecord)rec;
+
+                buf.putLong(startRec.id().getMostSignificantBits());
+                buf.putLong(startRec.id().getLeastSignificantBits());
+
+                break;
+
+            case INCREMENTAL_SNAPSHOT_FINISH_RECORD:
+                IncrementalSnapshotFinishRecord incSnpFinRec = (IncrementalSnapshotFinishRecord)rec;
+
+                buf.putLong(incSnpFinRec.id().getMostSignificantBits());
+                buf.putLong(incSnpFinRec.id().getLeastSignificantBits());
+
+                buf.putInt(incSnpFinRec.included().size());
+
+                for (GridCacheVersion v: incSnpFinRec.included())
+                    putVersion(buf, v, false);
+
+                buf.putInt(incSnpFinRec.excluded().size());
+
+                for (GridCacheVersion v: incSnpFinRec.excluded())
+                    putVersion(buf, v, false);
+
+                break;
+
+            case CLUSTER_SNAPSHOT:
+                byte[] snpName = ((ClusterSnapshotRecord)rec).clusterSnapshotName().getBytes();
+
+                buf.putInt(snpName.length);
+                buf.put(snpName);
+
+                break;
+
             default:
                 throw new UnsupportedOperationException("Type: " + rec.type());
         }
@@ -2106,7 +2185,8 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
         int partId = in.readInt();
         long partCntr = in.readLong();
         long expireTime = in.readLong();
-        byte flags = type == DATA_RECORD_V2 || type == OUT_OF_ORDER_UPDATE ? in.readByte() : 0;
+        byte flags = type == DATA_RECORD_V2 || type == OUT_OF_ORDER_UPDATE || type == CDC_DATA_RECORD ?
+            in.readByte() : 0;
 
         GridCacheContext cacheCtx = cctx.cacheContext(cacheId);
 
@@ -2241,6 +2321,26 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
         catch (IgniteCheckedException e) {
             throw new IOException(e);
         }
+    }
+
+    /**
+     * Read set of versions.
+     *
+     * @param in Data input to read from.
+     * @return Read set of cache versions.
+     */
+    private Set<GridCacheVersion> readVersions(ByteBufferBackedDataInput in) throws IOException {
+        int txsSize = in.readInt();
+
+        Set<GridCacheVersion> txs = new HashSet<>();
+
+        for (int i = 0; i < txsSize; i++) {
+            GridCacheVersion v = readVersion(in, false);
+
+            txs.add(v);
+        }
+
+        return txs;
     }
 
     /**

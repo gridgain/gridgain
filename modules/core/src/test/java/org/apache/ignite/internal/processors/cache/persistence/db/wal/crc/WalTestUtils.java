@@ -122,7 +122,7 @@ public class WalTestUtils {
 
         String walFileName = desc.file().getName().replace(FilePageStoreManager.ZIP_SUFFIX, "");
 
-        // reanaming is needed because unzip removes leading zeros from archived wal segment file name,
+        // renaming is needed because unzip removes leading zeros from archived wal segment file name,
         // but strict name pattern of wal file is needed for WALIterator
         walFile.renameTo(new File(tmp.getPath() + "/" + walFileName));
 

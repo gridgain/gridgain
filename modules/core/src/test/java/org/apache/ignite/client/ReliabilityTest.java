@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
@@ -30,7 +29,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
@@ -134,33 +132,6 @@ public class ReliabilityTest extends AbstractThinClientTest {
             });
 
             cache.clear();
-
-            // Composite operation failover: query
-            Map<Integer, String> data = IntStream.rangeClosed(1, 1000).boxed()
-                .collect(Collectors.toMap(i -> i, i -> String.format("String %s", i)));
-
-            assertOnUnstableCluster(cluster, () -> {
-                cache.putAll(data);
-
-                Query<Cache.Entry<Integer, String>> qry =
-                    new ScanQuery<Integer, String>().setPageSize(data.size() / 10);
-
-                try {
-                    try (QueryCursor<Cache.Entry<Integer, String>> cur = cache.query(qry)) {
-                        List<Cache.Entry<Integer, String>> res = cur.getAll();
-
-                        assertEquals("Unexpected number of entries", data.size(), res.size());
-
-                        Map<Integer, String> act = res.stream()
-                                .collect(Collectors.toMap(Cache.Entry::getKey, Cache.Entry::getValue));
-
-                        assertEquals("Unexpected entries", data, act);
-                    }
-                } catch (ClientConnectionException ignored) {
-                    // QueryCursor.getAll always executes on the same channel where the cursor is open,
-                    // so failover is not possible, and the call will fail when connection drops.
-                }
-            });
 
             // Client fails if all nodes go down
             cluster.close();

@@ -64,6 +64,7 @@ import static org.apache.ignite.internal.binary.streams.BinaryMemoryAllocator.DF
 import static org.apache.ignite.internal.managers.discovery.GridDiscoveryManager.DFLT_DISCOVERY_HISTORY_SIZE;
 import static org.apache.ignite.internal.processors.affinity.AffinityAssignment.DFLT_AFFINITY_BACKUPS_THRESHOLD;
 import static org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache.DFLT_AFFINITY_HISTORY_SIZE;
+import static org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache.DFLT_MIN_AFFINITY_HISTORY_SIZE;
 import static org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache.DFLT_PART_DISTRIBUTION_WARN_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.CacheAffinitySharedManager.DFLT_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT;
 import static org.apache.ignite.internal.processors.cache.CacheObjectsReleaseFuture.DFLT_IGNITE_PARTITION_RELEASE_FUTURE_WARN_LIMIT;
@@ -135,6 +136,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.DFLT_MBEAN_APPEND_CLAS
 import static org.apache.ignite.internal.util.StripedExecutor.DFLT_DATA_STREAMING_EXECUTOR_SERVICE_TASKS_STEALING_THRESHOLD;
 import static org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor.DFLT_NIO_RECOVERY_DESCRIPTOR_RESERVATION_TIMEOUT;
 import static org.apache.ignite.internal.util.nio.GridNioServer.DFLT_IO_BALANCE_PERIOD;
+import static org.apache.ignite.internal.util.nio.ssl.GridNioSslHandler.DFLT_SSL_HANDSHAKE_TIMEOUT_MS;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_TO_STRING_COLLECTION_LIMIT;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_TO_STRING_MAX_LENGTH;
@@ -877,6 +879,11 @@ public final class IgniteSystemProperties {
     @SystemProperty(value = "Maximum size for affinity assignment history", type = Integer.class,
         defaults = "" + DFLT_AFFINITY_HISTORY_SIZE)
     public static final String IGNITE_AFFINITY_HISTORY_SIZE = "IGNITE_AFFINITY_HISTORY_SIZE";
+
+    /** Minimum size for affinity assignment history. */
+    @SystemProperty(value = "Minimum size for affinity assignment history", type = Integer.class,
+        defaults = "" + DFLT_MIN_AFFINITY_HISTORY_SIZE)
+    public static final String IGNITE_MIN_AFFINITY_HISTORY_SIZE = "IGNITE_MIN_AFFINITY_HISTORY_SIZE";
 
     /** Maximum size for discovery messages history. */
     @SystemProperty(value = "Maximum size for discovery messages history", type = Integer.class,
@@ -2201,6 +2208,17 @@ public final class IgniteSystemProperties {
     @SystemProperty(value = "Disable a maintenance task for removing storage folders", defaults = "false")
     public static final String IGNITE_DISABLE_MAINTENANCE_CLEAR_FOLDER_TASK =
         "IGNITE_DISABLE_MAINTENANCE_CLEAR_FOLDER_TASK";
+
+    @SystemProperty(value = "Enables an allow overwrite mode for a data streamer", defaults = "true")
+    public static final String IGNITE_DATA_STREAMER_ALLOW_OVERWRITE = "IGNITE_DATA_STREAMER_ALLOW_OVERWRITE";
+
+    @SystemProperty(value = "Enables compliance with the JCache standard (JSR-107)", defaults = "false")
+    public static final String IGNITE_JCACHE_COMPLIANCE = "IGNITE_JCACHE_COMPLIANCE";
+
+    /** SSL handshake timeout. */
+    @SystemProperty(value = "SSL handshake timeout, in milliseconds", type = Long.class,
+            defaults = DFLT_SSL_HANDSHAKE_TIMEOUT_MS + " milliseconds")
+    public static final String IGNITE_SSL_HANDSHAKE_TIMEOUT = "IGNITE_SSL_HANDSHAKE_TIMEOUT";
 
     /**
      * Enforces singleton.

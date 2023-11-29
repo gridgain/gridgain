@@ -141,6 +141,8 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccVer
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.state;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.unexpectedStateException;
 import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.FULL_WITH_HINTS;
+import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.NO_KEY_WITH_VALUE_META_INFO;
+import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO.MVCC_INFO_SIZE;
 import static org.apache.ignite.internal.util.IgniteTree.OperationType.NOOP;
 import static org.apache.ignite.internal.util.IgniteTree.OperationType.PUT;
@@ -663,8 +665,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /** {@inheritDoc} */
-    @Override @Nullable public CacheDataRow read(GridCacheMapEntry entry)
-        throws IgniteCheckedException {
+    @Override @Nullable public CacheDataRow read(GridCacheMapEntry entry) throws IgniteCheckedException {
         KeyCacheObject key = entry.key();
 
         assert grp.isLocal() || entry.localPartition() != null : entry;
@@ -673,8 +674,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public CacheDataRow read(GridCacheContext cctx, KeyCacheObject key)
-        throws IgniteCheckedException {
+    @Nullable @Override public CacheDataRow read(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
         CacheDataStore dataStore = dataStore(cctx, key);
 
         CacheDataRow row = dataStore != null ? dataStore.find(cctx, key) : null;
@@ -688,11 +688,22 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /** {@inheritDoc} */
+    @Override @Nullable public CacheDataRow find(GridCacheMapEntry entry, boolean needVer) throws IgniteCheckedException {
+        KeyCacheObject key = entry.key();
+
+        assert grp.isLocal() || entry.localPartition() != null : entry;
+
+        return dataStore(entry.localPartition()).find(
+            entry.context(),
+            key,
+            needVer ? NO_KEY_WITH_VALUE_META_INFO : NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME);
+    }
+
+    /** {@inheritDoc} */
     @Nullable @Override public CacheDataRow find(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
         CacheDataStore dataStore = dataStore(cctx, key);
 
-        CacheDataRow row = dataStore != null ?
-            dataStore.find(cctx, key, CacheDataRowAdapter.RowData.NO_KEY_WITH_VALUE_TYPE_AND_EXPIRATION_TIME) : null;
+        CacheDataRow row = dataStore != null ? dataStore.find(cctx, key, NO_KEY_WITH_VALUE_META_INFO) : null;
 
         if (row != null && row.tombstone())
             row = null;
