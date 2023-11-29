@@ -718,19 +718,16 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testDeactivate() throws Exception {
         Ignite ignite = startGrids(1);
 
-        assertFalse(ignite.cluster().active());
         assertEquals(INACTIVE, ignite.cluster().state());
 
         ignite.cluster().state(ACTIVE);
 
-        assertTrue(ignite.cluster().active());
         assertEquals(ACTIVE, ignite.cluster().state());
 
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--deactivate"));
 
-        assertFalse(ignite.cluster().active());
         assertEquals(INACTIVE, ignite.cluster().state());
 
         assertContains(log, testOut.toString(), "Command deprecated. Use --set-state instead.");
@@ -780,7 +777,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     ) {
         deactivateWithCheckClusterNameInConfirmation(igniteEx, clusterName);
 
-        igniteEx.cluster().active(true);
+        igniteEx.cluster().state(ACTIVE);
         assertTrue(igniteEx.cluster().active());
 
         deactivateWithCheckClusterNameInConfirmation(igniteEx, clusterName);
@@ -822,7 +819,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         IgniteEx ignite = startGrids(1);
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
         injectTestSystemOut();
 
@@ -837,9 +834,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertContains(log, out, "Cluster  ID: " + clId);
         assertContains(log, out, "Cluster tag: " + clTag);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
-        assertTrue(ignite.cluster().active());
+        assertEquals(ACTIVE, ignite.cluster().state());
 
         assertEquals(EXIT_CODE_OK, execute("--state"));
 
@@ -878,7 +875,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testState1() throws Exception {
         Ignite ignite = startGrids(1);
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
         injectTestSystemOut();
 
@@ -1001,9 +998,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         hostNames.setAccessible(true);
         hostNames.set(ignite.cluster().node(), Arrays.asList("10.19.112.175.hostname"));
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         injectTestSystemOut();
 
@@ -1047,9 +1044,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testShutdownPolicy() throws Exception {
         Ignite ignite = startGrids(1);
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         ShutdownPolicy policy = ignite.cluster().shutdownPolicy();
 
@@ -1071,9 +1068,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testShutdownPolicyChange() throws Exception {
         Ignite ignite = startGrids(1);
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         ShutdownPolicy policyToChange = null;
 
@@ -1107,9 +1104,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         IgniteEx ignite = startClientGrid(1);
         startGrid(2);
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         stopGrid(0);
         startGrid(0);
@@ -1128,9 +1125,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testBaselineCollectCrd() throws Exception {
         Ignite ignite = startGrids(2);
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         injectTestSystemOut();
 
@@ -1238,9 +1235,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "add"));
 
@@ -1408,9 +1405,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         Ignite other = startGrid("nodeToStop");
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         String offlineNodeConsId = consistentIds(other);
 
@@ -1432,21 +1429,21 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         Ignite ignite = startGrids(1);
         Ignite other = startGrid("nodeToStop");
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
         String offlineNodeConsId = consistentIds(other);
 
         assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--baseline", "remove", offlineNodeConsId));
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         stopGrid("nodeToStop");
 
         assertEquals(2, ignite.cluster().currentBaselineTopology().size());
 
-        ignite.cluster().active(false);
+        ignite.cluster().state(INACTIVE);
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
         injectTestSystemOut();
 
@@ -1466,9 +1463,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         Ignite other = startGrid(2);
 
@@ -1493,9 +1490,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         //It is important to set consistent id to null for force autogeneration.
         Ignite ignite1 = startGrid(optimize(getConfiguration(getTestIgniteInstanceName(1)).setConsistentId(null)));
 
-        assertFalse(ignite0.cluster().active());
+        assertEquals(INACTIVE, ignite0.cluster().state());
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         Ignite other = startGrid(2);
 
@@ -1519,9 +1516,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         startGrid(2);
 
@@ -1561,7 +1558,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             log.registerListener(lsnrs[g] = bldr.build());
         }
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));
 
@@ -1601,7 +1598,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testBaselineAutoAdjustmentAutoAddNode() throws Exception {
         Ignite ignite = startGrids(1);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));
 
@@ -1643,7 +1640,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testBaselineAutoAdjustmentAutoFeatureDisabled() throws Exception {
         Ignite ignite = startGrids(1);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));
     }
@@ -1655,7 +1652,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testBaselineAutoAdjustmentCouldBeEnabled() throws Exception {
         IgniteEx ignite = startGrids(1);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
 
@@ -1679,7 +1676,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testBaselineAutoAdjustmentTimeoutCouldBeChanged() throws Exception {
         IgniteEx ignite = startGrids(1);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
 
@@ -1704,7 +1701,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testBaselineAutoAdjustmentTimeoutWrongArguments() throws Exception {
         IgniteEx ignite = startGrids(1);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
 
@@ -1722,7 +1719,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testBaselineAutoAdjustmentWrongArguments() throws Exception {
         IgniteEx ignite = startGrids(1);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
 
@@ -1740,7 +1737,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testActiveTransactions() throws Exception {
         Ignite ignite = startGridsMultiThreaded(2);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         Ignite client = startGrid("client");
 
@@ -2086,7 +2083,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testBaselineAddOnNotActiveCluster() throws Exception {
         Ignite ignite = startGrid(1);
 
-        assertFalse(ignite.cluster().active());
+        assertEquals(INACTIVE, ignite.cluster().state());
 
         String consistentIDs = getTestIgniteInstanceName(1);
 
@@ -2185,7 +2182,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         Ignite unstable = startGrid("unstable");
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         createCacheAndPreload(ignite, 100);
 
@@ -2228,7 +2225,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
                 unstableNodes.add(ignite(i));
         }
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         createCacheAndPreload(ignite, 100);
 
@@ -2321,7 +2318,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     private void testCacheIdleVerifyWithCorruptedPartition(String... args) throws Exception {
         Ignite ignite = startGrids(2);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         createCacheAndPreload(ignite, 1000);
 
@@ -2381,7 +2378,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         IgniteEx ignite = startGrids(3);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         IgniteCache<Object, Object> cache = ignite.createCache(new CacheConfiguration<>()
             .setAffinity(new RendezvousAffinityFunction(false, parts))
@@ -2439,7 +2436,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         int parts = 32;
 
@@ -2474,7 +2471,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testCacheSequence() throws Exception {
         Ignite ignite = startGrid();
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         Ignite client = startGrid("client");
 
@@ -2540,7 +2537,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         ClusterNode node2 = nodes0.get(2);
         ClusterNode node3 = nodes0.get(3);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         assertEquals(
             EXIT_CODE_OK,
@@ -2752,7 +2749,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testKillHangingLocalTransactions() throws Exception {
         Ignite ignite = startGridsMultiThreaded(2);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         Ignite client = startGrid("client");
 
@@ -2826,7 +2823,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void setConsistenceIdsWithOfflineBaselineNode() throws Exception {
         Ignite ignite = startGrids(2);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         ignite(0).createCache(defaultCacheConfiguration().setNodeFilter(
             (IgnitePredicate<ClusterNode>)node -> node.attribute("some-attr") != null));
@@ -2842,7 +2839,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testCacheIdleVerifyPrintLostPartitions() throws Exception {
         IgniteEx ignite = startGrids(3);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
             .setAffinity(new RendezvousAffinityFunction(false, 16))
