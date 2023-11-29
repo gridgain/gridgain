@@ -263,7 +263,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     public static final int DFLT_RECONNECT_CNT = 10;
 
     /** Default message queue limit for incoming connections. */
-    public static final int DFLT_MSG_QUEUE_LIMIT = 1024;
+    public static final int DFLT_MSG_QUEUE_LIMIT = 4096;
 
     /**
      * Default count of selectors for TCP server equals to
