@@ -77,6 +77,8 @@ public class CacheDirectoryNameTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        super.afterTest();
     }
 
     /** */
