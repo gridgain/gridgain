@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.cache.query.annotations.QueryGroupIndex;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
+import org.apache.ignite.cache.query.annotations.QuerySqlTable;
 import org.apache.ignite.cache.query.annotations.QueryTextField;
 import org.apache.ignite.internal.processors.cache.query.QueryEntityClassProperty;
 import org.apache.ignite.internal.processors.cache.query.QueryEntityTypeDescriptor;
@@ -675,14 +676,22 @@ public class QueryEntity implements Serializable {
     private static QueryEntity convert(QueryEntityTypeDescriptor desc) {
         QueryEntity entity = new QueryEntity();
 
+        entity.tableName = desc.tableName();
+
         // Key and val types.
         entity.setKeyType(desc.keyClass().getName());
         entity.setValueType(desc.valueClass().getName());
 
+        if (desc.keyFieldName() != null && !desc.keyFieldName().isEmpty()) {
+            entity.setKeyFieldName(desc.keyFieldName());
+            entity.addQueryField(desc.keyFieldName(), U.box(desc.keyClass()).getName(), null);
+        }
+        else {
+            entity.setKeyFields(desc.keyProperties());
+        }
+
         for (QueryEntityClassProperty prop : desc.properties().values())
             entity.addQueryField(prop.fullName(), U.box(prop.type()).getName(), prop.alias());
-
-        entity.setKeyFields(desc.keyProperties());
 
         QueryIndex txtIdx = null;
 
@@ -794,6 +803,16 @@ public class QueryEntity implements Serializable {
             throw new CacheException("Recursive reference found in type: " + cls.getName());
 
         if (parent == null) { // Check class annotation at top level only.
+            QuerySqlTable tableCls = cls.getAnnotation(QuerySqlTable.class);
+            if (tableCls != null) {
+                if (key) {
+                    throw new CacheException("@QuerySqlTable annotation can only be used on a value class (" + cls.getName() + ")");
+                }
+                else {
+                    type.addTableProperties(tableCls.name(), tableCls.keyFieldName());
+                }
+            }
+
             QueryTextField txtAnnCls = cls.getAnnotation(QueryTextField.class);
 
             if (txtAnnCls != null)

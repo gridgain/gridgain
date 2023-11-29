@@ -37,6 +37,9 @@ import org.jetbrains.annotations.NotNull;
  * Descriptor of type.
  */
 public class QueryEntityTypeDescriptor {
+    /** Table name */
+    private String tableName = null;
+
     /** Value field names and types with preserved order. */
     @GridToStringInclude
     private final Map<String, Class<?>> fields = new LinkedHashMap<>();
@@ -64,6 +67,9 @@ public class QueryEntityTypeDescriptor {
 
     /** */
     private QueryEntityIndexDescriptor fullTextIdx;
+
+    /** */
+    private String keyFieldName = null;
 
     /** */
     private final Class<?> keyCls;
@@ -146,6 +152,29 @@ public class QueryEntityTypeDescriptor {
     }
 
     /**
+     * Adds table-level fields
+     *
+     * @param tableName Table name
+     * @param keyFieldName Key field name
+     */
+    public void addTableProperties(String tableName, String keyFieldName) {
+        if (tableName != null && !tableName.equals("")) {
+            this.tableName = tableName;
+        }
+        if (keyFieldName != null) {
+            this.keyFieldName = keyFieldName;
+        }
+    }
+
+    /**
+     *
+     * @return Name of the key field
+     */
+    public String keyFieldName() {
+        return keyFieldName;
+    }
+
+    /**
      * @return Value class.
      */
     public Class<?> valueClass() {
@@ -212,6 +241,10 @@ public class QueryEntityTypeDescriptor {
      */
     public void addScale(String field, int scale) {
         fieldsScale.put(field, scale);
+    }
+
+    public String tableName() {
+        return tableName;
     }
 
     /**
