@@ -824,19 +824,22 @@ public class GridAffinityAssignmentCache {
                     ", lastAffChangeTopVer=" + lastAffChangeTopVer +
                     ", head=" + head.get().topologyVersion() +
                     ", history=" + affCache.keySet() +
+                    ", minNonShallowHistorySize=" + MIN_NON_SHALLOW_HIST_SIZE +
                     ", maxNonShallowHistorySize=" + MAX_NON_SHALLOW_HIST_SIZE +
                     ']');
             }
 
             if (cache.topologyVersion().compareTo(topVer) > 0) {
                 throw new IllegalStateException("Getting affinity for too old topology version that is already " +
-                    "out of history (try to increase '" + IGNITE_AFFINITY_HISTORY_SIZE + "' system property)" +
+                    "out of history (try to increase '" + IGNITE_MIN_AFFINITY_HISTORY_SIZE + "' or '" +
+                    IGNITE_AFFINITY_HISTORY_SIZE + "' system properties)" +
                     " [locNode=" + ctx.discovery().localNode() +
                     ", grp=" + cacheOrGrpName +
                     ", topVer=" + topVer +
                     ", lastAffChangeTopVer=" + lastAffChangeTopVer +
                     ", head=" + head.get().topologyVersion() +
                     ", history=" + affCache.keySet() +
+                    ", minNonShallowHistorySize=" + MIN_NON_SHALLOW_HIST_SIZE +
                     ", maxNonShallowHistorySize=" + MAX_NON_SHALLOW_HIST_SIZE +
                     ']');
             }
@@ -971,8 +974,15 @@ public class GridAffinityAssignmentCache {
 
         int totalSize = affCache.size();
 
+        int originNonShallowSize = nonShallowSize;
+
+        int originTotalSize = totalSize;
+
         if (shouldContinueCleanup(nonShallowSize, totalSize)) {
             int initNonShallowSize = nonShallowSize;
+
+            AffinityTopologyVersion firstVer = null;
+            AffinityTopologyVersion lastVer = null;
 
             Iterator<HistoryAffinityAssignment> it = affCache.values().iterator();
 
@@ -988,6 +998,28 @@ public class GridAffinityAssignmentCache {
                         // GridAffinityProcessor#affMap has the same size and instance set as #affCache.
                         ctx.affinity().removeCachedAffinity(aff0.topologyVersion());
 
+                        if (log.isDebugEnabled()) {
+                            String msg = String.format(
+                                "Removed affinity assignments for group [name=%s, nonShallowSize=%s, totalSize=%s",
+                                cacheOrGrpName, originNonShallowSize, originTotalSize
+                            );
+
+                            if (lastVer == null) {
+                                msg += String.format(", version=[topVer=%s, minorTopVer=%s]]",
+                                    firstVer.topologyVersion(), firstVer.minorTopologyVersion()
+                                );
+                            }
+                            else {
+                                msg += String.format(", from=[topVer=%s, minorTopVer=%s], " +
+                                        "to=[topVer=%s, minorTopVer=%s]]",
+                                    firstVer.topologyVersion(), firstVer.minorTopologyVersion(),
+                                    lastVer.topologyVersion(), lastVer.minorTopologyVersion()
+                                );
+                            }
+
+                            log.debug(msg);
+                        }
+
                         return;
                     }
 
@@ -997,6 +1029,13 @@ public class GridAffinityAssignmentCache {
                 totalSize--;
 
                 it.remove();
+
+                if (log.isDebugEnabled()) {
+                    if (firstVer == null)
+                        firstVer = aff0.topologyVersion();
+                    else
+                        lastVer = aff0.topologyVersion();
+                }
             }
 
             assert false : "All elements have been removed from affinity cache during cleanup";
