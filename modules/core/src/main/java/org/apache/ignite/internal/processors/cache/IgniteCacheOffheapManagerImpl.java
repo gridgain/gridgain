@@ -2899,15 +2899,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 tombstoneRemoved();
 
                 incrementSize(cctx.cacheId());
-            } else if (!oldRow.tombstone() && !newRow.tombstone()) {
-                // Update pending entries if expire time changed.
-                if (oldRow.expireTime() != newRow.expireTime()) {
-                    log.warning(">>>>> Update pending entries on expire time change!");
-                    updatePendingEntries(cctx, newRow, oldRow);
-                }
             } else {
-                assert newRow.tombstone() && oldRow.tombstone() : "Invalid row state [oldRow=" + oldRow +
-                    ", newRow=" + newRow + ']';
+                // Need to re-index the updated entry with a new expiration time.
+                if (oldRow.expireTime() != newRow.expireTime())
+                    updatePendingEntries(cctx, newRow, oldRow);
             }
 
             if (oldRow.version().updateCounter() != 0)
