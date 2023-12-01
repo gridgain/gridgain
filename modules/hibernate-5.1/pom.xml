@@ -101,6 +101,7 @@
             <scope>test</scope>
         </dependency>
 
+
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-spring</artifactId>
@@ -196,7 +197,7 @@
                 <configuration>
                     <skip>false</skip>
                 </configuration>
-            </plugin>                
+            </plugin>
         </plugins>
     </build>
 </project>
