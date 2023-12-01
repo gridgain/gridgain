@@ -101,7 +101,6 @@
             <scope>test</scope>
         </dependency>
 
-
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-spring</artifactId>
