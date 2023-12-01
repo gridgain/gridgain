@@ -103,7 +103,6 @@ import org.apache.ignite.internal.processors.cache.IgniteStartCacheInTransaction
 import org.apache.ignite.internal.processors.cache.IgniteSystemCacheOnClientTest;
 import org.apache.ignite.internal.processors.cache.MarshallerCacheJobRunNodeRestartTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheAffinityEarlyTest;
-import org.apache.ignite.internal.processors.cache.distributed.CacheDirectoryNameTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheDiscoveryDataConcurrentJoinTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheGetFutureHangsSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheGroupsPreloadTest;
@@ -367,8 +366,6 @@ public class IgniteCacheTestSuite4 {
         GridTestUtils.addTestIfNeeded(suite, NearCacheNoMessagesTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, GridCacheProcessorActiveTxTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, CacheDirectoryNameTest.class, ignoredTests);
 
         return suite;
     }
