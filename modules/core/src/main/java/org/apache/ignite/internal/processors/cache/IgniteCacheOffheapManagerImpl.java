@@ -1841,9 +1841,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 || cctx.cacheObjectContext().compressionStrategy() != null)
                 return false;
 
-//            if (oldRow.expireTime() != dataRow.expireTime())
-//                return false;
-
             oldRow.key().prepareForCache(cctx.cacheObjectContext(), false);
             oldRow.value().prepareForCache(cctx.cacheObjectContext(), false);
 
