@@ -416,6 +416,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
     /** {@inheritDoc} */
     @Override public void dumpStatistics(IgniteLogger log) {
         long dataPages = 0;
+        long reusePages = 0;
 
         final boolean dumpBucketsInfo = false;
 
@@ -424,6 +425,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
             if (!isReuseBucket(b))
                 dataPages += size;
+            else
+                reusePages = size;
 
             if (dumpBucketsInfo) {
                 Stripe[] stripes = getBucket(b);
@@ -448,12 +451,12 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             }
         }
 
-        if (dataPages > 0) {
+        if (reusePages > 0) {
             if (log.isInfoEnabled())
                 log.info("FreeList [name=" + name() +
                     ", buckets=" + BUCKETS +
                     ", dataPages=" + dataPages +
-                    ", reusePages=" + bucketsSize.get(REUSE_BUCKET) + "]");
+                    ", reusePages=" + reusePages + "]");
         }
     }
 
