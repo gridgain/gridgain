@@ -306,7 +306,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
     /** @throws Exception If failed. */
     @Test
-    @WithSystemProperty(key=IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE, value="0.25")
+    @WithSystemProperty(key = IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE, value = "0.25")
     public void testCacheStopDuringReencryption() throws Exception {
         pageScanRate = 1;
 
@@ -699,7 +699,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key=IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE, value="0.25")
+    @WithSystemProperty(key = IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE, value = "0.25")
     public void testChangeBaseline() throws Exception {
         backups = 1;
         pageScanRate = 2;
