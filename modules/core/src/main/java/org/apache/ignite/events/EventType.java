@@ -897,6 +897,36 @@ public interface EventType {
     public static final int EVT_CLUSTER_ID_UPDATED = 149;
 
     /**
+     * Built-in event type: service method invoked.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see ServiceEvent
+     */
+    public static final int EVT_SERVICE_METHOD_EXECUTION_STARTED = 163;
+
+    /**
+     * Built-in event type: service method invocation failed.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see ServiceEvent
+     */
+    public static final int EVT_SERVICE_METHOD_EXECUTION_FINISHED = 164;
+
+    /**
+     * Built-in event type: service method invocation failed over.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see ServiceEvent
+     */
+    public static final int EVT_SERVICE_METHOD_EXECUTION_FAILED = 165;
+
+    /**
      * All checkpoint events. This array can be directly passed into
      * {@link IgniteEvents#localListen(IgnitePredicate, int...)} method to
      * subscribe to all checkpoint events.
@@ -943,7 +973,8 @@ public interface EventType {
         EVT_TASK_DEPLOYED,
         EVT_TASK_UNDEPLOYED,
         EVT_CACHE_REBALANCE_STARTED,
-        EVT_CACHE_REBALANCE_STOPPED
+        EVT_CACHE_REBALANCE_STOPPED,
+        EVT_SERVICE_METHOD_EXECUTION_FAILED
     };
 
     /**
@@ -1018,6 +1049,19 @@ public interface EventType {
         EVT_TASK_TIMEDOUT,
         EVT_TASK_SESSION_ATTR_SET,
         EVT_TASK_REDUCED
+    };
+
+    /**
+     * All grid task execution events. This array can be directly passed into
+     * {@link IgniteEvents#localListen(IgnitePredicate, int...)} method to
+     * subscribe to all grid task execution events.
+     *
+     * @see TaskEvent
+     */
+    public static final int[] EVTS_SERVICE_EXECUTION = {
+            EVT_SERVICE_METHOD_EXECUTION_STARTED,
+            EVT_SERVICE_METHOD_EXECUTION_FINISHED,
+            EVT_SERVICE_METHOD_EXECUTION_FAILED
     };
 
     /**
