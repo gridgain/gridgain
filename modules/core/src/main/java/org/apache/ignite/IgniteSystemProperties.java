@@ -64,6 +64,7 @@ import static org.apache.ignite.internal.binary.streams.BinaryMemoryAllocator.DF
 import static org.apache.ignite.internal.managers.discovery.GridDiscoveryManager.DFLT_DISCOVERY_HISTORY_SIZE;
 import static org.apache.ignite.internal.processors.affinity.AffinityAssignment.DFLT_AFFINITY_BACKUPS_THRESHOLD;
 import static org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache.DFLT_AFFINITY_HISTORY_SIZE;
+import static org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache.DFLT_MIN_AFFINITY_HISTORY_SIZE;
 import static org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache.DFLT_PART_DISTRIBUTION_WARN_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.CacheAffinitySharedManager.DFLT_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT;
 import static org.apache.ignite.internal.processors.cache.CacheObjectsReleaseFuture.DFLT_IGNITE_PARTITION_RELEASE_FUTURE_WARN_LIMIT;
@@ -879,6 +880,11 @@ public final class IgniteSystemProperties {
         defaults = "" + DFLT_AFFINITY_HISTORY_SIZE)
     public static final String IGNITE_AFFINITY_HISTORY_SIZE = "IGNITE_AFFINITY_HISTORY_SIZE";
 
+    /** Minimum size for affinity assignment history. */
+    @SystemProperty(value = "Minimum size for affinity assignment history", type = Integer.class,
+        defaults = "" + DFLT_MIN_AFFINITY_HISTORY_SIZE)
+    public static final String IGNITE_MIN_AFFINITY_HISTORY_SIZE = "IGNITE_MIN_AFFINITY_HISTORY_SIZE";
+
     /** Maximum size for discovery messages history. */
     @SystemProperty(value = "Maximum size for discovery messages history", type = Integer.class,
         defaults = "" + DFLT_DISCOVERY_HISTORY_SIZE)
@@ -1458,7 +1464,7 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_LOADED_PAGES_BACKWARD_SHIFT_MAP = "IGNITE_LOADED_PAGES_BACKWARD_SHIFT_MAP";
 
     /**
-     * Property for setup percentage of archive size for checkpoint trigger. Default value is 0.25
+     * Property for setup percentage of archive size for checkpoint trigger. Default value is 0.75
      */
     @SystemProperty(value = "Percentage of archive size for checkpoint trigger",
         type = Double.class, defaults = "" + DFLT_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE)
