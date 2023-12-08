@@ -262,8 +262,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     /** Default reconnect attempts count (value is <tt>10</tt>). */
     public static final int DFLT_RECONNECT_CNT = 10;
 
-    /** Default message queue limit per connection (for incoming and outgoing . */
-    public static final int DFLT_MSG_QUEUE_LIMIT = GridNioServer.DFLT_SEND_QUEUE_LIMIT;
+    /** Default message queue limit for incoming connections. */
+    public static final int DFLT_MSG_QUEUE_LIMIT = 4096;
 
     /**
      * Default count of selectors for TCP server equals to
