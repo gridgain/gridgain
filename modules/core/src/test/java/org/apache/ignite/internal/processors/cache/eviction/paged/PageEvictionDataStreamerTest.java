@@ -23,6 +23,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  *
@@ -64,6 +65,7 @@ public class PageEvictionDataStreamerTest extends PageEvictionMultinodeAbstractT
     }
 
     /** {@inheritDoc} */
+    @Test
     @Ignore("https://ggsystems.atlassian.net/browse/GG-36146")
     @Override public void testPageEviction() throws Exception {
         super.testPageEviction();

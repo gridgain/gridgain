@@ -35,6 +35,7 @@ public class IgniteNativeIoLocalWalModeChangeDuringRebalancingSelfTest extends L
     }
 
     /** {@inheritDoc} */
+    @Test
     @Ignore("https://ggsystems.atlassian.net/browse/GG-37602")
     @Override public void testParallelExchangeDuringCheckpoint() throws Exception {
         super.testParallelExchangeDuringCheckpoint();
