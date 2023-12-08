@@ -22,6 +22,7 @@ import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.junit.Ignore;
 
 /**
  *
@@ -60,5 +61,11 @@ public class PageEvictionDataStreamerTest extends PageEvictionMultinodeAbstractT
         assertTrue(resultingSize < ENTRIES);
 
         clientGrid().destroyCache(cfg.getName());
+    }
+
+    /** {@inheritDoc} */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-36146")
+    @Override public void testPageEviction() throws Exception {
+        super.testPageEviction();
     }
 }

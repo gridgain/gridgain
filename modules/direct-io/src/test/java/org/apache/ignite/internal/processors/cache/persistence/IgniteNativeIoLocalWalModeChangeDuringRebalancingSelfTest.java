@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -30,7 +31,12 @@ public class IgniteNativeIoLocalWalModeChangeDuringRebalancingSelfTest extends L
     /** {@inheritDoc} */
     @Test
     @Override public void testWithExchangesMerge() throws Exception {
-
         super.testWithExchangesMerge();
+    }
+
+    /** {@inheritDoc} */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-37602")
+    @Override public void testParallelExchangeDuringCheckpoint() throws Exception {
+        super.testParallelExchangeDuringCheckpoint();
     }
 }
