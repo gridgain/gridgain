@@ -1753,7 +1753,7 @@ public final class IgniteSystemProperties {
      * <p/>
      * If the property is {@code false} then internal cache based implementation of service processor will be used.
      * <p/>
-     * Default is {@code false}.
+     * Default is {@code true}.
      */
     @SystemProperty(value = "Manages the type of the implementation of the service processor " +
         "(implementation of the IgniteServices). All nodes in the cluster must have the same value of this property. " +
