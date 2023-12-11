@@ -161,13 +161,13 @@ public class QueryEntityTypeDescriptor {
      * @param keyFieldName Key field name
      */
     public void addTableProperties(String tableName, String keyFieldName, String valueFieldName) {
-        if (tableName != null && !tableName.equals("")) {
+        if (tableName != null && !tableName.isEmpty()) {
             this.tableName = tableName;
         }
-        if (keyFieldName != null) {
+        if (keyFieldName != null && !keyFieldName.isEmpty()) {
             this.keyFieldName = keyFieldName;
         }
-        if (valueFieldName != null) {
+        if (valueFieldName != null && !valueFieldName.isEmpty()) {
             this.valueFieldName = valueFieldName;
         }
     }
