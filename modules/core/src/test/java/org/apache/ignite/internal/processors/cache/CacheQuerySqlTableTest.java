@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache;
 
 import org.apache.ignite.cache.QueryEntity;
-import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cache.query.annotations.QuerySqlTable;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -42,8 +41,6 @@ public class CacheQuerySqlTableTest extends GridCommonAbstractTest {
 
     @QuerySqlTable(name = "query_table_2", valueFieldName = "all_values_2")
     private static class QueryTable2 {
-        @QuerySqlField
-        private String field1;
     }
 
     @Test
