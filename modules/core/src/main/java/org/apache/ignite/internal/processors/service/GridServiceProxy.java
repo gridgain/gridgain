@@ -99,6 +99,7 @@ public class GridServiceProxy<T> implements Serializable {
         }
     }
 
+    /** */
     private static final String SUBJECT_ID_KEY = "subjId";
 
     /** Grid logger. */
