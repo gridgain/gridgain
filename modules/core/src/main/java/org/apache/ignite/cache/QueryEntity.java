@@ -690,7 +690,7 @@ public class QueryEntity implements Serializable {
             entity.setKeyFields(desc.keyProperties());
         }
         if (desc.valueFieldName() != null && !desc.valueFieldName().isEmpty()) {
-            entity.setValueFieldName(desc.keyFieldName());
+            entity.setValueFieldName(desc.valueFieldName());
             entity.addQueryField(desc.valueFieldName(), U.box(desc.valueClass()).getName(), null);
         }
 
