@@ -49,4 +49,12 @@ public @interface QuerySqlTable {
      * @return Key name
      */
     String keyFieldName() default "";
+
+    /**
+     * Value name. Cam be used to denote the value as a whole, for example, if
+     * the value is a scalar.
+     *
+     * @return Value name
+     */
+    String valueFieldName() default "";
 }

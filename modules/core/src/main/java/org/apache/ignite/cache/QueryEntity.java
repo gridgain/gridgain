@@ -689,6 +689,10 @@ public class QueryEntity implements Serializable {
         else {
             entity.setKeyFields(desc.keyProperties());
         }
+        if (desc.valueFieldName() != null && !desc.valueFieldName().isEmpty()) {
+            entity.setValueFieldName(desc.keyFieldName());
+            entity.addQueryField(desc.valueFieldName(), U.box(desc.valueClass()).getName(), null);
+        }
 
         for (QueryEntityClassProperty prop : desc.properties().values())
             entity.addQueryField(prop.fullName(), U.box(prop.type()).getName(), prop.alias());
@@ -809,7 +813,7 @@ public class QueryEntity implements Serializable {
                     throw new CacheException("@QuerySqlTable annotation can only be used on a value class [tableCls=" + cls.getName() + "]");
                 }
                 else {
-                    type.addTableProperties(tableCls.name(), tableCls.keyFieldName());
+                    type.addTableProperties(tableCls.name(), tableCls.keyFieldName(), tableCls.valueFieldName());
                 }
             }
 

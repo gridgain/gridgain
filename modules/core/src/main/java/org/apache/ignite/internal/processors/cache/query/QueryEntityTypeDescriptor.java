@@ -72,6 +72,9 @@ public class QueryEntityTypeDescriptor {
     private String keyFieldName = null;
 
     /** */
+    private String valueFieldName = null;
+
+    /** */
     private final Class<?> keyCls;
 
     /** */
@@ -157,12 +160,15 @@ public class QueryEntityTypeDescriptor {
      * @param tableName Table name
      * @param keyFieldName Key field name
      */
-    public void addTableProperties(String tableName, String keyFieldName) {
+    public void addTableProperties(String tableName, String keyFieldName, String valueFieldName) {
         if (tableName != null && !tableName.equals("")) {
             this.tableName = tableName;
         }
         if (keyFieldName != null) {
             this.keyFieldName = keyFieldName;
+        }
+        if (valueFieldName != null) {
+            this.valueFieldName = valueFieldName;
         }
     }
 
@@ -172,6 +178,14 @@ public class QueryEntityTypeDescriptor {
      */
     public String keyFieldName() {
         return keyFieldName;
+    }
+
+    /**
+     *
+     * @return Name of the value field
+     */
+    public String valueFieldName() {
+        return valueFieldName;
     }
 
     /**
