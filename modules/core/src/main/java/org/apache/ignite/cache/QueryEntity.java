@@ -806,7 +806,7 @@ public class QueryEntity implements Serializable {
             QuerySqlTable tableCls = cls.getAnnotation(QuerySqlTable.class);
             if (tableCls != null) {
                 if (key) {
-                    throw new CacheException("@QuerySqlTable annotation can only be used on a value class (" + cls.getName() + ")");
+                    throw new CacheException("@QuerySqlTable annotation can only be used on a value class [tableCls=" + cls.getName() + "]");
                 }
                 else {
                     type.addTableProperties(tableCls.name(), tableCls.keyFieldName());
