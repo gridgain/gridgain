@@ -239,7 +239,7 @@ public class GridServiceProxy<T> implements Serializable {
 
                         if (callCtx != null)
                             ((ServiceCallContextImpl)callCtx).values()
-                                    .put(SUBJECT_ID_KEY, subjId);
+                                    .put(SUBJECT_ID_KEY, subjId.toString());
                         else {
                             callCtx = new ServiceCallContextImpl(Collections.singletonMap(SUBJECT_ID_KEY, subjId.toString()));
                         }
