@@ -1841,9 +1841,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 || cctx.cacheObjectContext().compressionStrategy() != null)
                 return false;
 
-            if (oldRow.expireTime() != dataRow.expireTime())
-                return false;
-
             oldRow.key().prepareForCache(cctx.cacheObjectContext(), false);
             oldRow.value().prepareForCache(cctx.cacheObjectContext(), false);
 
@@ -1919,33 +1916,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 }
 
                 case IN_PLACE:
-                    CacheDataRow oldRow = c.oldRow();
-
-                    assert oldRow != null;
-                    assert newRow != null;
-
-                    if (newRow.tombstone() && !oldRow.tombstone()) {
-                        updatePendingEntries(cctx, c.newRow(), null);
-
-                        tombstoneCreated();
-
-                        decrementSize(cctx.cacheId());
-                    }
-                    else if (oldRow.tombstone() && !newRow.tombstone()) {
-                        clearPendingEntries(cctx, c.oldRow());
-
-                        tombstoneRemoved();
-
-                        incrementSize(cctx.cacheId());
-                    }
-
-                    if (oldRow.version().updateCounter() != 0)
-                        removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
-
-                    if (isIncrementalDrEnabled(cctx)) {
-                        if (newRow.version().updateCounter() != 0)
-                            addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
-                    }
+                    finishInPlaceUpdate(cctx, newRow, c.oldRow());
 
                     break;
 
@@ -2892,6 +2863,51 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 if (newRow.link() != oldRow.link())
                     rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
+            }
+        }
+
+        /**
+         * Finishes in-place update.
+         *
+         * @param cctx Cache context.
+         * @param newRow New row.
+         * @param oldRow Old row.
+         * @throws IgniteCheckedException If failed.
+         */
+        private void finishInPlaceUpdate(
+            GridCacheContext cctx,
+            CacheDataRow newRow,
+            CacheDataRow oldRow
+        ) throws IgniteCheckedException {
+            assert oldRow != null;
+            assert newRow != null;
+            assert oldRow.link() == newRow.link() : "Invalid row link [oldRow=" + oldRow + ", newRow=" + newRow + ']';
+
+            if (newRow.tombstone() && !oldRow.tombstone()) {
+                updatePendingEntries(cctx, newRow, null);
+
+                tombstoneCreated();
+
+                decrementSize(cctx.cacheId());
+            }
+            else if (oldRow.tombstone() && !newRow.tombstone()) {
+                clearPendingEntries(cctx, oldRow);
+
+                tombstoneRemoved();
+
+                incrementSize(cctx.cacheId());
+            } else {
+                // Need to re-index the updated entry with a new expiration time.
+                if (oldRow.expireTime() != newRow.expireTime())
+                    updatePendingEntries(cctx, newRow, oldRow);
+            }
+
+            if (oldRow.version().updateCounter() != 0)
+                removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+
+            if (isIncrementalDrEnabled(cctx)) {
+                if (newRow.version().updateCounter() != 0)
+                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
             }
         }
 
