@@ -64,6 +64,9 @@ import org.apache.ignite.testframework.junits.spi.GridSpiAbstractTest;
 import org.apache.ignite.testframework.junits.spi.GridSpiTest;
 import org.junit.Test;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+
 /**
  *
  */
@@ -131,7 +134,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
         @Override public void onMessage(UUID nodeId, Message msg, IgniteRunnable msgC) {
             msgC.run();
 
-            assertTrue(msg instanceof GridTestMessage);
+            assertThat(msg, instanceOf(GridTestMessage.class));
 
             cntr.incrementAndGet();
 
