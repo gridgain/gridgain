@@ -99,6 +99,8 @@ public class GridServiceProxy<T> implements Serializable {
         }
     }
 
+    private static final String SUBJECT_ID_KEY = "subjId";
+
     /** Grid logger. */
     @GridToStringExclude
     private final IgniteLogger log;
@@ -234,10 +236,17 @@ public class GridServiceProxy<T> implements Serializable {
                     else {
                         ctx.task().setThreadContext(TC_IO_POLICY, GridIoPolicy.SERVICE_POOL);
 
+                        if (callCtx != null)
+                            ((ServiceCallContextImpl)callCtx).values()
+                                    .put(SUBJECT_ID_KEY, subjId);
+                        else {
+                            callCtx = new ServiceCallContextImpl(Collections.singletonMap(SUBJECT_ID_KEY, subjId.toString()));
+                        }
+
                         // Execute service remotely.
                         return ctx.closure().callAsyncNoFailover(
                             GridClosureCallMode.BROADCAST,
-                            new ServiceProxyCallable(methodName(mtd), name, mtd.getParameterTypes(), args, callCtx, subjId),
+                            new ServiceProxyCallable(methodName(mtd), name, mtd.getParameterTypes(), args, callCtx),
                             Collections.singleton(node),
                             false,
                             waitTimeout,
@@ -570,9 +579,6 @@ public class GridServiceProxy<T> implements Serializable {
         /** Service call context. */
         private ServiceCallContext callCtx;
 
-        /** Subject id. */
-        private UUID subjId;
-
         /** Grid instance. */
         @IgniteInstanceResource
         private transient IgniteEx ignite;
@@ -596,15 +602,13 @@ public class GridServiceProxy<T> implements Serializable {
             String svcName,
             Class<?>[] argTypes,
             Object[] args,
-            @Nullable ServiceCallContext callCtx,
-            UUID subjId
+            @Nullable ServiceCallContext callCtx
         ) {
             this.mtdName = mtdName;
             this.svcName = svcName;
             this.argTypes = argTypes;
             this.args = args;
             this.callCtx = callCtx;
-            this.subjId = subjId;
         }
 
         /** {@inheritDoc} */
@@ -612,6 +616,13 @@ public class GridServiceProxy<T> implements Serializable {
             System.out.println("Service execution node: " + ignite.localNode());
 
             ServiceContextImpl ctx = ignite.context().service().serviceContext(svcName);
+
+            UUID subjId = null;
+            if (callCtx != null) {
+                subjId = UUID.fromString(callCtx.attribute(SUBJECT_ID_KEY));
+
+                ((ServiceCallContextImpl)callCtx).values().remove(SUBJECT_ID_KEY);
+            }
 
             recordServiceEvent(ignite.context(), EVT_SERVICE_METHOD_EXECUTION_STARTED,
                     "Service method execution has started.", svcName, mtdName, subjId);
@@ -680,7 +691,6 @@ public class GridServiceProxy<T> implements Serializable {
             U.writeString(out, mtdName);
             U.writeArray(out, argTypes);
             U.writeArray(out, args);
-            U.writeUuid(out, subjId);
 
             if (callCtx != null) {
                 out.writeBoolean(true);
@@ -696,7 +706,6 @@ public class GridServiceProxy<T> implements Serializable {
             mtdName = U.readString(in);
             argTypes = U.readClassArray(in);
             args = U.readArray(in);
-            subjId = U.readUuid(in);
 
             try
             {
