@@ -2683,7 +2683,7 @@ public class IgnitionEx {
     }
 
     /**
-     * @param cfg Ignite Configuration with legacy data storage configuration.
+     * @param cfg Ignite Configuration with legacy data storage configurations.
      */
     private static void convertLegacyDataStorageConfigurationToNew(
         IgniteConfiguration cfg) throws IgniteCheckedException {
