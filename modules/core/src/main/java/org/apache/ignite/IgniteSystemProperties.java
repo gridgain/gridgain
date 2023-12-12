@@ -136,6 +136,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.DFLT_MBEAN_APPEND_CLAS
 import static org.apache.ignite.internal.util.StripedExecutor.DFLT_DATA_STREAMING_EXECUTOR_SERVICE_TASKS_STEALING_THRESHOLD;
 import static org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor.DFLT_NIO_RECOVERY_DESCRIPTOR_RESERVATION_TIMEOUT;
 import static org.apache.ignite.internal.util.nio.GridNioServer.DFLT_IO_BALANCE_PERIOD;
+import static org.apache.ignite.internal.util.nio.ssl.GridNioSslHandler.DFLT_SSL_HANDSHAKE_TIMEOUT_MS;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_TO_STRING_COLLECTION_LIMIT;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_TO_STRING_MAX_LENGTH;
@@ -2215,6 +2216,11 @@ public final class IgniteSystemProperties {
     @SystemProperty(value = "Disable a maintenance task for removing storage folders", defaults = "false")
     public static final String IGNITE_DISABLE_MAINTENANCE_CLEAR_FOLDER_TASK =
         "IGNITE_DISABLE_MAINTENANCE_CLEAR_FOLDER_TASK";
+
+    /** SSL handshake timeout. */
+    @SystemProperty(value = "SSL handshake timeout, in milliseconds", type = Long.class,
+            defaults = DFLT_SSL_HANDSHAKE_TIMEOUT_MS + " milliseconds")
+    public static final String IGNITE_SSL_HANDSHAKE_TIMEOUT = "IGNITE_SSL_HANDSHAKE_TIMEOUT";
 
     /**
      * Enforces singleton.
