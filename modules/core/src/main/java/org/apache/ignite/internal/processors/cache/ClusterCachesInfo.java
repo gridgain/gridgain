@@ -1087,7 +1087,7 @@ public class ClusterCachesInfo {
 
         if (containsInvalidFileNameChars(ccfg, ctx.config().getDataStorageConfiguration())) {
             err = new IgniteCheckedException("Cache start failed. Cache or group name contains the characters " +
-                "that are not allowed in file names [cache=" +
+                "that are not allowed in file names [cache=" + cacheName +
                 (ccfg.getGroupName() == null ? "" : ", group=" + ccfg.getGroupName()) + ']');
         }
 
