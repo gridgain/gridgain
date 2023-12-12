@@ -238,8 +238,10 @@ public class GridServiceProxy<T> implements Serializable {
                         ctx.task().setThreadContext(TC_IO_POLICY, GridIoPolicy.SERVICE_POOL);
 
                         if (callCtx != null)
-                            ((ServiceCallContextImpl)callCtx).values()
-                                    .put(SUBJECT_ID_KEY, subjId.toString());
+                            synchronized (callCtx) {
+                                ((ServiceCallContextImpl) callCtx).values()
+                                        .put(SUBJECT_ID_KEY, subjId.toString());
+                            }
                         else {
                             callCtx = new ServiceCallContextImpl(Collections.singletonMap(SUBJECT_ID_KEY, subjId.toString()));
                         }
@@ -614,8 +616,6 @@ public class GridServiceProxy<T> implements Serializable {
 
         /** {@inheritDoc} */
         @Override public Object call() throws Exception {
-            System.out.println("Service execution node: " + ignite.localNode());
-
             ServiceContextImpl ctx = ignite.context().service().serviceContext(svcName);
 
             UUID subjId = null;
