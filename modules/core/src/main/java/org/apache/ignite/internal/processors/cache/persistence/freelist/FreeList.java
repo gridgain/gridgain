@@ -18,9 +18,9 @@ package org.apache.ignite.internal.processors.cache.persistence.freelist;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.processors.cache.persistence.Storable;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
-import org.apache.ignite.internal.metric.IoStatisticsHolder;
 
 /**
  */
@@ -38,6 +38,14 @@ public interface FreeList<T extends Storable> {
      * @throws IgniteCheckedException If failed.
      */
     public boolean updateDataRow(long link, T row, IoStatisticsHolder statHolder) throws IgniteCheckedException;
+
+    /**
+     * @param link Row link.
+     * @param row New row data.
+     * @return {@code True} if was able to update row.
+     * @throws IgniteCheckedException If failed.
+     */
+    public boolean updateDataRowTtl(long link, T row, IoStatisticsHolder statHolder) throws IgniteCheckedException;
 
     /**
      * @param link Row link.

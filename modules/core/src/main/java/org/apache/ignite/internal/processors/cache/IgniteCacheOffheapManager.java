@@ -674,6 +674,15 @@ public interface IgniteCacheOffheapManager {
          * @return Old row.
          */
         @Nullable public CacheDataRow oldRow();
+
+        /**
+         * Specifies a mode that is used to find and prepare the old row before this closure is executed.
+         *
+         * @return Mode that is used to find a row.
+         */
+        default CacheDataRowAdapter.RowData rowData() {
+            return CacheDataRowAdapter.RowData.NO_KEY;
+        }
     }
 
     /**
@@ -794,6 +803,18 @@ public interface IgniteCacheOffheapManager {
             GridCacheVersion ver,
             long expireTime,
             @Nullable CacheDataRow oldRow) throws IgniteCheckedException;
+
+        /**
+         * @param cctx Cache context.
+         * @param expireTime New expiration time.
+         * @param oldRow Old row.
+         * @return New row.
+         * @throws IgniteCheckedException If failed.
+         */
+        public CacheDataRow createRowForTtlUpdate(
+            GridCacheContext cctx,
+            long expireTime,
+            CacheDataRow oldRow) throws IgniteCheckedException;
 
         /**
          * @param cctx Cache context.

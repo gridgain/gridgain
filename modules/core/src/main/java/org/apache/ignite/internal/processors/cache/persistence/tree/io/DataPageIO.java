@@ -57,8 +57,13 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     }
 
     /** {@inheritDoc} */
-    @Override protected void writeRowData(long pageAddr, int dataOff, int payloadSize, CacheDataRow row,
-        boolean newRow) throws IgniteCheckedException {
+    @Override protected void writeRowData(
+        long pageAddr,
+        int dataOff,
+        int payloadSize,
+        CacheDataRow row,
+        boolean newRow
+    ) throws IgniteCheckedException {
         assertPageType(pageAddr);
 
         long addr = pageAddr + dataOff;
@@ -114,8 +119,12 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     }
 
     /** {@inheritDoc} */
-    @Override protected void writeFragmentData(CacheDataRow row, ByteBuffer buf, int rowOff,
-        int payloadSize) throws IgniteCheckedException {
+    @Override protected void writeFragmentData(
+        CacheDataRow row,
+        ByteBuffer buf,
+        int rowOff,
+        int payloadSize
+    ) throws IgniteCheckedException {
         assertPageType(buf);
 
         final int keySize = row.key().valueBytesLength(null);
@@ -136,6 +145,199 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
             VERSION, keySize, valSize);
 
         assert written == payloadSize;
+    }
+
+    /**
+     * Updates the expiration time for existing row that fits one data page
+     *
+     * @param pageAddr Page address.
+     * @param dataOff Data offset inside the page that contains the row.
+     * @param row Row.
+     * @throws IgniteCheckedException If failed.
+     */
+    public void updateExpirationTime(
+        long pageAddr,
+        int dataOff,
+        CacheDataRow row
+    ) throws IgniteCheckedException {
+        assertPageType(pageAddr);
+        assert !isFragmented(pageAddr, dataOff) :
+            "Row should fit one page [pageAddr=" + pageAddr + ", dataOff=" + dataOff + ", row=" + row + ']';
+
+        long addr = pageAddr + dataOff;
+
+        int cacheIdSize = row.cacheId() != 0 ? 4 : 0;
+        int mvccInfoSize = row.mvccCoordinatorVersion() > 0 ? MVCC_INFO_SIZE : 0;
+
+        addr += (mvccInfoSize + cacheIdSize + row.key().valueBytesLength(null));
+
+        addr += row.value().valueBytesLength(null);
+
+        addr += CacheVersionIO.size(row.version(), false);
+
+        PageUtils.putLong(addr, 0, row.expireTime());
+    }
+
+    /**
+     * Updates the expiration time for existing row that does not fit one data page.
+     *
+     * @param row Cache data row with a new expiration time.
+     * @param buf Buffer that contains the row.
+     * @param payloadSize Available payload size in the buffer.
+     * @param updatedBytes Number of bytes that were updated already.
+     * @param scannedBytes Number of bytes that were scanned already.
+     * @return Number of bytes related to the expiration time field that were updated.
+     *      When the field was completely updated then Integer.MAX_VALUE is returned.
+     *
+     * @throws IgniteCheckedException If failed.
+     */
+    public int updateExpirationTimeFragmentData(
+        CacheDataRow row,
+        ByteBuffer buf,
+        int payloadSize,
+        int updatedBytes,
+        int scannedBytes
+    ) throws IgniteCheckedException {
+        assertPageType(buf);
+
+        final int keySize = row.key().valueBytesLength(null);
+
+        final int valSize = row.value().valueBytesLength(null);
+
+        final int startPos = calculateStartPosition(row, EXPIRE_TIME, keySize, valSize);
+        final int finishPos = calculateFinishPosition(row, EXPIRE_TIME, keySize, valSize);
+
+        // Need to find a position of expiration time.
+        if (scannedBytes + payloadSize <= startPos) {
+            // Don't have anything to update. Need scan the next fragment of the entry.
+            return 0;
+        }
+
+        // Payload contains bytes that should be updated. Move buffer position to the start of payload.
+        int expirationTimeOffset = ((startPos > scannedBytes) ? startPos - scannedBytes : 0);
+
+        buf.position(buf.position() + expirationTimeOffset);
+
+        // Minimum available size of bytes to update.
+        int len = Math.min(finishPos - startPos - updatedBytes, payloadSize - expirationTimeOffset);
+
+        assert len > 0 : "There are no bytes to update " +
+            "[startPos=" + startPos + ", finishPos=" + finishPos + ", scannedBytes=" + scannedBytes + ", upatedBytes=" + updatedBytes +
+            ", payloadSize=" + payloadSize + ", expirationTimeOffset=" + expirationTimeOffset + ", row=" + row + ']';
+
+        writeExpireTimeFragment(buf, row.expireTime(), updatedBytes, len, 0);
+
+        if (updatedBytes + len == finishPos - startPos)
+            return Integer.MAX_VALUE;
+
+        // Return number of bytes that were updated.
+        return len;
+    }
+
+    /**
+     * Calculates start position of the fragment defined by {@code type}.
+     *
+     * @param row Row.
+     * @param type Type of the part of entry.
+     * @param keySize Key size.
+     * @param valSize Value size.
+     * @return Start position.
+     */
+    private int calculateStartPosition(final CacheDataRow row, final EntryPart type, final int keySize, final int valSize) {
+        final int prevLen;
+
+        int cacheIdSize = row.cacheId() == 0 ? 0 : 4;
+        int mvccInfoSize = row.mvccCoordinatorVersion() > 0 ? MVCC_INFO_SIZE : 0;
+
+        switch (type) {
+            case MVCC_INFO:
+                prevLen = 0;
+
+                break;
+
+            case CACHE_ID:
+                prevLen = mvccInfoSize;
+
+                break;
+
+            case KEY:
+                prevLen = mvccInfoSize + cacheIdSize;
+
+                break;
+
+            case EXPIRE_TIME:
+                prevLen = mvccInfoSize + cacheIdSize + keySize;
+
+                break;
+
+            case VALUE:
+                prevLen = mvccInfoSize + cacheIdSize + keySize + 8;
+
+                break;
+
+            case VERSION:
+                prevLen = mvccInfoSize + cacheIdSize + keySize + valSize + 8;
+
+                break;
+
+            default:
+                throw new IllegalArgumentException("Unknown entry part type: " + type);
+        }
+
+        return prevLen;
+    }
+
+    /**
+     * Calculates finish position of the fragment defined by {@code type}.
+     *
+     * @param row Row.
+     * @param type Type of the part of entry.
+     * @param keySize Key size.
+     * @param valSize Value size.
+     * @return Finish position.
+     */
+    private int calculateFinishPosition(final CacheDataRow row, final EntryPart type, final int keySize, final int valSize) {
+        final int curLen;
+
+        int cacheIdSize = row.cacheId() == 0 ? 0 : 4;
+        int mvccInfoSize = row.mvccCoordinatorVersion() > 0 ? MVCC_INFO_SIZE : 0;
+
+        switch (type) {
+            case MVCC_INFO:
+                curLen = mvccInfoSize;
+
+                break;
+
+            case CACHE_ID:
+                curLen = mvccInfoSize + cacheIdSize;
+
+                break;
+
+            case KEY:
+                curLen = mvccInfoSize + cacheIdSize + keySize;
+
+                break;
+
+            case EXPIRE_TIME:
+                curLen = mvccInfoSize + cacheIdSize + keySize + 8;
+
+                break;
+
+            case VALUE:
+                curLen = mvccInfoSize + cacheIdSize + keySize + valSize + 8;
+
+                break;
+
+            case VERSION:
+                curLen = mvccInfoSize + cacheIdSize + keySize + valSize + CacheVersionIO.size(row.version(), false) + 8;
+
+                break;
+
+            default:
+                throw new IllegalArgumentException("Unknown entry part type: " + type);
+        }
+
+        return curLen;
     }
 
     /**
@@ -163,66 +365,22 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
         if (payloadSize == 0)
             return 0;
 
-        final int prevLen;
-        final int curLen;
-
-        int cacheIdSize = row.cacheId() == 0 ? 0 : 4;
-        int mvccInfoSize = row.mvccCoordinatorVersion() > 0 ? MVCC_INFO_SIZE : 0;
-
-        switch (type) {
-            case MVCC_INFO:
-                prevLen = 0;
-                curLen = mvccInfoSize;
-
-                break;
-
-            case CACHE_ID:
-                prevLen = mvccInfoSize;
-                curLen = mvccInfoSize + cacheIdSize;
-
-                break;
-
-            case KEY:
-                prevLen = mvccInfoSize + cacheIdSize;
-                curLen = mvccInfoSize + cacheIdSize + keySize;
-
-                break;
-
-            case EXPIRE_TIME:
-                prevLen = mvccInfoSize + cacheIdSize + keySize;
-                curLen = mvccInfoSize + cacheIdSize + keySize + 8;
-
-                break;
-
-            case VALUE:
-                prevLen = mvccInfoSize + cacheIdSize + keySize + 8;
-                curLen = mvccInfoSize + cacheIdSize + keySize + valSize + 8;
-
-                break;
-
-            case VERSION:
-                prevLen = mvccInfoSize + cacheIdSize + keySize + valSize + 8;
-                curLen = mvccInfoSize + cacheIdSize + keySize + valSize + CacheVersionIO.size(row.version(), false) + 8;
-
-                break;
-
-            default:
-                throw new IllegalArgumentException("Unknown entry part type: " + type);
-        }
+        final int prevLen = calculateStartPosition(row, type, keySize, valSize);
+        final int curLen = calculateFinishPosition(row, type, keySize, valSize);
 
         if (curLen <= rowOff)
             return 0;
 
         final int len = Math.min(curLen - rowOff, payloadSize);
 
-        final int keyAbsentBeforeFlag = (row instanceof MvccUpdateResult) &&
-            ((MvccUpdateResult)row).isKeyAbsentBefore() ? (1 << MVCC_KEY_ABSENT_BEFORE_OFF) : 0;
-
         if (type == EXPIRE_TIME)
             writeExpireTimeFragment(buf, row.expireTime(), rowOff, len, prevLen);
         else if (type == CACHE_ID)
             writeCacheIdFragment(buf, row.cacheId(), rowOff, len, prevLen);
-        else if (type == MVCC_INFO)
+        else if (type == MVCC_INFO) {
+            final int keyAbsentBeforeFlag = (row instanceof MvccUpdateResult) &&
+                ((MvccUpdateResult)row).isKeyAbsentBefore() ? (1 << MVCC_KEY_ABSENT_BEFORE_OFF) : 0;
+
             writeMvccInfoFragment(buf,
                 row.mvccCoordinatorVersion(),
                 row.mvccCounter(),
@@ -233,6 +391,7 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
                 row.newMvccOperationCounter() | (row.newMvccTxState() << MVCC_HINTS_BIT_OFF) |
                     ((row.newMvccCoordinatorVersion() == MVCC_CRD_COUNTER_NA) ? 0 : keyAbsentBeforeFlag),
                 len);
+        }
         else if (type != VERSION) {
             // Write key or value.
             final CacheObject co = type == KEY ? row.key() : row.value();

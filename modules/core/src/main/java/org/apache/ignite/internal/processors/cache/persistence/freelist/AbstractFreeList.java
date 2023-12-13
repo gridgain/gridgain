@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.freelist;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -32,12 +33,14 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageInsertFragmen
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageInsertRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageRemoveRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageUpdateRecord;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.Storable;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.evict.PageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPagePayload;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.LongListReuseBag;
@@ -264,6 +267,136 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             }
 
             return written + payloadSize;
+        }
+    }
+
+    /** Page handler that is used to update the expiration time of CacheDataRow. */
+    private final PageHandler<T, Boolean> updateDataRowTtl = new UpdateRowMetaHandler();
+
+    /**
+     * Page handler that is used to update the expiration time of CacheDataRow.
+     * This page handler is used only for CacheDataTree and PageIO is an instance of DataPageIO.
+     **/
+    private final class UpdateRowMetaHandler extends PageHandler<T, Boolean> {
+        /** {@inheritDoc} */
+        @Override public Boolean run(
+            int cacheId,
+            long pageId,
+            long page,
+            long pageAddr,
+            PageIO iox,
+            Boolean walPlc,
+            T row,
+            int itemId,
+            IoStatisticsHolder statHolder
+        ) throws IgniteCheckedException {
+            DataPageIO io = (DataPageIO) iox;
+
+            Boolean updated = updateTtl(pageId, page, pageAddr, io, row, itemId, walPlc, statHolder);
+
+            evictionTracker.touchPage(pageId);
+
+            return updated;
+        }
+
+        /**
+         * @param pageId Page ID.
+         * @param page Page pointer.
+         * @param pageAddr Page address.
+         * @param io IO.
+         * @param row Row.
+         * @param itemId Item id.
+         * @return {@code true} If the expiration time was updated.
+         * @throws IgniteCheckedException If failed.
+         */
+        private Boolean updateTtl(
+            long pageId,
+            long page,
+            long pageAddr,
+            DataPageIO io,
+            T row,
+            int itemId,
+            Boolean walPlc,
+            IoStatisticsHolder statHolder
+        ) throws IgniteCheckedException {
+            // Read payload to determine that the row is fragmented.
+            DataPagePayload data = io.readPayload(pageAddr, itemId, pageMem.realPageSize(grpId));
+            if (data.nextLink() == 0) {
+                // The data is not fragmented, so it is one page update.
+                io.updateExpirationTime(pageAddr, data.offset(), (CacheDataRow) row);
+
+                return Boolean.TRUE;
+            }
+
+            // The data is fragmented, so need to update the required fragment.
+            long nextLink = 0L;
+            boolean pageUpdated = false;
+            int scannedBytes = 0;
+            int updatedBytes = 0;
+
+            // We under write lock here, so it is safe to read/write the first page.
+            boolean firstPage = true;
+
+            do {
+                final int cutItemId = firstPage ? itemId : PageIdUtils.itemId(nextLink);
+                final long curPageId = firstPage ? pageId : PageIdUtils.pageId(nextLink);
+
+                final long curPage = firstPage ? page : pageMem.acquirePage(grpId, curPageId, statHolder);
+
+                try {
+                    long curPageAddr = firstPage ? pageAddr : pageMem.writeLock(grpId, curPageId, curPage);
+
+                    try {
+                        assert curPageAddr != 0L : "Failed to acquire write lock on the page [grpId=" + grpId + ", pageId=" + curPageId +
+                            ", page=" + curPage + ", firstPage=" + firstPage + ", nextLink=" + nextLink + ']';
+
+                        ByteBuffer buf = pageMem.pageBuffer(curPageAddr);
+
+                        DataPageIO curIo = DataPageIO.VERSIONS.forPage(curPageAddr);
+
+                        data = curIo.readPayload(curPageAddr, cutItemId, pageMem.realPageSize(grpId));
+
+                        buf.position(data.offset());
+                        buf.limit(data.offset() + data.payloadSize());
+
+                        int res = curIo.updateExpirationTimeFragmentData(
+                            (CacheDataRow) row,
+                            buf,
+                            data.payloadSize(),
+                            updatedBytes,
+                            scannedBytes
+                        );
+
+                        pageUpdated = res != 0;
+                        scannedBytes += data.payloadSize();
+                        updatedBytes += res;
+
+                        if (pageUpdated && needWalDeltaRecord(pageId, page, walPlc)) {
+                            // TODO Log a new version of DataPageUpdateRecord.
+                            // For now, DataPageUpdateRecord cannot update fragmented data.
+                        }
+
+                        if (res == COMPLETE) {
+                            // The update is completed.
+                            return Boolean.TRUE;
+                        }
+
+                        nextLink = data.nextLink();
+                    }
+                    finally  {
+                        if (!firstPage)
+                            pageMem.writeUnlock(grpId, curPageId, curPage, walPlc, pageUpdated);
+                    }
+                }
+                finally {
+                    if (!firstPage)
+                        pageMem.releasePage(grpId, curPageId, curPage);
+                }
+
+                firstPage = false;
+            } while (nextLink != 0L);
+
+            return Boolean.FALSE;
         }
     }
 
@@ -602,6 +735,31 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             assert updated != null; // Can't fail here.
 
             return updated;
+        }
+        catch (AssertionError e) {
+            throw corruptedFreeListException(e);
+        }
+        catch (IgniteCheckedException | Error e) {
+            throw e;
+        }
+        catch (Throwable t) {
+            throw new CorruptedFreeListException("Failed to update data row", t, grpId);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean updateDataRowTtl(long link, T row, IoStatisticsHolder statHolder) throws IgniteCheckedException {
+        assert link != 0;
+
+        try {
+            long pageId = PageIdUtils.pageId(link);
+            int itemId = PageIdUtils.itemId(link);
+
+            Boolean updated = write(pageId, updateDataRowTtl, row, itemId, null, statHolder);
+
+            assert updated != null; // Can't fail here.
+
+            return Boolean.TRUE.equals(updated);
         }
         catch (AssertionError e) {
             throw corruptedFreeListException(e);

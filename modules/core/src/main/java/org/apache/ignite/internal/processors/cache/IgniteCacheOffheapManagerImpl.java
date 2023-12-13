@@ -1887,7 +1887,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             throws IgniteCheckedException {
             assert cctx.shared().database().checkpointLockIsHeldByThread();
 
-            dataTree.invoke(row, CacheDataRowAdapter.RowData.NO_KEY, c);
+            dataTree.invoke(row, c.rowData(), c);
 
             CacheDataRow newRow = c.newRow();
 
@@ -1986,6 +1986,40 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             assert dataRow.link() != 0 : dataRow;
+
+            if (grp.sharedGroup()) {
+                if (dataRow.cacheId() == CU.UNDEFINED_CACHE_ID)
+                    dataRow.cacheId(cctx.cacheId());
+
+                if (oldRow != null && oldRow.cacheId() == CU.UNDEFINED_CACHE_ID)
+                    oldRow.cacheId(cctx.cacheId());
+            }
+
+            return dataRow;
+        }
+
+        /** {@inheritDoc} */
+        @Override public CacheDataRow createRowForTtlUpdate(
+            GridCacheContext cctx,
+            long expireTime,
+            CacheDataRow oldRow
+        ) throws IgniteCheckedException {
+            assert oldRow != null : "Old row is null for inplace ttl update [row=" + oldRow + ']';
+            assert !(cctx.queries().enabled() || grp.mvccEnabled() || cctx.cacheObjectContext().compressionStrategy() != null) :
+                "In-place ttl update is not supported for MVCC caches, caches with enabled SQL or with enabled compression [" +
+                "mvccEnabled=" + grp.mvccEnabled() + ", sqlEnabled=" + cctx.queries().enabled() +
+                ", compressionStrategy=" + cctx.cacheObjectContext().compressionStrategy() + ']';
+
+            int cacheId = grp.storeCacheIdInDataPage() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
+
+            // Set real stored cacheId to properly calculate row size.
+            oldRow.cacheId(cacheId);
+
+            DataRow dataRow = makeDataRow(oldRow.key(), oldRow.value(), oldRow.version(), expireTime, cacheId);
+
+            rowStore.updateDataRowTtl(oldRow.link(), dataRow, grp.statisticsHolderData());
+
+            dataRow.link(oldRow.link());
 
             if (grp.sharedGroup()) {
                 if (dataRow.cacheId() == CU.UNDEFINED_CACHE_ID)
