@@ -632,7 +632,6 @@ public class GridServiceProxy<T> implements Serializable {
             if (callCtx != null && callCtx.attribute(SUBJECT_ID_KEY) != null)
                 subjId = UUID.fromString(callCtx.attribute(SUBJECT_ID_KEY));
 
-
             recordServiceEvent(ignite.context(), EVT_SERVICE_METHOD_EXECUTION_STARTED,
                     "Service method execution has started.", svcName, mtdName, subjId);
 
