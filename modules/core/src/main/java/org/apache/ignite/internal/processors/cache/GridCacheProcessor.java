@@ -4035,6 +4035,27 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * Attempts to register a cache locally if it has not already been registered.
+     *
+     * @param cacheNames Cache names.
+     * @return Future that will be completed when all caches are checked.
+     */
+    public IgniteInternalFuture<?> checkCaches(Collection<String> cacheNames) {
+        List<IgniteInternalFuture<?>> futures = new ArrayList<>();
+
+        for (String cacheName : cacheNames) {
+            IgniteInternalCache<Object, Object> cache0 = internalCache(cacheName);
+
+            // Try to start cache, there is no guarantee that cache will be instantiated.
+            if (cache0 == null) {
+                futures.add(dynamicStartCache(null, cacheName, null, false, false, true));
+            }
+        }
+
+        return futures.stream().collect(IgniteCollectors.toCompoundFuture());
+    }
+
+    /**
      * Save cache configuration to persistent store if necessary.
      *
      * @param desc Cache descriptor.
