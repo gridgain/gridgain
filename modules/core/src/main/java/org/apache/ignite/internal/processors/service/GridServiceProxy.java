@@ -100,7 +100,7 @@ public class GridServiceProxy<T> implements Serializable {
     }
 
     /** */
-    private static final String SUBJECT_ID_KEY = "subjId";
+    public static final String SUBJECT_ID_KEY = "subjId";
 
     /** Grid logger. */
     @GridToStringExclude
@@ -192,15 +192,11 @@ public class GridServiceProxy<T> implements Serializable {
     public Object invokeMethod(
         final Method mtd,
         final Object[] args,
-        @Nullable ServiceCallContext callCtx
+        ServiceCallContext callCtx
     ) throws Throwable {
         UUID subjId = null;
-
-        if (ctx.security().enabled())
-            subjId = ctx.security().securityContext().subject().id();
-
-        if (subjId == null)
-            subjId = ctx.localNodeId();
+        if (callCtx != null && callCtx.attribute(SUBJECT_ID_KEY) != null)
+            subjId = UUID.fromString(callCtx.attribute(SUBJECT_ID_KEY));
 
         if (U.isHashCodeMethod(mtd))
             return invokeObjectMethods(() -> System.identityHashCode(proxy), "hashCode", subjId);
@@ -236,15 +232,6 @@ public class GridServiceProxy<T> implements Serializable {
                     }
                     else {
                         ctx.task().setThreadContext(TC_IO_POLICY, GridIoPolicy.SERVICE_POOL);
-
-                        if (callCtx != null)
-                            synchronized (callCtx) {
-                                ((ServiceCallContextImpl) callCtx).values()
-                                        .put(SUBJECT_ID_KEY, subjId.toString());
-                            }
-                        else {
-                            callCtx = new ServiceCallContextImpl(Collections.singletonMap(SUBJECT_ID_KEY, subjId.toString()));
-                        }
 
                         // Execute service remotely.
                         return ctx.closure().callAsyncNoFailover(
@@ -312,6 +299,7 @@ public class GridServiceProxy<T> implements Serializable {
         }
     }
 
+    /** */
     private Object invokeObjectMethods(Callable<Object> mtdCall, String mtdName, UUID subjId) throws Exception {
         Object res;
 
@@ -556,7 +544,29 @@ public class GridServiceProxy<T> implements Serializable {
 
         /** {@inheritDoc} */
         @Override public Object invoke(Object proxy, final Method mtd, final Object[] args) throws Throwable {
-            return invokeMethod(mtd, args, callCtxProvider != null ? callCtxProvider.get() : null);
+            ServiceCallContext callCtx = getCallCtxWithSubjId();
+
+            return invokeMethod(mtd, args, callCtx);
+        }
+
+        private ServiceCallContext getCallCtxWithSubjId() {
+            UUID subjId;
+
+            if (ctx.security().enabled())
+                subjId = ctx.security().securityContext().subject().id();
+            else
+                subjId = ctx.localNodeId();
+
+            if (callCtxProvider == null || callCtxProvider.get() == null)
+                return ServiceCallContext.builder()
+                        .put(SUBJECT_ID_KEY, subjId.toString())
+                        .build();
+            else {
+                ((ServiceCallContextImpl) callCtxProvider.get()).values()
+                        .put(SUBJECT_ID_KEY, ctx.localNodeId().toString());
+
+                return callCtxProvider.get();
+            }
         }
     }
 
@@ -619,11 +629,9 @@ public class GridServiceProxy<T> implements Serializable {
             ServiceContextImpl ctx = ignite.context().service().serviceContext(svcName);
 
             UUID subjId = null;
-            if (callCtx != null) {
+            if (callCtx != null && callCtx.attribute(SUBJECT_ID_KEY) != null)
                 subjId = UUID.fromString(callCtx.attribute(SUBJECT_ID_KEY));
 
-                ((ServiceCallContextImpl)callCtx).values().remove(SUBJECT_ID_KEY);
-            }
 
             recordServiceEvent(ignite.context(), EVT_SERVICE_METHOD_EXECUTION_STARTED,
                     "Service method execution has started.", svcName, mtdName, subjId);

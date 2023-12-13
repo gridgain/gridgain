@@ -40,6 +40,7 @@ import org.apache.ignite.internal.processors.service.GridServiceProxy;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.services.Service;
+import org.apache.ignite.services.ServiceCallContext;
 import org.apache.ignite.services.ServiceDescriptor;
 
 /**
@@ -176,7 +177,23 @@ public class ClientServiceInvokeRequest extends ClientRequest {
 
                 PlatformServices.convertArrayArgs(args, method);
 
-                res = proxy.invokeMethod(method, args, null);
+                UUID subjId;
+
+                if (ctx.kernalContext().security().enabled())
+                    subjId = ctx.kernalContext()
+                            .security()
+                            .securityContext()
+                            .subject()
+                            .id();
+                else
+                    subjId = ctx.kernalContext().localNodeId();
+
+                res = proxy.invokeMethod(
+                        method, args,
+                        ServiceCallContext.builder()
+                                .put(GridServiceProxy.SUBJECT_ID_KEY, subjId.toString())
+                                .build()
+                );
             }
 
             return new ClientObjectResponse(requestId(), res);
