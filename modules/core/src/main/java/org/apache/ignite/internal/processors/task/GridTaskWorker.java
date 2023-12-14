@@ -1576,15 +1576,29 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
      */
     private void recordTaskEvent(int evtType, String msg) {
         if (!internal && ctx.event().isRecordable(evtType)) {
-            Event evt = new TaskEvent(
-                ctx.discovery().localNode(),
-                msg,
-                evtType,
-                ses.getId(),
-                ses.getTaskName(),
-                ses.getTaskClassName(),
-                internal,
-                subjId);
+            Event evt;
+            if (ses.isFullSupport()) {
+                evt = new TaskEvent(
+                        ctx.discovery().localNode(),
+                        msg,
+                        evtType,
+                        ses.getId(),
+                        ses.getTaskName(),
+                        ses.getTaskClassName(),
+                        ses.getAttributes(),
+                        internal,
+                        subjId);
+            } else {
+                evt = new TaskEvent(
+                        ctx.discovery().localNode(),
+                        msg,
+                        evtType,
+                        ses.getId(),
+                        ses.getTaskName(),
+                        ses.getTaskClassName(),
+                        internal,
+                        subjId);
+            }
 
             ctx.event().record(evt);
         }

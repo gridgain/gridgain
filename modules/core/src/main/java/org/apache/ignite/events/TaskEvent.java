@@ -16,6 +16,7 @@
 
 package org.apache.ignite.events;
 
+import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -81,6 +82,9 @@ public class TaskEvent extends EventAdapter {
     /**  */
     private final UUID subjId;
 
+    /**  */
+    private Map<Object, Object> attributes;
+
     /** {@inheritDoc} */
     @Override public String shortDisplay() {
         return name() + ": taskName=" + taskName;
@@ -97,12 +101,28 @@ public class TaskEvent extends EventAdapter {
      * @param subjId Subject ID.
      */
     public TaskEvent(ClusterNode node, String msg, int type, IgniteUuid sesId, String taskName, String taskClsName,
-        boolean internal, @Nullable UUID subjId) {
+                     boolean internal, @Nullable UUID subjId) {
+        this(node, msg, type, sesId, taskName, taskClsName, null, internal, subjId);
+    }
+
+    /**
+     * Creates task event with given parameters.
+     *
+     * @param node Node.
+     * @param msg Optional message.
+     * @param type Event type.
+     * @param sesId Task session ID.
+     * @param taskName Task name.
+     * @param subjId Subject ID.
+     */
+    public TaskEvent(ClusterNode node, String msg, int type, IgniteUuid sesId, String taskName, String taskClsName,
+                     Map<Object, Object> attributes, boolean internal, @Nullable UUID subjId) {
         super(node, msg, type);
 
         this.sesId = sesId;
         this.taskName = taskName;
         this.taskClsName = taskClsName;
+        this.attributes = attributes;
         this.internal = internal;
         this.subjId = subjId;
     }
@@ -134,6 +154,10 @@ public class TaskEvent extends EventAdapter {
         return sesId;
     }
 
+    public Map<Object, Object> attributes() {
+        return attributes;
+    }
+
     /**
      * Returns {@code true} if task is created by Ignite and is used for system needs.
      *
@@ -162,6 +186,7 @@ public class TaskEvent extends EventAdapter {
             "nodeId8", U.id8(node().id()),
             "msg", message(),
             "type", name(),
+            "attributes", attributes(),
             "tstamp", timestamp());
     }
 }
