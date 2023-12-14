@@ -4139,8 +4139,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         try {
             checkObsolete();
 
-            if (cctx.queries().enabled() || cctx.mvccEnabled() || cctx.cacheObjectContext().compressionStrategy() != null) {
+            if (cctx.queries().enabled() || cctx.mvccEnabled() || cctx.cacheObjectContext().compressionStrategy() != null || isNear()) {
                 // Fast update is not possible for this entry. Need to fallback to writing the whole entry.
+                //  - in general, enabling sql indcies should not prevent from using fast update. can be improved later.
+                //  - mvcc and compression are not supported for fast update yet.
+                //  - near entries only require update on the entry itself.
                 unswap(null, true);
 
                 updateTtl(ver, ttl);
@@ -4180,6 +4183,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             assert cctx.shared().database().checkpointLockIsHeldByThread() :
                 "Checkpoint lock must be held by the thread before acquiring entry lock";
 
+            // TODO IGNITE-305
+            // TTL messages are not ordered, so the version cannot be used to properly handle a new ttl value.
             storeTtlValue(val, expireTime, ver);
         }
         catch (IgniteCheckedException e) {
@@ -4253,7 +4258,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         long expireTime,
         GridCacheVersion ver
     ) throws IgniteCheckedException {
-        storeValue(new UpdateTtlClosure(this, val, ver, expireTime));
+        storeValue(new UpdateTtlClosure(this, expireTime));
     }
 
     /**
@@ -5944,14 +5949,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         /**
          * @param entry Entry.
-         * @param val New value.
-         * @param ver New version.
          * @param expireTime New expire time.
          */
         private UpdateTtlClosure(
             GridCacheMapEntry entry,
-            CacheObject val,
-            GridCacheVersion ver,
             long expireTime
         ) {
             this.entry = entry;
