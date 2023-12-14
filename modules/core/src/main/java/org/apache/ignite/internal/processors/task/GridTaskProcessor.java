@@ -1074,17 +1074,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         }
 
         if (ctx.event().isRecordable(EVT_TASK_SESSION_ATTR_SET)) {
-            Event evt = new TaskEvent(
-                ctx.discovery().localNode(),
-                "Changed attributes: " + attrs,
-                EVT_TASK_SESSION_ATTR_SET,
-                ses.getId(),
-                ses.getTaskName(),
-                ses.getTaskClassName(),
-                false,
-                null);
-
-            ctx.event().record(evt);
+            recordTaskEvent(attrs, ses);
         }
 
         notifyTaskStatusMonitors(ComputeTaskStatus.snapshot(ses), false);
@@ -1689,5 +1679,38 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             return emptyMap();
         else
             return taskWorker.jobStatuses();
+    }
+
+    /**
+     * @param attrs Attributes set.
+     * @param ses Internal session.
+     */
+    public void recordTaskEvent(Map<?, ?> attrs, GridTaskSessionImpl ses) {
+        Event evt;
+
+        if (ses.isFullSupport()) {
+            evt = new TaskEvent(
+                    ctx.discovery().localNode(),
+                    "Changed attributes: " + attrs,
+                    EVT_TASK_SESSION_ATTR_SET,
+                    ses.getId(),
+                    ses.getTaskName(),
+                    ses.getTaskClassName(),
+                    ses.getAttributes(),
+                    false,
+                    null);
+        } else {
+            evt = new TaskEvent(
+                    ctx.discovery().localNode(),
+                    "Changed attributes: " + attrs,
+                    EVT_TASK_SESSION_ATTR_SET,
+                    ses.getId(),
+                    ses.getTaskName(),
+                    ses.getTaskClassName(),
+                    false,
+                    null);
+        }
+
+        ctx.event().record(evt);
     }
 }
