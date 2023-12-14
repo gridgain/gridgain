@@ -19,9 +19,10 @@ package org.apache.ignite.internal.managers.communication;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
-
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
@@ -113,6 +114,14 @@ public class IgniteMessageFactoryImpl implements IgniteMessageFactory {
             maxIdx = Math.max(idx, maxIdx);
 
             cnt++;
+
+            Ignition.LOG.error(
+                String.format(
+                    ">>>>> register Message supplier directType=%s idx=%s, supplier=%s, supplier.get=%s",
+                    directType, idx, supplier, Optional.ofNullable(supplier.get()).map(Object::getClass).orElse(null)
+                ),
+                new Exception()
+            );
         }
         else
             throw new IgniteException("Message factory is already registered for direct type: " + directType);
@@ -126,12 +135,26 @@ public class IgniteMessageFactoryImpl implements IgniteMessageFactory {
      * @throws IgniteException If there are no any message factory for given {@code directType}.
      */
     @Override public @Nullable Message create(short directType) {
-        Supplier<Message> supplier = msgSuppliers[directTypeToIndex(directType)];
+        int idx = directTypeToIndex(directType);
+
+        Supplier<Message> supplier = msgSuppliers[idx];
 
         if (supplier == null)
             throw new IgniteException("Invalid message type: " + directType);
 
-        return supplier.get();
+        Message message = supplier.get();
+
+        if (directType == 0) {
+            Ignition.LOG.error(
+                String.format(
+                    ">>>>> create Message directType=%s, idx=%s, supplier=%, supplier.get=%s",
+                    directType, idx, supplier, Optional.ofNullable(message).map(Object::getClass).orElse(null)
+                ),
+                new Exception()
+            );
+        }
+
+        return message;
     }
 
     /**

@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridJobCancelRequest;
@@ -46,6 +47,7 @@ import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridNioServer;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteRunnable;
+import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
@@ -575,11 +577,13 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
         super.beforeTestsStarted();
 
         GridJobCancelRequest.LOG = log;
+        Ignition.LOG = log;
     }
 
     @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
 
         GridJobCancelRequest.LOG = null;
+        Ignition.LOG = new NullLogger();
     }
 }
