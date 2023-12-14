@@ -294,10 +294,15 @@ public abstract class GridSpiAbstractTest<T extends IgniteSpi> extends GridAbstr
     protected GridSpiTestContext initSpiContext() throws Exception {
         GridSpiTestContext spiCtx = new GridSpiTestContext();
 
-        if (getTestData().getDiscoverySpi() != null) {
-            spiCtx.setLocalNode(getTestData().getDiscoverySpi().getLocalNode());
+        DiscoverySpi spi = getTestData().getDiscoverySpi();
 
-            for (ClusterNode node : getTestData().getDiscoverySpi().getRemoteNodes())
+        if (spi != null)
+            log.error(">>>>> disco=" + spi + ", loc=" + spi.getLocalNode() + ", remotes=" + spi.getRemoteNodes());
+
+        if (spi != null) {
+            spiCtx.setLocalNode(spi.getLocalNode());
+
+            for (ClusterNode node : spi.getRemoteNodes())
                 spiCtx.addNode(node);
         }
         else {

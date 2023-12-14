@@ -18,6 +18,7 @@ package org.apache.ignite.internal;
 
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -29,6 +30,8 @@ import org.jetbrains.annotations.Nullable;
  * Job cancellation request.
  */
 public class GridJobCancelRequest implements Message {
+    public static volatile IgniteLogger LOG;
+
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -47,6 +50,7 @@ public class GridJobCancelRequest implements Message {
      */
     public GridJobCancelRequest() {
         // No-op.
+        logCreation();
     }
 
     /**
@@ -56,6 +60,8 @@ public class GridJobCancelRequest implements Message {
         assert sesId != null;
 
         this.sesId = sesId;
+
+        logCreation();
     }
 
     /**
@@ -67,6 +73,8 @@ public class GridJobCancelRequest implements Message {
 
         this.sesId = sesId;
         this.jobId = jobId;
+
+        logCreation();
     }
 
     /**
@@ -80,6 +88,15 @@ public class GridJobCancelRequest implements Message {
         this.sesId = sesId;
         this.jobId = jobId;
         this.sys = sys;
+
+        logCreation();
+    }
+
+    private void logCreation() {
+        IgniteLogger log = LOG;
+
+        if (log != null)
+            LOG.error(">>>>> create GridJobCancelRequest=" + this, new Exception());
     }
 
     /**
