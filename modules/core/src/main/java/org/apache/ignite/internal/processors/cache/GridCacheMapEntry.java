@@ -4134,6 +4134,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public void updateTtlOnly(@Nullable GridCacheVersion ver, long ttl) throws GridCacheEntryRemovedException {
+        assert cctx.shared().database().checkpointLockIsHeldByThread() :
+            "Checkpoint lock must be held by the thread before acquiring entry lock";
+
         lockEntry();
 
         try {
@@ -4178,10 +4181,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 expireTime = CU.toExpireTime(ttl);
 
             ttlAndExpireTimeExtras(ttl, expireTime);
-
-            // Do we really need this assert here?
-            assert cctx.shared().database().checkpointLockIsHeldByThread() :
-                "Checkpoint lock must be held by the thread before acquiring entry lock";
 
             // TODO IGNITE-305
             // TTL messages are not ordered, so the version cannot be used to properly handle a new ttl value.
@@ -5929,27 +5928,32 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
-     *
+     * Invoke closure that allows to in-place update entry TTL.
      */
     private static class UpdateTtlClosure implements IgniteCacheOffheapManager.OffheapInvokeClosure {
-        /** */
+        /** Entry to be updated. */
         private final GridCacheMapEntry entry;
 
-        /** */
+        /** New expiration time. */
         private final long expireTime;
 
-        /** */
+        /** Link to the updated row. It can be {@code null} or equals to {@link #oldRow}. */
         private CacheDataRow newRow;
 
-        /** */
+        /** Link to the row to be updated. */
         private CacheDataRow oldRow;
 
-        /** */
+        /**
+         * Result of applying this closure to the row.
+         * The possible values are:
+         *  - NOOP - entry not found.
+         *  - IN_PLACE - in-place update of ttl.
+         **/
         private IgniteTree.OperationType treeOp = IgniteTree.OperationType.IN_PLACE;
 
         /**
          * @param entry Entry.
-         * @param expireTime New expire time.
+         * @param expireTime New expiration time.
          */
         private UpdateTtlClosure(
             GridCacheMapEntry entry,
@@ -5981,8 +5985,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             treeOp = IgniteTree.OperationType.IN_PLACE;
         }
 
-        @Override
-        public CacheDataRowAdapter.RowData rowData() {
+        /** {@inheritDoc} */
+        @Override public CacheDataRowAdapter.RowData rowData() {
             return CacheDataRowAdapter.RowData.NO_KEY_WITH_VALUE_META_INFO;
         }
 

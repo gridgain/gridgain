@@ -101,7 +101,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
     private final AtomicLong pageListCacheLimit;
 
     /**
-     *
+     * Update handler that is used to updated row which is placed on the one page.
      */
     private final class UpdateRowHandler extends PageHandler<T, Boolean> {
         @Override public Boolean run(
@@ -148,7 +148,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
     private final PageHandler<T, Integer> writeRow = new WriteRowHandler();
 
     /**
-     *
+     * Write handler that is used to write row.
+     * This handler allows to write full row or a fragment of the row.
      */
     private final class WriteRowHandler extends PageHandler<T, Integer> {
         @Override public Integer run(
@@ -300,6 +301,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
         }
 
         /**
+         * Updats the expiration time of CacheDataRow.
+         *
          * @param pageId Page ID.
          * @param page Page pointer.
          * @param pageAddr Page address.
@@ -334,7 +337,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             int scannedBytes = 0;
             int updatedBytes = 0;
 
-            // We under write lock here, so it is safe to read/write the first page.
+            // We are under write lock here, so it is safe to read/write the first page.
             boolean firstPage = true;
 
             do {
@@ -344,6 +347,10 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                 final long curPage = firstPage ? page : pageMem.acquirePage(grpId, curPageId, statHolder);
 
                 try {
+                    // It is safe to acquire a write lock on the next pages because we are under the write lock on the first page (head of
+                    // the entry). This means that reading of entry is not possible, since it requires holding a read lock on the first page
+                    // until all pages related to the entry are read. Moreover, following the current implementation of inserting a new
+                    // entry, the tail of the entry is always placed on empty pages so these pages cannot be used for other entries.
                     long curPageAddr = firstPage ? pageAddr : pageMem.writeLock(grpId, curPageId, curPage);
 
                     try {
@@ -359,7 +366,9 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                         buf.position(data.offset());
                         buf.limit(data.offset() + data.payloadSize());
 
-                        int res = curIo.updateExpirationTimeFragmentData(
+                        // This variable contains the number of bytes that were updated on the current page.
+                        // Take into account that in the case when all bytes were updated, the method below returns Integer.MAX_VALUE.
+                        int updatedOnCurrPage = curIo.updateExpirationTimeFragmentData(
                             (CacheDataRow) row,
                             buf,
                             data.payloadSize(),
@@ -367,16 +376,16 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                             scannedBytes
                         );
 
-                        pageUpdated = res != 0;
+                        pageUpdated = updatedOnCurrPage != 0;
                         scannedBytes += data.payloadSize();
-                        updatedBytes += res;
+                        updatedBytes += updatedOnCurrPage;
 
                         if (pageUpdated && needWalDeltaRecord(pageId, page, walPlc)) {
                             // TODO Log a new version of DataPageUpdateRecord.
                             // For now, DataPageUpdateRecord cannot update fragmented data.
                         }
 
-                        if (res == COMPLETE) {
+                        if (updatedOnCurrPage == COMPLETE) {
                             // The update is completed.
                             return Boolean.TRUE;
                         }

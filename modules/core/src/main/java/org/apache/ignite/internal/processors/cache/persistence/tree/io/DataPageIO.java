@@ -148,7 +148,7 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     }
 
     /**
-     * Updates the expiration time for existing row that fits one data page
+     * Updates the expiration time for existing row that fits one data page.
      *
      * @param pageAddr Page address.
      * @param dataOff Data offset inside the page that contains the row.

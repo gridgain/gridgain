@@ -2004,11 +2004,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             long expireTime,
             CacheDataRow oldRow
         ) throws IgniteCheckedException {
-            assert oldRow != null : "Old row is null for inplace ttl update [row=" + oldRow + ']';
-            assert !(cctx.queries().enabled() || grp.mvccEnabled() || cctx.cacheObjectContext().compressionStrategy() != null) :
-                "In-place ttl update is not supported for MVCC caches, caches with enabled SQL or with enabled compression [" +
-                "mvccEnabled=" + grp.mvccEnabled() + ", sqlEnabled=" + cctx.queries().enabled() +
-                ", compressionStrategy=" + cctx.cacheObjectContext().compressionStrategy() + ']';
+            assert oldRow != null : "Old row is null for inplace ttl update [cache=" + cctx.name() + ']';
+            assert !cctx.queries().enabled() :
+                "In-place ttl update is not supported for caches with enabled SQL [cache=" + cctx.name() + ", row=" + oldRow + ']';
+            assert !grp.mvccEnabled() :
+                "In-place ttl update is not supported for MVCC caches [cache=" + cctx.name() + ", row=" + oldRow + ']';
+            assert cctx.cacheObjectContext().compressionStrategy() == null :
+                "In-place ttl update is not supported for caches with enabled compression [cache=" + cctx.name() + ", row=" + oldRow + ']';
 
             int cacheId = grp.storeCacheIdInDataPage() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
@@ -2021,6 +2023,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             dataRow.link(oldRow.link());
 
+            // ? should we update dataRow cache id before updating?
+            // need a test for cache groups
             if (grp.sharedGroup()) {
                 if (dataRow.cacheId() == CU.UNDEFINED_CACHE_ID)
                     dataRow.cacheId(cctx.cacheId());
