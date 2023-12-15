@@ -18,6 +18,7 @@ package org.apache.ignite.internal.managers.communication;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -95,6 +96,8 @@ public class IgniteMessageFactoryImpl implements IgniteMessageFactory {
         initialized = true;
     }
 
+    public static volatile Collection<String> REGISTERED;
+
     /** {@inheritDoc} */
     @Override public void register(short directType, Supplier<Message> supplier) throws IgniteException {
         if (initialized) {
@@ -115,13 +118,16 @@ public class IgniteMessageFactoryImpl implements IgniteMessageFactory {
 
             cnt++;
 
-            Ignition.LOG.error(
-                String.format(
+            Collection<String> registered = REGISTERED;
+
+            if (registered != null) {
+                String format = String.format(
                     ">>>>> register Message supplier directType=%s idx=%s, supplier=%s, supplier.get=%s",
                     directType, idx, supplier, Optional.ofNullable(supplier.get()).map(Object::getClass).orElse(null)
-                ),
-                new Exception()
-            );
+                );
+
+                registered.add(format);
+            }
         }
         else
             throw new IgniteException("Message factory is already registered for direct type: " + directType);
@@ -147,7 +153,7 @@ public class IgniteMessageFactoryImpl implements IgniteMessageFactory {
         if (directType == 0) {
             Ignition.LOG.error(
                 String.format(
-                    ">>>>> create Message directType=%s, idx=%s, supplier=%, supplier.get=%s",
+                    ">>>>> create Message directType=%s, idx=%s, supplier=%s, supplier.get=%s",
                     directType, idx, supplier, Optional.ofNullable(message).map(Object::getClass).orElse(null)
                 ),
                 new Exception()

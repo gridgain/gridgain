@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -152,6 +153,8 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
                     ">>>>> Not %s, but=[%s], msgNodeId=[%s], nodeIds=%s, consIds=%s, hostNames=%s, addresses=%s",
                     GridTestMessage.class, msg, nodeId, nodeIds, consistentIds, hostNames, addresses
                 );
+
+                log.error(">>>>> IgniteMessageFactoryImpl.REGISTERED=" + IgniteMessageFactoryImpl.REGISTERED);
 
                 fail(errMsg);
             }
@@ -578,6 +581,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
 
         GridJobCancelRequest.LOG = log;
         Ignition.LOG = log;
+        IgniteMessageFactoryImpl.REGISTERED = new ConcurrentLinkedQueue<>();
     }
 
     @Override protected void afterTestsStopped() throws Exception {
@@ -585,5 +589,6 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
 
         GridJobCancelRequest.LOG = null;
         Ignition.LOG = new NullLogger();
+        IgniteMessageFactoryImpl.REGISTERED = null;
     }
 }
