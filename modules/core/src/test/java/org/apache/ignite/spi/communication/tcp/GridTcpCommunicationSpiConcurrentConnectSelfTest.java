@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -154,7 +154,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
                     GridTestMessage.class, msg, nodeId, nodeIds, consistentIds, hostNames, addresses
                 );
 
-                log.error(">>>>> IgniteMessageFactoryImpl.REGISTERED=" + IgniteMessageFactoryImpl.REGISTERED);
+                log.error(">>>>> IgniteMessageFactoryImpl.REGISTERED:" + U.nl() + "    " + String.join(U.nl() + "    ", IgniteMessageFactoryImpl.REGISTERED));
 
                 fail(errMsg);
             }
@@ -581,7 +581,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
 
         GridJobCancelRequest.LOG = log;
         Ignition.LOG = log;
-        IgniteMessageFactoryImpl.REGISTERED = new ConcurrentLinkedQueue<>();
+        IgniteMessageFactoryImpl.REGISTERED = ConcurrentHashMap.newKeySet();
     }
 
     @Override protected void afterTestsStopped() throws Exception {
@@ -590,5 +590,9 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
         GridJobCancelRequest.LOG = null;
         Ignition.LOG = new NullLogger();
         IgniteMessageFactoryImpl.REGISTERED = null;
+    }
+
+    @Override protected void afterTest() throws Exception {
+        IgniteMessageFactoryImpl.REGISTERED.clear();
     }
 }
