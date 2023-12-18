@@ -3836,7 +3836,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         try {
             Collection<String> cacheNames0 = cacheNames.isEmpty() ? ctx.cache().cacheNames() : cacheNames;
 
-            ctx.cache().checkCaches(cacheNames0).get();
+            ctx.cache().registerCachesLocally(cacheNames0).get();
 
             ctx.cache().resetCacheState(cacheNames0).get();
         }
