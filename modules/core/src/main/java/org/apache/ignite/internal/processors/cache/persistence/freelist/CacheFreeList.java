@@ -22,7 +22,9 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
+import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
+import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageUpdateRecord;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
@@ -129,7 +131,7 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
         ) throws IgniteCheckedException {
             DataPageIO io = (DataPageIO) iox;
 
-            Boolean updated = updateTtl(pageId, page, pageAddr, io, row, itemId, walPlc, statHolder);
+            Boolean updated = updateTtl(cacheId, pageId, page, pageAddr, io, row, itemId, walPlc, statHolder);
 
             evictionTracker().touchPage(pageId);
 
@@ -139,6 +141,7 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
         /**
          * Updats the expiration time of CacheDataRow.
          *
+         * @param cacheId Cache ID.
          * @param pageId Page ID.
          * @param page Page pointer.
          * @param pageAddr Page address.
@@ -149,6 +152,7 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
          * @throws IgniteCheckedException If failed.
          */
         private Boolean updateTtl(
+            int cacheId,
             long pageId,
             long page,
             long pageAddr,
@@ -163,6 +167,26 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
             if (data.nextLink() == 0) {
                 // The data is not fragmented, so it is one page update.
                 io.updateExpirationTime(pageAddr, data.offset(), row);
+
+                if (needWalDeltaRecord(pageId, page, walPlc)) {
+                    // TODO This record must contain only a reference to a logical WAL record with the actual data.
+                    int rowSize = data.payloadSize();
+
+                    byte[] payload = new byte[rowSize];
+
+                    // Reload the payload to get the actual data.
+                    data = io.readPayload(pageAddr, itemId, pageSize());
+
+                    assert data.payloadSize() == rowSize;
+
+                    PageUtils.getBytes(pageAddr, data.offset(), payload, 0, rowSize);
+
+                    wal.log(new DataPageUpdateRecord(
+                        cacheId,
+                        pageId,
+                        itemId,
+                        payload));
+                }
 
                 return Boolean.TRUE;
             }
