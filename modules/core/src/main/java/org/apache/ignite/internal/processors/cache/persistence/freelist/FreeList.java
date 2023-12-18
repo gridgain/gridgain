@@ -45,7 +45,9 @@ public interface FreeList<T extends Storable> {
      * @return {@code True} if was able to update row.
      * @throws IgniteCheckedException If failed.
      */
-    public boolean updateDataRowTtl(long link, T row, IoStatisticsHolder statHolder) throws IgniteCheckedException;
+    public default boolean updateDataRowTtl(long link, T row, IoStatisticsHolder statHolder) throws IgniteCheckedException {
+        throw new UnsupportedOperationException("Updating TTL is only supported by CacheFreeLis.");
+    }
 
     /**
      * @param link Row link.
