@@ -4133,7 +4133,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public void updateTtlOnly(@Nullable GridCacheVersion ver, long ttl) throws GridCacheEntryRemovedException {
+    @Override public void updateTimeToLiveOnTtlUpdateRequest(@Nullable GridCacheVersion ver, long ttl) throws GridCacheEntryRemovedException {
         assert cctx.shared().database().checkpointLockIsHeldByThread() :
             "Checkpoint lock must be held by the thread before acquiring entry lock";
 

@@ -1106,15 +1106,13 @@ public interface GridCacheEntryEx {
     public void updateTtl(@Nullable GridCacheVersion ver, long ttl) throws GridCacheEntryRemovedException;
 
     /**
-     * TODO: perhaps the better naming should be used here.
-     *
      * Updates ttl for this entry and stores its value in storage.
      *
      * @param ver Version.
      * @param ttl Time to live.
      * @throws GridCacheEntryRemovedException If entry is obsolete (entry was removed).
      */
-    public void updateTtlOnly(@Nullable GridCacheVersion ver, long ttl) throws GridCacheEntryRemovedException;
+    public void updateTimeToLiveOnTtlUpdateRequest(@Nullable GridCacheVersion ver, long ttl) throws GridCacheEntryRemovedException;
 
     /**
      * @return Value.

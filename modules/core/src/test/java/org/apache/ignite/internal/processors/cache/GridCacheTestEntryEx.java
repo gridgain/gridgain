@@ -888,7 +888,7 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     }
 
     /** @inheritDoc */
-    @Override public void updateTtlOnly(GridCacheVersion ver, long ttl) {
+    @Override public void updateTimeToLiveOnTtlUpdateRequest(GridCacheVersion ver, long ttl) {
         throw new UnsupportedOperationException();
     }
 

@@ -1577,7 +1577,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                     try {
                         entry = cache.entryEx(keys.get(i));
 
-                        entry.updateTtlOnly(vers.get(i), ttl);
+                        entry.updateTimeToLiveOnTtlUpdateRequest(vers.get(i), ttl);
 
                         break;
                     }
