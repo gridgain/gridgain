@@ -897,7 +897,7 @@ public interface EventType {
     public static final int EVT_CLUSTER_ID_UPDATED = 149;
 
     /**
-     * Built-in event type: service method invoked.
+     * Built-in event type: is raised right before a service method execution started.
      * <p>
      * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
      * internal Ignite events and should not be used by user-defined events.
@@ -907,7 +907,7 @@ public interface EventType {
     public static final int EVT_SERVICE_METHOD_EXECUTION_STARTED = 163;
 
     /**
-     * Built-in event type: service method invocation failed.
+     * Built-in event type: is raised right after a service method execution finished.
      * <p>
      * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
      * internal Ignite events and should not be used by user-defined events.
@@ -917,7 +917,7 @@ public interface EventType {
     public static final int EVT_SERVICE_METHOD_EXECUTION_FINISHED = 164;
 
     /**
-     * Built-in event type: service method invocation failed over.
+     * Built-in event type: is raised in case of a service method execution failed.
      * <p>
      * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
      * internal Ignite events and should not be used by user-defined events.

@@ -401,7 +401,6 @@ public class GridServiceProxy<T> implements Serializable {
                     eventType,
                     svcName,
                     mtdName,
-                    null,
                     subjId
             );
 

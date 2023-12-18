@@ -180,9 +180,7 @@ public class ClientServiceInvokeRequest extends ClientRequest {
                 UUID subjId;
 
                 if (ctx.kernalContext().security().enabled())
-                    subjId = ctx.kernalContext()
-                            .security()
-                            .securityContext()
+                    subjId = ctx.securityContext()
                             .subject()
                             .id();
                 else

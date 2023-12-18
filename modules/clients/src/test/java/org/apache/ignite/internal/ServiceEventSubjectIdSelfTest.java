@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,11 +42,16 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.events.EventType.EVTS_SERVICE_EXECUTION;
 import static org.apache.ignite.events.EventType.EVT_SERVICE_METHOD_EXECUTION_FAILED;
 import static org.apache.ignite.events.EventType.EVT_SERVICE_METHOD_EXECUTION_FINISHED;
 import static org.apache.ignite.events.EventType.EVT_SERVICE_METHOD_EXECUTION_STARTED;
+import static org.apache.ignite.internal.processors.odbc.ClientListenerProcessor.CLIENT_LISTENER_PORT;
 
+/**
+ * Tests for security subject ID in service events.
+ */
 public class ServiceEventSubjectIdSelfTest extends GridCommonAbstractTest {
     /** */
     private static final String SVC_NAME = "simpleService";
@@ -104,18 +109,8 @@ public class ServiceEventSubjectIdSelfTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-
-    }
-
-    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         evts.clear();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-
     }
 
     /**
@@ -142,7 +137,7 @@ public class ServiceEventSubjectIdSelfTest extends GridCommonAbstractTest {
 
         assertEquals("simpleValue", simpleValue);
 
-        assert latch.await(1_000, MILLISECONDS);
+        assertTrue("Failed to wait for service execution.", latch.await(1, SECONDS));
 
         assertEquals(2, evts.size());
 
@@ -192,7 +187,7 @@ public class ServiceEventSubjectIdSelfTest extends GridCommonAbstractTest {
 
         assertEquals("simpleValue", simpleValue);
 
-        assert latch.await(1_000, MILLISECONDS);
+        assertTrue("Failed to wait for service execution.", latch.await(1, SECONDS));
 
         assertEquals(2, evts.size());
 
@@ -238,7 +233,7 @@ public class ServiceEventSubjectIdSelfTest extends GridCommonAbstractTest {
 
         GridTestUtils.assertThrows(null, simpleSvc::simpleFailureMethod, RuntimeException.class, "test exception");
 
-        assert latch.await(1_000, MILLISECONDS);
+        assertTrue("Failed to wait for service execution.", latch.await(1, SECONDS));
 
         assertEquals(2, evts.size());
 

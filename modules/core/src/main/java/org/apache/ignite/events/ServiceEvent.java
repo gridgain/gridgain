@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.apache.ignite.events;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.services.ServiceConfiguration;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
@@ -70,9 +69,6 @@ public class ServiceEvent extends EventAdapter {
     /** */
     private final String mtdName;
 
-    /** */
-    private final ServiceConfiguration svcCfg;
-
     /**  */
     private final UUID subjId;
 
@@ -82,18 +78,20 @@ public class ServiceEvent extends EventAdapter {
     }
 
     /**
-     * Creates job event with given parameters.
+     * Creates service event with given parameters.
      *
-     * @param node Node.
+     * @param node Node that raised this event.
      * @param msg Optional message.
      * @param type Event type.
+     * @param svcName Service name.
+     * @param mtdName Service method name.
+     * @param subjId Security subject ID.
      */
-    public ServiceEvent(ClusterNode node, String msg, int type, String svcName, @Nullable String mtdName,
-                        @Nullable ServiceConfiguration svcCfg, @Nullable UUID subjId) {
+    public ServiceEvent(ClusterNode node, String msg, int type, String svcName,
+        @Nullable String mtdName, @Nullable UUID subjId) {
         super(node, msg, type);
         this.svcName = svcName;
         this.mtdName = mtdName;
-        this.svcCfg = svcCfg;
         this.subjId = subjId;
     }
 
@@ -107,15 +105,6 @@ public class ServiceEvent extends EventAdapter {
     }
 
     /**
-     * Gets config of service that triggered this event.
-     *
-     * @return Config of service that triggered the event.
-     */
-    public ServiceConfiguration serviceConfiguration() {
-        return svcCfg;
-    }
-
-    /**
      * Gets name of service method that triggered this event.
      *
      * @return Name of service method that triggered the event.
@@ -125,9 +114,12 @@ public class ServiceEvent extends EventAdapter {
     }
 
     /**
-     * Gets session ID of service that triggered this event.
+     * Gets security subject ID initiated this service event.
+     * <p>
+     * Subject ID will be set either to node ID or client ID initiated
+     * task execution.
      *
-     * @return Session ID that triggered the event.
+     * @return Subject ID.
      */
     public UUID subjectId() {
         return subjId;
