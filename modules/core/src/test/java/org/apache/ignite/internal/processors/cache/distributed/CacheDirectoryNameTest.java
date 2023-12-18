@@ -16,9 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -26,15 +23,15 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static org.apache.ignite.internal.util.lang.GridFunc.asList;
-import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
-import static org.apache.ignite.testframework.GridTestUtils.cartesianProduct;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Test cache directory name validation.
@@ -42,27 +39,25 @@ import static org.apache.ignite.testframework.GridTestUtils.cartesianProduct;
 @RunWith(Parameterized.class)
 public class CacheDirectoryNameTest extends GridCommonAbstractTest {
     /** */
-    @Parameterized.Parameter
-    public boolean persistenceEnabled;
-
-    /** */
-    @Parameterized.Parameter(1)
+    @Parameterized.Parameter()
     public boolean checkGroup;
 
     /** @return Test parameters. */
-    @Parameterized.Parameters(name = "persistenceEnabled={0}, isGroupName={1}")
+    @Parameterized.Parameters(name = "checkGroup={0}")
     public static Collection<?> parameters() {
-        return cartesianProduct(
-            asList(false, true), asList(false, true)
-        );
+        Collection<Object[]> params = new ArrayList<>();
+
+        params.add(new Object[] {true});
+        params.add(new Object[] {false});
+
+        return params;
     }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setDataStorageConfiguration(new DataStorageConfiguration()
-                .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-                    .setPersistenceEnabled(persistenceEnabled)));
+                .setDefaultDataRegionConfiguration(new DataRegionConfiguration()));
     }
 
     /** {@inheritDoc} */
@@ -88,22 +83,24 @@ public class CacheDirectoryNameTest extends GridCommonAbstractTest {
 
         srv.cluster().state(ClusterState.ACTIVE);
 
+        int num = 0;
+
         for (String name : illegalCacheNames()) {
-            CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
+            CacheConfiguration<Object, Object> cfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME + num++);
 
             if (checkGroup)
                 cfg.setGroupName(name);
             else
                 cfg.setName(name);
 
-            if (persistenceEnabled) {
-                assertThrows(log, () -> srv.createCache(cfg), IgniteCheckedException.class,
-                    "Cache start failed. Cache or group name contains the characters that are not allowed in file names");
-            }
-            else {
-                srv.createCache(cfg);
-                srv.destroyCache(cfg.getName());
-            }
+            Throwable e = GridTestUtils.assertThrowsWithCause(
+                    () -> srv.createCache(cfg), IllegalArgumentException.class
+            );
+
+            assertTrue(
+                    e.getMessage().contains("Cache or group name contains the character that are not allowed")
+                            || e.getMessage().contains("Cache name must not")
+            );
         }
     }
 
@@ -130,14 +127,14 @@ public class CacheDirectoryNameTest extends GridCommonAbstractTest {
 
             clietnCfg.setCacheConfiguration(cfg);
 
-            if (persistenceEnabled) {
-                assertThrows(log, () -> startClientGrid(optimize(clietnCfg)), IgniteCheckedException.class,
-                    "Cache start failed. Cache or group name contains the characters that are not allowed in file names");
-            }
-            else {
-                startClientGrid(optimize(clietnCfg));
-                stopGrid(clientNodeName);
-            }
+            Throwable e = GridTestUtils.assertThrowsWithCause(
+                    () -> startClientGrid(optimize(clietnCfg)), IgniteCheckedException.class
+            );
+
+            assertTrue(
+                    e.getMessage().contains("Cache or group name contains the character that are not allowed")
+                    || e.getMessage().contains("Cache name must not")
+            );
         }
     }
 
@@ -145,13 +142,16 @@ public class CacheDirectoryNameTest extends GridCommonAbstractTest {
     private static List<String> illegalCacheNames() {
         List<String> illegalNames = new ArrayList<>();
 
-        illegalNames.add("/");
-        illegalNames.add("a/b");
-
-        if (U.isWindows()) {
-            illegalNames.add("a>b");
-            illegalNames.add("a\\b");
-        }
+        illegalNames.add("abc\\");
+        illegalNames.add("abc/");
+        illegalNames.add("abc:");
+        illegalNames.add("abc?");
+        illegalNames.add("abc\"");
+        illegalNames.add("abc<");
+        illegalNames.add("abc>");
+        illegalNames.add("abc|");
+        illegalNames.add("abc ");
+        illegalNames.add("ab*c");
 
         return illegalNames;
     }
