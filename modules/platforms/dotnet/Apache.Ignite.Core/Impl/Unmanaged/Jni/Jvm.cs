@@ -59,6 +59,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             "--add-opens=java.base/java.io=ALL-UNNAMED",
             "--add-opens=java.base/java.net=ALL-UNNAMED",
             "--add-opens=java.base/java.nio=ALL-UNNAMED",
+            "--add-opens=java.base/java.security.cert=ALL-UNNAMED",
             "--add-opens=java.base/java.util=ALL-UNNAMED",
             "--add-opens=java.base/java.util.concurrent=ALL-UNNAMED",
             "--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED",
@@ -66,6 +67,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             "--add-opens=java.base/java.lang=ALL-UNNAMED",
             "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
             "--add-opens=java.base/java.math=ALL-UNNAMED",
+            "--add-opens=java.base/sun.security.x509=ALL-UNNAMED",
             "--add-opens=java.sql/java.sql=ALL-UNNAMED"
         };
 
