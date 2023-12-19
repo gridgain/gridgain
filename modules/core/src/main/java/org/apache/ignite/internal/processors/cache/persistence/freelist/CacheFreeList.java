@@ -169,7 +169,8 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
                 io.updateExpirationTime(pageAddr, data.offset(), row);
 
                 if (needWalDeltaRecord(pageId, page, walPlc)) {
-                    // TODO This record must contain only a reference to a logical WAL record with the actual data.
+                    // TODO IGNITE-5829
+                    // This record must contain only a reference to a logical WAL record with the actual data.
                     int rowSize = data.payloadSize();
 
                     byte[] payload = new byte[rowSize];
@@ -241,7 +242,8 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
                         updatedBytes += updatedOnCurrPage;
 
                         if (pageUpdated && needWalDeltaRecord(pageId, page, walPlc)) {
-                            // TODO Log a new version of DataPageUpdateRecord.
+                            // TODO https://ggsystems.atlassian.net/browse/GG-38158
+                            // Log a new version of DataPageUpdateRecord.
                             // For now, DataPageUpdateRecord cannot update fragmented data.
                         }
 

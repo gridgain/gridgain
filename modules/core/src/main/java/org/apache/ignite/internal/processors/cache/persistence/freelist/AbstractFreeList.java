@@ -121,7 +121,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             evictionTracker.touchPage(pageId);
 
             if (updated && needWalDeltaRecord(pageId, page, walPlc)) {
-                // TODO This record must contain only a reference to a logical WAL record with the actual data.
+                // TODO IGNITE-5829
+                // This record must contain only a reference to a logical WAL record with the actual data.
                 byte[] payload = new byte[rowSize];
 
                 DataPagePayload data = io.readPayload(pageAddr, itemId, pageSize());
@@ -208,7 +209,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             io.addRow(pageId, pageAddr, row, rowSize, pageSize());
 
             if (needWalDeltaRecord(pageId, page, null)) {
-                // TODO IGNITE-5829 This record must contain only a reference to a logical WAL record with the actual data.
+                // TODO IGNITE-5829
+                // This record must contain only a reference to a logical WAL record with the actual data.
                 byte[] payload = new byte[rowSize];
 
                 DataPagePayload data = io.readPayload(pageAddr, PageIdUtils.itemId(row.link()), pageSize());
@@ -254,7 +256,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             assert payloadSize > 0 : payloadSize;
 
             if (needWalDeltaRecord(pageId, page, null)) {
-                // TODO IGNITE-5829 This record must contain only a reference to a logical WAL record with the actual data.
+                // TODO IGNITE-5829
+                // This record must contain only a reference to a logical WAL record with the actual data.
                 byte[] payload = new byte[payloadSize];
 
                 DataPagePayload data = io.readPayload(pageAddr, PageIdUtils.itemId(row.link()), pageSize());
