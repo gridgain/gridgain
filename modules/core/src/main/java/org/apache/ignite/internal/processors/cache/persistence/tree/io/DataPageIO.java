@@ -161,8 +161,6 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
         CacheDataRow row
     ) throws IgniteCheckedException {
         assertPageType(pageAddr);
-        assert !isFragmented(pageAddr, dataOff) :
-            "Row should fit one page [pageAddr=" + pageAddr + ", dataOff=" + dataOff + ", row=" + row + ']';
 
         long addr = pageAddr + dataOff;
 

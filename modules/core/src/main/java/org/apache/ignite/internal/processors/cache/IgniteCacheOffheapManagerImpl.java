@@ -2023,13 +2023,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             dataRow.link(oldRow.link());
 
-            // ? should we update dataRow cache id before updating?
-            // need a test for cache groups
             if (grp.sharedGroup()) {
                 if (dataRow.cacheId() == CU.UNDEFINED_CACHE_ID)
                     dataRow.cacheId(cctx.cacheId());
 
-                if (oldRow != null && oldRow.cacheId() == CU.UNDEFINED_CACHE_ID)
+                if (oldRow.cacheId() == CU.UNDEFINED_CACHE_ID)
                     oldRow.cacheId(cctx.cacheId());
             }
 
