@@ -1058,7 +1058,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     public static String cacheDirName(CacheConfiguration<?, ?> ccfg) {
         boolean isSharedGrp = ccfg.getGroupName() != null;
 
-        return cacheDirName(isSharedGrp, CU.cacheOrGroupName(ccfg));
+        return cacheDirName(isSharedGrp, CacheGroupContext.cacheOrGroupName(ccfg));
     }
 
     /**
