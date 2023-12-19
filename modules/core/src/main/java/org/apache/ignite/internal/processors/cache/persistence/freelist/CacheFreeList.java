@@ -252,7 +252,7 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
 
                         nextLink = data.nextLink();
                     }
-                    finally  {
+                    finally {
                         if (!firstPage)
                             pageMem.writeUnlock(grpId, curPageId, curPage, walPlc, pageUpdated);
                     }

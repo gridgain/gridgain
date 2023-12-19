@@ -142,6 +142,7 @@ public class RowStore {
 
         return freeList.updateDataRow(link, row, statHolder);
     }
+
     /**
      * @param link Row link.
      * @param row New row data.
