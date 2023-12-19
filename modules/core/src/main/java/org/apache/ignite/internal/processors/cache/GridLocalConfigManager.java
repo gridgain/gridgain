@@ -272,11 +272,6 @@ public class GridLocalConfigManager {
 
         CU.validateCacheName(cacheName);
 
-        CU.validateCacheOrGroupNameCharacters(cfg.getName());
-
-        if (cfg.getGroupName() != null)
-            CU.validateCacheOrGroupNameCharacters(cfg.getGroupName());
-
         Collection<CacheConfiguration<?, ?>> ccfgs = new ArrayList<>(caches.size());
 
         for (CacheJoinNodeDiscoveryData.CacheInfo cacheInfo : caches.values())

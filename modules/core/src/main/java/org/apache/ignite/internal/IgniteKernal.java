@@ -3199,10 +3199,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     @Override public <K, V> IgniteCache<K, V> createCache(CacheConfiguration<K, V> cacheCfg) {
         A.notNull(cacheCfg, "cacheCfg");
         CU.validateNewCacheName(cacheCfg.getName());
-        CU.validateCacheOrGroupNameCharacters(cacheCfg.getName());
-
-        if (cacheCfg.getGroupName() != null)
-            CU.validateCacheOrGroupNameCharacters(cacheCfg.getGroupName());
 
         guard();
 
@@ -3259,7 +3255,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** {@inheritDoc} */
     @Override public <K, V> IgniteCache<K, V> createCache(String cacheName) {
         CU.validateNewCacheName(cacheName);
-        CU.validateCacheOrGroupNameCharacters(cacheName);
 
         guard();
 
@@ -3290,10 +3285,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         String cacheName = cacheCfg.getName();
 
         CU.validateNewCacheName(cacheName);
-        CU.validateCacheOrGroupNameCharacters(cacheCfg.getName());
-
-        if (cacheCfg.getGroupName() != null)
-            CU.validateCacheOrGroupNameCharacters(cacheCfg.getGroupName());
 
         guard();
 
@@ -3364,11 +3355,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     ) {
         A.notNull(cacheCfg, "cacheCfg");
         CU.validateNewCacheName(cacheCfg.getName());
-        CU.validateCacheOrGroupNameCharacters(cacheCfg.getName());
-
-        if (cacheCfg.getGroupName() != null)
-            CU.validateCacheOrGroupNameCharacters(cacheCfg.getGroupName());
-
         A.notNull(nearCfg, "nearCfg");
 
         guard();
@@ -3398,11 +3384,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         NearCacheConfiguration<K, V> nearCfg) {
         A.notNull(cacheCfg, "cacheCfg");
         CU.validateNewCacheName(cacheCfg.getName());
-        CU.validateCacheOrGroupNameCharacters(cacheCfg.getName());
-
-        if (cacheCfg.getGroupName() != null)
-            CU.validateCacheOrGroupNameCharacters(cacheCfg.getGroupName());
-
         A.notNull(nearCfg, "nearCfg");
 
         guard();
@@ -3444,9 +3425,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** {@inheritDoc} */
     @Override public <K, V> IgniteCache<K, V> createNearCache(String cacheName, NearCacheConfiguration<K, V> nearCfg) {
         CU.validateNewCacheName(cacheName);
-
-        CU.validateCacheOrGroupNameCharacters(cacheName);
-
         A.notNull(nearCfg, "nearCfg");
 
         guard();
@@ -3479,9 +3457,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     @Override public <K, V> IgniteCache<K, V> getOrCreateNearCache(String cacheName,
         NearCacheConfiguration<K, V> nearCfg) {
         CU.validateNewCacheName(cacheName);
-
-        CU.validateCacheOrGroupNameCharacters(cacheName);
-
         A.notNull(nearCfg, "nearCfg");
 
         guard();
@@ -3611,7 +3586,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** {@inheritDoc} */
     @Override public <K, V> IgniteCache<K, V> getOrCreateCache(String cacheName) {
         CU.validateNewCacheName(cacheName);
-        CU.validateCacheOrGroupNameCharacters(cacheName);
 
         guard();
 
@@ -3647,8 +3621,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         CacheConfigurationOverride cfgOverride, boolean checkThreadTx) {
         CU.validateNewCacheName(cacheName);
 
-        CU.validateCacheOrGroupNameCharacters(cacheName);
-
         guard();
 
         try {
@@ -3668,11 +3640,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     @Override public <K, V> void addCacheConfiguration(CacheConfiguration<K, V> cacheCfg) {
         A.notNull(cacheCfg, "cacheCfg");
         CU.validateNewCacheName(cacheCfg.getName());
-
-        CU.validateCacheOrGroupNameCharacters(cacheCfg.getName());
-
-        if (cacheCfg.getGroupName() != null)
-            CU.validateCacheOrGroupNameCharacters(cacheCfg.getGroupName());
 
         guard();
 

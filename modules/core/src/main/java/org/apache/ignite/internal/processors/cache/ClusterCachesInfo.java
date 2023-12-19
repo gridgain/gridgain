@@ -92,6 +92,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CACHE_PROC;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
 import static org.apache.ignite.internal.processors.cache.GridCacheProcessor.CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT;
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.containsInvalidFileNameChars;
 import static org.apache.ignite.internal.processors.cache.GridLocalConfigManager.validateIncomingConfiguration;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
 
@@ -1083,6 +1084,15 @@ public class ClusterCachesInfo {
                 return false;
             }
         }
+
+        if (containsInvalidFileNameChars(ccfg, ctx.config().getDataStorageConfiguration())) {
+            err = new IgniteCheckedException("Cache start failed. Cache or group name contains the characters " +
+                "that are not allowed in file names [cache=" + cacheName +
+                (ccfg.getGroupName() == null ? "" : ", group=" + ccfg.getGroupName()) + ']');
+        }
+
+        if (!validateStartNewCache(err, persistedCfgs, res, req))
+            return false;
 
         assert req.cacheType() != null : req;
         assert F.eq(ccfg.getName(), cacheName) : req;

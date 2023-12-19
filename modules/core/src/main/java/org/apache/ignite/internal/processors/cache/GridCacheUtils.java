@@ -16,6 +16,33 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.nio.file.InvalidPathException;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Stream;
+import javax.cache.Cache;
+import javax.cache.CacheException;
+import javax.cache.configuration.Factory;
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.integration.CacheLoader;
+import javax.cache.integration.CacheWriter;
+import javax.cache.integration.CacheWriterException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -94,32 +121,6 @@ import org.apache.ignite.transactions.TransactionRollbackException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.cache.Cache;
-import javax.cache.CacheException;
-import javax.cache.configuration.Factory;
-import javax.cache.expiry.Duration;
-import javax.cache.expiry.ExpiryPolicy;
-import javax.cache.integration.CacheLoader;
-import javax.cache.integration.CacheWriter;
-import javax.cache.integration.CacheWriterException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.LongAdder;
-import java.util.stream.Stream;
-
 import static java.util.Objects.nonNull;
 import static java.util.stream.Stream.concat;
 import static java.util.stream.Stream.of;
@@ -132,6 +133,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC
 import static org.apache.ignite.configuration.CacheConfiguration.DFLT_CACHE_MODE;
 import static org.apache.ignite.internal.GridTopic.TOPIC_REPLICATION;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
+import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.cacheDirName;
 
 /**
  * Cache utility methods.
@@ -1110,6 +1112,14 @@ public class GridCacheUtils {
     }
 
     /**
+     * @param ccfg Cache configuration.
+     * @return Group name if it is specified, otherwise cache name.
+     */
+    public static String cacheOrGroupName(CacheConfiguration<?, ?> ccfg) {
+        return ccfg.getGroupName() == null ? ccfg.getName() : ccfg.getGroupName();
+    }
+
+    /**
      * Convert TTL to expire time.
      *
      * @param ttl TTL.
@@ -1532,19 +1542,6 @@ public class GridCacheUtils {
             : cfg.getTransactionConfiguration();
     }
 
-    public static void validateCacheOrGroupNameCharacters(String name) {
-        char[] forbiddenChars = new char[] {'\\', '/', ':', '?', '"', '<', '>', '|'};
-
-        for (int i = 0; i < forbiddenChars.length; i++) {
-            A.ensure(name.indexOf(forbiddenChars[i]) < 0, "Cache or group name contains the character that "
-                    + "are not allowed '" + forbiddenChars[i] + "'.");
-        }
-
-        A.ensure(!name.endsWith(" "), "Cache name must not end with a space.");
-        A.ensure(name.indexOf('*') < 0 || name.indexOf('*') == name.length() - 1,
-                "Cache name must not contain a '*', except of a cache template name.");
-    }
-
     /**
      * @param name Cache name.
      * @throws IllegalArgumentException In case the name is not valid.
@@ -1581,14 +1578,8 @@ public class GridCacheUtils {
      */
     public static void validateConfigurationCacheNames(Collection<CacheConfiguration> ccfgs)
         throws IllegalArgumentException {
-        for (CacheConfiguration ccfg : ccfgs) {
+        for (CacheConfiguration ccfg : ccfgs)
             validateNewCacheName(ccfg.getName());
-
-            CU.validateCacheOrGroupNameCharacters(ccfg.getName());
-
-            if (ccfg.getGroupName() != null)
-                CU.validateCacheOrGroupNameCharacters(ccfg.getGroupName());
-        }
     }
 
     /**
@@ -2264,6 +2255,27 @@ public class GridCacheUtils {
                 .setSqlSchema(sqlSchema)
                 .setSqlEscapeAll(isSqlEscape)
                 .setQueryParallelism(qryParallelism);
+    }
+
+    /**
+     * Checks if the cache directory path contains invalid chars.
+     *
+     * @param ccfg Cache configuration
+     * @param dscfg Data storage configuration.
+     * @return {@code True} if cache directory contains the characters that are not allowed in file names.
+     */
+    public static boolean containsInvalidFileNameChars(CacheConfiguration<?, ?> ccfg, DataStorageConfiguration dscfg) {
+        if (!CU.isPersistentCache(ccfg, dscfg))
+            return false;
+
+        String expDir = cacheDirName(ccfg);
+
+        try {
+            return !expDir.equals(Paths.get(expDir).toFile().getName());
+        }
+        catch (InvalidPathException ignored) {
+            return true;
+        }
     }
 
     /**
