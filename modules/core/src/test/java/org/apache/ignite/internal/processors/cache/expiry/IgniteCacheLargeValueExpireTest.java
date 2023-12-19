@@ -103,8 +103,8 @@ public class IgniteCacheLargeValueExpireTest extends GridCommonAbstractTest {
         awaitPartitionMapExchange();
     }
 
-    @Override
-    protected void afterTestsStopped() throws Exception {
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
 
         stopAllGrids();
