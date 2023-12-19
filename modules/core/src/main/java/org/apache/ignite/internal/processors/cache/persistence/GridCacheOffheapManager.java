@@ -287,46 +287,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         syncMetadata(ctx, ctx.executor(), false);
     }
 
-    /** {@inheritDoc} */
-    @Override public void afterCheckpointEnd(Context ctx) throws IgniteCheckedException {
-        persStoreMetrics.onStorageSizeChanged(
-            forAllPageStores(PageStore::size),
-            forAllPageStores(PageStore::getSparseSize)
-        );
-    }
-
-    /**
-     * @param f Consumer.
-     * @return Accumulated result for all page stores.
-     */
-    private long forAllPageStores(ToLongFunction<PageStore> f) {
-        return forGroupPageStores(grp, f);
-    }
-
-    /**
-     * @param gctx Group context.
-     * @param f Consumer.
-     * @return Accumulated result for all page stores.
-     */
-    private long forGroupPageStores(CacheGroupContext gctx, ToLongFunction<PageStore> f) {
-        int groupId = gctx.groupId();
-
-        long res = 0;
-
-        try {
-            Collection<PageStore> stores = ((FilePageStoreManager)ctx.cache().context().pageStore()).getStores(groupId);
-
-            if (stores != null) {
-                for (PageStore store : stores)
-                    res += f.applyAsLong(store);
-            }
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
-
-        return res;
-    }
 
     /**
      * Syncs and saves meta-information of all data structures to page memory.
