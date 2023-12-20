@@ -70,8 +70,6 @@ public class ResetLostPartitionsFromClientTest extends GridCommonAbstractTest {
 
         IgniteEx client = startClientGrid(3);
 
-        client.cluster().state(ClusterState.ACTIVE);
-
         String cacheName = "test_cache";
 
         CacheConfiguration<Integer, String> cacheCfg = new CacheConfiguration<>(cacheName);
