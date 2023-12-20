@@ -5937,10 +5937,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         /** New expiration time. */
         private final long expireTime;
 
-        /** Link to the updated row. It can be {@code null} or equals to {@link #oldRow}. */
+        /** Reference to the updated row. It can be {@code null} or equals to {@link #oldRow}. */
         private CacheDataRow newRow;
 
-        /** Link to the row to be updated. */
+        /** Reference to the row to be updated. */
         private CacheDataRow oldRow;
 
         /**
