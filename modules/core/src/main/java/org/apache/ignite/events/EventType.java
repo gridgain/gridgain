@@ -1054,9 +1054,9 @@ public interface EventType {
     /**
      * All grid service execution events. This array can be directly passed into
      * {@link IgniteEvents#localListen(IgnitePredicate, int...)} method to
-     * subscribe to all grid task execution events.
+     * subscribe to all grid service execution events.
      *
-     * @see TaskEvent
+     * @see ServiceEvent
      */
     public static final int[] EVTS_SERVICE_EXECUTION = {
             EVT_SERVICE_METHOD_EXECUTION_STARTED,
