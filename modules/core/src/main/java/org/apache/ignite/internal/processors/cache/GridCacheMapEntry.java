@@ -4142,7 +4142,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         try {
             checkObsolete();
 
-            if (cctx.queries().enabled() || cctx.mvccEnabled() || cctx.cacheObjectContext().compressionStrategy() != null || isNear()) {
+            if (cctx.queries().enabled() || cctx.mvccEnabled() || cctx.cacheObjectContext().compressionStrategy() != null || isNear() ||
+                cctx.group().persistenceEnabled()) {
+                // TODO https://ggsystems.atlassian.net/browse/GG-38158
+
                 // Fast update is not possible for this entry. Need to fallback to writing the whole entry.
                 //  - in general, enabling sql indices should not prevent from using fast update. Can be improved later.
                 //  - mvcc and compression are not supported for fast update yet.
