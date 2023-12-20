@@ -4144,7 +4144,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             if (cctx.queries().enabled() || cctx.mvccEnabled() || cctx.cacheObjectContext().compressionStrategy() != null || isNear()) {
                 // Fast update is not possible for this entry. Need to fallback to writing the whole entry.
-                //  - in general, enabling sql indcies should not prevent from using fast update. can be improved later.
+                //  - in general, enabling sql indices should not prevent from using fast update. Can be improved later.
                 //  - mvcc and compression are not supported for fast update yet.
                 //  - near entries only require update on the entry itself.
                 unswap(null, true);
