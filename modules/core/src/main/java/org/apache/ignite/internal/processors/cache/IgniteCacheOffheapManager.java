@@ -806,7 +806,7 @@ public interface IgniteCacheOffheapManager {
 
         /**
          * Updates the old row with the new value of expiration time and returns the new row that represents the updated row.
-         * It is assumed that lnk to the old row and a new one are the same.
+         * It is assumed that link to the old row and a new one are the same.
          *
          * @param cctx Cache context.
          * @param expireTime New expiration time.
