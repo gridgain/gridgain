@@ -99,7 +99,7 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
 
             assert updated != null; // Can't fail here.
 
-            return Boolean.TRUE.equals(updated);
+            return updated;
         }
         catch (AssertionError e) {
             throw corruptedFreeListException(e);
