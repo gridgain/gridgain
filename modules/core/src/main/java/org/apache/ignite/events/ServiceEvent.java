@@ -117,7 +117,7 @@ public class ServiceEvent extends EventAdapter {
      * Gets security subject ID initiated this service event.
      * <p>
      * Subject ID will be set either to node ID or client ID initiated
-     * task execution.
+     * service execution.
      *
      * @return Subject ID.
      */
