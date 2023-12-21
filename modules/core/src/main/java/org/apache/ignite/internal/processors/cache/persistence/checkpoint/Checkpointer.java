@@ -708,8 +708,8 @@ public class Checkpointer extends GridWorker {
                 chp.pagesSize,
                 tracker.dataPagesWritten(),
                 tracker.cowPagesWritten(),
-                dbMgr.forAllPageStores(PageStore::size),
-                dbMgr.forAllPageStores(PageStore::getSparseSize)
+                dbMgr.forAllGroupsPageStores(PageStore::size),
+                dbMgr.forAllGroupsPageStores(PageStore::getSparseSize)
             );
         }
     }

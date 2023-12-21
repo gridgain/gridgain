@@ -514,8 +514,8 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
 
         int expTotal = 0;
         int expSpare = 0;
-        for (CacheGroupContext groupCtx: grid.context().cache().cacheGroups()) {
-            if(groupCtx.persistenceEnabled()){
+        for (CacheGroupContext groupCtx : grid.context().cache().cacheGroups()) {
+            if (groupCtx.persistenceEnabled()) {
                 expTotal += groupCtx.metrics().getStorageSize();
                 expSpare += groupCtx.metrics().getSparseStorageSize();
             }
