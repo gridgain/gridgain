@@ -152,7 +152,7 @@ do
             OS/390*)
                 "$JAVA" ${QUIET} ${JVM_OPTS} "${RESTART_SUCCESS_OPT}" \
                 -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" -DIGNITE_WAL_MMAP=false \
-                -Dcom.ibm.jsse2.overrideDefaultTLS=true -Dssl.KeyManagerFactory.algorithm=IbmX509 \
+                $(getIbmSslOpts $version) \
                 -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} && ERRORCODE="$?" || ERRORCODE="$?"
             ;;
             *)
@@ -171,7 +171,7 @@ do
             OS/390*)
                 "$JAVA" ${QUIET} ${JVM_OPTS} "${RESTART_SUCCESS_OPT}" \
                  -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" -DIGNITE_WAL_MMAP=false \
-                 -Dcom.ibm.jsse2.overrideDefaultTLS=true -Dssl.KeyManagerFactory.algorithm=IbmX509 \
+                 $(getIbmSslOpts $version) \
                  -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} "${CONFIG}" && ERRORCODE="$?" || ERRORCODE="$?"
             ;;
             *)

@@ -15,6 +15,17 @@
 # limitations under the License.
 #
 
+getIbmSslOpts() {
+  version=$1
+  OS390_SSL_ALGO="IbmX509"
+
+  if [ "${version}" -ge 11 ]; then
+    OS390_SSL_ALGO="SunX509"
+  fi
+
+  echo "-Dcom.ibm.jsse2.overrideDefaultTLS=true -Dssl.KeyManagerFactory.algorithm=${OS390_SSL_ALGO}"
+}
+
 # Gets java specific options like add-exports and add-opens
 # First argument is the version of the java
 # Second argument is the current value of the jvm options
