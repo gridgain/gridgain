@@ -2382,8 +2382,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         if (permits0 < permits)
             permits = permits0;
 
+        int overrides = getInteger(IGNITE_RECOVERY_SEMAPHORE_PERMITS, permits);
+
+        log.warning(">>>>> default=" + (exec.stripesCount() * 4) + ", permits0=" + permits0 + ", permits=" + permits +
+            ", overrides=" + overrides + ", memory=" + maxMemory);
+
         // Property for override any calculation.
-        return getInteger(IGNITE_RECOVERY_SEMAPHORE_PERMITS, permits);
+        return overrides;
     }
 
     /**
@@ -2836,7 +2841,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         StripedExecutor exec = cctx.kernalContext().pools().getStripedExecutorService();
 
-        Semaphore semaphore = new Semaphore(semaphorePertmits(exec));
+        int semaphorePermits = semaphorePertmits(exec);
+
+        Semaphore semaphore = new Semaphore(semaphorePermits);
 
         Map<GroupPartitionId, Integer> partitionRecoveryStates = new HashMap<>();
 

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -65,6 +66,7 @@ import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteMessaging;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CachePeekMode;
@@ -158,10 +160,16 @@ import org.apache.ignite.transactions.TransactionRollbackException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.CREATE_NEW;
+import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
+import static org.apache.ignite.IgniteSystemProperties.OOM_HAPPEN;
+import static org.apache.ignite.IgniteSystemProperties.SHIT_HAPPEN;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheRebalanceMode.NONE;
@@ -2142,6 +2150,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             "[subfolderName=" + subfolderName + ", src=" + src + ", dst=" + dst + ']');
     }
 
+    private static final AtomicInteger COUNTER = new AtomicInteger();
+
     /**
      *
      */
@@ -2149,6 +2159,41 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         assertTrue("Grids are not stopped", F.isEmpty(G.allGrids()));
 
         String dfltWorkDir = U.defaultWorkDirectory();
+
+        if (IgniteSystemProperties.getBoolean(OOM_HAPPEN, false)) {
+            System.clearProperty(OOM_HAPPEN);
+
+            File dest = new File(dfltWorkDir + "/log", testDescription().replace("#", "_") + "_oom" + COUNTER.getAndIncrement());
+
+            U.delete(dest);
+
+            U.copy(
+                U.resolveWorkDirectory(dfltWorkDir, DFLT_STORE_DIR, false),
+                dest,
+                false
+            );
+
+            log.warning(">>> COPY PDS ON OOM: " + dest.getAbsolutePath());
+        }
+
+        if (IgniteSystemProperties.getBoolean(SHIT_HAPPEN, false)) {
+            System.clearProperty(SHIT_HAPPEN);
+
+            String testName = testDescription().replace("#", "_");
+
+            File file = new File(dfltWorkDir + "/artifacts/" + testName + "/", COUNTER.getAndIncrement() + "some.txt");
+
+            U.delete(file);
+
+            try {
+                log.error("!!!! try save file: " + file.getAbsolutePath());
+
+                Files.write(file.toPath(), "hello!".getBytes(UTF_8), CREATE_NEW, CREATE, WRITE);
+            }
+            catch (Throwable t) {
+                log.error("Error there:" + file.getAbsolutePath(), t);
+            }
+        }
 
         deleteDirWithCheckAndLogging(U.resolveWorkDirectory(dfltWorkDir, "cp", false));
         deleteDirWithCheckAndLogging(U.resolveWorkDirectory(dfltWorkDir, DFLT_STORE_DIR, false));

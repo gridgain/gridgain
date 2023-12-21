@@ -21,7 +21,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteOrder;
+import java.nio.file.Files;
+import java.util.Base64;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
@@ -37,12 +40,14 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.Re
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordSerializerFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.SegmentHeader;
 import org.apache.ignite.internal.util.GridCloseableIteratorAdapter;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.P2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.stream.Collectors.joining;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.readSegmentHeader;
 
 /**
@@ -295,6 +300,38 @@ public abstract class AbstractWalRecordsIterator
             }
 
             return null;
+        }
+        catch (OutOfMemoryError oom) {
+            log.error(">>>>> OutOfMemoryError [actualFilePtr=" + actualFilePtr + ", hnd=" + hnd + ']');
+
+            FileWriteAheadLogManager wal = (FileWriteAheadLogManager)sharedCtx.wal();
+
+            FileDescriptor[] segments = wal.segmentRouter.findSegment1(hnd.idx());
+
+            log.error(">>>>> segments [" +
+                Stream.of(segments).map(descriptor -> "path=" + descriptor.file.getAbsolutePath() + ", exists=" + descriptor.file.exists() + " ").collect(joining())
+                + ']');
+
+            for (FileDescriptor segment : segments) {
+                if (segment.file.exists()) {
+                    byte[] zipBytes = IgniteUtils.zip(readAllBytes(segment.file));
+
+                    log.error(">>>>> segment content [path=" + segment.file.getAbsolutePath() + ", content=" + Base64.getEncoder().encodeToString(zipBytes) + ']');
+                }
+            }
+
+            throw oom;
+        }
+    }
+
+    private static byte[] readAllBytes(File file) {
+        assert file.exists() : file.getAbsolutePath();
+
+        try {
+            return Files.readAllBytes(file.toPath());
+        }
+        catch (IOException e) {
+            throw new RuntimeException(file.getAbsolutePath(), e);
         }
     }
 

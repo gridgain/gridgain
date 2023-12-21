@@ -228,7 +228,7 @@ public class SegmentedRingByteBuffer {
         for (;;) {
             long currTail = tail;
 
-            assert !safe || currTail < 0 : "Unsafe usage of segment ring byte buffer currTail=" + currTail;
+            assert !safe || currTail < 0 : "Unsafe usage of segment ring byte buffer currTail=" + currTail + ", safe=" + safe;
 
             if (currTail < 0) {
                 if (safe)
@@ -550,7 +550,7 @@ public class SegmentedRingByteBuffer {
      */
     public class ReadSegment extends Segment {
         /** New head. */
-        private final long newHead;
+        public final long newHead;
 
         /**
          * @param seg Seg.

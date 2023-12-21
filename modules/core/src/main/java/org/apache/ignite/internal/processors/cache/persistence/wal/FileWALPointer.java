@@ -39,6 +39,8 @@ public class FileWALPointer implements WALPointer, Comparable<FileWALPointer> {
     /** Written record length. */
     private int len;
 
+    private long written;
+
     /**
      * @param idx Absolute WAL segment file index (incremental counter).
      * @param fileOff Offset in file, from the beginning.
@@ -76,6 +78,14 @@ public class FileWALPointer implements WALPointer, Comparable<FileWALPointer> {
      */
     public void length(int len) {
         this.len = len;
+    }
+
+    public long getWritten() {
+        return written;
+    }
+
+    public void setWritten(long written) {
+        this.written = written;
     }
 
     /** {@inheritDoc} */

@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersion;
@@ -36,6 +38,18 @@ import org.apache.ignite.transactions.TransactionState;
  * {@link TxRecord} WAL serializer.
  */
 public class TxRecordSerializer {
+    /** Logger. */
+    private IgniteLogger log;
+
+    /**
+     * Constructor.
+     *
+     * @param log Logger.
+     */
+    public TxRecordSerializer(IgniteLogger log) {
+        this.log = log;
+    }
+
     /** Mvcc version record size. */
     static final int MVCC_VERSION_SIZE = 8 + 8 + 4;
 
@@ -81,6 +95,11 @@ public class TxRecordSerializer {
 
         Map<Short, Collection<Short>> participatingNodes = rec.participatingNodes();
 
+        if (participatingNodes != null && participatingNodes.size() > 10) {
+            ///
+            U.dumpStack(log, ">>> TxRecord [rec=" + rec + ']');
+        }
+
         if (participatingNodes != null && !participatingNodes.isEmpty()) {
             buf.putInt(participatingNodes.size());
 
@@ -90,6 +109,10 @@ public class TxRecordSerializer {
                 Collection<Short> backupNodes = e.getValue();
 
                 buf.putInt(backupNodes.size());
+
+                if (backupNodes.size() > 10) {
+                    U.dumpStack(log, ">>> TxRecord [rec=" + rec + ']');
+                }
 
                 for (short backupNode : backupNodes)
                     buf.putShort(backupNode);
@@ -124,15 +147,40 @@ public class TxRecordSerializer {
 
             int backupNodesSize = in.readInt();
 
-            Collection<Short> backupNodes = new ArrayList<>(backupNodesSize);
+            try {
+                if (backupNodesSize > 3) {
+                    log.info(">>>>> Read tx record: [primaryNode=" + primaryNode
+                        + ", backupNodesSize=" + backupNodesSize
+                        + ", state=" + state
+                        + ", nearXidVer=" + nearXidVer
+                        + ", writeVer=" + writeVer
+                        + ", participatingNodesSize=" + participatingNodesSize + ']');
+                }
 
-            for (int j = 0; j < backupNodesSize; j++) {
-                short backupNode = in.readShort();
+                Collection<Short> backupNodes = new ArrayList<>(backupNodesSize);
 
-                backupNodes.add(backupNode);
+                for (int j = 0; j < backupNodesSize; j++) {
+                    short backupNode = in.readShort();
+
+                    backupNodes.add(backupNode);
+                }
+
+                participatingNodes.put(primaryNode, backupNodes);
             }
+            catch (Throwable t) {
+                log.warning(">>>>> Read tx record: OutOfMemoryCheck [primaryNode=" + primaryNode
+                    + ", backupNodesSize=" + backupNodesSize
+                    + ", state=" + state
+                    + ", nearXidVer=" + nearXidVer
+                    + ", writeVer=" + writeVer
+                    + ", participatingNodesSize=" + participatingNodesSize + ']');
 
-            participatingNodes.put(primaryNode, backupNodes);
+                if (t instanceof OutOfMemoryError) {
+                    System.setProperty(IgniteSystemProperties.OOM_HAPPEN, Boolean.TRUE.toString());
+                }
+
+                throw t;
+            }
         }
 
         long ts = in.readLong();

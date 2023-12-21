@@ -370,6 +370,8 @@ public class FileHandleManagerImpl implements FileHandleManager {
                         continue;
                     }
 
+                    log.error(">>>>> WRITE SEGMENTS ");
+
                     for (int i = 0; i < segs.size(); i++) {
                         SegmentedRingByteBuffer.ReadSegment seg = segs.get(i);
 
@@ -613,6 +615,8 @@ public class FileHandleManagerImpl implements FileHandleManager {
                 sleep(syncTimeout);
 
                 try {
+                    log.error(">>>>> FSYNC ");
+
                     flush(null, true);
                 }
                 catch (IgniteCheckedException e) {
