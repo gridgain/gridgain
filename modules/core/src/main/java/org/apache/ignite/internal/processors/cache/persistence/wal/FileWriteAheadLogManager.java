@@ -26,6 +26,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.ClosedByInterruptException;
@@ -41,14 +42,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
+import java.util.stream.LongStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -75,6 +79,7 @@ import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.RolloverType;
 import org.apache.ignite.internal.pagemem.wal.record.SwitchSegmentRecord;
+import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageDeltaRecord;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -108,6 +113,8 @@ import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.GridUnsafe;
+import org.apache.ignite.internal.util.debug.DebugUtils;
+import org.apache.ignite.internal.util.debug.WalRecordCyclicBufferByThread;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.io.GridFileUtils;
@@ -688,6 +695,31 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         catch (IgniteInterruptedCheckedException e) {
             U.error(log, "Failed to gracefully shutdown WAL components, thread was interrupted.", e);
         }
+
+        FileWALPointer lastWritePointer = (FileWALPointer)lastWritePointer();
+
+        if (lastWritePointer != null) {
+            long index = lastWritePointer.index();
+
+            List<IgniteBiTuple<Thread, WALRecord>> allRecords = LongStream.of(index - 1, index, index + 1)
+                .filter(i -> i >= 0)
+                .mapToObj(walRecordCyclicBufferByThread::getSortedListWalRecords)
+                .flatMap(Collection::stream)
+                .collect(toList());
+
+            DebugUtils.dumpWalRecords(lastWritePointer, allRecords, null, log);
+
+            List<File> segments = getSegmentRouter().findSegment1(lastWritePointer.index()).stream()
+                .map(FileDescriptor::file)
+                .collect(toList());
+
+            DebugUtils.dumpWalSegments(lastWritePointer, segments, log);
+        }
+
+        log.error(String.format(
+            ">>>>> Stop WAL: [lawWritePtr=%s, archiver=%s]",
+            lastWritePointer, archiver != null
+        ));
     }
 
     /** {@inheritDoc} */
@@ -822,13 +854,63 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         }
     }
 
+    private final WalRecordCyclicBufferByThread walRecordCyclicBufferByThread = new WalRecordCyclicBufferByThread(1_000);
+
     /** {@inheritDoc} */
     @Override public WALPointer log(WALRecord rec) throws IgniteCheckedException {
         return log(rec, RolloverType.NONE);
     }
 
+    private final AtomicBoolean firstLogRec = new AtomicBoolean();
+
     /** {@inheritDoc} */
     @Override public WALPointer log(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
+        WALPointer ptr = log0(rec, rolloverType);
+
+        if (ptr == null)
+            return ptr;
+
+        if (firstLogRec.compareAndSet(false, true)) {
+            log.error(String.format(
+                ">>>>> First log record: [ptr=%s, rec=%s]",
+                ptr, rec
+            ));
+        }
+
+        if (!(rec instanceof TxRecord))
+            return ptr;
+
+        // TODO: GG-34721 maybe log all wal records, don't forget bufferSize
+        walRecordCyclicBufferByThread.add(rec);
+
+        // TODO: GG-34721 maybe remove this if
+        if (rec != null)
+            return ptr;
+
+        try {
+            WALRecord read = read0((FileWALPointer)ptr);
+
+            assert rec.type() == read.type() : "rec=" + rec + ", read=" + read;
+        }
+        catch (Throwable t) {
+            walRecordCyclicBufferByThread.stop();
+
+            long absSegIdx = ((FileWALPointer)ptr).index();
+
+            DebugUtils.dumpWalRecords(
+                ptr,
+                walRecordCyclicBufferByThread.getSortedListWalRecords(absSegIdx),
+                t,
+                log
+            );
+
+            throw t;
+        }
+
+        return ptr;
+    }
+
+    private WALPointer log0(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
         if (serializer == null || mode == WALMode.NONE)
             return null;
 
@@ -949,6 +1031,20 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         }
     }
 
+    /** */
+    private WALRecord read0(FileWALPointer ptr) throws IgniteCheckedException {
+        FileWALPointer end = new FileWALPointer(ptr.index(), ptr.fileOffset() + ptr.length(), 0);
+
+        try (WALIterator it = replay0(ptr, end, null, true)) {
+            IgniteBiTuple<WALPointer, WALRecord> rec = it.next();
+
+            if (rec != null && rec.get2().position().equals(ptr))
+                return rec.get2();
+            else
+                throw new StorageException("Failed to read record by pointer [ptr=" + ptr + ", rec=" + rec + "]");
+        }
+    }
+
     /** {@inheritDoc} */
     @Override public WALIterator replay(WALPointer start) throws IgniteCheckedException, StorageException {
         return replay(start, null);
@@ -959,13 +1055,29 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         WALPointer start,
         @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter
     ) throws IgniteCheckedException, StorageException {
+        return replay0(start, null, recordDeserializeFilter, false);
+    }
+
+    @Override public WALIterator replay(
+        WALPointer start,
+        @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter,
+        boolean debug
+    ) throws IgniteCheckedException, StorageException {
+        return replay0(start, null, recordDeserializeFilter, debug);
+    }
+
+    /** */
+    private WALIterator replay0(
+        WALPointer start,
+        @Nullable FileWALPointer end,
+        @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter,
+        boolean debug
+    ) throws IgniteCheckedException, StorageException {
         assert start == null || start instanceof FileWALPointer : "Invalid start pointer: " + start;
 
         FileWriteHandle hnd = currentHandle();
 
-        FileWALPointer end = null;
-
-        if (hnd != null)
+        if (end == null && hnd != null)
             end = hnd.position();
 
         RecordsIterator iter = new RecordsIterator(
@@ -982,7 +1094,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             log,
             segmentAware,
             segmentRouter,
-            lockedSegmentFileInputFactory
+            lockedSegmentFileInputFactory,
+            debug
         );
 
         try {
@@ -2833,7 +2946,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             IgniteLogger log,
             SegmentAware segmentAware,
             SegmentRouter segmentRouter,
-            SegmentFileInputFactory segmentFileInputFactory
+            SegmentFileInputFactory segmentFileInputFactory,
+            boolean debug
         ) throws IgniteCheckedException {
             super(
                 log,
@@ -2841,7 +2955,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 serializerFactory,
                 ioFactory,
                 dsCfg.getWalRecordIteratorBufferSize(),
-                segmentFileInputFactory
+                segmentFileInputFactory,
+                debug
             );
 
             this.walArchiveDir = walArchiveDir;
@@ -3032,6 +3147,20 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         /** {@inheritDoc} */
         @Override protected IgniteCheckedException handleRecordException(Exception e, @Nullable FileWALPointer ptr) {
             if (e instanceof IgniteCheckedException && X.hasCause(e, IgniteDataIntegrityViolationException.class)) {
+                Integer pos = Optional.of(currWalSegment)
+                    .map(AbstractReadFileHandle::in)
+                    .map(ByteBufferBackedDataInput::buffer)
+                    .map(Buffer::position)
+                    .orElse(null);
+
+                log.error(
+                    String.format(
+                        ">>>>> ON handleRecordException: [start=%s, end=%s, ptr=%s, curWalSegmIdx=%s, lastReadPointer=%s, pos=%s]",
+                        start, end, ptr, curWalSegmIdx, lastReadPointer(), pos
+                    ),
+                    e
+                );
+
                 // This means that there is no explicit last segment, so we iterate until the very end.
                 if (end == null) {
                     long nextWalSegmentIdx = curWalSegmIdx + 1;
@@ -3108,6 +3237,25 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         @Override protected AbstractReadFileHandle createReadFileHandle(SegmentIO fileIO,
             RecordSerializer ser, FileInput in) {
             return new ReadFileHandle(fileIO, ser, in, segmentAware);
+        }
+
+        @Override protected IgniteBiTuple<WALPointer, WALRecord> advanceRecord(
+            @Nullable AbstractReadFileHandle hnd
+        ) throws IgniteCheckedException {
+            long hndPos = hnd == null ? -1 : hnd.in().position();
+
+            if (start != null && end != null && end.fileOffset() == start.fileOffset() + start.length()
+                && hnd != null && hnd.in().position() > start.fileOffset())
+                return null;
+
+            try {
+                return super.advanceRecord(hnd);
+            }
+            catch (Throwable t) {
+                log.error(">>>>> ON ADVANCE RECORD: [start=" + start + ", end=" + end + ", hndPos=" + hndPos + ']');
+
+                throw t;
+            }
         }
     }
 

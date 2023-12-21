@@ -21,7 +21,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteOrder;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
@@ -37,6 +40,8 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.Re
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordSerializerFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.SegmentHeader;
 import org.apache.ignite.internal.util.GridCloseableIteratorAdapter;
+import org.apache.ignite.internal.util.debug.CyclicBuffer;
+import org.apache.ignite.internal.util.debug.FilesToArtifacts;
 import org.apache.ignite.internal.util.typedef.P2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -74,7 +79,7 @@ public abstract class AbstractWalRecordsIterator
     /**
      * Current WAL segment read file handle. To be filled by subclass advanceSegment
      */
-    private AbstractReadFileHandle currWalSegment;
+    protected AbstractReadFileHandle currWalSegment;
 
     /** Logger */
     @NotNull protected final IgniteLogger log;
@@ -100,6 +105,8 @@ public abstract class AbstractWalRecordsIterator
     /** Position of last read valid record. */
     private WALPointer lastRead;
 
+    private final @Nullable CyclicBuffer<IgniteBiTuple<WALRecord.RecordType, FileWALPointer>> lastReadCyclicBuffer;
+
     /**
      * @param log Logger.
      * @param sharedCtx Shared context.
@@ -114,7 +121,9 @@ public abstract class AbstractWalRecordsIterator
         @NotNull final RecordSerializerFactory serializerFactory,
         @NotNull final FileIOFactory ioFactory,
         final int initialReadBufferSize,
-        SegmentFileInputFactory segmentFileInputFactory) {
+        SegmentFileInputFactory segmentFileInputFactory,
+        boolean debug
+    ) {
         this.log = log;
         this.sharedCtx = sharedCtx;
         this.serializerFactory = serializerFactory;
@@ -122,6 +131,8 @@ public abstract class AbstractWalRecordsIterator
         this.segmentFileInputFactory = segmentFileInputFactory;
 
         buf = new ByteBufferExpander(initialReadBufferSize, ByteOrder.nativeOrder());
+
+        lastReadCyclicBuffer = debug ? new CyclicBuffer<>(1_000) : null;
     }
 
     /** {@inheritDoc} */
@@ -159,6 +170,16 @@ public abstract class AbstractWalRecordsIterator
         }
     }
 
+    private void addLastRead(IgniteBiTuple<WALPointer, WALRecord> curRec) {
+        if (lastReadCyclicBuffer == null || curRec == null || curRec.get1() == null)
+            return;
+
+        lastReadCyclicBuffer.add(new IgniteBiTuple<>(
+            curRec.get2().type0(),
+            (FileWALPointer)curRec.get1()
+        ));
+    }
+
     /**
      * Switches records iterator to the next record. <ul> <li>{@link #curRec} will be updated.</li> <li> If end of
      * segment reached, switch to new segment is called. {@link #currWalSegment} will be updated.</li> </ul>
@@ -168,8 +189,11 @@ public abstract class AbstractWalRecordsIterator
      * @throws IgniteCheckedException If failed.
      */
     protected void advance() throws IgniteCheckedException {
-        if (curRec != null)
+        if (curRec != null) {
             lastRead = curRec.get1();
+
+            addLastRead(curRec);
+        }
 
         while (true) {
             try {
@@ -178,6 +202,8 @@ public abstract class AbstractWalRecordsIterator
                 if (curRec != null) {
                     if (curRec.get2().type() == null) {
                         lastRead = curRec.get1();
+
+                        addLastRead(curRec);
 
                         continue; // Record was skipped by filter of current serializer, should read next record.
                     }
@@ -206,6 +232,17 @@ public abstract class AbstractWalRecordsIterator
                 return;
             }
         }
+    }
+
+    @Override public void printDebugInfo() {
+        log.error(String.format(
+            ">>>>> printDebugInfo: [cls=%s, lastRead=%s, lastReadBuffer=%s]",
+            getClass().getSimpleName(),
+            lastRead,
+            lastReadCyclicBuffer == null ? null : lastReadCyclicBuffer.stream()
+                .sorted(Comparator.comparing(IgniteBiTuple::get2))
+                .collect(Collectors.toList())
+        ));
     }
 
     /** {@inheritDoc} */
@@ -295,6 +332,20 @@ public abstract class AbstractWalRecordsIterator
             }
 
             return null;
+        }
+        catch (OutOfMemoryError oom) {
+            List<FileDescriptor> segments = ((FileWriteAheadLogManager)sharedCtx.wal()).getSegmentRouter().findSegment1(actualFilePtr.index());
+
+            log.error(String.format(
+                "!!!!! AbstractWalRecordsIterator OutOfMemoryError [actualFilePtr=%s, hnd=%s, segments=%s]",
+                actualFilePtr,
+                hnd,
+                segments.stream().map(FileDescriptor::file).map(File::getAbsolutePath).collect(Collectors.toList())
+            ));
+
+            FilesToArtifacts.addFilesToArtifacts(segments.stream().map(FileDescriptor::file));
+
+            throw oom;
         }
     }
 

@@ -25,6 +25,7 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.util.lang.GridIteratorAdapter;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Decorator of {@link WALIterator} which allow filter record by {@link WALPointer} and {@link WALRecord}.
@@ -105,5 +106,9 @@ public class FilteredWalIterator extends GridIteratorAdapter<IgniteBiTuple<WALPo
     /** {@inheritDoc} */
     @Override public boolean isClosed() {
         return delegateWalIter.isClosed();
+    }
+
+    @Override public @Nullable WALPointer lastReadPointer() {
+        return delegateWalIter.lastReadPointer();
     }
 }

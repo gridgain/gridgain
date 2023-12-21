@@ -20,6 +20,7 @@ import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordPurpose.CUSTOM;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordPurpose.INTERNAL;
@@ -472,6 +473,10 @@ public abstract class WALRecord {
      * @return Entry type.
      */
     public abstract RecordType type();
+
+    public @Nullable RecordType type0() {
+        return type();
+    }
 
     /** {@inheritDoc} */
     @Override public String toString() {

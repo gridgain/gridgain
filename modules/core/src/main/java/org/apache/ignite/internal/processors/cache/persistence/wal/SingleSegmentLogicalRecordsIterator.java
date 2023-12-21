@@ -70,7 +70,7 @@ public class SingleSegmentLogicalRecordsIterator extends AbstractWalRecordsItera
         File archiveDir,
         CIX1<WALRecord> advanceC
     ) throws IgniteCheckedException {
-        super(log, sharedCtx, initLogicalRecordsSerializerFactory(sharedCtx), ioFactory, bufSize, new SimpleSegmentFileInputFactory());
+        super(log, sharedCtx, initLogicalRecordsSerializerFactory(sharedCtx), ioFactory, bufSize, new SimpleSegmentFileInputFactory(), false);
 
         curWalSegmIdx = archivedSegIdx;
         this.archiveDir = archiveDir;

@@ -145,7 +145,7 @@ public class RecordV2Serializer implements RecordSerializer {
                 if (in.skipBytes(toSkip) < toSkip)
                     throw new EOFException("Reached end of file while reading record: " + ptr);
 
-                return FilteredRecord.INSTANCE;
+                return new FilteredRecord(recType);
             }
             else if (marshalledMode) {
                 ByteBuffer buf = heapTlb.get();
