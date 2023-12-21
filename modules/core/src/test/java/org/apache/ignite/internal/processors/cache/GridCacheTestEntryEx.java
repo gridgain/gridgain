@@ -897,6 +897,11 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
         throw new UnsupportedOperationException();
     }
 
+    /** @inheritDoc */
+    @Override public EntryGetResult touchTtlVersioned(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException {
+        throw new UnsupportedOperationException();
+    }
+
     /** {@inheritDoc} */
     @Override public CacheObject unswap() throws IgniteCheckedException {
         return null;

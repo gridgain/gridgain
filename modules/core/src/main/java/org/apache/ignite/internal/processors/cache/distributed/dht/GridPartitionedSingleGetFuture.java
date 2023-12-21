@@ -565,7 +565,8 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                         }
                         else {
                             if (touchTtl) {
-                                assert skipVals;
+                                assert skipVals : this;
+
                                 v = entry.touchTtl(expiryPlc);
                             }
                             else {

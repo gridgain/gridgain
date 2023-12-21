@@ -4219,6 +4219,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
+    @Override public EntryGetResult touchTtlVersioned(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException {
+        CacheObject v = touchTtl(expiryPlc);
+
+        return v != null ? new EntryGetResult(v, version()) : null;
+    }
+
+    /** {@inheritDoc} */
     @Override public CacheObject valueBytes() throws GridCacheEntryRemovedException {
         lockEntry();
 

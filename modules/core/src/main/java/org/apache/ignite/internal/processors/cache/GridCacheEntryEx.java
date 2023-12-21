@@ -1119,9 +1119,19 @@ public interface GridCacheEntryEx {
      * Updates ttl for this entry and stores its value in storage.
      *
      * @param expiryPlc Expiry policy to be uased to calculate new ttl value.
+     * @return Cached object.
      * @throws GridCacheEntryRemovedException If entry is obsolete (entry was removed).
      */
     public CacheObject touchTtl(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException;
+
+    /**
+     * Updates ttl for this entry and stores its value in storage.
+     *
+     * @param expiryPlc Expiry policy to be uased to calculate new ttl value.
+     * @return Cached object.
+     * @throws GridCacheEntryRemovedException If entry is obsolete (entry was removed).
+     */
+    public EntryGetResult touchTtlVersioned(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException;
 
     /**
      * @return Value.

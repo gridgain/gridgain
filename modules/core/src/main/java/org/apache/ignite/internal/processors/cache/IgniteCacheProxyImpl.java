@@ -2222,7 +2222,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
         try {
             return delegate.touch(key);
         }
-        catch (Exception e/*IgniteCheckedException e*/) {
+        catch (IgniteException e) {
             throw cacheException(e);
         }
     }

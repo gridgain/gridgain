@@ -861,11 +861,10 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                                 }
                             }
                             else if (touchTtl) {
-                                CacheObject v = entry.touchTtl(expiry); // TODO touchVersioned?
-                                if (v != null)
-                                    res = new EntryGetResult(v, null);
-                                else
-                                    res = null;
+                                res = entry.touchTtlVersioned(expiry);
+
+                                if (res == null)
+                                    entry.touch();
                             }
                             else {
                                 res = entry.innerGetVersioned(
