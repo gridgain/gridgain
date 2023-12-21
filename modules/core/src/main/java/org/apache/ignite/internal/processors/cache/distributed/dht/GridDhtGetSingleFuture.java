@@ -119,6 +119,9 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
     /** */
     private final MvccSnapshot mvccSnapshot;
 
+    /** Indicates that operation requires just update the time to live value. */
+    private final boolean touchTtl;
+
     /**
      * @param cctx Context.
      * @param msgId Message ID.
@@ -133,6 +136,7 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
      * @param skipVals Skip values flag.
      * @param txLbl Transaction label.
      * @param mvccSnapshot Mvcc snapshot.
+     * @param touchTtl If {@code true} then ttl only chnages are required.
      */
     public GridDhtGetSingleFuture(
         GridCacheContext<K, V> cctx,
@@ -148,7 +152,8 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
         boolean skipVals,
         boolean recovery,
         @Nullable String txLbl,
-        @Nullable MvccSnapshot mvccSnapshot
+        @Nullable MvccSnapshot mvccSnapshot,
+        boolean touchTtl
     ) {
         assert reader != null;
         assert key != null;
@@ -167,6 +172,7 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
         this.recovery = recovery;
         this.txLbl = txLbl;
         this.mvccSnapshot = mvccSnapshot;
+        this.touchTtl = touchTtl;
 
         futId = IgniteUuid.randomUuid();
 
@@ -420,7 +426,8 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
                 skipVals,
                 recovery,
                 txLbl,
-                mvccSnapshot);
+                mvccSnapshot,
+                touchTtl);
         }
         else {
             final ReaderArguments args = readerArgs;
@@ -447,7 +454,8 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
                                 skipVals,
                                 recovery,
                                 null,
-                                mvccSnapshot);
+                                mvccSnapshot,
+                                touchTtl);
 
                         fut0.listen(createGetFutureListener());
                     }

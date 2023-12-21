@@ -678,6 +678,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
      * @param skipVals Skip values flag.
      * @param txLbl Transaction label.
      * @param mvccSnapshot MVCC snapshot.
+     * @param touchTtl Indicates that operation requires just update the time to live value.
      * @return Get future.
      */
     IgniteInternalFuture<Map<KeyCacheObject, EntryGetResult>> getDhtAllAsync(
@@ -690,7 +691,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
         boolean skipVals,
         boolean recovery,
         @Nullable String txLbl,
-        MvccSnapshot mvccSnapshot
+        MvccSnapshot mvccSnapshot,
+        boolean touchTtl
     ) {
         return getAllAsync0(keys,
             readerArgs,
@@ -704,7 +706,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
             recovery,
             /*need version*/true,
             txLbl,
-            mvccSnapshot);
+            mvccSnapshot,
+            touchTtl);
     }
 
     /**
@@ -720,6 +723,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
      * @param needVer If {@code true} returns values as tuples containing value and version.
      * @param txLbl Transaction label.
      * @param mvccSnapshot MVCC snapshot.
+     * @param touchTtl Indicates that operation requires just update the time to live value.
      * @return Future.
      */
     protected final <K1, V1> IgniteInternalFuture<Map<K1, V1>> getAllAsync0(
@@ -735,7 +739,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
         final boolean recovery,
         final boolean needVer,
         @Nullable String txLbl,
-        MvccSnapshot mvccSnapshot
+        MvccSnapshot mvccSnapshot,
+        boolean touchTtl
     ) {
         if (F.isEmpty(keys))
             return new GridFinishedFuture<>(Collections.<K1, V1>emptyMap());
@@ -854,6 +859,13 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
 
                                     res = null;
                                 }
+                            }
+                            else if (touchTtl) {
+                                CacheObject v = entry.touchTtl(expiry); // TODO touchVersioned?
+                                if (v != null)
+                                    res = new EntryGetResult(v, null);
+                                else
+                                    res = null;
                             }
                             else {
                                 res = entry.innerGetVersioned(
@@ -1128,6 +1140,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
      * @param skipVals Skip vals flag.
      * @param txLbl Transaction label.
      * @param mvccSnapshot Mvcc snapshot.
+     * @param touchTtl Indicates that operation requires just update the time to live value.
      * @return Future for the operation.
      */
     GridDhtGetSingleFuture getDhtSingleAsync(
@@ -1143,7 +1156,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
         boolean skipVals,
         boolean recovery,
         String txLbl,
-        MvccSnapshot mvccSnapshot
+        MvccSnapshot mvccSnapshot,
+        boolean touchTtl
     ) {
         GridDhtGetSingleFuture fut = new GridDhtGetSingleFuture<>(
             ctx,
@@ -1159,7 +1173,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
             skipVals,
             recovery,
             txLbl,
-            mvccSnapshot);
+            mvccSnapshot,
+            touchTtl);
 
         fut.init();
 
@@ -1192,7 +1207,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                     req.skipValues(),
                     req.recovery(),
                     req.txLabel(),
-                    req.mvccSnapshot());
+                    req.mvccSnapshot(),
+                    req.touchTtl());
 
             fut.listen(new CI1<IgniteInternalFuture<GridCacheEntryInfo>>() {
                 @Override public void apply(IgniteInternalFuture<GridCacheEntryInfo> f) {

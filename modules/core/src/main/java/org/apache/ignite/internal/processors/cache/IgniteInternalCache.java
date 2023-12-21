@@ -28,6 +28,7 @@ import javax.cache.Cache;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorResult;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -1853,4 +1854,14 @@ public interface IgniteInternalCache<K, V> extends Iterable<Cache.Entry<K, V>> {
      * @throws IgniteCheckedException If failed.
      */
     public int localEntrySize(K key) throws IgniteCheckedException;
+
+    /**
+     * Updates the time to live value for the given {@code key}.
+     *
+     * @param key The key whose associated ttl value is to be updated in accrordance with the specified {@link ExpiryPolicy}.
+     * @return {@code true} if the ttl value was updated, {@code false} if the key is not present in the cache.
+     * @throws NullPointerException If key is {@code null}.
+     * @see IgniteCache#withExpiryPolicy(ExpiryPolicy)
+     */
+    public boolean touch(K key);
 }

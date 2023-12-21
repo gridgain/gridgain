@@ -477,7 +477,8 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
                 skipVals,
                 recovery,
                 txLbl,
-                mvccSnapshot);
+                mvccSnapshot,
+                false); // TODO https://ggsystems.atlassian.net/browse/GG-38173
         }
         else {
             final ReaderArguments args = readerArgs;
@@ -502,7 +503,8 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
                             skipVals,
                             recovery,
                             txLbl,
-                            mvccSnapshot);
+                            mvccSnapshot,
+                            false); // TODO https://ggsystems.atlassian.net/browse/GG-38173
                     }
                 }
             );

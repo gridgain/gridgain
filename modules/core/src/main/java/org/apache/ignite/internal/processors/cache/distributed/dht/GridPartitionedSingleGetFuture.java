@@ -166,6 +166,9 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
     /** Remap count. */
     protected volatile int remapCnt;
 
+    /** Indicates that operation requires just update the time to live value. */
+    private final boolean touchTtl;
+
     /**
      * @param cctx Context.
      * @param key Key.
@@ -180,6 +183,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
      * @param needVer If {@code true} returns values as tuples containing value and version.
      * @param keepCacheObjects Keep cache objects flag.
      * @param txLbl Transaction label.
+     * @param touchTtl Indicates that operation requires just update the time to live value.
      */
     public GridPartitionedSingleGetFuture(
         GridCacheContext cctx,
@@ -196,7 +200,8 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
         boolean keepCacheObjects,
         boolean recovery,
         String txLbl,
-        @Nullable MvccSnapshot mvccSnapshot
+        @Nullable MvccSnapshot mvccSnapshot,
+        boolean touchTtl
     ) {
         assert key != null;
         assert mvccSnapshot == null || cctx.mvccEnabled();
@@ -226,6 +231,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
         this.topVer = topVer;
         this.mvccSnapshot = mvccSnapshot;
         this.deploymentLdrId = U.contextDeploymentClassLoaderId(cctx.kernalContext());
+        this.touchTtl = touchTtl;
 
         this.txLbl = txLbl;
 
@@ -324,7 +330,8 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                         skipVals,
                         recovery,
                         txLbl,
-                        mvccSnapshot
+                        mvccSnapshot,
+                        touchTtl
                     );
 
                 Collection<Integer> invalidParts = fut0.invalidPartitions();
@@ -390,7 +397,8 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                     cctx.deploymentEnabled(),
                     recovery,
                     txLbl,
-                    mvccSnapshot
+                    mvccSnapshot,
+                    touchTtl
                 );
 
                 try {
@@ -556,17 +564,23 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                             }
                         }
                         else {
-                            v = entry.innerGet(
-                                null,
-                                null,
-                                /*read-through*/false,
-                                /*update-metrics*/false,
-                                /*event*/evt,
-                                subjId,
-                                null,
-                                taskName,
-                                expiryPlc,
-                                true);
+                            if (touchTtl) {
+                                assert skipVals;
+                                v = entry.touchTtl(expiryPlc);
+                            }
+                            else {
+                                v = entry.innerGet(
+                                    null,
+                                    null,
+                                    /*read-through*/false,
+                                    /*update-metrics*/false,
+                                    /*event*/evt,
+                                    subjId,
+                                    null,
+                                    taskName,
+                                    expiryPlc,
+                                    true);
+                            }
                         }
 
                         entry.touch();

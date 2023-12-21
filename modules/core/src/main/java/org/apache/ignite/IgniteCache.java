@@ -61,6 +61,7 @@ import org.apache.ignite.lang.IgniteAsyncSupport;
 import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteClosure;
+import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.mxbean.CacheMetricsMXBean;
 import org.apache.ignite.transactions.TransactionException;
@@ -1706,4 +1707,15 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @throws NullPointerException If key is {@code null}.
      */
     public int localEntrySize(K key);
+
+    /**
+     * Updates the time to live value for the given {@code key}.
+     *
+     * @param key The key whose associated ttl value is to be updated in accrordance with the specified {@link ExpiryPolicy}.
+     * @return {@code true} if the ttl value was updated, {@code false} if the key is not present in the cache.
+     * @throws NullPointerException If key is {@code null}.
+     * @see IgniteCache#withExpiryPolicy(ExpiryPolicy)
+     */
+    @IgniteExperimental
+    public boolean touch(K key);
 }
