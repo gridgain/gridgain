@@ -119,7 +119,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
     /**
      * The set of partitons nodes exists on nodes, which shouldn't relate to the idial assignment.
-     * This property is not calculated for replication caches.
+     * This property is not calculated for replicated caches.
      */
     private final Map<Integer, Set<UUID>> diffFromAffinity = new HashMap<>();
 
@@ -323,7 +323,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /**
-     * Gets the last topology version where partition distribution is considered with the ideal one.
+     * Gets the last topology version where partition distribution is considered as the ideal one.
      *
      * @return Affinity topology version.
      */

@@ -17,11 +17,13 @@
 package org.apache.ignite.cache;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.MutableEntry;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -220,27 +222,36 @@ public class ReplicationCacheConsistencyOnUnstableTopologyTest extends GridCommo
         assertEquals(rebTopVer, getRebalancedTopVer(ignite(1)));
         assertEquals(rebTopVer, getRebalancedTopVer(ignite(2)));
 
-        HashMap<Integer, EntryProcessor<Integer, Integer, Void>> invokes = new HashMap<>(3);
+        HashSet<Integer> keysToUpdate = new HashSet<>(9);
 
-        invokes.put(1, new TestEntryProcessor(100));
-        invokes.put(2, new TestEntryProcessor(100)); //<<part2
-        invokes.put(3, new TestEntryProcessor(100));
+        // The keys were loaded on the nodes.
+        keysToUpdate.add(partitionKeys(0, 0, 20));
+        keysToUpdate.add(partitionKeys(1, 0, 20));
+        keysToUpdate.add(partitionKeys(2, 0, 20));
 
-        invokes.put(21, new TestEntryProcessor(100));
-        invokes.put(22, new TestEntryProcessor(100));
-        invokes.put(23, new TestEntryProcessor(100)); //<<part2
+        //The keys were loaded on topology without one node.
+        keysToUpdate.add(partitionKeys(0, 20, 40));
+        keysToUpdate.add(partitionKeys(1, 20, 40));
+        keysToUpdate.add(partitionKeys(2, 20, 40));
 
-        invokes.put(41, new TestEntryProcessor(100)); //<<part2
-        invokes.put(42, new TestEntryProcessor(100));
-        invokes.put(43, new TestEntryProcessor(100));
+        // The keys were loaded on topology without two nodes.
+        keysToUpdate.add(partitionKeys(0, 40, 60));
+        keysToUpdate.add(partitionKeys(1, 40, 60));
+        keysToUpdate.add(partitionKeys(2, 40, 60));
 
-        checkTopology(3);
-
-        for (Integer key : invokes.keySet()) {
+        for (Integer key : keysToUpdate) {
             info("Intention to invike [key: " + key +
                 " part: " + ignite.affinity(DEFAULT_CACHE_NAME).partition(key) +
                 " primary: " + ignite.affinity(DEFAULT_CACHE_NAME).mapKeyToNode(key) + ']');
         }
+
+        HashMap<Integer, EntryProcessor<Integer, Integer, Void>> invokes = new HashMap<>(keysToUpdate.size());
+
+        for (Integer key : keysToUpdate) {
+            invokes.put(key, new TestEntryProcessor(100));
+        }
+
+        checkTopology(3);
 
         ignite.<Integer, Integer>cache(DEFAULT_CACHE_NAME).invokeAll(invokes);
 
@@ -254,6 +265,26 @@ public class ReplicationCacheConsistencyOnUnstableTopologyTest extends GridCommo
         assertEquals(rebTopVer, getRebalancedTopVer(ignite(2)));
 
         assertPartitionsSame(idleVerify(ignite, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * Finds a partition key.
+     *
+     * @param part Partiton.
+     * @param from Left search bound.
+     * @param to   Right search bound.
+     * @return A keyu.
+     */
+    protected Integer partitionKeys(int part, int from, int to) {
+        Affinity<Integer> aff = ignite(0).affinity(DEFAULT_CACHE_NAME);
+
+        for (int k = from; k < to; k++) {
+            if (aff.partition(k) == part) {
+                return k;
+            }
+        }
+
+        throw new AssertionError("Key was not fond [pat=" + part + ", from=" + from + ", to=" + to + ']');
     }
 
     /**
