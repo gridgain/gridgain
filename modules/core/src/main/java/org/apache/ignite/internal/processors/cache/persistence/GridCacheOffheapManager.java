@@ -283,7 +283,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         syncMetadata(ctx, ctx.executor(), false);
     }
 
-
     /**
      * Syncs and saves meta-information of all data structures to page memory.
      *
