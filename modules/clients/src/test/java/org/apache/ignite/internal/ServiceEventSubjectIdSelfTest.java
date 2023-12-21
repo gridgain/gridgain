@@ -99,7 +99,7 @@ public class ServiceEventSubjectIdSelfTest extends GridCommonAbstractTest {
 
                         return true;
                     }
-                },  EventType.EVT_SERVICE_METHOD_EXECUTION_STARTED,
+                }, EventType.EVT_SERVICE_METHOD_EXECUTION_STARTED,
                 EventType.EVT_SERVICE_METHOD_EXECUTION_FINISHED,
                 EventType.EVT_SERVICE_METHOD_EXECUTION_FAILED
             );
