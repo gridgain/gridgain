@@ -160,6 +160,7 @@ namespace ignite
                 opts.push_back(CopyChars("--add-opens=java.base/java.io=ALL-UNNAMED"));
                 opts.push_back(CopyChars("--add-opens=java.base/java.net=ALL-UNNAMED"));
                 opts.push_back(CopyChars("--add-opens=java.base/java.nio=ALL-UNNAMED"));
+                opts.push_back(CopyChars("--add-opens=java.base/java.security.cert=ALL-UNNAMED"));
                 opts.push_back(CopyChars("--add-opens=java.base/java.util=ALL-UNNAMED"));
                 opts.push_back(CopyChars("--add-opens=java.base/java.util.concurrent=ALL-UNNAMED"));
                 opts.push_back(CopyChars("--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED"));
@@ -167,6 +168,8 @@ namespace ignite
                 opts.push_back(CopyChars("--add-opens=java.base/java.lang=ALL-UNNAMED"));
                 opts.push_back(CopyChars("--add-opens=java.base/java.lang.invoke=ALL-UNNAMED"));
                 opts.push_back(CopyChars("--add-opens=java.base/java.math=ALL-UNNAMED"));
+                opts.push_back(CopyChars("--add-opens=java.base/java.time=ALL-UNNAMED"));
+                opts.push_back(CopyChars("--add-opens=java.base/sun.security.x509=ALL-UNNAMED"));
                 opts.push_back(CopyChars("--add-opens=java.sql/java.sql=ALL-UNNAMED"));
             }
         }
