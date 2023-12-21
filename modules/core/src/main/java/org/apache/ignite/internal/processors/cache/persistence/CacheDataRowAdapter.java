@@ -45,6 +45,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.itemId;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_COUNTER_NA;
@@ -57,6 +58,9 @@ import static org.apache.ignite.internal.processors.cache.persistence.CacheDataR
  * Cache data row adapter.
  */
 public class CacheDataRowAdapter implements CacheDataRow {
+    /** */
+    private static final boolean HOLD_READ_LOCK_ON_HEADER_PAGE = getBoolean("IGNITE_IN_PLACE_UPDATE_TTL", true);
+
     /** */
     @GridToStringExclude
     protected long link;
@@ -213,18 +217,6 @@ public class CacheDataRowAdapter implements CacheDataRow {
         }
     }
 
-    /**
-     * @param link Link.
-     * @param sharedCtx Cache shared context.
-     * @param coctx Cache object context.
-     * @param pageMem Page memory.
-     * @param grpId Cache group Id.
-     * @param readCacheId {@code true} If need to read cache ID.
-     * @param rowData Required row data.
-     * @param incomplete Incomplete object.
-     * @param skipVer Whether version read should be skipped.
-     * @throws IgniteCheckedException If failed.
-     */
     private void doInitFromLink(
         long link,
         GridCacheSharedContext<?, ?> sharedCtx,
@@ -240,16 +232,96 @@ public class CacheDataRowAdapter implements CacheDataRow {
         assert link != 0 : "link";
         assert key == null : "key";
 
+        final long pageId = pageId(link);
+
+        long page = 0;
+        long pageAddr = 0;
+
+        if (HOLD_READ_LOCK_ON_HEADER_PAGE)
+            page = pageMem.acquirePage(grpId, pageId, statHolder);
+
+        try {
+            try {
+                if (HOLD_READ_LOCK_ON_HEADER_PAGE) {
+                    // Hold the read lock until the row is fully read.
+                    pageAddr = pageMem.readLock(grpId, pageId, page); // Non-empty data page must not be recycled.
+
+                    assert pageAddr != 0L : link;
+                }
+
+                doInitFromLink0(
+                    link,
+                    page,
+                    pageAddr,
+                    HOLD_READ_LOCK_ON_HEADER_PAGE,
+                    sharedCtx,
+                    coctx,
+                    pageMem,
+                    grpId,
+                    statHolder,
+                    readCacheId,
+                    rowData,
+                    incomplete,
+                    skipVer);
+            }
+            finally {
+                if (HOLD_READ_LOCK_ON_HEADER_PAGE)
+                    pageMem.readUnlock(grpId, pageId, page);
+            }
+        }
+        finally {
+            if (HOLD_READ_LOCK_ON_HEADER_PAGE)
+                pageMem.releasePage(grpId, pageId, page);
+        }
+    }
+
+    /**
+     * @param link Link.
+     * @param headerPage First page of the entry.
+     * @param headerPageAddr First page address.
+     * @param headerPageLocked {@code true} If header page is already locked.
+     * @param sharedCtx Cache shared context.
+     * @param coctx Cache object context.
+     * @param pageMem Page memory.
+     * @param grpId Cache group Id.
+     * @param readCacheId {@code true} If need to read cache ID.
+     * @param rowData Required row data.
+     * @param incomplete Incomplete object.
+     * @param skipVer Whether version read should be skipped.
+     * @throws IgniteCheckedException If failed.
+     */
+    private void doInitFromLink0(
+        long link,
+        long headerPage,
+        long headerPageAddr,
+        boolean headerPageLocked,
+        GridCacheSharedContext<?, ?> sharedCtx,
+        CacheObjectContext coctx,
+        PageMemory pageMem,
+        int grpId,
+        IoStatisticsHolder statHolder,
+        boolean readCacheId,
+        RowData rowData,
+        @Nullable IncompleteObject<?> incomplete,
+        boolean skipVer
+    ) throws IgniteCheckedException {
+        assert link != 0 : "link";
+        assert key == null : "key";
+        assert (headerPageLocked && headerPageAddr != 0L) || (!headerPageLocked && headerPageAddr == 0L) :
+            "Incorrect page lock state [headerPageLocked=" + headerPageLocked + ", headerPageAddr=" + headerPageAddr + ']';
+
         long nextLink = link;
+        boolean lockPageNeeded = !headerPageLocked;
 
         do {
             final long pageId = pageId(nextLink);
 
             try {
-                final long page = pageMem.acquirePage(grpId, pageId, statHolder);
+                final long page = lockPageNeeded ? pageMem.acquirePage(grpId, pageId, statHolder) : headerPage;
 
                 try {
-                    long pageAddr = pageMem.readLock(grpId, pageId, page); // Non-empty data page must not be recycled.
+                    // Non-empty data page must not be recycled.
+                    long pageAddr = lockPageNeeded ? pageMem.readLock(grpId, pageId, page) : headerPageAddr;
 
                     assert pageAddr != 0L : nextLink;
 
@@ -267,11 +339,16 @@ public class CacheDataRowAdapter implements CacheDataRow {
                         nextLink = incomplete.getNextLink();
                     }
                     finally {
-                        pageMem.readUnlock(grpId, pageId, page);
+                        if (lockPageNeeded)
+                            pageMem.readUnlock(grpId, pageId, page);
                     }
                 }
                 finally {
-                    pageMem.releasePage(grpId, pageId, page);
+                    if (lockPageNeeded)
+                        pageMem.releasePage(grpId, pageId, page);
+
+                    // Lock the rest pages.
+                    lockPageNeeded = true;
                 }
             }
             catch (RuntimeException | AssertionError e) {
