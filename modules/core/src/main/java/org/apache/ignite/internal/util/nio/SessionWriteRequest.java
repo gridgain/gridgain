@@ -82,4 +82,12 @@ public interface SessionWriteRequest {
      * @return Span.
      */
     Span span();
+
+    /**
+     *
+     * @param chunkSize size in bytes of message chunk written to network channel.
+     */
+    void addToSize(int chunkSize);
+
+    int size();
 }

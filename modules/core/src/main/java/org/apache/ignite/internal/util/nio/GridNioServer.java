@@ -1790,7 +1790,11 @@ public class GridNioServer<T> {
 
                 finished = msg.writeTo(buf, writer);
 
-                span.addTag(SOCKET_WRITE_BYTES, () -> Integer.toString(buf.position() - startPos));
+                int writtenBytes = buf.position() - startPos;
+
+                req.addToSize(writtenBytes);
+
+                span.addTag(SOCKET_WRITE_BYTES, () -> Integer.toString(writtenBytes));
 
                 if (finished) {
                     onMessageWritten(ses, msg);
@@ -3329,6 +3333,16 @@ public class GridNioServer<T> {
         }
 
         /** {@inheritDoc} */
+        @Override public void addToSize(int chunkSize) {
+
+        }
+
+        /** {@inheritDoc} */
+        @Override public int size() {
+            return 0;
+        }
+
+        /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(WriteRequestSystemImpl.class, this);
         }
@@ -3433,6 +3447,16 @@ public class GridNioServer<T> {
         /** {@inheritDoc} */
         @Override public Span span() {
             return span;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void addToSize(int chunkSize) {
+
+        }
+
+        /** {@inheritDoc} */
+        @Override public int size() {
+            return 0;
         }
 
         /** {@inheritDoc} */
@@ -3639,6 +3663,16 @@ public class GridNioServer<T> {
         /** {@inheritDoc} */
         @Override public boolean skipRecovery() {
             return skipRecovery;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void addToSize(int chunkSize) {
+            //No-op.
+        }
+
+        /** {@inheritDoc} */
+        @Override public int size() {
+            return 0;
         }
 
         /** {@inheritDoc} */
