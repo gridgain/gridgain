@@ -144,6 +144,23 @@ public class RowStore {
     }
 
     /**
+     * @param link Row link.
+     * @param row New row data.
+     * @return {@code True} if was able to update row.
+     * @throws IgniteCheckedException If failed.
+     */
+    public boolean updateDataRowTtl(long link, CacheDataRow row, IoStatisticsHolder statHolder) throws IgniteCheckedException {
+        assert !persistenceEnabled || ctx.database().checkpointLockIsHeldByThread();
+
+        GridQueryRowCacheCleaner rowCacheCleaner0 = rowCacheCleaner.get();
+
+        if (rowCacheCleaner0 != null)
+            rowCacheCleaner0.remove(link);
+
+        return freeList.updateDataRowTtl(link, row, statHolder);
+    }
+
+    /**
      * Run page handler operation over the row.
      *
      * @param link Row link.

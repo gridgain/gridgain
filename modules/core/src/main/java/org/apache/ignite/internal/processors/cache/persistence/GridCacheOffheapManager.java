@@ -3051,6 +3051,19 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         }
 
         /** {@inheritDoc} */
+        @Override public CacheDataRow createRowForTtlUpdate(
+            GridCacheContext cctx,
+            long expireTime,
+            CacheDataRow oldRow
+        ) throws IgniteCheckedException {
+            assert grp.shared().database().checkpointLockIsHeldByThread();
+
+            CacheDataStore delegate = init0(false);
+
+            return delegate.createRowForTtlUpdate(cctx, expireTime, oldRow);
+        }
+
+        /** {@inheritDoc} */
         @Override public int cleanup(GridCacheContext cctx,
             @Nullable List<MvccLinkAwareSearchRow> cleanupRows) throws IgniteCheckedException {
             CacheDataStore delegate = init0(false);

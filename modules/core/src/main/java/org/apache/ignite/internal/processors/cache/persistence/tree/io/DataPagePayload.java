@@ -23,13 +23,13 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  *
  */
 public class DataPagePayload {
-    /** */
+    /** Payload offset. */
     private final int off;
 
-    /** */
+    /** Available size of the payload. */
     private final int payloadSize;
 
-    /** */
+    /** Link to the next fragmet. If it is the last fragment or the data row is not fragmented then it is {@code null} value. */
     private final long nextLink;
 
     /**
