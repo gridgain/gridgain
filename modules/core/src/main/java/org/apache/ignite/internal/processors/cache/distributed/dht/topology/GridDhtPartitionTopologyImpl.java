@@ -322,6 +322,14 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         return topVer;
     }
 
+    /**
+     * Gets the last topology version where partition distribution is considered with the ideal one.
+     *
+     * @return Affinity topology version.
+     */
+    public AffinityTopologyVersion getRebalancedTopVer() {
+        return rebalancedTopVer;
+    }
     /** {@inheritDoc} */
     @Override public AffinityTopologyVersion lastTopologyChangeVersion() {
         AffinityTopologyVersion topVer = this.lastTopChangeVer;
