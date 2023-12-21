@@ -330,6 +330,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     public AffinityTopologyVersion getRebalancedTopVer() {
         return rebalancedTopVer;
     }
+
     /** {@inheritDoc} */
     @Override public AffinityTopologyVersion lastTopologyChangeVersion() {
         AffinityTopologyVersion topVer = this.lastTopChangeVer;

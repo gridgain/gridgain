@@ -61,8 +61,7 @@ public class ReplicationCacheConsistencyOnUnstableTopologyTest extends GridCommo
      */
     private boolean readFromBackup;
 
-    @Override
-    protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setConsistentId(igniteInstanceName)
             .setCommunicationSpi(new TestRecordingCommunicationSpi())
@@ -78,15 +77,13 @@ public class ReplicationCacheConsistencyOnUnstableTopologyTest extends GridCommo
                 .setReadFromBackup(readFromBackup));
     }
 
-    @Override
-    protected void beforeTest() throws Exception {
+    @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
         cleanPersistenceDir();
     }
 
-    @Override
-    protected void afterTest() throws Exception {
+    @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -283,8 +280,7 @@ public class ReplicationCacheConsistencyOnUnstableTopologyTest extends GridCommo
             this.val = val;
         }
 
-        @Override
-        public Void process(
+        @Override public Void process(
             MutableEntry<Integer, Integer> mutableEntry,
             Object... objects
         ) throws EntryProcessorException {
