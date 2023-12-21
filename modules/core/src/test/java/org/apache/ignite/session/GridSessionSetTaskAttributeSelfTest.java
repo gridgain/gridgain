@@ -63,6 +63,7 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
 
     /** */
     private static final String INT_PARAM_NAME = "customIntParameter";
+
     /** */
     private static final String TXT_PARAM_NAME = "customTextParameter";
 
@@ -180,6 +181,7 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
         private ComputeTaskSession ses;
 
         private int numericParameter;
+
         private String textParameter;
 
         public CallableWithSessionAttributes(int numericParameter, String textParameter) {
@@ -187,8 +189,7 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
             this.textParameter = textParameter;
         }
 
-        @Override
-        public void run() {
+        @Override public void run() {
             if (numericParameter != 0)
                 ses.setAttribute(INT_PARAM_NAME, numericParameter);
 
