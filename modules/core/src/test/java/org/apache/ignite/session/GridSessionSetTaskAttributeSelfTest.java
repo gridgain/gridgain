@@ -20,6 +20,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
@@ -134,15 +136,21 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
 
         IgniteEx n = startGrid(0);
 
+        CountDownLatch latch = new CountDownLatch(1);
+
         n.cluster().state(ACTIVE);
 
         IgnitePredicate<TaskEvent> lsnr = evt -> {
-            System.out.println("Received task event [evt=" + evt.name() + ", taskName=" + evt.taskName() + ", taskAttributes=" + evt.attributes() + ']');
+            log.info("Received task event [evt=" + evt.name() + ", taskName=" + evt.taskName() + ", taskAttributes=" + evt.attributes() + ']');
 
-            if (evt.type() != EVT_TASK_STARTED && evt.attributes().isEmpty()) {
+            if (evt.type() == EVT_TASK_STARTED) {
+                assertTrue(evt.attributes().isEmpty());
+            } else {
                 assertEquals(intParam, evt.attributes().get(INT_PARAM_NAME));
                 assertEquals(textParam, evt.attributes().get(TXT_PARAM_NAME));
             }
+
+            latch.countDown();
 
             return true;
         };
@@ -152,7 +160,11 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
         // Generate task events.
         IgniteFuture<Void> taskFut0 = n.compute().runAsync(new CallableWithSessionAttributes(intParam, textParam));
 
-        taskFut0.get();
+        taskFut0.get(5, TimeUnit.SECONDS);
+
+        latch.await(5, TimeUnit.SECONDS);
+
+        assertEquals(0, latch.getCount());
 
         // Unsubscribe local task event listener.
         n.events().stopLocalListen(lsnr);
