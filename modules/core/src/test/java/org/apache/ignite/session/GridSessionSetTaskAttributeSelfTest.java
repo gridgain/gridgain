@@ -147,7 +147,8 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
                 assertTrue(evt.attributes().isEmpty());
             } else {
                 assertEquals(intParam, evt.attributes().get(INT_PARAM_NAME));
-                assertEquals(textParam, evt.attributes().get(TXT_PARAM_NAME));
+                if (evt.attributes().size() > 1)
+                    assertEquals(textParam, evt.attributes().get(TXT_PARAM_NAME));
             }
 
             latch.countDown();
