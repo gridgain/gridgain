@@ -4133,7 +4133,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public void updateTimeToLiveOnTtlUpdateRequest(@Nullable GridCacheVersion ver, long ttl) throws GridCacheEntryRemovedException {
+    @Override public CacheObject updateTimeToLiveOnTtlUpdateRequest(@Nullable GridCacheVersion ver, long ttl) throws GridCacheEntryRemovedException {
         assert cctx.shared().database().checkpointLockIsHeldByThread() :
             "Checkpoint lock must be held by the thread before acquiring entry lock";
 
@@ -4154,7 +4154,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 updateTtl(ver, ttl);
 
-                return;
+                return val;
             }
 
             CacheObject val = this.val;
@@ -4172,7 +4172,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 isExpired = checkExpired();
 
             if (val == null || isExpired)
-                return;
+                return null;
 
             long expireTime;
 
@@ -4188,6 +4188,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             // TODO IGNITE-305
             // TTL messages are not ordered, so the version cannot be used to properly handle a new ttl value.
             storeTtlValue(val, expireTime, ver);
+
+            return val;
         }
         catch (IgniteCheckedException e) {
             U.error(log, "Failed to update TTL: " + e, e);
@@ -4195,6 +4197,32 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         finally {
             unlockEntry();
         }
+
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public CacheObject touchTtl(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException {
+        CacheObject res = null;
+
+        if (expiryPlc != null) {
+            long ttl = expiryPlc.forAccess();
+
+            if (ttl != CU.TTL_NOT_CHANGED) {
+                res = updateTimeToLiveOnTtlUpdateRequest(null, ttl);
+
+                expiryPlc.ttlUpdated(key(), version(), hasReaders() ? ((GridDhtCacheEntry)this).readers() : null);
+            }
+        }
+
+        return res;
+    }
+
+    /** {@inheritDoc} */
+    @Override public EntryGetResult touchTtlVersioned(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException {
+        CacheObject v = touchTtl(expiryPlc);
+
+        return v != null ? new EntryGetResult(v, version()) : null;
     }
 
     /** {@inheritDoc} */

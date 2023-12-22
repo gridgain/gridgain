@@ -457,7 +457,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         final String taskName,
         final boolean deserializeBinary,
         final boolean skipVals,
-        final boolean needVer
+        final boolean needVer,
+        final boolean touchTtl
     ) {
         ctx.checkSecurity(SecurityPermission.CACHE_READ);
 
@@ -466,7 +467,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         subjId = ctx.subjectIdPerCall(null, opCtx);
 
         final UUID subjId0 = subjId;
-        final ExpiryPolicy expiryPlc = skipVals ? null : opCtx != null ? opCtx.expiry() : null;
+        final ExpiryPolicy expiryPlc = skipVals && !touchTtl ? null : opCtx != null ? opCtx.expiry() : null;
         final boolean skipStore = opCtx != null && opCtx.skipStore();
         final boolean recovery = opCtx != null && opCtx.recovery();
 
@@ -481,7 +482,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                     expiryPlc,
                     skipVals,
                     skipStore,
-                    needVer);
+                    needVer,
+                    touchTtl);
             }
         });
     }
@@ -1385,6 +1387,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      * @param skipVals Skip values flag.
      * @param skipStore Skip store flag.
      * @param needVer Need version.
+     * @param touchTtl Indicates that operation requires just update the time to live value.
      * @return Get future.
      */
     private IgniteInternalFuture<V> getAsync0(KeyCacheObject key,
@@ -1396,11 +1399,12 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         @Nullable ExpiryPolicy expiryPlc,
         boolean skipVals,
         boolean skipStore,
-        boolean needVer
+        boolean needVer,
+        boolean touchTtl
     ) {
         AffinityTopologyVersion topVer = ctx.affinity().affinityTopologyVersion();
 
-        IgniteCacheExpiryPolicy expiry = skipVals ? null : expiryPolicy(expiryPlc);
+        IgniteCacheExpiryPolicy expiry = skipVals && !touchTtl ? null : expiryPolicy(expiryPlc);
 
         GridPartitionedSingleGetFuture fut = new GridPartitionedSingleGetFuture(ctx,
             key,
@@ -1416,7 +1420,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             false,
             recovery,
             null,
-            null);
+            null,
+            touchTtl);
 
         fut.init();
 
