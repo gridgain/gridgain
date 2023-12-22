@@ -4726,7 +4726,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
     @Override public boolean touch(K key) {
         A.notNull(key, "key");
 
-        // TODO support touch operation for transactional caches.
+        // TODO https://ggsystems.atlassian.net/browse/GG-38173
         if (!isDhtAtomic()) {
             throw new UnsupportedOperationException(
                 "Operation is not supported on " +
