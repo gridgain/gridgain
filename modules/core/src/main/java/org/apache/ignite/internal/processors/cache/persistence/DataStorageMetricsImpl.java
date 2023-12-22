@@ -754,7 +754,9 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
         long start,
         long totalPages,
         long dataPages,
-        long cowPages
+        long cowPages,
+        long storageSize,
+        long sparseStorageSize
     ) {
         if (metricsEnabled) {
             lastCpBeforeLockDuration.value(beforeLockDuration);
@@ -772,6 +774,8 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
             lastCpTotalPages.value(totalPages);
             lastCpDataPages.value(dataPages);
             lastCpCowPages.value(cowPages);
+            this.storageSize.value(storageSize);
+            this.sparseStorageSize.value(sparseStorageSize);
 
             totalCheckpointTime.add(duration);
 
@@ -786,20 +790,6 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
             cpWriteEntryHistogram.value(writeEntryDuration);
             cpSplitAndSortPagesHistogram.value(splitAndSortPagesDuration);
             cpHistogram.value(duration);
-        }
-    }
-
-    /**
-     * @param sparseStorageSize Sparse storage size.
-     * @param storageSize Storage size.
-     */
-    public void onStorageSizeChanged(
-        long storageSize,
-        long sparseStorageSize
-    ) {
-        if (metricsEnabled) {
-            this.storageSize.value(storageSize);
-            this.sparseStorageSize.value(sparseStorageSize);
         }
     }
 

@@ -43,6 +43,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
@@ -493,6 +494,38 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Checking that db manager uses aggregated storageSize and sparseStorageSize instead of the last cache group.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testStorageSize() throws Exception {
+        IgniteEx grid = startGrid(0);
+
+        grid.cluster().state(ACTIVE);
+
+        grid.getOrCreateCache("cache2");
+        grid.getOrCreateCache("cache3");
+
+        populateCache(grid, "cache2", 20);
+        populateCache(grid, "cache3", 10);
+
+        forceCheckpoint(grid);
+
+        int expTotal = 0;
+        int expSpare = 0;
+        for (CacheGroupContext groupCtx : grid.context().cache().cacheGroups()) {
+            if (groupCtx.persistenceEnabled()) {
+                expTotal += groupCtx.metrics().getStorageSize();
+                expSpare += groupCtx.metrics().getSparseStorageSize();
+            }
+        }
+
+        assertEquals(expTotal, dbMgr(grid).persistentStoreMetrics().getStorageSize());
+        assertEquals(expSpare, dbMgr(grid).persistentStoreMetrics().getSparseStorageSize());
+    }
+
+    /**
      * Populates a cache w/32 KB of data.
      *
      * @param igniteEx Node.
@@ -500,6 +533,18 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
     private void populateCache(IgniteEx igniteEx) {
         for (int i = 0; i < 10; i++)
             igniteEx.cache("cache").put(ThreadLocalRandom.current().nextLong(), new byte[(int)(32 * U.KB)]);
+    }
+
+    /**
+     *  Populates a cache w/32 KB of data.
+     *
+     * @param igniteEx Node.
+     * @param cacheName Cache name.
+     * @param count Items count.
+     */
+    private void populateCache(IgniteEx igniteEx, String cacheName, int count) {
+        for (int i = 0; i < count; i++)
+            igniteEx.cache(cacheName).put(ThreadLocalRandom.current().nextLong(), new byte[(int)(32 * U.KB)]);
     }
 
     /**
