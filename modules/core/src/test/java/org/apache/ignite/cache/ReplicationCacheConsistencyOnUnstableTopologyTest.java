@@ -284,7 +284,7 @@ public class ReplicationCacheConsistencyOnUnstableTopologyTest extends GridCommo
             }
         }
 
-        throw new AssertionError("Key was not fond [pat=" + part + ", from=" + from + ", to=" + to + ']');
+        throw new AssertionError("Key was not found [pat=" + part + ", from=" + from + ", to=" + to + ']');
     }
 
     /**
