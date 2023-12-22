@@ -32,12 +32,13 @@
     <artifactId>ignite-spring-data_2.2</artifactId>
     <url>http://ignite.apache.org</url>
 
+    <!-- Need to override this transitive dependency to fix vulnerabilities. -->
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>org.springframework</groupId>
                 <artifactId>spring-beans</artifactId>
-                <version>${spring.version}</version>
+                <version>5.2.24.RELEASE</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
