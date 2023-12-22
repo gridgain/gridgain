@@ -117,7 +117,8 @@ public class GridDhtCache<K, V> extends GridDhtTransactionalCacheAdapter<K, V> {
             opCtx != null && opCtx.recovery(),
             needVer,
             null,
-            null); // TODO IGNITE-7371
+            null, // TODO IGNITE-7371
+            false); // TODO https://ggsystems.atlassian.net/browse/GG-38173
     }
 
     /**

@@ -705,7 +705,13 @@ public class IgniteCacheProcessProxy<K, V> implements IgniteCache<K, V> {
         return this;
     }
 
+    /** {@inheritDoc} */
     @Override public int localEntrySize(K key) {
+        throw new UnsupportedOperationException("Method should be supported.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean touch(K key) {
         throw new UnsupportedOperationException("Method should be supported.");
     }
 

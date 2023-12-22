@@ -338,6 +338,18 @@ public class GridCacheProxyImpl<K, V> implements IgniteInternalCache<K, V>, Exte
     }
 
     /** {@inheritDoc} */
+    @Override public boolean touch(K key) {
+        CacheOperationContext prev = onEnter(opCtx);
+
+        try {
+            return delegate.touch(key);
+        }
+        finally {
+            onLeave(prev);
+        }
+    }
+
+    /** {@inheritDoc} */
     @Override public GridCacheProxyImpl<K, V> forSubjectId(UUID subjId) {
         return new GridCacheProxyImpl<>(ctx, delegate,
             opCtx != null ? opCtx.forSubjectId(subjId) :
