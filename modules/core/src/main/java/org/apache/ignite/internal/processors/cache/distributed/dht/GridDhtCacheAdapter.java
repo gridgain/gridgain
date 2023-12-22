@@ -1560,46 +1560,45 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
     private void updateTtl(GridCacheAdapter<K, V> cache,
         List<KeyCacheObject> keys,
         List<GridCacheVersion> vers,
-        long ttl) {
+        long ttl
+    ) {
         assert !F.isEmpty(keys);
         assert keys.size() == vers.size();
 
         int size = keys.size();
 
         for (int i = 0; i < size; i++) {
+            GridCacheEntryEx entry = null;
+
             try {
-                GridCacheEntryEx entry = null;
+                while (true) {
+                    ctx.shared().database().checkpointReadLock();
 
-                try {
-                    while (true) {
-                        try {
-                            entry = cache.entryEx(keys.get(i));
+                    try {
+                        entry = cache.entryEx(keys.get(i));
 
-                            entry.unswap(false);
+                        entry.updateTimeToLiveOnTtlUpdateRequest(vers.get(i), ttl);
 
-                            entry.updateTtl(vers.get(i), ttl);
+                        break;
+                    }
+                    catch (GridCacheEntryRemovedException ignore) {
+                        if (log.isDebugEnabled())
+                            log.debug("Got removed entry: " + entry);
+                    }
+                    catch (GridDhtInvalidPartitionException e) {
+                        if (log.isDebugEnabled())
+                            log.debug("Got GridDhtInvalidPartitionException: " + e);
 
-                            break;
-                        }
-                        catch (GridCacheEntryRemovedException ignore) {
-                            if (log.isDebugEnabled())
-                                log.debug("Got removed entry: " + entry);
-                        }
-                        catch (GridDhtInvalidPartitionException e) {
-                            if (log.isDebugEnabled())
-                                log.debug("Got GridDhtInvalidPartitionException: " + e);
-
-                            break;
-                        }
+                        break;
+                    }
+                    finally {
+                        ctx.shared().database().checkpointReadUnlock();
                     }
                 }
-                finally {
-                    if (entry != null)
-                        entry.touch();
-                }
             }
-            catch (IgniteCheckedException e) {
-                log.error("Failed to unswap entry.", e);
+            finally {
+                if (entry != null)
+                    entry.touch();
             }
         }
     }

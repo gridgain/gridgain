@@ -16,8 +16,10 @@
 
 package org.apache.ignite.internal.processors.cache.ttl;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -35,13 +37,17 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy;
 import org.apache.ignite.cache.query.SqlQuery;
+import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cache.store.CacheStoreAdapter;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
@@ -56,7 +62,29 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 /**
  * TTL test.
  */
+@RunWith(Parameterized.class)
 public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
+    /** Default memory page size. */
+    private static final int DEFAULT_PAGE_SIZE = DataStorageConfiguration.DFLT_PAGE_SIZE;
+
+    /**
+     * Parameter that defines a size of cache values.
+     * if {@code true} then cache values will be large, it means that the value will fit several data pages, otherwise one page.
+     **/
+    @Parameterized.Parameter
+    public Boolean useSmallValues;
+
+    /** Test run configurations. */
+    @Parameterized.Parameters(name = "useSmallValues = {0}")
+    public static List<Object[]> parameters() {
+        ArrayList<Object[]> params = new ArrayList<>(2);
+
+        params.add(new Object[] {Boolean.FALSE});
+        params.add(new Object[] {Boolean.TRUE});
+
+        return params;
+    }
+
     /** */
     private static final int MAX_CACHE_SIZE = 5;
 
@@ -80,7 +108,10 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
 
         ccfg.setEvictionPolicy(plc);
         ccfg.setOnheapCacheEnabled(true);
-        ccfg.setIndexedTypes(Integer.class, Integer.class);
+
+        if (useSmallValues)
+            ccfg.setIndexedTypes(Integer.class, TestValue.class);
+
         ccfg.setBackups(2);
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setRebalanceMode(SYNC);
@@ -88,11 +119,11 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
         ccfg.setCacheStoreFactory(singletonFactory(new CacheStoreAdapter() {
             @Override public void loadCache(IgniteBiInClosure clo, Object... args) {
                 for (int i = 0; i < SIZE; i++)
-                    clo.apply(i, i);
+                    clo.apply(i, new TestValue(i, useSmallValues));
             }
 
             @Override public Object load(Object key) throws CacheLoaderException {
-                return key;
+                return new TestValue((Integer)key, useSmallValues);
             }
 
             @Override public void write(Cache.Entry entry) throws CacheWriterException {
@@ -156,7 +187,7 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testDefaultTimeToLiveLoadCache() throws Exception {
-        IgniteCache<Integer, Integer> cache = jcache(0);
+        IgniteCache<Integer, TestValue> cache = jcache(0);
 
         cache.loadCache(null);
 
@@ -182,7 +213,7 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void defaultTimeToLiveLoadAll(boolean replaceExisting) throws Exception {
-        IgniteCache<Integer, Integer> cache = jcache(0);
+        IgniteCache<Integer, TestValue> cache = jcache(0);
 
         CompletionListenerFuture fut = new CompletionListenerFuture();
 
@@ -207,9 +238,9 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testDefaultTimeToLiveStreamerAdd() throws Exception {
-        try (IgniteDataStreamer<Integer, Integer> streamer = ignite(0).dataStreamer(DEFAULT_CACHE_NAME)) {
+        try (IgniteDataStreamer<Integer, TestValue> streamer = ignite(0).dataStreamer(DEFAULT_CACHE_NAME)) {
             for (int i = 0; i < SIZE; i++)
-                streamer.addData(i, i);
+                streamer.addData(i, new TestValue(i, useSmallValues));
         }
 
         checkSizeBeforeLive(SIZE);
@@ -218,11 +249,11 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
 
         checkSizeAfterLive();
 
-        try (IgniteDataStreamer<Integer, Integer> streamer = ignite(0).dataStreamer(DEFAULT_CACHE_NAME)) {
+        try (IgniteDataStreamer<Integer, TestValue> streamer = ignite(0).dataStreamer(DEFAULT_CACHE_NAME)) {
             streamer.allowOverwrite(true);
 
             for (int i = 0; i < SIZE; i++)
-                streamer.addData(i, i);
+                streamer.addData(i, new TestValue(i, useSmallValues));
         }
 
         checkSizeBeforeLive(SIZE);
@@ -237,11 +268,11 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testDefaultTimeToLivePut() throws Exception {
-        IgniteCache<Integer, Integer> cache = jcache(0);
+        IgniteCache<Integer, TestValue> cache = jcache(0);
 
         Integer key = 0;
 
-        cache.put(key, 1);
+        cache.put(key, new TestValue(key, useSmallValues));
 
         checkSizeBeforeLive(1);
 
@@ -255,12 +286,12 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testDefaultTimeToLivePutAll() throws Exception {
-        IgniteCache<Integer, Integer> cache = jcache(0);
+        IgniteCache<Integer, TestValue> cache = jcache(0);
 
-        Map<Integer, Integer> entries = new HashMap<>();
+        Map<Integer, TestValue> entries = new HashMap<>();
 
         for (int i = 0; i < SIZE; ++i)
-            entries.put(i, i);
+            entries.put(i, new TestValue(i, useSmallValues));
 
         cache.putAll(entries);
 
@@ -279,12 +310,12 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
         if (cacheMode() == LOCAL)
             return;
 
-        IgniteCache<Integer, Integer> cache = jcache(0);
+        IgniteCache<Integer, TestValue> cache = jcache(0);
 
-        Map<Integer, Integer> entries = new HashMap<>();
+        Map<Integer, TestValue> entries = new HashMap<>();
 
         for (int i = 0; i < SIZE; ++i)
-            entries.put(i, i);
+            entries.put(i, new TestValue(i, useSmallValues));
 
         cache.putAll(entries);
 
@@ -304,11 +335,11 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
     public void testTimeToLiveTtl() throws Exception {
         long time = DEFAULT_TIME_TO_LIVE + 2000;
 
-        IgniteCache<Integer, Integer> cache = this.<Integer, Integer>jcache(0).withExpiryPolicy(
+        IgniteCache<Integer, TestValue> cache = this.<Integer, TestValue>jcache(0).withExpiryPolicy(
             new TouchedExpiryPolicy(new Duration(MILLISECONDS, time)));
 
         for (int i = 0; i < SIZE; i++)
-            cache.put(i, i);
+            cache.put(i, new TestValue(i, useSmallValues));
 
         checkSizeBeforeLive(SIZE);
 
@@ -336,7 +367,7 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
      */
     private void checkSizeBeforeLive(int size, int gridCnt) throws Exception {
         for (int i = 0; i < gridCnt; ++i) {
-            IgniteCache<Integer, Integer> cache = jcache(i);
+            IgniteCache<Integer, TestValue> cache = jcache(i);
 
             log.info("Size [node=" + i + ", " + cache.localSize(PRIMARY, BACKUP, NEAR) + ']');
 
@@ -345,7 +376,8 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
             for (int key = 0; key < size; key++)
                 assertNotNull(cache.localPeek(key));
 
-            assertFalse(cache.query(new SqlQuery<>(Integer.class, "_val >= 0")).getAll().isEmpty());
+            if (useSmallValues)
+                assertFalse(cache.query(new SqlQuery<>(TestValue.class, "1 = 1")).getAll().isEmpty());
         }
     }
 
@@ -362,7 +394,7 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
      */
     private void checkSizeAfterLive(int gridCnt) throws Exception {
         for (int i = 0; i < gridCnt; ++i) {
-            IgniteCache<Integer, Integer> cache = jcache(i);
+            IgniteCache<Integer, TestValue> cache = jcache(i);
 
             log.info("Size [node=" + i +
                 ", heap=" + cache.localSize(ONHEAP) +
@@ -370,10 +402,29 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
 
             assertEquals(0, cache.localSize());
             assertEquals(0, cache.localSize(OFFHEAP));
-            assertEquals(0, cache.query(new SqlQuery<>(Integer.class, "_val >= 0")).getAll().size());
+
+            if (useSmallValues)
+                assertEquals(0, cache.query(new SqlQuery<>(TestValue.class, "1 = 1")).getAll().size());
 
             for (int key = 0; key < SIZE; key++)
                 assertNull(cache.localPeek(key));
+        }
+    }
+
+    /**
+     * Test value class.
+     */
+    public static class TestValue {
+        // Integer payload.
+        @QuerySqlField
+        public final int intPayload;
+
+        // Byte array payload.
+        public final byte[] data;
+
+        public TestValue(int key, boolean useSmallValues) {
+            intPayload = key;
+            data = useSmallValues ? new byte[128] : new byte[5 * DEFAULT_PAGE_SIZE];
         }
     }
 }
