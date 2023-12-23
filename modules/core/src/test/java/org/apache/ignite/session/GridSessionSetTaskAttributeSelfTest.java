@@ -20,7 +20,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
@@ -37,6 +36,8 @@ import org.apache.ignite.compute.ComputeTaskSplitAdapter;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.TaskEvent;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.future.CountDownFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -50,6 +51,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.events.EventType.EVTS_TASK_EXECUTION;
+import static org.apache.ignite.events.EventType.EVT_TASK_SESSION_ATTR_SET;
 import static org.apache.ignite.events.EventType.EVT_TASK_STARTED;
 
 /**
@@ -126,46 +128,58 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
     }
 
     /**
-     * Check parameters propagation from session to events
-     * @throws Exception
+     * Check parameters propagation from session to events.
+     *
+     * @throws Exception If failed.
      */
     @Test
     public void testAttributesToEventsPropagation() throws Exception {
-        final int intParam = 1;
-        final String textParam = "text";
+        int intParam = 1;
+        String textParam = "text";
 
         IgniteEx n = startGrid(0);
 
-        CountDownLatch latch = new CountDownLatch(1);
-
         n.cluster().state(ACTIVE);
 
+        GridFutureAdapter<Void> lsnrFut = new CountDownFuture(5);
+
         IgnitePredicate<TaskEvent> lsnr = evt -> {
-            log.info("Received task event [evt=" + evt.name() + ", taskName=" + evt.taskName() + ", taskAttributes=" + evt.attributes() + ']');
+            log.info("Received task event [evt=" + evt.name() + ", taskName=" + evt.taskName() +
+                ", taskAttributes=" + evt.attributes() + ']');
 
-            if (evt.type() == EVT_TASK_STARTED) {
-                assertTrue(evt.attributes().isEmpty());
-            } else {
-                assertEquals(intParam, evt.attributes().get(INT_PARAM_NAME));
-                if (evt.attributes().size() > 1)
+            try {
+                if (evt.type() == EVT_TASK_STARTED)
+                    assertTrue(evt.attributes().isEmpty());
+                else if (evt.type() == EVT_TASK_SESSION_ATTR_SET) {
+                    if (evt.attributes().containsKey(INT_PARAM_NAME))
+                        assertEquals(intParam, evt.attributes().get(INT_PARAM_NAME));
+
+                    if (evt.attributes().containsKey(TXT_PARAM_NAME))
+                        assertEquals(textParam, evt.attributes().get(TXT_PARAM_NAME));
+                }
+                else {
+                    assertEquals(intParam, evt.attributes().get(INT_PARAM_NAME));
                     assertEquals(textParam, evt.attributes().get(TXT_PARAM_NAME));
+                }
+
+                lsnrFut.onDone();
             }
-
-            latch.countDown();
-
-            return true;
+            catch (Throwable t) {
+                lsnrFut.onDone(t);
+            }
+            finally {
+                return true;
+            }
         };
 
         n.events().localListen(lsnr, EVTS_TASK_EXECUTION);
 
         // Generate task events.
-        IgniteFuture<Void> taskFut0 = n.compute().runAsync(new CallableWithSessionAttributes(intParam, textParam));
+        IgniteFuture<Void> taskFut = n.compute().runAsync(new CallableWithSessionAttributes(intParam, textParam));
 
-        taskFut0.get(5, TimeUnit.SECONDS);
+        taskFut.get(5, TimeUnit.SECONDS);
 
-        latch.await(5, TimeUnit.SECONDS);
-
-        assertEquals(0, latch.getCount());
+        lsnrFut.get(5, TimeUnit.SECONDS);
 
         // Unsubscribe local task event listener.
         n.events().stopLocalListen(lsnr);
@@ -189,7 +203,6 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
      */
     @ComputeTaskSessionFullSupport
     private static class CallableWithSessionAttributes implements IgniteRunnable {
-
         @TaskSessionResource
         private ComputeTaskSession ses;
 
@@ -203,11 +216,8 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
         }
 
         @Override public void run() {
-            if (numericParameter != 0)
-                ses.setAttribute(INT_PARAM_NAME, numericParameter);
-
-            if (textParameter != null)
-                ses.setAttribute(TXT_PARAM_NAME, textParameter);
+            ses.setAttribute(INT_PARAM_NAME, numericParameter);
+            ses.setAttribute(TXT_PARAM_NAME, textParameter);
         }
     }
 
