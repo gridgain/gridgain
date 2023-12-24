@@ -61,7 +61,6 @@ import static org.apache.ignite.internal.LongJVMPauseDetector.DFLT_JVM_PAUSE_DET
 import static org.apache.ignite.internal.LongJVMPauseDetector.DFLT_JVM_PAUSE_DETECTOR_PRECISION;
 import static org.apache.ignite.internal.binary.streams.BinaryMemoryAllocator.DFLT_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE;
 import static org.apache.ignite.internal.binary.streams.BinaryMemoryAllocator.DFLT_MARSHAL_BUFFERS_RECHECK;
-import static org.apache.ignite.internal.cluster.DistributedClientListenerConfiguration.DFLT_MAX_CONNECTIONS_PER_NODE;
 import static org.apache.ignite.internal.managers.discovery.GridDiscoveryManager.DFLT_DISCOVERY_HISTORY_SIZE;
 import static org.apache.ignite.internal.processors.affinity.AffinityAssignment.DFLT_AFFINITY_BACKUPS_THRESHOLD;
 import static org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache.DFLT_AFFINITY_HISTORY_SIZE;
@@ -2220,11 +2219,6 @@ public final class IgniteSystemProperties {
     @SystemProperty(value = "SSL handshake timeout, in milliseconds", type = Long.class,
             defaults = DFLT_SSL_HANDSHAKE_TIMEOUT_MS + " milliseconds")
     public static final String IGNITE_SSL_HANDSHAKE_TIMEOUT = "IGNITE_SSL_HANDSHAKE_TIMEOUT";
-
-    /** Max thin client connections per node. */
-    @SystemProperty(value = "Maximum allowed number of active thin client connections per node", type = Integer.class,
-            defaults = "" + DFLT_MAX_CONNECTIONS_PER_NODE)
-    public static final String IGNITE_MAX_THIN_CONNECTIONS_PER_NODE = "IGNITE_MAX_THIN_CONNECTIONS_PER_NODE";
 
     /**
      * Enforces singleton.

@@ -38,6 +38,7 @@ import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedThinClientConfiguration;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext;
 import org.apache.ignite.internal.processors.odbc.odbc.OdbcConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
@@ -80,7 +81,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     public static final Integer CONN_STATE_DISCONNECTED = 0;
 
     /** Phisical level connection is established. */
-    public static final Integer CONN_STATE_PHISICAL_CONNECTED = 1;
+    public static final Integer CONN_STATE_PHYSICAL_CONNECTED = 1;
 
     /** Logical level connection is established. */
     public static final Integer CONN_STATE_HANDSHAKE_ACCEPTED = 2;
@@ -106,6 +107,9 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     /** Client connection config. */
     private final ClientConnectorConfiguration cliConnCfg;
 
+    /** Distributed Thin Client config. */
+    private final DistributedThinClientConfiguration distrThinCfg;
+
     /** Thin client configuration. */
     private final ThinClientConfiguration thinCfg;
 
@@ -115,17 +119,24 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     /**
      * Constructor.
      *
-     * @param ctx Context.
-     * @param busyLock Shutdown busy lock.
-     * @param cliConnCfg Client connector configuration.
+     * @param ctx          Context.
+     * @param busyLock     Shutdown busy lock.
+     * @param cliConnCfg   Client connector configuration.
+     * @param distrThinCfg Distributed thin client configuration.
      */
-    public ClientListenerNioListener(GridKernalContext ctx, GridSpinBusyLock busyLock,
-        ClientConnectorConfiguration cliConnCfg) {
+    public ClientListenerNioListener(
+        GridKernalContext ctx,
+        GridSpinBusyLock busyLock,
+        ClientConnectorConfiguration cliConnCfg,
+        DistributedThinClientConfiguration distrThinCfg
+    ) {
         assert cliConnCfg != null;
+        assert distrThinCfg != null;
 
         this.ctx = ctx;
         this.busyLock = busyLock;
         this.cliConnCfg = cliConnCfg;
+        this.distrThinCfg = distrThinCfg;
 
         maxCursors = cliConnCfg.getMaxOpenCursorsPerConnection();
         log = ctx.log(getClass());
@@ -144,7 +155,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
         if (connState != null)
             return;
 
-        ses.addMeta(CONN_STATE_META_KEY, CONN_STATE_PHISICAL_CONNECTED);
+        ses.addMeta(CONN_STATE_META_KEY, CONN_STATE_PHYSICAL_CONNECTED);
 
         if (log.isDebugEnabled())
             log.debug("Client connected: " + ses.remoteAddress());
@@ -369,7 +380,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
         ClientListenerConnectionContext connCtx = null;
 
         try {
-            int maxConn = cliConnCfg.getMaxConnectionCount();
+            int maxConn = distrThinCfg.maxConnectionsPerNode();
             if (maxConn > 0 && connectionsCnt.get() >= maxConn)
                 throw new IgniteCheckedException("Connection limit reached: " + maxConn);
 

@@ -169,7 +169,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                         srv = GridNioServer.<ClientMessage>builder()
                             .address(hostAddr)
                             .port(port)
-                            .listener(new ClientListenerNioListener(ctx, busyLock, cliConnCfg))
+                            .listener(new ClientListenerNioListener(ctx, busyLock, cliConnCfg, distrThinCfg))
                             .logger(log)
                             .selectorCount(selectorCnt)
                             .igniteInstanceName(ctx.igniteInstanceName())
@@ -581,7 +581,6 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
         assertParameter(cfg.getSocketReceiveBufferSize() >= 0, "socketReceiveBufferSize > 0");
         assertParameter(cfg.getMaxOpenCursorsPerConnection() >= 0, "maxOpenCursorsPerConnection() >= 0");
         assertParameter(cfg.getThreadPoolSize() > 0, "threadPoolSize > 0");
-        assertParameter(cfg.getMaxConnectionCount() >= 0, "maxConnectionCount >= 0");
     }
 
     /**
