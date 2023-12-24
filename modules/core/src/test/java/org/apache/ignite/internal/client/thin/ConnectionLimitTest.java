@@ -18,8 +18,8 @@ package org.apache.ignite.internal.client.thin;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.client.IgniteClient;
-import org.apache.ignite.configuration.ClientConnectorConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
+import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -35,16 +35,15 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
      */
     private static final int MAX_CONNECTIONS = 4;
 
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName).setClientConnectorConfiguration(
-            new ClientConnectorConfiguration().setMaxConnectionCount(MAX_CONNECTIONS));
-    }
-
     /** */
     @Test
     public void testConnectionsRejectedOnLimitReached() throws Exception {
-        try (Ignite ignored = startGrid(0)) {
+        try (Ignite ignite = startGrid(0)) {
+            ClientProcessorMXBean ignored = getMxBean(ignite.name(), "Clients",
+                    ClientProcessorMXBean.class, ClientListenerProcessor.class);
+
+            // TODO: set limit
+
             List<IgniteClient> clients = new ArrayList<>();
             try {
                 for (int i = 0; i < MAX_CONNECTIONS; ++i) {

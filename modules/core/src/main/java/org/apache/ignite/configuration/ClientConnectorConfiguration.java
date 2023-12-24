@@ -56,9 +56,6 @@ public class ClientConnectorConfiguration {
     /** Default value of whether to use Ignite SSL context factory. */
     public static final boolean DFLT_USE_IGNITE_SSL_CTX_FACTORY = true;
 
-    /** Default connection count limit. */
-    public static final int DFLT_MAX_CONNECTION_CNT = 0;
-
     /** Host. */
     private String host;
 
@@ -85,9 +82,6 @@ public class ClientConnectorConfiguration {
 
     /** Selector count. */
     private int selectorCnt = DFLT_SELECTOR_CNT;
-
-    /** Max connection count. Zero means no limit. Negative values are not allowed. */
-    private int maxConnectionCnt = DFLT_MAX_CONNECTION_CNT;
 
     /** Idle timeout. */
     private long idleTimeout = DFLT_IDLE_TIMEOUT;
@@ -143,7 +137,6 @@ public class ClientConnectorConfiguration {
         tcpNoDelay = cfg.isTcpNoDelay();
         threadPoolSize = cfg.getThreadPoolSize();
         selectorCnt = cfg.getSelectorCount();
-        maxConnectionCnt = cfg.getMaxConnectionCount();
         idleTimeout = cfg.getIdleTimeout();
         handshakeTimeout = cfg.getHandshakeTimeout();
         jdbcEnabled = cfg.jdbcEnabled;
@@ -353,36 +346,6 @@ public class ClientConnectorConfiguration {
      */
     public ClientConnectorConfiguration setSelectorCount(int selectorCnt) {
         this.selectorCnt = selectorCnt;
-
-        return this;
-    }
-
-    /**
-     * Gets maximum allowed number of active client connections per node.
-     * <p>
-     * Defaults to {@link #DFLT_MAX_CONNECTION_CNT}.
-     * This applies to any connections that use thin client protocol: thin clients, ODBC, thin JDBC connections.
-     * The total number of all connections (ODBC+JDBC+thin client) can not exceed this limit.
-     * Zero means no limit. Negative values are not allowed.
-     *
-     * @return Maximum allowed number of active connections.
-     */
-    public int getMaxConnectionCount() {
-        return maxConnectionCnt;
-    }
-
-    /**
-     * Sets maximum allowed number of active client connections per node.
-     * <p>
-     * This applies to any connections that use thin client protocol: thin clients, ODBC, thin JDBC connections.
-     * The total number of all connections (ODBC+JDBC+thin client) can not exceed this limit.
-     * Zero means no limit. Negative values are not allowed.
-     *
-     * @param maxConnectionCnt Maximum allowed number of active connections.
-     * @return This instance for chaining.
-     */
-    public ClientConnectorConfiguration setMaxConnectionCount(int maxConnectionCnt) {
-        this.maxConnectionCnt = maxConnectionCnt;
 
         return this;
     }
