@@ -39,10 +39,10 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
     @Test
     public void testConnectionsRejectedOnLimitReached() throws Exception {
         try (Ignite ignite = startGrid(0)) {
-            ClientProcessorMXBean ignored = getMxBean(ignite.name(), "Clients",
+            ClientProcessorMXBean mxBean = getMxBean(ignite.name(), "Clients",
                     ClientProcessorMXBean.class, ClientListenerProcessor.class);
 
-            // TODO: set limit
+            mxBean.setMaxConnectionsPerNode(MAX_CONNECTIONS);
 
             List<IgniteClient> clients = new ArrayList<>();
             try {

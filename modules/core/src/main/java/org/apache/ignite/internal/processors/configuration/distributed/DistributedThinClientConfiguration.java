@@ -118,7 +118,10 @@ public class DistributedThinClientConfiguration {
     /**
      * @return Maximum allowed number of active client connections per node. See {@link #maxConnectionsPerNode}.
      */
-    public Integer maxConnectionsPerNode() {
-        return maxConnectionsPerNode.getOrDefault(DFLT_MAX_CONNECTIONS_PER_NODE);
+    public int maxConnectionsPerNode() {
+        Integer value = maxConnectionsPerNode.getOrDefault(DFLT_MAX_CONNECTIONS_PER_NODE);
+        assert value != null;
+
+        return value;
     }
 }

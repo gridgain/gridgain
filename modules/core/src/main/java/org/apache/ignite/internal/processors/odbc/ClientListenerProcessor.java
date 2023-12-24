@@ -134,6 +134,8 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
             try {
                 validateConfiguration(cliConnCfg);
 
+                distrThinCfg = new DistributedThinClientConfiguration(ctx);
+
                 // Resolve host.
                 String host = cliConnCfg.getHost();
 
@@ -222,8 +224,6 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                     this::connectionAttributeViewSupplier,
                     Function.identity()
                 );
-
-                distrThinCfg = new DistributedThinClientConfiguration(ctx);
             }
             catch (Exception e) {
                 throw new IgniteCheckedException("Failed to start client connector processor.", e);
@@ -702,6 +702,21 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
             catch (IgniteCheckedException e) {
                 throw new IgniteException(e);
             }
+        }
+
+        @Override
+        public void setMaxConnectionsPerNode(int maxConnectionsPerNode) {
+            try {
+                distrThinCfg.updateMaxConnectionsPerNodeAsync(maxConnectionsPerNode).get();
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+        }
+
+        @Override
+        public int getMaxConnectionsPerNode() {
+            return distrThinCfg.maxConnectionsPerNode();
         }
     }
 }
