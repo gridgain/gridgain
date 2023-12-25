@@ -17,6 +17,7 @@
 package org.apache.ignite.spi.discovery.tcp.ipfinder.zk.curator;
 
 import org.apache.curator.test.ZooKeeperMainFace;
+import org.apache.zookeeper.server.ServerCnxn;
 import org.apache.zookeeper.server.ServerCnxnFactory;
 import org.apache.zookeeper.server.admin.AdminServer;
 import org.apache.zookeeper.server.quorum.QuorumPeer;
@@ -44,7 +45,7 @@ public class FixedTestingQuorumPeerMain extends QuorumPeerMain implements ZooKee
 
                 ServerCnxnFactory cnxnFactory = (ServerCnxnFactory)cnxnFactoryField.get(quorumPeer);
 
-//                cnxnFactory.closeAll();
+                cnxnFactory.closeAll(ServerCnxn.DisconnectReason.UNKNOWN);
 
                 Field ssField = cnxnFactory.getClass().getDeclaredField("ss");
 
