@@ -18,6 +18,7 @@ package org.apache.ignite.spi.discovery.tcp.ipfinder.zk.curator;
 
 import org.apache.curator.test.ZooKeeperMainFace;
 import org.apache.zookeeper.server.ServerCnxnFactory;
+import org.apache.zookeeper.server.admin.AdminServer;
 import org.apache.zookeeper.server.quorum.QuorumPeer;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeerMain;
@@ -28,7 +29,7 @@ import java.nio.channels.ServerSocketChannel;
 /**
  */
 public class FixedTestingQuorumPeerMain extends QuorumPeerMain implements ZooKeeperMainFace {
-    @Override public void runFromConfig(QuorumPeerConfig config) throws IOException {
+    @Override public void runFromConfig(QuorumPeerConfig config) throws IOException, AdminServer.AdminServerException {
         quorumPeer = QuorumPeer.testingQuorumPeer();
         super.runFromConfig(config);
     }
@@ -43,7 +44,7 @@ public class FixedTestingQuorumPeerMain extends QuorumPeerMain implements ZooKee
 
                 ServerCnxnFactory cnxnFactory = (ServerCnxnFactory)cnxnFactoryField.get(quorumPeer);
 
-                cnxnFactory.closeAll();
+//                cnxnFactory.closeAll();
 
                 Field ssField = cnxnFactory.getClass().getDeclaredField("ss");
 
@@ -66,7 +67,7 @@ public class FixedTestingQuorumPeerMain extends QuorumPeerMain implements ZooKee
     }
 
     /** {@inheritDoc} */
-    @Override public void close() throws IOException {
+    @Override public void close() {
         if (quorumPeer != null)
             quorumPeer.shutdown();
     }

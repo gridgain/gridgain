@@ -73,7 +73,7 @@ public class ZkTestClientCnxnSocketNIO extends ClientCnxnSocketNIO {
      * @throws IOException If failed.
      */
     public ZkTestClientCnxnSocketNIO() throws IOException {
-        super();
+        super(null);
 
         String threadName = Thread.currentThread().getName();
 

@@ -124,9 +124,14 @@ public class TestingZooKeeperServer extends QuorumPeerMain implements Closeable 
     /**
      *
      */
-    public void stop() throws IOException {
-        if (state.compareAndSet(State.STARTED, State.STOPPED))
-            main.close();
+    public void stop() {
+        if (state.compareAndSet(State.STARTED, State.STOPPED)) {
+            try {
+                main.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     /**
@@ -137,14 +142,23 @@ public class TestingZooKeeperServer extends QuorumPeerMain implements Closeable 
     }
 
     /** {@inheritDoc} */
-    @Override public void close() throws IOException {
+    @Override public void close() {
         stop();
 
         if (state.compareAndSet(State.STOPPED, State.CLOSED)) {
             InstanceSpec spec = getInstanceSpec();
-            if (spec.deleteDataDirectoryOnClose())
-                DirectoryUtils.deleteRecursively(spec.getDataDirectory());
+            if (spec.deleteDataDirectoryOnClose()) {
+                try {
+                    DirectoryUtils.deleteRecursively(spec.getDataDirectory());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            super.close();
         }
+
+
     }
 
     /**
