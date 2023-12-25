@@ -68,11 +68,6 @@ namespace Apache.Ignite.Core.Configuration
         public static readonly TimeSpan DefaultHandshakeTimeout = TimeSpan.FromSeconds(10);
 
         /// <summary>
-        /// Default max connection count. Zero means no limit. Negative values are not allowed.
-        /// </summary>
-        public const int DefaultMaxConnections = 0;
-
-        /// <summary>
         /// Default value for <see cref="ThinClientEnabled"/> property.
         /// </summary>
         public const bool DefaultThinClientEnabled = true;
@@ -101,7 +96,6 @@ namespace Apache.Ignite.Core.Configuration
             ThreadPoolSize = DefaultThreadPoolSize;
             IdleTimeout = DefaultIdleTimeout;
             HandshakeTimeout = DefaultHandshakeTimeout;
-            MaxConnections = DefaultMaxConnections;
 
             ThinClientEnabled = DefaultThinClientEnabled;
             OdbcEnabled = DefaultOdbcEnabled;
@@ -130,7 +124,6 @@ namespace Apache.Ignite.Core.Configuration
             JdbcEnabled = reader.ReadBoolean();
 
             HandshakeTimeout = reader.ConfigReadLongAsTimespan();
-            MaxConnections = reader.ReadInt();
 
             // Thin client configuration.
             if (reader.ReadBoolean())
@@ -166,7 +159,6 @@ namespace Apache.Ignite.Core.Configuration
             writer.WriteBoolean(JdbcEnabled);
 
             writer.ConfigWriteTimeSpanAsLong(HandshakeTimeout);
-            writer.WriteInt(MaxConnections);
 
             // Thin client configuration.
             if (ThinClientConfiguration != null)
@@ -247,14 +239,6 @@ namespace Apache.Ignite.Core.Configuration
         /// the connection is closed.
         /// </summary>
         public TimeSpan HandshakeTimeout { get; set; }
-
-        /// <summary>
-        /// Gets or sets maximum allowed number of active client connections per node.
-        /// This applies to any connections that use thin client protocol: thin clients, ODBC, thin JDBC connections.
-        /// The total number of all connections (ODBC+JDBC+thin client) can not exceed this limit.
-        /// Zero means no limit. Negative values are not allowed.
-        /// </summary>
-        public int MaxConnections { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether thin client connector is enabled.

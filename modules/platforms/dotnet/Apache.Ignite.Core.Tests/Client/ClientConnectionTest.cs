@@ -1047,37 +1047,6 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         /// <summary>
-        /// Tests that server rejects new connections when the connection limit reached.
-        /// </summary>
-        [Test]
-        public void TestRejectOnClientLimitReached()
-        {
-            const int maxConnections = 4;
-            
-            var ignite = Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration())
-            {
-                ClientConnectorConfiguration = new ClientConnectorConfiguration
-                {
-                    MaxConnections = maxConnections
-                }
-            });
-
-            Assert.AreEqual(maxConnections, ignite.GetConfiguration().ClientConnectorConfiguration.MaxConnections);
-
-            var clients = new List<IIgniteClient>();
-            try
-            {
-                clients.AddRange(Enumerable.Range(1, maxConnections).Select(_ => StartClient()));
-                var ex = Assert.Catch<Exception>(() => clients.Add(StartClient()));
-                StringAssert.Contains("Connection limit reached: " + maxConnections, ex.Message);
-            }
-            finally
-            {
-                clients.ForEach(c => c.Dispose());
-            }
-        }
-
-        /// <summary>
         /// Starts the client.
         /// </summary>
         private static IIgniteClient StartClient()
