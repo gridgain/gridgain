@@ -72,17 +72,6 @@ public class TaskEventV2 extends TaskEvent {
     private Map<Object, Object> attributes;
 
     /**
-     * Creates task event with given parameters.
-     *
-     * @param node Node.
-     * @param msg Optional message.
-     * @param type Event type.
-     * @param sesId Task session ID.
-     * @param taskName Task name.
-     * @param subjId Subject ID.
-     */
-
-    /**
      *
      * @param node Node.
      * @param msg Optional message.
