@@ -296,6 +296,8 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
 
         IgniteCache<Integer, String> cache = grid(0).createCache(cacheConfiguration());
 
+        info("Start test " + grid(getTestIgniteInstanceName(0)).cluster().localNode().consistentId());
+
         List<Integer> keys = primaryKeys(cache, PRIMARY_KEYS_NUMBER);
 
         for (Integer key : keys)
@@ -324,10 +326,15 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
 
             long getsCnt = ignite.cache(DEFAULT_CACHE_NAME).localMetrics().getCacheGets();
 
-            if (destId.equals(ignite.localNode().id()))
+            if (destId.equals(ignite.localNode().id())) {
+                log.info("Node: " + ignite.localNode().consistentId());
+
                 assertEquals(PRIMARY_KEYS_NUMBER, getsCnt);
-            else
+            }
+            else {
+                log.info("For node " + i);
                 assertEquals(0L, getsCnt);
+            }
         }
     }
 

@@ -3154,6 +3154,11 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
      * @param aff Affinity assignments.
      */
     private void updateRebalanceVersion(AffinityTopologyVersion affVer, List<List<ClusterNode>> aff) {
+        log.info("Call updateRebalanceVersion [grp=" + grp.cacheOrGroupName() +
+            ", top=" + affVer +
+            ", diffFromAffinityVer=" + diffFromAffinityVer +
+            ", readyTopVer=" + readyTopVer + ']');
+
         if (!affVer.equals(diffFromAffinityVer))
             return;
 
@@ -3190,6 +3195,11 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             }
 
             rebalancedTopVer = readyTopVer;
+
+            log.info("Topology updated updateRebalanceVersion [grp=" + grp.cacheOrGroupName() +
+                ", top=" + affVer +
+                ", diffFromAffinityVer=" + diffFromAffinityVer +
+                ", readyTopVer=" + readyTopVer + ']');
 
             if (log.isDebugEnabled())
                 log.debug("Updated rebalanced version [grp=" + grp.cacheOrGroupName() + ", ver=" + rebalancedTopVer + ']');
