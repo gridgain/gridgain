@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
@@ -32,13 +33,27 @@ import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.compute.ComputeTaskSession;
 import org.apache.ignite.compute.ComputeTaskSessionFullSupport;
 import org.apache.ignite.compute.ComputeTaskSplitAdapter;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.TaskEvent;
+import org.apache.ignite.events.TaskEventV2;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.future.CountDownFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.resources.TaskSessionResource;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
+
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.events.EventType.EVTS_TASK_EXECUTION;
+import static org.apache.ignite.events.EventType.EVT_TASK_SESSION_ATTR_SET;
+import static org.apache.ignite.events.EventType.EVT_TASK_STARTED;
 
 /**
  *
@@ -52,8 +67,20 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
     public static final int EXEC_COUNT = 5;
 
     /** */
+    private static final String INT_PARAM_NAME = "customIntParameter";
+
+    /** */
+    private static final String TXT_PARAM_NAME = "customTextParameter";
+
+    /** */
     public GridSessionSetTaskAttributeSelfTest() {
         super(true);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+                .setIncludeEventTypes(EVTS_TASK_EXECUTION);
     }
 
     /**
@@ -102,6 +129,68 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
     }
 
     /**
+     * Check parameters propagation from session to events.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testAttributesToEventsPropagation() throws Exception {
+        int intParam = 1;
+        String textParam = "text";
+
+        IgniteEx n = startGrid(0);
+
+        n.cluster().state(ACTIVE);
+
+        GridFutureAdapter<Void> lsnrFut = new CountDownFuture(5);
+
+        IgnitePredicate<TaskEvent> lsnr = evt -> {
+            assertTrue(evt instanceof TaskEventV2);
+
+            TaskEventV2 event = (TaskEventV2) evt;
+
+            log.info("Received task event [evt=" + event.name() + ", taskName=" + event.taskName() +
+                ", taskAttributes=" + event.attributes() + ']');
+
+            try {
+                if (event.type() == EVT_TASK_STARTED)
+                    assertTrue(event.attributes().isEmpty());
+                else if (event.type() == EVT_TASK_SESSION_ATTR_SET) {
+                    if (event.attributes().containsKey(INT_PARAM_NAME))
+                        assertEquals(intParam, event.attributes().get(INT_PARAM_NAME));
+
+                    if (event.attributes().containsKey(TXT_PARAM_NAME))
+                        assertEquals(textParam, event.attributes().get(TXT_PARAM_NAME));
+                }
+                else {
+                    assertEquals(intParam, event.attributes().get(INT_PARAM_NAME));
+                    assertEquals(textParam, event.attributes().get(TXT_PARAM_NAME));
+                }
+
+                lsnrFut.onDone();
+            }
+            catch (Throwable t) {
+                lsnrFut.onDone(t);
+            }
+            finally {
+                return true;
+            }
+        };
+
+        n.events().localListen(lsnr, EVTS_TASK_EXECUTION);
+
+        // Generate task events.
+        IgniteFuture<Void> taskFut = n.compute().runAsync(new RunnableWithSessionAttributes(intParam, textParam));
+
+        taskFut.get(5, TimeUnit.SECONDS);
+
+        lsnrFut.get(5, TimeUnit.SECONDS);
+
+        // Unsubscribe local task event listener.
+        n.events().stopLocalListen(lsnr);
+    }
+
+    /**
      * @param num Number.
      */
     private void checkTask(int num) {
@@ -112,6 +201,29 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
         Object res = fut.get();
 
         assert (Integer)res == SPLIT_COUNT : "Invalid result [num=" + num + ", fut=" + fut + ']';
+    }
+
+    /**
+     *
+     */
+    @ComputeTaskSessionFullSupport
+    private static class RunnableWithSessionAttributes implements IgniteRunnable {
+        @TaskSessionResource
+        private ComputeTaskSession ses;
+
+        private int numericParameter;
+
+        private String textParameter;
+
+        public RunnableWithSessionAttributes(int numericParameter, String textParameter) {
+            this.numericParameter = numericParameter;
+            this.textParameter = textParameter;
+        }
+
+        @Override public void run() {
+            ses.setAttribute(INT_PARAM_NAME, numericParameter);
+            ses.setAttribute(TXT_PARAM_NAME, textParameter);
+        }
     }
 
     /**

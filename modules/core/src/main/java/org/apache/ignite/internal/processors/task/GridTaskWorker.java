@@ -51,6 +51,7 @@ import org.apache.ignite.compute.ComputeUserUndeclaredException;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.JobEvent;
 import org.apache.ignite.events.TaskEvent;
+import org.apache.ignite.events.TaskEventV2;
 import org.apache.ignite.internal.ComputeTaskInternalFuture;
 import org.apache.ignite.internal.GridInternalException;
 import org.apache.ignite.internal.GridJobCancelRequest;
@@ -105,6 +106,8 @@ import static org.apache.ignite.events.EventType.EVT_TASK_STARTED;
 import static org.apache.ignite.events.EventType.EVT_TASK_TIMEDOUT;
 import static org.apache.ignite.internal.GridTopic.TOPIC_JOB;
 import static org.apache.ignite.internal.GridTopic.TOPIC_JOB_CANCEL;
+import static org.apache.ignite.internal.IgniteFeatures.TASK_EVT_ATTRIBUTE_SUPPORT;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.MANAGEMENT_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.PUBLIC_POOL;
 import static org.apache.ignite.internal.processors.job.ComputeJobStatusEnum.CANCELLED;
@@ -1576,15 +1579,29 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
      */
     private void recordTaskEvent(int evtType, String msg) {
         if (!internal && ctx.event().isRecordable(evtType)) {
-            Event evt = new TaskEvent(
-                ctx.discovery().localNode(),
-                msg,
-                evtType,
-                ses.getId(),
-                ses.getTaskName(),
-                ses.getTaskClassName(),
-                internal,
-                subjId);
+            Event evt;
+            if (allNodesSupport(ctx, TASK_EVT_ATTRIBUTE_SUPPORT)) {
+                evt = new TaskEventV2(
+                        ctx.discovery().localNode(),
+                        msg,
+                        evtType,
+                        ses.getId(),
+                        ses.getTaskName(),
+                        ses.getTaskClassName(),
+                        internal,
+                        subjId,
+                        ses.isFullSupport() ? ses.getAttributes() : null);
+            } else {
+                evt = new TaskEvent(
+                        ctx.discovery().localNode(),
+                        msg,
+                        evtType,
+                        ses.getId(),
+                        ses.getTaskName(),
+                        ses.getTaskClassName(),
+                        internal,
+                        subjId);
+            }
 
             ctx.event().record(evt);
         }
