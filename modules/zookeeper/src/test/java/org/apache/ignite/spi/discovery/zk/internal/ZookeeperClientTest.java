@@ -25,7 +25,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.zk.curator.TestingCluster;
+import org.apache.curator.test.TestingCluster;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -569,7 +569,7 @@ public class ZookeeperClientTest extends GridCommonAbstractTest {
     private void startZK(int instances) throws Exception {
         assert zkCluster == null;
 
-        zkCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(instances);
+        zkCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(instances, null);
 
         zkCluster.start();
     }

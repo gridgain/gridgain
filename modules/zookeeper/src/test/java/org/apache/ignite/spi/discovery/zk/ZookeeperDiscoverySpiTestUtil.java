@@ -19,9 +19,12 @@ package org.apache.ignite.spi.discovery.zk;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
 import org.apache.curator.test.InstanceSpec;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.zk.curator.TestingCluster;
+import org.apache.curator.test.TestingCluster;
 import org.apache.ignite.IgniteException;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Utility to run regular Ignite tests with {@link org.apache.ignite.spi.discovery.zk.ZookeeperDiscoverySpi}.
@@ -31,16 +34,20 @@ public class ZookeeperDiscoverySpiTestUtil {
      * @param instances Number of instances in cluster.
      * @return Test cluster.
      */
-    public static TestingCluster createTestingCluster(int instances) {
-        return createTestingCluster(instances, 0);
+    public static TestingCluster createTestingCluster(int instances, @Nullable Map<String,Object>[] customProps) {
+        return createTestingCluster(instances, 0, null);
     }
 
     /**
-     * @param instances Number of instances in.
+     * @param instances Number of instances in cluster.
      * @param firstInstanceIdx First instance index.
+     *      * @param customProps Custom configuration properties for every server.
      * @return Test cluster.
      */
-    public static TestingCluster createTestingCluster(int instances, int firstInstanceIdx) {
+    public static TestingCluster createTestingCluster(
+            int instances,
+            int firstInstanceIdx,
+            @Nullable Map<String,Object>[] customProps) {
         String tmpDir;
 
         tmpDir = System.getenv("TMPFS_ROOT") != null
@@ -58,7 +65,9 @@ public class ZookeeperDiscoverySpiTestUtil {
                     throw new IgniteException("Failed to create directory for test Zookeeper server: " + file.getAbsolutePath());
             }
 
-            specs.add(new InstanceSpec(file, -1, -1, -1, true, -1, -1, 500));
+            Map<String,Object> props = customProps != null ? customProps[i] : null;
+
+            specs.add(new InstanceSpec(file, -1, -1, -1, true, -1, -1, 500, props));
         }
 
         return new TestingCluster(specs);
