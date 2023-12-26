@@ -49,6 +49,7 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.JobEvent;
 import org.apache.ignite.events.TaskEvent;
+import org.apache.ignite.events.TaskEventV2;
 import org.apache.ignite.internal.GridJobCancelRequest;
 import org.apache.ignite.internal.GridJobContextImpl;
 import org.apache.ignite.internal.GridJobExecuteRequest;
@@ -59,6 +60,7 @@ import org.apache.ignite.internal.GridJobSiblingsResponse;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTaskSessionImpl;
 import org.apache.ignite.internal.GridTaskSessionRequest;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.SkipDaemon;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.collision.GridCollisionJobContextAdapter;
@@ -114,6 +116,8 @@ import static org.apache.ignite.internal.GridTopic.TOPIC_JOB;
 import static org.apache.ignite.internal.GridTopic.TOPIC_JOB_CANCEL;
 import static org.apache.ignite.internal.GridTopic.TOPIC_JOB_SIBLINGS;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TASK;
+import static org.apache.ignite.internal.IgniteFeatures.TASK_EVT_ATTRIBUTE_SUPPORT;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.makeUpdateListener;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.MANAGEMENT_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
@@ -2440,17 +2444,17 @@ public class GridJobProcessor extends GridProcessorAdapter {
     public void recordTaskEvent(Map<?, ?> attrs, GridTaskSessionImpl ses) {
         Event evt;
 
-        if (ses.isFullSupport()) {
-            evt = new TaskEvent(
+        if (allNodesSupport(ctx, TASK_EVT_ATTRIBUTE_SUPPORT)) {
+            evt = new TaskEventV2(
                     ctx.discovery().localNode(),
                     "Changed attributes: " + attrs,
                     EVT_TASK_SESSION_ATTR_SET,
                     ses.getId(),
                     ses.getTaskName(),
                     ses.getTaskClassName(),
-                    ses.getAttributes(),
                     false,
-                    null);
+                    null,
+                    ses.getAttributes());
         } else {
             evt = new TaskEvent(
                     ctx.discovery().localNode(),

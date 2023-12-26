@@ -18,6 +18,7 @@ package org.apache.ignite.spi.loadbalancing.roundrobin;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import org.apache.ignite.GridTestJob;
@@ -26,6 +27,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeTaskSession;
 import org.apache.ignite.events.TaskEvent;
+import org.apache.ignite.events.TaskEventV2;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.testframework.GridSpiTestContext;
 import org.apache.ignite.testframework.GridTestNode;
@@ -103,6 +105,12 @@ public class GridRoundRobinLoadBalancingSpiNotPerTaskSelfTest
             null, null, EVT_TASK_FINISHED, ses1.getId(), null, null, false, null));
         getSpiContext().triggerEvent(new TaskEvent(
             null, null, EVT_TASK_FAILED, ses2.getId(), null, null, false, null));
+
+        getSpiContext().triggerEvent(new TaskEventV2(
+                null, null, EVT_TASK_FINISHED, ses1.getId(), null, null, false, null, new HashMap<>()));
+        getSpiContext().triggerEvent(new TaskEventV2(
+                null, null, EVT_TASK_FAILED, ses2.getId(), null, null, false, null, new HashMap<>()));
+
     }
 
     /**
