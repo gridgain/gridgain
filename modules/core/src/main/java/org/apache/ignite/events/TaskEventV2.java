@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,12 +81,30 @@ public class TaskEventV2 extends TaskEvent {
      * @param taskName Task name.
      * @param subjId Subject ID.
      */
+
+    /**
+     *
+     * @param node Node.
+     * @param msg Optional message.
+     * @param type Event type.
+     * @param sesId Task session ID.
+     * @param taskName Task name.
+     * @param taskClsName Task class name.
+     * @param internal Task is internal.
+     * @param subjId Subject ID.
+     * @param attributes Task session attributes.
+     */
     public TaskEventV2(ClusterNode node, String msg, int type, IgniteUuid sesId, String taskName, String taskClsName,
                        boolean internal, @Nullable UUID subjId, Map<Object, Object> attributes) {
         super(node, msg, type, sesId, taskName, taskClsName, internal, subjId);
         this.attributes = attributes;
     }
 
+    /**
+     * Gets map of attributes from attached task session.
+     *
+     * @return Attributes from task session.
+     */
     public Map<Object, Object> attributes() {
         return attributes;
     }

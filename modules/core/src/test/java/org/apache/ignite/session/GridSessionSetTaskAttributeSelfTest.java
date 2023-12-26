@@ -180,7 +180,7 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
         n.events().localListen(lsnr, EVTS_TASK_EXECUTION);
 
         // Generate task events.
-        IgniteFuture<Void> taskFut = n.compute().runAsync(new CallableWithSessionAttributes(intParam, textParam));
+        IgniteFuture<Void> taskFut = n.compute().runAsync(new RunnableWithSessionAttributes(intParam, textParam));
 
         taskFut.get(5, TimeUnit.SECONDS);
 
@@ -207,7 +207,7 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
      *
      */
     @ComputeTaskSessionFullSupport
-    private static class CallableWithSessionAttributes implements IgniteRunnable {
+    private static class RunnableWithSessionAttributes implements IgniteRunnable {
         @TaskSessionResource
         private ComputeTaskSession ses;
 
@@ -215,7 +215,7 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
 
         private String textParameter;
 
-        public CallableWithSessionAttributes(int numericParameter, String textParameter) {
+        public RunnableWithSessionAttributes(int numericParameter, String textParameter) {
             this.numericParameter = numericParameter;
             this.textParameter = textParameter;
         }
