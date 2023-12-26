@@ -35,6 +35,7 @@ import org.apache.ignite.compute.ComputeTaskSessionFullSupport;
 import org.apache.ignite.compute.ComputeTaskSplitAdapter;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.TaskEvent;
+import org.apache.ignite.events.TaskEventV2;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.future.CountDownFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -144,22 +145,26 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
         GridFutureAdapter<Void> lsnrFut = new CountDownFuture(5);
 
         IgnitePredicate<TaskEvent> lsnr = evt -> {
-            log.info("Received task event [evt=" + evt.name() + ", taskName=" + evt.taskName() +
-                ", taskAttributes=" + evt.attributes() + ']');
+            assertTrue(evt instanceof TaskEventV2);
+
+            TaskEventV2 event = (TaskEventV2) evt;
+
+            log.info("Received task event [evt=" + event.name() + ", taskName=" + event.taskName() +
+                ", taskAttributes=" + event.attributes() + ']');
 
             try {
-                if (evt.type() == EVT_TASK_STARTED)
-                    assertTrue(evt.attributes().isEmpty());
-                else if (evt.type() == EVT_TASK_SESSION_ATTR_SET) {
-                    if (evt.attributes().containsKey(INT_PARAM_NAME))
-                        assertEquals(intParam, evt.attributes().get(INT_PARAM_NAME));
+                if (event.type() == EVT_TASK_STARTED)
+                    assertTrue(event.attributes().isEmpty());
+                else if (event.type() == EVT_TASK_SESSION_ATTR_SET) {
+                    if (event.attributes().containsKey(INT_PARAM_NAME))
+                        assertEquals(intParam, event.attributes().get(INT_PARAM_NAME));
 
-                    if (evt.attributes().containsKey(TXT_PARAM_NAME))
-                        assertEquals(textParam, evt.attributes().get(TXT_PARAM_NAME));
+                    if (event.attributes().containsKey(TXT_PARAM_NAME))
+                        assertEquals(textParam, event.attributes().get(TXT_PARAM_NAME));
                 }
                 else {
-                    assertEquals(intParam, evt.attributes().get(INT_PARAM_NAME));
-                    assertEquals(textParam, evt.attributes().get(TXT_PARAM_NAME));
+                    assertEquals(intParam, event.attributes().get(INT_PARAM_NAME));
+                    assertEquals(textParam, event.attributes().get(TXT_PARAM_NAME));
                 }
 
                 lsnrFut.onDone();
