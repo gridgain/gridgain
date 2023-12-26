@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,14 @@
 
 package org.apache.ignite.events;
 
-import java.util.UUID;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Grid task event.
@@ -62,106 +64,47 @@ import org.jetbrains.annotations.Nullable;
  * @see EventType#EVT_TASK_TIMEDOUT
  * @see EventType#EVTS_TASK_EXECUTION
  */
-public class TaskEvent extends EventAdapter {
+public class TaskEventV2 extends TaskEvent {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** */
-    private final String taskName;
-
-    /** */
-    private final String taskClsName;
-
-    /** */
-    private final IgniteUuid sesId;
-
-    /** */
-    private final boolean internal;
-
     /**  */
-    private final UUID subjId;
-
-    /** {@inheritDoc} */
-    @Override public String shortDisplay() {
-        return name() + ": taskName=" + taskName;
-    }
+    private Map<Object, Object> attributes;
 
     /**
-     * Creates task event with given parameters.
      *
      * @param node Node.
      * @param msg Optional message.
      * @param type Event type.
      * @param sesId Task session ID.
      * @param taskName Task name.
+     * @param taskClsName Task class name.
+     * @param internal Task is internal.
      * @param subjId Subject ID.
+     * @param attributes Task session attributes.
      */
-    public TaskEvent(ClusterNode node, String msg, int type, IgniteUuid sesId, String taskName, String taskClsName,
-                     boolean internal, @Nullable UUID subjId) {
-        super(node, msg, type);
-
-        this.sesId = sesId;
-        this.taskName = taskName;
-        this.taskClsName = taskClsName;
-        this.internal = internal;
-        this.subjId = subjId;
+    public TaskEventV2(ClusterNode node, String msg, int type, IgniteUuid sesId, String taskName, String taskClsName,
+                       boolean internal, @Nullable UUID subjId, Map<Object, Object> attributes) {
+        super(node, msg, type, sesId, taskName, taskClsName, internal, subjId);
+        this.attributes = attributes;
     }
 
     /**
-     * Gets name of the task that triggered the event.
+     * Gets map of attributes from attached task session.
      *
-     * @return Name of the task that triggered the event.
+     * @return Attributes from task session.
      */
-    public String taskName() {
-        return taskName;
-    }
-
-    /**
-     * Gets name of task class that triggered this event.
-     *
-     * @return Name of task class that triggered the event.
-     */
-    public String taskClassName() {
-        return taskClsName;
-    }
-
-    /**
-     * Gets session ID of the task that triggered the event.
-     *
-     * @return Session ID of the task that triggered the event.
-     */
-    public IgniteUuid taskSessionId() {
-        return sesId;
-    }
-
-    /**
-     * Returns {@code true} if task is created by Ignite and is used for system needs.
-     *
-     * @return {@code True} if task is created by Ignite and is used for system needs.
-     */
-    public boolean internal() {
-        return internal;
-    }
-
-    /**
-     * Gets security subject ID initiated this task event, if available. This property
-     * is not available for GridEventType#EVT_TASK_SESSION_ATTR_SET task event.
-     * <p>
-     * Subject ID will be set either to node ID or client ID initiated
-     * task execution.
-     *
-     * @return Subject ID.
-     */
-    @Nullable public UUID subjectId() {
-        return subjId;
+    public Map<Object, Object> attributes() {
+        return attributes;
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(TaskEvent.class, this,
+        return S.toString(TaskEventV2.class, this,
             "nodeId8", U.id8(node().id()),
             "msg", message(),
             "type", name(),
+            "attributes", attributes(),
             "tstamp", timestamp());
     }
 }

@@ -43,6 +43,7 @@ import org.apache.ignite.compute.ComputeTaskSessionFullSupport;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.TaskEvent;
+import org.apache.ignite.events.TaskEventV2;
 import org.apache.ignite.internal.ComputeTaskInternalFuture;
 import org.apache.ignite.internal.GridJobExecuteResponse;
 import org.apache.ignite.internal.GridJobSiblingImpl;
@@ -101,6 +102,8 @@ import static org.apache.ignite.events.EventType.EVT_TASK_SESSION_ATTR_SET;
 import static org.apache.ignite.internal.GridTopic.TOPIC_JOB_SIBLINGS;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TASK;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TASK_CANCEL;
+import static org.apache.ignite.internal.IgniteFeatures.TASK_EVT_ATTRIBUTE_SUPPORT;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistenceEnabled;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.SYS_METRICS;
@@ -834,17 +837,34 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
                 if (ctx.event().isRecordable(EVT_MANAGEMENT_TASK_STARTED) && dep.visorManagementTask(task, taskCls)) {
                     VisorTaskArgument visorTaskArgument = (VisorTaskArgument)arg;
 
-                    Event evt = new TaskEvent(
-                        ctx.discovery().localNode(),
-                        visorTaskArgument != null && visorTaskArgument.getArgument() != null
-                            ? visorTaskArgument.getArgument().toString() : "[]",
-                        EVT_MANAGEMENT_TASK_STARTED,
-                        ses.getId(),
-                        taskCls == null ? null : taskCls.getSimpleName(),
-                        "VisorManagementTask",
-                        false,
-                        subjId
-                    );
+                    Event evt;
+
+                    if (allNodesSupport(ctx, TASK_EVT_ATTRIBUTE_SUPPORT)) {
+                        evt = new TaskEventV2(
+                                ctx.discovery().localNode(),
+                                visorTaskArgument != null && visorTaskArgument.getArgument() != null
+                                        ? visorTaskArgument.getArgument().toString() : "[]",
+                                EVT_MANAGEMENT_TASK_STARTED,
+                                ses.getId(),
+                                taskCls == null ? null : taskCls.getSimpleName(),
+                                "VisorManagementTask",
+                                false,
+                                subjId,
+                                null
+                        );
+                    } else {
+                         evt = new TaskEvent(
+                                ctx.discovery().localNode(),
+                                visorTaskArgument != null && visorTaskArgument.getArgument() != null
+                                        ? visorTaskArgument.getArgument().toString() : "[]",
+                                EVT_MANAGEMENT_TASK_STARTED,
+                                ses.getId(),
+                                taskCls == null ? null : taskCls.getSimpleName(),
+                                "VisorManagementTask",
+                                false,
+                                subjId
+                        );
+                    }
 
                     ctx.event().record(evt);
                 }
@@ -1074,17 +1094,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         }
 
         if (ctx.event().isRecordable(EVT_TASK_SESSION_ATTR_SET)) {
-            Event evt = new TaskEvent(
-                ctx.discovery().localNode(),
-                "Changed attributes: " + attrs,
-                EVT_TASK_SESSION_ATTR_SET,
-                ses.getId(),
-                ses.getTaskName(),
-                ses.getTaskClassName(),
-                false,
-                null);
-
-            ctx.event().record(evt);
+            recordTaskEvent(attrs, ses);
         }
 
         notifyTaskStatusMonitors(ComputeTaskStatus.snapshot(ses), false);
@@ -1689,5 +1699,38 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             return emptyMap();
         else
             return taskWorker.jobStatuses();
+    }
+
+    /**
+     * @param attrs Attributes set.
+     * @param ses Internal session.
+     */
+    public void recordTaskEvent(Map<?, ?> attrs, GridTaskSessionImpl ses) {
+        Event evt;
+
+        if (allNodesSupport(ctx, TASK_EVT_ATTRIBUTE_SUPPORT)) {
+            evt = new TaskEventV2(
+                    ctx.discovery().localNode(),
+                    "Changed attributes: " + attrs,
+                    EVT_TASK_SESSION_ATTR_SET,
+                    ses.getId(),
+                    ses.getTaskName(),
+                    ses.getTaskClassName(),
+                    false,
+                    null,
+                    ses.isFullSupport() ? ses.getAttributes() : null);
+        } else {
+            evt = new TaskEvent(
+                    ctx.discovery().localNode(),
+                    "Changed attributes: " + attrs,
+                    EVT_TASK_SESSION_ATTR_SET,
+                    ses.getId(),
+                    ses.getTaskName(),
+                    ses.getTaskClassName(),
+                    false,
+                    null);
+        }
+
+        ctx.event().record(evt);
     }
 }
