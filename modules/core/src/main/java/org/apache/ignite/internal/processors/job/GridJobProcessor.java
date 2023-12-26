@@ -2454,7 +2454,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
                     ses.getTaskClassName(),
                     false,
                     null,
-                    ses.getAttributes());
+                    ses.isFullSupport() ? ses.getAttributes() : null);
         } else {
             evt = new TaskEvent(
                     ctx.discovery().localNode(),

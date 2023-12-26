@@ -1718,7 +1718,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
                     ses.getTaskClassName(),
                     false,
                     null,
-                    ses.getAttributes());
+                    ses.isFullSupport() ? ses.getAttributes() : null);
         } else {
             evt = new TaskEvent(
                     ctx.discovery().localNode(),
