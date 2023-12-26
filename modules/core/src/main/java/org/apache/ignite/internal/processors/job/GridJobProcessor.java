@@ -60,7 +60,6 @@ import org.apache.ignite.internal.GridJobSiblingsResponse;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTaskSessionImpl;
 import org.apache.ignite.internal.GridTaskSessionRequest;
-import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.SkipDaemon;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.collision.GridCollisionJobContextAdapter;
