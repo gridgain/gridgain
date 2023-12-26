@@ -973,7 +973,7 @@ namespace Apache.Ignite.Core.Tests
                     {
                         MaxActiveTxPerConnection = 8,
                         MaxActiveComputeTasksPerConnection = 9
-                    },
+                    }
                 },
                 PersistentStoreConfiguration = new PersistentStoreConfiguration
                 {

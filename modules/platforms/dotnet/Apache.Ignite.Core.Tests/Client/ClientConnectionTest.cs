@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Tests.Client
 {
     using System;
-    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Net;
