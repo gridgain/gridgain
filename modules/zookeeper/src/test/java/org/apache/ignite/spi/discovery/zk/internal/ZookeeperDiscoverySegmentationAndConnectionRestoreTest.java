@@ -43,7 +43,6 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.zookeeper.ZkTestClientCnxnSocketNIO;
 import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.server.quorum.QuorumPeer;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -254,10 +253,9 @@ public class ZookeeperDiscoverySegmentationAndConnectionRestoreTest extends Zook
             srvs.get(0).stop();
             srvs.get(1).stop();
 
-            QuorumPeer qp = srvs.get(2).getQuorumPeer();
+            int tickTime = srvs.get(2).getInstanceSpec().getTickTime();
 
-            // Zookeeper's socket timeout [tickTime * initLimit] + 5 additional seconds for other logic
-            assertTrue(l.await(qp.getTickTime() * qp.getInitLimit() + 5000, TimeUnit.MILLISECONDS));
+            assertTrue(l.await(30, TimeUnit.MILLISECONDS));
         }
         finally {
             zkCluster.close();
