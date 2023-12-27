@@ -43,7 +43,7 @@ import org.apache.ignite.compute.ComputeTaskSessionFullSupport;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.TaskEvent;
-import org.apache.ignite.events.TaskEventV2;
+import org.apache.ignite.events.ComputeTaskEvent;
 import org.apache.ignite.internal.ComputeTaskInternalFuture;
 import org.apache.ignite.internal.GridJobExecuteResponse;
 import org.apache.ignite.internal.GridJobSiblingImpl;
@@ -840,7 +840,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
                     Event evt;
 
                     if (allNodesSupport(ctx, TASK_EVT_ATTRIBUTE_SUPPORT)) {
-                        evt = new TaskEventV2(
+                        evt = new ComputeTaskEvent(
                                 ctx.discovery().localNode(),
                                 visorTaskArgument != null && visorTaskArgument.getArgument() != null
                                         ? visorTaskArgument.getArgument().toString() : "[]",
@@ -1709,7 +1709,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         Event evt;
 
         if (allNodesSupport(ctx, TASK_EVT_ATTRIBUTE_SUPPORT)) {
-            evt = new TaskEventV2(
+            evt = new ComputeTaskEvent(
                     ctx.discovery().localNode(),
                     "Changed attributes: " + attrs,
                     EVT_TASK_SESSION_ATTR_SET,

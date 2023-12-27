@@ -64,7 +64,7 @@ import java.util.UUID;
  * @see EventType#EVT_TASK_TIMEDOUT
  * @see EventType#EVTS_TASK_EXECUTION
  */
-public class TaskEventV2 extends TaskEvent {
+public class ComputeTaskEvent extends TaskEvent {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -83,8 +83,8 @@ public class TaskEventV2 extends TaskEvent {
      * @param subjId Subject ID.
      * @param attributes Task session attributes.
      */
-    public TaskEventV2(ClusterNode node, String msg, int type, IgniteUuid sesId, String taskName, String taskClsName,
-                       boolean internal, @Nullable UUID subjId, Map<Object, Object> attributes) {
+    public ComputeTaskEvent(ClusterNode node, String msg, int type, IgniteUuid sesId, String taskName, String taskClsName,
+                            boolean internal, @Nullable UUID subjId, Map<Object, Object> attributes) {
         super(node, msg, type, sesId, taskName, taskClsName, internal, subjId);
         this.attributes = attributes;
     }
@@ -100,7 +100,7 @@ public class TaskEventV2 extends TaskEvent {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(TaskEventV2.class, this,
+        return S.toString(ComputeTaskEvent.class, this,
             "nodeId8", U.id8(node().id()),
             "msg", message(),
             "type", name(),
