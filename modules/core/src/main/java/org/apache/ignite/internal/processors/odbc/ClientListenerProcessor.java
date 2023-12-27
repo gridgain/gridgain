@@ -704,8 +704,8 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
             }
         }
 
-        @Override
-        public void setMaxConnectionsPerNode(int maxConnectionsPerNode) {
+        /** {@inheritDoc} */
+        @Override public void setMaxConnectionsPerNode(int maxConnectionsPerNode) {
             try {
                 distrThinCfg.updateMaxConnectionsPerNodeAsync(maxConnectionsPerNode).get();
             }
@@ -714,8 +714,8 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
             }
         }
 
-        @Override
-        public int getMaxConnectionsPerNode() {
+        /** {@inheritDoc} */
+        @Override public int getMaxConnectionsPerNode() {
             return distrThinCfg.maxConnectionsPerNode();
         }
     }
