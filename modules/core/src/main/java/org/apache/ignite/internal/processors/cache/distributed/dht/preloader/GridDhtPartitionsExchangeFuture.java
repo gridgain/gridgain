@@ -4877,6 +4877,17 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         CachePartitionFullCountersMap cntrMap = msg.partitionUpdateCounters(grpId,
                             top.partitions());
 
+//                        if (resTopVer.equals(new AffinityTopologyVersion(5,1))
+//                            && cctx.localNode().consistentId().equals("client")
+//                            && "default".hashCode() == grpId) {
+//                            try {
+//                                Thread.sleep(1_000);
+//                            }
+//                            catch (InterruptedException e) {
+//                                e.printStackTrace();
+//                            }
+//                        }
+
                         top.update(resTopVer,
                             msg.partitions().get(grpId),
                             cntrMap,
