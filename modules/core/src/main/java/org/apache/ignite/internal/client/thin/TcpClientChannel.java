@@ -790,6 +790,8 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
                             resultErr = new ClientAuthenticationException(err);
                         else if (ver.equals(srvVer))
                             resultErr = new ClientProtocolError(err);
+                        else if (srvVer.equals(ProtocolVersion.V_UNKNOWN))
+                            resultErr = new ClientConnectionException(err);
                         else if (!supportedVers.contains(srvVer) ||
                             (!ProtocolContext.isFeatureSupported(srvVer, AUTHORIZATION) && !F.isEmpty(user))) {
                             // Server version is not supported by this client OR server version is less than 1.1.0 supporting

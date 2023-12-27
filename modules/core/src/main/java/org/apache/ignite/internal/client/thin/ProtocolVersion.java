@@ -45,6 +45,9 @@ public final class ProtocolVersion implements Comparable<ProtocolVersion> {
     /** Protocol version 1.0.0. */
     public static final ProtocolVersion V1_0_0 = new ProtocolVersion((short)1, (short)0, (short)0);
 
+    /** Unknown protocol version. */
+    public static final ProtocolVersion V_UNKNOWN = new ProtocolVersion((short)0, (short)0, (short)0);
+
     /** Current protocol version. */
     public static final ProtocolVersion CURRENT_VER = V1_7_1;
 
