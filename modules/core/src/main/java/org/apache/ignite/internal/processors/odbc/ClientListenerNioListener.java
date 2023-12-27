@@ -446,7 +446,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
             ClientListenerProtocolVersion currVer;
 
             if (connCtx == null)
-                currVer = ClientListenerProtocolVersion.create(0, 0, 0);
+                currVer = ClientListenerProtocolVersion.VER_UNKNOWN;
             else
                 currVer = connCtx.defaultVersion();
 

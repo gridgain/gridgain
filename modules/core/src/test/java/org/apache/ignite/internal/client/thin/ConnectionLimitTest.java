@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.client.thin;
 
 import org.apache.ignite.Ignite;
+import org.apache.ignite.client.ClientConnectionException;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
@@ -52,7 +53,7 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
 
                 GridTestUtils.assertThrows(log(),
                         () -> startClient(0),
-                        ClientProtocolError.class,
+                        ClientConnectionException.class,
                         "Connection limit reached: " + MAX_CONNECTIONS);
             }
             finally {
@@ -78,14 +79,14 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
 
                 GridTestUtils.assertThrows(log(),
                         () -> startClient(0),
-                        ClientProtocolError.class,
+                        ClientConnectionException.class,
                         "Connection limit reached: " + MAX_CONNECTIONS);
 
                 mxBean.setMaxConnectionsPerNode(MAX_CONNECTIONS - 2);
 
                 GridTestUtils.assertThrows(log(),
                         () -> startClient(0),
-                        ClientProtocolError.class,
+                        ClientConnectionException.class,
                         "Connection limit reached: " + (MAX_CONNECTIONS - 2));
             }
             finally {
@@ -111,7 +112,7 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
 
                 GridTestUtils.assertThrows(log(),
                         () -> startClient(0),
-                        ClientProtocolError.class,
+                        ClientConnectionException.class,
                         "Connection limit reached: " + MAX_CONNECTIONS);
 
                 mxBean.setMaxConnectionsPerNode(MAX_CONNECTIONS + 2);
@@ -122,7 +123,7 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
 
                 GridTestUtils.assertThrows(log(),
                         () -> startClient(0),
-                        ClientProtocolError.class,
+                        ClientConnectionException.class,
                         "Connection limit reached: " + (MAX_CONNECTIONS + 2));
             }
             finally {
