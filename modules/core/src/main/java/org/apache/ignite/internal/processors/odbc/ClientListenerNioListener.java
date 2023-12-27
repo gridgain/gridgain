@@ -38,6 +38,7 @@ import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedThinClientConfiguration;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext;
 import org.apache.ignite.internal.processors.odbc.odbc.OdbcConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
@@ -73,8 +74,23 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     /** Connection-related metadata key. */
     public static final int CONN_CTX_META_KEY = GridNioSessionMetaKey.nextUniqueKey();
 
+    /** Connection-related metadata key. */
+    public static final int CONN_STATE_META_KEY = GridNioSessionMetaKey.nextUniqueKey();
+
+    /** Connection is not established. */
+    public static final Integer CONN_STATE_DISCONNECTED = 0;
+
+    /** Physical level connection is established. */
+    public static final Integer CONN_STATE_PHYSICAL_CONNECTED = 1;
+
+    /** Logical level connection is established. */
+    public static final Integer CONN_STATE_HANDSHAKE_ACCEPTED = 2;
+
     /** Next connection id. */
-    private static AtomicInteger nextConnId = new AtomicInteger(1);
+    private static final AtomicInteger nextConnId = new AtomicInteger(1);
+
+    /** Current count of active connections. */
+    private static final AtomicInteger connectionsCnt = new AtomicInteger(0);
 
     /** Busy lock. */
     private final GridSpinBusyLock busyLock;
@@ -91,6 +107,9 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     /** Client connection config. */
     private final ClientConnectorConfiguration cliConnCfg;
 
+    /** Distributed Thin Client config. */
+    private final DistributedThinClientConfiguration distrThinCfg;
+
     /** Thin client configuration. */
     private final ThinClientConfiguration thinCfg;
 
@@ -100,17 +119,24 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     /**
      * Constructor.
      *
-     * @param ctx Context.
-     * @param busyLock Shutdown busy lock.
-     * @param cliConnCfg Client connector configuration.
+     * @param ctx          Context.
+     * @param busyLock     Shutdown busy lock.
+     * @param cliConnCfg   Client connector configuration.
+     * @param distrThinCfg Distributed thin client configuration.
      */
-    public ClientListenerNioListener(GridKernalContext ctx, GridSpinBusyLock busyLock,
-        ClientConnectorConfiguration cliConnCfg) {
+    public ClientListenerNioListener(
+        GridKernalContext ctx,
+        GridSpinBusyLock busyLock,
+        ClientConnectorConfiguration cliConnCfg,
+        DistributedThinClientConfiguration distrThinCfg
+    ) {
         assert cliConnCfg != null;
+        assert distrThinCfg != null;
 
         this.ctx = ctx;
         this.busyLock = busyLock;
         this.cliConnCfg = cliConnCfg;
+        this.distrThinCfg = distrThinCfg;
 
         maxCursors = cliConnCfg.getMaxOpenCursorsPerConnection();
         log = ctx.log(getClass());
@@ -123,6 +149,14 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
 
     /** {@inheritDoc} */
     @Override public void onConnected(GridNioSession ses) {
+        Integer connState = ses.meta(CONN_STATE_META_KEY);
+
+        // It means connection was already processed.
+        if (connState != null)
+            return;
+
+        ses.addMeta(CONN_STATE_META_KEY, CONN_STATE_PHYSICAL_CONNECTED);
+
         if (log.isDebugEnabled())
             log.debug("Client connected: " + ses.remoteAddress());
 
@@ -134,6 +168,16 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
 
     /** {@inheritDoc} */
     @Override public void onDisconnected(GridNioSession ses, @Nullable Exception e) {
+        Integer connState = ses.meta(CONN_STATE_META_KEY);
+
+        // It means connection was never properly established or already processed.
+        if (connState == null || connState.equals(CONN_STATE_DISCONNECTED))
+            return;
+
+        ses.addMeta(CONN_STATE_META_KEY, CONN_STATE_DISCONNECTED);
+        if (connState.equals(CONN_STATE_HANDSHAKE_ACCEPTED))
+            connectionsCnt.decrementAndGet();
+
         ClientListenerConnectionContext connCtx = ses.meta(CONN_CTX_META_KEY);
 
         if (connCtx != null) {
@@ -208,7 +252,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
             if (authCtx != null)
                 AuthorizationContext.context(authCtx);
 
-            try (OperationSecurityContext s = ctx.security().withContext(connCtx.securityContext())) {
+            try (OperationSecurityContext ignored = ctx.security().withContext(connCtx.securityContext())) {
                 ClientListenerResponse resp = handler.handle(req);
 
             if (resp != null) {
@@ -336,6 +380,10 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
         ClientListenerConnectionContext connCtx = null;
 
         try {
+            int maxConn = distrThinCfg.maxConnectionsPerNode();
+            if (maxConn > 0 && connectionsCnt.get() >= maxConn)
+                throw new IgniteCheckedException("Connection limit reached: " + maxConn);
+
             connCtx = prepareContext(clientType, ses);
 
             ensureClientPermissions(clientType);
@@ -351,6 +399,9 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
             cancelHandshakeTimeout(ses);
 
             connCtx.handler().writeHandshake(writer);
+
+            ses.addMeta(CONN_STATE_META_KEY, CONN_STATE_HANDSHAKE_ACCEPTED);
+            connectionsCnt.incrementAndGet();
 
             metrics.onHandshakeAccept(clientType);
 
@@ -395,7 +446,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
             ClientListenerProtocolVersion currVer;
 
             if (connCtx == null)
-                currVer = ClientListenerProtocolVersion.create(0, 0, 0);
+                currVer = ClientListenerProtocolVersion.VER_UNKNOWN;
             else
                 currVer = connCtx.defaultVersion();
 

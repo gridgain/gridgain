@@ -44,7 +44,7 @@ public interface ClientProcessorMXBean {
      * @return {@code True} if connection has been dropped successfully, {@code false} otherwise.
      */
     @MXBeanDescription("Drop client connection by ID.")
-    public boolean dropConnection(
+    boolean dropConnection(
         @MXBeanParameter(name = "id", description = "Client connection ID.") long id
     );
 
@@ -57,4 +57,33 @@ public interface ClientProcessorMXBean {
     void showFullStackOnClientSide(
         @MXBeanParameter(name = "show", description = "Show error full stack.") boolean show
     );
+
+    /**
+     * Sets maximum allowed number of active client connections per node.
+     * <p>
+     * This applies to any connections that use thin client protocol: thin clients, ODBC, thin JDBC connections.
+     * The total number of all connections (ODBC+JDBC+thin client) can not exceed this limit.
+     * Zero or negative values mean no limit.
+     *
+     * @param maxConnectionsPerNode Maximum allowed number of active connections per node.
+     */
+    @MXBeanDescription("Maximum allowed number of active client connections per node. This applies to any " +
+        "connection that use thin client protocol: thin clients, ODBC, thin JDBC connections. The total number " +
+        "of all connections (ODBC + JDBC + thin client) can not exceed this limit. Zero or negative values mean " +
+        "no limit.")
+    void setMaxConnectionsPerNode(
+        @MXBeanParameter(
+            name = "maxConnectionsPerNode",
+            description = "Maximum allowed number of active connections per node."
+        ) int maxConnectionsPerNode
+    );
+
+    /**
+     * @return Current maximum allowed number of active client connections per node.
+     */
+    @MXBeanDescription("Returns a maximum allowed number of active client connections per node. This applies to any " +
+        "connection that use thin client protocol: thin clients, ODBC, thin JDBC connections. The total number " +
+        "of all connections (ODBC + JDBC + thin client) can not exceed this limit. Zero or negative values mean " +
+        "no limit.")
+    int getMaxConnectionsPerNode();
 }
