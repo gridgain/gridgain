@@ -253,8 +253,6 @@ public class ZookeeperDiscoverySegmentationAndConnectionRestoreTest extends Zook
             srvs.get(0).stop();
             srvs.get(1).stop();
 
-            int tickTime = srvs.get(2).getInstanceSpec().getTickTime();
-
             assertTrue(l.await(30, TimeUnit.MILLISECONDS));
         }
         finally {
