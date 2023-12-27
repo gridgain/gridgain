@@ -35,7 +35,7 @@ import org.apache.ignite.compute.ComputeTaskSessionFullSupport;
 import org.apache.ignite.compute.ComputeTaskSplitAdapter;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.TaskEvent;
-import org.apache.ignite.events.TaskEventV2;
+import org.apache.ignite.events.TaskWithAttributesEvent;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.future.CountDownFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -145,9 +145,9 @@ public class GridSessionSetTaskAttributeSelfTest extends GridCommonAbstractTest 
         GridFutureAdapter<Void> lsnrFut = new CountDownFuture(5);
 
         IgnitePredicate<TaskEvent> lsnr = evt -> {
-            assertTrue(evt instanceof TaskEventV2);
+            assertTrue(evt instanceof TaskWithAttributesEvent);
 
-            TaskEventV2 event = (TaskEventV2) evt;
+            TaskWithAttributesEvent event = (TaskWithAttributesEvent) evt;
 
             log.info("Received task event [evt=" + event.name() + ", taskName=" + event.taskName() +
                 ", taskAttributes=" + event.attributes() + ']');

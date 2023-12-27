@@ -49,7 +49,7 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.JobEvent;
 import org.apache.ignite.events.TaskEvent;
-import org.apache.ignite.events.TaskEventV2;
+import org.apache.ignite.events.TaskWithAttributesEvent;
 import org.apache.ignite.internal.GridJobCancelRequest;
 import org.apache.ignite.internal.GridJobContextImpl;
 import org.apache.ignite.internal.GridJobExecuteRequest;
@@ -2444,7 +2444,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
         Event evt;
 
         if (allNodesSupport(ctx, TASK_EVT_ATTRIBUTE_SUPPORT)) {
-            evt = new TaskEventV2(
+            evt = new TaskWithAttributesEvent(
                     ctx.discovery().localNode(),
                     "Changed attributes: " + attrs,
                     EVT_TASK_SESSION_ATTR_SET,
