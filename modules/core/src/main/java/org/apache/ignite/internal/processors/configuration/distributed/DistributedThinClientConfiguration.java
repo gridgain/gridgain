@@ -51,7 +51,7 @@ public class DistributedThinClientConfiguration {
      * Zero or negative value means no limit.
      */
     private final DistributedChangeableProperty<Integer> maxConnectionsPerNode =
-            detachedIntegerProperty("maxConnectionsPerNode");
+            detachedIntegerProperty("thinClientProperty.maxConnectionsPerNode");
 
     /** */
     private final IgniteLogger log;
