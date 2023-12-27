@@ -60,4 +60,74 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
             }
         }
     }
+
+    /** */
+    @Test
+    public void testConnectionsRejectedOnLimitLowered() throws Exception {
+        try (Ignite ignite = startGrid(0)) {
+            ClientProcessorMXBean mxBean = getMxBean(ignite.name(), "Clients",
+                    ClientProcessorMXBean.class, ClientListenerProcessor.class);
+
+            mxBean.setMaxConnectionsPerNode(MAX_CONNECTIONS);
+
+            List<IgniteClient> clients = new ArrayList<>();
+            try {
+                for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+                    clients.add(startClient(0));
+                }
+
+                GridTestUtils.assertThrows(log(),
+                        () -> startClient(0),
+                        ClientProtocolError.class,
+                        "Connection limit reached: " + MAX_CONNECTIONS);
+
+                mxBean.setMaxConnectionsPerNode(MAX_CONNECTIONS - 2);
+
+                GridTestUtils.assertThrows(log(),
+                        () -> startClient(0),
+                        ClientProtocolError.class,
+                        "Connection limit reached: " + (MAX_CONNECTIONS - 2));
+            }
+            finally {
+                clients.forEach(IgniteClient::close);
+            }
+        }
+    }
+
+    /** */
+    @Test
+    public void testConnectionsRejectedOnLimitRaised() throws Exception {
+        try (Ignite ignite = startGrid(0)) {
+            ClientProcessorMXBean mxBean = getMxBean(ignite.name(), "Clients",
+                    ClientProcessorMXBean.class, ClientListenerProcessor.class);
+
+            mxBean.setMaxConnectionsPerNode(MAX_CONNECTIONS);
+
+            List<IgniteClient> clients = new ArrayList<>();
+            try {
+                for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+                    clients.add(startClient(0));
+                }
+
+                GridTestUtils.assertThrows(log(),
+                        () -> startClient(0),
+                        ClientProtocolError.class,
+                        "Connection limit reached: " + MAX_CONNECTIONS);
+
+                mxBean.setMaxConnectionsPerNode(MAX_CONNECTIONS + 2);
+
+                for (int i = 0; i < 2; ++i) {
+                    clients.add(startClient(0));
+                }
+
+                GridTestUtils.assertThrows(log(),
+                        () -> startClient(0),
+                        ClientProtocolError.class,
+                        "Connection limit reached: " + (MAX_CONNECTIONS + 2));
+            }
+            finally {
+                clients.forEach(IgniteClient::close);
+            }
+        }
+    }
 }

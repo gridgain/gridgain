@@ -80,7 +80,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     /** Connection is not established. */
     public static final Integer CONN_STATE_DISCONNECTED = 0;
 
-    /** Phisical level connection is established. */
+    /** Physical level connection is established. */
     public static final Integer CONN_STATE_PHYSICAL_CONNECTED = 1;
 
     /** Logical level connection is established. */

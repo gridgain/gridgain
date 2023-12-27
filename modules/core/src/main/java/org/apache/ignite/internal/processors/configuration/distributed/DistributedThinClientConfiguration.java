@@ -34,7 +34,7 @@ public class DistributedThinClientConfiguration {
     /** Default connection count limit. */
     public static final int DFLT_MAX_CONNECTIONS_PER_NODE = 0;
 
-    /** Message of baseline auto-adjust parameter was changed. */
+    /** Message of thin client distributed config parameter was changed. */
     private static final String PROPERTY_UPDATE_MESSAGE =
             "ThinClientProperty parameter '%s' was changed from '%s' to '%s'";
 
