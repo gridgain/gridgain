@@ -3198,12 +3198,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** {@inheritDoc} */
     @Override public <K, V> IgniteCache<K, V> createCache(CacheConfiguration<K, V> cacheCfg) {
         A.notNull(cacheCfg, "cacheCfg");
+        CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
 
         guard();
 
         try {
-            CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
-
             checkClusterState();
 
             ctx.cache().dynamicStartCache(cacheCfg,
@@ -3226,12 +3225,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** {@inheritDoc} */
     @Override public Collection<IgniteCache> createCaches(Collection<CacheConfiguration> cacheCfgs) {
         A.notNull(cacheCfgs, "cacheCfgs");
+        CU.validateConfigurationCacheNames(cacheCfgs, ctx.config().getDataStorageConfiguration());
 
         guard();
 
         try {
-            CU.validateConfigurationCacheNames(cacheCfgs, ctx.config().getDataStorageConfiguration());
-
             checkClusterState();
 
             ctx.cache().dynamicStartCaches(cacheCfgs,
@@ -3284,11 +3282,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         A.notNull(cacheCfg, "cacheCfg");
         String cacheName = cacheCfg.getName();
 
+        CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
+
         guard();
 
         try {
-            CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
-
             checkClusterState();
 
             Boolean res = false;
@@ -3321,12 +3319,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** {@inheritDoc} */
     @Override public Collection<IgniteCache> getOrCreateCaches(Collection<CacheConfiguration> cacheCfgs) {
         A.notNull(cacheCfgs, "cacheCfgs");
+        CU.validateConfigurationCacheNames(cacheCfgs, ctx.config().getDataStorageConfiguration());
 
         guard();
 
         try {
-            CU.validateConfigurationCacheNames(cacheCfgs, ctx.config().getDataStorageConfiguration());
-
             checkClusterState();
 
             ctx.cache().dynamicStartCaches(cacheCfgs,
@@ -3355,13 +3352,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         NearCacheConfiguration<K, V> nearCfg
     ) {
         A.notNull(cacheCfg, "cacheCfg");
+        CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
         A.notNull(nearCfg, "nearCfg");
 
         guard();
 
         try {
-            CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
-
             checkClusterState();
 
             ctx.cache().dynamicStartCache(cacheCfg,
@@ -3385,13 +3381,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     @Override public <K, V> IgniteCache<K, V> getOrCreateCache(CacheConfiguration<K, V> cacheCfg,
         NearCacheConfiguration<K, V> nearCfg) {
         A.notNull(cacheCfg, "cacheCfg");
+        CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
         A.notNull(nearCfg, "nearCfg");
 
         guard();
 
         try {
-            CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
-
             checkClusterState();
 
             IgniteInternalCache<Object, Object> cache = ctx.cache().cache(cacheCfg.getName());
@@ -3639,12 +3634,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** {@inheritDoc} */
     @Override public <K, V> void addCacheConfiguration(CacheConfiguration<K, V> cacheCfg) {
         A.notNull(cacheCfg, "cacheCfg");
+        CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
 
         guard();
 
         try {
-            CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
-
             checkClusterState();
 
             ctx.cache().addCacheConfiguration(cacheCfg);

@@ -1555,15 +1555,15 @@ public class GridCacheUtils {
 
     /**
      * @param ccfg Cache configuration.
-     * @param dsCfg Data storage config.
+     * @param dsCfg Data storage configuration.
      * @throws IllegalArgumentException In case the name is not valid.
      */
     public static void validateNewCacheName(CacheConfiguration ccfg, DataStorageConfiguration dsCfg)
-            throws IllegalArgumentException, IgniteCheckedException {
+            throws IllegalArgumentException {
         validateNewCacheName(ccfg.getName());
 
         if (ccfg != null && !CU.isCacheTemplateName(ccfg.getName()) && CU.containsInvalidFileNameChars(ccfg, dsCfg)) {
-            throw new IgniteCheckedException(
+            throw new IllegalArgumentException(
                     "Cache start failed. Cache or group name contains the characters " +
                             "that are not allowed in file names [cache=" + ccfg.getName() +
                             (ccfg.getGroupName() == null ? "" : ", group=" + ccfg.getGroupName()) + ']'
@@ -1584,14 +1584,13 @@ public class GridCacheUtils {
 
     /**
      * @param ccfgs Configurations to validate.
-     * @param dsCfg Data storage config.
+     * @param dsCfg Data storage configuration.
      * @throws IllegalArgumentException In case the name is not valid.
      */
     public static void validateConfigurationCacheNames(
             Collection<CacheConfiguration> ccfgs,
             DataStorageConfiguration dsCfg
-    )
-            throws IllegalArgumentException, IgniteCheckedException {
+    ) throws IllegalArgumentException {
         for (CacheConfiguration ccfg : ccfgs)
             validateNewCacheName(ccfg, dsCfg);
     }
@@ -2275,11 +2274,11 @@ public class GridCacheUtils {
      * Checks if the cache directory path contains invalid chars.
      *
      * @param ccfg Cache configuration
-     * @param dscfg Data storage configuration.
+     * @param dsCfg Data storage configuration.
      * @return {@code True} if cache directory contains the characters that are not allowed in file names.
      */
-    public static boolean containsInvalidFileNameChars(CacheConfiguration<?, ?> ccfg, DataStorageConfiguration dscfg) {
-        if (!CU.isPersistentCache(ccfg, dscfg))
+    public static boolean containsInvalidFileNameChars(CacheConfiguration<?, ?> ccfg, DataStorageConfiguration dsCfg) {
+        if (!CU.isPersistentCache(ccfg, dsCfg))
             return false;
 
         String expDir = cacheDirName(ccfg);

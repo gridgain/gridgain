@@ -97,7 +97,7 @@ public class CacheDirectoryNameTest extends GridCommonAbstractTest {
                 cfg.setName(name);
 
             if (persistenceEnabled) {
-                assertThrows(log, () -> srv.createCache(cfg), IgniteCheckedException.class,
+                assertThrows(log, () -> srv.createCache(cfg), IllegalArgumentException.class,
                     "Cache start failed. Cache or group name contains the characters that are not allowed in file names");
             }
             else {

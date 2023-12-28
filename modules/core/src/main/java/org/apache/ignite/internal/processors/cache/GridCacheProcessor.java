@@ -3549,15 +3549,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     ) {
         assert cacheName != null;
 
-        if (ccfg != null && CU.containsInvalidFileNameChars(ccfg, ctx.config().getDataStorageConfiguration())) {
-            return new GridFinishedFuture<>(new IgniteCheckedException(
-                    "Cache start failed. Cache or group name contains the characters " +
-                            "that are not allowed in file names [cache=" + ccfg.getName() +
-                            (ccfg.getGroupName() == null ? "" : ", group=" + ccfg.getGroupName()) + ']'
-                    )
-            );
-        }
-
         if (checkThreadTx) {
             sharedCtx.tm().checkEmptyTransactions(
                 () -> format(CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT, cacheName, "dynamicStartCache"));
