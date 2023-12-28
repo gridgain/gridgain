@@ -1554,6 +1554,24 @@ public class GridCacheUtils {
     }
 
     /**
+     * @param ccfg Cache configuration.
+     * @param dsCfg Data storage config.
+     * @throws IllegalArgumentException In case the name is not valid.
+     */
+    public static void validateNewCacheName(CacheConfiguration ccfg, DataStorageConfiguration dsCfg)
+            throws IllegalArgumentException, IgniteCheckedException {
+        validateNewCacheName(ccfg.getName());
+
+        if (ccfg != null && !CU.isCacheTemplateName(ccfg.getName()) && CU.containsInvalidFileNameChars(ccfg, dsCfg)) {
+            throw new IgniteCheckedException(
+                    "Cache start failed. Cache or group name contains the characters " +
+                            "that are not allowed in file names [cache=" + ccfg.getName() +
+                            (ccfg.getGroupName() == null ? "" : ", group=" + ccfg.getGroupName()) + ']'
+            );
+        }
+    }
+
+    /**
      * @param cacheNames Cache names to validate.
      * @throws IllegalArgumentException In case the name is not valid.
      */
@@ -1566,12 +1584,16 @@ public class GridCacheUtils {
 
     /**
      * @param ccfgs Configurations to validate.
+     * @param dsCfg Data storage config.
      * @throws IllegalArgumentException In case the name is not valid.
      */
-    public static void validateConfigurationCacheNames(Collection<CacheConfiguration> ccfgs)
-        throws IllegalArgumentException {
+    public static void validateConfigurationCacheNames(
+            Collection<CacheConfiguration> ccfgs,
+            DataStorageConfiguration dsCfg
+    )
+            throws IllegalArgumentException, IgniteCheckedException {
         for (CacheConfiguration ccfg : ccfgs)
-            validateNewCacheName(ccfg.getName());
+            validateNewCacheName(ccfg, dsCfg);
     }
 
     /**
