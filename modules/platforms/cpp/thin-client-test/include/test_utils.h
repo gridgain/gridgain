@@ -24,6 +24,8 @@
 
 #include <ignite/ignition.h>
 
+#include "teamcity/teamcity_messages.h"
+
 #define MUTE_TEST_FOR_TEAMCITY \
     if (jetbrains::teamcity::underTeamcity()) \
     { \
