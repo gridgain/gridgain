@@ -24,6 +24,10 @@ import org.jetbrains.annotations.NotNull;
  * Client listener protocol version.
  */
 public class ClientListenerProtocolVersion implements Comparable<ClientListenerProtocolVersion> {
+    /** Unknown version. */
+    public static final ClientListenerProtocolVersion VER_UNKNOWN =
+            new ClientListenerProtocolVersion((short)0, (short)0, (short)0);
+
     /** Major part. */
     private final short major;
 

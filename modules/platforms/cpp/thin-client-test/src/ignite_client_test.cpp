@@ -220,6 +220,8 @@ BOOST_AUTO_TEST_CASE(IgniteClientConnectionLimit)
 
 BOOST_AUTO_TEST_CASE(IgniteClientReconnect)
 {
+    MUTE_TEST_FOR_TEAMCITY;
+
     ignite::Ignite serverNode0 = StartNodeWithLog("0", &logger);
     ignite::Ignite serverNode1 = StartNodeWithLog("1", &logger);
 

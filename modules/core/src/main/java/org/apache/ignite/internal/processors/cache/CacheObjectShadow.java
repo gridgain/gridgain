@@ -80,7 +80,7 @@ public class CacheObjectShadow extends CacheObjectAdapter {
     }
 
     @Override public int valueBytesLength(CacheObjectContext ctx) throws IgniteCheckedException {
-        return valSize;
+        return objectPutSize(valSize);
     }
 
     /** {@inheritDoc} */

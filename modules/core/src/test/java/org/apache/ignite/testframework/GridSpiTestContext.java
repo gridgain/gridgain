@@ -35,6 +35,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.TaskEvent;
+import org.apache.ignite.events.TaskWithAttributesEvent;
 import org.apache.ignite.internal.ClusterMetricsSnapshot;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.direct.DirectMessageReader;
@@ -393,6 +394,18 @@ public class GridSpiTestContext implements IgniteSpiContext {
         assert type > 0;
 
         triggerEvent(new TaskEvent(locNode, msg, type, taskSesId, taskName, null, false, null));
+    }
+
+    /**
+     * @param type Event type.
+     * @param taskName Task name.
+     * @param taskSesId Session ID.
+     * @param msg Event message.
+     */
+    public void triggerTaskEventV2(int type, String taskName, IgniteUuid taskSesId, String msg) {
+        assert type > 0;
+
+        triggerEvent(new TaskWithAttributesEvent(locNode, msg, type, taskSesId, taskName, null, false, null, new HashMap<>()));
     }
 
     /**

@@ -136,6 +136,7 @@ public class ClientConnectorConfiguration {
         sockSndBufSize = cfg.getSocketSendBufferSize();
         tcpNoDelay = cfg.isTcpNoDelay();
         threadPoolSize = cfg.getThreadPoolSize();
+        selectorCnt = cfg.getSelectorCount();
         idleTimeout = cfg.getIdleTimeout();
         handshakeTimeout = cfg.getHandshakeTimeout();
         jdbcEnabled = cfg.jdbcEnabled;

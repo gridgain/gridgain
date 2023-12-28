@@ -21,7 +21,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collection;
 import java.util.UUID;
-import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
@@ -108,7 +107,6 @@ public class CheckpointManager {
      * @param cacheProcessor Cache processor.
      * @param cpFreqOverride Override of checkpoint frequency (ms) via a distributed property.
      * @param cpFreqDeviation Distributed checkpoint frequency deviation.
-     * @param checkpointMapSnapshotExecutor Checkpoint map snapshot executor.
      * @throws IgniteCheckedException if fail.
      */
     public CheckpointManager(
@@ -130,8 +128,7 @@ public class CheckpointManager {
         FailureProcessor failureProcessor,
         GridCacheProcessor cacheProcessor,
         Supplier<Long> cpFreqOverride,
-        Supplier<Integer> cpFreqDeviation,
-        Executor checkpointMapSnapshotExecutor
+        Supplier<Integer> cpFreqDeviation
     ) throws IgniteCheckedException {
         CheckpointHistory cpHistory = new CheckpointHistory(
             persistenceCfg,
@@ -151,8 +148,7 @@ public class CheckpointManager {
             cpHistory,
             ioFactory,
             pageStoreManager.workDir().getAbsolutePath(),
-            lock,
-            checkpointMapSnapshotExecutor
+            lock
         );
 
         checkpointWorkflow = new CheckpointWorkflow(
@@ -406,6 +402,8 @@ public class CheckpointManager {
         checkpointWorkflow.stop();
 
         this.checkpointer = null;
+
+        checkpointMarkersStorage.stop();
     }
 
     /**

@@ -576,7 +576,7 @@ public class ClusterCachesInfo {
             // 2 - At the same, the user initiates destroing the cache which should be started on the step 1.
             // 3 - The corresponding exchange (see step 1) results in an error, and so, the start should be rolled back.
             // 4 - When DynamicCacheChangeFailureMessage received the reqired cache descriptor is already deleted
-            //     and therefore, we need to scan markedForDeletion collections in order to fins the right descriptor.
+            //     and therefore, we need to scan markedForDeletion collections in order to find the right descriptor.
 
             // Find the "earliest" available descriptor.
             for (Map<String, DynamicCacheDescriptor> descriptors : markedForDeletionCaches.tailMap(actualTopVer).values()) {

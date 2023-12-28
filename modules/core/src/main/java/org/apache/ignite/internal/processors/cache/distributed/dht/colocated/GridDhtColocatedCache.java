@@ -187,7 +187,9 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
         String taskName,
         final boolean deserializeBinary,
         final boolean skipVals,
-        final boolean needVer) {
+        final boolean needVer,
+        final boolean touchTtl
+    ) {
         ctx.checkSecurity(SecurityPermission.CACHE_READ);
 
         GridNearTxLocal tx = checkCurrentTx();
@@ -275,7 +277,8 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
             /*keepCacheObjects*/false,
             opCtx != null && opCtx.recovery(),
             null,
-            mvccSnapshot);
+            mvccSnapshot,
+            false); // TODO https://ggsystems.atlassian.net/browse/GG-38173
 
         fut.init();
 
@@ -442,7 +445,8 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
             keepCacheObj,
             recovery,
             txLbl,
-            mvccSnapshot);
+            mvccSnapshot,
+            false); // TODO https://ggsystems.atlassian.net/browse/GG-38173
 
         fut.init();
 

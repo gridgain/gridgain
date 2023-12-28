@@ -29,6 +29,7 @@ import org.apache.ignite.cache.RebalanceCancellationTest;
 import org.apache.ignite.cache.RebalanceCompleteDuringExchangeTest;
 import org.apache.ignite.cache.ReleaseSegmentOnHistoricalRebalanceTest;
 import org.apache.ignite.cache.ResetLostPartitionTest;
+import org.apache.ignite.cache.ResetLostPartitionsFromClientTest;
 import org.apache.ignite.internal.processors.cache.IgniteClusterActivateDeactivateTestWithPersistenceAndMemoryReuse;
 import org.apache.ignite.internal.processors.cache.distributed.CachePageWriteLockUnlockTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.IgniteRebalanceOnCachesStoppingOrDestroyingTest;
@@ -78,6 +79,7 @@ public class IgnitePdsTestSuite4 {
         GridTestUtils.addTestIfNeeded(suite, IgniteClusterActivateDeactivateTestWithPersistenceAndMemoryReuse.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsPartitionPreloadTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ResetLostPartitionTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, ResetLostPartitionsFromClientTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, RebalanceAfterResettingLostPartitionTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteRebalanceOnCachesStoppingOrDestroyingTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CachePageWriteLockUnlockTest.class, ignoredTests);

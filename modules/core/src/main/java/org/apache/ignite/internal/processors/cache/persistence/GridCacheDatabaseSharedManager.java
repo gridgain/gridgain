@@ -572,8 +572,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 kernalCtx.failure(),
                 kernalCtx.cache(),
                 cpFreq::get,
-                cpFreqDeviation::get,
-                kernalCtx.pools().getSystemExecutorService()
+                cpFreqDeviation::get
             );
 
             final NodeFileLockHolder preLocked = kernalCtx.pdsFolderResolver()
@@ -2064,6 +2063,19 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);
         }
+
+        return res;
+    }
+
+    /**
+     * @param f Consumer.
+     * @return Accumulated result for all page stores in all cache groups.
+     */
+    public long forAllGroupsPageStores(ToLongFunction<PageStore> f) {
+        long res = 0;
+
+        for (CacheGroupContext gctx : cacheGrpCtxSupplier().getAll())
+            res += forGroupPageStores(gctx, f);
 
         return res;
     }
