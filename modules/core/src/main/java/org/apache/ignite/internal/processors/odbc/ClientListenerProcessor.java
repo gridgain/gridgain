@@ -134,6 +134,8 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
             try {
                 validateConfiguration(cliConnCfg);
 
+                distrThinCfg = new DistributedThinClientConfiguration(ctx);
+
                 // Resolve host.
                 String host = cliConnCfg.getHost();
 
@@ -169,7 +171,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                         srv = GridNioServer.<ClientMessage>builder()
                             .address(hostAddr)
                             .port(port)
-                            .listener(new ClientListenerNioListener(ctx, busyLock, cliConnCfg))
+                            .listener(new ClientListenerNioListener(ctx, busyLock, cliConnCfg, distrThinCfg))
                             .logger(log)
                             .selectorCount(selectorCnt)
                             .igniteInstanceName(ctx.igniteInstanceName())
@@ -222,8 +224,6 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                     this::connectionAttributeViewSupplier,
                     Function.identity()
                 );
-
-                distrThinCfg = new DistributedThinClientConfiguration(ctx);
             }
             catch (Exception e) {
                 throw new IgniteCheckedException("Failed to start client connector processor.", e);
@@ -702,6 +702,21 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
             catch (IgniteCheckedException e) {
                 throw new IgniteException(e);
             }
+        }
+
+        /** {@inheritDoc} */
+        @Override public void setMaxConnectionsPerNode(int maxConnectionsPerNode) {
+            try {
+                distrThinCfg.updateMaxConnectionsPerNodeAsync(maxConnectionsPerNode).get();
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public int getMaxConnectionsPerNode() {
+            return distrThinCfg.maxConnectionsPerNode();
         }
     }
 }
