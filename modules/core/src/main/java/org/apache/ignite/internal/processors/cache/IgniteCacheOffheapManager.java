@@ -41,7 +41,7 @@ import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccUpdateResult;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccLinkAwareSearchRow;
-import org.apache.ignite.internal.processors.cache.tree.updatelog.PartitionLogTree;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLog;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
 import org.apache.ignite.internal.util.GridAtomicLong;
@@ -1217,11 +1217,11 @@ public interface IgniteCacheOffheapManager {
         public void setRowCacheCleaner(GridQueryRowCacheCleaner rowCacheCleaner);
 
         /**
-         * Return partition update log tree.
+         * Return partition update log.
          *
-         * @return PartitionLogTree instance.
+         * @return UpdateLog instance.
          */
-        PartitionLogTree logTree();
+        UpdateLog logTree();
 
         /**
          * Return PendingTree for data store.
