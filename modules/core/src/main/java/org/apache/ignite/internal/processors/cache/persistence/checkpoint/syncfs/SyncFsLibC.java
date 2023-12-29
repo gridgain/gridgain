@@ -26,21 +26,27 @@ class SyncFsLibC {
     /** JNA library available and initialized. {@code true} for linux with version >= 2.14. */
     public static final boolean JNA_AVAILABLE;
 
+    /** Native lib initialization error. */
+    public static final Throwable ERROR;
+
     static {
-        boolean jnaAvailable0 = false;
+        boolean jnaAvailable = false;
+        Throwable error = null;
 
         if (Platform.isLinux()) {
             try {
                 if (checkLinuxVersion()) {
                     Native.register(Platform.C_LIBRARY_NAME);
-                    jnaAvailable0 = true;
+                    jnaAvailable = true;
                 }
             }
-            catch (Throwable ignore) {
+            catch (Throwable r) {
+                error = r;
             }
         }
 
-        JNA_AVAILABLE = jnaAvailable0;
+        JNA_AVAILABLE = jnaAvailable;
+        ERROR = error;
     }
 
     private static boolean checkLinuxVersion() {

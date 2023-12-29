@@ -200,12 +200,7 @@ public class CheckpointWorkflow {
         this.igniteInstanceName = igniteInstanceName;
         this.checkpointCollectPagesInfoPool = initializeCheckpointPool();
 
-        if (SyncFsUtils.SYNC_FS_ENABLED) {
-            if (SyncFsUtils.isEnabled())
-                log.info("syncfs is enabled with a threshold of " + SyncFsUtils.SYNC_FS_THRESHOLD + " files.");
-            else
-                log.warning("syncfs checkpoint optimization is enabled, but not supported by the OS.");
-        }
+        SyncFsUtils.logStartup(log);
     }
 
     /**
@@ -632,13 +627,13 @@ public class CheckpointWorkflow {
      * Tries to call {@code syncfs} on the stores if it's enabled and there are enough stores to exceed the threshold.
      *
      * @param updStores Map with updated page stores.
-     * @return {@code true} is {@code syncfs} as been called, {@code false} otherwise.
+     * @return {@code true} if {@code syncfs} has been called, {@code false} otherwise.
      * @throws IgniteCheckedException If failed.
      */
     public boolean trySyncFs(
         ConcurrentMap<PageStore, CheckpointPageStoreInfo> updStores
     ) throws IgniteCheckedException {
-        if (SyncFsUtils.isEnabled()) {
+        if (SyncFsUtils.isActive()) {
             if (updStores.size() > SyncFsUtils.SYNC_FS_THRESHOLD) {
                 SyncFsUtils.syncfs(updStores);
 

@@ -22,11 +22,13 @@ import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.pagemem.store.PageStore;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointPagesWriter.CheckpointPageStoreInfo;
@@ -76,6 +78,15 @@ public class SyncFsUtils {
     public static void syncfs(
         ConcurrentMap<PageStore, CheckpointPageStoreInfo> updStores
     ) throws IgniteCheckedException {
+        Collection<Path> filesFromDifferentFileSystems = findAllFileSystems(updStores);
+
+        // Resulting collection should not be big. For most installations it will only consist of a single element.
+        syncFileSystems(filesFromDifferentFileSystems);
+    }
+
+    private static Collection<Path> findAllFileSystems(
+        ConcurrentMap<PageStore, CheckpointPageStoreInfo> updStores
+    ) throws StorageException {
         IntHashMap<IgniteBiTuple<Path, FileStore>> groupIdToFileStore = new IntHashMap<>();
 
         // First pass is to split all file stores by the groupId. All partitions within a group are always in the same
@@ -104,21 +115,33 @@ public class SyncFsUtils {
 
         groupIdToFileStore.forEach((key, val) -> fileSystems.putIfAbsent(val.getValue().name(), val.getKey()));
 
-        // Resulting collection should not be big. For most installations it will only consist of a single element.
-        for (Path path : fileSystems.values()) {
+        return fileSystems.values();
+    }
+
+    @SuppressWarnings("ThrowFromFinallyBlock")
+    private static void syncFileSystems(Collection<Path> filesFromDifferentFileSystems) throws IgniteCheckedException {
+        for (Path path : filesFromDifferentFileSystems) {
             // Open with default flags and mode in order to get file descriptor.
             int fd = SyncFsLibC.open(path.toAbsolutePath().toString(), 0, 0);
 
             int syncFsErr = 0;
 
+            Throwable error = null;
+
             try {
                 if (SyncFsLibC.syncfs(fd) != 0)
                     syncFsErr = Native.getLastError();
-            } finally {
+            }
+            catch (RuntimeException | Error e) {
+                error = e;
+            }
+            finally {
                 int closeErr = 0;
 
                 if (SyncFsLibC.close(fd) != 0)
                     closeErr = Native.getLastError();
+
+                IgniteCheckedException igniteException = null;
 
                 if (closeErr != 0 || syncFsErr != 0) {
                     List<String> messages = new ArrayList<>(2);
@@ -129,9 +152,20 @@ public class SyncFsUtils {
                     if (closeErr != 0)
                         messages.add(SyncFsLibC.strerror(closeErr));
 
-                    //noinspection ThrowFromFinallyBlock
-                    throw new IgniteCheckedException("Failed to execute syncfs: " + messages);
+                    igniteException = new IgniteCheckedException("Failed to execute syncfs: " + messages);
                 }
+
+                if (error != null) {
+                    if (igniteException != null)
+                        error.addSuppressed(igniteException);
+
+                    if (error instanceof RuntimeException)
+                        throw (RuntimeException)error;
+                    else
+                        throw (Error)error;
+                }
+                else if (igniteException != null)
+                    throw igniteException;
             }
         }
     }
@@ -140,7 +174,24 @@ public class SyncFsUtils {
      * Returns {@code true} if {@code IGNITE_CHECKPOINT_SYNC_FS_ENABLED} system property is set to {@code true} and
      * current operating system supports {@code syncfs} function.
      */
-    public static boolean isEnabled() {
+    public static boolean isActive() {
         return SYNC_FS_ENABLED && SyncFsLibC.JNA_AVAILABLE;
+    }
+
+    /**
+     * Logs the startup message if necessary.
+     *
+     * @param log Logger.
+     */
+    public static void logStartup(IgniteLogger log) {
+        if (SyncFsUtils.SYNC_FS_ENABLED) {
+            if (SyncFsUtils.isActive())
+                log.info("syncfs is enabled with a threshold of " + SyncFsUtils.SYNC_FS_THRESHOLD + " files.");
+            else
+                log.warning("syncfs checkpoint optimization is enabled, but not supported by the OS.");
+
+            if (SyncFsLibC.ERROR != null)
+                log.error("Exception while loading native library for syncfs", SyncFsLibC.ERROR);
+        }
     }
 }
