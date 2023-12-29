@@ -253,7 +253,7 @@ public class ZookeeperDiscoverySegmentationAndConnectionRestoreTest extends Zook
             srvs.get(0).stop();
             srvs.get(1).stop();
 
-            assertTrue(l.await(30, TimeUnit.MILLISECONDS));
+            assertTrue(l.await(60_000, TimeUnit.MILLISECONDS));
         }
         finally {
             zkCluster.close();
