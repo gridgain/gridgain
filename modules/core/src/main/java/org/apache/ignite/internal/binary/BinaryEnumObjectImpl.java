@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.binary;
 
+import java.util.Objects;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
@@ -277,7 +278,7 @@ public class BinaryEnumObjectImpl implements BinaryObjectEx, Externalizable, Cac
         try {
             Object val = deserialize();
 
-            return new SB().a(val).toString();
+            return Objects.toString(val);
         } catch (Exception ignored) {
             // No-op.
         }

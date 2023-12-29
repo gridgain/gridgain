@@ -196,7 +196,7 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
     @Override public String getString() {
         try {
             return deserialize().toString();
-        } catch (BinaryObjectException ex) {
+        } catch (IgniteException ex) {
             return null;
         }
     }
