@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import org.apache.ignite.IgniteLogger;
@@ -30,6 +30,7 @@ import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.store.PageStore;
 import org.apache.ignite.internal.processors.cache.persistence.DataStorageMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointPagesWriter.CheckpointPageStoreInfo;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.CheckpointMetricsTracker;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
@@ -38,7 +39,6 @@ import org.apache.ignite.internal.util.GridConcurrentMultiPairQueue;
 import org.apache.ignite.internal.util.future.CountDownFuture;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.jsr166.ConcurrentLinkedHashMap;
 
 /**
  * Factory class for checkpoint pages writer.
@@ -107,7 +107,7 @@ public class CheckpointPagesWriterFactory {
     CheckpointPagesWriter build(
         CheckpointMetricsTracker tracker,
         GridConcurrentMultiPairQueue<PageMemoryEx, FullPageId> cpPages,
-        ConcurrentLinkedHashMap<PageStore, LongAdder> updStores,
+        ConcurrentMap<PageStore, CheckpointPageStoreInfo> updStores,
         CountDownFuture doneWriteFut,
         Runnable beforePageWrite,
         CheckpointProgressImpl curCpProgress,

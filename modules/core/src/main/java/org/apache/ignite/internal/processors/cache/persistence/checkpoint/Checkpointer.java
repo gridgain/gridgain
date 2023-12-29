@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -33,7 +33,6 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.failure.FailureContext;
-import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.LongJVMPauseDetector;
@@ -47,6 +46,8 @@ import org.apache.ignite.internal.processors.cache.persistence.CheckpointState;
 import org.apache.ignite.internal.processors.cache.persistence.DataStorageMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheOffheapManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointPagesWriter.CheckpointPageStoreInfo;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.syncfs.SyncFsUtils;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.CheckpointMetricsTracker;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
@@ -233,6 +234,13 @@ public class Checkpointer extends GridWorker {
         this.cpFreqOverride = cpFreqOverride;
 
         scheduledCp = new CheckpointProgressImpl(nextCheckpointInterval());
+
+        if (SyncFsUtils.SYNC_FS_ENABLED) {
+            if (SyncFsUtils.isEnabled())
+                log.info("syncfs is enabled with a threshold of " + SyncFsUtils.SYNC_FS_THRESHOLD + " files.");
+            else
+                log.warning("syncfs checkpoint optimization is enabled, but not supported by the OS.");
+        }
     }
 
     /**
@@ -442,7 +450,7 @@ public class Checkpointer extends GridWorker {
                     curCpProgress.fail(e);
 
                 // In case of checkpoint initialization error node should be invalidated and stopped.
-                failureProcessor.process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+                failureProcessor.process(new FailureContext(CRITICAL_ERROR, e));
 
                 throw new IgniteException(e); // Re-throw as unchecked exception to force stopping checkpoint thread.
             }
@@ -523,7 +531,7 @@ public class Checkpointer extends GridWorker {
         catch (IgniteCheckedException e) {
             chp.progress.fail(e);
 
-            failureProcessor.process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+            failureProcessor.process(new FailureContext(CRITICAL_ERROR, e));
         }
     }
 
@@ -545,8 +553,7 @@ public class Checkpointer extends GridWorker {
 
         int checkpointWritePageThreads = pageWritePool == null ? 1 : pageWritePool.getMaximumPoolSize();
 
-        // Identity stores set.
-        ConcurrentLinkedHashMap<PageStore, LongAdder> updStores = new ConcurrentLinkedHashMap<>();
+        ConcurrentMap<PageStore, CheckpointPageStoreInfo> updStores = new ConcurrentLinkedHashMap<>();
 
         CountDownFuture doneWriteFut = new CountDownFuture(checkpointWritePageThreads);
 
@@ -608,12 +615,23 @@ public class Checkpointer extends GridWorker {
      * @param updStores Stores which should be synced.
      */
     private void syncUpdatedStores(
-        ConcurrentLinkedHashMap<PageStore, LongAdder> updStores
+        ConcurrentMap<PageStore, CheckpointPageStoreInfo> updStores
     ) throws IgniteCheckedException {
+        if (SyncFsUtils.isEnabled()) {
+            if (updStores.size() > SyncFsUtils.SYNC_FS_THRESHOLD) {
+                SyncFsUtils.syncfs(updStores);
+
+                return;
+            }
+
+            log.info("Skipping syncfs, falling back to fsync. Number of files doesn't exceed the threshold" +
+                " [files=" + updStores.size() + ", threshold=" + SyncFsUtils.SYNC_FS_THRESHOLD + ']');
+        }
+
         IgniteThreadPoolExecutor pageWritePool = checkpointWritePagesPool;
 
         if (pageWritePool == null) {
-            for (Map.Entry<PageStore, LongAdder> updStoreEntry : updStores.entrySet()) {
+            for (Map.Entry<PageStore, CheckpointPageStoreInfo> updStoreEntry : updStores.entrySet()) {
                 if (shutdownNow)
                     return;
 
@@ -626,7 +644,7 @@ public class Checkpointer extends GridWorker {
                     blockingSectionEnd();
                 }
 
-                currentProgress().updateSyncedPages(updStoreEntry.getValue().intValue());
+                currentProgress().updateSyncedPages(updStoreEntry.getValue().checkpointedPages.intValue());
             }
         }
         else {
@@ -634,11 +652,11 @@ public class Checkpointer extends GridWorker {
 
             CountDownFuture doneFut = new CountDownFuture(checkpointThreads);
 
-            BlockingQueue<Map.Entry<PageStore, LongAdder>> queue = new LinkedBlockingQueue<>(updStores.entrySet());
+            BlockingQueue<Map.Entry<PageStore, CheckpointPageStoreInfo>> queue = new LinkedBlockingQueue<>(updStores.entrySet());
 
             for (int i = 0; i < checkpointThreads; i++) {
                 pageWritePool.execute(() -> {
-                    Map.Entry<PageStore, LongAdder> updStoreEntry = queue.poll();
+                    Map.Entry<PageStore, CheckpointPageStoreInfo> updStoreEntry = queue.poll();
 
                     boolean err = false;
 
@@ -656,7 +674,7 @@ public class Checkpointer extends GridWorker {
                                 blockingSectionEnd();
                             }
 
-                            currentProgress().updateSyncedPages(updStoreEntry.getValue().intValue());
+                            currentProgress().updateSyncedPages(updStoreEntry.getValue().checkpointedPages.intValue());
 
                             updStoreEntry = queue.poll();
                         }
