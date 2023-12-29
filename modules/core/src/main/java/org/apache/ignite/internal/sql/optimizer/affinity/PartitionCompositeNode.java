@@ -149,7 +149,7 @@ public class PartitionCompositeNode implements PartitionNode {
      * @return Result.
      */
     private PartitionNode optimizeSpecial(PartitionNode left, PartitionNode right) {
-        if (left == PartitionAllNode.INSTANCE) {
+/*        if (left == PartitionAllNode.INSTANCE) {
             if (op == PartitionCompositeNodeOperator.OR)
                 // ALL or (...) -> ALL.
                 return PartitionAllNode.INSTANCE;
@@ -158,6 +158,16 @@ public class PartitionCompositeNode implements PartitionNode {
                 assert op == PartitionCompositeNodeOperator.AND;
 
                 return right;
+            }*/
+        if (left == PartitionAllNode.INSTANCE) {
+            if (op == PartitionCompositeNodeOperator.OR)
+                // ALL or (...) -> (...)).
+                return right;
+            else {
+                // ALL and (...) -> ALL.
+                assert op == PartitionCompositeNodeOperator.AND;
+
+                return PartitionAllNode.INSTANCE;
             }
         }
         else {

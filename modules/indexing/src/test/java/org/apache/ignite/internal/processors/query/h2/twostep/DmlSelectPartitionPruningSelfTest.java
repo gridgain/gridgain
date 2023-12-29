@@ -19,18 +19,26 @@ package org.apache.ignite.internal.processors.query.h2.twostep;
 import java.util.List;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.cache.affinity.AffinityFunction;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.junit.Test;
 
 /**
  * Tests for use partition pruning at the SELECT step of the UPDATE/DELETE statements execution.
  */
-@SuppressWarnings("deprecation")
 public class DmlSelectPartitionPruningSelfTest extends AbstractPartitionPruningBaseTest {
     /** Rows count for test tables. */
     private static final int ROWS = 10;
 
     /** Recreate tables before each test statement. */
     private boolean recreateTables;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        clearIoState();
+    }
 
     /**
      * Test UPDATE statement.
@@ -183,6 +191,50 @@ public class DmlSelectPartitionPruningSelfTest extends AbstractPartitionPruningB
             },
             "3", "2", "1"
         );
+    }
+
+    @Test
+    public void test0() {
+        createPartitionedTable("t1",
+                pkColumn("k1"),
+                "k2",
+                "v2");
+
+        createPartitionedTable("t2",
+                pkColumn("k1"),
+                affinityColumn("ak2"),
+                "v3");
+
+        AffinityFunction aff1 = grid("srv1").cache("t1").getConfiguration(CacheConfiguration.class)
+                .getAffinity();
+
+        AffinityFunction aff2 = grid("srv1").cache("t2").getConfiguration(CacheConfiguration.class)
+                .getAffinity();
+
+        int p1 = aff1.partition('2');
+        int p2 = aff2.partition('3');
+        assertFalse(p1 == p2);
+
+        executeSql("INSERT INTO t1 VALUES ('1', '1', '1')");
+        executeSql("INSERT INTO t2 VALUES ('1', '1', '1')");
+
+        executeSql("INSERT INTO t1 VALUES ('2', '2', '2')");
+        executeSql("INSERT INTO t2 VALUES ('2', '2', '2')");
+
+        executeSql("INSERT INTO t1 VALUES ('3', '3', '3')");
+        executeSql("INSERT INTO t2 VALUES ('3', '3', '3')");
+
+        executeSql("INSERT INTO t1 VALUES ('4', '4', '4')");
+        executeSql("INSERT INTO t2 VALUES ('4', '4', '4')");
+
+        executeSql("INSERT INTO t1 VALUES ('6', '5', '5')");
+        executeSql("INSERT INTO t2 VALUES ('5', '5', '5')");
+
+        List<List<?>> res0 = executeSql("select k1 from t2 where (ak2=?) AND k1 IN (select distinct k2 from t1 where t1.v2=?)", "5", "5");
+        //List<List<?>> res0 = executeSql("select k1 from t2 where (ak2=?) AND (k1=? OR k1=(SELECT ?))", "5", "5", "5");
+
+        assertTrue(!res0.isEmpty());
+        assertEquals(1, res0.get(0).size());
     }
 
     /**

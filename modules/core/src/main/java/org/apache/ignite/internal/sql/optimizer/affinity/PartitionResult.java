@@ -104,7 +104,6 @@ public class PartitionResult {
      * @param args Arguments.
      * @return Calculated partitions or {@code null} if failed to calculate and there should be a broadcast.
      */
-    @SuppressWarnings("ZeroLengthArrayAllocation")
     public static int[] calculatePartitions(int[] explicitParts, PartitionResult derivedParts, Object[] args) {
         if (!F.isEmpty(explicitParts))
             return explicitParts;
