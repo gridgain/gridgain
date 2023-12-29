@@ -47,7 +47,6 @@ import org.apache.ignite.internal.processors.cache.persistence.DataStorageMetric
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointPagesWriter.CheckpointPageStoreInfo;
-import org.apache.ignite.internal.processors.cache.persistence.checkpoint.syncfs.SyncFsUtils;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.CheckpointMetricsTracker;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
@@ -234,13 +233,6 @@ public class Checkpointer extends GridWorker {
         this.cpFreqOverride = cpFreqOverride;
 
         scheduledCp = new CheckpointProgressImpl(nextCheckpointInterval());
-
-        if (SyncFsUtils.SYNC_FS_ENABLED) {
-            if (SyncFsUtils.isEnabled())
-                log.info("syncfs is enabled with a threshold of " + SyncFsUtils.SYNC_FS_THRESHOLD + " files.");
-            else
-                log.warning("syncfs checkpoint optimization is enabled, but not supported by the OS.");
-        }
     }
 
     /**
@@ -617,17 +609,6 @@ public class Checkpointer extends GridWorker {
     private void syncUpdatedStores(
         ConcurrentMap<PageStore, CheckpointPageStoreInfo> updStores
     ) throws IgniteCheckedException {
-        if (SyncFsUtils.isEnabled()) {
-            if (updStores.size() > SyncFsUtils.SYNC_FS_THRESHOLD) {
-                SyncFsUtils.syncfs(updStores);
-
-                return;
-            }
-
-            log.info("Skipping syncfs, falling back to fsync. Number of files doesn't exceed the threshold" +
-                " [files=" + updStores.size() + ", threshold=" + SyncFsUtils.SYNC_FS_THRESHOLD + ']');
-        }
-
         IgniteThreadPoolExecutor pageWritePool = checkpointWritePagesPool;
 
         if (pageWritePool == null) {

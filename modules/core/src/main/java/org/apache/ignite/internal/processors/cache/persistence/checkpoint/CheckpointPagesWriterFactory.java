@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.persistence.checkpoint;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -140,7 +139,7 @@ public class CheckpointPagesWriterFactory {
      */
     Runnable buildRecovery(
         GridConcurrentMultiPairQueue<PageMemoryEx, FullPageId> pages,
-        Collection<PageStore> updStores,
+        ConcurrentMap<PageStore, CheckpointPageStoreInfo> updStores,
         AtomicReference<Throwable> writePagesError,
         AtomicInteger cpPagesCnt
     ) {
@@ -169,7 +168,7 @@ public class CheckpointPagesWriterFactory {
                             PageStore store = checkpointPageWriter.write(pageMemEx, fullPageId, buf, tag);
 
                             // Save store for future fsync.
-                            updStores.add(store);
+                            updStores.computeIfAbsent(store, key -> new CheckpointPageStoreInfo(fullPageId.groupId()));
                         }
                     );
 
