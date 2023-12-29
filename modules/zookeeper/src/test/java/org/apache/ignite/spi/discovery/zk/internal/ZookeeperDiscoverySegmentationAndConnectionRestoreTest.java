@@ -220,7 +220,7 @@ public class ZookeeperDiscoverySegmentationAndConnectionRestoreTest extends Zook
             assertTrue(l.await(10, TimeUnit.SECONDS));
         }
         finally {
-            zkCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(ZK_SRVS, null);
+            zkCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(ZK_SRVS);
 
             zkCluster.start();
         }
@@ -258,7 +258,7 @@ public class ZookeeperDiscoverySegmentationAndConnectionRestoreTest extends Zook
         finally {
             zkCluster.close();
 
-            zkCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(ZK_SRVS, null);
+            zkCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(ZK_SRVS);
 
             zkCluster.start();
         }
@@ -297,7 +297,7 @@ public class ZookeeperDiscoverySegmentationAndConnectionRestoreTest extends Zook
         finally {
             zkCluster.close();
 
-            zkCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(ZK_SRVS, null);
+            zkCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(ZK_SRVS);
 
             zkCluster.start();
         }

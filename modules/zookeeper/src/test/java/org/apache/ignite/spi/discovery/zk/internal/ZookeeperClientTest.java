@@ -569,7 +569,7 @@ public class ZookeeperClientTest extends GridCommonAbstractTest {
     private void startZK(int instances) throws Exception {
         assert zkCluster == null;
 
-        zkCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(instances, null);
+        zkCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(instances);
 
         zkCluster.start();
     }

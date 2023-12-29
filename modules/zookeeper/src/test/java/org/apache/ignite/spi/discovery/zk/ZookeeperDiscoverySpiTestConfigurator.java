@@ -44,7 +44,7 @@ public class ZookeeperDiscoverySpiTestConfigurator {
 
         lock.lock();
         try {
-            testingCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(3, null);
+            testingCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(3);
 
             testingCluster.start();
         }

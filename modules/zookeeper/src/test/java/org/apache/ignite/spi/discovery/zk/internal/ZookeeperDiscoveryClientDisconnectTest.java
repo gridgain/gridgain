@@ -405,7 +405,7 @@ public class ZookeeperDiscoveryClientDisconnectTest extends ZookeeperDiscoverySp
 
         sesTimeout = 30_000;
 
-        zkCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(3, null);
+        zkCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(3);
 
         try {
             final AtomicInteger idx = new AtomicInteger();

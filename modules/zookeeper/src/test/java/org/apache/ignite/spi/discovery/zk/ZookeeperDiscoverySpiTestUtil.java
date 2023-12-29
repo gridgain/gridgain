@@ -25,7 +25,6 @@ import java.util.Map;
 import org.apache.curator.test.InstanceSpec;
 import org.apache.curator.test.TestingCluster;
 import org.apache.ignite.IgniteException;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Utility to run regular Ignite tests with {@link org.apache.ignite.spi.discovery.zk.ZookeeperDiscoverySpi}.
@@ -39,23 +38,18 @@ public class ZookeeperDiscoverySpiTestUtil {
 
     /**
      * @param instances Number of instances in cluster.
-     * @param customProps Custom configuration properties for every server.
      * @return Test cluster.
      */
-    public static TestingCluster createTestingCluster(int instances, @Nullable Map<String,Object>[] customProps) {
-        return createTestingCluster(instances, 0, null);
+    public static TestingCluster createTestingCluster(int instances) {
+        return createTestingCluster(instances, 0);
     }
 
     /**
      * @param instances Number of instances in cluster.
      * @param firstInstanceIdx First instance index.
-     * @param customProps Custom configuration properties for every server.
      * @return Test cluster.
      */
-    public static TestingCluster createTestingCluster(
-            int instances,
-            int firstInstanceIdx,
-            @Nullable Map<String,Object>[] customProps) {
+    public static TestingCluster createTestingCluster(int instances, int firstInstanceIdx) {
         String tmpDir;
 
         tmpDir = System.getenv("TMPFS_ROOT") != null
@@ -73,8 +67,7 @@ public class ZookeeperDiscoverySpiTestUtil {
                     throw new IgniteException("Failed to create directory for test Zookeeper server: " + file.getAbsolutePath());
             }
 
-            specs.add(new InstanceSpec(file, -1, -1, -1, true, -1, -1, 500,
-                    optimizeProperties(customProps, i)));
+            specs.add(new InstanceSpec(file, -1, -1, -1, true, -1, -1, 500, clusterCustomProperties()));
         }
 
         return new TestingCluster(specs);
@@ -83,9 +76,8 @@ public class ZookeeperDiscoverySpiTestUtil {
     /**
      *
      */
-    private static Map<String, Object> optimizeProperties(Map<String, Object>[] customProps, int idx) {
-        Map<String, Object> props = customProps != null && customProps[idx] != null ?
-                customProps[idx] : new HashMap<>();
+    private static Map<String, Object> clusterCustomProperties() {
+        Map<String, Object> props = new HashMap<>();
 
         // In container environment, especially in Kubernetes, this value should be increased or set to 0
         // (infinite retry) to overcome issues related to DNS name resolving.

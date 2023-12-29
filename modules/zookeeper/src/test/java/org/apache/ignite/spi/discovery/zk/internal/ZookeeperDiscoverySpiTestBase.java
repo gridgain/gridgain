@@ -196,7 +196,7 @@ class ZookeeperDiscoverySpiTestBase extends GridCommonAbstractTest {
         super.beforeTest();
 
         if (USE_TEST_CLUSTER && zkCluster == null) {
-            zkCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(ZK_SRVS, clusterCustomProperties());
+            zkCluster = ZookeeperDiscoverySpiTestUtil.createTestingCluster(ZK_SRVS);
 
             zkCluster.start();
 
@@ -204,13 +204,6 @@ class ZookeeperDiscoverySpiTestBase extends GridCommonAbstractTest {
         }
 
         reset();
-    }
-
-    /**
-     * @return Cluster configuration custom properties.
-     */
-    protected Map<String, Object>[] clusterCustomProperties() {
-        return new Map[ZK_SRVS];
     }
 
     /** {@inheritDoc} */
