@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.nio.file.InvalidPathException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -131,6 +133,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC
 import static org.apache.ignite.configuration.CacheConfiguration.DFLT_CACHE_MODE;
 import static org.apache.ignite.internal.GridTopic.TOPIC_REPLICATION;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
+import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.cacheDirName;
 
 /**
  * Cache utility methods.
@@ -1551,6 +1554,24 @@ public class GridCacheUtils {
     }
 
     /**
+     * @param ccfg Cache configuration.
+     * @param dsCfg Data storage configuration.
+     * @throws IllegalArgumentException In case the name is not valid.
+     */
+    public static void validateNewCacheName(CacheConfiguration ccfg, DataStorageConfiguration dsCfg)
+            throws IllegalArgumentException {
+        validateNewCacheName(ccfg.getName());
+
+        if (ccfg != null && !CU.isCacheTemplateName(ccfg.getName()) && CU.containsInvalidFileNameChars(ccfg, dsCfg)) {
+            throw new IllegalArgumentException(
+                    "Cache start failed. Cache or group name contains the characters " +
+                            "that are not allowed in file names [cache=" + ccfg.getName() +
+                            (ccfg.getGroupName() == null ? "" : ", group=" + ccfg.getGroupName()) + ']'
+            );
+        }
+    }
+
+    /**
      * @param cacheNames Cache names to validate.
      * @throws IllegalArgumentException In case the name is not valid.
      */
@@ -1563,12 +1584,15 @@ public class GridCacheUtils {
 
     /**
      * @param ccfgs Configurations to validate.
+     * @param dsCfg Data storage configuration.
      * @throws IllegalArgumentException In case the name is not valid.
      */
-    public static void validateConfigurationCacheNames(Collection<CacheConfiguration> ccfgs)
-        throws IllegalArgumentException {
+    public static void validateConfigurationCacheNames(
+            Collection<CacheConfiguration> ccfgs,
+            DataStorageConfiguration dsCfg
+    ) throws IllegalArgumentException {
         for (CacheConfiguration ccfg : ccfgs)
-            validateNewCacheName(ccfg.getName());
+            validateNewCacheName(ccfg, dsCfg);
     }
 
     /**
@@ -2244,6 +2268,27 @@ public class GridCacheUtils {
                 .setSqlSchema(sqlSchema)
                 .setSqlEscapeAll(isSqlEscape)
                 .setQueryParallelism(qryParallelism);
+    }
+
+    /**
+     * Checks if the cache directory path contains invalid chars.
+     *
+     * @param ccfg Cache configuration
+     * @param dsCfg Data storage configuration.
+     * @return {@code True} if cache directory contains the characters that are not allowed in file names.
+     */
+    public static boolean containsInvalidFileNameChars(CacheConfiguration<?, ?> ccfg, DataStorageConfiguration dsCfg) {
+        if (!CU.isPersistentCache(ccfg, dsCfg))
+            return false;
+
+        String expDir = cacheDirName(ccfg);
+
+        try {
+            return !expDir.equals(Paths.get(expDir).toFile().getName());
+        }
+        catch (InvalidPathException ignored) {
+            return true;
+        }
     }
 
     /**
