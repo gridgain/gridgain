@@ -210,15 +210,22 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
         CachePartitionFullCountersMap countersMap = grp.topology().fullUpdateCounters();
 
+        boolean securityEnabled = ctx.kernalContext().security().enabled();
+
         for (int p = 0; p < partitions; p++) {
             if (ctx.exchange().hasPendingServerExchange()) {
-                if (log.isDebugEnabled())
-                    log.debug("Skipping assignments creation, exchange worker has pending assignments: " +
-                        exchId);
+                // https://ggsystems.atlassian.net/browse/GG-37043
+                // Do not postpone initial rebalancing of the system cache when security is enabled.
+                if (!securityEnabled || !grp.utilityCache() || syncFuture().isDone()) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Skipping assignments creation, exchange worker has pending assignments: " +
+                            "[cache=" + grp.cacheOrGroupName() + ", exchId=" + exchId + ']');
+                    }
 
-                assignments.cancelled(true);
+                    assignments.cancelled(true);
 
-                return assignments;
+                    return assignments;
+                }
             }
 
             // If partition belongs to local node.
