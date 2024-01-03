@@ -3334,6 +3334,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         try {
             CacheConfiguration cfg = getOrCreateConfigFromTemplate(cacheName);
 
+            CU.validateNewCacheName(cfg, ctx.config().getDataStorageConfiguration());
+
             return dynamicStartCache(cfg, cacheName, null, true, true, true);
         }
         catch (IgniteCheckedException e) {
@@ -3374,6 +3376,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 : getOrCreateConfigFromTemplate(templateName);
 
             ccfg.setName(cacheName);
+
+            CU.validateNewCacheName(ccfg, ctx.config().getDataStorageConfiguration());
 
             if (cfgOverride != null)
                 cfgOverride.apply(ccfg);

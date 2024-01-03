@@ -2062,6 +2062,14 @@ public class IgnitionEx {
                         "like TcpDiscoverySpi)");
 
                 for (CacheConfiguration ccfg : userCaches) {
+                    if (!CU.isCacheTemplateName(ccfg.getName())
+                            && CU.containsInvalidFileNameChars(ccfg, cfg.getDataStorageConfiguration()))
+                        throw new IgniteCheckedException(
+                            "Cache start failed. Cache or group name contains the characters " +
+                                "that are not allowed in file names [cache=" + ccfg.getName() +
+                                (ccfg.getGroupName() == null ? "" : ", group=" + ccfg.getGroupName()) + ']'
+                        );
+
                     if (CU.isReservedCacheName(ccfg.getName()))
                         throw new IgniteCheckedException("Cache name cannot be \"" + ccfg.getName() +
                             "\" because it is reserved for internal purposes.");
