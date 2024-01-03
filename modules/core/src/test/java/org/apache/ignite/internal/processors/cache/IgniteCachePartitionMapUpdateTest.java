@@ -172,49 +172,45 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
         int numNodesHostCache1 = 0;
         int numNodesHostCache2 = 0;
 
-        for (int iter = 0; iter < 1; iter++) {
-            log.info("Iteration: " + iter);
+        for (int i = 0; i < NODE_CNT; i++) {
+            cache1 = rnd.nextBoolean();
+            cache2 = rnd.nextBoolean();
 
-            for (int i = 0; i < NODE_CNT; i++) {
-                cache1 = rnd.nextBoolean();
-                cache2 = rnd.nextBoolean();
+            numNodesHostCache1 += cache1 ? 1 : 0;
+            numNodesHostCache2 += cache2 ? 1 : 0;
 
-                numNodesHostCache1 += cache1 ? 1 : 0;
-                numNodesHostCache2 += cache2 ? 1 : 0;
-
-                // At least one node should be available for CACHE1.
-                if ((numNodesHostCache1 < 1) && (NODE_CNT - i <= 1)) {
-                    cache1 = true;
-                    numNodesHostCache1 += 1;
-                }
-
-                // At least two nodes should be available for CACHE2.
-                if ((numNodesHostCache2 < 2) && (NODE_CNT - i <= 2)) {
-                    cache2 = true;
-                    numNodesHostCache2 += 1;
-                }
-
-                log.info("Start node [idx=" + i + ", cache1=" + cache1 + ", cache2=" + cache2 + ']');
-
-                startGrid(i);
-
-                awaitPartitionMapExchange();
+            // At least one node should be available for CACHE1.
+            if ((numNodesHostCache1 < 1) && (NODE_CNT - i <= 1)) {
+                cache1 = true;
+                numNodesHostCache1 += 1;
             }
 
-            LinkedHashSet<Integer> stopSeq = new LinkedHashSet<>();
-
-            while (stopSeq.size() != NODE_CNT)
-                stopSeq.add(rnd.nextInt(NODE_CNT));
-
-            log.info("Stop sequence: " + stopSeq + ", seed=" + seed);
-
-            for (Integer idx : stopSeq) {
-                log.info("Stop node: " + idx);
-
-                stopGrid(idx);
-
-                awaitPartitionMapExchange();
+            // At least two nodes should be available for CACHE2.
+            if ((numNodesHostCache2 < 2) && (NODE_CNT - i <= 2)) {
+                cache2 = true;
+                numNodesHostCache2 += 1;
             }
+
+            log.info("Start node [idx=" + i + ", cache1=" + cache1 + ", cache2=" + cache2 + ']');
+
+            startGrid(i);
+
+            awaitPartitionMapExchange();
+        }
+
+        LinkedHashSet<Integer> stopSeq = new LinkedHashSet<>();
+
+        while (stopSeq.size() != NODE_CNT)
+            stopSeq.add(rnd.nextInt(NODE_CNT));
+
+        log.info("Stop sequence: " + stopSeq + ", seed=" + seed);
+
+        for (Integer idx : stopSeq) {
+            log.info("Stop node: " + idx);
+
+            stopGrid(idx);
+
+            awaitPartitionMapExchange();
         }
     }
 
