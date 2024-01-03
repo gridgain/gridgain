@@ -1052,6 +1052,26 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     }
 
     /**
+     * @param ccfg Cache configuration.
+     * @return The full cache directory name.
+     */
+    public static String cacheDirName(CacheConfiguration<?, ?> ccfg) {
+        boolean isSharedGrp = ccfg.getGroupName() != null;
+
+        return cacheDirName(isSharedGrp, CacheGroupContext.cacheOrGroupName(ccfg));
+    }
+
+    /**
+     * @param isSharedGroup {@code True} if cache is sharing the same `underlying` cache.
+     * @param cacheOrGroupName Cache name.
+     * @return The full cache directory name.
+     */
+    public static String cacheDirName(boolean isSharedGroup, String cacheOrGroupName) {
+        return isSharedGroup ? CACHE_GRP_DIR_PREFIX + cacheOrGroupName
+            : CACHE_DIR_PREFIX + cacheOrGroupName;
+    }
+
+    /**
      * @param cleanFiles {@code True} if the stores should delete it's files upon close.
      */
     private IgniteCheckedException shutdown(Collection<CacheStoreHolder> holders, boolean cleanFiles) {
