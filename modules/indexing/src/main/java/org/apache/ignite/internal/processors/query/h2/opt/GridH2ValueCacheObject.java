@@ -20,6 +20,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.binary.BinaryObjectEx;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
@@ -100,7 +101,12 @@ public class GridH2ValueCacheObject extends Value {
 
     /** {@inheritDoc} */
     @Override public String getString() {
-        return getObject().toString();
+        Object obj0 = getObject();
+        if (obj0 instanceof BinaryObjectEx) {
+            String str = ((BinaryObjectEx) obj0).getString();
+            return str == null ? obj0.toString() : str;
+        }
+        return obj0.toString();
     }
 
     /** {@inheritDoc} */
@@ -143,7 +149,6 @@ public class GridH2ValueCacheObject extends Value {
     }
 
     /** {@inheritDoc} */
-    @SuppressWarnings("unchecked")
     @Override public int compareTypeSafe(Value v, CompareMode mode) {
         Object o1 = getObject();
         Object o2 = v.getObject();

@@ -16,8 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
+
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 import org.apache.ignite.IgniteCache;
@@ -26,6 +29,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -54,18 +58,22 @@ public class EnumClassImplementingIndexedInterfaceTest extends GridCommonAbstrac
 
     /** */
     @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
     public void testInsertTableVarColumns() {
         checkCachePutInsert(startSqlPersonCache());
     }
 
     /** */
     @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "hash")
     public void testInsertValueVarColumns() {
         checkCachePutInsert(startPersonCache());
     }
 
     /** */
     private void checkCachePutInsert(IgniteCache<Integer, Person> cache) {
+        SqlFieldsQuery sqlSelect = new SqlFieldsQuery("SELECT CONVERT(role, varchar), CONVERT(title, varchar) from " + PERSON_CACHE);
+
         Arrays.stream(RoleEnum.values()).forEach(role -> {
             Title title = role.ordinal() % 2 == 0 ? new TitleClass1() : new TitleClass2();
             Person person = new Person(role, title, role.toString());
@@ -77,6 +85,14 @@ public class EnumClassImplementingIndexedInterfaceTest extends GridCommonAbstrac
 
             cache.query(sqlInsertQuery(role, title, role.toString()));
             assertEquals(person, cache.get(KEY));
+
+            List<List<?>> res = cache.query(sqlSelect).getAll();
+
+            Object checkEnum = res.get(0).get(0);
+            assertEquals(role.toString(), checkEnum);
+
+            Object checkCustom = res.get(0).get(1);
+            assertEquals(title.toString(), checkCustom);
 
             cache.clear();
         });
@@ -118,7 +134,7 @@ public class EnumClassImplementingIndexedInterfaceTest extends GridCommonAbstrac
     }
 
     /** */
-    static interface Role {
+    interface Role {
     }
 
     /** */
@@ -134,7 +150,7 @@ public class EnumClassImplementingIndexedInterfaceTest extends GridCommonAbstrac
     }
 
     /** */
-    static interface Title {
+    interface Title {
         /** */
         public String getTitle();
     }
@@ -166,6 +182,11 @@ public class EnumClassImplementingIndexedInterfaceTest extends GridCommonAbstrac
         @Override public int hashCode() {
             return 0;
         }
+
+        /** */
+        @Override public String toString() {
+            return title1;
+        }
     }
 
     /** */
@@ -193,6 +214,11 @@ public class EnumClassImplementingIndexedInterfaceTest extends GridCommonAbstrac
 
         /** */
         @Override public int hashCode() { return 1; }
+
+        /** */
+        @Override public String toString() {
+            return title2;
+        }
     }
 
     /** */
