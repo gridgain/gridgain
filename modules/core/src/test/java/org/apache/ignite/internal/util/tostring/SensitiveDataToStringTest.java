@@ -58,6 +58,9 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
     /** Random int. */
     int rndInt2 = 334455;
 
+    /** Enum. */
+    Level lvl = Level.HIGH;
+
     /** Random byte array. */
     byte[] rndArray = new byte[] { (byte) 22, (byte) 111};
 
@@ -151,7 +154,7 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
 
     /** */
     private void testCacheObjectImpl(BiConsumer<String, Object> checker) {
-        Person person = new Person(rndInt0, rndString);
+        Person person = new Person(rndInt0, rndString, lvl);
 
         CacheObjectImpl testObject = new CacheObjectImpl(person, null);
         checker.accept(testObject.toString(), person);
@@ -183,7 +186,7 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
 
     /** */
     private void testKeyCacheObjectImpl(BiConsumer<String, Object> checker) {
-        Person person = new Person(rndInt0, rndString);
+        Person person = new Person(rndInt0, rndString, lvl);
 
         KeyCacheObjectImpl testObject = new KeyCacheObjectImpl(person, null, rndInt1);
         checker.accept(testObject.toString(), person);
@@ -229,6 +232,7 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         testBinaryObjectImpl((strToCheck, object) -> {
             assertTrue(strToCheck, strToCheck.contains("orgId=" + rndInt0));
             assertTrue(strToCheck, strToCheck.contains("name=" + rndString));
+            assertTrue(strToCheck, strToCheck.contains("lvl=" + lvl.toString()));
         });
     }
 
@@ -250,7 +254,7 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
     private void testBinaryObjectImpl(BiConsumer<String, Object> checker) throws Exception {
         IgniteEx grid = startGrid(0);
         IgniteBinary binary = grid.binary();
-        BinaryObject binPerson = binary.toBinary(new Person(rndInt0, rndString));
+        BinaryObject binPerson = binary.toBinary(new Person(rndInt0, rndString, lvl));
         assertTrue(binPerson.getClass().getSimpleName(), binPerson instanceof BinaryObjectImpl);
         checker.accept(binPerson.toString(), binPerson);
     }
@@ -306,7 +310,8 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
     public void testIgniteTxKeyWithSensitive() {
         testIgniteTxKey((strToCheck, object) -> {
             assertTrue(strToCheck,
-                    strToCheck.contains("key") && strToCheck.contains("" + rndInt0) && strToCheck.contains(rndString));
+                    strToCheck.contains("key") && strToCheck.contains("" + rndInt0) && strToCheck.contains(rndString)
+            && strToCheck.contains(lvl.toString()));
         });
     }
 
@@ -324,13 +329,14 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         testIgniteTxKey((strToCheck, object) -> assertTrue(strToCheck, !strToCheck.contains("key") &&
                 !strToCheck.contains("" + rndInt0) &&
                 !strToCheck.contains(rndString) &&
+                !strToCheck.contains(lvl.toString()) &&
                 !strToCheck.contains("" + IgniteUtils.hash(object))
         ));
     }
 
     /** */
     private void testIgniteTxKey(BiConsumer<String, Object> checker) {
-        KeyCacheObjectImpl keyCacheObject = new KeyCacheObjectImpl(new Person(rndInt0, rndString), null, rndInt1);
+        KeyCacheObjectImpl keyCacheObject = new KeyCacheObjectImpl(new Person(rndInt0, rndString, lvl), null, rndInt1);
         IgniteTxKey txKey = new IgniteTxKey(keyCacheObject, rndInt2);
         checker.accept(txKey.toString(), keyCacheObject);
     }
@@ -341,7 +347,8 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
     public void testTxEntryValueHolderWithSensitive() {
         testTxEntryValueHolder((strToCheck, object) -> {
             assertTrue(strToCheck,
-                    strToCheck.contains("val") && strToCheck.contains("" + rndInt0) && strToCheck.contains(rndString));
+                    strToCheck.contains("val") && strToCheck.contains("" + rndInt0) && strToCheck.contains(rndString)
+                            && strToCheck.contains(lvl.toString()));
         });
     }
 
@@ -366,7 +373,7 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
     /** */
     private void testTxEntryValueHolder(BiConsumer<String, Object> checker) {
         final TxEntryValueHolder txEntryValue = new TxEntryValueHolder();
-        final Person person = new Person(rndInt0, rndString);
+        final Person person = new Person(rndInt0, rndString, Level.HIGH);
         final CacheObjectImpl cacheObject = new CacheObjectImpl(person, null);
         txEntryValue.value(cacheObject);
         checker.accept(txEntryValue.toString(), person);
@@ -380,28 +387,40 @@ public class SensitiveDataToStringTest extends GridCommonAbstractTest {
         /** Person name. */
         String name;
 
+        /** Some enum. */
+        Level lvl;
+
         /**
          * Constructor.
          *
          * @param orgId Id organization.
          * @param name Person name.
+         * @param level Level enum.
          */
-        public Person(int orgId, String name) {
+        public Person(int orgId, String name, Level level) {
             this.orgId = orgId;
             this.name = name;
+            lvl = level;
         }
 
         /** {@inheritDoc} */
         @Override public int hashCode() {
-            return Objects.hash(orgId, name);
+            return Objects.hash(orgId, name, lvl);
         }
 
         /** {@inheritDoc} */
         @Override public String toString() {
             return "Person{" +
-                    "orgId=" + orgId +
+                    "lvl=" + lvl +
+                    ", orgId=" + orgId +
                     ", name='" + name + '\'' +
                     '}';
         }
+    }
+
+    public enum Level {
+        LOW,
+        MEDIUM,
+        HIGH
     }
 }
