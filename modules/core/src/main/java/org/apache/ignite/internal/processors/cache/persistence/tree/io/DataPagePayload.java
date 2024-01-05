@@ -32,15 +32,18 @@ public class DataPagePayload {
     /** Link to the next fragmet. If it is the last fragment or the data row is not fragmented then it is {@code null} value. */
     private final long nextLink;
 
+    private final boolean fragmented;
+
     /**
      * @param off Offset.
      * @param payloadSize Payload size.
      * @param nextLink Next link.
      */
-    DataPagePayload(int off, int payloadSize, long nextLink) {
+    DataPagePayload(int off, int payloadSize, boolean fragmented, long nextLink) {
         this.off = off;
         this.payloadSize = payloadSize;
         this.nextLink = nextLink;
+        this.fragmented = fragmented;
     }
 
     /**
@@ -62,6 +65,10 @@ public class DataPagePayload {
      */
     public long nextLink() {
         return nextLink;
+    }
+
+    public boolean isFragmented() {
+        return fragmented;
     }
 
     /**
