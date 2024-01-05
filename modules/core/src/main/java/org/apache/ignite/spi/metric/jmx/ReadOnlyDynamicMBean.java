@@ -16,6 +16,7 @@
 
 package org.apache.ignite.spi.metric.jmx;
 
+import java.util.List;
 import javax.management.Attribute;
 import javax.management.AttributeList;
 import javax.management.AttributeNotFoundException;
@@ -29,12 +30,12 @@ import org.apache.ignite.IgniteException;
  */
 public abstract class ReadOnlyDynamicMBean implements DynamicMBean {
     /** {@inheritDoc} */
-    @Override public void setAttribute(Attribute attribute) {
+    @Override public void setAttribute(Attribute attr) {
         throw new UnsupportedOperationException("setAttribute is not supported.");
     }
 
     /** {@inheritDoc} */
-    @Override public AttributeList setAttributes(AttributeList attributes) {
+    @Override public AttributeList setAttributes(AttributeList attrs) {
         throw new UnsupportedOperationException("setAttributes is not supported.");
     }
 
@@ -57,12 +58,16 @@ public abstract class ReadOnlyDynamicMBean implements DynamicMBean {
     /** {@inheritDoc} */
     @Override public AttributeList getAttributes(String[] attributes) {
         AttributeList list = new AttributeList();
+        List<Attribute> attrList = list.asList();
 
         try {
-            for (String attribute : attributes) {
-                Object val = getAttribute(attribute);
+            for (String attr : attributes) {
+                Object val = getAttribute(attr);
 
-                list.add(val);
+                if (val instanceof Attribute)
+                    attrList.add((Attribute)val);
+                else
+                    attrList.add(new Attribute(attr, val));
             }
 
             return list;
