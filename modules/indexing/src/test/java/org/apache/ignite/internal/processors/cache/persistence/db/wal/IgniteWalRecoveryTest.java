@@ -86,6 +86,7 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.TestPartitionsExchangeAwareLifecycleBean;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
@@ -98,8 +99,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.Compactab
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
-import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.lang.IgniteInClosureX;
 import org.apache.ignite.internal.util.typedef.F;
@@ -114,8 +113,6 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
-import org.apache.ignite.lifecycle.LifecycleEventType;
-import org.apache.ignite.loadtests.colocation.GridTestLifecycleBean;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -1884,29 +1881,19 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
         CountDownLatch l1,
         CountDownLatch l2
     ) throws Exception {
-        return getConfiguration(getTestIgniteInstanceName(idx)).setLifecycleBeans(new GridTestLifecycleBean() {
-            @Override public void onLifecycleEvent(LifecycleEventType type) {
-                if (type == LifecycleEventType.BEFORE_NODE_START) {
-                    g.context().internalSubscriptionProcessor().registerDistributedMetastorageListener(
-                        new DistributedMetastorageLifecycleListener() {
-                        @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
-                            g.context().cache().context().exchange().registerExchangeAwareComponent(
-                                new PartitionsExchangeAware() {
-                                @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-                                    l1.countDown();
+        return getConfiguration(getTestIgniteInstanceName(idx))
+            .setLifecycleBeans(new TestPartitionsExchangeAwareLifecycleBean(new PartitionsExchangeAware() {
+                /** {@inheritDoc} */
+                @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+                    l1.countDown();
 
-                                    try {
-                                        assertTrue(U.await(l2, 10, TimeUnit.SECONDS));
-                                    } catch (IgniteInterruptedCheckedException e) {
-                                        fail(X.getFullStackTrace(e));
-                                    }
-                                }
-                            });
-                        }
-                    });
+                    try {
+                        assertTrue(U.await(l2, 10, TimeUnit.SECONDS));
+                    } catch (IgniteInterruptedCheckedException e) {
+                        fail(X.getFullStackTrace(e));
+                    }
                 }
-            }
-        });
+            }));
     }
 
     /**
