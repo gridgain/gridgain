@@ -114,6 +114,9 @@ import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccUpdateResult;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccLinkAwareSearchRow;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.PartitionLogTree;
+import org.apache.ignite.internal.Factory;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLog;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
 import org.apache.ignite.internal.util.GridLongList;
@@ -2025,7 +2028,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         /** */
         @GridToStringInclude
-        private final RootPage updateLogTreeRoot;
+        private final @Nullable RootPage updateLogTreeRoot;
 
         /**
          * @param treeRoot Metadata storage root.
@@ -2036,7 +2039,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
               RootPage reuseListRoot,
               RootPage pendingTreeRoot,
               RootPage partMetastoreReuseListRoot,
-              RootPage updateLogTreeRoot) {
+              @Nullable RootPage updateLogTreeRoot) {
             this.treeRoot = treeRoot;
             this.reuseListRoot = reuseListRoot;
             this.pendingTreeRoot = pendingTreeRoot;
@@ -2180,6 +2183,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         PageIdUtils.partId(metas.treeRoot.pageId().pageId()) != partId ||
                         PageIdUtils.partId(metas.pendingTreeRoot.pageId().pageId()) != partId ||
                         PageIdUtils.partId(metas.partMetastoreReuseListRoot.pageId().pageId()) != partId ||
+                        metas.updateLogTreeRoot != null &&
                         PageIdUtils.partId(metas.updateLogTreeRoot.pageId().pageId()) != partId
                     ) {
                         throw new IgniteCheckedException("Invalid meta root allocated [" +
@@ -2283,29 +2287,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         }
                     };
 
-                    String logTreeName = updateLogTreeName();
-
                     RootPage logTreeRoot = metas.updateLogTreeRoot;
 
-                    PartitionLogTree logTree = new PartitionLogTree(
-                        grp,
-                        partId,
-                        logTreeName,
-                        grp.dataRegion().pageMemory(),
-                        logTreeRoot.pageId().pageId(),
-                        freeList,
-                        logTreeRoot.isAllocated(),
-                        ctx.diagnostic().pageLockTracker(),
-                        PageIdAllocator.FLAG_AUX,
-                        log
-                    ) {
-                        /** {@inheritDoc} */
-                        @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
-                            assert ctx.database().checkpointLockIsHeldByThread();
-
-                            return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
-                        }
-                    };
+                    UpdateLog updateLog = metas.updateLogTreeRoot != null ?
+                        new UpdateLogImpl(createLogTree(logTreeRoot.pageId().pageId(), logTreeRoot.isAllocated())) :
+                        new UpdateLogImpl(createLogTreeFactory());
 
                     PageMemoryEx pageMem = (PageMemoryEx) grp.dataRegion().pageMemory();
 
@@ -2314,7 +2300,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     delegate0 = new CacheDataStoreImpl(partId,
                         rowStore,
                         dataTree,
-                        logTree,
+                        updateLog,
                         () -> pendingTree0,
                         grp,
                         busyLock,
@@ -2426,6 +2412,78 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             return delegate0;
         }
 
+        private PartitionLogTree createLogTree(final long pageId, final boolean initNew) throws IgniteCheckedException {
+            return new PartitionLogTree(
+                grp,
+                partId,
+                updateLogTreeName(),
+                grp.dataRegion().pageMemory(),
+                pageId,
+                freeList,
+                initNew,
+                grp.shared().diagnostic().pageLockTracker(),
+                PageIdAllocator.FLAG_AUX,
+                log
+            ) {
+                /** {@inheritDoc} */
+                @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
+                    assert grp.shared().database().checkpointLockIsHeldByThread();
+
+                    return pageMem.allocatePage(grpId, partId, PageIdAllocator.FLAG_AUX);
+                }
+            };
+        }
+
+        private Factory<PartitionLogTree> createLogTreeFactory() {
+            return () -> {
+                PageMemoryEx pageMem = (PageMemoryEx)grp.dataRegion().pageMemory();
+
+                IgniteWriteAheadLogManager wal = grp.shared().wal();
+
+                int grpId = grp.groupId();
+                long partMetaId = pageMem.partitionMetaPageId(grpId, partId);
+
+                AtomicBoolean metaPageAllocated = new AtomicBoolean(false);
+
+                long partMetaPage = pageMem.acquirePage(grpId, partMetaId, metaPageAllocated);
+                try {
+                    long updateLogTreeRoot;
+
+                    long pageAddr = pageMem.writeLock(grpId, partMetaId, partMetaPage);
+                    try {
+                        PagePartitionMetaIOV3 io = (PagePartitionMetaIOV3)PagePartitionMetaIO.VERSIONS.latest();
+                        // Partition meta page is initialized.
+                        assert (PageIO.getType(pageAddr) == PageIO.T_PART_META);
+                        assert PageIO.getPageIO(pageAddr) == io;
+
+                        // Update log tree wasn't initialized.
+                        assert io.getUpdateTreeRoot(pageAddr) == 0L;
+
+                        updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
+                        io.setUpdateTreeRoot(pageAddr, updateLogTreeRoot);
+
+                        if (PageIdUtils.flag(updateLogTreeRoot) != PageMemory.FLAG_AUX
+                            && PageIdUtils.flag(updateLogTreeRoot) != PageMemory.FLAG_DATA)
+                            throw new StorageException("Wrong partition update log root page id flag: updateLogTreeRoot="
+                                + U.hexLong(updateLogTreeRoot) + ", part=" + partId + ", grpId=" + grpId);
+
+                        if (isWalDeltaRecordNeeded(pageMem, grpId, partMetaId, partMetaPage, wal, null)) {
+                            wal.log(new PageSnapshot(new FullPageId(partMetaId, grpId), pageAddr,
+                                pageMem.pageSize(), pageMem.realPageSize(grpId)));
+                        }
+
+                        return createLogTree(updateLogTreeRoot,true);
+                    }
+                    finally {
+                        pageMem.writeUnlock(grpId, partMetaId, partMetaPage, null, true);
+                    }
+                }
+                finally {
+                    pageMem.releasePage(grpId, partMetaId, partMetaPage);
+                }
+            };
+        }
+
         /**
          * @return Partition metas.
          */
@@ -2450,6 +2508,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 boolean pendingTreeAllocated = false;
                 boolean partMetastoreReuseListAllocated = false;
                 boolean updateLogTreeRootAllocated = false;
+                boolean preallocateUpdateLogTree = grp.caches().stream().anyMatch(GridCacheContext::isDrEnabled);
 
                 long pageAddr = pageMem.writeLock(grpId, partMetaId, partMetaPage);
                 try {
@@ -2467,18 +2526,24 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         reuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
                         pendingTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
                         partMetaStoreReuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
-                        updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
 
                         assert PageIdUtils.flag(treeRoot) == PageMemory.FLAG_AUX;
                         assert PageIdUtils.flag(reuseListRoot) == PageMemory.FLAG_AUX;
                         assert PageIdUtils.flag(pendingTreeRoot) == PageMemory.FLAG_AUX;
                         assert PageIdUtils.flag(partMetaStoreReuseListRoot) == PageMemory.FLAG_AUX;
-                        assert PageIdUtils.flag(updateLogTreeRoot) == PageMemory.FLAG_AUX;
 
                         io.setTreeRoot(pageAddr, treeRoot);
                         io.setReuseListRoot(pageAddr, reuseListRoot);
                         io.setPendingTreeRoot(pageAddr, pendingTreeRoot);
                         io.setPartitionMetaStoreReuseListRoot(pageAddr, partMetaStoreReuseListRoot);
+
+                        if (preallocateUpdateLogTree) {
+                            updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
+                            assert PageIdUtils.flag(updateLogTreeRoot) == PageMemory.FLAG_AUX;
+                        } else {
+                            updateLogTreeRoot = 0L;
+                        }
+
                         io.setUpdateTreeRoot(pageAddr, updateLogTreeRoot);
 
                         allocated = true;
@@ -2522,7 +2587,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             partMetastoreReuseListAllocated = true;
                         }
 
-                        if ((updateLogTreeRoot = io.getUpdateTreeRoot(pageAddr)) == 0) {
+                        if ((updateLogTreeRoot = io.getUpdateTreeRoot(pageAddr)) == 0 && preallocateUpdateLogTree) {
                             updateLogTreeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
 
                             io.setUpdateTreeRoot(pageAddr, updateLogTreeRoot);
@@ -2550,7 +2615,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             throw new StorageException("Wrong partition meta store list root page id flag: partMetaStoreReuseListRoot="
                                 + U.hexLong(partMetaStoreReuseListRoot) + ", part=" + partId + ", grpId=" + grpId);
 
-                        if (PageIdUtils.flag(updateLogTreeRoot) != PageMemory.FLAG_AUX
+                        if (preallocateUpdateLogTree && PageIdUtils.flag(updateLogTreeRoot) != PageMemory.FLAG_AUX
                             && PageIdUtils.flag(updateLogTreeRoot) != PageMemory.FLAG_DATA)
                             throw new StorageException("Wrong partition update log root page id flag: updateLogTreeRoot="
                                 + U.hexLong(updateLogTreeRoot) + ", part=" + partId + ", grpId=" + grpId);
@@ -2567,7 +2632,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         new RootPage(new FullPageId(reuseListRoot, grpId), allocated),
                         new RootPage(new FullPageId(pendingTreeRoot, grpId), allocated || pendingTreeAllocated),
                         new RootPage(new FullPageId(partMetaStoreReuseListRoot, grpId), allocated || partMetastoreReuseListAllocated),
-                        new RootPage(new FullPageId(updateLogTreeRoot, grpId), allocated || updateLogTreeRootAllocated));
+                        updateLogTreeRoot == 0 ? null : new RootPage(new FullPageId(updateLogTreeRoot, grpId), allocated || updateLogTreeRootAllocated));
                 }
                 finally {
                     pageMem.writeUnlock(grpId, partMetaId, partMetaPage, null,
@@ -2642,7 +2707,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         }
 
         /** {@inheritDoc} */
-        @Override public PartitionLogTree logTree() {
+        @Override public UpdateLog logTree() {
             try {
                 CacheDataStore delegate0 = init0(true);
 
