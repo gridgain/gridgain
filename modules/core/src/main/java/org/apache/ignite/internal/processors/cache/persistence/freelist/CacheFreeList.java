@@ -274,21 +274,21 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
                         scannedBytes += data.payloadSize();
                         updatedBytes += updatedOnCurrPage;
 
-                        if (pageUpdated && needWalDeltaRecord(pageId, page, walPlc)) {
+                        if (pageUpdated && needWalDeltaRecord(curPageId, curPage, walPlc)) {
                             // This record must contain only a reference to a logical WAL record with the actual data.
                             // Reload the payload to get the actual data.
                             data = io.readPayload(curPageAddr, cutItemId, pageSize());
 
                             byte[] payload = new byte[data.payloadSize()];
 
-                            PageUtils.getBytes(pageAddr, data.offset(), payload, 0, data.payloadSize());
+                            PageUtils.getBytes(curPageAddr, data.offset(), payload, 0, data.payloadSize());
 
                             assert data.isFragmented() : "Test assertion [data=" + data + ']';
 
                             wal.log(new DataPageFragmentedUpdateRecord(
                                 cacheId,
-                                pageId,
-                                itemId,
+                                curPageId,
+                                cutItemId,
                                 data.nextLink(),
                                 payload));
                         }

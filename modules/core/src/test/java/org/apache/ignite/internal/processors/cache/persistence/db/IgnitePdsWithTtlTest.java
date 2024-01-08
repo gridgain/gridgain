@@ -16,6 +16,10 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.db;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -26,9 +30,11 @@ import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.expiry.TouchedExpiryPolicy;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
@@ -46,13 +52,21 @@ import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.pagemem.wal.WALIterator;
+import org.apache.ignite.internal.pagemem.wal.WALPointer;
+import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage;
+import org.apache.ignite.internal.processors.cache.persistence.wal.reader.IgniteWalIteratorFactory;
 import org.apache.ignite.internal.util.ReentrantReadWriteLockWithTracking;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.F;
@@ -60,15 +74,22 @@ import org.apache.ignite.internal.util.typedef.PA;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
+import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntryType.END;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.testframework.GridTestUtils.runMultiThreadedAsync;
 import static org.apache.ignite.testframework.GridTestUtils.waitForAllFutures;
@@ -438,7 +459,7 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
             srv.cluster().baselineAutoAdjustEnabled(false);
 
             startGrid(1);
-            srv.cluster().active(true);
+            srv.cluster().state(ACTIVE);
 
             ExpiryPolicy plc = CreatedExpiryPolicy.factoryOf(Duration.ONE_DAY).create();
 
@@ -471,6 +492,71 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
         finally {
             stopAllGrids();
         }
+    }
+
+    /**
+     * Tests that expiration of large entries (that require more than one data pages)
+     * work correctly after node stopping in the midle of checkpoint.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testExpirationLargeEntriesAfterNodeRestart() throws Exception {
+        IgniteEx srv = startGrid(0);
+
+        srv.cluster().state(ACTIVE);
+
+        String nodeFolderName = srv.context().pdsFolderResolver().resolveFolders().folderName();
+
+        IgniteCache<Integer, byte[]> c = srv.getOrCreateCache(CACHE_NAME_ATOMIC);
+
+        // Insert a new value to the cache.
+        // It assumed that the entry will be spit to two pages. Moreover, the time to live value will be split on both pages.
+        c.withExpiryPolicy(new TouchedExpiryPolicy(new Duration(MILLISECONDS, EXPIRATION_TIMEOUT * 10)))
+            .put(12, new byte[1024 * 4 - 100]);
+
+        // Touch the entry to update the time to live value.
+        c.withExpiryPolicy(new TouchedExpiryPolicy(new Duration(SECONDS, EXPIRATION_TIMEOUT))).touch(12);
+
+        // Create a checkpoint and remove checkpoint end marker in order to emulate stopping the node in the middle of checkpoint.
+        GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager) srv.context().cache().context().database();
+
+        IgniteInternalFuture<?> cpFinishFut = dbMgr.forceCheckpoint("test checkpoint").futureFor(FINISHED);
+
+        cpFinishFut = cpFinishFut.chain(fut -> {
+            CheckpointEntry cpEntry = dbMgr.checkpointHistory().lastCheckpoint();
+
+            String cpEndFileName = CheckpointMarkersStorage.checkpointFileName(cpEntry, END);
+
+            GridFutureAdapter<Void> fut0 = new GridFutureAdapter<>();
+
+            try {
+                Files.delete(Paths.get(dbMgr.checkpointDirectory().getAbsolutePath(), cpEndFileName));
+            }
+            catch (IOException e) {
+                fut0.onDone(new IgniteException("Failed to remove checkpoint end marker.", e));
+            }
+            finally {
+                fut0.onDone();
+            }
+
+            return fut0;
+        });
+
+        cpFinishFut.get(10, SECONDS);
+
+        stopGrid(0, true);
+
+        // Check that WAL contains two physical records related to the entry.
+        verifyDataPageFragmentUpdateRecords(nodeFolderName, 2);
+
+        // Restart the node.
+        srv = startGrid(0);
+
+        c = srv.getOrCreateCache(CACHE_NAME_ATOMIC);
+
+        // Check that the entry was expired.
+        waitAndCheckExpired(srv, c);
     }
 
     /**
@@ -566,5 +652,69 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
         System.out.println(msg + " {{");
         cache.context().printMemoryStats();
         System.out.println("}} " + msg);
+    }
+
+    /**
+     * @param nodeFolderName Folder name
+     * @param expRecNum Expected number of DATA_PAGE_FRAGMENTED_UPDATE_RECORDs.
+     * @throws IgniteCheckedException If failed.
+     */
+    private void verifyDataPageFragmentUpdateRecords(String nodeFolderName, int expRecNum) throws IgniteCheckedException {
+        String workDir = U.defaultWorkDirectory();
+        File dbDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), "db", false);
+
+        File walDir = new File(dbDir, "wal");
+        File archiveDir = new File(walDir, "archive");
+
+        File nodeWalDir = new File(walDir, nodeFolderName);
+        File nodeArchiveDir = new File(archiveDir, nodeFolderName);
+
+        IgniteWalIteratorFactory factory = new IgniteWalIteratorFactory(new NullLogger());
+
+        IgniteWalIteratorFactory.IteratorParametersBuilder params = createIteratorParametersBuilder(workDir, nodeFolderName)
+            .filesOrDirs(nodeWalDir, nodeArchiveDir);
+
+        int recNum = 0;
+        try (WALIterator iter = factory.iterator(params)) {
+            while (iter.hasNextX()) {
+                IgniteBiTuple<WALPointer, WALRecord> tup = iter.nextX();
+
+                WALRecord walRecord = tup.get2();
+                WALRecord.RecordType type = walRecord.type();
+
+                switch (type) {
+                    case DATA_PAGE_FRAGMENTED_UPDATE_RECORD:
+                        recNum++;
+
+                        break;
+
+                    default:
+                        // No-op.
+                }
+            }
+        }
+
+        assertEquals("Unexpected number of DATA_PAGE_FRAGMENTED_UPDATE_RECORDs", expRecNum, recNum);
+    }
+
+    /**
+     * @param workDir Work directory.
+     * @param nodeFolderName Subfolder name.
+     * @return WAL iterator factory.
+     * @throws IgniteCheckedException If failed.
+     */
+    @NotNull
+    private IgniteWalIteratorFactory.IteratorParametersBuilder createIteratorParametersBuilder(
+        String workDir,
+        String nodeFolderName
+    ) throws IgniteCheckedException {
+        File binaryMeta = U.resolveWorkDirectory(workDir, DataStorageConfiguration.DFLT_BINARY_METADATA_PATH,
+            false);
+        File binaryMetaWithConsId = new File(binaryMeta, nodeFolderName);
+        File marshallerMapping = U.resolveWorkDirectory(workDir, DataStorageConfiguration.DFLT_MARSHALLER_PATH, false);
+
+        return new IgniteWalIteratorFactory.IteratorParametersBuilder()
+            .binaryMetadataFileStoreDir(binaryMetaWithConsId)
+            .marshallerMappingFileStoreDir(marshallerMapping);
     }
 }
