@@ -637,7 +637,6 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
 
         return new DataPagePayload(dataOff + PAYLOAD_LEN_SIZE + (fragmented ? LINK_SIZE : 0),
             payloadSize,
-            fragmented,
             nextLink);
     }
 

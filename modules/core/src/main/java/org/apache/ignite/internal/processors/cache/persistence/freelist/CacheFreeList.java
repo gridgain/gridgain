@@ -283,8 +283,6 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
 
                             PageUtils.getBytes(curPageAddr, data.offset(), payload, 0, data.payloadSize());
 
-                            assert data.isFragmented() : "Test assertion [data=" + data + ']';
-
                             wal.log(new DataPageFragmentedUpdateRecord(
                                 cacheId,
                                 curPageId,

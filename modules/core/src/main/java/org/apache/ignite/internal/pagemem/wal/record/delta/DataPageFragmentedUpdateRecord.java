@@ -22,6 +22,9 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageI
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
+/**
+ * Physical WAL record that represents a fragment of an entry update.
+ */
 public class DataPageFragmentedUpdateRecord extends DataPageUpdateRecord {
     /** Link to the next entry fragment. */
     private final long linkToNextFragment;

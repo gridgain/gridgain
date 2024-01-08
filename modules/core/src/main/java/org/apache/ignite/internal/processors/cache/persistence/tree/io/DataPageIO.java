@@ -248,9 +248,9 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
         long linkToNextFragment,
         byte[] payload
     ) {
+        assertPageType(pageAddr);
         assert checkIndex(itemId) : "Invalid item Id [itemId=" + itemId + ']';
         assert payload != null : "Payload is null";
-        assertPageType(pageAddr);
 
         int dataOff = getDataOffset(pageAddr, itemId, pageSize);
 
