@@ -29,6 +29,8 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHan
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
+import java.util.function.Supplier;
+
 /**
  * Data store for H2 rows.
  */
