@@ -84,6 +84,7 @@ import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_DISK_PAGE_COMPRESSION;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
@@ -502,6 +503,12 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
      */
     @Test
     public void testExpirationLargeEntriesAfterNodeRestart() throws Exception {
+        if (System.getProperty(IGNITE_DEFAULT_DISK_PAGE_COMPRESSION) != null) {
+            log.info("Test is skipped because of " + IGNITE_DEFAULT_DISK_PAGE_COMPRESSION + " property is set.");
+
+            return;
+        }
+
         IgniteEx srv = startGrid(0);
 
         srv.cluster().state(ACTIVE);
