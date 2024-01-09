@@ -505,10 +505,10 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
 
                 // Do the final fsync.
                 if (mode != WALMode.NONE) {
-                    if (mmap)
-                        ((MappedByteBuffer)buf.buf).force();
-                    else
-                        walWriter.force();
+//                    if (mmap)
+//                        ((MappedByteBuffer)buf.buf).force();
+//                    else
+//                        walWriter.force();
 
                     lastFsyncPos = written;
                 }
