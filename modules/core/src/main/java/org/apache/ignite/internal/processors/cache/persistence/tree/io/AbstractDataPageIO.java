@@ -194,13 +194,13 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
     private static final int ITEM_SIZE = 2;
 
     /** */
-    private static final int PAYLOAD_LEN_SIZE = 2;
+    protected static final int PAYLOAD_LEN_SIZE = 2;
 
     /** */
-    private static final int LINK_SIZE = 8;
+    protected static final int LINK_SIZE = 8;
 
     /** */
-    private static final int FRAGMENTED_FLAG = 0b10000000_00000000;
+    protected static final int FRAGMENTED_FLAG = 0b10000000_00000000;
 
     /** */
     public static final int MIN_DATA_PAGE_OVERHEAD = ITEMS_OFF + ITEM_SIZE + PAYLOAD_LEN_SIZE + LINK_SIZE;
@@ -1472,7 +1472,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         assertPageType(pageAddr);
 
         PageUtils.putShort(pageAddr, dataOff, (short)payload.length);
-        dataOff += 2;
+        dataOff += PAYLOAD_LEN_SIZE;
 
         PageUtils.putBytes(pageAddr, dataOff, payload);
     }
