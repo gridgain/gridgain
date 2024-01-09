@@ -136,6 +136,7 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
 
             // Read payload to determine that the row is fragmented.
             DataPagePayload data = io.readPayload(pageAddr, itemId, pageSize());
+
             if (data.nextLink() == 0) {
                 // The data is not fragmented, so it is one page update.
                 updated = updateTtl(cacheId, pageId, page, pageAddr, io, row, itemId, walPlc);

@@ -61,7 +61,7 @@ public class DataPageFragmentedUpdateRecord extends DataPageUpdateRecord {
 
         DataPageIO io = PageIO.getPageIO(pageAddr);
 
-        io.updateFragmentedData(pageAddr, itemId(), pageMem.realPageSize(groupId()),linkToNextFragment, payload());
+        io.updateFragmentedData(pageAddr, itemId(), pageMem.realPageSize(groupId()), linkToNextFragment, payload());
     }
 
     /** {@inheritDoc} */
