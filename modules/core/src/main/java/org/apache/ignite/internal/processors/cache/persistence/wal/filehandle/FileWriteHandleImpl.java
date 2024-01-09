@@ -476,8 +476,6 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
                     if (segRecPtr != null) {
                         FileWALPointer filePtr = (FileWALPointer)segRecPtr;
 
-                        fsync(filePtr);
-
                         switchSegmentRecordOffset = filePtr.fileOffset() + switchSegmentRecSize;
                     }
                     else {
