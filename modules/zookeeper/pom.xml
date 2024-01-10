@@ -38,9 +38,8 @@
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-transport-native-epoll</artifactId>
-                <version>4.1.104.Final</version>
+                <version>${netty.version}</version>
             </dependency>
-
         </dependencies>
     </dependencyManagement>
 
