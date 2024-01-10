@@ -476,8 +476,6 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
                     if (segRecPtr != null) {
                         FileWALPointer filePtr = (FileWALPointer)segRecPtr;
 
-                        fsync(filePtr);
-
                         switchSegmentRecordOffset = filePtr.fileOffset() + switchSegmentRecSize;
                     }
                     else {
@@ -507,10 +505,10 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
 
                 // Do the final fsync.
                 if (mode != WALMode.NONE) {
-                    if (mmap)
-                        ((MappedByteBuffer)buf.buf).force();
-                    else
-                        walWriter.force();
+//                    if (mmap)
+//                        ((MappedByteBuffer)buf.buf).force();
+//                    else
+//                        walWriter.force();
 
                     lastFsyncPos = written;
                 }
