@@ -68,6 +68,7 @@ import org.apache.ignite.internal.processors.query.QuerySchemaPatch;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.lang.GridFunc;
 import org.apache.ignite.internal.util.lang.GridPlainCallable;
+import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -91,6 +92,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CACHE_PROC;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
 import static org.apache.ignite.internal.processors.cache.GridCacheProcessor.CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT;
+import static org.apache.ignite.internal.processors.cache.GridLocalConfigManager.validateIncomingConfiguration;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
 
 /**
@@ -574,7 +576,7 @@ public class ClusterCachesInfo {
             // 2 - At the same, the user initiates destroing the cache which should be started on the step 1.
             // 3 - The corresponding exchange (see step 1) results in an error, and so, the start should be rolled back.
             // 4 - When DynamicCacheChangeFailureMessage received the reqired cache descriptor is already deleted
-            //     and therefore, we need to scan markedForDeletion collections in order to fins the right descriptor.
+            //     and therefore, we need to scan markedForDeletion collections in order to find the right descriptor.
 
             // Find the "earliest" available descriptor.
             for (Map<String, DynamicCacheDescriptor> descriptors : markedForDeletionCaches.tailMap(actualTopVer).values()) {
@@ -1041,18 +1043,18 @@ public class ClusterCachesInfo {
         if (!validateStartNewCache(err, persistedCfgs, res, req))
             return false;
 
-        String conflictErr = checkCacheConflict(req.startCacheConfiguration());
+        err = QueryUtils.checkQueryEntityConflicts(req.startCacheConfiguration(), registeredCaches.values());
+
+        if (!validateStartNewCache(err, persistedCfgs, res, req))
+            return false;
+
+        String conflictErr = checkCacheConflict(req.startCacheConfiguration(), false);
 
         if (conflictErr != null) {
             U.warn(log, "Ignore cache start request. " + conflictErr);
 
             err = new IgniteCheckedException("Failed to start cache. " + conflictErr);
         }
-
-        if (!validateStartNewCache(err, persistedCfgs, res, req))
-            return false;
-
-        err = QueryUtils.checkQueryEntityConflicts(req.startCacheConfiguration(), registeredCaches.values());
 
         if (!validateStartNewCache(err, persistedCfgs, res, req))
             return false;
@@ -1518,7 +1520,7 @@ public class ClusterCachesInfo {
         if (joinDiscoData != null) {
             for (Map.Entry<String, CacheJoinNodeDiscoveryData.CacheInfo> e : joinDiscoData.caches().entrySet()) {
                 if (!registeredCaches.containsKey(e.getKey())) {
-                    conflictErr = checkCacheConflict(e.getValue().cacheData().config());
+                    conflictErr = checkCacheConflict(e.getValue().cacheData().config(), true);
 
                     if (conflictErr != null) {
                         conflictErr = "Failed to start configured cache due to conflict with started caches. " +
@@ -2007,7 +2009,7 @@ public class ClusterCachesInfo {
                     CacheConfiguration<?, ?> cfg = cacheInfo.cacheData().config();
 
                     if (!registeredCaches.containsKey(cfg.getName())) {
-                        String conflictErr = checkCacheConflict(cfg);
+                        String conflictErr = checkCacheConflict(cfg, true);
 
                         if (conflictErr != null) {
                             U.warn(log, "Ignore cache received from joining node. " + conflictErr);
@@ -2064,9 +2066,20 @@ public class ClusterCachesInfo {
      * Checks cache configuration on conflict with already registered caches and cache groups.
      *
      * @param cfg Cache configuration.
+     * @param checkIndexes If {@code true} check indexes conflicts.
      * @return {@code null} if validation passed, error message in other case.
      */
-    private String checkCacheConflict(CacheConfiguration<?, ?> cfg) {
+    private String checkCacheConflict(CacheConfiguration<?, ?> cfg, boolean checkIndexes) {
+        if (checkIndexes) {
+            Collection<CacheConfiguration<?, ?>> processedCfgs = F.viewReadOnly(registeredCaches.values(),
+                (C1<DynamicCacheDescriptor, CacheConfiguration<?, ?>>)DynamicCacheDescriptor::cacheConfiguration);
+
+            String err = validateIncomingConfiguration(processedCfgs, cfg);
+
+            if (err != null)
+                return err;
+        }
+
         int cacheId = CU.cacheId(cfg.getName());
 
         if (cacheGroupByName(cfg.getName()) != null)
@@ -2129,7 +2142,7 @@ public class ClusterCachesInfo {
             CacheConfiguration<?, ?> cfg = cacheInfo.cacheData().config();
 
             if (!registeredCaches.containsKey(cfg.getName())) {
-                String conflictErr = checkCacheConflict(cfg);
+                String conflictErr = checkCacheConflict(cfg, true);
 
                 if (conflictErr != null) {
                     if (locJoin)

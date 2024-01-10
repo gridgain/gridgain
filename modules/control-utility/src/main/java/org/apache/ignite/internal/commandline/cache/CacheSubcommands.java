@@ -26,6 +26,7 @@ import org.apache.ignite.internal.commandline.cache.argument.IndexForceRebuildCo
 import org.apache.ignite.internal.commandline.cache.argument.IndexListCommandArg;
 import org.apache.ignite.internal.commandline.cache.argument.IndexRebuildStatusArg;
 import org.apache.ignite.internal.commandline.cache.argument.ListCommandArg;
+import org.apache.ignite.internal.commandline.cache.argument.ResetLostPartitionsCommandArg;
 import org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg;
 import org.jetbrains.annotations.Nullable;
 
@@ -76,7 +77,7 @@ public enum CacheSubcommands {
     /**
      * Reset lost partitions
      */
-    RESET_LOST_PARTITIONS("reset_lost_partitions", null, new ResetLostPartitions()),
+    RESET_LOST_PARTITIONS("reset_lost_partitions", ResetLostPartitionsCommandArg.class, new ResetLostPartitions()),
 
     /**
      * Find and remove garbage.

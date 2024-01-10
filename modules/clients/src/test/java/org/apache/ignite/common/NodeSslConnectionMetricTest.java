@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.client.ClientConnectionException;
 import org.apache.ignite.client.Config;
 import org.apache.ignite.client.IgniteClient;
@@ -49,6 +50,7 @@ import static java.sql.DriverManager.getConnection;
 import static org.apache.ignite.Ignition.startClient;
 import static org.apache.ignite.internal.client.GridClientFactory.start;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.CLIENT_CONNECTOR_METRICS;
+import static org.apache.ignite.internal.processors.odbc.ClientListenerProcessor.CLIENT_LISTENER_PORT;
 import static org.apache.ignite.internal.processors.rest.protocols.tcp.GridTcpRestProtocol.REST_CONNECTOR_METRIC_REGISTRY_NAME;
 import static org.apache.ignite.internal.util.nio.GridNioServer.RECEIVED_BYTES_METRIC_NAME;
 import static org.apache.ignite.internal.util.nio.GridNioServer.SENT_BYTES_METRIC_NAME;
@@ -377,6 +379,9 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
 
         return new GridClientConfiguration()
             .setServers(Collections.singleton("127.0.0.1:11211"))
+            // disable background topology updater in order to avoid background connections to a cluster
+            // and sporadic changes of metrics.
+            .setTopologyRefreshFrequency(Long.MAX_VALUE)
             .setSslContextFactory(sslCtxFactory::create);
     }
 
@@ -387,10 +392,14 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         String cipherSuite,
         String protocol
     ) {
-       return new ClientConfiguration()
-            .setAddresses("127.0.0.1:10800")
-            .setSslMode(SslMode.REQUIRED)
-            .setSslContextFactory(sslContextFactory(keyStore, trustStore, cipherSuite, protocol));
+        int port = (Integer) Ignition.allGrids().get(0).cluster().localNode().attributes().get(CLIENT_LISTENER_PORT);
+
+        return new ClientConfiguration()
+                .setAddresses("127.0.0.1:" + port)
+                // When PA is enabled, async client channel init executes and spoils the metrics.
+                .setAffinityAwarenessEnabled(false)
+                .setSslMode(SslMode.REQUIRED)
+                .setSslContextFactory(sslContextFactory(keyStore, trustStore, cipherSuite, protocol));
     }
 
     /** Checks that the node join failed if the connection was performed with the specified SSL options. */

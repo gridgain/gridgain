@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Connection;
@@ -34,16 +36,19 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
-
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
@@ -59,6 +64,7 @@ import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.QueryField;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RetryException;
@@ -73,6 +79,7 @@ import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.gridgain.internal.h2.api.AggregateFunction;
 import org.gridgain.internal.h2.engine.Constants;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.expression.aggregate.AggregateData;
@@ -108,6 +115,7 @@ import org.gridgain.internal.h2.value.ValueTimestamp;
 import org.gridgain.internal.h2.value.ValueUuid;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 
 import static java.sql.ResultSetMetaData.columnNullableUnknown;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_HASH_JOIN;
@@ -123,20 +131,94 @@ public class H2Utils {
     /** Default hash join max table size. */
     public static final int DFLT_HASH_JOIN_MAX_TABLE_SIZE = 100_000;
 
+    /** Allow run CREATE TABLE statement without explicitly specifying a PK. This mode is for testing purposes only. */
+    @TestOnly
+    public static final String IGNITE_SQL_ALLOW_IMPLICIT_PK = "IGNITE_SQL_ALLOW_IMPLICIT_PK";
+
     /**
      * The default precision for a char/varchar value.
      */
-    static final int STRING_DEFAULT_PRECISION = Integer.MAX_VALUE;
+    public static final int STRING_DEFAULT_PRECISION = Integer.MAX_VALUE;
+
+    /**
+     * The default precision for a binary/varbinary value.
+     */
+    public static final int BINARY_DEFAULT_PRECISION = Integer.MAX_VALUE;
+
+    /**
+     * The default precision for a geometry value.
+     */
+    public static final int GEOMETRY_DEFAULT_PRECISION = Integer.MAX_VALUE;
 
     /**
      * The default precision for a decimal value.
      */
-    static final int DECIMAL_DEFAULT_PRECISION = 65535;
+    public static final int DECIMAL_DEFAULT_PRECISION = 65535;
 
     /**
      * The default scale for a decimal value.
      */
-    static final int DECIMAL_DEFAULT_SCALE = 32767;
+    public static final int DECIMAL_DEFAULT_SCALE = 32767;
+
+    /**
+     * The default precision for a boolean value (see {@link ValueBoolean}).
+     */
+    public static final int BOOLEAN_DEFAULT_PRECISION = ValueBoolean.PRECISION;
+
+    /**
+     * The default precision for a byte value (see {@link ValueByte}).
+     */
+    public static final int BYTE_DEFAULT_PRECISION = 3;
+
+    /**
+     * The default precision for a short value (see {@link ValueShort}).
+     */
+    public static final int SHORT_DEFAULT_PRECISION = 5;
+
+    /**
+     * The default precision for a integer value (see {@link ValueInt}).
+     */
+    public static final int INTEGER_DEFAULT_PRECISION = ValueInt.PRECISION;
+
+    /**
+     * The default precision for a long value (see {@link ValueLong}).
+     */
+    public static final int LONG_DEFAULT_PRECISION = ValueLong.PRECISION;
+
+    /**
+     * The default precision for a double value (see {@link ValueDouble}).
+     */
+    public static final int DOUBLE_DEFAULT_PRECISION = ValueDouble.PRECISION;
+
+    /**
+     * The default precision for real value (see {@link  ValueFloat}).
+     */
+    public static final int REAL_DEFAULT_PRECISION = 7;
+
+    /**
+     * The default precision for a uuid value (see {@link ValueUuid}).
+     */
+    public static final int UUID_DEFAULT_PRECISION = 16;
+
+    /**
+     * The default precision for a time value (see {@link ValueTime}).
+     */
+    public static final int TIME_DEFAULT_PRECISION = ValueTime.DEFAULT_PRECISION;
+
+    /**
+     * The default precision for a date value (see {@link ValueDate}).
+     */
+    public static final int DATE_DEFAULT_PRECISION = ValueDate.PRECISION;
+
+    /**
+     * The default precision for a timestamp value (see {@link ValueTimestamp}).
+     */
+    public static final int TIMESTAMP_DEFAULT_PRECISION = ValueTimestamp.DEFAULT_PRECISION;
+
+    /**
+     * The default scale for a timestamp value (see {@link ValueTimestamp}).
+     */
+    public static final int TIMESTAMP_DEFAULT_SCALE = 6;
 
     /** Dummy metadata for update result. */
     public static final List<GridQueryFieldMetadata> UPDATE_RESULT_META =
@@ -164,6 +246,12 @@ public class H2Utils {
      */
     private static boolean enableHashJoin
         = IgniteSystemProperties.getBoolean(IGNITE_ENABLE_HASH_JOIN, false);
+
+    /** Mapping of type to its default precision. */
+    private static final Map<Class<?>, Integer> defaultPrecisionsByType = knownDefaultPrecisions();
+
+    /** Mapping of type to its default scale. */
+    private static final Map<Class<?>, Integer> defaultScalesByType = knownDefaultScales();
 
     /**
      * @param c1 First column.
@@ -748,6 +836,46 @@ public class H2Utils {
     }
 
     /**
+     * Gets the precision for the descriptor.
+     *
+     * @param prop Query entity field descriptor.
+     * @return Precision of the query entity, if it has been set, or the default precision of the type.
+     */
+    public static int resolveDefaultPrecisionIfUndefined(GridQueryProperty prop) {
+        if (prop == null) {
+            return QueryField.UNDEFINED_PRECISION;
+        }
+
+        int precision = prop.precision();
+
+        if (precision != QueryField.UNDEFINED_PRECISION) {
+            return precision;
+        }
+
+        return defaultPrecisionsByType.getOrDefault(prop.type(), precision);
+    }
+
+    /**
+     * Gets the scale for the descriptor.
+     *
+     * @param prop Query entity field descriptor.
+     * @return Scale of the query entity, if it has been set, or the default scale of the type.
+     */
+    public static int resolveDefaultScaleIfUndefined(GridQueryProperty prop) {
+        if (prop == null) {
+            return QueryField.UNDEFINED_SCALE;
+        }
+
+        int scale = prop.scale();
+
+        if (scale != QueryField.UNDEFINED_SCALE) {
+            return scale;
+        }
+
+        return defaultScalesByType.getOrDefault(prop.type(), 0);
+    }
+
+    /**
      * Validates properties described by query types.
      *
      * @param type Type descriptor.
@@ -1209,5 +1337,103 @@ public class H2Utils {
         GridQueryIndexing indexing = ctx.query().getIndexing();
 
         return indexing instanceof IgniteH2Indexing ? ((IgniteH2Indexing)indexing).dataHandler() : null;
+    }
+
+    private static Map<Class<?>, Integer> knownDefaultPrecisions() {
+        HashMap<Class<?>, Integer> dfltPrecisions = new HashMap<>();
+
+        dfltPrecisions.put(Boolean.class, BOOLEAN_DEFAULT_PRECISION);
+        dfltPrecisions.put(Byte.class, BYTE_DEFAULT_PRECISION);
+        dfltPrecisions.put(Short.class, SHORT_DEFAULT_PRECISION);
+        dfltPrecisions.put(Integer.class, INTEGER_DEFAULT_PRECISION);
+        dfltPrecisions.put(Long.class, LONG_DEFAULT_PRECISION);
+        dfltPrecisions.put(BigDecimal.class, DECIMAL_DEFAULT_PRECISION);
+        dfltPrecisions.put(Double.class, DOUBLE_DEFAULT_PRECISION);
+        // H2 maps REAL to Float and FLOAT to Double,
+        dfltPrecisions.put(Float.class, REAL_DEFAULT_PRECISION);
+
+        dfltPrecisions.put(Time.class, TIME_DEFAULT_PRECISION);
+        dfltPrecisions.put(Date.class, DATE_DEFAULT_PRECISION);
+        dfltPrecisions.put(Timestamp.class, TIMESTAMP_DEFAULT_PRECISION);
+
+        dfltPrecisions.put(String.class, STRING_DEFAULT_PRECISION);
+        dfltPrecisions.put(byte[].class, BINARY_DEFAULT_PRECISION);
+
+        dfltPrecisions.put(UUID.class, UUID_DEFAULT_PRECISION);
+
+        Class<?> geometryCls = U.classForName("org.locationtech.jts.geom.Geometry", null);
+        if (geometryCls != null) {
+            dfltPrecisions.put(geometryCls, GEOMETRY_DEFAULT_PRECISION);
+        }
+
+        return dfltPrecisions;
+    }
+
+    private static Map<Class<?>, Integer> knownDefaultScales() {
+        HashMap<Class<?>, Integer> dfltScales = new HashMap<>();
+
+        dfltScales.put(BigDecimal.class, DECIMAL_DEFAULT_SCALE);
+        dfltScales.put(Timestamp.class, TIMESTAMP_DEFAULT_SCALE);
+
+        return dfltScales;
+    }
+
+    /**
+     * Register custom SQL functions.
+     *
+     * @param schema Schema.
+     * @param clss   Classes.
+     * @throws IgniteCheckedException If failed.
+     */
+    public static void registerSqlFunctions(IgniteLogger log, ConnectionManager connMgr, String schema, Class<?>[] clss)
+        throws IgniteCheckedException {
+        if (F.isEmpty(clss))
+            return;
+
+        for (Class<?> cls : clss) {
+            for (Method m : cls.getDeclaredMethods()) {
+                QuerySqlFunction ann = m.getAnnotation(QuerySqlFunction.class);
+
+                if (ann != null) {
+                    int modifiers = m.getModifiers();
+
+                    if (!Modifier.isStatic(modifiers) || !Modifier.isPublic(modifiers))
+                        throw new IgniteCheckedException("Method " + m.getName() + " must be public static.");
+
+                    String alias = ann.alias().isEmpty() ? m.getName() : ann.alias();
+
+                    String clause = "CREATE ALIAS IF NOT EXISTS " + alias + (ann.deterministic() ?
+                        " DETERMINISTIC FOR \"" :
+                        " FOR \"") +
+                        cls.getName() + '.' + m.getName() + '"';
+
+                    connMgr.executeStatement(schema, clause);
+
+                    if (log != null && log.isDebugEnabled())
+                        log.debug("Sql function " + alias + "(" + cls.getName() + ") has been registered.");
+                }
+            }
+        }
+    }
+
+    /**
+     * Register custom aggregate function.
+     *
+     * @param fnName SQL function name.
+     * @param cls    Function implementation class.
+     * @throws IgniteCheckedException If failed.
+     */
+    public static void registerAggregateFunction(IgniteLogger log, ConnectionManager connMgr, String fnName, Class<? extends AggregateFunction> cls)
+        throws IgniteCheckedException {
+        Objects.requireNonNull(fnName, "Function name can't be null");
+        Objects.requireNonNull(cls, "Class name can't be null");
+
+        if (!AggregateFunction.class.isAssignableFrom(cls))
+            throw new IgniteSQLException("Aggregate function '" + cls.getName() + "' should implement '" + AggregateFunction.class.getName() + "'");
+
+        connMgr.executeStatement(null, "CREATE AGGREGATE " + fnName + " FOR \"" + cls.getName() + "\"");
+
+        if (log != null && log.isDebugEnabled())
+            log.debug("Aggregation function " + fnName + "(" + cls.getName() + ") has been registered.");
     }
 }

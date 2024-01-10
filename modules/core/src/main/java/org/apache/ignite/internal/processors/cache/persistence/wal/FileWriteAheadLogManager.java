@@ -209,7 +209,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     public static final int DFLT_WAL_COMPRESSOR_WORKER_THREAD_CNT = 4;
 
     /** @see IgniteSystemProperties#IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE */
-    public static final double DFLT_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE = 0.25;
+    public static final double DFLT_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE = 0.75;
 
     /** @see IgniteSystemProperties#IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE */
     public static final double DFLT_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE = 0.5;
@@ -1067,16 +1067,19 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         int deleted = 0;
 
+        List<String> deletedSegments = null;
+        long lastCpIdx = lastCheckpointPtr.index();
+
         for (FileDescriptor desc : descs) {
             long archivedAbsIdx = segmentAware.lastArchivedAbsoluteIndex();
 
             long lastArchived = archivedAbsIdx >= 0 ? archivedAbsIdx : lastArchivedIndex();
 
-            if (desc.idx >= lastCheckpointPtr.index() // We cannot delete segments needed for binary recovery.
+            if (desc.idx >= lastCpIdx // We cannot delete segments needed for binary recovery.
                 || desc.idx >= lastArchived // We cannot delete last segment, it is needed at start of node and avoid gaps.
                 || desc.idx >= highPtr.index() // We cannot delete segments larger than the border.
                 || !segmentAware.minReserveIndex(desc.idx)) // We cannot delete reserved segment.
-                return deleted;
+                break;
 
             long len = desc.file.length();
 
@@ -1086,6 +1089,11 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             }
             else {
                 deleted++;
+
+                if (deletedSegments == null)
+                    deletedSegments = new ArrayList<>();
+
+                deletedSegments.add(desc.file().getName());
 
                 long idx = desc.idx();
 
@@ -1098,6 +1106,11 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 segmentAware.lastTruncatedArchiveIdx(desc.idx);
 
             cctx.kernalContext().encryption().onWalSegmentRemoved(desc.idx);
+        }
+
+        if (log.isInfoEnabled() && deletedSegments != null) {
+            log.info("Segments removed after WAL archive cleaning [cleanedSegments=" + deletedSegments
+                + ", lastCpIdx=" + lastCpIdx + ", highIdx=" + highPtr.index() + ']');
         }
 
         return deleted;
@@ -2120,7 +2133,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
          * Restart worker in IgniteThread.
          */
         public void restart() {
-            assert runner() == null : "FileArchiver is still running";
+            assert runner() == null : "FileArchiver is still running [worker=" + this + ']';
 
             isCancelled.set(false);
 
@@ -2212,7 +2225,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 U.cancel(this);
             }
 
-            U.join(this);
+            U.join(runner());
         }
     }
 
@@ -2228,7 +2241,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         /** */
         void restart() {
-            assert runner() == null : "FileCompressorWorker is still running.";
+            assert runner() == null : "FileCompressorWorker is still running [worker=" + this + ']';
 
             isCancelled.set(false);
 
@@ -2412,10 +2425,14 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             Set<Long> indices = new HashSet<>();
             Set<Long> duplicateIndices = new HashSet<>();
 
+            long lastCpIndex = lastCheckpointPtr.index();
+
             for (FileDescriptor desc : descs) {
                 if (!indices.add(desc.idx))
                     duplicateIndices.add(desc.idx);
             }
+
+            List<Long> deletedRawSegments = null;
 
             for (FileDescriptor desc : descs) {
                 if (desc.isCompressed())
@@ -2423,10 +2440,25 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
                 // Do not delete reserved or locked segment and any segment after it.
                 if (segmentReservedOrLocked(desc.idx))
-                    return;
+                    break;
 
-                if (desc.idx < lastCheckpointPtr.index() && duplicateIndices.contains(desc.idx))
-                    segmentAware.addSize(desc.idx, -deleteArchiveFiles(desc.file));
+                if (desc.idx < lastCpIndex && duplicateIndices.contains(desc.idx)) {
+                    long cleanedUpSize = deleteArchiveFiles(desc.file);
+
+                    if (cleanedUpSize > 0) {
+                        if (deletedRawSegments == null)
+                            deletedRawSegments = new ArrayList<>();
+
+                        deletedRawSegments.add(desc.idx);
+
+                        segmentAware.addSize(desc.idx, -cleanedUpSize);
+                    }
+                }
+            }
+
+            if (log.isInfoEnabled() && deletedRawSegments != null) {
+                log.info("Raw segments removed after compression [deletedSegments=" + deletedRawSegments
+                    + ", lastCpIndex=" + lastCpIndex + ']');
             }
         }
     }
@@ -2579,12 +2611,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 segmentsQueue.put(-1L);
             }
 
-            U.join(this, log);
+            U.join(runner(), log);
         }
 
         /** Restart worker. */
         void restart() {
-            assert runner() == null : "FileDecompressor is still running.";
+            assert runner() == null : "FileDecompressor is still running [worker=" + this + ']';
 
             isCancelled.set(false);
 
@@ -3296,14 +3328,14 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         private void shutdown() throws IgniteInterruptedCheckedException {
             isCancelled.set(true);
 
-            U.join(this);
+            U.join(runner());
         }
 
         /**
          * Restart worker in IgniteThread.
          */
         public void restart() {
-            assert runner() == null : "FileCleaner is still running";
+            assert runner() == null : "FileCleaner is still running [worker=" + this + ']';
 
             isCancelled.set(false);
 

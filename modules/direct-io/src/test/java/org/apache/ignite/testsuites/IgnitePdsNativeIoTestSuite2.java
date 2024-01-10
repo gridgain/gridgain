@@ -19,7 +19,9 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteNativeIoLocalWalModeChangeDuringRebalancingSelfTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteNativeIoPdsRecoveryAfterFileCorruptionTest;
+import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragmentationTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteNativeIoWalFlushFsyncSelfTest;
+import org.apache.ignite.internal.processors.cache.persistence.file.IgniteNativeIoSelfTest;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
 
@@ -42,6 +44,10 @@ public class IgnitePdsNativeIoTestSuite2 {
         suite.add(IgniteNativeIoLocalWalModeChangeDuringRebalancingSelfTest.class);
 
         suite.add(IgniteNativeIoWalFlushFsyncSelfTest.class);
+
+        suite.add(IgniteNativeIoSelfTest.class);
+
+        suite.add(IgnitePdsDefragmentationTest.class);
 
         return suite;
     }

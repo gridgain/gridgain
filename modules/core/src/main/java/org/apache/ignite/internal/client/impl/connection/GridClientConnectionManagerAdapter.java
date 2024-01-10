@@ -661,7 +661,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
 
             if (handshakeFut != null)
                 handshakeFut.onDone(
-                    new GridClientConnectionResetException("Failed to perform handshake (connection failed)."));
+                    new GridClientConnectionResetException("Failed to perform handshake (connection failed).", e));
             else {
                 GridClientNioTcpConnection conn = ses.meta(GridClientNioTcpConnection.SES_META_CONN);
 

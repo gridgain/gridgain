@@ -156,8 +156,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_RETRIES_COUNT;
+import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.internal.GridClosureCallMode.BROADCAST;
-import static org.apache.ignite.internal.processors.cache.CacheOperationContext.DFLT_ALLOW_ATOMIC_OPS_IN_TX;
+import static org.apache.ignite.internal.processors.cache.CacheOperationContext.defaultAllowAtomicOpsInTx;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_LOAD;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
@@ -487,7 +488,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             false,
             null,
             false,
-            DFLT_ALLOW_ATOMIC_OPS_IN_TX);
+            defaultAllowAtomicOpsInTx());
 
         return new GridCacheProxyImpl<>(ctx, this, opCtx);
     }
@@ -507,7 +508,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             false,
             null,
             false,
-            DFLT_ALLOW_ATOMIC_OPS_IN_TX);
+            defaultAllowAtomicOpsInTx());
 
         return new GridCacheProxyImpl<>(ctx, this, opCtx);
     }
@@ -522,7 +523,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             false,
             null,
             false,
-            DFLT_ALLOW_ATOMIC_OPS_IN_TX);
+            defaultAllowAtomicOpsInTx());
 
         return new GridCacheProxyImpl<>((GridCacheContext<K1, V1>)ctx, (GridCacheAdapter<K1, V1>)this, opCtx);
     }
@@ -544,7 +545,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             false,
             null,
             false,
-            DFLT_ALLOW_ATOMIC_OPS_IN_TX);
+            defaultAllowAtomicOpsInTx());
 
         return new GridCacheProxyImpl<>(ctx, this, opCtx);
     }
@@ -559,7 +560,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             true,
             null,
             false,
-            DFLT_ALLOW_ATOMIC_OPS_IN_TX);
+            defaultAllowAtomicOpsInTx());
 
         return new GridCacheProxyImpl<>(ctx, this, opCtx);
     }
@@ -574,7 +575,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             false,
             null,
             false,
-            DFLT_ALLOW_ATOMIC_OPS_IN_TX);
+            defaultAllowAtomicOpsInTx());
 
         return new GridCacheProxyImpl<>(ctx, this, opCtx);
     }
@@ -661,7 +662,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      *
      * @throws IgniteCheckedException If callback failed.
      */
-    protected void onKernalStart() throws IgniteCheckedException {
+    public void onKernalStart() throws IgniteCheckedException {
         // No-op.
     }
 
@@ -703,7 +704,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             /*task name*/null,
             /*deserialize binary*/false,
             /*skip values*/true,
-            false);
+            /*needVer*/false,
+            /*touchTtl*/false);
     }
 
     /** {@inheritDoc} */
@@ -1515,6 +1517,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                     taskName,
                     !keepBinary,
                     /*skip vals*/false,
+                    false,
                     false);
             }
 
@@ -1565,7 +1568,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 taskName,
                 !keepBinary,
                 /*skip vals*/false,
-                true);
+                true,
+                false);
         }
 
         final boolean intercept = ctx.config().getInterceptor() != null;
@@ -1837,6 +1841,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      * @param deserializeBinary Deserialize binary.
      * @param skipVals Skip values.
      * @param needVer Need version.
+     * @param touchTtl Indicates that operation requires just update the time to live value.
      * @return Future for the get operation.
      */
     protected IgniteInternalFuture<V> getAsync(
@@ -1846,7 +1851,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         String taskName,
         boolean deserializeBinary,
         final boolean skipVals,
-        final boolean needVer
+        final boolean needVer,
+        final boolean touchTtl
     ) {
         CacheOperationContext opCtx = ctx.operationContextPerCall();
 
@@ -4373,7 +4379,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 taskName,
                 deserializeBinary,
                 /*skip vals*/false,
-                needVer).get();
+                needVer,
+                /*touchTtl*/false).get();
         }
         catch (IgniteException e) {
             if (e.getCause(IgniteCheckedException.class) != null)
@@ -4646,6 +4653,101 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         }
 
         return true;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int localEntrySize(K key) throws IgniteCheckedException {
+        A.notNull(key, "key");
+
+        if (ctx.mvccEnabled()) {
+            throw new UnsupportedOperationException(
+                "Operation is not supported for " + TRANSACTIONAL_SNAPSHOT + " cache [name=" + name() + ']');
+        }
+
+        ctx.checkSecurity(SecurityPermission.CACHE_READ);
+
+        KeyCacheObject cacheKey = ctx.toCacheKeyObject(key);
+
+        if (!ctx.isLocal()) {
+            AffinityTopologyVersion topVer = ctx.affinity().affinityTopologyVersion();
+
+            int part = ctx.affinity().partition(cacheKey);
+
+            boolean keyPrimary = ctx.affinity().primaryByPartition(ctx.localNode(), part, topVer);
+            boolean keyBackup = ctx.affinity().partitionBelongs(ctx.localNode(), part, topVer);
+
+            if (!keyPrimary && !keyBackup)
+                return 0;
+
+            GridCacheEntryEx e;
+            GridCacheContext ctx0;
+
+            while (true) {
+                ctx0 = ctx.isNear() ? ctx.near().dht().context() : ctx;
+                e = ctx0.cache().entryEx(key);
+
+                // There is no need to acquire checkpoint read lock
+                // due to the fact that this operation is read only and doesn't modify any pages.
+                try {
+                    return e.localSize(topVer);
+                }
+                catch (GridCacheEntryRemovedException ignore) {
+                    if (log.isDebugEnabled())
+                        log.debug("Got removed entry during calculating entry size: " + key);
+                }
+                finally {
+                    e.touch();
+                }
+            }
+        }
+        else {
+            while (true) {
+                try {
+                    GridCacheEntryEx e = entryEx(key);
+
+                    if (e != null) {
+                        try {
+                            return e.localSize(AffinityTopologyVersion.NONE);
+                        }
+                        finally {
+                            e.touch();
+                        }
+                    }
+                }
+                catch (GridCacheEntryRemovedException ignore) {
+                    if (log.isDebugEnabled())
+                        log.debug("Got removed entry during calculating entry size: " + key);
+                }
+            }
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean touch(K key) {
+        A.notNull(key, "key");
+
+        // TODO https://ggsystems.atlassian.net/browse/GG-38173
+        if (!isDhtAtomic()) {
+            throw new UnsupportedOperationException(
+                "Operation is not supported on " +
+                    (isNear() ? "near " : "") + (isLocal() ? "local " : "") + ctx.config().getAtomicityMode() +
+                    " cache [name=" + name() + ']');
+        }
+
+        try {
+            return ((IgniteInternalFuture<Boolean>)getAsync(
+                key,
+                /*skip tx*/false,
+                /*subj id*/null,
+                /*task name*/null,
+                /*deserialize binary*/false,
+                /*skip values*/true,
+                /*needVer*/ false,
+                /*touchTtl*/true)).get();
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
     }
 
     /**

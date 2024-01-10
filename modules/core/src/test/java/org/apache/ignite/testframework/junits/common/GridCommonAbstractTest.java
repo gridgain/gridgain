@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,7 +78,6 @@ import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
@@ -166,6 +165,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVI
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheRebalanceMode.NONE;
+import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_BINARY_METADATA_PATH;
+import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_MARSHALLER_PATH;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
@@ -2147,11 +2148,12 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     protected void cleanPersistenceDir() throws Exception {
         assertTrue("Grids are not stopped", F.isEmpty(G.allGrids()));
 
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "cp", false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_BINARY_METADATA_PATH,
-            false));
+        String dfltWorkDir = U.defaultWorkDirectory();
+
+        deleteDirWithCheckAndLogging(U.resolveWorkDirectory(dfltWorkDir, "cp", false));
+        deleteDirWithCheckAndLogging(U.resolveWorkDirectory(dfltWorkDir, DFLT_STORE_DIR, false));
+        deleteDirWithCheckAndLogging(U.resolveWorkDirectory(dfltWorkDir, DFLT_MARSHALLER_PATH, false));
+        deleteDirWithCheckAndLogging(U.resolveWorkDirectory(dfltWorkDir, DFLT_BINARY_METADATA_PATH, false));
     }
 
     /**
@@ -2160,9 +2162,20 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     protected void cleanPersistenceDir(String name) throws Exception {
         String dn2DirName = name.replace(".", "_");
 
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR + "/" + dn2DirName, true));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR + "/wal/" + dn2DirName, true));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR + "/wal/archive/" + dn2DirName, true));
+        String dfltWorkDir = U.defaultWorkDirectory();
+
+        String dbDir = DFLT_STORE_DIR;
+
+        deleteDirWithCheckAndLogging(U.resolveWorkDirectory(dfltWorkDir, dbDir + "/" + dn2DirName, true));
+        deleteDirWithCheckAndLogging(U.resolveWorkDirectory(dfltWorkDir, dbDir + "/wal/" + dn2DirName, true));
+        deleteDirWithCheckAndLogging(U.resolveWorkDirectory(dfltWorkDir, dbDir + "/wal/archive/" + dn2DirName, true));
+    }
+
+    /**
+     *
+     */
+    private void deleteDirWithCheckAndLogging(File dir) {
+        assertTrue("Failed to delete directory, see logs for details: " + dir.getAbsolutePath(), U.delete(dir, log));
     }
 
     /**

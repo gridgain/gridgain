@@ -202,6 +202,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
         ccfg.setAffinity(affinityFunction(null));
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setBackups(0);
+        ccfg.setReadFromBackup(true);
 
         return ccfg;
     }

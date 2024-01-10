@@ -37,7 +37,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.AffinityKey;
@@ -48,7 +47,10 @@ import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.jdbc2.JdbcUtils;
 import org.apache.ignite.internal.processors.query.QueryEntityEx;
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
+import org.apache.ignite.internal.sql.SqlKeyword;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -58,7 +60,6 @@ import static java.sql.Types.DECIMAL;
 import static java.sql.Types.INTEGER;
 import static java.sql.Types.OTHER;
 import static java.sql.Types.VARCHAR;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.processors.query.QueryUtils.DFLT_SCHEMA;
@@ -411,6 +412,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
     public void testGetAllView() throws Exception {
         HashSet<String> expViews = new HashSet<>(Arrays.asList(
                 sysSchemaName() + ".METRICS",
+                sysSchemaName() + ".SERVICES",
                 sysSchemaName() + ".CACHE_GROUPS",
                 sysSchemaName() + ".CACHES",
                 sysSchemaName() + ".TASKS",
@@ -427,6 +429,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".NODE_ATTRIBUTES",
                 sysSchemaName() + ".TABLES",
                 sysSchemaName() + ".CLIENT_CONNECTIONS",
+                sysSchemaName() + ".CLIENT_CONNECTION_ATTRIBUTES",
                 sysSchemaName() + ".TRANSACTIONS",
                 sysSchemaName() + ".VIEWS",
                 sysSchemaName() + ".TABLE_COLUMNS",
@@ -449,10 +452,6 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".DS_SEMAPHORES",
                 sysSchemaName() + ".DS_REENTRANTLOCKS"
         ));
-
-        if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
-            expViews.add("IGNITE.SERVICES");
-        }
 
         testGetTables(new String[] {"VIEW"}, expViews);
     }
@@ -602,26 +601,26 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
             ResultSet rs = meta.getColumns(null, null, null, null);
 
             Set<String> expectedCols = new HashSet<>(Arrays.asList(
-                "PUBLIC.Quoted.Id.null",
+                "PUBLIC.Quoted.Id.null.10",
                 "PUBLIC.Quoted.Name.null.50",
-                "PUBLIC.TEST.ID.null",
+                "PUBLIC.TEST.ID.null.10",
                 "PUBLIC.TEST.NAME.'default name'.50",
-                "PUBLIC.TEST.AGE.21",
+                "PUBLIC.TEST.AGE.21.10",
                 "PUBLIC.TEST.VAL.null.50",
-                "PUBLIC.TEST_DECIMAL_COLUMN.ID.null",
+                "PUBLIC.TEST_DECIMAL_COLUMN.ID.null.10",
                 "PUBLIC.TEST_DECIMAL_COLUMN.DEC_COL.null.8.3",
-                "PUBLIC.TEST_DECIMAL_COLUMN_PRECISION.ID.null",
+                "PUBLIC.TEST_DECIMAL_COLUMN_PRECISION.ID.null.10",
                 "PUBLIC.TEST_DECIMAL_COLUMN_PRECISION.DEC_COL.null.8",
-                "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.ID.null",
+                "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.ID.null.10",
                 "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.DEC_COL.null.8",
-                "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.DATE_COL.null",
-                "dep.DEPARTMENT.ID.null",
+                "PUBLIC.TEST_DECIMAL_DATE_COLUMN_META.DATE_COL.null.10",
+                "dep.DEPARTMENT.ID.null.10",
                 "dep.DEPARTMENT.NAME.null.43",
-                "org.ORGANIZATION.ID.null",
+                "org.ORGANIZATION.ID.null.10",
                 "org.ORGANIZATION.NAME.null.42",
-                "pers.PERSON.NAME.null",
-                "pers.PERSON.AGE.null",
-                "pers.PERSON.ORGID.null"
+                "pers.PERSON.NAME.null.2147483647",
+                "pers.PERSON.AGE.null.10",
+                "pers.PERSON.ORGID.null.10"
             ));
 
             Set<String> actualUserCols = new HashSet<>(expectedCols.size());
@@ -912,6 +911,9 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".CLIENT_CONNECTIONS.TYPE.null.2147483647",
                 sysSchemaName() + ".CLIENT_CONNECTIONS.USER.null.2147483647",
                 sysSchemaName() + ".CLIENT_CONNECTIONS.VERSION.null.2147483647",
+                sysSchemaName() + ".CLIENT_CONNECTION_ATTRIBUTES.CONNECTION_ID.null.19",
+                sysSchemaName() + ".CLIENT_CONNECTION_ATTRIBUTES.NAME.null.2147483647",
+                sysSchemaName() + ".CLIENT_CONNECTION_ATTRIBUTES.VALUE.null.2147483647",
                 sysSchemaName() + ".TRANSACTIONS.LOCAL_NODE_ID.null.16",
                 sysSchemaName() + ".TRANSACTIONS.STATE.null.2147483647",
                 sysSchemaName() + ".TRANSACTIONS.XID.null.2147483647",
@@ -1103,21 +1105,19 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".DS_SETS.SIZE.null.10"
             ));
 
-            if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
-                expectedCols.addAll(Arrays.asList(
-                        sysSchemaName() + ".SERVICES.SERVICE_ID.null.2147483647",
-                        sysSchemaName() + ".SERVICES.NAME.null.2147483647",
-                        sysSchemaName() + ".SERVICES.SERVICE_CLASS.null.2147483647",
-                        sysSchemaName() + ".SERVICES.CACHE_NAME.null.2147483647",
-                        sysSchemaName() + ".SERVICES.ORIGIN_NODE_ID.null.2147483647",
-                        sysSchemaName() + ".SERVICES.TOTAL_COUNT.null.10",
-                        sysSchemaName() + ".SERVICES.MAX_PER_NODE_COUNT.null.10",
-                        sysSchemaName() + ".SERVICES.AFFINITY_KEY.null.2147483647",
-                        sysSchemaName() + ".SERVICES.NODE_FILTER.null.2147483647",
-                        sysSchemaName() + ".SERVICES.STATICALLY_CONFIGURED.null.1",
-                        sysSchemaName() + ".SERVICES.SERVICE_ID.null.2147483647"
-                ));
-            }
+            expectedCols.addAll(Arrays.asList(
+                    sysSchemaName() + ".SERVICES.SERVICE_ID.null.2147483647",
+                    sysSchemaName() + ".SERVICES.NAME.null.2147483647",
+                    sysSchemaName() + ".SERVICES.SERVICE_CLASS.null.2147483647",
+                    sysSchemaName() + ".SERVICES.CACHE_NAME.null.2147483647",
+                    sysSchemaName() + ".SERVICES.ORIGIN_NODE_ID.null.16",
+                    sysSchemaName() + ".SERVICES.TOTAL_COUNT.null.10",
+                    sysSchemaName() + ".SERVICES.MAX_PER_NODE_COUNT.null.10",
+                    sysSchemaName() + ".SERVICES.AFFINITY_KEY.null.2147483647",
+                    sysSchemaName() + ".SERVICES.NODE_FILTER.null.2147483647",
+                    sysSchemaName() + ".SERVICES.STATICALLY_CONFIGURED.null.1",
+                    sysSchemaName() + ".SERVICES.SERVICE_ID.null.2147483647"
+            ));
 
             Assert.assertEquals(expectedCols, actualSystemCols);
         }
@@ -1402,6 +1402,83 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
         }
     }
 
+    @Test
+    public void testColumnsPrecisionAndScale() throws SQLException {
+        doTestColumnsPrecisionsAndScale("TEST_COLUMN_TYPES", false);
+    }
+
+    @Test
+    public void testDynamicColumnsPrecisionAndScale() throws SQLException {
+        doTestColumnsPrecisionsAndScale("TEST_DYNAMIC_COLUMN_TYPES", true);
+    }
+
+    private void doTestColumnsPrecisionsAndScale(String tblName, boolean alterTableAddColumns) throws SQLException {
+        PrecicsionAndScaleTestPatameters params = PrecicsionAndScaleTestPatameters
+            .builder()
+            .table(tblName)
+            .addColumn(SqlKeyword.INTEGER)
+            .addColumn(SqlKeyword.BOOLEAN)
+            .addColumn(SqlKeyword.TINYINT)
+            .addColumn(SqlKeyword.SMALLINT)
+            .addColumn(SqlKeyword.BIGINT)
+            .addColumn(SqlKeyword.DECIMAL)
+            .addColumn(SqlKeyword.DECIMAL, 10, 2)
+            .addColumn(SqlKeyword.REAL)
+            .addColumn(SqlKeyword.FLOAT)
+            .addColumn(SqlKeyword.DOUBLE)
+            .addColumn(SqlKeyword.TIME)
+            .addColumn(SqlKeyword.DATE)
+            .addColumn(SqlKeyword.DATETIME)
+            .addColumn(SqlKeyword.TIMESTAMP)
+            .addColumn(SqlKeyword.CHAR)
+            .addColumn(SqlKeyword.CHAR, 22)
+            .addColumn(SqlKeyword.VARCHAR)
+            .addColumn(SqlKeyword.VARCHAR, 21)
+            .addColumn(SqlKeyword.BINARY)
+            .addColumn(SqlKeyword.VARBINARY)
+            .addColumn(SqlKeyword.UUID)
+            .build();
+
+        try (Connection conn = DriverManager.getConnection(URL)) {
+            try {
+                Statement stmt = conn.createStatement();
+
+                stmt.executeUpdate(params.tableCreateStatement(alterTableAddColumns));
+
+                // Validate metadata.
+                ResultSet rs = conn.getMetaData().getColumns(null, null, tblName, null);
+                validateColumnsResultSet(rs, params);
+
+                // Validate system view attributes.
+                rs = stmt.executeQuery(String.format("SELECT COLUMN_NAME, PRECISION as COLUMN_SIZE, " +
+                    "SCALE as DECIMAL_DIGITS FROM " + sysSchemaName() + ".TABLE_COLUMNS WHERE TABLE_NAME='%s'", tblName));
+                validateColumnsResultSet(rs, params);
+            } finally {
+                conn.createStatement().executeUpdate("DROP TABLE IF EXISTS " + tblName);
+            }
+        }
+    }
+
+    private void validateColumnsResultSet(ResultSet rs, PrecicsionAndScaleTestPatameters params) throws SQLException {
+        int columnsCount = 0;
+
+        while (rs.next()) {
+            String columnName = rs.getString("COLUMN_NAME");
+
+            if (!params.columns.containsKey(columnName))
+                continue;
+
+            columnsCount++;
+
+            int precision = rs.getInt("COLUMN_SIZE");
+            int scale = rs.getInt("DECIMAL_DIGITS");
+            assertEquals(columnName, params.precision(columnName), precision);
+            assertEquals(columnName, params.scale(columnName), scale);
+        }
+
+        assertEquals(params.columns.size(), columnsCount);
+    }
+
     /**
      * Negative scenarios for catalog name.
      * Perform metadata lookups, that use incorrect catalog names.
@@ -1591,6 +1668,185 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
         /** */
         public String columnName() {
             return colName;
+        }
+    }
+
+    private static class PrecicsionAndScaleTestPatameters {
+        private final Map<String, TestColumnData> columns;
+
+        private final String tableName;
+
+        PrecicsionAndScaleTestPatameters(Map<String, TestColumnData> columns, String tableName) {
+            this.columns = columns;
+            this.tableName = tableName;
+        }
+
+        String tableCreateStatement(boolean alterTable) {
+            SB buf = new SB();
+
+            for (Map.Entry<String, TestColumnData> e : columns.entrySet()) {
+                String colName = e.getKey();
+                TestColumnData col = e.getValue();
+
+                if (buf.length() > 0)
+                    buf.a(", ");
+
+                String customPrecisionAndScale = col.precision != null ?
+                    "(" + col.precision + (col.scale != null ? ", " + col.scale : "") + ")" : "";
+
+                buf.a(String.format("%s %s%s", colName, col.type, customPrecisionAndScale));
+            }
+
+            String columnList = buf.toString();
+
+            if (alterTable) {
+                return String.format(
+                    "CREATE TABLE %s (ID INT PRIMARY KEY, VAL INT); " +
+                    "ALTER TABLE %s add column(%s)", tableName, tableName, columnList
+                );
+            }
+
+            return String.format("CREATE TABLE %s (ID INT PRIMARY KEY, %s)", tableName, columnList);
+        }
+
+        int precision(String column) {
+            TestColumnData data = columns.get(column);
+
+            if (data.precision == null) {
+                return defaultPrecision(data.type);
+            }
+
+            return data.precision;
+        }
+
+        int scale(String column) {
+            TestColumnData data = columns.get(column);
+
+            if (data.scale == null) {
+                return defaultScale(data.type);
+            }
+
+            return data.scale;
+        }
+
+        private int defaultPrecision(String type) {
+            switch (type) {
+                case SqlKeyword.BOOLEAN:
+                    return H2Utils.BOOLEAN_DEFAULT_PRECISION;
+
+                case SqlKeyword.TINYINT:
+                    return H2Utils.BYTE_DEFAULT_PRECISION;
+
+                case SqlKeyword.SMALLINT:
+                    return H2Utils.SHORT_DEFAULT_PRECISION;
+
+                case SqlKeyword.INTEGER:
+                    return H2Utils.INTEGER_DEFAULT_PRECISION;
+
+                case SqlKeyword.BIGINT:
+                    return H2Utils.LONG_DEFAULT_PRECISION;
+
+                case SqlKeyword.DECIMAL:
+                    return H2Utils.DECIMAL_DEFAULT_PRECISION;
+
+                case SqlKeyword.REAL:
+                    return H2Utils.REAL_DEFAULT_PRECISION;
+
+                case SqlKeyword.FLOAT:
+                case SqlKeyword.DOUBLE:
+                    return H2Utils.DOUBLE_DEFAULT_PRECISION;
+
+                case SqlKeyword.TIME:
+                    return H2Utils.TIME_DEFAULT_PRECISION;
+
+                case SqlKeyword.DATE:
+                    return H2Utils.DATE_DEFAULT_PRECISION;
+
+                case SqlKeyword.DATETIME:
+                case SqlKeyword.TIMESTAMP:
+                    return H2Utils.TIMESTAMP_DEFAULT_PRECISION;
+
+                case SqlKeyword.BINARY:
+                case SqlKeyword.VARBINARY:
+                    return H2Utils.BINARY_DEFAULT_PRECISION;
+
+                case SqlKeyword.CHAR:
+                case SqlKeyword.VARCHAR:
+                    return H2Utils.STRING_DEFAULT_PRECISION;
+
+                case SqlKeyword.UUID:
+                    return H2Utils.UUID_DEFAULT_PRECISION;
+
+                default:
+                    throw new IllegalArgumentException("Unknown type " + type);
+            }
+        }
+
+        private int defaultScale(String type) {
+            switch (type) {
+                case SqlKeyword.DECIMAL:
+                    return H2Utils.DECIMAL_DEFAULT_SCALE;
+
+                case SqlKeyword.DATETIME:
+                case SqlKeyword.TIMESTAMP:
+                    return H2Utils.TIMESTAMP_DEFAULT_SCALE;
+
+                default:
+                    return 0;
+            }
+        }
+
+        static PrecicsionAndScaleTestParamtersBuilder builder() {
+            return new PrecicsionAndScaleTestParamtersBuilder();
+        }
+
+        static class TestColumnData {
+            final String type;
+
+            final Integer precision;
+
+            final Integer scale;
+
+            public TestColumnData(String type, Integer precision, Integer scale) {
+                this.type = type;
+                this.precision = precision;
+                this.scale = scale;
+            }
+        }
+
+        static class PrecicsionAndScaleTestParamtersBuilder {
+            private final Map<String, TestColumnData> columns = new HashMap<>();
+
+            private String tblName;
+
+            int columnCnt;
+
+            PrecicsionAndScaleTestParamtersBuilder table(String name) {
+                tblName = name;
+
+                return this;
+            }
+
+            PrecicsionAndScaleTestParamtersBuilder addColumn(String type) {
+                return addColumn(type, null, null);
+            }
+
+            PrecicsionAndScaleTestParamtersBuilder addColumn(String type, int precision) {
+                return addColumn(type, precision, null);
+            }
+
+            private PrecicsionAndScaleTestParamtersBuilder addColumn(String type, Integer precision, Integer scale) {
+                String type0 = type.toUpperCase();
+                String colName = String.format("COL_%d_%s", ++columnCnt, type0);
+
+                columns.put(colName, new TestColumnData(type0, precision, scale));
+
+                return this;
+            }
+
+            PrecicsionAndScaleTestPatameters build() {
+                return new PrecicsionAndScaleTestPatameters(columns, tblName);
+            }
         }
     }
 }

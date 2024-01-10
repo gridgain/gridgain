@@ -420,7 +420,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         cctx.gridEvents().addDiscoveryEventListener(discoLsnr, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED,
             EVT_DISCOVERY_CUSTOM_EVT);
 
-        cctx.io().addCacheHandler(0, GridDhtPartitionsSingleMessage.class,
+        cctx.io().addCacheHandler(GridDhtPartitionsSingleMessage.class,
             new MessageHandler<GridDhtPartitionsSingleMessage>() {
                 @Override public void onMessage(final ClusterNode node, final GridDhtPartitionsSingleMessage msg) {
                     GridDhtPartitionExchangeId exchangeId = msg.exchangeId();
@@ -457,7 +457,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 }
             });
 
-        cctx.io().addCacheHandler(0, GridDhtPartitionsFullMessage.class,
+        cctx.io().addCacheHandler(GridDhtPartitionsFullMessage.class,
             new MessageHandler<GridDhtPartitionsFullMessage>() {
                 @Override public void onMessage(ClusterNode node, GridDhtPartitionsFullMessage msg) {
                     if (msg.exchangeId() == null) {
@@ -475,7 +475,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 }
             });
 
-        cctx.io().addCacheHandler(0, GridDhtPartitionsSingleRequest.class,
+        cctx.io().addCacheHandler(GridDhtPartitionsSingleRequest.class,
             new MessageHandler<GridDhtPartitionsSingleRequest>() {
                 @Override public void onMessage(ClusterNode node, GridDhtPartitionsSingleRequest msg) {
                     processSinglePartitionRequest(node, msg);
@@ -940,6 +940,12 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 catch (Exception e) {
                     if (fut.reconnectOnError(e))
                         throw new IgniteNeedReconnectException(cctx.localNode(), e);
+
+                    if (X.hasCause(e, ClassNotFoundException.class)) {
+                        String clsNotFound = X.cause(e, ClassNotFoundException.class).getMessage();
+                        U.warn(log, "Class " + clsNotFound + " was not found when processing cache start requests." +
+                            " Please check that the class is available on all necessary server nodes.");
+                    }
 
                     throw e;
                 }
@@ -1412,9 +1418,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
             // No need to send to nodes which did not finish their first exchange.
             AffinityTopologyVersion rmtTopVer =
-                lastFut != null ?
-                    (lastFut.isDone() ? lastFut.topologyVersion() : lastFut.initialVersion())
-                    : AffinityTopologyVersion.NONE;
+                    lastFut != null ?
+                            (lastFut.isDone() && lastFut.error() == null ? lastFut.topologyVersion() : lastFut.initialVersion())
+                            : AffinityTopologyVersion.NONE;
 
             Collection<ClusterNode> rmts = cctx.discovery().remoteAliveNodesWithCaches(rmtTopVer);
 
@@ -1605,6 +1611,23 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         // It is important that client topologies be added after contexts.
         for (GridClientPartitionTopology top : cctx.exchange().clientTopologies()) {
+            if (exchId != null) {
+                CacheGroupDescriptor grpDesc = cctx.cache().cacheGroupDescriptor(top.groupId());
+
+                if (grpDesc == null)
+                    // Cache group was removed already.
+                    continue;
+
+                // Start topology version for dynamically started cache.
+                AffinityTopologyVersion startTopVer = grpDesc.startTopologyVersion();
+                if (startTopVer == null)
+                    // Start topology version for statically configured cache.
+                    startTopVer = grpDesc.receivedFromStartVersion();
+
+                if (startTopVer != null && startTopVer.compareTo(exchId.topologyVersion()) > 0)
+                    continue;
+            }
+
             GridDhtPartitionFullMap map = top.partitionMap(true);
 
             if (map != null)

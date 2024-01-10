@@ -42,6 +42,9 @@ class SegmentCompressStorage {
     /** Last enqueued to compress segment. */
     private long lastEnqueuedToCompressIdx = -1L;
 
+    /** Segment of last completed checkpoint. */
+    private long lastCpIdx = -1L;
+
     /** Segments to compress queue. */
     private final Queue<Long> segmentsToCompress = new ArrayDeque<>();
 
@@ -65,10 +68,19 @@ class SegmentCompressStorage {
     /**
      * Sets the largest index of previously compressed segment.
      *
-     * @param idx Segment index.
+     * @param idx Absolute segment index.
      */
     synchronized void lastSegmentCompressed(long idx) {
         onSegmentCompressed(lastEnqueuedToCompressIdx = idx);
+    }
+
+    /**
+     * Update segment of last completed checkpoint.
+     *
+     * @param lastCpIdx Absolute segment index.
+     */
+    synchronized void lastCheckpointIdx(long lastCpIdx) {
+        this.lastCpIdx = lastCpIdx;
     }
 
     /**
@@ -146,7 +158,7 @@ class SegmentCompressStorage {
      * Callback for waking up compressor when new segment is archived.
      */
     synchronized void onSegmentArchived(long lastAbsArchivedIdx) {
-        while (lastEnqueuedToCompressIdx < lastAbsArchivedIdx && compactionEnabled) {
+        while (lastEnqueuedToCompressIdx < Math.min(lastAbsArchivedIdx, lastCpIdx - 1) && compactionEnabled) {
             if (log.isInfoEnabled())
                 log.info("Enqueuing segment for compression [idx=" + (lastEnqueuedToCompressIdx + 1) + ']');
 

@@ -25,21 +25,36 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.makeUpdateListener;
 import static org.apache.ignite.internal.processors.configuration.distributed.DistributedBooleanProperty.detachedBooleanProperty;
+import static org.apache.ignite.internal.processors.configuration.distributed.DistributedIntegerProperty.detachedIntegerProperty;
 
 /**
  * Thin client distributed configuration.
  */
 public class DistributedThinClientConfiguration {
-    /** */
-    private final IgniteLogger log;
+    /** Default connection count limit. */
+    public static final int DFLT_MAX_CONNECTIONS_PER_NODE = 0;
+
+    /** Message of thin client distributed config parameter was changed. */
+    private static final String PROPERTY_UPDATE_MESSAGE =
+            "ThinClientProperty parameter '%s' was changed from '%s' to '%s'";
 
     /** . */
     private final DistributedChangeableProperty<Boolean> showStackTrace =
-        detachedBooleanProperty("thinClientProperty.showStackTrace");
+            detachedBooleanProperty("thinClientProperty.showStackTrace");
 
-    /** Message of baseline auto-adjust parameter was changed. */
-    private static final String PROPERTY_UPDATE_MESSAGE =
-        "ThinClientProperty parameter '%s' was changed from '%s' to '%s'";
+    /**
+     * Maximum allowed number of active thin client connections per node.
+     * <p>
+     * Defaults to {@link #DFLT_MAX_CONNECTIONS_PER_NODE}.
+     * This applies to any connections that use thin client protocol: thin clients, ODBC, thin JDBC connections.
+     * The total number of all connections (ODBC+JDBC+thin client) can not exceed this limit.
+     * Zero or negative value means no limit.
+     */
+    private final DistributedChangeableProperty<Integer> maxConnectionsPerNode =
+            detachedIntegerProperty("thinClientProperty.maxConnectionsPerNode");
+
+    /** */
+    private final IgniteLogger log;
 
     /**
      * @param ctx Kernal context.
@@ -55,8 +70,10 @@ public class DistributedThinClientConfiguration {
             new DistributedConfigurationLifecycleListener() {
                 @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
                     showStackTrace.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
+                    maxConnectionsPerNode.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
 
                     dispatcher.registerProperties(showStackTrace);
+                    dispatcher.registerProperties(maxConnectionsPerNode);
                 }
             }
         );
@@ -76,5 +93,35 @@ public class DistributedThinClientConfiguration {
      */
     @Nullable public Boolean sendServerExceptionStackTraceToClient() {
         return showStackTrace.get();
+    }
+
+    /**
+     * Cluster wide update of {@link #maxConnectionsPerNode}.
+     *
+     * @param limit New value of {@link #maxConnectionsPerNode}.
+     * @return Future for {@link #maxConnectionsPerNode} update operation.
+     * @throws IgniteCheckedException If failed during cluster wide update.
+     */
+    public GridFutureAdapter<?> updateMaxConnectionsPerNodeAsync(int limit) throws IgniteCheckedException {
+        return maxConnectionsPerNode.propagateAsync(limit);
+    }
+
+    /**
+     * Local update of {@link #maxConnectionsPerNode}.
+     *
+     * @param limit New value of {@link #maxConnectionsPerNode}.
+     */
+    public void updateMaxConnectionsPerNodeLocal(int limit) {
+        maxConnectionsPerNode.localUpdate(limit);
+    }
+
+    /**
+     * @return Maximum allowed number of active client connections per node. See {@link #maxConnectionsPerNode}.
+     */
+    public int maxConnectionsPerNode() {
+        Integer value = maxConnectionsPerNode.getOrDefault(DFLT_MAX_CONNECTIONS_PER_NODE);
+        assert value != null;
+
+        return value;
     }
 }

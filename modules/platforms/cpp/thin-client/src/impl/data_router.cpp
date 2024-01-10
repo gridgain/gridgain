@@ -177,6 +177,8 @@ namespace ignite
                     common::concurrent::CsLockGuard lock(channelsMutex);
 
                     channel = FindChannelLocked(id);
+                    if (!channel.IsValid())
+                        return;
 
                     connectedChannels.erase(id);
                     InvalidateChannelLocked(channel);

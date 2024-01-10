@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,6 +53,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointe
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
+import org.apache.ignite.thread.IgniteThreadFactory;
 import org.jetbrains.annotations.Nullable;
 
 import static java.nio.file.StandardOpenOption.READ;
@@ -81,7 +83,7 @@ public class CheckpointMarkersStorage {
     private static final String EARLIEST_CP_SNAPSHOT_TMP_FILE = EARLIEST_CP_SNAPSHOT_FILE + ".tmp";
 
     /** Checkpoint map snapshot executor. */
-    private final Executor checkpointMapSnapshotExecutor;
+    private final ExecutorService checkpointMapSnapshotExecutor;
 
     /** Logger. */
     protected IgniteLogger log;
@@ -114,7 +116,6 @@ public class CheckpointMarkersStorage {
      * @param factory IO factory.
      * @param absoluteWorkDir Directory path to checkpoint markers folder.
      * @param lock Checkpoint read-write lock.
-     * @param checkpointMapSnapshotExecutor Checkpoint map snapshot executor.
      * @throws IgniteCheckedException if fail.
      */
     CheckpointMarkersStorage(
@@ -123,8 +124,7 @@ public class CheckpointMarkersStorage {
         CheckpointHistory history,
         FileIOFactory factory,
         String absoluteWorkDir,
-        CheckpointReadWriteLock lock,
-        Executor checkpointMapSnapshotExecutor
+        CheckpointReadWriteLock lock
     ) throws IgniteCheckedException {
         this.log = logger.apply(getClass());
         cpHistory = history;
@@ -141,7 +141,18 @@ public class CheckpointMarkersStorage {
 
         tmpWriteBuf.order(ByteOrder.nativeOrder());
 
-        this.checkpointMapSnapshotExecutor = checkpointMapSnapshotExecutor;
+        // Intentionally uses a single thread executor to linearize create of snapshot earliest checkpoint map and try
+        // not to miss changes.
+        this.checkpointMapSnapshotExecutor = Executors.newSingleThreadExecutor(
+            new IgniteThreadFactory(igniteInstanceName, "cp-map-snapshot-executor-")
+        );
+    }
+
+    /**
+     * Stop component.
+     */
+    public void stop() {
+        U.shutdownNow(CheckpointMarkersStorage.class, checkpointMapSnapshotExecutor, log);
     }
 
     /**
@@ -201,8 +212,11 @@ public class CheckpointMarkersStorage {
 
                 snap = JdkMarshaller.DEFAULT.unmarshal(bytes, null);
             }
-            catch (IOException e) {
-                log.error("Failed to unmarshal earliest checkpoint map snapshot", e);
+            catch (IOException | IgniteCheckedException e) {
+                if (e instanceof IgniteCheckedException)
+                    log.error("Failed to unmarshal earliest checkpoint map snapshot", e);
+                else
+                    log.error("Failed to read earliest checkpoint map snapshot", e);
 
                 if (!IgniteUtils.delete(snapshotFile)) {
                     throw new IgniteCheckedException(
@@ -217,6 +231,13 @@ public class CheckpointMarkersStorage {
             snap = new EarliestCheckpointMapSnapshot();
 
         cpHistory.initialize(retrieveHistory(), snap);
+    }
+
+    /**
+     * Starts internal components.
+     */
+    void start() {
+        cpHistory.start();
     }
 
     /**
@@ -645,9 +666,8 @@ public class CheckpointMarkersStorage {
 
         if (createSnapshot) {
             Runnable runnable = () -> {
-                if (!checkpointSnapshotInProgress.compareAndSet(false, true)) {
+                if (!checkpointSnapshotInProgress.compareAndSet(false, true))
                     return;
-                }
 
                 try {
                     EarliestCheckpointMapSnapshot snapshot;
@@ -685,7 +705,10 @@ public class CheckpointMarkersStorage {
                     }
 
                     try {
-                        Files.write(tmpFile.toPath(), bytes);
+                        // Use DSYNC so write to file is fsync'ed or else we can move empty file.
+                        // CREATE_NEW is needed here, because we need to create a new temporary file.
+                        // It's not needed by default, but needed to be passed explicitly in case of DSYNC.
+                        Files.write(tmpFile.toPath(), bytes, StandardOpenOption.CREATE_NEW, StandardOpenOption.DSYNC);
                     }
                     catch (IOException e) {
                         log.error("Failed to write checkpoint snapshot temporary file: " + tmpFile, e);

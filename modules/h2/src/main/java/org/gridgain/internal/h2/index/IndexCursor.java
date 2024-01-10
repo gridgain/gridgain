@@ -78,7 +78,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
         inResult = null;
         intersects = null;
 
-        boolean isConstEqualConditionsOnly = true;
+        boolean canUseAnyIndexColumnForIn = true;
 
         for (IndexCondition condition : indexConditions) {
             if (condition.isAlwaysFalse()) {
@@ -91,31 +91,36 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 continue;
             }
             Column column = condition.getColumn();
+            if (condition.getCompareType() == Comparison.IN_LIST) {
+                if (canUseAnyIndexColumnForIn || (start == null && end == null)) {
+                    // We can handle only one IN(...) index scan.
+                    if (inColumn != null && index.getColumnIndex(inColumn) <= index.getColumnIndex(column))
+                        continue;
 
-            boolean inListComparison;
-            boolean inQueryComparison = false;;
+                    if (inResult != null)
+                        inResult.close();
 
-            if ((inListComparison = (condition.getCompareType() == Comparison.IN_LIST)) ||
-                (inQueryComparison = (condition.getCompareType() == Comparison.IN_QUERY))) {
-                // We can handle only one IN(...) index scan.
-                if (inColumn != null && index.getColumnIndex(inColumn) <= index.getColumnIndex(column))
-                    continue;
-
-                inColumn = column;
-                inList = null;
-
-                if (inResult != null)
-                    inResult.close();
-
-                if (inListComparison) {
+                    this.inColumn = column;
                     inList = condition.getCurrentValueList(s);
                     inListIndex = 0;
                 }
-                else if (inQueryComparison) {
-                    inResult = condition.getCurrentResult();
+            } else if (condition.getCompareType() == Comparison.IN_QUERY) {
+                // Fallback to the table scan if the IN column is not the first column of the index.
+                if (inColumn != null && !canUseIndexFor(inColumn)) {
+                    inList = null;
+                    inColumn = null;
+                }
+
+                canUseAnyIndexColumnForIn = false;
+
+                if (start == null && end == null) {
+                    if (inColumn == null && canUseIndexFor(column)) {
+                        this.inColumn = column;
+                        inResult = condition.getCurrentResult();
+                    }
                 }
             } else {
-                isConstEqualConditionsOnly &= condition.getCompareType() == Comparison.EQUAL &&
+                canUseAnyIndexColumnForIn &= condition.getCompareType() == Comparison.EQUAL &&
                     condition.getExpression().isConstant();
 
                 Value v = condition.getCurrentValue(s);
@@ -148,7 +153,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
 
         // An X=? condition will produce less rows than
         // an X IN(..) condition, unless the X IN condition can use the index.
-        if (!isConstEqualConditionsOnly && !canUseIndexFor(inColumn)) {
+        if (!canUseAnyIndexColumnForIn && (start != null || end != null) && !canUseIndexFor(inColumn)) {
             inColumn = null;
             inList = null;
 
@@ -158,7 +163,10 @@ public class IndexCursor implements Cursor, AutoCloseable {
             inResult = null;
         }
 
-        if (inColumn != null && start == null) {
+        if (inColumn == null)
+            return;
+
+        if (start == null || (!canUseAnyIndexColumnForIn && canUseIndexFor(inColumn))) {
             start = table.getTemplateRow();
         }
     }

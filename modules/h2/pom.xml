@@ -26,13 +26,13 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.gridgain</groupId>
-        <artifactId>community.parent</artifactId>
-        <version>1</version>
-        <relativePath>../../parent</relativePath>
+        <artifactId>ignite-parent-internal</artifactId>
+        <version>8.9.127-SNAPSHOT</version>
+        <relativePath>../../parent-internal/pom.xml</relativePath>
     </parent>
 
     <artifactId>ignite-h2</artifactId>
-    <version>8.8.127-SNAPSHOT</version>
+
     <description>H2 Database Engine Fork</description>
 
     <licenses>
@@ -157,7 +157,6 @@
                         <configuration>
                             <sources>
                                 <source>src/test/tools</source>
-                                <source>src/test/java/META-INF/**</source>
                             </sources>
                         </configuration>
                     </execution>

@@ -44,6 +44,7 @@ import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.metric.AbstractExporterSpiTest;
 import org.apache.ignite.internal.metric.SystemViewSelfTest.TestPredicate;
@@ -62,6 +63,7 @@ import org.junit.Test;
 
 import static java.util.Arrays.asList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.metric.SystemViewSelfTest.TEST_PREDICATE;
 import static org.apache.ignite.internal.metric.SystemViewSelfTest.TEST_TRANSFORMER;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheGroupId;
@@ -109,7 +111,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
         ignite0 = startGrid(0);
         ignite1 = startGrid(1);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
     }
 
     /** {@inheritDoc} */
@@ -358,7 +360,8 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
     /** */
     @Test
     public void testSchemas() throws Exception {
-        try (IgniteEx g = startGrid(new IgniteConfiguration().setSqlSchemas("MY_SCHEMA", "ANOTHER_SCHEMA"))) {
+        try (IgniteEx g = startGrid(getConfiguration(getTestIgniteInstanceName(3))
+                .setSqlConfiguration(new SqlConfiguration().setSqlSchemas("MY_SCHEMA", "ANOTHER_SCHEMA")))) {
             SystemView<SqlSchemaView> schemasSysView = g.context().systemView().view(SQL_SCHEMA_VIEW);
 
             Set<String> schemaFromSysView = new HashSet<>();
@@ -400,6 +403,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
             "NODE_ATTRIBUTES",
             "TABLES",
             "CLIENT_CONNECTIONS",
+            "CLIENT_CONNECTION_ATTRIBUTES",
             "VIEWS",
             "TABLE_COLUMNS",
             "VIEW_COLUMNS",
@@ -488,12 +492,12 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
         execute(ignite0, "CREATE TABLE T2(ID LONG PRIMARY KEY, NAME VARCHAR(50))");
 
         List<List<?>> expRes = asList(
-            asList("ID", "T1", "PUBLIC", false, false, "null", true, true, -1, -1, Long.class.getName()),
-            asList("NAME", "T1", "PUBLIC", false, false, "null", true, false, 40, -1, String.class.getName()),
+            asList("ID", "T1", "PUBLIC", false, false, "null", true, true, 19, 0, Long.class.getName()),
+            asList("NAME", "T1", "PUBLIC", false, false, "null", true, false, 40, 0, String.class.getName()),
             asList("_KEY", "T1", "PUBLIC", true, false, null, false, true, -1, -1, null),
             asList("_VAL", "T1", "PUBLIC", false, false, null, true, false, -1, -1, null),
-            asList("ID", "T2", "PUBLIC", false, false, "null", true, true, -1, -1, Long.class.getName()),
-            asList("NAME", "T2", "PUBLIC", false, false, "null", true, false, 50, -1, String.class.getName()),
+            asList("ID", "T2", "PUBLIC", false, false, "null", true, true, 19, 0, Long.class.getName()),
+            asList("NAME", "T2", "PUBLIC", false, false, "null", true, false, 50, 0, String.class.getName()),
             asList("_KEY", "T2", "PUBLIC", true, false, null, false, true, -1, -1, null),
             asList("_VAL", "T2", "PUBLIC", false, false, null, true, false, -1, -1, null)
         );

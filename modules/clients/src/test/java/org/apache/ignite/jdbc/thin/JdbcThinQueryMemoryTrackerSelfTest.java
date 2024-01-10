@@ -21,136 +21,120 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
-import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
-import org.apache.ignite.internal.util.IgniteUtils;
-import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.GridAbstractTest;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import org.apache.ignite.internal.jdbc2.JdbcQueryMemoryTrackerSelfTest;
+import org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory;
+import org.apache.ignite.internal.processors.query.h2.H2ManagedLocalResult;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.expression.Expression;
+import org.gridgain.internal.h2.result.LocalResult;
+import org.gridgain.internal.h2.result.LocalResultImpl;
 import org.junit.Test;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Query memory manager for local queries.
  */
-public class JdbcThinQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTest {
+public class JdbcThinQueryMemoryTrackerSelfTest extends JdbcQueryMemoryTrackerSelfTest {
+    /** Hold any error that occurred while closing the local result. */
+    private static final AtomicReference<Throwable> localResultErr = new AtomicReference<>();
+
+    /** Count of closed results. */
+    private static final AtomicInteger closedResultCntr = new AtomicInteger();
+
     /** {@inheritDoc} */
-    @Override protected boolean startClient() {
-        return false;
+    @Override protected Class<?> localResultFactory() {
+        return TestH2LocalResultFactory.class;
     }
 
     /** {@inheritDoc} */
-    @Test
-    @Override public void testGlobalQuota() throws Exception {
-        maxMem = 8 * MB;
-        useJdbcV2GlobalQuotaCfg = true;
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
 
-        final List<ResultSet> results = Collections.synchronizedList(new ArrayList<>());
-        final List<Statement> statements = Collections.synchronizedList(new ArrayList<>());
-        final List<IgniteInternalFuture> futs = new ArrayList<>();
-
-        try {
-            for (int i = 0; i < 10; i++) {
-                futs.add(GridTestUtils.runAsync(() -> {
-                        Connection conn = createConnection(true);
-                        Statement stmt = conn.createStatement();
-
-                        statements.add(stmt);
-
-                        ResultSet rs = stmt.executeQuery("select * from T as T0, T as T1 where T0.id < 2 " +
-                            "UNION select * from T as T2, T as T3 where T2.id >= 1 AND T2.id < 2");
-
-                        results.add(rs);
-
-                        rs.next();
-
-                        return null;
-                    }
-                ));
-            }
-
-            SQLException ex = (SQLException)GridTestUtils.assertThrows(GridAbstractTest.log, () -> {
-                SQLException sqlEx = null;
-
-                for (IgniteInternalFuture f : futs) {
-                    try {
-                        f.get(5_000);
-                    }
-                    catch (IgniteCheckedException e) {
-                        if (e.hasCause(SQLException.class))
-                            sqlEx = e.getCause(SQLException.class);
-                    }
-                }
-
-                if (sqlEx != null)
-                    throw sqlEx;
-
-                return null;
-            }, SQLException.class, "SQL query ran out of memory: Global quota was exceeded.");
-
-            assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, ex.getErrorCode());
-            assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), ex.getSQLState());
-        }
-        finally {
-            for (ResultSet rs : results)
-                IgniteUtils.closeQuiet(rs);
-
-            for (Statement stmt : statements) {
-                IgniteUtils.closeQuiet(stmt.getConnection());
-                IgniteUtils.closeQuiet(stmt);
-            }
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override protected List<List<?>> execQuery(String sql, boolean lazy) throws Exception {
-        try (Connection conn = createConnection(lazy)) {
-            try (Statement stmt = conn.createStatement()) {
-                assert stmt != null && !stmt.isClosed();
-
-                try (ResultSet rs = stmt.executeQuery(sql)) {
-                    while (rs.next())
-                        ;
-                }
-            }
-        }
-        return Collections.emptyList();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void checkQueryExpectOOM(String sql, boolean lazy) {
-        try {
-            execQuery(sql, lazy);
-
-            fail("Exception is not thrown.");
-        } catch (SQLException e) {
-            assertTrue(e.getMessage().contains("SQL query ran out of memory: Query quota was exceeded."));
-            assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, e.getErrorCode());
-            assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), e.getSQLState());
-        }
-        catch (Exception e) {
-            fail("Wrong exception: " + X.getFullStackTrace(e));
-        }
+        closedResultCntr.set(0);
     }
 
     /**
-     * Initialize SQL connection.
+     * Ensures that the H2 local result closes without errors when only a small part of the results are read.
      *
-     * @param lazy Lazy flag.
-     * @throws SQLException If failed.
+     * @throws Throwable If failed.
      */
-    protected Connection createConnection(boolean lazy) throws SQLException {
+    @Test
+    public void testPartialResultRead() throws Throwable {
+        maxMem = 8 * MB;
+
+        try (Connection conn = createConnection(false)) {
+            try (Statement stmt = conn.createStatement()) {
+                try (ResultSet rs = stmt.executeQuery("select * from k")) {
+                    for (int i = 0; i < 10; i++) {
+                        if (!rs.next())
+                            fail();
+                    }
+                }
+            }
+        }
+
+        // A wait is required because the query cancel request handler runs asynchronously.
+        boolean success = waitForCondition(() -> localResults.size() == closedResultCntr.get(), 10_000);
+        assertTrue(success);
+
+        Throwable err = localResultErr.get();
+
+        if (err != null) {
+            fail(err.getMessage());
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Connection createConnection(boolean lazy) throws SQLException {
         Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:10800..10802?" +
             "queryMaxMemory=" + (maxMem) + "&lazy=" + lazy);
 
         conn.setSchema("\"PUBLIC\"");
 
         return conn;
+    }
+
+    /**
+     * Local result factory for test.
+     */
+    public static class TestH2LocalResultFactory extends H2LocalResultFactory {
+        /** {@inheritDoc} */
+        @Override public LocalResult create(Session ses, Expression[] expressions, int visibleColCnt, boolean system) {
+            if (system)
+                return new LocalResultImpl(ses, expressions, visibleColCnt);
+
+            if (ses.memoryTracker() != null) {
+                H2ManagedLocalResult res = new H2ManagedLocalResult(ses, expressions, visibleColCnt) {
+                    @Override public void close() {
+                        try {
+                            closedResultCntr.incrementAndGet();
+
+                            super.close();
+                        } catch (Throwable t) {
+                            if (!localResultErr.compareAndSet(null, t))
+                                localResultErr.get().addSuppressed(t);
+
+                            throw t;
+                        }
+                    }
+                };
+
+                localResults.add(res);
+
+                return res;
+            }
+
+            return new H2ManagedLocalResult(ses, expressions, visibleColCnt);
+        }
+
+        /** {@inheritDoc} */
+        @Override public LocalResult create() {
+            throw new NotImplementedException();
+        }
     }
 }

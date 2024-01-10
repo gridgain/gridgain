@@ -28,6 +28,7 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareFutureAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.tostring.SensitiveDataToStringTest.Level;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -95,6 +96,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
             .setConsistentId(igniteInstanceName)
             .setGridLogger(testLog)
             .setClientMode(client)
+            .setNetworkTimeout(1_000)
             .setCommunicationSpi(new TestRecordingCommunicationSpi())
             .setCacheConfiguration(
                 new CacheConfiguration<>(DEFAULT_CACHE_NAME)
@@ -206,7 +208,8 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
         IgniteBinary binary = crd.binary();
 
         BinaryObject binKey = binary.toBinary(new Key(0));
-        BinaryObject binPerson = binary.toBinary(new Person(1, "name_1"));
+        Level lvl = Level.HIGH;
+        BinaryObject binPerson = binary.toBinary(new Person(1, "name_1", lvl));
 
         cache.put(binKey, binPerson);
 
@@ -215,7 +218,8 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
         cache.put(binKey, binPerson);
 
         GridTestUtils.runAsync(() -> {
-            logLsnr.check(10 * crd.configuration().getNetworkTimeout());
+            // timeout from: GridDhtPartitionsExchangeFuture.waitPartitionRelease
+            logLsnr.check(4 * crd.configuration().getNetworkTimeout());
 
             tx.commit();
 
@@ -253,6 +257,8 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
             Matcher matcherVal = patternVal.matcher(strToCheck);
 
             assertTrue(strToCheck, matcherVal.find());
+
+            assertFalse(strToCheck.contains(lvl.toString()));
         }
     }
 
@@ -302,7 +308,7 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
         IgniteBinary binary = clientNode.binary();
 
         BinaryObject binKey = binary.toBinary(new Key(primaryKey(grid(stopGridId).cache(cacheName))));
-        BinaryObject binPerson = binary.toBinary(new Person(1, "name_1"));
+        BinaryObject binPerson = binary.toBinary(new Person(1, "name_1", Level.HIGH));
 
         try (Transaction tx = clientNode.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
             cache.put(binKey, binPerson);
@@ -404,15 +410,20 @@ public class TransactionSensitiveDataTest extends GridCommonAbstractTest {
         /** Person name. */
         String name;
 
+        /** Some enum. */
+        Level lvl;
+
         /**
          * Constructor.
          *
          * @param orgId Id organization.
          * @param name Person name.
+         * @param level Level enum.
          */
-        public Person(int orgId, String name) {
+        public Person(int orgId, String name, Level level) {
             this.orgId = orgId;
             this.name = name;
+            lvl = level;
         }
     }
 }

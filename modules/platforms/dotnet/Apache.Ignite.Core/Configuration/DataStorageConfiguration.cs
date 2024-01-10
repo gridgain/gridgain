@@ -173,6 +173,11 @@ namespace Apache.Ignite.Core.Configuration
         public const DiskPageCompression DefaultWalPageCompression = DiskPageCompression.Disabled;
 
         /// <summary>
+        /// Default value for <see cref="MetricsEnabled"/>.
+        /// </summary>
+        public const bool DefaultMetricsEnabled = true;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="DataStorageConfiguration"/> class.
         /// </summary>
         public DataStorageConfiguration()
@@ -202,6 +207,7 @@ namespace Apache.Ignite.Core.Configuration
             MaxWalArchiveSize = DefaultMaxWalArchiveSize;
             WalPageCompression = DefaultWalPageCompression;
             ConcurrencyLevel = DefaultConcurrencyLevel;
+            MetricsEnabled = DefaultMetricsEnabled;
         }
 
         /// <summary>
@@ -213,9 +219,9 @@ namespace Apache.Ignite.Core.Configuration
             Debug.Assert(reader != null);
 
             StoragePath = reader.ReadString();
-            CheckpointFrequency = reader.ReadLongAsTimespan();
+            CheckpointFrequency = reader.ConfigReadLongAsTimespan();
             CheckpointThreads = reader.ReadInt();
-            LockWaitTime = reader.ReadLongAsTimespan();
+            LockWaitTime = reader.ConfigReadLongAsTimespan();
             WalHistorySize = reader.ReadInt();
             WalSegments = reader.ReadInt();
             WalSegmentSize = reader.ReadInt();
@@ -223,13 +229,13 @@ namespace Apache.Ignite.Core.Configuration
             WalArchivePath = reader.ReadString();
             WalMode = (WalMode)reader.ReadInt();
             WalThreadLocalBufferSize = reader.ReadInt();
-            WalFlushFrequency = reader.ReadLongAsTimespan();
+            WalFlushFrequency = reader.ConfigReadLongAsTimespan();
             WalFsyncDelayNanos = reader.ReadLong();
             WalRecordIteratorBufferSize = reader.ReadInt();
             AlwaysWriteFullPages = reader.ReadBoolean();
             MetricsEnabled = reader.ReadBoolean();
             MetricsSubIntervalCount = reader.ReadInt();
-            MetricsRateTimeInterval = reader.ReadLongAsTimespan();
+            MetricsRateTimeInterval = reader.ConfigReadLongAsTimespan();
             CheckpointWriteOrder = (CheckpointWriteOrder)reader.ReadInt();
             WriteThrottlingEnabled = reader.ReadBoolean();
             WalCompactionEnabled = reader.ReadBoolean();
@@ -239,10 +245,10 @@ namespace Apache.Ignite.Core.Configuration
             SystemRegionMaxSize = reader.ReadLong();
             PageSize = reader.ReadInt();
             ConcurrencyLevel = reader.ReadInt();
-            WalAutoArchiveAfterInactivity = reader.ReadLongAsTimespan();
-            CheckpointReadLockTimeout = reader.ReadTimeSpanNullable();
+            WalAutoArchiveAfterInactivity = reader.ConfigReadLongAsTimespan();
+            CheckpointReadLockTimeout = reader.ConfigReadTimeSpanNullable();
             WalPageCompression = (DiskPageCompression)reader.ReadInt();
-            WalPageCompressionLevel = reader.ReadIntNullable();
+            WalPageCompressionLevel = reader.ConfigReadIntNullable();
 
             var count = reader.ReadInt();
 
@@ -268,9 +274,9 @@ namespace Apache.Ignite.Core.Configuration
             Debug.Assert(writer != null);
 
             writer.WriteString(StoragePath);
-            writer.WriteTimeSpanAsLong(CheckpointFrequency);
+            writer.ConfigWriteTimeSpanAsLong(CheckpointFrequency);
             writer.WriteInt(CheckpointThreads);
-            writer.WriteTimeSpanAsLong(LockWaitTime);
+            writer.ConfigWriteTimeSpanAsLong(LockWaitTime);
             writer.WriteInt(WalHistorySize);
             writer.WriteInt(WalSegments);
             writer.WriteInt(WalSegmentSize);
@@ -278,13 +284,13 @@ namespace Apache.Ignite.Core.Configuration
             writer.WriteString(WalArchivePath);
             writer.WriteInt((int)WalMode);
             writer.WriteInt(WalThreadLocalBufferSize);
-            writer.WriteTimeSpanAsLong(WalFlushFrequency);
+            writer.ConfigWriteTimeSpanAsLong(WalFlushFrequency);
             writer.WriteLong(WalFsyncDelayNanos);
             writer.WriteInt(WalRecordIteratorBufferSize);
             writer.WriteBoolean(AlwaysWriteFullPages);
             writer.WriteBoolean(MetricsEnabled);
             writer.WriteInt(MetricsSubIntervalCount);
-            writer.WriteTimeSpanAsLong(MetricsRateTimeInterval);
+            writer.ConfigWriteTimeSpanAsLong(MetricsRateTimeInterval);
             writer.WriteInt((int)CheckpointWriteOrder);
             writer.WriteBoolean(WriteThrottlingEnabled);
             writer.WriteBoolean(WalCompactionEnabled);
@@ -294,10 +300,10 @@ namespace Apache.Ignite.Core.Configuration
             writer.WriteLong(SystemRegionMaxSize);
             writer.WriteInt(PageSize);
             writer.WriteInt(ConcurrencyLevel);
-            writer.WriteTimeSpanAsLong(WalAutoArchiveAfterInactivity);
-            writer.WriteTimeSpanAsLongNullable(CheckpointReadLockTimeout);
+            writer.ConfigWriteTimeSpanAsLong(WalAutoArchiveAfterInactivity);
+            writer.ConfigWriteTimeSpanAsLongNullable(CheckpointReadLockTimeout);
             writer.WriteInt((int)WalPageCompression);
-            writer.WriteIntNullable(WalPageCompressionLevel);
+            writer.ConfigWriteIntNullable(WalPageCompressionLevel);
 
             if (DataRegionConfigurations != null)
             {
@@ -426,6 +432,7 @@ namespace Apache.Ignite.Core.Configuration
         /// Gets or sets a value indicating whether to enable data storage metrics.
         /// See <see cref="IIgnite.GetDataStorageMetrics"/>.
         /// </summary>
+        [DefaultValue(DefaultMetricsEnabled)]
         public bool MetricsEnabled { get; set; }
 
         /// <summary>

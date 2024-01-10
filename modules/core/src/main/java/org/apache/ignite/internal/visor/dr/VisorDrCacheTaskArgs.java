@@ -106,6 +106,9 @@ public class VisorDrCacheTaskArgs extends IgniteDataTransferObject {
     /** Action coordinator. */
     private UUID actionCoordinator;
 
+    /** FST sync mode. */
+    private boolean fstSyncMode;
+
     /** */
     public String getRegex() {
         return regex;
@@ -156,6 +159,11 @@ public class VisorDrCacheTaskArgs extends IgniteDataTransferObject {
         return actionCoordinator;
     }
 
+    /** */
+    public boolean isFstSyncMode() {
+        return fstSyncMode;
+    }
+
     /**
      * Default constructor.
      */
@@ -174,7 +182,8 @@ public class VisorDrCacheTaskArgs extends IgniteDataTransferObject {
         int action,
         byte remoteDataCenterId,
         Map<String, UUID> cacheNamesMap,
-        UUID actionCoordinator
+        UUID actionCoordinator,
+        boolean fstSyncMode
     ) {
         this.regex = regex;
         this.config = config;
@@ -186,6 +195,7 @@ public class VisorDrCacheTaskArgs extends IgniteDataTransferObject {
         this.remoteDataCenterId = remoteDataCenterId;
         this.cacheNamesMap = cacheNamesMap;
         this.actionCoordinator = actionCoordinator;
+        this.fstSyncMode = fstSyncMode;
     }
 
     /** {@inheritDoc} */
@@ -200,6 +210,7 @@ public class VisorDrCacheTaskArgs extends IgniteDataTransferObject {
         out.writeByte(remoteDataCenterId);
         U.writeMap(out, cacheNamesMap);
         U.writeUuid(out, actionCoordinator);
+        out.writeBoolean(fstSyncMode);
     }
 
     /** {@inheritDoc} */
@@ -214,5 +225,6 @@ public class VisorDrCacheTaskArgs extends IgniteDataTransferObject {
         remoteDataCenterId = in.readByte();
         cacheNamesMap = U.readMap(in);
         actionCoordinator = U.readUuid(in);
+        fstSyncMode = in.readBoolean();
     }
 }

@@ -39,6 +39,12 @@ namespace Apache.Ignite.Core.Communication.Tcp
         /// <summary> Default value of <see cref="AckSendThreshold"/> property. </summary>
         public const int DefaultAckSendThreshold = 16;
 
+        /// <summary> Default value of <see cref="AckSendThresholdBytes"/> property. </summary>
+        public const int DefaultAckSendThresholdBytes = 1024 * 1024;
+
+        /// <summary> Default value of <see cref="AckSendThresholdBytes"/> property. </summary>
+        public const int DefaultAckSendThresholdMillis = 1000;
+
         /// <summary> Default value of <see cref="ConnectionsPerNode"/> property. </summary>
         public const int DefaultConnectionsPerNode = 1;
 
@@ -99,6 +105,8 @@ namespace Apache.Ignite.Core.Communication.Tcp
         public TcpCommunicationSpi()
         {
             AckSendThreshold = DefaultAckSendThreshold;
+            AckSendThresholdBytes = DefaultAckSendThresholdBytes;
+            AckSendThresholdMillis = DefaultAckSendThresholdMillis;
             ConnectionsPerNode = DefaultConnectionsPerNode;
             ConnectTimeout = DefaultConnectTimeout;
             DirectBuffer = DefaultDirectBuffer;
@@ -127,16 +135,18 @@ namespace Apache.Ignite.Core.Communication.Tcp
         internal TcpCommunicationSpi(IBinaryRawReader reader)
         {
             AckSendThreshold = reader.ReadInt();
+            AckSendThresholdBytes = reader.ReadLong();
+            AckSendThresholdMillis = reader.ReadLong();
             ConnectionsPerNode = reader.ReadInt();
-            ConnectTimeout = reader.ReadLongAsTimespan();
+            ConnectTimeout = reader.ConfigReadLongAsTimespan();
             DirectBuffer = reader.ReadBoolean();
             DirectSendBuffer = reader.ReadBoolean();
             FilterReachableAddresses = reader.ReadBoolean();
-            IdleConnectionTimeout = reader.ReadLongAsTimespan();
+            IdleConnectionTimeout = reader.ConfigReadLongAsTimespan();
             LocalAddress = reader.ReadString();
             LocalPort = reader.ReadInt();
             LocalPortRange = reader.ReadInt();
-            MaxConnectTimeout = reader.ReadLongAsTimespan();
+            MaxConnectTimeout = reader.ConfigReadLongAsTimespan();
             MessageQueueLimit = reader.ReadInt();
             ReconnectCount = reader.ReadInt();
             SelectorsCount = reader.ReadInt();
@@ -157,6 +167,20 @@ namespace Apache.Ignite.Core.Communication.Tcp
         /// </summary>
         [DefaultValue(DefaultAckSendThreshold)]
         public int AckSendThreshold { get; set; }
+
+        /// <summary>
+        /// Gets or sets the accrued size of received messages per connection
+        /// to node after which acknowledgment is sent.
+        /// </summary>
+        [DefaultValue(DefaultAckSendThresholdBytes)]
+        public long AckSendThresholdBytes { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of milliseconds after which acknowledgment
+        /// is sent. This only happens if there is at least one unacknowledged message.
+        /// </summary>
+        [DefaultValue(DefaultAckSendThresholdMillis)]
+        public long AckSendThresholdMillis { get; set; }
 
         /// <summary>
         /// Gets or sets the connect timeout used when establishing connection with remote nodes.
@@ -334,6 +358,8 @@ namespace Apache.Ignite.Core.Communication.Tcp
         internal void Write(IBinaryRawWriter writer)
         {
             writer.WriteInt(AckSendThreshold);
+            writer.WriteLong(AckSendThresholdBytes);
+            writer.WriteLong(AckSendThresholdMillis);
             writer.WriteInt(ConnectionsPerNode);
             writer.WriteLong((long) ConnectTimeout.TotalMilliseconds);
             writer.WriteBoolean(DirectBuffer);

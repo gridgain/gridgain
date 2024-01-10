@@ -711,7 +711,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     grpHolders.put(grpId, grpHolder);
                 }
                 catch (IgniteCheckedException e) {
-                    U.error(log, "Failed to initialize cache: " + e, e);
+                    U.warn(log, "Failed to initialize cache: " + e, e);
                 }
             }
         }
@@ -1040,7 +1040,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         for (Map.Entry<StartCacheInfo, IgniteCheckedException> entry : failedCaches.entrySet()) {
             if (cctx.localNode().isClient()) {
-                U.error(log, "Failed to initialize cache. Will try to rollback cache start routine. " +
+                U.warn(log, "Failed to initialize cache. Will try to rollback cache start routine. " +
                     "[cacheName=" + entry.getKey().getStartedConfiguration().getName() + ']', entry.getValue());
 
                 cctx.cache().closeCaches(Collections.singleton(entry.getKey().getStartedConfiguration().getName()), false);
@@ -1443,7 +1443,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         boolean crd,
         final GridDhtPartitionsExchangeFuture fut,
         Collection<DynamicCacheDescriptor> descs
-    ) throws IgniteCheckedException {
+    ) {
         IgniteInternalFuture<?> res = cachesRegistry.addUnregistered(descs);
 
         if (fut.context().mergeExchanges())

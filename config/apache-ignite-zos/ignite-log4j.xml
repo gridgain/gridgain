@@ -105,6 +105,11 @@
         <level value="WARN"/>
     </category>
 
+    <!-- Control Center Agent shaded dependencies. -->
+    <category name="org.gridgain.control.shade">
+        <level value="WARN"/>
+    </category>
+
     <!--
         Avoid warnings about failed bind attempt when multiple nodes running on the same host.
     -->

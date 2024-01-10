@@ -64,6 +64,7 @@ import static org.apache.ignite.internal.binary.streams.BinaryMemoryAllocator.DF
 import static org.apache.ignite.internal.managers.discovery.GridDiscoveryManager.DFLT_DISCOVERY_HISTORY_SIZE;
 import static org.apache.ignite.internal.processors.affinity.AffinityAssignment.DFLT_AFFINITY_BACKUPS_THRESHOLD;
 import static org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache.DFLT_AFFINITY_HISTORY_SIZE;
+import static org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache.DFLT_MIN_AFFINITY_HISTORY_SIZE;
 import static org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache.DFLT_PART_DISTRIBUTION_WARN_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.CacheAffinitySharedManager.DFLT_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT;
 import static org.apache.ignite.internal.processors.cache.CacheObjectsReleaseFuture.DFLT_IGNITE_PARTITION_RELEASE_FUTURE_WARN_LIMIT;
@@ -135,6 +136,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.DFLT_MBEAN_APPEND_CLAS
 import static org.apache.ignite.internal.util.StripedExecutor.DFLT_DATA_STREAMING_EXECUTOR_SERVICE_TASKS_STEALING_THRESHOLD;
 import static org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor.DFLT_NIO_RECOVERY_DESCRIPTOR_RESERVATION_TIMEOUT;
 import static org.apache.ignite.internal.util.nio.GridNioServer.DFLT_IO_BALANCE_PERIOD;
+import static org.apache.ignite.internal.util.nio.ssl.GridNioSslHandler.DFLT_SSL_HANDSHAKE_TIMEOUT_MS;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_TO_STRING_COLLECTION_LIMIT;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_TO_STRING_MAX_LENGTH;
@@ -323,11 +325,11 @@ public final class IgniteSystemProperties {
      * additionally to a shortened version of standard output on the start.
      * <p>
      * Note that if you use <tt>ignite.{sh|bat}</tt> scripts to start Ignite they
-     * start by default in quiet mode. You can supply <tt>-v</tt> flag to override it.
+     * start by default in verbose mode. You can supply <tt>-q</tt> flag to override it.
      */
     @SystemProperty(value = "In quiet mode, only warning and errors are printed into the log additionally to a " +
         "shortened version of standard output on the start. Note that if you use ignite.{sh|bat} scripts to start " +
-        "Ignite they start by default in quiet mode. You can supply -v flag to override it", defaults = "true")
+        "Ignite they start by default in verbose mode. You can supply -q flag to override it", defaults = "false")
     public static final String IGNITE_QUIET = "IGNITE_QUIET";
 
     /**
@@ -648,9 +650,10 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED = "IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED";
 
     /**
-     * Flag indicating whether atomic operations allowed for use inside transactions.
+     * Flag indicating whether atomic operations allowed to be used inside transactions.
+     * Since 8.9.0 atomic operations inside transactions are not allowed by default.
      */
-    @SystemProperty(value = "Allows atomic operations inside transactions", defaults = "true")
+    @SystemProperty(value = "Allows atomic operations inside transactions", defaults = "false")
     public static final String IGNITE_ALLOW_ATOMIC_OPS_IN_TX = "IGNITE_ALLOW_ATOMIC_OPS_IN_TX";
 
     /**
@@ -840,15 +843,6 @@ public final class IgniteSystemProperties {
         "parse the statement", defaults = "false")
     public static final String IGNITE_SQL_PARSER_DISABLE_H2_FALLBACK = "IGNITE_SQL_PARSER_DISABLE_H2_FALLBACK";
 
-    /**
-     *  Force all SQL queries to be processed lazily regardless of what clients request.
-     *
-     * @deprecated Since version 2.8.
-     */
-    @Deprecated
-    @SystemProperty("Force all SQL queries to be processed lazily regardless of what clients request")
-    public static final String IGNITE_SQL_FORCE_LAZY_RESULT_SET = "IGNITE_SQL_FORCE_LAZY_RESULT_SET";
-
     /** Disable SQL system views. */
     @SystemProperty("Disables SQL system views")
     public static final String IGNITE_SQL_DISABLE_SYSTEM_VIEWS = "IGNITE_SQL_DISABLE_SYSTEM_VIEWS";
@@ -885,6 +879,11 @@ public final class IgniteSystemProperties {
     @SystemProperty(value = "Maximum size for affinity assignment history", type = Integer.class,
         defaults = "" + DFLT_AFFINITY_HISTORY_SIZE)
     public static final String IGNITE_AFFINITY_HISTORY_SIZE = "IGNITE_AFFINITY_HISTORY_SIZE";
+
+    /** Minimum size for affinity assignment history. */
+    @SystemProperty(value = "Minimum size for affinity assignment history", type = Integer.class,
+        defaults = "" + DFLT_MIN_AFFINITY_HISTORY_SIZE)
+    public static final String IGNITE_MIN_AFFINITY_HISTORY_SIZE = "IGNITE_MIN_AFFINITY_HISTORY_SIZE";
 
     /** Maximum size for discovery messages history. */
     @SystemProperty(value = "Maximum size for discovery messages history", type = Integer.class,
@@ -1465,7 +1464,7 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_LOADED_PAGES_BACKWARD_SHIFT_MAP = "IGNITE_LOADED_PAGES_BACKWARD_SHIFT_MAP";
 
     /**
-     * Property for setup percentage of archive size for checkpoint trigger. Default value is 0.25
+     * Property for setup percentage of archive size for checkpoint trigger. Default value is 0.75
      */
     @SystemProperty(value = "Percentage of archive size for checkpoint trigger",
         type = Double.class, defaults = "" + DFLT_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE)
@@ -2205,6 +2204,21 @@ public final class IgniteSystemProperties {
         "internal invariants", defaults = "false")
     public static final String IGNITE_STRICT_CONSISTENCY_CHECK =
         "IGNITE_STRICT_CONSISTENCY_CHECK";
+
+    @SystemProperty(value = "Disable a maintenance task for removing storage folders", defaults = "false")
+    public static final String IGNITE_DISABLE_MAINTENANCE_CLEAR_FOLDER_TASK =
+        "IGNITE_DISABLE_MAINTENANCE_CLEAR_FOLDER_TASK";
+
+    @SystemProperty(value = "Enables an allow overwrite mode for a data streamer", defaults = "true")
+    public static final String IGNITE_DATA_STREAMER_ALLOW_OVERWRITE = "IGNITE_DATA_STREAMER_ALLOW_OVERWRITE";
+
+    @SystemProperty(value = "Enables compliance with the JCache standard (JSR-107)", defaults = "false")
+    public static final String IGNITE_JCACHE_COMPLIANCE = "IGNITE_JCACHE_COMPLIANCE";
+
+    /** SSL handshake timeout. */
+    @SystemProperty(value = "SSL handshake timeout, in milliseconds", type = Long.class,
+            defaults = DFLT_SSL_HANDSHAKE_TIMEOUT_MS + " milliseconds")
+    public static final String IGNITE_SSL_HANDSHAKE_TIMEOUT = "IGNITE_SSL_HANDSHAKE_TIMEOUT";
 
     /**
      * Enforces singleton.

@@ -961,12 +961,15 @@ public class GridNioServerWrapper {
                     "[locNodeId=" + locNodeSupplier.get().id() +
                     ", key=" + key + ", rmtNode=" + node + ']');
 
-            int maxSize = Math.max(cfg.messageQueueLimit(), cfg.ackSendThreshold());
+            int maxSize = cfg.messageQueueLimit() != 0 ? cfg.messageQueueLimit() : cfg.ackSendThreshold() * 128;
 
-            int queueLimit = cfg.unackedMsgsBufferSize() != 0 ? cfg.unackedMsgsBufferSize() : (maxSize * 128);
+            int queueLimit = cfg.unackedMsgsBufferSize() != 0 ? cfg.unackedMsgsBufferSize() : maxSize;
 
-            GridNioRecoveryDescriptor old = recoveryDescs.putIfAbsent(key,
-                recovery = new GridNioRecoveryDescriptor(pairedConnections, queueLimit, node, log));
+            recovery = new GridNioRecoveryDescriptor(
+                pairedConnections, queueLimit, cfg.ackSendThresholdBytes(), node, log
+            );
+
+            GridNioRecoveryDescriptor old = recoveryDescs.putIfAbsent(key, recovery);
 
             if (old != null) {
                 recovery = old;

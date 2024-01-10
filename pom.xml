@@ -24,13 +24,13 @@
 
     <parent>
         <groupId>org.gridgain</groupId>
-        <artifactId>community.parent</artifactId>
-        <version>1</version>
-        <relativePath>parent</relativePath>
+        <artifactId>ignite-parent</artifactId>
+        <version>8.9.127-SNAPSHOT</version>
+        <relativePath>parent/pom.xml</relativePath>
     </parent>
 
     <artifactId>apache-ignite</artifactId>
-    <version>8.8.127-SNAPSHOT</version>
+    <version>8.9.127-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <scm>
@@ -42,6 +42,8 @@
 
     <modules>
         <module>modules/apache-license-gen</module>
+        <module>parent</module>
+        <module>parent-internal</module>
         <module>modules/tools</module>
         <module>modules/core</module>
         <module>modules/compress</module>
@@ -114,13 +116,6 @@
             <id>all-scala</id><!-- used to update project versions and check all modules compilation -->
             <modules><!-- sorted alphabetically -->
                 <module>modules/ml/mleap-model-parser</module>
-                <module>modules/scalar-2.10</module>
-                <module>modules/scalar</module>
-                <module>modules/spark</module>
-                <module>modules/spark-2.4</module>
-                <module>modules/visor-console-2.10</module>
-                <module>modules/visor-console</module>
-                <module>modules/visor-plugins</module>
             </modules>
         </profile>
 
@@ -605,37 +600,6 @@
 
             <modules>
                 <module>modules/ml/mleap-model-parser</module>
-                <module>modules/scalar</module>
-                <module>modules/spark</module>
-                <module>modules/visor-console</module>
-                <module>modules/visor-plugins</module>
-            </modules>
-        </profile>
-
-        <profile>
-            <id>spark-2.4</id>
-
-            <activation>
-                <property><name>!scala-2.10</name></property>
-            </activation>
-
-            <modules>
-                <module>modules/spark-2.4</module>
-                <module>modules/scalar</module>
-            </modules>
-        </profile>
-
-        <profile>
-            <id>scala-2.10</id>
-
-            <activation>
-                <property><name>scala-2.10</name></property>
-            </activation>
-
-            <modules>
-                <module>modules/scalar-2.10</module>
-                <module>modules/visor-console-2.10</module>
-                <module>modules/visor-plugins</module>
             </modules>
         </profile>
 
@@ -681,7 +645,7 @@
                                                 if (digitVer != null)
                                                 {
                                                     // Date of the last major release
-                                                    var startDate = new Date(new Date().getFullYear(),1,1);
+                                                    var startDate = new Date(new Date().getFullYear(),0,1);
 
                                                     // Number of hours since the last major release
                                                     var buildNum = Math.round((new Date() - startDate)/(3600*1000));

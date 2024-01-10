@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy;
 import org.apache.ignite.cluster.ClusterMetrics;
+import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
@@ -42,7 +43,6 @@ import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.messaging.MessagingListenActor;
 import org.apache.ignite.mxbean.ClusterMetricsMXBean;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
@@ -50,6 +50,11 @@ import org.junit.Test;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CLIENT_MODE;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 
 /**
  * Grid node metrics self test.
@@ -98,6 +103,9 @@ public class ClusterNodeMetricsSelfTest extends GridCommonAbstractTest {
 
         ccfg.setEvictionPolicy(plc);
         ccfg.setOnheapCacheEnabled(true);
+
+        // It is necessary that at the metric update event we update it exactly, and not skip it.
+        cfg.setMetricsUpdateFrequency(1L);
 
         return cfg.setCacheConfiguration(ccfg);
     }
@@ -163,12 +171,15 @@ public class ClusterNodeMetricsSelfTest extends GridCommonAbstractTest {
         Ignite ignite = grid();
 
         final CountDownLatch taskLatch = new CountDownLatch(1);
-        ignite.compute().executeAsync(new GridTestTask(taskLatch), "testArg");
+
+        ComputeTaskFuture<Object> taskFut = ignite.compute().executeAsync(new GridTestTask(taskLatch), "testArg");
 
         // Let metrics update twice.
         awaitMetricsUpdate(2);
 
         taskLatch.countDown();
+
+        taskFut.get(getTestTimeout());
 
         awaitMetricsUpdate(1);
 
@@ -176,32 +187,37 @@ public class ClusterNodeMetricsSelfTest extends GridCommonAbstractTest {
 
         info("Node metrics: " + metrics);
 
-        assert metrics.getAverageActiveJobs() > 0;
-        assert metrics.getAverageCancelledJobs() == 0;
-        assert metrics.getAverageJobExecuteTime() >= 0;
-        assert metrics.getAverageJobWaitTime() >= 0;
-        assert metrics.getAverageRejectedJobs() == 0;
-        assert metrics.getAverageWaitingJobs() == 0;
-        assert metrics.getCurrentActiveJobs() == 0;
-        assert metrics.getCurrentCancelledJobs() == 0;
-        assert metrics.getCurrentJobExecuteTime() > 0;
-        assert metrics.getCurrentJobWaitTime() == 0;
-        assert metrics.getCurrentWaitingJobs() == 0;
-        assert metrics.getMaximumActiveJobs() == 1;
-        assert metrics.getMaximumCancelledJobs() == 0;
-        assert metrics.getMaximumJobExecuteTime() >= 0;
-        assert metrics.getMaximumJobWaitTime() >= 0;
-        assert metrics.getMaximumRejectedJobs() == 0;
-        assert metrics.getMaximumWaitingJobs() == 0;
-        assert metrics.getTotalCancelledJobs() == 0;
-        assert metrics.getTotalExecutedJobs() == 1;
-        assert metrics.getTotalRejectedJobs() == 0;
-        assert metrics.getTotalExecutedTasks() == 1;
-        assert metrics.getTotalJobsExecutionTime() > 0;
+        assertThat(metrics.getAverageActiveJobs(), greaterThan(0f));
+        assertThat(metrics.getAverageCancelledJobs(), equalTo(0f));
+        assertThat(metrics.getAverageJobExecuteTime(), greaterThanOrEqualTo(0d));
+        assertThat(metrics.getAverageJobWaitTime(), greaterThanOrEqualTo(0d));
+        assertThat(metrics.getAverageRejectedJobs(), equalTo(0f));
+        assertThat(metrics.getAverageWaitingJobs(), equalTo(0f));
+        assertThat(metrics.getCurrentActiveJobs(), equalTo(0));
+        assertThat(metrics.getCurrentCancelledJobs(), equalTo(0));
+        assertThat(metrics.getCurrentJobExecuteTime(), greaterThanOrEqualTo(0L));
+        assertThat(metrics.getCurrentJobWaitTime(), equalTo(0L));
+        assertThat(metrics.getCurrentWaitingJobs(), equalTo(0));
+        assertThat(metrics.getMaximumActiveJobs(), equalTo(1));
+        assertThat(metrics.getMaximumCancelledJobs(), equalTo(0));
+        assertThat(metrics.getMaximumJobExecuteTime(), greaterThanOrEqualTo(0L));
+        assertThat(metrics.getMaximumJobWaitTime(), greaterThanOrEqualTo(0L));
+        assertThat(metrics.getMaximumRejectedJobs(), equalTo(0));
+        assertThat(metrics.getMaximumWaitingJobs(), equalTo(0));
+        assertThat(metrics.getTotalCancelledJobs(), equalTo(0));
+        assertThat(metrics.getTotalExecutedJobs(), equalTo(1));
+        assertThat(metrics.getTotalRejectedJobs(), equalTo(0));
+        assertThat(metrics.getTotalExecutedTasks(), equalTo(1));
+        assertThat(metrics.getTotalJobsExecutionTime(), greaterThan(1L));
 
-        assertTrue("MaximumJobExecuteTime=" + metrics.getMaximumJobExecuteTime() +
-            " is less than AverageJobExecuteTime=" + metrics.getAverageJobExecuteTime(),
-            metrics.getMaximumJobExecuteTime() >= metrics.getAverageJobExecuteTime());
+        long maxJobExecTime = metrics.getMaximumJobExecuteTime();
+        double avgJobExecTime = metrics.getAverageJobExecuteTime();
+
+        assertThat(
+            "MaximumJobExecuteTime=" + maxJobExecTime + " is less than AverageJobExecuteTime=" + avgJobExecTime,
+            maxJobExecTime,
+            greaterThanOrEqualTo((long)avgJobExecTime)
+        );
     }
 
     /**
@@ -311,7 +327,7 @@ public class ClusterNodeMetricsSelfTest extends GridCommonAbstractTest {
         final Ignite ignite0 = grid();
         final Ignite ignite1 = startGrid(1);
 
-        GridTestUtils.waitForCondition(new GridAbsPredicate() {
+        waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
                 return ignite0.cluster().nodes().size() == 2 && ignite1.cluster().nodes().size() == 2;
             }

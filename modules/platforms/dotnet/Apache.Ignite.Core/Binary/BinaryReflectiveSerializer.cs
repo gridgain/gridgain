@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Binary
 {
     using System;
+    using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Binary;
 
     /// <summary>
@@ -46,6 +47,9 @@ namespace Apache.Ignite.Core.Binary
 
         /** Force timestamp flag. */
         private bool _forceTimestamp;
+
+        /** Unwrap nullable value types flag. */
+        private bool _unwrapNullablePrimitiveTypes;
 
         /// <summary>
         /// Write binary object.
@@ -107,6 +111,28 @@ namespace Apache.Ignite.Core.Binary
         }
 
         /// <summary>
+        /// Gets or sets a value indicating whether primitive nullable object fields should be unwrapped and
+        /// written as underlying type, instead of using <see cref="IBinaryWriter.WriteObject{T}"/>.
+        /// <para />
+        /// This produces correct field type in binary metadata and is consistent with Java serializer behavior.
+        /// <para />
+        /// It is recommended to enable this setting, unless you need old behavior to preserve compatibility.
+        /// <para />
+        /// See also <see cref="BinaryConfiguration.UnwrapNullablePrimitiveTypes"/>.
+        /// </summary>
+        [IgniteExperimental]
+        public bool UnwrapNullablePrimitiveTypes
+        {
+            get => _unwrapNullablePrimitiveTypes;
+            set
+            {
+                ThrowIfInUse();
+
+                _unwrapNullablePrimitiveTypes = value;
+            }
+        }
+
+        /// <summary>
         /// Registers the specified type.
         /// </summary>
         internal IBinarySerializerInternal Register(Type type, int typeId, IBinaryNameMapper converter,
@@ -114,8 +140,8 @@ namespace Apache.Ignite.Core.Binary
         {
             _isInUse = true;
 
-            return new BinaryReflectiveSerializerInternal(_rawMode)
-                .Register(type, typeId, converter, idMapper, _forceTimestamp);
+            return BinaryReflectiveSerializerInternal.Create(
+                type, typeId, converter, idMapper, _forceTimestamp, _rawMode, _unwrapNullablePrimitiveTypes);
         }
 
         /// <summary>

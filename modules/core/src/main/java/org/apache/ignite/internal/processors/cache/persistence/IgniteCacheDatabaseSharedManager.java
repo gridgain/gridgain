@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -1800,5 +1800,12 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
             warmUpStrategies,
             (warmUpConfig) -> "Unknown data region warm-up configuration: " + errPostfix.get()
         );
+    }
+
+    /**
+     * Prepares to stop caches and groups before deactivating the cluster.
+     */
+    public void prepareCachesStopOnDeActivate() {
+        // No-op.
     }
 }

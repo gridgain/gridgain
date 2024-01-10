@@ -189,6 +189,8 @@ namespace Apache.Ignite.Core.Tests
                 var com = (TcpCommunicationSpi) cfg.CommunicationSpi;
                 var resCom = (TcpCommunicationSpi) resCfg.CommunicationSpi;
                 Assert.AreEqual(com.AckSendThreshold, resCom.AckSendThreshold);
+                Assert.AreEqual(com.AckSendThresholdBytes, resCom.AckSendThresholdBytes);
+                Assert.AreEqual(com.AckSendThresholdMillis, resCom.AckSendThresholdMillis);
                 Assert.AreEqual(com.ConnectionsPerNode, resCom.ConnectionsPerNode);
                 Assert.AreEqual(com.ConnectTimeout, resCom.ConnectTimeout);
                 Assert.AreEqual(com.DirectBuffer, resCom.DirectBuffer);
@@ -615,7 +617,7 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(DataStorageConfiguration.DefaultWalSegmentSize, cfg.WalSegmentSize);
             Assert.AreEqual(DataStorageConfiguration.DefaultWalSegments, cfg.WalSegments);
             Assert.AreEqual(DataStorageConfiguration.DefaultWalMode, cfg.WalMode);
-            Assert.IsFalse(cfg.MetricsEnabled);
+            Assert.AreEqual(DataStorageConfiguration.DefaultMetricsEnabled, cfg.MetricsEnabled);
             Assert.AreEqual(DataStorageConfiguration.DefaultMetricsSubIntervalCount, cfg.MetricsSubIntervalCount);
             Assert.AreEqual(DataStorageConfiguration.DefaultMetricsRateTimeInterval, cfg.MetricsRateTimeInterval);
             Assert.AreEqual(DataStorageConfiguration.DefaultWalPath, cfg.WalPath);
@@ -643,6 +645,7 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(DataRegionConfiguration.DefaultPersistenceEnabled, cfg.PersistenceEnabled);
             Assert.AreEqual(DataRegionConfiguration.DefaultMetricsRateTimeInterval, cfg.MetricsRateTimeInterval);
             Assert.AreEqual(DataRegionConfiguration.DefaultMetricsSubIntervalCount, cfg.MetricsSubIntervalCount);
+            Assert.AreEqual(DataRegionConfiguration.DefaultMetricsEnabled, cfg.MetricsEnabled);
             Assert.AreEqual(default(long), cfg.CheckpointPageBufferSize);
 
             if (DataRegionConfiguration.DefaultMaxSize != cfg.MaxSize)
@@ -686,14 +689,14 @@ namespace Apache.Ignite.Core.Tests
         /// <param name="cfg">Config.</param>
         private static void CheckDefaultProperties(SqlConnectorConfiguration cfg)
         {
-            Assert.AreEqual(ClientConnectorConfiguration.DefaultPort, cfg.Port);
-            Assert.AreEqual(ClientConnectorConfiguration.DefaultPortRange, cfg.PortRange);
-            Assert.AreEqual(ClientConnectorConfiguration.DefaultMaxOpenCursorsPerConnection,
+            Assert.AreEqual(SqlConnectorConfiguration.DefaultPort, cfg.Port);
+            Assert.AreEqual(SqlConnectorConfiguration.DefaultPortRange, cfg.PortRange);
+            Assert.AreEqual(SqlConnectorConfiguration.DefaultMaxOpenCursorsPerConnection,
                 cfg.MaxOpenCursorsPerConnection);
-            Assert.AreEqual(ClientConnectorConfiguration.DefaultSocketBufferSize, cfg.SocketReceiveBufferSize);
-            Assert.AreEqual(ClientConnectorConfiguration.DefaultSocketBufferSize, cfg.SocketSendBufferSize);
-            Assert.AreEqual(ClientConnectorConfiguration.DefaultTcpNoDelay, cfg.TcpNoDelay);
-            Assert.AreEqual(ClientConnectorConfiguration.DefaultThreadPoolSize, cfg.ThreadPoolSize);
+            Assert.AreEqual(SqlConnectorConfiguration.DefaultSocketBufferSize, cfg.SocketReceiveBufferSize);
+            Assert.AreEqual(SqlConnectorConfiguration.DefaultSocketBufferSize, cfg.SocketSendBufferSize);
+            Assert.AreEqual(SqlConnectorConfiguration.DefaultTcpNoDelay, cfg.TcpNoDelay);
+            Assert.AreEqual(SqlConnectorConfiguration.DefaultThreadPoolSize, cfg.ThreadPoolSize);
         }
 
         /// <summary>
@@ -799,6 +802,8 @@ namespace Apache.Ignite.Core.Tests
                     ReconnectCount = 33,
                     SocketReceiveBufferSize = 512,
                     AckSendThreshold = 99,
+                    AckSendThresholdBytes = 200000,
+                    AckSendThresholdMillis = 888,
                     DirectBuffer = false,
                     DirectSendBuffer = true,
                     LocalPortRange = 45,

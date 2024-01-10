@@ -112,7 +112,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         public const bool DefaultLoadPreviousValue = false;
 
         /// <summary> Default value for 'readFromBackup' flag. </summary>
-        public const bool DefaultReadFromBackup = true;
+        public const bool DefaultReadFromBackup = false;
 
         /// <summary> Default timeout after which long query warning will be printed. </summary>
         public static readonly TimeSpan DefaultLongQueryWarningTimeout = TimeSpan.FromMilliseconds(3000);
@@ -162,6 +162,9 @@ namespace Apache.Ignite.Core.Cache.Configuration
 
         /// <summary> Default value for <see cref="EncryptionEnabled"/>. </summary>
         public const bool DefaultEncryptionEnabled = false;
+
+        /// <summary> Default value for <see cref="EnableStatistics"/>. </summary>
+        public const bool DefaultEnableStatistics = true;
 
         /// <summary>
         /// Gets or sets the cache name.
@@ -217,6 +220,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
             MaxQueryIteratorsCount = DefaultMaxQueryIteratorsCount;
             QueryParallelism = DefaultQueryParallelism;
             EncryptionEnabled = DefaultEncryptionEnabled;
+            EnableStatistics = DefaultEnableStatistics;
         }
 
         /// <summary>
@@ -294,22 +298,22 @@ namespace Apache.Ignite.Core.Cache.Configuration
             Invalidate = reader.ReadBoolean();
             KeepBinaryInStore = reader.ReadBoolean();
             LoadPreviousValue = reader.ReadBoolean();
-            LockTimeout = reader.ReadLongAsTimespan();
+            LockTimeout = reader.ConfigReadLongAsTimespan();
 #pragma warning disable 618
-            LongQueryWarningTimeout = reader.ReadLongAsTimespan();
+            LongQueryWarningTimeout = reader.ConfigReadLongAsTimespan();
 #pragma warning restore 618
             MaxConcurrentAsyncOperations = reader.ReadInt();
             Name = reader.ReadString();
             ReadFromBackup = reader.ReadBoolean();
             RebalanceBatchSize = reader.ReadInt();
-            RebalanceDelay = reader.ReadLongAsTimespan();
+            RebalanceDelay = reader.ConfigReadLongAsTimespan();
             RebalanceMode = (CacheRebalanceMode) reader.ReadInt();
-            RebalanceThrottle = reader.ReadLongAsTimespan();
-            RebalanceTimeout = reader.ReadLongAsTimespan();
+            RebalanceThrottle = reader.ConfigReadLongAsTimespan();
+            RebalanceTimeout = reader.ConfigReadLongAsTimespan();
             SqlEscapeAll = reader.ReadBoolean();
             WriteBehindBatchSize = reader.ReadInt();
             WriteBehindEnabled = reader.ReadBoolean();
-            WriteBehindFlushFrequency = reader.ReadLongAsTimespan();
+            WriteBehindFlushFrequency = reader.ConfigReadLongAsTimespan();
             WriteBehindFlushSize = reader.ReadInt();
             WriteBehindFlushThreadCount = reader.ReadInt();
             WriteBehindCoalescing = reader.ReadBoolean();
@@ -818,6 +822,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Gets or sets a value indicating whether statistics gathering is enabled on a cache.
         /// These statistics can be retrieved via <see cref="ICache{TK,TV}.GetMetrics()"/>.
         /// </summary>
+        [DefaultValue(DefaultEnableStatistics)]
         public bool EnableStatistics { get; set; }
 
         /// <summary>

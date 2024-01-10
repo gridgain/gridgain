@@ -24,13 +24,12 @@
 
     <parent>
         <groupId>org.gridgain</groupId>
-        <artifactId>community.parent</artifactId>
-        <version>1</version>
-        <relativePath>../../parent</relativePath>
+        <artifactId>ignite-parent-internal</artifactId>
+        <version>8.9.127-SNAPSHOT</version>
+        <relativePath>../../parent-internal/pom.xml</relativePath>
     </parent>
 
     <artifactId>ignite-jcl</artifactId>
-    <version>8.8.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <dependencies>
@@ -43,7 +42,7 @@
         <dependency>
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
-            <version>1.1.1</version>
+            <version>1.2</version>
         </dependency>
 
         <dependency>

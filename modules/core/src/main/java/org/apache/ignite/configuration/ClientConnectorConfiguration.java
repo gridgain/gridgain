@@ -33,7 +33,7 @@ public class ClientConnectorConfiguration {
     public static final int DFLT_PORT_RANGE = 100;
 
     /** Default socket send and receive buffer size. */
-    public static final int DFLT_SOCK_BUF_SIZE = 0;
+    public static final int DFLT_SOCK_BUF_SIZE = 256 * 1024;
 
     /** Default value for {@code TCP_NODELAY} socket option (value is <tt>true</tt>). */
     public static final boolean DFLT_TCP_NO_DELAY = true;
@@ -136,6 +136,7 @@ public class ClientConnectorConfiguration {
         sockSndBufSize = cfg.getSocketSendBufferSize();
         tcpNoDelay = cfg.isTcpNoDelay();
         threadPoolSize = cfg.getThreadPoolSize();
+        selectorCnt = cfg.getSelectorCount();
         idleTimeout = cfg.getIdleTimeout();
         handshakeTimeout = cfg.getHandshakeTimeout();
         jdbcEnabled = cfg.jdbcEnabled;

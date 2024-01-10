@@ -51,7 +51,7 @@ public class CommandLineTransformer {
     private boolean interactive;
 
     /** Verbose mode. */
-    private boolean verbose;
+    private boolean verbose = true;
 
     /** No pause mode. */
     private boolean noPause;
@@ -125,6 +125,11 @@ public class CommandLineTransformer {
 
                 case "-v":
                     verbose = true;
+
+                    break;
+
+                case "-q":
+                    verbose = false;
 
                     break;
 

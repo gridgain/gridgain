@@ -32,7 +32,7 @@ public class DummyPageIO extends PageIO implements CompactablePageIO {
 
     /** */
     public DummyPageIO() {
-        super(2 * Short.MAX_VALUE, 1);
+        super(Short.MAX_VALUE, 1);
 
         PageIO.registerTest(this);
     }

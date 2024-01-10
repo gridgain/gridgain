@@ -744,6 +744,16 @@ public interface GridCacheEntryEx {
         throws GridCacheEntryRemovedException, IgniteCheckedException;
 
     /**
+     * Returns number of bytes that required by a value for the given {@code key} in the off-heap storage,
+     * without loading the value into cache.
+     *
+     * @param topVer Topology version.
+     * @return Entry size in bytes.
+     * @throws GridCacheEntryRemovedException If entry has been removed.
+     */
+    public int localSize(AffinityTopologyVersion topVer) throws GridCacheEntryRemovedException, IgniteCheckedException;
+
+    /**
      * Sets new value if current version is <tt>0</tt>
      *
      * @param val New value.
@@ -1087,10 +1097,56 @@ public interface GridCacheEntryEx {
     public long ttl() throws GridCacheEntryRemovedException;
 
     /**
+     * Updates ttl for this entry and stores current value, version and ttl in storage.
+     *
      * @param ver Version.
      * @param ttl Time to live.
+     * @throws GridCacheEntryRemovedException If entry is obsolete (entry was removed).
      */
     public void updateTtl(@Nullable GridCacheVersion ver, long ttl) throws GridCacheEntryRemovedException;
+
+    /**
+     * Updates time to live value for this entry and stores its value in storage.
+     *
+     * This method only updates time to live value and does not trigger any listeners, events or metrics updates.
+     * Worth mentioning that the implementation tries to avoid reading the whole entry value from the off-heap storage, if it is possible.
+     *
+     * @param ver Version.
+     * @param ttl Time to live.
+     * @return Cached object.
+     * @throws GridCacheEntryRemovedException If entry is obsolete (entry was removed).
+     */
+    public CacheObject updateTimeToLiveOnTtlUpdateRequest(@Nullable GridCacheVersion ver, long ttl) throws GridCacheEntryRemovedException;
+
+    /**
+     * Calculates and updates time to live value for this entry and stores its value in storage.
+     *
+     * This method only updates time to live value and does not trigger any listeners, events or metrics updates.
+     * Worth mentioning that the implementation tries to avoid reading the whole entry value from the off-heap storage, if it is possible.
+     *
+     * If {@code expiryPlc} is {@code null} then the time to live value is not updated.
+     * The new value is calculated using {@link IgniteCacheExpiryPolicy#forAccess()}.
+     *
+     * @param expiryPlc Expiry policy to be uased to calculate new ttl value.
+     * @return Cached object.
+     * @throws GridCacheEntryRemovedException If entry is obsolete (entry was removed).
+     */
+    public CacheObject touchTtl(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException;
+
+    /**
+     * Calculates and updates time to live value for this entry and stores its value in storage.
+     *
+     * This method only updates time to live value and does not trigger any listeners, events or metrics updates.
+     * Worth mentioning that the implementation tries to avoid reading the whole entry value from the off-heap storage, if it is possible.
+     *
+     * If {@code expiryPlc} is {@code null} then the time to live value is not updated.
+     * The new value is calculated using {@link IgniteCacheExpiryPolicy#forAccess()}.
+     *
+     * @param expiryPlc Expiry policy to be uased to calculate new ttl value.
+     * @return Cached object.
+     * @throws GridCacheEntryRemovedException If entry is obsolete (entry was removed).
+     */
+    public EntryGetResult touchTtlVersioned(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException;
 
     /**
      * @return Value.

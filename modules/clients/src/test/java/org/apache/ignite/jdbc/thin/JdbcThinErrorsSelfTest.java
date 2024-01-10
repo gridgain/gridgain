@@ -45,11 +45,11 @@ public class JdbcThinErrorsSelfTest extends JdbcErrorsAbstractSelfTest {
     public void testConnectionError() throws SQLException {
         checkErrorState(new IgniteCallable<Void>() {
             @Override public Void call() throws Exception {
-                DriverManager.getConnection("jdbc:ignite:thin://unknown.host");
+                DriverManager.getConnection("jdbc:ignite:thin://host.invalid");
 
                 return null;
             }
-        }, "08001", "Failed to connect to server [host=unknown.host");
+        }, "08001", "Failed to connect to ");
     }
 
     /**

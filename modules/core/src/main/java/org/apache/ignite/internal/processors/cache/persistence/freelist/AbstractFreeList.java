@@ -98,7 +98,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
     private final AtomicLong pageListCacheLimit;
 
     /**
-     *
+     * Update handler that is used to updated row which is placed on the one page.
      */
     private final class UpdateRowHandler extends PageHandler<T, Boolean> {
         @Override public Boolean run(
@@ -121,7 +121,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             evictionTracker.touchPage(pageId);
 
             if (updated && needWalDeltaRecord(pageId, page, walPlc)) {
-                // TODO This record must contain only a reference to a logical WAL record with the actual data.
+                // TODO IGNITE-5829
+                // This record must contain only a reference to a logical WAL record with the actual data.
                 byte[] payload = new byte[rowSize];
 
                 DataPagePayload data = io.readPayload(pageAddr, itemId, pageSize());
@@ -145,7 +146,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
     private final PageHandler<T, Integer> writeRow = new WriteRowHandler();
 
     /**
-     *
+     * Write handler that is used to write row.
+     * This handler allows to write full row or a fragment of the row.
      */
     private final class WriteRowHandler extends PageHandler<T, Integer> {
         @Override public Integer run(
@@ -207,7 +209,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             io.addRow(pageId, pageAddr, row, rowSize, pageSize());
 
             if (needWalDeltaRecord(pageId, page, null)) {
-                // TODO IGNITE-5829 This record must contain only a reference to a logical WAL record with the actual data.
+                // TODO IGNITE-5829
+                // This record must contain only a reference to a logical WAL record with the actual data.
                 byte[] payload = new byte[rowSize];
 
                 DataPagePayload data = io.readPayload(pageAddr, PageIdUtils.itemId(row.link()), pageSize());
@@ -253,7 +256,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             assert payloadSize > 0 : payloadSize;
 
             if (needWalDeltaRecord(pageId, page, null)) {
-                // TODO IGNITE-5829 This record must contain only a reference to a logical WAL record with the actual data.
+                // TODO IGNITE-5829
+                // This record must contain only a reference to a logical WAL record with the actual data.
                 byte[] payload = new byte[payloadSize];
 
                 DataPagePayload data = io.readPayload(pageAddr, PageIdUtils.itemId(row.link()), pageSize());
@@ -416,6 +420,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
     /** {@inheritDoc} */
     @Override public void dumpStatistics(IgniteLogger log) {
         long dataPages = 0;
+        long reusePages = 0;
 
         final boolean dumpBucketsInfo = false;
 
@@ -424,6 +429,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
             if (!isReuseBucket(b))
                 dataPages += size;
+            else
+                reusePages = size;
 
             if (dumpBucketsInfo) {
                 Stripe[] stripes = getBucket(b);
@@ -448,12 +455,12 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             }
         }
 
-        if (dataPages > 0) {
+        if (reusePages > 0) {
             if (log.isInfoEnabled())
                 log.info("FreeList [name=" + name() +
                     ", buckets=" + BUCKETS +
                     ", dataPages=" + dataPages +
-                    ", reusePages=" + bucketsSize.get(REUSE_BUCKET) + "]");
+                    ", reusePages=" + reusePages + "]");
         }
     }
 
@@ -772,6 +779,15 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
     /** {@inheritDoc} */
     @Override public long initRecycledPage(long pageId, byte flag, PageIO initIO) throws IgniteCheckedException {
         return initRecycledPage0(pageId, flag, initIO);
+    }
+
+    /**
+     * Returns page eviction tracker connected to this free list.
+     *
+     * @return Returns page eviction tracker connected to this free list.
+     */
+    protected PageEvictionTracker evictionTracker() {
+        return evictionTracker;
     }
 
     /** {@inheritDoc} */

@@ -913,7 +913,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             writer.WriteBoolean(qry.ReplicatedOnly);
 #pragma warning restore 618
             writer.WriteInt(qry.PageSize);
-            writer.WriteTimeSpanAsLong(qry.Timeout);
+            writer.ConfigWriteTimeSpanAsLong(qry.Timeout);
         }
 
         /// <summary>
@@ -942,7 +942,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             writer.WriteBoolean(qry.EnforceJoinOrder);
             writer.WriteBoolean(qry.Colocated);
             writer.WriteBoolean(qry.Lazy);
-            writer.WriteTimeSpanAsLong(qry.Timeout);
+            writer.ConfigWriteTimeSpanAsLong(qry.Timeout);
             writer.WriteBoolean(includeColumns);
 
             if (qry.Partitions != null)

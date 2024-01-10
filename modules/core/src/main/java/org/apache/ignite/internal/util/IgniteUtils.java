@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -294,6 +294,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import sun.misc.Unsafe;
 
+import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 import static java.util.Objects.isNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_HOSTNAME_VERIFIER;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_HOME;
@@ -313,6 +314,8 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_DATE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CACHE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DATA_REGIONS_OFFHEAP_SIZE;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DATA_REGIONS_TOTAL_ALLOCATED_SIZE;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_HOST_RAM_SIZE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_JVM_PID;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
 import static org.apache.ignite.internal.util.GridUnsafe.objectFieldOffset;
@@ -556,6 +559,9 @@ public abstract class IgniteUtils {
     /** Date format for thread dumps. */
     private static final DateTimeFormatter THREAD_DUMP_FMT =
         DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss z").withZone(ZoneId.systemDefault());
+
+    /** ISO-8601 compliant date-time format. */
+    public static final DateTimeFormatter ISO_DATE_FMT = ISO_LOCAL_DATE_TIME.withZone(ZoneId.systemDefault());
 
     /** Cached local host address to make sure that every time the same local host is returned. */
     private static InetAddress locHost;
@@ -1443,6 +1449,45 @@ public abstract class IgniteUtils {
         }
 
         return roundedHeapSize(totalOffheap, precision);
+    }
+
+    /**
+     * Gets total allocated persistence size in GB rounded to specified precision.
+     *
+     * @param nodes Nodes.
+     * @param precision Precision.
+     * @return Total allocated PDS size in GB.
+     */
+    public static double allocatedPDSSize(Iterable<ClusterNode> nodes, int precision) {
+        double totalAllocatedPDS = .0;
+
+        for (ClusterNode n : nodes) {
+            if (n.isClient())
+                continue;
+
+            Long val = n.<Long>attribute(ATTR_DATA_REGIONS_TOTAL_ALLOCATED_SIZE);
+
+            if (val != null)
+                totalAllocatedPDS += val;
+        }
+
+        return roundedHeapSize(totalAllocatedPDS, precision);
+    }
+
+    public static double hostRamSize(Iterable<ClusterNode> nodes, int precision) {
+        double totalHostRamSize = .0;
+
+        for (Collection<ClusterNode> nodesPerHost : neighborhood(nodes).values()) {
+            ClusterNode first = F.first(nodesPerHost);
+            if (first != null) {
+                Long val = first.<Long>attribute(ATTR_HOST_RAM_SIZE);
+
+                if (val != null)
+                    totalHostRamSize += val;
+            }
+        }
+
+        return roundedHeapSize(totalHostRamSize, precision);
     }
 
     /**
@@ -3824,7 +3869,19 @@ public abstract class IgniteUtils {
      *      {@code false} otherwise
      */
     public static boolean delete(@Nullable File file) {
-        return file != null && delete(file.toPath());
+        return delete(file, null);
+    }
+
+    /**
+     * Deletes file or directory with all sub-directories and files.
+     *
+     * @param file File or directory to delete.
+     * @param log Log errors when deleting files, {@code null} if not to be logged.
+     * @return {@code true} if and only if the file or directory is successfully deleted,
+     *      {@code false} otherwise
+     */
+    public static boolean delete(@Nullable File file, @Nullable IgniteLogger log) {
+        return file != null && delete(file.toPath(), log);
     }
 
     /**
@@ -3845,17 +3902,32 @@ public abstract class IgniteUtils {
      *      {@code false} otherwise
      */
     public static boolean delete(Path path) {
+        return delete(path, null);
+    }
+
+    /**
+     * Deletes file or directory with all sub-directories and files.
+     *
+     * @param path File or directory to delete.
+     * @param log Log errors when deleting files, {@code null} if not to be logged.
+     * @return {@code true} if and only if the file or directory is successfully deleted,
+     *      {@code false} otherwise
+     */
+    public static boolean delete(Path path, @Nullable IgniteLogger log) {
         if (Files.isDirectory(path)) {
             try {
                 try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)) {
                     for (Path innerPath : stream) {
-                        boolean res = delete(innerPath);
+                        boolean res = delete(innerPath, log);
 
                         if (!res)
                             return false;
                     }
                 }
             } catch (IOException e) {
+                if (log != null)
+                    log.error("Failed to clear directory: " + path.toFile().getAbsolutePath(), e);
+
                 return false;
             }
         }
@@ -3865,8 +3937,10 @@ public abstract class IgniteUtils {
                 // Why do we do this?
                 new JarFile(path.toString(), false).close();
             }
-            catch (IOException ignore) {
-                // Ignore it here...
+            catch (IOException e) {
+                // Just logging.
+                if (log != null)
+                    log.error("Failed to delete jar: " + path.toFile().getAbsolutePath(), e);
             }
         }
 
@@ -3875,6 +3949,9 @@ public abstract class IgniteUtils {
 
             return true;
         } catch (IOException e) {
+            if (log != null)
+                log.error("Failed to delete file: " + path.toFile().getAbsolutePath(), e);
+
             return false;
         }
     }
@@ -4361,7 +4438,7 @@ public abstract class IgniteUtils {
      * @param log Logger to log possible checked exception with (optional).
      */
     public static void close(@Nullable Socket sock, @Nullable IgniteLogger log) {
-        if (sock == null)
+        if (sock == null || sock.isClosed())
             return;
 
         try {

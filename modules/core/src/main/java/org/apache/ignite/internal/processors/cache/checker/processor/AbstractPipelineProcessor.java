@@ -42,6 +42,7 @@ import static org.apache.ignite.internal.processors.cache.checker.processor.Reco
 import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.FINISHED;
 import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.READY;
 import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.SCHEDULED;
+import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.SKIPPED;
 
 /**
  * Abstraction for the control unit of work.
@@ -193,6 +194,17 @@ public class AbstractPipelineProcessor {
 
         ClusterGroup grp = partOwners(workload.cacheName(), workload.partitionId());
 
+        if (grp == null) {
+            // There are no owners for this partition.
+            evtLsnr.onEvent(SKIPPED, workload);
+
+            evtLsnr.onEvent(FINISHED, workload);
+
+            liveListeners.release();
+
+            return;
+        }
+
         evtLsnr.onEvent(BEFORE_PROCESSING, workload);
 
         ignite.compute(grp).executeAsync(taskCls, workload).listen(fut -> {
@@ -262,11 +274,14 @@ public class AbstractPipelineProcessor {
     }
 
     /**
-     * @return Set of partition owners.
+     * Returns a cluster group represents a set od nodes that own the given partition.
+     * Returned group can be {@code null} in case of there are no owners for the given partition.
+     *
+     * @return Cluster group of owners.
      */
     private ClusterGroup partOwners(String cacheName, int partId) {
         Collection<ClusterNode> nodes = ignite.cachex(cacheName).context().topology().owners(partId, startTopVer);
 
-        return ignite.cluster().forNodes(nodes);
+        return nodes.isEmpty() ? null : ignite.cluster().forNodes(nodes);
     }
 }

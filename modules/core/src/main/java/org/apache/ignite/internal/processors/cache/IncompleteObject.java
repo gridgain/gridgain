@@ -77,6 +77,15 @@ public class IncompleteObject<T> {
     }
 
     /**
+     * Returns length of the underlying object in bytes.
+     *
+     * @return Length of data.
+     */
+    public int dataLength() {
+        return data.length;
+    }
+
+    /**
      * @param buf Read remaining data.
      */
     public void readData(ByteBuffer buf) {

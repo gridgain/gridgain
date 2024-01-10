@@ -31,7 +31,7 @@ public class GridCommandLineTransformerSelfTest extends GridCommonAbstractTest {
     @Test
     public void testTransformIfNoArguments() throws Exception {
         assertEquals(
-            "\"INTERACTIVE=0\" \"QUIET=-DIGNITE_QUIET=true\" \"NO_PAUSE=0\" " +
+            "\"INTERACTIVE=0\" \"QUIET=-DIGNITE_QUIET=false\" \"NO_PAUSE=0\" " +
                 "\"JVM_XOPTS=-Dfile.encoding=UTF-8\" \"CONFIG=\"",
             CommandLineTransformer.transform());
     }
@@ -106,7 +106,7 @@ public class GridCommandLineTransformerSelfTest extends GridCommonAbstractTest {
     @Test
     public void testTransformIfOnlyPathToConfigSpecified() throws Exception {
         assertEquals(
-            "\"INTERACTIVE=0\" \"QUIET=-DIGNITE_QUIET=true\" \"NO_PAUSE=0\" " +
+            "\"INTERACTIVE=0\" \"QUIET=-DIGNITE_QUIET=false\" \"NO_PAUSE=0\" " +
             "\"JVM_XOPTS=-Dfile.encoding=UTF-8\" \"CONFIG=c:\\qw.xml\"",
             CommandLineTransformer.transform("c:\\qw.xml"));
     }
@@ -122,5 +122,16 @@ public class GridCommandLineTransformerSelfTest extends GridCommonAbstractTest {
                 "\"CONFIG=\"c:\\path to\\русский каталог\"\"",
             CommandLineTransformer.transform("-i", "-np", "-v", "-J-Xmx1g", "-J-Xms1m",
                 "\"c:\\path to\\русский каталог\""));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testTransformQuietArgument() throws Exception {
+        assertEquals(
+            "\"INTERACTIVE=0\" \"QUIET=-DIGNITE_QUIET=true\" \"NO_PAUSE=0\" " +
+                "\"JVM_XOPTS=-Dfile.encoding=UTF-8\" \"CONFIG=\"",
+            CommandLineTransformer.transform("-q"));
     }
 }

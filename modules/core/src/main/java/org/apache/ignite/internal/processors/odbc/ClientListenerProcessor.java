@@ -21,9 +21,12 @@ import java.net.InetSocketAddress;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import javax.cache.configuration.Factory;
 import javax.management.JMException;
 import javax.management.ObjectName;
@@ -36,6 +39,7 @@ import org.apache.ignite.configuration.OdbcConfiguration;
 import org.apache.ignite.configuration.SqlConnectorConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.direct.DirectMessageWriter;
+import org.apache.ignite.internal.managers.systemview.walker.ClientConnectionAttributeViewWalker;
 import org.apache.ignite.internal.managers.systemview.walker.ClientConnectionViewWalker;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
@@ -55,6 +59,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.spi.IgnitePortProtocol;
+import org.apache.ignite.spi.systemview.view.ClientConnectionAttributeView;
 import org.apache.ignite.spi.systemview.view.ClientConnectionView;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -73,6 +78,12 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
 
     /** */
     public static final String CLI_CONN_VIEW_DESC = "Client connections";
+
+    /** */
+    public static final String CLI_CONN_ATTR_VIEW = metricName("client", "connection", "attributes");
+
+    /** */
+    public static final String CLI_CONN_ATTR_VIEW_DESC = "Client connection attributes";
 
     /** Default client connector configuration. */
     public static final ClientConnectorConfiguration DFLT_CLI_CFG = new ClientConnectorConfigurationEx();
@@ -123,6 +134,8 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
             try {
                 validateConfiguration(cliConnCfg);
 
+                distrThinCfg = new DistributedThinClientConfiguration(ctx);
+
                 // Resolve host.
                 String host = cliConnCfg.getHost();
 
@@ -158,7 +171,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                         srv = GridNioServer.<ClientMessage>builder()
                             .address(hostAddr)
                             .port(port)
-                            .listener(new ClientListenerNioListener(ctx, busyLock, cliConnCfg))
+                            .listener(new ClientListenerNioListener(ctx, busyLock, cliConnCfg, distrThinCfg))
                             .logger(log)
                             .selectorCount(selectorCnt)
                             .igniteInstanceName(ctx.igniteInstanceName())
@@ -206,12 +219,48 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                     srv.sessions(),
                     ClientConnectionView::new);
 
-                distrThinCfg = new DistributedThinClientConfiguration(ctx);
+                ctx.systemView().registerFiltrableView(CLI_CONN_ATTR_VIEW, CLI_CONN_ATTR_VIEW_DESC,
+                    new ClientConnectionAttributeViewWalker(),
+                    this::connectionAttributeViewSupplier,
+                    Function.identity()
+                );
             }
             catch (Exception e) {
                 throw new IgniteCheckedException("Failed to start client connector processor.", e);
             }
         }
+    }
+
+    /** */
+    private Iterable<ClientConnectionAttributeView> connectionAttributeViewSupplier(Map<String, Object> filter) {
+        Long connId = (Long)filter.get(ClientConnectionAttributeViewWalker.CONNECTION_ID_FILTER);
+        String attrName = (String)filter.get(ClientConnectionAttributeViewWalker.NAME_FILTER);
+
+        Collection<? extends GridNioSession> sessions = srv.sessions();
+
+        return F.flat(F.iterator(sessions, ses -> {
+            ClientListenerConnectionContext ctx = ses.meta(CONN_CTX_META_KEY);
+
+            if (connId != null && connId != ctx.connectionId())
+                return Collections.emptyList();
+
+            Map<String, String> attrs = ctx.attributes();
+
+            if (attrName != null) {
+                String attrVal = attrs.get(attrName);
+
+                if (attrVal == null)
+                    return Collections.emptyList();
+
+                attrs = F.asMap(attrName, attrVal);
+            }
+
+            return F.iterator(
+                attrs.entrySet(),
+                attr -> new ClientConnectionAttributeView(ctx.connectionId(), attr.getKey(), attr.getValue()),
+                true
+            );
+        }, true));
     }
 
     /** {@inheritDoc} */
@@ -653,6 +702,21 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
             catch (IgniteCheckedException e) {
                 throw new IgniteException(e);
             }
+        }
+
+        /** {@inheritDoc} */
+        @Override public void setMaxConnectionsPerNode(int maxConnectionsPerNode) {
+            try {
+                distrThinCfg.updateMaxConnectionsPerNodeAsync(maxConnectionsPerNode).get();
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public int getMaxConnectionsPerNode() {
+            return distrThinCfg.maxConnectionsPerNode();
         }
     }
 }

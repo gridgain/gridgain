@@ -48,6 +48,8 @@ namespace Apache.Ignite.Core.Tests.Dataload
 
                 var streamer = gridNoCache.GetDataStreamer<int, int>(cacheName);
 
+                streamer.AllowOverwrite = false;
+
                 streamer.Add(1, 2);
                 streamer.Flush();
 

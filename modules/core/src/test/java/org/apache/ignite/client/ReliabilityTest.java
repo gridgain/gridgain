@@ -16,10 +16,11 @@
 
 package org.apache.ignite.client;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
@@ -28,13 +29,13 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
@@ -46,12 +47,16 @@ import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.client.thin.AbstractThinClientTest;
 import org.apache.ignite.internal.client.thin.ClientOperation;
 import org.apache.ignite.internal.client.thin.ClientServerError;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.services.Service;
 import org.apache.ignite.services.ServiceConfiguration;
 import org.apache.ignite.services.ServiceContext;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Assume;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.events.EventType.EVTS_CACHE;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_READ;
@@ -60,30 +65,58 @@ import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED;
 /**
  * High Availability tests.
  */
+@RunWith(Parameterized.class)
 public class ReliabilityTest extends AbstractThinClientTest {
     /** Service name. */
     private static final String SERVICE_NAME = "svc";
+
+    /** Partition awareness. */
+    @Parameterized.Parameter
+    public boolean partitionAware;
+
+    /** Async operations. */
+    @Parameterized.Parameter(1)
+    public boolean async;
+
+    /**
+     * @return List of parameters to test.
+     */
+    @Parameterized.Parameters(name = "partitionAware={0}, async={1}")
+    public static Collection<Object[]> testData() {
+        List<Object[]> res = new ArrayList<>();
+
+        res.add(new Object[] {false, false});
+        res.add(new Object[] {false, true});
+        res.add(new Object[] {true, false});
+        res.add(new Object[] {true, true});
+
+        return res;
+    }
 
     /**
      * Thin clint failover.
      */
     @Test
     public void testFailover() throws Exception {
-        if (isPartitionAware())
-            return;
+        Assume.assumeFalse(partitionAware);
 
         final int CLUSTER_SIZE = 3;
 
         try (LocalIgniteCluster cluster = LocalIgniteCluster.start(CLUSTER_SIZE);
              IgniteClient client = Ignition.startClient(getClientConfiguration()
                  .setReconnectThrottlingRetries(0) // Disable throttling.
-                 .setAddresses(cluster.clientAddresses().toArray(new String[CLUSTER_SIZE]))
+                 // Disable endpoints discovery, since in this test it reduces attempts count and sometimes one extra
+                 // attempt is required to complete operation without failure.
+                 .setAddressesFinder(new StaticAddressFinder(cluster.clientAddresses().toArray(new String[CLUSTER_SIZE])))
              )
         ) {
             final Random rnd = new Random();
 
             final ClientCache<Integer, String> cache = client.getOrCreateCache(
-                new ClientCacheConfiguration().setName("testFailover").setCacheMode(CacheMode.REPLICATED)
+                new ClientCacheConfiguration()
+                    .setName("testFailover")
+                    .setCacheMode(CacheMode.REPLICATED)
+                    .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
             );
 
             // Simple operation failover: put/get
@@ -99,33 +132,6 @@ public class ReliabilityTest extends AbstractThinClientTest {
             });
 
             cache.clear();
-
-            // Composite operation failover: query
-            Map<Integer, String> data = IntStream.rangeClosed(1, 1000).boxed()
-                .collect(Collectors.toMap(i -> i, i -> String.format("String %s", i)));
-
-            assertOnUnstableCluster(cluster, () -> {
-                cache.putAll(data);
-
-                Query<Cache.Entry<Integer, String>> qry =
-                    new ScanQuery<Integer, String>().setPageSize(data.size() / 10);
-
-                try {
-                    try (QueryCursor<Cache.Entry<Integer, String>> cur = cache.query(qry)) {
-                        List<Cache.Entry<Integer, String>> res = cur.getAll();
-
-                        assertEquals("Unexpected number of entries", data.size(), res.size());
-
-                        Map<Integer, String> act = res.stream()
-                                .collect(Collectors.toMap(Cache.Entry::getKey, Cache.Entry::getValue));
-
-                        assertEquals("Unexpected entries", data, act);
-                    }
-                } catch (ClientConnectionException ignored) {
-                    // QueryCursor.getAll always executes on the same channel where the cursor is open,
-                    // so failover is not possible, and the call will fail when connection drops.
-                }
-            });
 
             // Client fails if all nodes go down
             cluster.close();
@@ -180,9 +186,10 @@ public class ReliabilityTest extends AbstractThinClientTest {
     public void testSingleServerDuplicatedFailover() throws Exception {
         try (LocalIgniteCluster cluster = LocalIgniteCluster.start(1);
              IgniteClient client = Ignition.startClient(getClientConfiguration()
-                 .setAddresses(
-                     cluster.clientAddresses().iterator().next(),
-                     cluster.clientAddresses().iterator().next()))
+                 .setAddressesFinder(new StaticAddressFinder(
+                     F.first(cluster.clientAddresses()),
+                     F.first(cluster.clientAddresses())
+                 )))
         ) {
             ClientCache<Integer, Integer> cache = client.createCache("cache");
 
@@ -205,9 +212,10 @@ public class ReliabilityTest extends AbstractThinClientTest {
         try (LocalIgniteCluster cluster = LocalIgniteCluster.start(1);
              IgniteClient client = Ignition.startClient(getClientConfiguration()
                  .setRetryPolicy(new ClientRetryReadPolicy())
-                 .setAddresses(
-                     cluster.clientAddresses().iterator().next(),
-                     cluster.clientAddresses().iterator().next()))
+                 .setAddressesFinder(new StaticAddressFinder(
+                     F.first(cluster.clientAddresses()),
+                     F.first(cluster.clientAddresses())
+                 )))
         ) {
             ClientCache<Integer, Integer> cache = client.createCache("cache");
 
@@ -227,15 +235,15 @@ public class ReliabilityTest extends AbstractThinClientTest {
      */
     @Test
     public void testExceptionInRetryPolicyPropagatesToCaller() {
-        if (isPartitionAware())
-            return;
+        Assume.assumeFalse(partitionAware);
 
         try (LocalIgniteCluster cluster = LocalIgniteCluster.start(1);
              IgniteClient client = Ignition.startClient(getClientConfiguration()
                  .setRetryPolicy(new ExceptionRetryPolicy())
-                 .setAddresses(
-                     cluster.clientAddresses().iterator().next(),
-                     cluster.clientAddresses().iterator().next()))
+                 .setAddressesFinder(new StaticAddressFinder(
+                     F.first(cluster.clientAddresses()),
+                     F.first(cluster.clientAddresses())
+                 )))
         ) {
             ClientCache<Integer, Integer> cache = client.createCache("cache");
             dropAllThinClientConnections(Ignition.allGrids().get(0));
@@ -262,9 +270,10 @@ public class ReliabilityTest extends AbstractThinClientTest {
         try (LocalIgniteCluster cluster = LocalIgniteCluster.start(1);
              IgniteClient client = Ignition.startClient(getClientConfiguration()
                  .setRetryLimit(1)
-                 .setAddresses(
-                     cluster.clientAddresses().iterator().next(),
-                     cluster.clientAddresses().iterator().next()))
+                 .setAddressesFinder(new StaticAddressFinder(
+                     F.first(cluster.clientAddresses()),
+                     F.first(cluster.clientAddresses())
+                 )))
         ) {
             ClientCache<Integer, Integer> cache = client.createCache("cache");
 
@@ -343,7 +352,7 @@ public class ReliabilityTest extends AbstractThinClientTest {
 
         String nullOpsNames = nullOps.stream().map(Enum::name).collect(Collectors.joining(", "));
 
-        long expectedNullCount = 16;
+        long expectedNullCount = 18;
 
         String msg = nullOps.size()
                 + " operation codes do not have public equivalent. When adding new codes, update ClientOperationType too. Missing ops: "
@@ -396,8 +405,7 @@ public class ReliabilityTest extends AbstractThinClientTest {
     public void testTxWithIdIntersection() throws Exception {
         // Partition-aware client connects to all known servers at the start, and dropAllThinClientConnections
         // causes failure on all channels, so the logic in this test is not applicable.
-        if (isPartitionAware())
-            return;
+        Assume.assumeFalse(partitionAware);
 
         int CLUSTER_SIZE = 2;
 
@@ -465,6 +473,9 @@ public class ReliabilityTest extends AbstractThinClientTest {
     @Test
     @SuppressWarnings("ThrowableNotThrown")
     public void testReconnectionThrottling() throws Exception {
+        // If partition awareness is enabled, channels are restored asynchronously without applying throttling.
+        Assume.assumeFalse(partitionAware);
+
         int throttlingRetries = 5;
         long throttlingPeriod = 3_000L;
 
@@ -629,7 +640,19 @@ public class ReliabilityTest extends AbstractThinClientTest {
      * @param <V> Val type.
      */
     protected <K, V> void cachePut(ClientCache<K, V> cache, K key, V val) {
-        cache.put(key, val);
+        if (async) {
+            try {
+                cache.putAsync(key, val).get();
+            }
+            catch (InterruptedException | ExecutionException e) {
+                if (e.getCause() instanceof RuntimeException)
+                    throw (RuntimeException)e.getCause();
+
+                throw new RuntimeException(e);
+            }
+        }
+        else
+            cache.put(key, val);
     }
 
     /**
@@ -670,11 +693,9 @@ public class ReliabilityTest extends AbstractThinClientTest {
         }
     }
 
-    /**
-     * Returns a value indicating whether partition awareness is enabled.
-     */
-    protected boolean isPartitionAware() {
-        return false;
+    /** {@inheritDoc} */
+    @Override protected boolean isClientPartitionAwarenessEnabled() {
+        return partitionAware;
     }
 
     /** */

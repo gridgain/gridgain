@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -28,26 +28,36 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_ALLOW_START_CACHES_IN_PARALLEL;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
+import static org.apache.ignite.testframework.GridTestUtils.SF.applyLB;
 
 /**
  * Test covers parallel start and stop of caches.
  */
 public class CacheParallelStartTest extends GridCommonAbstractTest {
     /** */
-    private static final int CACHES_COUNT = 5000;
+    private static final int CACHES_COUNT = applyLB(5000, 500);
 
     /** */
-    private static final int GROUPS_COUNT = 50;
+    private static final int GROUPS_COUNT = applyLB(50, 5);
 
     /** */
     private static final String STATIC_CACHE_PREFIX = "static-cache-";
 
     /** */
     private static final String STATIC_CACHE_CACHE_GROUP_NAME = "static-cache-group";
+
+    /** */
+    private static final int PARTS_NUM = 128;
 
     /**
      * {@inheritDoc}
@@ -65,6 +75,7 @@ public class CacheParallelStartTest extends GridCommonAbstractTest {
                         .setPersistenceEnabled(false)
                         .setInitialSize(sz)
                         .setMaxSize(sz)
+                        .setCheckpointPageBufferSize(10 * U.MB)
                 )
                 .setWalMode(WALMode.LOG_ONLY).setCheckpointFrequency(24L * 60 * 60 * 1000);
 
@@ -91,6 +102,7 @@ public class CacheParallelStartTest extends GridCommonAbstractTest {
         cfg.setBackups(1);
         cfg.setGroupName(STATIC_CACHE_CACHE_GROUP_NAME + i % GROUPS_COUNT);
         cfg.setIndexedTypes(Long.class, Long.class);
+        cfg.setAffinity(new RendezvousAffinityFunction(false, PARTS_NUM));
 
         return cfg;
     }
@@ -118,44 +130,42 @@ public class CacheParallelStartTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
-
-        System.clearProperty(IgniteSystemProperties.IGNITE_ALLOW_START_CACHES_IN_PARALLEL);
     }
 
     /**
      * @throws Exception If failed.
      */
-    @Test(timeout = 2 * 300000)
+    @Test
+    @WithSystemProperty(key = IGNITE_ALLOW_START_CACHES_IN_PARALLEL, value = "true")
     public void testParallelStartAndStop() throws Exception {
-        testParallelStartAndStop(true);
+        checkParallelStartAndStopInternal();
     }
 
     /**
      * @throws Exception if failed.
      */
-    @Test
+    @Test(timeout = 2 * 300000)
+    @WithSystemProperty(key = IGNITE_ALLOW_START_CACHES_IN_PARALLEL, value = "false")
     @Ignore("https://ggsystems.atlassian.net/browse/GG-19619")
     public void testSequentialStartAndStop() throws Exception {
-        testParallelStartAndStop(false);
+        checkParallelStartAndStopInternal();
     }
 
     /**
      *
      */
-    private void testParallelStartAndStop(boolean parallel) throws Exception {
-        System.setProperty(IgniteSystemProperties.IGNITE_ALLOW_START_CACHES_IN_PARALLEL, String.valueOf(parallel));
-
+    private void checkParallelStartAndStopInternal() throws Exception {
         IgniteEx igniteEx = startGrid(0);
 
         IgniteEx igniteEx2 = startGrid(1);
 
-        igniteEx.cluster().active(true);
+        igniteEx.cluster().state(ACTIVE);
 
         assertCaches(igniteEx);
 
         assertCaches(igniteEx2);
 
-        igniteEx.cluster().active(false);
+        igniteEx.cluster().state(INACTIVE);
 
         assertCachesAfterStop(igniteEx);
 

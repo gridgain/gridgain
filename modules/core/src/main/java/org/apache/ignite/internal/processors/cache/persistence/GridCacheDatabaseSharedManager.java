@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,6 +98,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.PartitionDestroyRecor
 import org.apache.ignite.internal.pagemem.wal.record.delta.PartitionMetaStateRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.CacheGroupContextSupplier;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -140,6 +141,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointe
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedChangeableProperty;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationLifecycleListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedPropertyDispatcher;
 import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
@@ -367,8 +369,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** Data regions which should be checkpointed. */
     protected final Set<DataRegion> checkpointedDataRegions = new GridConcurrentHashSet<>();
 
+    /** Checkpoint frequency dynamic property (measured in ms). */
+    private DistributedChangeableProperty<Long> cpFreq;
+
     /** Checkpoint frequency deviation. */
-    private SimpleDistributedProperty<Integer> cpFreqDeviation;
+    private DistributedChangeableProperty<Integer> cpFreqDeviation;
 
     /** WAL rebalance threshold. */
     private final SimpleDistributedProperty<Integer> historicalRebalanceThreshold =
@@ -530,9 +535,18 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         if (!kernalCtx.clientNode()) {
             kernalCtx.internalSubscriptionProcessor().registerDatabaseListener(new MetastorageRecoveryLifecycle());
 
+            cpFreq = new SimpleDistributedProperty<>("checkpoint.frequency", Long::parseLong);
             cpFreqDeviation = new SimpleDistributedProperty<>("checkpoint.deviation", Integer::parseInt);
 
             kernalCtx.internalSubscriptionProcessor().registerDistributedConfigurationListener(dispatcher -> {
+                cpFreq.addListener((name, oldVal, newVal) -> {
+                    U.log(log, "Checkpoint frequency changed [oldVal=" + oldVal + ", newVal=" + newVal + "]");
+
+                    forceCheckpoint("checkpoint-frequency-changed");
+                });
+
+                dispatcher.registerProperty(cpFreq);
+
                 cpFreqDeviation.addListener((name, oldVal, newVal) ->
                     U.log(log, "Checkpoint frequency deviation changed [oldVal=" + oldVal + ", newVal=" + newVal + "]"));
 
@@ -549,7 +563,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 storeMgr,
                 this::isCheckpointInapplicableForWalRebalance,
                 this::checkpointedDataRegions,
-                this::cacheGroupContexts,
+                cacheGrpCtxSupplier(),
                 this::getPageMemoryForCacheGroup,
                 resolveThrottlingPolicy(),
                 snapshotMgr,
@@ -557,8 +571,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 kernalCtx.longJvmPauseDetector(),
                 kernalCtx.failure(),
                 kernalCtx.cache(),
-                cpFreqDeviation::get,
-                kernalCtx.pools().getSystemExecutorService()
+                cpFreq::get,
+                cpFreqDeviation::get
             );
 
             final NodeFileLockHolder preLocked = kernalCtx.pdsFolderResolver()
@@ -669,11 +683,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** */
     public Collection<DataRegion> checkpointedDataRegions() {
         return checkpointedDataRegions;
-    }
-
-    /** */
-    private Collection<CacheGroupContext> cacheGroupContexts() {
-        return cctx.cache().cacheGroups();
     }
 
     /**
@@ -2059,6 +2068,19 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /**
+     * @param f Consumer.
+     * @return Accumulated result for all page stores in all cache groups.
+     */
+    public long forAllGroupsPageStores(ToLongFunction<PageStore> f) {
+        long res = 0;
+
+        for (CacheGroupContext gctx : cacheGrpCtxSupplier().getAll())
+            res += forGroupPageStores(gctx, f);
+
+        return res;
+    }
+
+    /**
      * Calculates tail pointer for WAL at the end of logical recovery.
      *
      * @param logicalState State after logical recovery.
@@ -2981,6 +3003,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         GridCacheContext cacheCtx = cctx.cacheContext(cacheId);
 
                         if (cacheCtx != null) {
+                            // Index was destroyed before restart, mark it as invalid, so that we don't start
+                            // hew destruction task. Existance of this record means that
+                            // DurableBackgroundTask that destroys indexes is already in metastorage and
+                            // that it will destroy index.
+                            GridQueryProcessor qryProc = cacheCtx.kernalContext().query();
+
+                            qryProc.getIndexing().markIndexRenamed(cacheCtx, record.oldTreeName());
+
                             IgniteCacheOffheapManager offheap = cacheCtx.offheap();
 
                             for (int i = 0; i < record.segments(); i++)
@@ -3843,5 +3873,23 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 }
             }
         );
+    }
+
+    /** */
+    private CacheGroupContextSupplier cacheGrpCtxSupplier() {
+        return new CacheGroupContextSupplier() {
+            @Override public Collection<CacheGroupContext> getAll() {
+                return cctx.cache().cacheGroups();
+            }
+
+            @Override public @Nullable CacheGroupContext get(int grpId) {
+                return cctx.cache().cacheGroup(grpId);
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override public void prepareCachesStopOnDeActivate() {
+        checkpointManager.prepareCachesStopOnDeActivate();
     }
 }

@@ -91,7 +91,6 @@
         <exclude within="scala..*"/>
 
         <!-- Visor Scala classes.-->
-        <exclude within="org.apache.ignite.visor..*"/>
         <exclude within="org.apache.ignite.scalar..*"/>
 
         <!-- Enterprise DT FTP libs. -->
@@ -237,7 +236,6 @@
         <exclude within="scala..*"/>
 
         <!-- Visor Scala classes.-->
-        <exclude within="org.apache.ignite.visor..*"/>
         <exclude within="ye yjhv.scalar..*"/>
 
         <!-- Enterprise DT FTP libs. -->

@@ -36,7 +36,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Set;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.AffinityKey;
@@ -58,7 +57,6 @@ import static java.sql.Types.DECIMAL;
 import static java.sql.Types.INTEGER;
 import static java.sql.Types.VARCHAR;
 import static org.apache.ignite.IgniteJdbcDriver.CFG_URL_PREFIX;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -336,7 +334,9 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             "TABLES",
             "TASKS",
             "JOBS",
+            "SERVICES",
             "CLIENT_CONNECTIONS",
+            "CLIENT_CONNECTION_ATTRIBUTES",
             "TRANSACTIONS",
             "VIEWS",
             "TABLE_COLUMNS",
@@ -359,9 +359,6 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             "DS_SEMAPHORES",
             "DS_REENTRANTLOCKS"
         ));
-
-        if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED))
-            expViews.add("SERVICES");
 
         Set<String> actViews = new HashSet<>();
 

@@ -101,7 +101,8 @@
         <level value="WARN"/>
     </category>
 
-    <category name="org.gridgain.control.springframework">
+    <!-- Control Center Agent shaded dependencies. -->
+    <category name="org.gridgain.control.shade">
         <level value="WARN"/>
     </category>
 

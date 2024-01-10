@@ -24,13 +24,13 @@
 
     <parent>
         <groupId>org.gridgain</groupId>
-        <artifactId>community.parent</artifactId>
-        <version>1</version>
-        <relativePath>../../parent</relativePath>
+        <artifactId>ignite-parent</artifactId>
+        <version>8.9.127-SNAPSHOT</version>
+        <relativePath>../../parent/pom.xml</relativePath>
     </parent>
 
     <artifactId>ignite-tools</artifactId>
-    <version>8.8.127-SNAPSHOT</version>
+
     <url>http://ignite.apache.org</url>
 
     <profiles>
@@ -115,19 +115,20 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
             <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.maven.surefire</groupId>
             <artifactId>maven-surefire-common</artifactId>
-            <version>3.0.0-M4</version>
+            <version>${surefire.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.rat</groupId>
             <artifactId>apache-rat-core</artifactId>
-            <version>0.12</version>
+            <version>0.14</version>
         </dependency>
 
         <dependency>

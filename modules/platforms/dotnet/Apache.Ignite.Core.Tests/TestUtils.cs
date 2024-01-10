@@ -26,11 +26,13 @@ namespace Apache.Ignite.Core.Tests
     using System.IO;
     using System.Linq;
     using System.Reflection;
+    using System.Text;
     using System.Threading;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Cluster;
+    using Apache.Ignite.Core.Communication.Tcp;
     using Apache.Ignite.Core.Configuration;
     using Apache.Ignite.Core.Discovery.Tcp;
     using Apache.Ignite.Core.Discovery.Tcp.Static;
@@ -63,6 +65,9 @@ namespace Apache.Ignite.Core.Tests
 
         /** System cache name. */
         public const string UtilityCacheName = "ignite-sys-cache";
+
+        /** */
+        private const string WaitForRebalanceTask = "org.apache.ignite.platform.PlatformWaitForRebalanceTask";
 
         /** Work dir. */
         private static readonly string WorkDir =
@@ -295,6 +300,25 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
+        /// Waits for rebalance to complete.
+        /// </summary>
+        /// <param name="ignite">Ignite.</param>
+        /// <param name="cacheName">Cache name.</param>
+        /// <param name="expectedTopVer">Expected topology version.</param>
+        /// <param name="timeoutMs">Timeout.</param>
+        /// <returns>True when expected topology version was reached; false otherwise.</returns>
+        public static bool WaitForRebalance(
+            this IIgnite ignite,
+            string cacheName,
+            AffinityTopologyVersion expectedTopVer,
+            long timeoutMs = 1000)
+        {
+            return ignite.GetCompute().ExecuteJavaTask<bool>(
+                WaitForRebalanceTask,
+                new object[] { cacheName, expectedTopVer.Version, expectedTopVer.MinorVersion, timeoutMs });
+        }
+
+        /// <summary>
         /// Waits for condition, polling in busy wait loop.
         /// </summary>
         /// <param name="cond">Condition.</param>
@@ -355,13 +379,13 @@ namespace Apache.Ignite.Core.Tests
         /// <summary>
         /// Gets the static discovery.
         /// </summary>
-        public static TcpDiscoverySpi GetStaticDiscovery(int? maxPort = null)
+        public static TcpDiscoverySpi GetStaticDiscovery(int maxPort = 47502)
         {
             return new TcpDiscoverySpi
             {
                 IpFinder = new TcpDiscoveryStaticIpFinder
                 {
-                    Endpoints = new[] { "127.0.0.1:47500" + (maxPort == null ? null : (".." + maxPort)) }
+                    Endpoints = new[] { $"127.0.0.1:47500..{maxPort}" }
                 },
                 SocketTimeout = TimeSpan.FromSeconds(0.3)
             };
@@ -595,6 +619,10 @@ namespace Apache.Ignite.Core.Tests
             return new IgniteConfiguration
             {
                 DiscoverySpi = GetStaticDiscovery(),
+                CommunicationSpi = new TcpCommunicationSpi
+                {
+                    MessageQueueLimit = 5120
+                },
                 Localhost = "127.0.0.1",
                 JvmOptions = TestJavaOptions(jvmDebug),
                 JvmClasspath = CreateTestClasspath(),
@@ -683,6 +711,19 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
+        /// Clears the marshaller work dir.
+        /// </summary>
+        public static void ClearMarshallerWorkDir()
+        {
+            // Delete all *.classname files within IGNITE_HOME
+            var home = IgniteHome.Resolve();
+
+            var files = Directory.GetFiles(home, "*.classname*", SearchOption.AllDirectories);
+
+            files.ToList().ForEach(File.Delete);
+        }
+
+        /// <summary>
         /// Logs to test progress. Produces immediate console output on .NET Core.
         /// </summary>
         public class TestContextLogger : ILogger
@@ -709,11 +750,36 @@ namespace Apache.Ignite.Core.Tests
                     return;
                 }
 
-                var text = args != null
-                    ? string.Format(formatProvider ?? CultureInfo.InvariantCulture, message, args)
-                    : message;
+                var sb = new StringBuilder();
 
-                _listener.TestOutput(new TestOutput(text + Environment.NewLine, "Progress", _ctx.CurrentTest?.Id, _ctx.CurrentTest?.FullName));
+                if (args != null)
+                {
+                    sb.AppendFormat(formatProvider ?? CultureInfo.InvariantCulture, message, args);
+                }
+                else
+                {
+                    sb.Append(message);
+                }
+
+                if (nativeErrorInfo != null)
+                {
+                    sb.Append(Environment.NewLine).Append(nativeErrorInfo);
+                }
+
+                if (ex != null)
+                {
+                    sb.Append(Environment.NewLine).Append(ex);
+                }
+
+                sb.Append(Environment.NewLine);
+
+                var output = new TestOutput(
+                    text: sb.ToString(),
+                    stream: "Progress",
+                    testId: _ctx.CurrentTest?.Id,
+                    testName: _ctx.CurrentTest?.FullName);
+
+                _listener.TestOutput(output);
             }
 
             /** <inheritdoc /> */

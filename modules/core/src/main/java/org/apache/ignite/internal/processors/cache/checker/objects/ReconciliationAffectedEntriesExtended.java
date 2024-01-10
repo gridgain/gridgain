@@ -110,9 +110,9 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
 
         inconsistentKeysCnt += outer.inconsistentKeysCount();
 
-        skippedCachesCnt += outer.skippedEntriesCount();
+        skippedCachesCnt += outer.skippedCachesCount();
 
-        skippedEntriesCnt += outer.skippedCachesCount();
+        skippedEntriesCnt += outer.skippedEntriesCount();
     }
 
     /** @inheritDoc */

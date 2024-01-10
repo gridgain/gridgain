@@ -20,13 +20,17 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Supplier;
 import org.apache.ignite.internal.pagemem.FullPageId;
+import org.apache.ignite.internal.pagemem.wal.record.CdcDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.ConsistentCutRecord;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.ExchangeRecord;
+import org.apache.ignite.internal.pagemem.wal.record.IncrementalSnapshotFinishRecord;
+import org.apache.ignite.internal.pagemem.wal.record.IncrementalSnapshotStartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.IndexRenameRootPageRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MasterKeyChangeRecordV2;
 import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
@@ -42,6 +46,7 @@ import org.apache.ignite.internal.pagemem.wal.record.SnapshotRecord;
 import org.apache.ignite.internal.pagemem.wal.record.SwitchSegmentRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
+import org.apache.ignite.internal.pagemem.wal.record.delta.ClusterSnapshotRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageInsertFragmentRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageInsertRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccMarkUpdatedRecord;
@@ -96,6 +101,8 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.transactions.TransactionState;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.NULL;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.BTREE_EXISTING_PAGE_SPLIT;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.BTREE_FIX_COUNT;
@@ -114,7 +121,9 @@ import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.BTREE_PAGE_RECYCLE;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.BTREE_PAGE_REMOVE;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.BTREE_PAGE_REPLACE;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.CDC_DATA_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.CHECKPOINT_RECORD;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.CLUSTER_SNAPSHOT;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.CONSISTENT_CUT;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_PAGE_INSERT_FRAGMENT_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_PAGE_INSERT_RECORD;
@@ -131,6 +140,8 @@ import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_RECORD_V2;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.EXCHANGE;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.HEADER_RECORD;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.INCREMENTAL_SNAPSHOT_FINISH_RECORD;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.INCREMENTAL_SNAPSHOT_START_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.INDEX_META_PAGE_DELTA_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.INDEX_ROOT_PAGE_RENAME_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.INIT_NEW_PAGE_RECORD;
@@ -261,6 +272,10 @@ public class RecordUtils {
             put(ENCRYPTED_OUT_OF_ORDER_UPDATE, buildUpsupportedWalRecord(ENCRYPTED_OUT_OF_ORDER_UPDATE));
             put(INDEX_ROOT_PAGE_RENAME_RECORD, RecordUtils::buildIndexRenameRootPageRecord);
             put(PARTITION_CLEARING_START_RECORD, RecordUtils::buildPartitionClearingStartedRecord);
+            put(CLUSTER_SNAPSHOT, RecordUtils::buildClusterSnapshotRecord);
+            put(INCREMENTAL_SNAPSHOT_START_RECORD, RecordUtils::buildIncrementedSnapshotStartRecord);
+            put(INCREMENTAL_SNAPSHOT_FINISH_RECORD, RecordUtils::buildIncrementedSnapshoFinishRecord);
+            put(CDC_DATA_RECORD, RecordUtils::buildCdcDataRecord);
         }};
 
     /** **/
@@ -604,7 +619,7 @@ public class RecordUtils {
         KeyCacheObjectImpl key = new KeyCacheObjectImpl(0L, new byte[] { NULL }, 0);
 
         DataEntry entry = new DataEntry(
-            CU.cacheId("test-cache"),
+            CU.cacheId(TEST_CACHE_NAME),
             key,
             null,
             GridCacheOperation.DELETE,
@@ -635,7 +650,7 @@ public class RecordUtils {
      */
     public static IndexRenameRootPageRecord buildIndexRenameRootPageRecord() {
         return new IndexRenameRootPageRecord(
-            CU.cacheId("test-cache"),
+            CU.cacheId(TEST_CACHE_NAME),
             "oldTreeName",
             "newTreeName",
             666
@@ -645,6 +660,26 @@ public class RecordUtils {
     /** **/
     public static PartitionClearingStartRecord buildPartitionClearingStartedRecord() {
         return new PartitionClearingStartRecord(12, 345, 123456789);
+    }
+
+    /** **/
+    public static ClusterSnapshotRecord buildClusterSnapshotRecord() {
+        return new ClusterSnapshotRecord("string");
+    }
+
+    /** **/
+    public static IncrementalSnapshotStartRecord buildIncrementedSnapshotStartRecord() {
+        return new IncrementalSnapshotStartRecord(new UUID(1, 1));
+    }
+
+    /** **/
+    public static IncrementalSnapshotFinishRecord buildIncrementedSnapshoFinishRecord() {
+        return new IncrementalSnapshotFinishRecord(new UUID(1, 1), emptySet(), emptySet());
+    }
+
+    /** **/
+    public static CdcDataRecord buildCdcDataRecord() {
+        return new CdcDataRecord(emptyList());
     }
 
     /**

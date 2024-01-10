@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cacheobject;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
-
 import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -187,11 +186,20 @@ public interface IgniteCacheObjectProcessor extends GridProcessor {
      * @param ctx Cache object context.
      * @param buf Buffer.
      * @param incompleteObj Incomplete cache object or {@code null} if it's a first read.
+     * @param createShadow If {@code true} then cache object shadow will be created.
+     * @param completeShadowFast If {@code true} then shadow object will be considered as ready
+     *                           when the value type and length are read from the buffer.
+     *                           If {@code false} then the object will be considered as ready when all value bytes are read.
      * @return Incomplete cache object.
      * @throws IgniteCheckedException If fail.
      */
-    public IncompleteCacheObject toCacheObject(CacheObjectContext ctx, ByteBuffer buf,
-        @Nullable IncompleteCacheObject incompleteObj) throws IgniteCheckedException;
+    public IncompleteCacheObject toCacheObject(
+        CacheObjectContext ctx,
+        ByteBuffer buf,
+        @Nullable IncompleteCacheObject incompleteObj,
+        boolean createShadow,
+        boolean completeShadowFast
+    ) throws IgniteCheckedException;
 
     /**
      * @param ctx Cache object context.
@@ -200,8 +208,11 @@ public interface IgniteCacheObjectProcessor extends GridProcessor {
      * @return Incomplete cache object.
      * @throws IgniteCheckedException If fail.
      */
-    public IncompleteCacheObject toKeyCacheObject(CacheObjectContext ctx, ByteBuffer buf,
-        @Nullable IncompleteCacheObject incompleteObj) throws IgniteCheckedException;
+    public IncompleteCacheObject toKeyCacheObject(
+        CacheObjectContext ctx,
+        ByteBuffer buf,
+        @Nullable IncompleteCacheObject incompleteObj
+    ) throws IgniteCheckedException;
 
     /**
      * @param obj Value.

@@ -18,6 +18,7 @@ package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.metric.SqlStatisticOffloadingTest;
 import org.apache.ignite.internal.metric.SqlStatisticsMemoryQuotaTest;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.metric.SqlStatisticsUserQueriesFastTest;
 import org.apache.ignite.internal.metric.SqlStatisticsUserQueriesLongTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedTxMultiNodeSelfTest;
@@ -66,6 +67,8 @@ import org.apache.ignite.internal.processors.query.oom.QueryMemoryManagerConfigu
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryManagerSelfTest;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
 import org.apache.ignite.sqltests.SqlDataTypesCoverageTests;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -146,7 +149,14 @@ import org.junit.runners.Suite;
     GridCachePartitionedTxMultiNodeSelfTest.class,
     GridCacheReplicatedTxMultiNodeBasicTest.class,
 
-    IgniteCacheQueryReservationOnUnstableTopologyTest.class
+    IgniteCacheQueryReservationOnUnstableTopologyTest.class,
+
+    ScriptTestSuite.class,
 })
 public class IgniteBinaryCacheQueryTestSuite4 {
+    /** Setup lazy mode default. */
+    @BeforeClass
+    public static void setupLazy() {
+        GridTestUtils.setFieldValue(SqlFieldsQuery.class, "DFLT_LAZY", false);
+    }
 }

@@ -297,6 +297,11 @@
                                 <xs:documentation>Force timestamp flag.</xs:documentation>
                             </xs:annotation>
                         </xs:attribute>
+                        <xs:attribute name="unwrapNullablePrimitiveTypes" type="xs:boolean">
+                            <xs:annotation>
+                                <xs:documentation>Unwrap nullable primitive types flag.</xs:documentation>
+                            </xs:annotation>
+                        </xs:attribute>
                     </xs:complexType>
                 </xs:element>
                 <xs:element name="cacheConfiguration" minOccurs="0">
@@ -1191,6 +1196,16 @@
                         <xs:attribute name="ackSendThreshold" type="xs:int">
                             <xs:annotation>
                                 <xs:documentation>Number of received messages per connection to node after which acknowledgment message is sent.</xs:documentation>
+                            </xs:annotation>
+                        </xs:attribute>
+                        <xs:attribute name="ackSendThresholdBytes" type="xs:int">
+                            <xs:annotation>
+                                <xs:documentation>Accrued size of received messages per connection to node after which acknowledgment is sent.</xs:documentation>
+                            </xs:annotation>
+                        </xs:attribute>
+                        <xs:attribute name="ackSendThresholdMillis" type="xs:int">
+                            <xs:annotation>
+                                <xs:documentation>Number of milliseconds after which acknowledgment is sent. This only happens if there is at least one unacknowledged message.</xs:documentation>
                             </xs:annotation>
                         </xs:attribute>
                         <xs:attribute name="connectTimeout" type="xs:string">

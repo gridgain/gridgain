@@ -356,4 +356,9 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     ) throws IgniteCheckedException {
         // No-op.
     }
+
+    /** {@inheritDoc} */
+    @Override public void markIndexRenamed(GridCacheContext<?, ?> cacheCtx, String indexTreeName) {
+        // No-op.
+    }
 }

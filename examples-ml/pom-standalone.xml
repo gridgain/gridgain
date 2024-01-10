@@ -30,10 +30,6 @@
         <maven.compiler.target>1.8</maven.compiler.target>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-        <!-- will be changed by profile activation. allows to combine profiles. -->
-        <spark.folder>src/main/java</spark.folder>
-        <lgpl.folder>src/main/java</lgpl.folder>
     </properties>
 
     <groupId>org.gridgain</groupId>
@@ -156,60 +152,6 @@
             <version>2.3.0</version>
         </dependency>
     </dependencies>
-
-    <profiles>
-        <profile>
-            <id>scala</id>
-
-            <properties>
-                <spark.folder>src/main/spark</spark.folder>
-                <spark.test.folder>src/test/spark</spark.test.folder>
-            </properties>
-
-            <dependencies>
-                <dependency>
-                    <groupId>org.gridgain</groupId>
-                    <artifactId>ignite-spark</artifactId>
-                    <version>${project.version}</version>
-                </dependency>
-            </dependencies>
-
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>net.alchim31.maven</groupId>
-                        <artifactId>scala-maven-plugin</artifactId>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-        <profile>
-            <id>spark-2.4</id>
-
-            <properties>
-                <spark.folder>src/main/spark</spark.folder>
-                <spark.test.folder>src/test/spark</spark.test.folder>
-            </properties>
-
-            <dependencies>
-                <dependency>
-                    <groupId>org.gridgain</groupId>
-                    <artifactId>ignite-spark-2.4</artifactId>
-                    <version>${project.version}</version>
-                </dependency>
-            </dependencies>
-
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>net.alchim31.maven</groupId>
-                        <artifactId>scala-maven-plugin</artifactId>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 
     <build>
         <resources>

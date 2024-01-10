@@ -19,6 +19,7 @@ package org.apache.ignite.internal.util.nio.ssl;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -355,6 +356,45 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
             }
         }
         catch (SSLException e) {
+            if (e instanceof SSLHandshakeException) {
+                onSessionOpenedException = e;
+
+                try {
+                    String sslHandshakeErrMsg = "SSL handshake failed (connection closed).";
+
+                    GridNioFutureImpl<?> fut = ses.removeMeta(HANDSHAKE_FUT_META_KEY);
+                    // If handshake is still in progress. Can be on a server side with client authentication if
+                    // protocol is TLS 1.3.
+                    if (fut != null) {
+                        if (rejectedSesCnt != null)
+                            rejectedSesCnt.increment();
+
+                        fut.onDone(new IgniteCheckedException(sslHandshakeErrMsg, e));
+
+                        return;
+                    }
+
+                    String errMsg = e.getMessage();
+                    if (errMsg.contains("Received fatal alert")) {
+                        // It's a TLS v1.3 "post-handshake handshake" error.
+                        if (rejectedSesCnt != null)
+                            rejectedSesCnt.increment();
+
+                        throw new IgniteCheckedException(sslHandshakeErrMsg, e);
+                    }
+                }
+                finally {
+                    try {
+                        // Close outbound so all alerts are flushed to the net buffer.
+                        hnd.closeOutbound();
+                    }
+                    catch (SSLException ignored) {
+                    }
+                    // Try to write TLS error to the remote.
+                    hnd.writeNetBuffer(null);
+                }
+            }
+
             throw new GridNioException("Failed to decode SSL data: " + ses, e);
         }
         finally {

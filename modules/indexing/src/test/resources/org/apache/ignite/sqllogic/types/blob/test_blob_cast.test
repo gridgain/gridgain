@@ -1,0 +1,103 @@
+# name: test/sql/types/blob/test_blob_cast.test
+# description: Cast BLOB values
+# group: [blob]
+
+statement ok
+PRAGMA enable_verification
+
+# BLOB to VARCHAR -> CastFromBlob, it always results in a hex representation
+query T
+SELECT (STRINGTOUTF8('a')::binary)::VARCHAR
+----
+61
+
+# VARCHAR to BLOB -> CastToBlob
+query T
+SELECT (STRINGTOUTF8('a')::VARCHAR)::binary
+----
+61
+
+# Hex string with BLOB
+query T
+SELECT x'2000FF'::varbinary
+----
+2000ff
+
+# CastFromBlob with hex string
+query T
+SELECT (x'612061'::VARBINARY)::VARCHAR
+----
+612061
+
+# CastFromBlob and after CastToBlob with hex string
+query T
+SELECT ((x'612061'::VARBINARY)::VARCHAR)::VARBINARY
+----
+612061
+
+# CastFromBlob -> CastToBlob -> CastFromBlob with hex string
+query T
+SELECT (((x'612061'::VARBINARY)::VARCHAR)::VARBINARY)::VARCHAR
+----
+612061
+
+# CastToBlob -> CastFromBlob -> CastToBlob with hex string
+query T
+SELECT (((x'612061'::VARCHAR)::VARBINARY)::VARCHAR)::VARBINARY
+----
+612061
+
+# [ignore]
+#statement error
+#SELECT 1::VARBINARY
+
+# [note] h2
+query T
+SELECT 1::VARBINARY
+----
+00000001
+
+statement error
+SELECT 1.0::VARBINARY
+
+# numeric -> varbinary, not valid/implemented casts
+# [ignore]
+#statement error
+#SELECT (1::tinyint)::VARBINARY
+
+# [note] h2
+query T
+SELECT (1::tinyint)::VARBINARY
+----
+01
+
+#statement error
+#SELECT (1::smallint)::VARBINARY
+
+# [note] h2
+query T
+SELECT (1::smallint)::VARBINARY
+----
+0001
+
+#statement error
+#SELECT (1::integer)::VARBINARY
+
+# [note] h2
+query T
+SELECT (1::integer)::VARBINARY
+----
+00000001
+
+#statement error
+#SELECT (1::bigint)::VARBINARY
+
+# [note] h2
+query T
+SELECT (1::bigint)::VARBINARY
+----
+0000000000000001
+
+statement error
+SELECT (1::decimal)::VARBINARY
+

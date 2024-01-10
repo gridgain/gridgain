@@ -80,6 +80,13 @@ public class ComputeTaskTest extends AbstractThinClientTest {
     }
 
     /** {@inheritDoc} */
+    @Override protected boolean isClientEndpointsDiscoveryEnabled() {
+        // In this test it's critical to connect to the nodes specified in startClient method,
+        // since node for task is checked and one of the nodes doesn't allow tasks execution.
+        return false;
+    }
+
+    /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
@@ -412,13 +419,13 @@ public class ComputeTaskTest extends AbstractThinClientTest {
             Future<Object> fut1 = compute.executeAsync(TestLatchTask.class.getName(), null);
 
             // Wait for the task to start, then drop connections.
-            TestLatchTask.startLatch.await();
+            TestLatchTask.startLatch.await(3, TimeUnit.MILLISECONDS);
             dropAllThinClientConnections();
 
             TestLatchTask.startLatch = new CountDownLatch(1);
             Future<Object> fut2 = compute.executeAsync(TestLatchTask.class.getName(), null);
 
-            TestLatchTask.startLatch.await();
+            TestLatchTask.startLatch.await(3000, TimeUnit.MILLISECONDS);
             dropAllThinClientConnections();
 
             TestLatchTask.latch = new CountDownLatch(1);

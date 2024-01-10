@@ -21,6 +21,9 @@ import java.util.List;
 import java.util.UUID;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.future.IgniteFutureImpl;
+import org.apache.ignite.lang.IgniteFuture;
 
 /**
  * Holds identify information of executing query and its result.
@@ -55,6 +58,9 @@ public class VisorQueryHolder implements AutoCloseable {
 
     /** Result set iterator. */
     private volatile Iterator itr;
+
+    /** Future that will be completed when the underlying query cursor is initialized and ready to use. */
+    private final GridFutureAdapter<Void> readyFut = new GridFutureAdapter<>();
 
     /**
      * @param qryId Query ID.
@@ -116,7 +122,17 @@ public class VisorQueryHolder implements AutoCloseable {
         this.cur = cur;
         this.duration = duration;
         this.cols = cols;
-        this.accessed = false;
+        accessed = false;
+        readyFut.onDone();
+    }
+
+    /**
+     * Returns a future that will be completed when the underlying query cursor is initialized and ready to use.
+     *
+     * @return Future that will be completed when the underlying query cursor is initialized and ready to use.
+     */
+    public IgniteFuture<Void> readyFuture() {
+        return new IgniteFutureImpl<>(readyFut);
     }
 
     /** {@inheritDoc} */
@@ -145,6 +161,8 @@ public class VisorQueryHolder implements AutoCloseable {
 
         if (cur != null)
             cur.close();
+
+        readyFut.onDone(err);
     }
 
     /**

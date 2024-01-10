@@ -35,16 +35,21 @@ public class NodeSplit implements Serializable {
     /** Impurity at this split point. */
     private final double impurity;
 
+    /** Gain at this split point. */
+    private final double gain;
+
     /**
      * Creates an instance of NodeSplit.
      *
      * @param featureId Feature id.
      * @param val Feature split value.
+     * @param gain Gain value.
      * @param impurity Impurity value.
      */
-    public NodeSplit(int featureId, double val, double impurity) {
+    public NodeSplit(int featureId, double val, double gain, double impurity) {
         this.featureId = featureId;
         this.val = val;
+        this.gain = gain;
         this.impurity = impurity;
     }
 
@@ -73,6 +78,11 @@ public class NodeSplit implements Serializable {
     /** */
     public double getImpurity() {
         return impurity;
+    }
+
+    /** */
+    public double getGain() {
+        return gain;
     }
 
     /** */

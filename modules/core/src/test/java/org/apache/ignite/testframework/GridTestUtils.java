@@ -99,6 +99,7 @@ import org.apache.ignite.internal.client.ssl.GridSslBasicContextFactory;
 import org.apache.ignite.internal.client.ssl.GridSslContextFactory;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
+import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
@@ -128,7 +129,6 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
 import org.apache.ignite.ssl.SslContextFactory;
-import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -140,6 +140,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_SSL_PROTOCOL;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
+import static org.apache.ignite.testframework.config.GridTestProperties.getProperty;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -535,8 +536,7 @@ public final class GridTestUtils {
      * @param log Logger (optional).
      * @param run Runnable.
      * @param cls Exception class.
-     * @param msg Exception message (optional). If provided exception message
-     *      and this message should be equal.
+     * @param msg Exception message (optional). Check that raised exception message contains this substring.
      * @return Thrown throwable.
      */
     public static <T extends Throwable> T assertThrows(
@@ -1555,6 +1555,22 @@ public final class GridTestUtils {
     }
 
     /**
+     * @param ig Ignite node to extract {@link IgniteWriteAheadLogManager} from.
+     * @return Instance of {@link IgniteWriteAheadLogManager} associated with the given Ignite node.
+     */
+    public static IgniteWriteAheadLogManager wal(IgniteEx ig) {
+        return ig.context().cache().context().wal();
+    }
+
+    /**
+     * @param ig Ignite node to extract {@link IgniteCacheDatabaseSharedManager} from.
+     * @@return Instance of {@link IgniteCacheDatabaseSharedManager} associated with the given Ignite node.
+     */
+    public static IgniteCacheDatabaseSharedManager database(IgniteEx ig) {
+        return ig.context().cache().context().database();
+    }
+
+    /**
      * @param cache Cache.
      * @return DHT cache.
      */
@@ -2079,8 +2095,9 @@ public final class GridTestUtils {
 
         KeyStore keyStore = KeyStore.getInstance(DFLT_STORE_TYPE);
 
-        keyStore.load(new FileInputStream(U.resolveIgnitePath(GridTestProperties.getProperty("ssl.keystore.path"))),
-            storePass);
+        try (InputStream stream = Files.newInputStream(U.resolveIgnitePath(getProperty("ssl.keystore.path")).toPath())) {
+            keyStore.load(stream, storePass);
+        }
 
         keyMgrFactory.init(keyStore, storePass);
 
@@ -2098,8 +2115,7 @@ public final class GridTestUtils {
     public static GridSslContextFactory sslContextFactory() {
         GridSslBasicContextFactory factory = new GridSslBasicContextFactory();
 
-        factory.setKeyStoreFilePath(
-            U.resolveIgnitePath(GridTestProperties.getProperty("ssl.keystore.path")).getAbsolutePath());
+        factory.setKeyStoreFilePath(U.resolveIgnitePath(getProperty("ssl.keystore.path")).getAbsolutePath());
         factory.setKeyStorePassword(keyStorePassword().toCharArray());
 
         factory.setTrustManagers(GridSslBasicContextFactory.getDisabledTrustManager());
@@ -2115,8 +2131,7 @@ public final class GridTestUtils {
     public static Factory<SSLContext> sslFactory() {
         SslContextFactory factory = new SslContextFactory();
 
-        factory.setKeyStoreFilePath(
-            U.resolveIgnitePath(GridTestProperties.getProperty("ssl.keystore.path")).getAbsolutePath());
+        factory.setKeyStoreFilePath(U.resolveIgnitePath(getProperty("ssl.keystore.path")).getAbsolutePath());
         factory.setKeyStorePassword(keyStorePassword().toCharArray());
 
         factory.setTrustManagers(SslContextFactory.getDisabledTrustManager());
@@ -2171,12 +2186,11 @@ public final class GridTestUtils {
     }
 
     public static String keyStorePassword() {
-        return GridTestProperties.getProperty("ssl.keystore.password");
+        return getProperty("ssl.keystore.password");
     }
 
     @NotNull public static String keyStorePath(String keyStore) {
-        return U.resolveIgnitePath(GridTestProperties.getProperty(
-            "ssl.keystore." + keyStore + ".path")).getAbsolutePath();
+        return U.resolveIgnitePath(getProperty("ssl.keystore." + keyStore + ".path")).getAbsolutePath();
     }
 
     /**

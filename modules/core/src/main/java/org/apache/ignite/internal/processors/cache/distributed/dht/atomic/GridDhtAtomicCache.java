@@ -247,44 +247,26 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
     }
 
     /** {@inheritDoc} */
-    @Override public void start() throws IgniteCheckedException {
-        super.start();
+    @Override public void onKernalStart() throws IgniteCheckedException {
+        super.onKernalStart();
 
-        assert metrics != null : "Cache metrics instance isn't initialized.";
-
-        if (ctx.dht().near() != null)
-            metrics.delegate(ctx.dht().near().metrics0());
+        assert !ctx.isRecoveryMode() : "Registering message handlers in recovery mode [cacheName=" + name() + ']';
 
         ctx.io().addCacheHandler(
             ctx.cacheId(),
+            ctx.startTopologyVersion(),
             GridNearGetRequest.class,
-            new CI2<UUID, GridNearGetRequest>() {
-                @Override public void apply(
-                    UUID nodeId,
-                    GridNearGetRequest req
-                ) {
-                    processNearGetRequest(
-                        nodeId,
-                        req);
-                }
-            });
+            (CI2<UUID, GridNearGetRequest>)this::processNearGetRequest);
 
         ctx.io().addCacheHandler(
             ctx.cacheId(),
+            ctx.startTopologyVersion(),
             GridNearSingleGetRequest.class,
-            new CI2<UUID, GridNearSingleGetRequest>() {
-                @Override public void apply(
-                    UUID nodeId,
-                    GridNearSingleGetRequest req
-                ) {
-                    processNearSingleGetRequest(
-                        nodeId,
-                        req);
-                }
-            });
+            (CI2<UUID, GridNearSingleGetRequest>)this::processNearSingleGetRequest);
 
         ctx.io().addCacheHandler(
             ctx.cacheId(),
+            ctx.startTopologyVersion(),
             GridNearAtomicAbstractUpdateRequest.class,
             new CI2<UUID, GridNearAtomicAbstractUpdateRequest>() {
                 @Override public void apply(
@@ -304,6 +286,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         ctx.io().addCacheHandler(
             ctx.cacheId(),
+            ctx.startTopologyVersion(),
             GridNearAtomicUpdateResponse.class,
             new CI2<UUID, GridNearAtomicUpdateResponse>() {
                 @Override public void apply(
@@ -323,6 +306,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         ctx.io().addCacheHandler(
             ctx.cacheId(),
+            ctx.startTopologyVersion(),
             GridDhtAtomicAbstractUpdateRequest.class,
             new CI2<UUID, GridDhtAtomicAbstractUpdateRequest>() {
                 @Override public void apply(
@@ -342,6 +326,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         ctx.io().addCacheHandler(
             ctx.cacheId(),
+            ctx.startTopologyVersion(),
             GridDhtAtomicUpdateResponse.class,
             new CI2<UUID, GridDhtAtomicUpdateResponse>() {
                 @Override public void apply(
@@ -361,6 +346,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         ctx.io().addCacheHandler(
             ctx.cacheId(),
+            ctx.startTopologyVersion(),
             GridDhtAtomicDeferredUpdateResponse.class,
             new CI2<UUID, GridDhtAtomicDeferredUpdateResponse>() {
                 @Override public void apply(
@@ -380,20 +366,22 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         ctx.io().addCacheHandler(
             ctx.cacheId(),
+            ctx.startTopologyVersion(),
             GridDhtAtomicNearResponse.class,
             new CI2<UUID, GridDhtAtomicNearResponse>() {
-            @Override public void apply(UUID uuid, GridDhtAtomicNearResponse msg) {
-                processDhtAtomicNearResponse(uuid, msg);
-            }
+                @Override public void apply(UUID uuid, GridDhtAtomicNearResponse msg) {
+                    processDhtAtomicNearResponse(uuid, msg);
+                }
 
-            @Override public String toString() {
-                return "GridDhtAtomicNearResponse handler " +
-                    "[msgIdx=" + GridDhtAtomicNearResponse.CACHE_MSG_IDX + ']';
-            }
-        });
+                @Override public String toString() {
+                    return "GridDhtAtomicNearResponse handler " +
+                        "[msgIdx=" + GridDhtAtomicNearResponse.CACHE_MSG_IDX + ']';
+                }
+            });
 
         ctx.io().addCacheHandler(
             ctx.cacheId(),
+            ctx.startTopologyVersion(),
             GridNearAtomicCheckUpdateRequest.class,
             new CI2<UUID, GridNearAtomicCheckUpdateRequest>() {
                 @Override public void apply(UUID uuid, GridNearAtomicCheckUpdateRequest msg) {
@@ -408,6 +396,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         ctx.io().addCacheHandler(
             ctx.cacheId(),
+            ctx.startTopologyVersion(),
             GridDhtForceKeysRequest.class,
             new MessageHandler<GridDhtForceKeysRequest>() {
                 @Override public void onMessage(ClusterNode node, GridDhtForceKeysRequest msg) {
@@ -417,6 +406,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         ctx.io().addCacheHandler(
             ctx.cacheId(),
+            ctx.startTopologyVersion(),
             GridDhtForceKeysResponse.class,
             new MessageHandler<GridDhtForceKeysResponse>() {
                 @Override public void onMessage(ClusterNode node, GridDhtForceKeysResponse msg) {
@@ -427,32 +417,24 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         if (near == null) {
             ctx.io().addCacheHandler(
                 ctx.cacheId(),
+                ctx.startTopologyVersion(),
                 GridNearGetResponse.class,
-                new CI2<UUID, GridNearGetResponse>() {
-                    @Override public void apply(
-                        UUID nodeId,
-                        GridNearGetResponse res
-                    ) {
-                        processNearGetResponse(
-                            nodeId,
-                            res);
-                    }
-                });
+                (CI2<UUID, GridNearGetResponse>)this::processNearGetResponse);
 
             ctx.io().addCacheHandler(
                 ctx.cacheId(),
+                ctx.startTopologyVersion(),
                 GridNearSingleGetResponse.class,
-                new CI2<UUID, GridNearSingleGetResponse>() {
-                    @Override public void apply(
-                        UUID nodeId,
-                        GridNearSingleGetResponse res
-                    ) {
-                        processNearSingleGetResponse(
-                            nodeId,
-                            res);
-                    }
-                });
+                (CI2<UUID, GridNearSingleGetResponse>)this::processNearSingleGetResponse);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void start() throws IgniteCheckedException {
+        assert metrics != null : "Cache metrics instance isn't initialized.";
+
+        if (ctx.dht().near() != null)
+            metrics.delegate(ctx.dht().near().metrics0());
     }
 
     /**
@@ -475,7 +457,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         final String taskName,
         final boolean deserializeBinary,
         final boolean skipVals,
-        final boolean needVer
+        final boolean needVer,
+        final boolean touchTtl
     ) {
         ctx.checkSecurity(SecurityPermission.CACHE_READ);
 
@@ -484,7 +467,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         subjId = ctx.subjectIdPerCall(null, opCtx);
 
         final UUID subjId0 = subjId;
-        final ExpiryPolicy expiryPlc = skipVals ? null : opCtx != null ? opCtx.expiry() : null;
+        final ExpiryPolicy expiryPlc = skipVals && !touchTtl ? null : opCtx != null ? opCtx.expiry() : null;
         final boolean skipStore = opCtx != null && opCtx.skipStore();
         final boolean recovery = opCtx != null && opCtx.recovery();
 
@@ -499,7 +482,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                     expiryPlc,
                     skipVals,
                     skipStore,
-                    needVer);
+                    needVer,
+                    touchTtl);
             }
         });
     }
@@ -1403,6 +1387,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      * @param skipVals Skip values flag.
      * @param skipStore Skip store flag.
      * @param needVer Need version.
+     * @param touchTtl Indicates that operation requires just update the time to live value.
      * @return Get future.
      */
     private IgniteInternalFuture<V> getAsync0(KeyCacheObject key,
@@ -1414,11 +1399,12 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         @Nullable ExpiryPolicy expiryPlc,
         boolean skipVals,
         boolean skipStore,
-        boolean needVer
+        boolean needVer,
+        boolean touchTtl
     ) {
         AffinityTopologyVersion topVer = ctx.affinity().affinityTopologyVersion();
 
-        IgniteCacheExpiryPolicy expiry = skipVals ? null : expiryPolicy(expiryPlc);
+        IgniteCacheExpiryPolicy expiry = skipVals && !touchTtl ? null : expiryPolicy(expiryPlc);
 
         GridPartitionedSingleGetFuture fut = new GridPartitionedSingleGetFuture(ctx,
             key,
@@ -1434,7 +1420,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             false,
             recovery,
             null,
-            null);
+            null,
+            touchTtl);
 
         fut.init();
 
@@ -1486,7 +1473,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 // Optimistically expect that all keys are available locally (avoid creation of get future).
                 for (KeyCacheObject key : keys) {
                     if (readNoEntry) {
-                        CacheDataRow row = ctx.offheap().read(ctx, key);
+                        CacheDataRow row = skipVals ? ctx.offheap().find(ctx, key) : ctx.offheap().read(ctx, key);
 
                         if (row != null) {
                             long expireTime = row.expireTime();

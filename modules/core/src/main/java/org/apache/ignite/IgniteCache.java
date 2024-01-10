@@ -61,6 +61,7 @@ import org.apache.ignite.lang.IgniteAsyncSupport;
 import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteClosure;
+import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.mxbean.CacheMetricsMXBean;
 import org.apache.ignite.transactions.TransactionException;
@@ -175,12 +176,9 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
     public <K1, V1> IgniteCache<K1, V1> withKeepBinary();
 
     /**
-     * By default atomic operations are allowed in transaction.
-     * To restrict transactions from operations with atomic caches you can set system property
-     * {@link IgniteSystemProperties#IGNITE_ALLOW_ATOMIC_OPS_IN_TX IGNITE_ALLOW_ATOMIC_OPS_IN_TX} to {@code false}.
-     * <p>
-     * If you want to use atomic operations inside transactions in case they are restricted by system property,
-     * you should allow it before transaction start.
+     * If you want to use atomic operations inside transactions you should allow it before transaction start.
+     * To enable this behavior by default you can set system property
+     * {@link IgniteSystemProperties#IGNITE_ALLOW_ATOMIC_OPS_IN_TX IGNITE_ALLOW_ATOMIC_OPS_IN_TX} to {@code true}.
      *
      * @return Cache with atomic operations allowed in transactions.
      */
@@ -1695,4 +1693,29 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * @return {@code True} if partition was preloaded, {@code false} if it doesn't belong to local node.
      */
     public boolean localPreloadPartition(int partition);
+
+    /**
+     * Returns approximate number of bytes that required by the given {@code key} and corresponding value in the off-heap storage.
+     *
+     * <p>
+     * This method will not load a value from the configured {@link CacheStore} or from a remote node.
+     * <h2 class="header">Transactions</h2>
+     * This method does not participate in any transactions.
+     *
+     * @param key Entry key.
+     * @return Size of the entry for the given {@code key} or {@code 0} if entry is not found.
+     * @throws NullPointerException If key is {@code null}.
+     */
+    public int localEntrySize(K key);
+
+    /**
+     * Updates the time to live value for the given {@code key}.
+     *
+     * @param key The key whose associated ttl value is to be updated in accrordance with the specified {@link ExpiryPolicy}.
+     * @return {@code true} if the ttl value was updated, {@code false} if the key is not present in the cache.
+     * @throws NullPointerException If key is {@code null}.
+     * @see IgniteCache#withExpiryPolicy(ExpiryPolicy)
+     */
+    @IgniteExperimental
+    public boolean touch(K key);
 }

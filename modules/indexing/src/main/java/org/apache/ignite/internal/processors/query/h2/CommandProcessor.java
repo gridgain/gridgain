@@ -35,10 +35,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
-import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -46,7 +44,6 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
-import org.apache.ignite.cache.query.BulkLoadContextCursor;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -60,15 +57,11 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
-import org.apache.ignite.internal.processors.bulkload.BulkLoadAckClientParameters;
-import org.apache.ignite.internal.processors.bulkload.BulkLoadCacheWriter;
-import org.apache.ignite.internal.processors.bulkload.BulkLoadParser;
-import org.apache.ignite.internal.processors.bulkload.BulkLoadProcessor;
-import org.apache.ignite.internal.processors.bulkload.BulkLoadStreamerWriter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
+import org.apache.ignite.internal.processors.io.BulkLoadCommandProcessorFactory;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
@@ -78,9 +71,6 @@ import org.apache.ignite.internal.processors.query.QueryEntityEx;
 import org.apache.ignite.internal.processors.query.QueryField;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.SqlClientContext;
-import org.apache.ignite.internal.processors.query.h2.dml.DmlBulkLoadDataConverter;
-import org.apache.ignite.internal.processors.query.h2.dml.UpdatePlan;
-import org.apache.ignite.internal.processors.query.h2.dml.UpdatePlanBuilder;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlAlterTableAddColumn;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlAlterTableDropColumn;
@@ -115,11 +105,9 @@ import org.apache.ignite.internal.sql.command.SqlRollbackTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlSetStreamingCommand;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.lang.IgniteClosureX;
 import org.apache.ignite.internal.util.typedef.CIX2;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.security.SecurityPermission;
@@ -132,6 +120,7 @@ import org.gridgain.internal.h2.command.ddl.DropTable;
 import org.gridgain.internal.h2.command.dml.NoOperation;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.value.DataType;
+import org.gridgain.internal.h2.value.TypeInfo;
 import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -183,6 +172,8 @@ public class CommandProcessor {
         }
     };
 
+    private final BulkLoadCommandProcessorFactory bulkLoadCommandProcessorFactory;
+
     /**
      * Constructor.
      *
@@ -195,6 +186,7 @@ public class CommandProcessor {
         this.idx = idx;
 
         log = ctx.log(CommandProcessor.class);
+        this.bulkLoadCommandProcessorFactory = new BulkLoadCommandProcessorFactory(ctx);
     }
 
     /**
@@ -418,7 +410,12 @@ public class CommandProcessor {
             if (isDdl(cmdNative))
                 runCommandNativeDdl(sql, cmdNative);
             else if (cmdNative instanceof SqlBulkLoadCommand) {
-                res = processBulkLoadCommand((SqlBulkLoadCommand) cmdNative, qryId);
+                // SqlClientContext is not available if using JDBC Client Driver but
+                // serverBulkLoadEnabled should be still enabled by default.
+                boolean serverBulkLoadEnabled = cliCtx == null || cliCtx.serverBulkLoadEnabled();
+                res = bulkLoadCommandProcessorFactory
+                    .getBulkLoadCommandProcessor(serverBulkLoadEnabled)
+                    .processBulkLoadCommand(ctx, (SqlBulkLoadCommand) cmdNative, qryId);
 
                 unregister = false;
             }
@@ -889,10 +886,14 @@ public class CommandProcessor {
                             }
                         }
 
-                        QueryField field = new QueryField(col.columnName(),
+                        QueryField field = new QueryField(
+                            col.columnName(),
                             getTypeClassName(col),
-                            col.column().isNullable(), col.defaultValue(),
-                            col.precision(), col.scale());
+                            col.column().isNullable(),
+                            col.defaultValue(),
+                            convertH2ColumnPrecision(col.column().getType()),
+                            convertH2ColumnScale(col.column().getType())
+                        );
 
                         cols.add(field);
 
@@ -1084,6 +1085,7 @@ public class CommandProcessor {
         QueryEntityEx res = new QueryEntityEx();
 
         res.setTableName(createTbl.tableName());
+        res.setImplicitPk(createTbl.implicitPk());
 
         Set<String> notNullFields = null;
 
@@ -1111,19 +1113,15 @@ public class CommandProcessor {
             if (dfltVal != null)
                 dfltValues.put(e.getKey(), dfltVal);
 
-            if (col.getType().getValueType() == Value.DECIMAL) {
-                if (col.getType().getPrecision() < H2Utils.DECIMAL_DEFAULT_PRECISION)
-                    precision.put(e.getKey(), (int)col.getType().getPrecision());
-
-                if (col.getType().getScale() < H2Utils.DECIMAL_DEFAULT_SCALE)
-                    scale.put(e.getKey(), col.getType().getScale());
+            int precisionVal = convertH2ColumnPrecision(col.getType());
+            if (precisionVal != QueryField.UNDEFINED_PRECISION) {
+                precision.put(e.getKey(), precisionVal);
             }
 
-            if (col.getType().getValueType() == Value.STRING ||
-                col.getType().getValueType() == Value.STRING_FIXED ||
-                col.getType().getValueType() == Value.STRING_IGNORECASE)
-                if (col.getType().getPrecision() < H2Utils.STRING_DEFAULT_PRECISION)
-                    precision.put(e.getKey(), (int)col.getType().getPrecision());
+            int scaleVal = convertH2ColumnScale(col.getType());
+            if (scaleVal != QueryField.UNDEFINED_SCALE) {
+                scale.put(e.getKey(), scaleVal);
+            }
         }
 
         if (!F.isEmpty(dfltValues))
@@ -1149,14 +1147,14 @@ public class CommandProcessor {
         assert createTbl.wrapKey() != null;
         assert createTbl.wrapValue() != null;
 
-        if (!createTbl.wrapKey()) {
+        if (!createTbl.wrapKey() && !createTbl.implicitPk()) {
             GridSqlColumn pkCol = createTbl.columns().get(createTbl.primaryKeyColumns().iterator().next());
 
             keyTypeName = getTypeClassName(pkCol);
 
             res.setKeyFieldName(pkCol.columnName());
         }
-        else {
+        else if (createTbl.wrapKey()) {
             res.setKeyFields(createTbl.primaryKeyColumns());
 
             if (IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
@@ -1201,6 +1199,29 @@ public class CommandProcessor {
             res.setAffinityKeyInlineSize(createTbl.affinityKeyInlineSize());
 
         return res;
+    }
+
+    private static int convertH2ColumnPrecision(TypeInfo type) {
+        if (type.getValueType() == Value.DECIMAL) {
+            if (type.getPrecision() < H2Utils.DECIMAL_DEFAULT_PRECISION)
+                return (int)type.getPrecision();
+        }
+        else if (type.getValueType() == Value.STRING ||
+            type.getValueType() == Value.STRING_FIXED ||
+            type.getValueType() == Value.STRING_IGNORECASE) {
+            if (type.getPrecision() < H2Utils.STRING_DEFAULT_PRECISION)
+                return (int)type.getPrecision();
+        }
+
+        return QueryField.UNDEFINED_PRECISION;
+    }
+
+    private static int convertH2ColumnScale(TypeInfo type) {
+        if (type.getValueType() == Value.DECIMAL &&
+            type.getScale() < H2Utils.DECIMAL_DEFAULT_SCALE)
+            return type.getScale();
+
+        return QueryField.UNDEFINED_SCALE;
     }
 
     /**
@@ -1400,45 +1421,5 @@ public class CommandProcessor {
             );
         else
             cliCtx.disableStreaming();
-    }
-
-    /**
-     * Process bulk load COPY command.
-     *
-     * @param cmd The command.
-     * @param qryId Query id.
-     * @return The context (which is the result of the first request/response).
-     * @throws IgniteCheckedException If something failed.
-     */
-    private FieldsQueryCursor<List<?>> processBulkLoadCommand(SqlBulkLoadCommand cmd, Long qryId)
-        throws IgniteCheckedException {
-        if (cmd.packetSize() == null)
-            cmd.packetSize(BulkLoadAckClientParameters.DFLT_PACKET_SIZE);
-
-        GridH2Table tbl = schemaMgr.dataTable(cmd.schemaName(), cmd.tableName());
-
-        if (tbl == null) {
-            throw new IgniteSQLException("Table does not exist: " + cmd.tableName(),
-                IgniteQueryErrorCode.TABLE_NOT_FOUND);
-        }
-
-        H2Utils.checkAndStartNotStartedCache(ctx, tbl);
-
-        UpdatePlan plan = UpdatePlanBuilder.planForBulkLoad(cmd, tbl);
-
-        IgniteClosureX<List<?>, IgniteBiTuple<?, ?>> dataConverter = new DmlBulkLoadDataConverter(plan);
-
-        IgniteDataStreamer<Object, Object> streamer = ctx.grid().dataStreamer(tbl.cacheName());
-
-        BulkLoadCacheWriter outputWriter = new BulkLoadStreamerWriter(streamer);
-
-        BulkLoadParser inputParser = BulkLoadParser.createParser(cmd.inputFormat());
-
-        BulkLoadProcessor processor = new BulkLoadProcessor(inputParser, dataConverter, outputWriter,
-            idx.runningQueryManager(), qryId, ctx.tracing());
-
-        BulkLoadAckClientParameters params = new BulkLoadAckClientParameters(cmd.localFileName(), cmd.packetSize());
-
-        return new BulkLoadContextCursor(processor, params);
     }
 }

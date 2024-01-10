@@ -54,7 +54,26 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.eviction.EvictionPolicy;
 import org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy;
 import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy;
-import org.apache.ignite.configuration.*;
+import org.apache.ignite.configuration.AtomicConfiguration;
+import org.apache.ignite.configuration.BinaryConfiguration;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.CheckpointWriteOrder;
+import org.apache.ignite.configuration.ClientConnectorConfiguration;
+import org.apache.ignite.configuration.DataPageEvictionMode;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.DiskPageCompression;
+import org.apache.ignite.configuration.ExecutorConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.MemoryConfiguration;
+import org.apache.ignite.configuration.MemoryPolicyConfiguration;
+import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.configuration.PersistentStoreConfiguration;
+import org.apache.ignite.configuration.PlatformCacheConfiguration;
+import org.apache.ignite.configuration.SqlConnectorConfiguration;
+import org.apache.ignite.configuration.ThinClientConfiguration;
+import org.apache.ignite.configuration.TransactionConfiguration;
+import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.NoOpFailureHandler;
@@ -794,6 +813,8 @@ public class PlatformConfigurationUtils {
             TcpCommunicationSpi comm = new TcpCommunicationSpi();
 
             comm.setAckSendThreshold(in.readInt());
+            comm.setAckSendThresholdBytes(in.readLong());
+            comm.setAckSendThresholdMillis(in.readLong());
             comm.setConnectionsPerNode(in.readInt());
             comm.setConnectTimeout(in.readLong());
             comm.setDirectBuffer(in.readBoolean());
@@ -1407,6 +1428,8 @@ public class PlatformConfigurationUtils {
             TcpCommunicationSpi tcp = (TcpCommunicationSpi) comm;
 
             w.writeInt(tcp.getAckSendThreshold());
+            w.writeLong(tcp.getAckSendThresholdBytes());
+            w.writeLong(tcp.getAckSendThresholdMillis());
             w.writeInt(tcp.getConnectionsPerNode());
             w.writeLong(tcp.getConnectTimeout());
             w.writeBoolean(tcp.isDirectBuffer());
@@ -1923,9 +1946,8 @@ public class PlatformConfigurationUtils {
                 .setIdleTimeout(in.readLong())
                 .setThinClientEnabled(in.readBoolean())
                 .setOdbcEnabled(in.readBoolean())
-                .setJdbcEnabled(in.readBoolean());
-
-        cfg.setHandshakeTimeout(in.readLong());
+                .setJdbcEnabled(in.readBoolean())
+                .setHandshakeTimeout(in.readLong());
 
         if (in.readBoolean()) {
             cfg.setThinClientConfiguration(new ThinClientConfiguration()
@@ -1963,7 +1985,7 @@ public class PlatformConfigurationUtils {
             w.writeBoolean(cfg.isOdbcEnabled());
             w.writeBoolean(cfg.isJdbcEnabled());
 
-            w.writeLong(cfg.getIdleTimeout());
+            w.writeLong(cfg.getHandshakeTimeout());
 
             ThinClientConfiguration thinCfg = cfg.getThinClientConfiguration();
 

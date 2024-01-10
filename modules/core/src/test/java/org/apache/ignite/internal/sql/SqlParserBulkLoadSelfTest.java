@@ -16,7 +16,14 @@
 
 package org.apache.ignite.internal.sql;
 
+import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationQuery;
+import org.apache.ignite.internal.processors.bulkload.BulkLoadLocationTable;
+import org.apache.ignite.internal.sql.command.SqlBulkLoadCommand;
+import org.apache.ignite.internal.sql.command.SqlCommand;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
+
+import java.util.Map;
 
 /**
  * Tests for SQL parser: COPY command.
@@ -27,7 +34,7 @@ public class SqlParserBulkLoadSelfTest extends SqlParserAbstractSelfTest {
     public void testCopy() {
         assertParseError(null,
             "copy grom 'any.file' into Person (_key, age, firstName, lastName) format csv",
-            "Unexpected token: \"GROM\" (expected: \"FROM\")");
+            "Unexpected token: \"GROM\" (expected: \"FROM\", \"INTO\")");
 
         assertParseError(null,
             "copy from into Person (_key, age, firstName, lastName) format csv",
@@ -35,15 +42,17 @@ public class SqlParserBulkLoadSelfTest extends SqlParserAbstractSelfTest {
 
         assertParseError(null,
             "copy from unquoted into Person (_key, age, firstName, lastName) format csv",
-            "Unexpected token: \"UNQUOTED\" (expected: \"[file name: string]\"");
+            "Unexpected token: \"INTO\" (expected: \"(\")");
 
         assertParseError(null,
             "copy from unquoted.file into Person (_key, age, firstName, lastName) format csv",
-            "Unexpected token: \"UNQUOTED\" (expected: \"[file name: string]\"");
+            "Unexpected token: \"INTO\" (expected: \"(\")");
 
         new SqlParser(null,
             "copy from '' into Person (_key, age, firstName, lastName) format csv")
             .nextCommand();
+
+        // File
 
         new SqlParser(null,
             "copy from 'd:/copy/from/into/format.csv' into Person (_key, age, firstName, lastName) format csv")
@@ -79,7 +88,7 @@ public class SqlParserBulkLoadSelfTest extends SqlParserAbstractSelfTest {
 
         assertParseError(null,
             "copy from 'any.file' to Person (_key, age, firstName, lastName) format csv",
-            "Unexpected token: \"TO\" (expected: \"INTO\")");
+            "Unexpected token: \"TO\" (expected: \"FROM\", \"INTO\")");
 
         // Column list
 
@@ -140,5 +149,89 @@ public class SqlParserBulkLoadSelfTest extends SqlParserAbstractSelfTest {
         assertParseError(null,
             "copy from 'any.file' into Person (_key, age, firstName, lastName) format csv charset ",
             "Unexpected end of command (expected: \"[string]\")");
+    }
+
+    @Test
+    public void testCopySubquery() {
+        String subquery = "select * from (select * from Person) as p";
+
+        SqlCommand cmd = new SqlParser(null,
+                "copy from (" + subquery + ") into 'any.file' format csv")
+                .nextCommand();
+        String actual = ((BulkLoadLocationQuery) ((SqlBulkLoadCommand) cmd).from()).sql();
+        assertEquals(subquery, actual);
+
+        assertParseError(null,
+                "copy from (select * from (select * from Person as p into 'any.file' format csv",
+                "Unexpected end of command (expected: \"[query: parenthesis]\")");
+
+        assertParseError(null,
+                "copy from select _key from (select * from Person) as p) into 'any.file' format csv",
+                "Unexpected token: \"_KEY\" (expected: \"(\"");
+    }
+
+    @Test
+    public void testCopyTable() {
+        SqlCommand cmd = new SqlParser(null, "COPY FROM \"schema\".\"person\" (_key, id) into 'any.file' format csv")
+                .nextCommand();
+        BulkLoadLocationTable from = (BulkLoadLocationTable) ((SqlBulkLoadCommand) cmd).from();
+        assertTrue(from.isSchemaNameQuoted());
+        assertTrue(from.isTableNameQuoted());
+
+        cmd = new SqlParser(null, "COPY FROM schema.person (_key, id) into 'any.file' format csv")
+                .nextCommand();
+        from = (BulkLoadLocationTable) ((SqlBulkLoadCommand) cmd).from();
+        assertFalse(from.isSchemaNameQuoted());
+        assertFalse(from.isTableNameQuoted());
+    }
+
+    @Test
+    public void testCopyParseProperties() {
+        String sql = "COPY FROM 'a' INTO 'b' FORMAT ICEBERG PROPERTIES ('warehouse'='path', 'catalog-impl'= 'impl1', 'io-impl' = 'impl2', 'UPPER' = 'CASE')";
+        SqlBulkLoadCommand cmd = (SqlBulkLoadCommand) new SqlParser(null, sql).nextCommand();
+
+        Map<String, String> actual = cmd.properties();
+        assertNotNull(actual);
+        assertEquals(actual.get("warehouse"), "path");
+        assertEquals(actual.get("catalog-impl"), "impl1");
+        assertEquals(actual.get("io-impl"), "impl2");
+
+        // case sensitive
+        assertNull(actual.get("WAREHOUSE"));
+        assertNull(actual.get("upper"));
+        assertEquals(actual.get("UPPER"), "CASE");
+
+        // immutable
+        GridTestUtils.assertThrows(log(), () -> actual.put("a", "b"),
+                UnsupportedOperationException.class, null);
+        assertEquals(actual.getClass().getSimpleName(), "UnmodifiableMap");
+
+        // quotes required
+        assertParseError(null,
+                "COPY FROM 'a' INTO 'b' FORMAT ICEBERG PROPERTIES (unquotedKey=unqotedVal)",
+                "Unexpected token: \"=UNQOTEDVAL\" (expected: \"=\")");
+    }
+
+    @Test
+    public void testLocationsOrder() {
+        new SqlParser(null,
+                "copy from 'any.file' into Person (_key, age, firstName, lastName) format csv")
+                .nextCommand();
+        new SqlParser(null,
+                "copy from Person (_key, age, firstName, lastName) into 'any.file' format csv")
+                .nextCommand();
+        new SqlParser(null,
+                "copy into 'any.file' from Person (_key, age, firstName, lastName) format csv")
+                .nextCommand();
+        new SqlParser(null,
+                "copy into Person (_key, age, firstName, lastName) from 'any.file' format csv")
+                .nextCommand();
+
+        assertParseError(null,
+                "copy into 'any.file' into Person (_key, age, firstName, lastName) format csv",
+                "(expected both locations: \"FROM\", \"INTO\")");
+        assertParseError(null,
+                "copy from 'any.file' from Person (_key, age, firstName, lastName) format csv",
+                "(expected both locations: \"FROM\", \"INTO\")");
     }
 }

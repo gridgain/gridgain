@@ -43,7 +43,10 @@ namespace Apache.Ignite.Core.Tests.Compute
         private const string JavaBinaryCls = "PlatformComputeJavaBinarizable";
 
         /** */
-        public const string DefaultCacheName = "default";
+        private const string DefaultCacheName = "default";
+
+        /** */
+        private const string CacheName2 = "cache1";
 
         /** First node. */
         private IIgnite _grid1;
@@ -67,12 +70,14 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             _grid1 = Ignition.Start(Configuration(configs.Item1));
             _grid2 = Ignition.Start(Configuration(configs.Item2));
-
-            AffinityTopologyVersion waitingTop = new AffinityTopologyVersion(2, 1);
-
-            Assert.True(_grid1.WaitTopology(waitingTop), "Failed to wait topology " + waitingTop);
-
             _grid3 = Ignition.Start(Configuration(configs.Item3));
+
+            var ver = new AffinityTopologyVersion(3, 0);
+
+            foreach (var cacheName in new[] { DefaultCacheName, CacheName2 })
+            {
+                Assert.True(_grid1.WaitForRebalance(cacheName, ver), "Failed to wait for rebalance on " + cacheName);
+            }
 
             // Start thin client.
             _igniteClient = Ignition.StartClient(GetThinClientConfiguration());
@@ -751,27 +756,32 @@ namespace Apache.Ignite.Core.Tests.Compute
             const string cacheName = DefaultCacheName;
 
             // Test keys for non-client nodes
-            var nodes = new[] {_grid1, _grid2}.Select(x => x.GetCluster().GetLocalNode());
-
             var aff = _grid1.GetAffinity(cacheName);
+            int i = 0;
 
-            foreach (var node in nodes)
+            foreach (var grid in new[] {_grid1, _grid2})
             {
-                var primaryKey = TestUtils.GetPrimaryKey(_grid1, cacheName, node);
-
-                var affinityKey = aff.GetAffinityKey<int, int>(primaryKey);
-
-                var computeAction = new ComputeAction
+                var node = grid.GetCluster().GetLocalNode();
+                foreach (var primaryKey in TestUtils.GetPrimaryKeys(_grid1, cacheName, node).Take(5))
                 {
-                    ReservedPartition = aff.GetPartition(primaryKey),
-                    CacheNames = new[] {cacheName}
-                };
+                    i++;
 
-                _grid1.GetCompute().AffinityRun(cacheName, affinityKey, computeAction);
-                Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
+                    var affinityKey = aff.GetAffinityKey<int, int>(primaryKey);
+                    var partition = aff.GetPartition(primaryKey);
 
-                _grid1.GetCompute().AffinityRunAsync(cacheName, affinityKey, computeAction).Wait();
-                Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
+                    var computeAction = new ComputeAction
+                    {
+                        ReservedPartition = partition,
+                        CacheNames = new[] { cacheName },
+                        Id = Guid.NewGuid()
+                    };
+
+                    _grid1.GetCompute().AffinityRun(cacheName, affinityKey, computeAction);
+                    Assert.AreEqual(node.Id, ComputeAction.ActionIdToNodeId[computeAction.Id], $"Run {i} failed");
+
+                    _grid1.GetCompute().AffinityRunAsync(cacheName, affinityKey, computeAction).Wait();
+                    Assert.AreEqual(node.Id, ComputeAction.ActionIdToNodeId[computeAction.Id], $"Async run {i} failed");
+                }
             }
         }
 
@@ -834,9 +844,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             Assert.AreEqual(localNode.Id, ComputeFunc.LastNodeId);
 
             // Two caches.
-            var cache = _grid1.CreateCache<int, int>(TestUtils.TestName);
-
-            res = action(new[] {cacheName, cache.Name});
+            res = action(new[] {cacheName, CacheName2});
 
             Assert.AreEqual(res, ComputeFunc.InvokeCount);
             Assert.AreEqual(localNode.Id, ComputeFunc.LastNodeId);
@@ -863,8 +871,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             if (multiCache)
             {
-                var cache2 = _grid1.CreateCache<int, int>(TestUtils.TestName);
-                cacheNames.Add(cache2.Name);
+                cacheNames.Add(CacheName2);
             }
 
             var node = local
@@ -880,7 +887,8 @@ namespace Apache.Ignite.Core.Tests.Compute
             var computeAction = new ComputeAction
             {
                 ReservedPartition = part,
-                CacheNames = cacheNames
+                CacheNames = cacheNames,
+                Id = Guid.NewGuid()
             };
 
             var action = async
@@ -889,7 +897,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             // Good case.
             action();
-            Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
+            Assert.AreEqual(node.Id, ComputeAction.ActionIdToNodeId[computeAction.Id]);
 
             // Exception in user code.
             computeAction.ShouldThrow = true;
@@ -1155,7 +1163,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
         public static ConcurrentBag<Guid> Invokes = new ConcurrentBag<Guid>();
 
-        public static Guid LastNodeId;
+        public static ConcurrentDictionary<Guid, Guid> ActionIdToNodeId = new ConcurrentDictionary<Guid, Guid>();
 
         public Guid Id { get; set; }
 
@@ -1179,7 +1187,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         {
             Thread.Sleep(10);
             Invokes.Add(Id);
-            LastNodeId = _grid.GetCluster().GetLocalNode().Id;
+            ActionIdToNodeId[Id] = _grid.GetCluster().GetLocalNode().Id;
 
             if (ReservedPartition != null)
             {

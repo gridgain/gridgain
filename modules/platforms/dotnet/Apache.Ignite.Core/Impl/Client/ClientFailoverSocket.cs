@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Impl.Client
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
@@ -94,6 +95,11 @@ namespace Apache.Ignite.Core.Impl.Client
 
         /** Logger. */
         private readonly ILogger _logger;
+
+        /** Key types that are not supported in partition awareness.
+         * We log warning once for those types, then bypass partition awareness for them. */
+        private readonly ConcurrentDictionary<Type, object> _partitionAwarenessUnsupportedKeyTypes =
+            new ConcurrentDictionary<Type, object>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClientFailoverSocket"/> class.
@@ -361,9 +367,8 @@ namespace Apache.Ignite.Core.Impl.Client
 
             var distributionMap = _distributionMap;
             var socketMap = _nodeSocketMap;
-            ClientCachePartitionMap cachePartMap;
 
-            if (socketMap == null || !distributionMap.CachePartitionMap.TryGetValue(cacheId, out cachePartMap))
+            if (socketMap == null || !distributionMap.CachePartitionMap.TryGetValue(cacheId, out var cachePartMap))
             {
                 return null;
             }
@@ -374,10 +379,13 @@ namespace Apache.Ignite.Core.Impl.Client
             }
 
             var partition = GetPartition(key, cachePartMap.PartitionNodeIds.Count, cachePartMap.KeyConfiguration);
-            var nodeId = cachePartMap.PartitionNodeIds[partition];
+            if (partition == null)
+            {
+                return null;
+            }
 
-            ClientSocket socket;
-            if (socketMap.TryGetValue(nodeId, out socket) && !socket.IsDisposed)
+            var nodeId = cachePartMap.PartitionNodeIds[partition.Value];
+            if (socketMap.TryGetValue(nodeId, out var socket) && !socket.IsDisposed)
             {
                 return socket;
             }
@@ -508,7 +516,12 @@ namespace Apache.Ignite.Core.Impl.Client
                 );
             }
 
-            if (!_socket.Features.HasFeature(ClientBitmaskFeature.ClusterGroupGetNodesEndpoints))
+            if (!_config.EnableClusterDiscovery)
+            {
+                _enableDiscovery = false;
+            }
+
+            if (_enableDiscovery && !_socket.Features.HasFeature(ClientBitmaskFeature.ClusterGroupGetNodesEndpoints))
             {
                 _enableDiscovery = false;
 
@@ -586,27 +599,34 @@ namespace Apache.Ignite.Core.Impl.Client
         {
             _affinityTopologyVersion = affinityTopologyVersion;
 
-            if (_discoveryTopologyVersion < affinityTopologyVersion.Version &&_config.EnablePartitionAwareness)
+            if (!_config.EnablePartitionAwareness && !_enableDiscovery)
             {
-                ThreadPool.QueueUserWorkItem(_ =>
+                return;
+            }
+
+            if (_discoveryTopologyVersion >= affinityTopologyVersion.Version)
+            {
+                return;
+            }
+
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
                 {
-                    try
+                    lock (_topologyUpdateLock)
                     {
-                        lock (_topologyUpdateLock)
+                        if (!_disposed)
                         {
-                            if (!_disposed)
-                            {
-                                DiscoverEndpoints();
-                                InitSocketMap();
-                            }
+                            DiscoverEndpoints();
+                            InitSocketMap();
                         }
                     }
-                    catch (Exception e)
-                    {
-                        _logger.Log(LogLevel.Error, e, "Failed to update topology information");
-                    }
-                });
-            }
+                }
+                catch (Exception e)
+                {
+                    _logger.Log(LogLevel.Error, e, "Failed to update topology information");
+                }
+            });
         }
 
         /// <summary>
@@ -785,10 +805,28 @@ namespace Apache.Ignite.Core.Impl.Client
             }
         }
 
-        private int GetPartition<TKey>(TKey key, int partitionCount, IDictionary<int, int> keyConfiguration)
+        private int? GetPartition<TKey>(TKey key, int partitionCount, IDictionary<int, int> keyConfiguration)
         {
+            var keyType = key.GetType();
+            if (_partitionAwarenessUnsupportedKeyTypes.ContainsKey(keyType))
+            {
+                return null;
+            }
+
             var keyHash = BinaryHashCodeUtils.GetHashCode(key, _marsh, keyConfiguration);
-            return ClientRendezvousAffinityFunction.GetPartitionForKey(keyHash, partitionCount);
+
+            if (keyHash == null)
+            {
+                if (_partitionAwarenessUnsupportedKeyTypes.TryAdd(keyType, null))
+                {
+                    // Log warning only once for the given type.
+                    _logger.Warn("Failed to compute partition awareness hash code for type '{0}'", keyType);
+                }
+
+                return null;
+            }
+
+            return ClientRendezvousAffinityFunction.GetPartitionForKey(keyHash.Value, partitionCount);
         }
 
         private void InitSocketMap()

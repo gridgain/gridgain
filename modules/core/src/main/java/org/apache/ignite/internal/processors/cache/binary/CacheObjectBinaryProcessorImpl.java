@@ -77,11 +77,13 @@ import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectByteArrayImpl;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
+import org.apache.ignite.internal.processors.cache.CacheObjectShadow;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheDefaultAffinityKeyMapper;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.IncompleteCacheObject;
+import org.apache.ignite.internal.processors.cache.IncompleteCacheObjectShadow;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
@@ -1272,18 +1274,27 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public IncompleteCacheObject toCacheObject(CacheObjectContext ctx, ByteBuffer buf,
-        @Nullable IncompleteCacheObject incompleteObj) {
+    @Override public IncompleteCacheObject toCacheObject(
+        CacheObjectContext ctx,
+        ByteBuffer buf,
+        @Nullable IncompleteCacheObject incompleteObj,
+        boolean createShadow,
+        boolean completeShadowFast
+    ) {
         if (incompleteObj == null)
-            incompleteObj = new IncompleteCacheObject(buf);
+            incompleteObj = createShadow ? new IncompleteCacheObjectShadow(buf, completeShadowFast) : new IncompleteCacheObject(buf);
 
         if (incompleteObj.isReady())
             return incompleteObj;
 
         incompleteObj.readData(buf);
 
-        if (incompleteObj.isReady())
-            incompleteObj.object(toCacheObject(ctx, incompleteObj.type(), incompleteObj.data()));
+        if (incompleteObj.isReady()) {
+            CacheObject obj = createShadow ? new CacheObjectShadow(incompleteObj.type(), incompleteObj.dataLength()) :
+                toCacheObject(ctx, incompleteObj.type(), incompleteObj.data());
+
+            incompleteObj.object(obj);
+        }
 
         return incompleteObj;
     }

@@ -16,25 +16,54 @@
 
 package org.apache.ignite.internal.processors.security.client;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAuthenticationException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.client.ClientAuthenticationException;
 import org.apache.ignite.client.IgniteClient;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientAuthenticationException;
+import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.client.GridClientFactory;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
+import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.lifecycle.LifecycleBean;
+import org.apache.ignite.lifecycle.LifecycleEventType;
+import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+
 /**
  * Security tests for thin client.
  */
 @RunWith(JUnit4.class)
 public class AdditionalSecurityCheckTest extends CommonSecurityCheckTest {
+    /** */
+    private LifecycleBean lifecycleBean;
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String instanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(instanceName);
+
+        if (lifecycleBean != null)
+            cfg.setLifecycleBeans(lifecycleBean);
+
+        return cfg;
+    }
+
     /**
      *
      */
@@ -151,5 +180,67 @@ public class AdditionalSecurityCheckTest extends CommonSecurityCheckTest {
             "Authentication failed");
 
         assertEquals(1, ignite.cluster().topologyVersion());
+    }
+
+    /**
+     * Tests that the authentication request can be handled before a node is considered as completely started.
+     *
+     * @throws Exception If fails.
+     */
+    @Test
+    public void testAuthenticationBeforeNodeStart() throws Exception {
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch contLatch = new CountDownLatch(1);
+        AtomicReference<Exception> err = new AtomicReference<>();
+
+        // Lifecycle bean that is used to block node start.
+        lifecycleBean = new LifecycleBean() {
+            /** Ignite instance. */
+            @IgniteInstanceResource
+            IgniteEx ignite;
+
+            /** {@inheritDoc} */
+            @Override public void onLifecycleEvent(LifecycleEventType evt) throws IgniteException {
+                if (evt == LifecycleEventType.BEFORE_NODE_START) {
+                    ignite.context().internalSubscriptionProcessor()
+                        .registerDistributedMetastorageListener(new DistributedMetastorageLifecycleListener() {
+                            @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
+                                try {
+                                    startLatch.countDown();
+
+                                    if (!contLatch.await(30, SECONDS))
+                                        throw new RuntimeException("Failed to wait for a latch to continue node start.");
+                                }
+                                catch (Exception e) {
+                                    err.set(e);
+                                }
+                            }
+                        });
+                }
+            }
+        };
+
+        IgniteInternalFuture<?> startFut = runAsync(() -> {
+            startGrid(0);
+        });
+
+        assertTrue("Failed to wait for starting node.", startLatch.await(10, SECONDS));
+
+        try (GridClient client = GridClientFactory.start(getGridClientConfiguration().setConnectTimeout(3_000))) {
+            GridClientException clientErr = client.checkLastError();
+
+            contLatch.countDown();
+
+            assertFalse(X.hasCause(
+                clientErr,
+                "Failed to process client request: Ouch! Argument cannot be null: node",
+                GridClientException.class));
+        }
+
+        startFut.get(30, SECONDS);
+
+        Exception unexpectedErr = err.get();
+
+        assertNull("Unexpected error [err=" + unexpectedErr + ']', unexpectedErr);
     }
 }

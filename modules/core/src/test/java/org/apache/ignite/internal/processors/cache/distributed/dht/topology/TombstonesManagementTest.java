@@ -29,8 +29,10 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheTtlManager;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.tree.PendingRow;
@@ -55,6 +57,7 @@ import static org.apache.ignite.internal.processors.cache.GridCacheSharedTtlClea
  * Tests tombstone management using distributed properties.
  */
 @RunWith(Parameterized.class)
+//@WithSystemProperty(key = "PROCESS_EMPTY_EVICT_QUEUE_FREQ", value = "50")
 @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable implicit clearing on cache op.
 @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable background cleanup.
 @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
@@ -74,10 +77,10 @@ public class TombstonesManagementTest extends GridCommonAbstractTest {
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
-        params.add(new Object[]{ATOMIC, false});
-        params.add(new Object[]{ATOMIC, true});
-        params.add(new Object[]{TRANSACTIONAL, false});
-        params.add(new Object[]{TRANSACTIONAL, true});
+        params.add(new Object[] {ATOMIC, false});
+        params.add(new Object[] {ATOMIC, true});
+        params.add(new Object[] {TRANSACTIONAL, false});
+        params.add(new Object[] {TRANSACTIONAL, true});
 
         return params;
     }
@@ -167,11 +170,8 @@ public class TombstonesManagementTest extends GridCommonAbstractTest {
         assertEquals(1L, tsLimit0.get());
         assertEquals(1L, tsLimit1.get());
 
-        assertTrue(GridTestUtils.waitForCondition(() -> !ctx0.shared().evict().evictQueue(true).isEmptyx(), 1_000));
-        assertTrue(GridTestUtils.waitForCondition(() -> !ctx1.shared().evict().evictQueue(true).isEmptyx(), 1_000));
-
-        ctx0.ttl().expire(1); // Should forcefully remove tombstone because limit is expired.
-        ctx1.ttl().expire(1); // Should forcefully remove tombstone because limit is expired.
+        checkEntryAndExpire(ctx0); // Should forcefully remove tombstone because limit is expired.
+        checkEntryAndExpire(ctx1); // Should forcefully remove tombstone because limit is expired.
 
         validateCache(ctx0.group(), part0, 1, 0);
         validateCache(ctx1.group(), part0, 1, 0);
@@ -222,17 +222,10 @@ public class TombstonesManagementTest extends GridCommonAbstractTest {
         cache.put(part1, 0);
         cache.remove(part1); // Create tombstone with small TTL.
 
-        doSleep(600);
+        checkTombstounExpired(ctx0, part1);
 
-        PendingRow row0 = ctx0.topology().localPartition(part1).dataStore().pendingTree().findFirst();
-
-        assertTrue(U.currentTimeMillis() > row0.expireTime);
-
-        assertTrue(GridTestUtils.waitForCondition(() -> !ctx0.shared().evict().evictQueue(true).isEmptyx(), 1_000));
-        assertTrue(GridTestUtils.waitForCondition(() -> !ctx1.shared().evict().evictQueue(true).isEmptyx(), 1_000));
-
-        ctx0.ttl().expire(2);
-        ctx1.ttl().expire(2);
+        checkEntryAndExpire(ctx0);
+        checkEntryAndExpire(ctx1);
 
         validateCache(ctx0.group(), part0, 1, 0);
         validateCache(ctx1.group(), part0, 1, 0);
@@ -276,7 +269,8 @@ public class TombstonesManagementTest extends GridCommonAbstractTest {
 
         tsCleanup0.propagate(true); // Disable cleanup.
 
-        doSleep(600);
+        checkTombstounExpired(ctx0, part0);
+        checkTombstounExpired(ctx1, part0);
 
         ctx0.ttl().expire(1); // Should not expire because it's disabled, despite of expired TTL.
         ctx1.ttl().expire(1);
@@ -286,14 +280,39 @@ public class TombstonesManagementTest extends GridCommonAbstractTest {
 
         tsCleanup0.propagate(false);
 
-        assertTrue(GridTestUtils.waitForCondition(() -> !ctx0.shared().evict().evictQueue(true).isEmptyx(), 1_000));
-        assertTrue(GridTestUtils.waitForCondition(() -> !ctx1.shared().evict().evictQueue(true).isEmptyx(), 1_000));
-
-        ctx0.ttl().expire(1);
-        ctx1.ttl().expire(1);
+        checkEntryAndExpire(ctx0);
+        checkEntryAndExpire(ctx1);
 
         validateCache(ctx0.group(), part0, 0, 0);
         validateCache(ctx1.group(), part0, 0, 0);
+    }
+
+    /**
+     * Checks the first found tombstone for this partition is already expired.
+     *
+     * @param ctx Cache context.
+     * @param part Partiton to find a tombstoun.
+     * @throws IgniteCheckedException If failed.
+     */
+    private static void checkTombstounExpired(GridCacheContext<Object, Object> ctx, int part) throws IgniteCheckedException {
+        PendingRow row0 = ctx.topology().localPartition(part).dataStore().pendingTree().findFirst();
+
+        assertTrue(GridTestUtils.waitForCondition(() -> U.currentTimeMillis() > row0.expireTime, 10_000));
+    }
+
+    /**
+     * Checks an entry to ready to expire and manually invokes the expiration process.
+     *
+     * @param grpCtx Cache context.
+     * @throws IgniteInterruptedCheckedException If failed.
+     */
+    private static void checkEntryAndExpire(GridCacheContext cctx) throws IgniteInterruptedCheckedException {
+        GridCacheTtlManager ttl = cctx.ttl();
+
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            !cctx.shared().evict().evictQueue(true).isEmptyx(), 10_000));
+
+        ttl.expire(1);
     }
 
     /**

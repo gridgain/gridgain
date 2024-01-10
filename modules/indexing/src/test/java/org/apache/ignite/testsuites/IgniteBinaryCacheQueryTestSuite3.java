@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.metric.SystemViewSelfTest;
 import org.apache.ignite.internal.processors.cache.BigEntryQueryTest;
 import org.apache.ignite.internal.processors.cache.BinaryMetadataConcurrentUpdateWithIndexesTest;
@@ -95,6 +96,7 @@ import org.apache.ignite.internal.processors.cache.query.ScanQueryConcurrentSqlU
 import org.apache.ignite.internal.processors.cache.query.ScanQueryConcurrentUpdatesTest;
 import org.apache.ignite.internal.processors.query.IgniteQueryDedicatedPoolTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlCustomAggregationTest;
+import org.apache.ignite.internal.processors.query.IgniteSqlCustomFunctionTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlCustomSchemaTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlCustomSchemaWithPdsEnabled;
 import org.apache.ignite.internal.processors.query.IgniteSqlDefaultSchemaTest;
@@ -153,6 +155,8 @@ import org.apache.ignite.internal.processors.sql.IgniteSQLColumnConstraintsTest;
 import org.apache.ignite.internal.processors.sql.IgniteTransactionSQLColumnConstraintTest;
 import org.apache.ignite.internal.sql.SqlParserUserSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridOrderedMessageCancelSelfTest;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -307,6 +311,9 @@ import org.junit.runners.Suite;
     // Custom aggregations functions
     IgniteSqlCustomAggregationTest.class,
 
+    // Custom sql functions
+    IgniteSqlCustomFunctionTest.class,
+
     // Binary
     BinarySerializationQuerySelfTest.class,
     BinarySerializationQueryWithReflectiveSerializerSelfTest.class,
@@ -352,4 +359,9 @@ import org.junit.runners.Suite;
     SystemViewSelfTest.class,
 })
 public class IgniteBinaryCacheQueryTestSuite3 {
+    /** Setup lazy mode default. */
+    @BeforeClass
+    public static void setupLazy() {
+        GridTestUtils.setFieldValue(SqlFieldsQuery.class, "DFLT_LAZY", false);
+    }
 }

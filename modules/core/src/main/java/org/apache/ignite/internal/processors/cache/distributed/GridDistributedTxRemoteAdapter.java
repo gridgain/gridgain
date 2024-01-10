@@ -837,6 +837,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                         cctx.mvccCaching().onTxFinished(this, true);
 
+                        // in case of a mixed data entries, only those that have WAL enabled will be logged.
                         if (!near() && !F.isEmpty(dataEntries)) {
                             logKeysToPendingTxsTracker(dataEntries);
 

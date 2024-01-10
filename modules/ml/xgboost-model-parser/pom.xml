@@ -28,14 +28,13 @@
     </properties>
 
     <parent>
-        <artifactId>community.parent</artifactId>
         <groupId>org.gridgain</groupId>
-        <version>1</version>
-        <relativePath>../../../parent</relativePath>
+        <artifactId>ignite-parent-internal</artifactId>
+        <version>8.9.127-SNAPSHOT</version>
+        <relativePath>../../../parent-internal/pom.xml</relativePath>
     </parent>
 
     <artifactId>ignite-ml-xgboost-model-parser</artifactId>
-    <version>8.8.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <build>

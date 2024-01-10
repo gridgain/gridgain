@@ -918,7 +918,7 @@ public class VisorTaskUtils {
      */
     public static List<Process> startLocalNode(@Nullable IgniteLogger log, String cfgPath, int nodesToStart,
         boolean quite, Map<String, String> envVars) throws IOException {
-        String quitePar = quite ? "" : "-v";
+        String quitePar = quite ? "-q" : "-v";
 
         String cmdFile = new File("bin", U.isWindows() ? "ignite.bat" : "ignite.sh").getPath();
 

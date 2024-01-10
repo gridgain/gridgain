@@ -39,7 +39,7 @@ import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.cache.GridCacheProcessor.TIMEOUT_OUTPUT_RESTORE_PARTITION_STATE_PROGRESS;
+import static org.apache.ignite.internal.processors.cache.GridCacheProcessor.FORCE_OUTPUT_RESTORE_PARTITION_STATE_PROGRESS;
 import static org.apache.ignite.internal.processors.cache.GridCacheProcessor.processedPartitionComparator;
 import static org.apache.ignite.internal.processors.cache.GridCacheProcessor.toStringTopProcessingPartitions;
 import static org.apache.ignite.internal.processors.cache.GridCacheProcessor.trimToSize;
@@ -48,8 +48,11 @@ import static org.apache.ignite.internal.processors.cache.GridCacheProcessor.tri
  * Class for testing the restoration of the status of partitions.
  */
 public class RestorePartitionStateTest extends GridCommonAbstractTest {
-    /** Timeout for displaying the progress of restoring the status of partitions. */
-    private long timeoutOutputRestoreProgress;
+    /**
+     * Saved 'force' flag for displaying the progress of restoring the status of partitions (used to restore the flag
+     * after test).
+     */
+    private boolean savedForceOutputRestoreProgress;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -58,7 +61,7 @@ public class RestorePartitionStateTest extends GridCommonAbstractTest {
         stopAllGrids();
         cleanPersistenceDir();
 
-        timeoutOutputRestoreProgress = TIMEOUT_OUTPUT_RESTORE_PARTITION_STATE_PROGRESS;
+        savedForceOutputRestoreProgress = FORCE_OUTPUT_RESTORE_PARTITION_STATE_PROGRESS;
     }
 
     /** {@inheritDoc} */
@@ -68,7 +71,7 @@ public class RestorePartitionStateTest extends GridCommonAbstractTest {
         stopAllGrids();
         cleanPersistenceDir();
 
-        TIMEOUT_OUTPUT_RESTORE_PARTITION_STATE_PROGRESS = timeoutOutputRestoreProgress;
+        FORCE_OUTPUT_RESTORE_PARTITION_STATE_PROGRESS = savedForceOutputRestoreProgress;
     }
 
     /** {@inheritDoc} */
@@ -201,7 +204,7 @@ public class RestorePartitionStateTest extends GridCommonAbstractTest {
         LogListener finishPartRestore = LogListener.matches("Finished restoring partition state for local groups")
             .andMatches("topProcessedPartitions").build();
 
-        TIMEOUT_OUTPUT_RESTORE_PARTITION_STATE_PROGRESS = 150L;
+        FORCE_OUTPUT_RESTORE_PARTITION_STATE_PROGRESS = true;
 
         setRootLoggerDebugLevel();
 
@@ -210,7 +213,7 @@ public class RestorePartitionStateTest extends GridCommonAbstractTest {
         });
 
         assertTrue(startPartRestore.check());
-        assertTrue(progressPartRestore.check());
+        assertTrue("Did not see an expected information in the log about restoration progress", progressPartRestore.check());
         assertTrue(finishPartRestore.check());
     }
 }

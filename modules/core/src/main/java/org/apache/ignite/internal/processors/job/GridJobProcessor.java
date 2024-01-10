@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.JobEvent;
 import org.apache.ignite.events.TaskEvent;
+import org.apache.ignite.events.TaskWithAttributesEvent;
 import org.apache.ignite.internal.GridJobCancelRequest;
 import org.apache.ignite.internal.GridJobContextImpl;
 import org.apache.ignite.internal.GridJobExecuteRequest;
@@ -114,6 +115,8 @@ import static org.apache.ignite.internal.GridTopic.TOPIC_JOB;
 import static org.apache.ignite.internal.GridTopic.TOPIC_JOB_CANCEL;
 import static org.apache.ignite.internal.GridTopic.TOPIC_JOB_SIBLINGS;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TASK;
+import static org.apache.ignite.internal.IgniteFeatures.TASK_EVT_ATTRIBUTE_SUPPORT;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.makeUpdateListener;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.MANAGEMENT_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
@@ -1134,6 +1137,11 @@ public class GridJobProcessor extends GridProcessorAdapter {
         for (GridJobWorker jobWorker : activeJobs.values()) {
             assert !jobWorker.isInternal();
 
+            IgniteUuid jobId = jobWorker.getJobId();
+
+            if (finishedJobs.contains(jobId) || cancelledJobs.containsKey(jobId))
+                continue;
+
             cnt++;
 
             if (!jobWorker.held()) {
@@ -1737,17 +1745,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
                     U.resolveClassLoader(ses.getClassLoader(), ctx.config()));
 
             if (ctx.event().isRecordable(EVT_TASK_SESSION_ATTR_SET)) {
-                Event evt = new TaskEvent(
-                    ctx.discovery().localNode(),
-                    "Changed attributes: " + attrs,
-                    EVT_TASK_SESSION_ATTR_SET,
-                    ses.getId(),
-                    ses.getTaskName(),
-                    ses.getTaskClassName(),
-                    false,
-                    null);
-
-                ctx.event().record(evt);
+                recordTaskEvent(attrs, ses);
             }
 
             synchronized (ses) {
@@ -2436,5 +2434,38 @@ public class GridJobProcessor extends GridProcessorAdapter {
      */
     public long computeJobWorkerInterruptTimeout() {
         return computeJobWorkerInterruptTimeout.getOrDefault(ctx.config().getFailureDetectionTimeout());
+    }
+
+    /**
+     * @param attrs Attributes set.
+     * @param ses Internal session.
+     */
+    public void recordTaskEvent(Map<?, ?> attrs, GridTaskSessionImpl ses) {
+        Event evt;
+
+        if (allNodesSupport(ctx, TASK_EVT_ATTRIBUTE_SUPPORT)) {
+            evt = new TaskWithAttributesEvent(
+                    ctx.discovery().localNode(),
+                    "Changed attributes: " + attrs,
+                    EVT_TASK_SESSION_ATTR_SET,
+                    ses.getId(),
+                    ses.getTaskName(),
+                    ses.getTaskClassName(),
+                    false,
+                    null,
+                    ses.isFullSupport() ? ses.getAttributes() : null);
+        } else {
+            evt = new TaskEvent(
+                    ctx.discovery().localNode(),
+                    "Changed attributes: " + attrs,
+                    EVT_TASK_SESSION_ATTR_SET,
+                    ses.getId(),
+                    ses.getTaskName(),
+                    ses.getTaskClassName(),
+                    false,
+                    null);
+        }
+
+        ctx.event().record(evt);
     }
 }

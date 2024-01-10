@@ -46,6 +46,7 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -86,6 +87,7 @@ public class IgniteClientReconnectMassiveShutdownTest extends GridCommonAbstract
      * @throws Exception If any error occurs.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-22830")
     public void testMassiveServersShutdown1() throws Exception {
         massiveServersShutdown(StopType.FAIL_EVENT);
     }

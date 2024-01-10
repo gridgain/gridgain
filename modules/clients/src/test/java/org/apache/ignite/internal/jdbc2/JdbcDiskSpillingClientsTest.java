@@ -32,7 +32,7 @@ public class JdbcDiskSpillingClientsTest extends JdbcThinDiskSpillingClientsTest
     protected static class Jdbc2Client extends JdbcThinClient {
         @Override protected String getConnectionString() {
             return "jdbc:ignite:cfg://" +
-                "queryMaxMemory=" + SMALL_MEM_LIMIT +
+                "queryMaxMemory=" + SMALL_MEM_LIMIT + ":lazy=false" +
                 "@modules/clients/src/test/config/jdbc-config-offload.xml";
         }
     }

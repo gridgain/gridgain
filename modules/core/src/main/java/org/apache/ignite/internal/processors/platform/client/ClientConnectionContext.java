@@ -234,7 +234,7 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
             }
         }
 
-        authenticate(ses.certificates(), user, pwd);
+        authenticate(ses.remoteAddress(), ses.certificates(), user, pwd);
 
         initClientDescriptor("cli");
 

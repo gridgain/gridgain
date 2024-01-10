@@ -58,6 +58,9 @@ public class GridNearSingleGetRequest extends GridCacheIdMessage implements Grid
     /** */
     public static final int RECOVERY_FLAG_MASK = 0x20;
 
+    /** */
+    public static final int TOUCH_TTL_FLAG_MASK = 0x40;
+
     /** Future ID. */
     private long futId;
 
@@ -112,6 +115,7 @@ public class GridNearSingleGetRequest extends GridCacheIdMessage implements Grid
      * @param addDepInfo Deployment info.
      * @param txLbl Transaction label.
      * @param mvccSnapshot MVCC snapshot.
+     * @param touchTtl Indicates that operation requires just update the time to live value.
      */
     public GridNearSingleGetRequest(
         int cacheId,
@@ -129,7 +133,8 @@ public class GridNearSingleGetRequest extends GridCacheIdMessage implements Grid
         boolean addDepInfo,
         boolean recovery,
         @Nullable String txLbl,
-        MvccSnapshot mvccSnapshot
+        MvccSnapshot mvccSnapshot,
+        boolean touchTtl
     ) {
         assert key != null;
 
@@ -159,6 +164,9 @@ public class GridNearSingleGetRequest extends GridCacheIdMessage implements Grid
 
         if (recovery)
             flags |= RECOVERY_FLAG_MASK;
+
+        if (touchTtl)
+            flags |= TOUCH_TTL_FLAG_MASK;
     }
 
     /**
@@ -275,6 +283,13 @@ public class GridNearSingleGetRequest extends GridCacheIdMessage implements Grid
      */
     public boolean recovery() {
         return (flags & RECOVERY_FLAG_MASK) != 0;
+    }
+
+    /**
+     * @return {@code True} if touch ttl flag is set.
+     */
+    public boolean touchTtl() {
+        return (flags & TOUCH_TTL_FLAG_MASK) != 0;
     }
 
     /** {@inheritDoc} */

@@ -1,0 +1,13 @@
+# name: test/sql/types/collections/list.test_slow
+# description: Test big list
+# group: [collections]
+# [ignore] Not supported (list)
+
+statement ok
+CREATE TABLE test(i INT, j INT);
+INSERT INTO test SELECT x i, 0 as j FROM system_range(0, 69999);
+
+query I
+SELECT list(i)[69999] FROM test GROUP BY j;
+----
+69999

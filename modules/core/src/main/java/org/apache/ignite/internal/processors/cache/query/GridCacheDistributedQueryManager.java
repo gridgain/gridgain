@@ -96,28 +96,29 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
     };
 
     /** Event listener. */
-    private GridLocalEventListener lsnr;
+    private GridLocalEventListener lsnr = new GridLocalEventListener() {
+        /** {@inheritDoc} */
+        @Override public void onEvent(Event evt) {
+            DiscoveryEvent discoEvt = (DiscoveryEvent)evt;
+
+            for (GridCacheDistributedQueryFuture fut : futs.values())
+                fut.onNodeLeft(discoEvt.eventNode().id());
+        }
+    };
 
     /** {@inheritDoc} */
-    @Override public void start0() throws IgniteCheckedException {
-        super.start0();
+    @Override public void onKernalStart0() throws IgniteCheckedException {
+        super.onKernalStart0();
 
         assert cctx.config().getCacheMode() != LOCAL;
 
-        cctx.io().addCacheHandler(cctx.cacheId(), GridCacheQueryRequest.class, new CI2<UUID, GridCacheQueryRequest>() {
-            @Override public void apply(UUID nodeId, GridCacheQueryRequest req) {
-                processQueryRequest(nodeId, req);
-            }
-        });
+        assert !cctx.isRecoveryMode() : "Registering message handlers in recovery mode [cacheName=" + cctx.name() + ']';
 
-        lsnr = new GridLocalEventListener() {
-            @Override public void onEvent(Event evt) {
-                DiscoveryEvent discoEvt = (DiscoveryEvent)evt;
-
-                for (GridCacheDistributedQueryFuture fut : futs.values())
-                    fut.onNodeLeft(discoEvt.eventNode().id());
-            }
-        };
+        cctx.io().addCacheHandler(
+            cctx.cacheId(),
+            cctx.startTopologyVersion(),
+            GridCacheQueryRequest.class,
+            (CI2<UUID, GridCacheQueryRequest>)this::processQueryRequest);
 
         cctx.events().addListener(lsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
     }
@@ -560,7 +561,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
                 qry.query().keepBinary(),
                 qry.query().subjectId(),
                 qry.query().taskHash(),
-                queryTopologyVersion(),
+                cctx.affinity().affinityTopologyVersion(),
                 mvccSnapshot,
                 // Force deployment anyway if scan query is used.
                 cctx.deploymentEnabled() || deployFilterOrTransformer,
@@ -693,7 +694,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
                 qry.keepBinary(),
                 qry.subjectId(),
                 qry.taskHash(),
-                queryTopologyVersion(),
+                cctx.affinity().affinityTopologyVersion(),
                 // Force deployment anyway if scan query is used.
                 cctx.deploymentEnabled() || (qry.scanFilter() != null && cctx.gridDeploy().enabled()),
                 qry.isDataPageScanEnabled());
@@ -761,7 +762,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
                 qry.query().keepBinary(),
                 qry.query().subjectId(),
                 qry.query().taskHash(),
-                queryTopologyVersion(),
+                cctx.affinity().affinityTopologyVersion(),
                 null,
                 cctx.deploymentEnabled(),
                 qry.query().isDataPageScanEnabled());

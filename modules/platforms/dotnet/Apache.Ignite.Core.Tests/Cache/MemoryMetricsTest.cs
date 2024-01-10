@@ -59,7 +59,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             var sysMetrics = metrics[2];
             Assert.AreEqual("sysMemPlc", sysMetrics.Name);
-            AssertMetricsAreEmpty(sysMetrics);
+            AssertMetricsAreNotEmpty(sysMetrics);
 
             var txLogMetrics = metrics[3];
             Assert.AreEqual("TxLog", txLogMetrics.Name);
@@ -84,7 +84,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             sysMetrics = ignite.GetMemoryMetrics("sysMemPlc");
             Assert.AreEqual("sysMemPlc", sysMetrics.Name);
-            AssertMetricsAreEmpty(sysMetrics);
+            AssertMetricsAreNotEmpty(sysMetrics);
 
             // Invalid name.
             Assert.IsNull(ignite.GetMemoryMetrics("boo"));
@@ -99,6 +99,16 @@ namespace Apache.Ignite.Core.Tests.Cache
             Assert.AreEqual(0, metrics.EvictionRate);
             Assert.AreEqual(0, metrics.LargeEntriesPagesPercentage);
             Assert.AreEqual(0, metrics.PageFillFactor);
+        }
+
+        /// <summary>
+        /// Asserts that metrics are not empty.
+        /// </summary>
+        private static void AssertMetricsAreNotEmpty(IMemoryMetrics metrics)
+        {
+            Assert.Greater(metrics.AllocationRate, 0);
+            Assert.Greater(metrics.PageFillFactor, 0);
+            Assert.Greater(metrics.TotalAllocatedPages, 100);
         }
 
         /// <summary>

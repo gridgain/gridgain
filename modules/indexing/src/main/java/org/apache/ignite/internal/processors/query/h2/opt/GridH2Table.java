@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
@@ -58,6 +57,7 @@ import org.apache.ignite.internal.processors.query.h2.database.H2IndexType;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.database.IndexInformation;
+import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
 import org.apache.ignite.internal.processors.query.stat.ObjectStatistics;
 import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -73,6 +73,7 @@ import org.gridgain.internal.h2.command.ddl.CreateTableData;
 import org.gridgain.internal.h2.engine.DbObject;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.engine.SysProperties;
+import org.gridgain.internal.h2.index.HashJoinIndex;
 import org.gridgain.internal.h2.index.Index;
 import org.gridgain.internal.h2.index.IndexType;
 import org.gridgain.internal.h2.index.SpatialIndex;
@@ -92,6 +93,7 @@ import static org.apache.ignite.internal.processors.affinity.AffinityTopologyVer
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.AFFINITY_KEY_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_HASH_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex.SCAN_INDEX_NAME_SUFFIX;
+import static org.apache.ignite.internal.processors.query.schema.SchemaOperationException.CODE_INDEX_EXISTS;
 
 /**
  * H2 Table implementation.
@@ -283,7 +285,6 @@ public class GridH2Table extends TableBase {
     /**
      * @return Information about all indexes related to the table.
      */
-    @SuppressWarnings("ZeroLengthArrayAllocation")
     public List<IndexInformation> indexesInformation() {
         List<IndexInformation> res = new ArrayList<>();
 
@@ -729,7 +730,6 @@ public class GridH2Table extends TableBase {
 
             database.removeMeta(ses, getId());
             invalidate();
-
         }
         finally {
             unlock(true);
@@ -1023,14 +1023,11 @@ public class GridH2Table extends TableBase {
     }
 
     /**
-     * Checks index presence, return {@link Index} if index with same name or same fields and search direction already
-     * exist or {@code null} othervise.
+     * Checks that equivalent fields collection index already present.
      *
      * @param curIdx Index to check.
-     * @return Index if equal or subset index exist.
-     * @throws IgniteCheckedException If failed.
      */
-    private @Nullable Index checkIndexPresence(Index curIdx) throws IgniteCheckedException {
+    private void checkEquivalentFieldsIndexIsPresent(Index curIdx) {
         IndexColumn[] curColumns = curIdx.getIndexColumns();
 
         Index registredIdx = null;
@@ -1038,9 +1035,6 @@ public class GridH2Table extends TableBase {
         for (Index idx : idxs) {
             if (!(idx instanceof H2TreeIndex))
                 continue;
-
-            if (F.eq(curIdx.getName(), idx.getName()))
-                throw new IgniteCheckedException("Index already exists: " + idx.getName());
 
             IndexColumn[] idxColumns = idx.getIndexColumns();
 
@@ -1061,11 +1055,17 @@ public class GridH2Table extends TableBase {
                 }
             }
 
-            if (registredIdx != null)
-                return registredIdx;
-        }
+            if (registredIdx != null) {
+                String idxCols = Stream.of(registredIdx.getIndexColumns())
+                    .map(k -> k.columnName).collect(Collectors.joining(", "));
 
-        return null;
+                U.warn(log, "Index with the given set or subset of columns already exists " +
+                    "(consider dropping either new or existing index) [cacheName=" + cacheInfo.name() + ", " +
+                    "schemaName=" + getSchema().getName() + ", tableName=" + getName() +
+                    ", newIndexName=" + curIdx.getName() + ", existingIndexName=" + registredIdx.getName() +
+                    ", existingIndexColumns=[" + idxCols + "]]");
+            }
+        }
     }
 
     /**
@@ -1083,18 +1083,12 @@ public class GridH2Table extends TableBase {
         try {
             ensureNotDestroyed();
 
-            Index idxExist = checkIndexPresence(idx);
-
-            if (idxExist != null) {
-                String idxCols = Stream.of(idxExist.getIndexColumns())
-                    .map(k -> k.columnName).collect(Collectors.joining(", "));
-
-                U.warn(log, "Index with the given set or subset of columns already exists " +
-                    "(consider dropping either new or existing index) [cacheName=" + cacheInfo.name() + ", " +
-                    "schemaName=" + getSchema().getName() + ", tableName=" + getName() +
-                    ", newIndexName=" + idx.getName() + ", existingIndexName=" + idxExist.getName() +
-                    ", existingIndexColumns=[" + idxCols + "]]");
+            for (Index idx0 : idxs) {
+                if (F.eq(idx.getName(), idx0.getName()))
+                    throw new SchemaOperationException(CODE_INDEX_EXISTS, idx.getName());
             }
+
+            checkEquivalentFieldsIndexIsPresent(idx);
 
             Index oldTmpIdx = tmpIdxs.put(idx.getName(), (GridH2IndexBase)idx);
 
@@ -1874,5 +1868,27 @@ public class GridH2Table extends TableBase {
         }
 
         return "<UNAVAILABLE>".getBytes();
+    }
+
+    /**
+     * Get an index by name.
+     *
+     * @param indexName Index name to search for.
+     * @return Found index, {@code null} if not found.
+     */
+    public @Nullable Index getIndexSafe(String indexName) {
+        ArrayList<Index> indexes = getIndexes();
+
+        if (HashJoinIndex.HASH_JOIN_IDX.equalsIgnoreCase(indexName))
+            return new HashJoinIndex(this);
+
+        if (indexes != null) {
+            for (Index index : indexes) {
+                if (index.getName().equals(indexName))
+                    return index;
+            }
+        }
+
+        return null;
     }
 }

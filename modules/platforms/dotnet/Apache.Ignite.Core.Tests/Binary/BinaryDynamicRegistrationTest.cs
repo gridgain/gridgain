@@ -51,7 +51,14 @@ namespace Apache.Ignite.Core.Tests.Binary
         [SetUp]
         public void SetUp()
         {
-            ClearMarshallerWorkDir();
+            TestUtils.ClearMarshallerWorkDir();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            Ignition.StopAll(true);
+            TestUtils.ClearMarshallerWorkDir();
         }
 
         /// <summary>
@@ -181,7 +188,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             }
 
             // Delete directory and check that store no longer works
-            ClearMarshallerWorkDir();
+            TestUtils.ClearMarshallerWorkDir();
 
             using (var ignite = Ignition.Start(cfg))
             {
@@ -454,19 +461,6 @@ namespace Apache.Ignite.Core.Tests.Binary
             var res2 = ignite1.GetCompute().Broadcast(new CompFn<string>(() => bar0.Str));
             Assert.AreEqual(Enumerable.Repeat(bar0.Str, serverNodeCount), res2);
 #endif
-        }
-
-        /// <summary>
-        /// Clears the marshaller work dir.
-        /// </summary>
-        private static void ClearMarshallerWorkDir()
-        {
-            // Delete all *.classname files within IGNITE_HOME
-            var home = IgniteHome.Resolve();
-
-            var files = Directory.GetFiles(home, "*.classname*", SearchOption.AllDirectories);
-
-            files.ToList().ForEach(File.Delete);
         }
 
         /// <summary>

@@ -123,10 +123,12 @@ public class PendingTreeCorruptionTest extends GridCommonAbstractTest {
         CacheGroupContext grp = ig.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME));
 
         IgniteCacheOffheapManager.CacheDataStore store = ((IgniteCacheOffheapManagerImpl)grp.offheap())
-            .dataStore(0, true);
+            .dataStore(part, true);
 
         // Get pending tree of expire cache.
         PendingEntriesTree pendingTree = store.pendingTree();
+
+        assertNotNull(pendingTree);
 
         assertTrue(pendingTree.isEmpty());
 
@@ -226,7 +228,8 @@ public class PendingTreeCorruptionTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Custom affinity key.
+     * Custom affinity key. Note that its {@code hashCode()} method is deliberately left inoverridden, to allow
+     * a randomness in its hash code.
      */
     public static class CustomKey {
         /** Id. */

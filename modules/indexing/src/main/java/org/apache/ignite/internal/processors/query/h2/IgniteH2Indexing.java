@@ -143,6 +143,7 @@ import org.apache.ignite.internal.processors.query.h2.dml.DmlUpdateSingleEntryIt
 import org.apache.ignite.internal.processors.query.h2.dml.DmlUtils;
 import org.apache.ignite.internal.processors.query.h2.dml.UpdateMode;
 import org.apache.ignite.internal.processors.query.h2.dml.UpdatePlan;
+import org.apache.ignite.internal.processors.query.h2.extension.SqlPluginExtension;
 import org.apache.ignite.internal.processors.query.h2.maintenance.RebuildIndexWorkflowCallback;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
@@ -202,9 +203,9 @@ import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilterImpl;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
-import org.gridgain.internal.h2.api.AggregateFunction;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.api.JavaObjectSerializer;
+import org.gridgain.internal.h2.engine.Constants;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.index.Index;
@@ -219,6 +220,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.singletonList;
+import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MVCC_TX_SIZE_CACHING_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.TX_SIZE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.checkActive;
@@ -1193,6 +1195,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             SqlFieldsQuery remainingQry = qry;
 
+            if (!failOnMultipleStmts) {
+                cancel.multiStatement(true);
+            }
+
             while (remainingQry != null) {
                 Span qrySpan = ctx.tracing().create(SQL_QRY, MTC.span())
                     .addTag(SQL_SCHEMA, () -> schemaName);
@@ -1245,6 +1251,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         assert dml != null;
 
+                        if (cancel.multiStatement()) {
+                            cancel.last(remainingQry == null);
+                        }
+
                         List<? extends FieldsQueryCursor<List<?>>> dmlRes = executeDml(
                             newQryDesc,
                             newQryParams,
@@ -1260,6 +1270,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         QueryParserResultSelect select = parseRes.select();
 
                         assert select != null;
+
+                        if (cancel.multiStatement()) {
+                            cancel.last(remainingQry == null);
+                        }
 
                         List<? extends FieldsQueryCursor<List<?>>> qryRes = executeSelect(
                             newQryDesc,
@@ -1976,6 +1990,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     @Override public boolean registerType(GridCacheContextInfo cacheInfo, GridQueryTypeDescriptor type, boolean isSql)
         throws IgniteCheckedException {
         validateTypeDescriptor(type);
+
+        // Print warning if _key is of custom user type and no key fields are configured, thus
+        // key object can't be created and used for COPY FROM operation.
+        // Note: QueryEntity can't be properly validated due to compatibility reasons, and a warning can't be printed
+        // from inside QueryEntity class due to absence of the logger.
+        if (type.keyClass() == Object.class && F.isEmpty(type.primaryKeyFields())) {
+            log.warning("Key of user type has no fields configured for table=" + type.tableName());
+        }
+
         schemaMgr.onCacheTypeCreated(cacheInfo, this, type, isSql);
 
         return true;
@@ -2089,8 +2112,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                                 prop.type(),
                                 c.isNullable(),
                                 prop.defaultValue(),
-                                prop.precision(),
-                                prop.scale(),
+                                H2Utils.resolveDefaultPrecisionIfUndefined(prop),
+                                H2Utils.resolveDefaultScaleIfUndefined(prop),
                                 isAff);
                         });
                 }
@@ -2398,6 +2421,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         connMgr.setH2Serializer(h2Serializer);
 
         registerAggregateFunctions();
+
+        registerSqlFunctions();
 
         distrCfg = new DistributedSqlConfiguration(ctx, log);
 
@@ -3470,29 +3495,22 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @throws IgniteCheckedException If failed.
      */
     private void registerAggregateFunctions() throws IgniteCheckedException {
-        registerAggregateFunction(GridFirstValueFunction.NAME, GridFirstValueFunction.class);
-        registerAggregateFunction(GridLastValueFunction.NAME, GridLastValueFunction.class);
+        H2Utils.registerAggregateFunction(log, connMgr, GridFirstValueFunction.NAME, GridFirstValueFunction.class);
+        H2Utils.registerAggregateFunction(log, connMgr, GridLastValueFunction.NAME, GridLastValueFunction.class);
     }
 
     /**
-     * Register custom aggregate function.
+     * Register predefined custom sql functions.
      *
-     * @param fnName SQL function name.
-     * @param cls Function implementation class.
      * @throws IgniteCheckedException If failed.
      */
-    public void registerAggregateFunction(String fnName,
-        Class<? extends AggregateFunction> cls) throws IgniteCheckedException {
-        Objects.requireNonNull(fnName, "Function name can't be null");
-        Objects.requireNonNull(cls, "Class name can't be null");
-
-        if (!AggregateFunction.class.isAssignableFrom(cls))
-            throw new IgniteSQLException("Aggregate function '" + cls.getName() + "' should implement '" + AggregateFunction.class.getName() + "'");
-
-        connections().executeStatement(null, "CREATE AGGREGATE " + fnName + " FOR \"" + cls.getName() + "\"");
-
-        if (log.isDebugEnabled())
-            log.debug("Aggregation function " + fnName + "(" + cls.getName() + ") has been registered.");
+    private void registerSqlFunctions() throws IgniteCheckedException {
+        SqlPluginExtension[] ext = ctx.plugins().extensions(SqlPluginExtension.class);
+        if (nonNull(ext)) {
+            for (SqlPluginExtension e : ext) {
+                H2Utils.registerSqlFunctions(log, connMgr, Constants.SCHEMA_MAIN, e.getSqlFunctions());
+            }
+        }
     }
 
     /**
@@ -3534,6 +3552,30 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         IgniteThreadPoolExecutor defragmentationThreadPool
     ) throws IgniteCheckedException {
         defragmentation.defragment(grpCtx, newCtx, partPageMem, mappingByPart, cpLock, cancellationChecker, log, defragmentationThreadPool);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void markIndexRenamed(GridCacheContext<?, ?> cacheCtx, String indexTreeName) {
+        Collection<H2TableDescriptor> descriptors = schemaManager().tablesForCache(cacheCtx.name());
+
+        for (H2TableDescriptor descriptor : descriptors) {
+            // We only know index's tree name, so we need to iterate over
+            // all the cache's tables.
+            GridH2Table tbl = descriptor.table();
+
+            for (Index index : tbl.getIndexes()) {
+                // Find index with matching tree name.
+                if (index instanceof H2TreeIndex) {
+                    H2TreeIndex treeIndex = (H2TreeIndex)index;
+
+                    if (indexTreeName.equals(treeIndex.treeName())) {
+                        treeIndex.markRenamed();
+
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     /**

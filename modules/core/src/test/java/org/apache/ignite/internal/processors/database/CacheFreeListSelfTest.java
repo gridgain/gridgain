@@ -176,8 +176,9 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
         for (int i = 0; i < 100; i++) {
             int keySize = rnd.nextInt(pageSize * 3 / 2) + 10;
             int valSize = rnd.nextInt(pageSize * 5 / 2) + 10;
+            long expTime = Math.abs(rnd.nextLong());
 
-            TestDataRow row = new TestDataRow(keySize, valSize);
+            TestDataRow row = new TestDataRow(keySize, valSize, expTime);
 
             list.insertDataRow(row, IoStatisticsHolderNoOp.INSTANCE);
 
@@ -219,8 +220,9 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
                     if (insert) {
                         int keySize = rnd.nextInt(pageSize * 3 / 2) + 10;
                         int valSize = rnd.nextInt(pageSize * 3 / 2) + 10;
+                        long expTime = Math.abs(rnd.nextLong());
 
-                        TestDataRow row = new TestDataRow(keySize, valSize);
+                        TestDataRow row = new TestDataRow(keySize, valSize, expTime);
 
                         list.insertDataRow(row, IoStatisticsHolderNoOp.INSTANCE);
 
@@ -247,6 +249,32 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
                             }
                         }
                     }
+
+                    if (i % 100 == 0) {
+                        // update ttl for random entry
+                        Iterator<TestDataRow> it = stored.values().iterator();
+
+                        if (it.hasNext()) {
+                            TestDataRow row = it.next();
+
+                            TestDataRow rmvd = stored.remove(row.link);
+
+                            if (rmvd != null) {
+                                TestDataRow newRow = new TestDataRow(rmvd);
+                                newRow.expireTime = Math.abs(rnd.nextLong());
+
+                                boolean updated = list.updateDataRowTtl(rmvd.link, newRow, IoStatisticsHolderNoOp.INSTANCE);
+
+                                assertTrue(updated);
+
+                                newRow.link(rmvd.link);
+
+                                rmvd = stored.put(newRow.link, newRow);
+
+                                assertNull(rmvd);
+                            }
+                        }
+                    }
                 }
 
                 return null;
@@ -267,8 +295,9 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
         for (int i = 0; i < 100; i++) {
             int keySize = rnd.nextInt(pageSize * 3 / 2) + 10;
             int valSize = rnd.nextInt(pageSize * 5 / 2) + 10;
+            long expTime = Math.abs(rnd.nextLong());
 
-            TestDataRow row = new TestDataRow(keySize, valSize);
+            TestDataRow row = new TestDataRow(keySize, valSize, expTime);
 
             list.insertDataRow(row, IoStatisticsHolderNoOp.INSTANCE);
 
@@ -302,8 +331,9 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
             if (insert) {
                 int keySize = rnd.nextInt(pageSize * 3 / 2) + 10;
                 int valSize = rnd.nextInt(pageSize * 3 / 2) + 10;
+                long expTime = Math.abs(rnd.nextLong());
 
-                TestDataRow row = new TestDataRow(keySize, valSize);
+                TestDataRow row = new TestDataRow(keySize, valSize, expTime);
 
                 list.insertDataRow(row, IoStatisticsHolderNoOp.INSTANCE);
 
@@ -324,6 +354,32 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
                     assertTrue(rmvd == row);
 
                     list.removeDataRowByLink(row.link, IoStatisticsHolderNoOp.INSTANCE);
+                }
+            }
+
+            if (i % 100 == 0) {
+                // update ttl for random entry
+                int pos = rnd.nextInt(Math.min(100, stored.size()));
+
+                Iterator<TestDataRow> it = stored.values().iterator();
+                TestDataRow oldRow = null;
+
+                while (it.hasNext() && pos-- > 0)
+                    oldRow = it.next();
+
+                if (oldRow != null) {
+                    TestDataRow newRow = new TestDataRow(oldRow);
+                    newRow.expireTime = Math.abs(rnd.nextLong());
+
+                    boolean updated = list.updateDataRowTtl(oldRow.link, newRow, IoStatisticsHolderNoOp.INSTANCE);
+
+                    assertTrue(updated);
+
+                    newRow.link(oldRow.link);
+
+                    oldRow = stored.put(newRow.link, newRow);
+
+                    assertNotNull(oldRow);
                 }
             }
         }
@@ -399,14 +455,29 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
         /** */
         private GridCacheVersion ver;
 
+        /** */
+        private long expireTime;
+
         /**
          * @param keySize Key size.
          * @param valSize Value size.
+         * @param expireTime Expire time.
          */
-        private TestDataRow(int keySize, int valSize) {
+        private TestDataRow(int keySize, int valSize, long expireTime) {
             key = new TestCacheObject(keySize);
             val = new TestCacheObject(valSize);
             ver = new GridCacheVersion(keySize, valSize, 1);
+            this.expireTime = expireTime;
+        }
+
+        /**
+         * @param row Row to be copied.
+         */
+        private TestDataRow(TestDataRow row) {
+            key = row.key;
+            val = row.val;
+            ver = row.ver;
+            expireTime = row.expireTime;
         }
 
         /** {@inheritDoc} */
@@ -431,7 +502,7 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
 
         /** {@inheritDoc} */
         @Override public long expireTime() {
-            return 0;
+            return expireTime;
         }
 
         /** {@inheritDoc} */

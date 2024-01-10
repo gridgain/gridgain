@@ -596,7 +596,6 @@ public class KillQueryTest extends GridCommonAbstractTest {
             "Query with provided ID doesn't exist");
 
         cur.close();
-
     }
 
     /**
@@ -646,7 +645,91 @@ public class KillQueryTest extends GridCommonAbstractTest {
             .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
 
         if (asyncCancel)
-            GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000);
+            assertTrue(GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000));
+        else
+            assertTrue(ignite.context().query().runningQueries(-1).isEmpty());
+
+        cur.close();
+    }
+
+    /** Test correctness of query cancellation with lazy data receiving, kill first query in multistatement. */
+    @Test
+    public void testCancelMultiStatementLazyKillFirst() throws Exception {
+        cancelMultiStatement(true, true);
+    }
+
+    /** Test correctness of query cancellation with lazy data receiving, kill last query in multistatement. */
+    @Test
+    public void testCancelMultiStatementLazyKillLast() throws Exception {
+        cancelMultiStatement(true, false);
+    }
+
+    /** Test correctness of query cancellation, kill first query in multistatement. */
+    @Test
+    public void testCancelMultiStatementKillFirst() throws Exception {
+        cancelMultiStatement(false, true);
+    }
+
+    /** Test correctness of query cancellation, kill last query in multistatement. */
+    @Test
+    public void testCancelMultiStatementKillLast() throws Exception {
+        cancelMultiStatement(false, false);
+    }
+
+    private void cancelMultiStatement(boolean lazy, boolean killFirst) throws Exception {
+        GridQueryProcessor qryProc = ignite.context().query();
+
+        String query = "DROP TABLE IF EXISTS CITY;" +
+                "CREATE TABLE CITY (" +
+                "  ID INT," +
+                "  Name VARCHAR," +
+                "  CountryCode CHAR(3)," +
+                "  District VARCHAR," +
+                "  Population INT," +
+                "  TimeS TIMESTAMP," +
+                "  PRIMARY KEY (ID));" +
+                "INSERT INTO City(ID, Name, CountryCode, District, Population, TimeS) VALUES (1,'Kabul','AFG','Kabol',1780000, %s);" +
+                "INSERT INTO City(ID, Name, CountryCode, District, Population, TimeS) VALUES (2,'Qandahar','AFG','Qandahar',237500, %s);" +
+                "SELECT * FROM City;" +
+                "SELECT * FROM City;" +
+                "INSERT INTO City(ID, Name, CountryCode, District, Population, TimeS) VALUES (3,'Herat','AFG','Herat',186800, %s);" +
+                "SELECT * FROM City;";
+
+        for (String param : new String[]{"null", "CURRENT_TIMESTAMP()"}) {
+            SqlFieldsQuery qry = new SqlFieldsQuery(String.format(query, param, param, param));
+
+            qry.setLazy(lazy);
+
+            List<FieldsQueryCursor<List<?>>> res = qryProc.querySqlFields(qry, true, false);
+
+            List<GridRunningQueryInfo> queries = new ArrayList<>(ignite.context().query().runningQueries(-1));
+
+            assertFalse(queries.isEmpty());
+
+            GridRunningQueryInfo qi = killFirst ? queries.get(0) : queries.get(queries.size() - 1);
+
+            SqlFieldsQuery killQuery = createKillQuery(ignite.context().localNodeId(), qi.id(), asyncCancel);
+
+            igniteForKillRequest.context().query()
+                    .querySqlFields(killQuery, false).getAll();
+
+            if (asyncCancel)
+                assertTrue(GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000));
+            else
+                assertTrue(ignite.context().query().runningQueries(-1).isEmpty());
+
+            IgniteCache<Object, Object> reqCache = igniteForKillRequest.cache(DEFAULT_CACHE_NAME);
+
+            GridTestUtils.assertThrows(log,
+                    () -> reqCache.query(killQuery).getAll(),
+                    CacheException.class,
+                    "Query with provided ID doesn't exist");
+
+            GridTestUtils.assertThrows(log,
+                    () -> res.get(4).getAll(),
+                    CacheException.class,
+                    "The query was cancelled");
+        }
     }
 
     /**
@@ -665,7 +748,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
             .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
 
         if (asyncCancel)
-            GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000);
+            assertTrue(GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000));
+
+        cur.close();
     }
 
     /**
@@ -686,7 +771,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
             .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
 
         if (asyncCancel)
-            GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000);
+            assertTrue(GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000));
     }
 
     /**
@@ -703,7 +788,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
             .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
 
         if (asyncCancel)
-            GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000);
+            assertTrue(GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000));
     }
 
     /**
@@ -722,7 +807,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
             .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
 
         if (asyncCancel)
-            GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000);
+            assertTrue(GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000));
     }
 
     /**
@@ -743,7 +828,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
             .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
 
         if (asyncCancel)
-            GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000);
+            assertTrue(GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000));
     }
 
     /**

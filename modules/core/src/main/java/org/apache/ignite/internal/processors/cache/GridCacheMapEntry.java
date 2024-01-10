@@ -1720,13 +1720,17 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             drReplicate(drType, null, newVer, topVer);
 
-            if (metrics && cctx.statisticsEnabled()) {
+            if (metrics && cctx.statisticsEnabled() && tx != null) {
                 cctx.cache().metrics0().onRemove();
 
-                T2<GridCacheOperation, CacheObject> entryProcRes = tx.entry(txKey()).entryProcessorCalculatedValue();
+                IgniteTxEntry txEntry = tx.entry(txKey());
 
-                if (entryProcRes != null && DELETE.equals(entryProcRes.get1()))
-                    cctx.cache().metrics0().onInvokeRemove(old != null);
+                if (txEntry != null) {
+                    T2<GridCacheOperation, CacheObject> entryProcRes = txEntry.entryProcessorCalculatedValue();
+
+                    if (entryProcRes != null && DELETE.equals(entryProcRes.get1()))
+                        cctx.cache().metrics0().onInvokeRemove(old != null);
+                }
             }
 
             if (tx == null)
@@ -2921,7 +2925,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
-     * Update TTL is it is changed.
+     * Update TTL if it is changed.
      *
      * @param expiryPlc Expiry policy.
      * @throws GridCacheEntryRemovedException If failed.
@@ -3112,6 +3116,46 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         AffinityTopologyVersion topVer = tx != null ? tx.topologyVersion() : cctx.affinity().affinityTopologyVersion();
 
         return peek(true, false, topVer, null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int localSize(AffinityTopologyVersion topVer) throws GridCacheEntryRemovedException, IgniteCheckedException {
+        lockEntry();
+
+        try {
+            checkObsolete();
+
+            if (valid(topVer)) {
+                CacheObject val = this.val;
+                boolean isExpired = false;
+
+                if (val == null) {
+                    CacheDataRow row = cctx.offheap().find(this, false);
+
+                    if (row != null && !row.tombstone()) {
+                        val = row.value();
+                        isExpired = row.expireTime() > 0 && row.expireTime() < U.currentTimeMillis();
+                    }
+                }
+                else
+                    isExpired = checkExpired();
+
+                if (val == null || isExpired)
+                    return 0;
+
+                key.prepareMarshal(cctx.cacheObjectContext());
+
+                val.prepareMarshal(cctx.cacheObjectContext());
+
+                return key.valueBytesOriginLength(cctx.cacheObjectContext()) + val.valueBytesOriginLength(cctx.cacheObjectContext());
+            }
+        }
+        finally {
+            unlockEntry();
+        }
+
+        // Entry is not valid. Just return zero value.
+        return 0;
     }
 
     /**
@@ -3892,14 +3936,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (!(expireTime0 > 0 && expireTime0 <= expireTime))
                 return false;
 
-            CacheObject expiredVal = this.val;
-
-            if (markObsolete0(obsoleteVer, true, null))
-                obsolete = true;
-
-            removeExpiredValue(obsoleteVer);
-
-            if (expiredVal != null) { // Do not trigger events for tombstones.
+            if (this.val != null) { // Do not trigger events for tombstones.
                 if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
                     cctx.events().addEvent(partition(),
                         key,
@@ -3908,16 +3945,21 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         EVT_CACHE_OBJECT_EXPIRED,
                         null,
                         false,
-                        expiredVal,
-                        expiredVal != null,
+                        this.val,
+                        true,
                         null,
                         null,
                         null,
                         true);
                 }
 
-                cctx.continuousQueries().onEntryExpired(this, key, expiredVal);
+                cctx.continuousQueries().onEntryExpired(this, key, this.val);
             }
+
+            if (markObsolete0(obsoleteVer, true, null))
+                obsolete = true;
+
+            removeExpiredValue(obsoleteVer);
 
             updatePlatformCache(null, null);
         }
@@ -4091,6 +4133,106 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
+    @Override public CacheObject updateTimeToLiveOnTtlUpdateRequest(@Nullable GridCacheVersion ver, long ttl) throws GridCacheEntryRemovedException {
+        assert cctx.shared().database().checkpointLockIsHeldByThread() :
+            "Checkpoint lock must be held by the thread before acquiring entry lock";
+
+        if (cctx.queries().enabled() || cctx.mvccEnabled() || cctx.cacheObjectContext().compressionStrategy() != null || isNear() ||
+            cctx.group().persistenceEnabled()) {
+            // TODO https://ggsystems.atlassian.net/browse/GG-38158
+
+            // Fast update is not possible for this entry. Need to fallback to writing the whole entry.
+            //  - in general, enabling sql indices should not prevent from using fast update. Can be improved later.
+            //  - mvcc and compression are not supported for fast update yet.
+            //  - near entries only require update on the entry itself.
+            try {
+                unswap(null, true);
+            }
+            catch (IgniteCheckedException e) {
+                U.error(log, "Failed to update TTL: " + e, e);
+
+                return null;
+            }
+
+            updateTtl(ver, ttl);
+
+            return val;
+        }
+
+        lockEntry();
+
+        try {
+            checkObsolete();
+
+            CacheObject val = this.val;
+            boolean isExpired = false;
+
+            if (val == null) {
+                CacheDataRow row = cctx.offheap().find(this, false);
+
+                if (row != null && !row.tombstone()) {
+                    val = row.value();
+                    isExpired = row.expireTime() > 0 && row.expireTime() < U.currentTimeMillis();
+                }
+            }
+            else
+                isExpired = checkExpired();
+
+            if (val == null || isExpired)
+                return null;
+
+            long expireTime;
+
+            if (ttl == CU.TTL_ZERO) {
+                ttl = CU.TTL_MINIMUM;
+                expireTime = CU.expireTimeInPast();
+            }
+            else
+                expireTime = CU.toExpireTime(ttl);
+
+            ttlAndExpireTimeExtras(ttl, expireTime);
+
+            // TODO IGNITE-305
+            // TTL messages are not ordered, so the version cannot be used to properly handle a new ttl value.
+            storeTtlValue(val, expireTime, ver);
+
+            return val;
+        }
+        catch (IgniteCheckedException e) {
+            U.error(log, "Failed to update TTL: " + e, e);
+        }
+        finally {
+            unlockEntry();
+        }
+
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public CacheObject touchTtl(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException {
+        CacheObject res = null;
+
+        if (expiryPlc != null) {
+            long ttl = expiryPlc.forAccess();
+
+            if (ttl != CU.TTL_NOT_CHANGED) {
+                res = updateTimeToLiveOnTtlUpdateRequest(null, ttl);
+
+                expiryPlc.ttlUpdated(key(), version(), hasReaders() ? ((GridDhtCacheEntry)this).readers() : null);
+            }
+        }
+
+        return res;
+    }
+
+    /** {@inheritDoc} */
+    @Override public EntryGetResult touchTtlVersioned(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException {
+        CacheObject v = touchTtl(expiryPlc);
+
+        return v != null ? new EntryGetResult(v, version()) : null;
+    }
+
+    /** {@inheritDoc} */
     @Override public CacheObject valueBytes() throws GridCacheEntryRemovedException {
         lockEntry();
 
@@ -4141,6 +4283,22 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
+     * Stores value in offheap.
+     *
+     * @param val Value.
+     * @param expireTime Expire time.
+     * @param ver New entry version.
+     * @throws IgniteCheckedException If update failed.
+     */
+    protected void storeTtlValue(
+        @Nullable CacheObject val,
+        long expireTime,
+        GridCacheVersion ver
+    ) throws IgniteCheckedException {
+        storeValue(new UpdateTtlClosure(this, expireTime));
+    }
+
+    /**
      * Stores value in off-heap.
      *
      * @param val Value.
@@ -4156,14 +4314,23 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         GridCacheVersion ver,
         @Nullable IgniteBiPredicate<CacheObject, GridCacheVersion> p
     ) throws IgniteCheckedException {
+        return storeValue(new UpdateClosure(this, val, ver, expireTime, p));
+    }
+
+    /**
+     * Stores value in off-heap.
+     *
+     * @param clo Update closure.
+     * @return Closure after execution.
+     * @throws IgniteCheckedException If update failed.
+     */
+    private <T extends IgniteCacheOffheapManager.OffheapInvokeClosure> T storeValue(T clo) throws IgniteCheckedException {
         assert lock.isHeldByCurrentThread();
         assert localPartition() == null || localPartition().state() != RENTING : localPartition();
 
-        UpdateClosure c = new UpdateClosure(this, val, ver, expireTime, p);
+        cctx.offheap().invoke(cctx, key, localPartition(), clo);
 
-        cctx.offheap().invoke(cctx, key, localPartition(), c);
-
-        return c;
+        return clo;
     }
 
     /**
@@ -5799,6 +5966,85 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
+     * Invoke closure that allows to in-place update entry TTL.
+     */
+    private static class UpdateTtlClosure implements IgniteCacheOffheapManager.OffheapInvokeClosure {
+        /** Entry to be updated. */
+        private final GridCacheMapEntry entry;
+
+        /** New expiration time. */
+        private final long expireTime;
+
+        /** Reference to the updated row. It can be {@code null} or equals to {@link #oldRow}. */
+        private CacheDataRow newRow;
+
+        /** Reference to the row to be updated. */
+        private CacheDataRow oldRow;
+
+        /**
+         * Result of applying this closure to the row.
+         * The possible values are:
+         *  - NOOP - entry not found.
+         *  - IN_PLACE - in-place update of ttl.
+         **/
+        private IgniteTree.OperationType treeOp = IgniteTree.OperationType.IN_PLACE;
+
+        /**
+         * @param entry Entry.
+         * @param expireTime New expiration time.
+         */
+        private UpdateTtlClosure(
+            GridCacheMapEntry entry,
+            long expireTime
+        ) {
+            this.entry = entry;
+            this.expireTime = expireTime;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void call(@Nullable CacheDataRow oldRow) throws IgniteCheckedException {
+            if (oldRow == null) {
+                treeOp = IgniteTree.OperationType.NOOP;
+
+                return;
+            }
+
+            oldRow.key(entry.key);
+            this.oldRow = oldRow;
+
+            newRow = entry.cctx.offheap().dataStore(entry.localPartition()).createRowForTtlUpdate(
+                entry.cctx,
+                expireTime,
+                oldRow);
+
+            assert oldRow.link() == newRow.link() :
+                "Links to the rows are not equal for update TTL closure [oldRow=" + oldRow + ", newRow=" + newRow + ']';
+
+            treeOp = IgniteTree.OperationType.IN_PLACE;
+        }
+
+        /** {@inheritDoc} */
+        @Override public CacheDataRowAdapter.RowData rowData() {
+            return CacheDataRowAdapter.RowData.NO_KEY_WITH_VALUE_META_INFO;
+        }
+
+        /** {@inheritDoc} */
+        @Override public CacheDataRow newRow() {
+            return newRow;
+        }
+
+        /** {@inheritDoc} */
+        @Override public IgniteTree.OperationType operationType() {
+            return treeOp;
+        }
+
+        /** {@inheritDoc} */
+        @Nullable @Override public CacheDataRow oldRow() {
+            return oldRow;
+        }
+    }
+
+    /**
      *
      */
     private static class AtomicCacheUpdateClosure implements IgniteCacheOffheapManager.OffheapInvokeClosure {
@@ -6928,18 +7174,22 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         if (!hasPlatformCache())
             return;
 
-        PlatformProcessor proc = this.cctx.kernalContext().platform();
+        PlatformProcessor proc = cctx.kernalContext().platform();
         if (!proc.hasContext() || !proc.context().isPlatformCacheSupported())
             return;
 
         try {
-            CacheObjectContext ctx = this.cctx.cacheObjectContext();
+            CacheObjectContext ctx = cctx.cacheObjectContext();
+            byte[] keyBytes = key.valueBytes(ctx);
 
             // val is null when entry is removed.
-            byte[] keyBytes = this.key.valueBytes(ctx);
-            byte[] valBytes = val == null ? null : val.valueBytes(ctx);
+            // valid(ver) is false when near cache entry is out of sync.
+            boolean valid = val != null && ver != null && valid(ver);
 
-            proc.context().updatePlatformCache(this.cctx.cacheId(), keyBytes, valBytes, partition(), ver);
+            // null valBytes means that entry should be removed from platform cache.
+            byte[] valBytes = valid ? val.valueBytes(ctx) : null;
+
+            proc.context().updatePlatformCache(cctx.cacheId(), keyBytes, valBytes, partition(), ver);
         } catch (Throwable e) {
             U.error(log, "Failed to update Platform Cache: " + e);
         }

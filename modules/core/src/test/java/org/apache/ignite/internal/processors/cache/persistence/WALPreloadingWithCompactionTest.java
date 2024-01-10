@@ -107,6 +107,13 @@ public class WALPreloadingWithCompactionTest extends GridCommonAbstractTest {
         for (int i = 500 * PARTITIONS_COUNT; i < 1000 * PARTITIONS_COUNT; i++)
             ignite(0).cache(DEFAULT_CACHE_NAME).put(i, i);
 
+        forceCheckpoint();
+
+        for (int i = PARTITIONS_COUNT; i < 500 * PARTITIONS_COUNT; i++)
+            ignite(0).cache(DEFAULT_CACHE_NAME).put(i, i);
+
+        forceCheckpoint();
+
         checkThatOnlyZipSegmentExists(ignite(0), 0);
         checkThatOnlyZipSegmentExists(ignite(1), 0);
     }

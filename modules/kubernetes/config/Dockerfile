@@ -22,6 +22,9 @@ ENV IGNITE_VERSION 2.0.0-SNAPSHOT
 # Set IGNITE_HOME variable.
 ENV IGNITE_HOME /opt/ignite/gridgain-community-${IGNITE_VERSION}-bin
 
+# Set IGNITE_WORK_DIR variable.
+ENV IGNITE_WORK_DIR /persistence
+
 # Setting a path to an Apache Ignite configuration file. Used by run.sh script below.
 ENV CONFIG_URI ${IGNITE_HOME}/config/example-kube.xml
 

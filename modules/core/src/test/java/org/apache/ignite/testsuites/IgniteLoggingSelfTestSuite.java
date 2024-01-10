@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.logger.java.JavaLoggerFormatterTest;
 import org.apache.ignite.logger.java.JavaLoggerTest;
 import org.apache.ignite.tools.junit.JUnitTeamcityReporter;
 import org.junit.BeforeClass;
@@ -26,7 +27,10 @@ import org.junit.runners.Suite;
  * Logging self-test suite.
  */
 @RunWith(Suite.class)
-@Suite.SuiteClasses({JavaLoggerTest.class})
+@Suite.SuiteClasses({
+    JavaLoggerTest.class,
+    JavaLoggerFormatterTest.class
+})
 public class IgniteLoggingSelfTestSuite {
     /** */
     @BeforeClass

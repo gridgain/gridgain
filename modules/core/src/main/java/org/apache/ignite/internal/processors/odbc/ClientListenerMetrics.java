@@ -137,7 +137,7 @@ public class ClientListenerMetrics {
      * @param clientType Client type.
      * @return Label for a client.
      */
-    private String clientTypeLabel(byte clientType) {
+    public static String clientTypeLabel(byte clientType) {
         switch (clientType) {
             case ODBC_CLIENT:
                 return "odbc";

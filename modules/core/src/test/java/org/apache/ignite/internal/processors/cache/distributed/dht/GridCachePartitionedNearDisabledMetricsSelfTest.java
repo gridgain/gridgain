@@ -53,6 +53,7 @@ public class GridCachePartitionedNearDisabledMetricsSelfTest extends GridCacheTr
         cfg.setRebalanceMode(SYNC);
         cfg.setWriteSynchronizationMode(FULL_SYNC);
         cfg.setNearConfiguration(null);
+        cfg.setReadFromBackup(true);
 
         return cfg;
     }

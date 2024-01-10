@@ -23,6 +23,7 @@ namespace Apache.Ignite.Core.Impl.Client
     using System.Diagnostics.CodeAnalysis;
     using System.Globalization;
     using System.Net;
+    using System.Threading;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
@@ -94,7 +95,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
             _configuration = new IgniteClientConfiguration(clientConfiguration);
 
-            _marsh = new Marshaller(_configuration.BinaryConfiguration)
+            _marsh = new Marshaller(_configuration.BinaryConfiguration, _configuration.Logger)
             {
                 Ignite = this
             };
@@ -112,6 +113,8 @@ namespace Apache.Ignite.Core.Impl.Client
             _compute = new ComputeClient(this, ComputeClientFlags.None, TimeSpan.Zero, null);
 
             _services = new ServicesClient(this);
+
+            Ignition.LogBinaryConfigurationDiagnostics(_configuration.BinaryConfiguration, _configuration.Logger);
         }
 
         /// <summary>

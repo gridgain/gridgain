@@ -1,0 +1,117 @@
+# name: test/sql/join/mark/test_mark_join_types.test
+# description: Test mark join with different types
+# group: [mark]
+
+statement ok
+PRAGMA enable_verification
+
+# numeric types
+# tests for tinyint
+
+statement ok
+create table a(i tinyint);
+insert into a select x::tinyint from system_range(1, 100, 1) order by random()
+
+query I
+select count(*) from a WHERE i = ANY((SELECT 1::tinyint))
+----
+1
+
+query I
+select * from (select * from a where i % 2 = 0) a WHERE i = ANY((SELECT 2::tinyint))
+----
+2
+
+statement ok
+drop table a
+
+# tests for smallint
+statement ok
+create table a(i smallint);
+insert into a select x::smallint from system_range(1, 100, 1) order by random()
+
+query I
+select count(*) from a WHERE i = ANY((SELECT 1::smallint))
+----
+1
+
+query I
+select * from (select * from a where i % 2 = 0) a WHERE i = ANY((SELECT 2::smallint))
+----
+2
+
+statement ok
+drop table a
+
+# tests for integer
+statement ok
+create table a(i integer);
+insert into a select x::integer from system_range(1, 100, 1) order by random()
+
+query I
+select count(*) from a WHERE i = ANY((SELECT 1::integer))
+----
+1
+
+query I
+select * from (select * from a where i % 2 = 0) a WHERE i = ANY((SELECT 2::integer))
+----
+2
+
+statement ok
+drop table a
+
+# tests for bigint
+statement ok
+create table a(i bigint);
+insert into a select x::bigint from system_range(1, 100, 1) order by random()
+
+query I
+select count(*) from a WHERE i = ANY((SELECT 1::bigint))
+----
+1
+
+query I
+select * from (select * from a where i % 2 = 0) a WHERE i = ANY((SELECT 2::bigint))
+----
+2
+
+statement ok
+drop table a
+
+# tests for real
+statement ok
+create table a(i real);
+insert into a select x::real from system_range(1, 100, 1) order by random()
+
+query I
+select count(*) from a WHERE i = ANY((SELECT 1::real))
+----
+1
+
+query I
+select * from (select * from a where i % 2 = 0) a WHERE i = ANY((SELECT 2::real))
+----
+2
+
+statement ok
+drop table a
+
+# tests for double
+statement ok
+create table a(i double);
+insert into a select x::double from system_range(1, 100, 1) order by random()
+
+query I
+select count(*) from a WHERE i = ANY((SELECT 1::double))
+----
+1
+
+query I
+select * from (select * from a where i % 2 = 0) a WHERE i = ANY((SELECT 2::double))
+----
+2
+
+statement ok
+drop table a
+

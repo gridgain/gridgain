@@ -1,0 +1,8 @@
+# name: test/sql/types/collections/array.test
+# description: Test ARRAY creation query
+# group: [collections]
+
+query T
+SELECT ARRAY[1, 2, 3]
+----
+[1, 2, 3]

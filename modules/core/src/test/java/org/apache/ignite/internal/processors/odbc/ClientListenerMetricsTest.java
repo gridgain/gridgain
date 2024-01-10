@@ -96,7 +96,7 @@ public class ClientListenerMetricsTest extends GridCommonAbstractTest {
 
         IgniteConfiguration nodeCfg = getConfiguration()
             .setClientConnectorConfiguration(new ClientConnectorConfiguration()
-                .setHandshakeTimeout(2000))
+                .setHandshakeTimeout(500))
             .setAuthenticationEnabled(true)
             .setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
@@ -165,9 +165,11 @@ public class ClientListenerMetricsTest extends GridCommonAbstractTest {
     /** */
     private static ClientConfiguration getClientConfiguration() {
         return new ClientConfiguration()
-                .setAddresses(Config.SERVER)
-                .setSendBufferSize(0)
-                .setReceiveBufferSize(0);
+            .setAddresses(Config.SERVER)
+            // When PA is enabled, async client channel init executes and spoils the metrics.
+            .setAffinityAwarenessEnabled(false)
+            .setSendBufferSize(0)
+            .setReceiveBufferSize(0);
     }
 
     /**

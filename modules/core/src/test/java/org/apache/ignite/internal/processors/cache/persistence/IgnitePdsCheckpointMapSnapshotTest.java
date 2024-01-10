@@ -17,6 +17,9 @@
 package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,11 +38,14 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry.GroupStateLazyStore;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.EarliestCheckpointMapSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.plugin.AbstractTestPluginProvider;
 import org.apache.ignite.plugin.PluginContext;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
@@ -47,6 +53,9 @@ import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFER_WAL_REBALANCE;
+import static org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCheckpointMapSnapshotTest.SnapshotAction.CLEAR_FILE;
+import static org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCheckpointMapSnapshotTest.SnapshotAction.KEEP;
+import static org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCheckpointMapSnapshotTest.SnapshotAction.REMOVE;
 
 /**
  * Tests checkpoint map snapshot.
@@ -138,7 +147,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRestartWithCheckpointMapSnapshot() throws Exception {
-        testRestart(false);
+        testRestart(KEEP);
     }
 
     /**
@@ -148,16 +157,26 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRestartWithoutCheckpointMapSnapshot() throws Exception {
-        testRestart(true);
+        testRestart(REMOVE);
+    }
+
+    /**
+     * Tests that node can restart successfully with an empty checkpoint map snapshot.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRestartWithEmptyCheckpointMapSnapshot() throws Exception {
+        testRestart(CLEAR_FILE);
     }
 
     /**
      * Tests node restart after a series of checkpoints. Node should use a checkpoint map snapshot if it is present.
      *
-     * @param removeSnapshot Whether to remove a snapshot of a checkpoint map.
+     * @param action Which action to perform with cpMapSnapshot.bin.
      * @throws Exception If failed.
      */
-    private void testRestart(boolean removeSnapshot) throws Exception {
+    private void testRestart(SnapshotAction action) throws Exception {
         IgniteEx grid = startGrid(0);
 
         grid.cluster().state(ClusterState.ACTIVE);
@@ -175,17 +194,45 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
             forceCheckpoint(grid);
         }
 
+        File cpDir = dbMgr(grid).checkpointManager.checkpointDirectory();
+
+        File cpSnapshotMap = new File(cpDir, CheckpointMarkersStorage.EARLIEST_CP_SNAPSHOT_FILE);
+
+        if (action == KEEP) {
+            assertTrue(GridTestUtils.waitForCondition(() -> {
+                // Wait until there is an expected number of checkpoints in cp snapshot.
+                try {
+                    byte[] bytes = Files.readAllBytes(cpSnapshotMap.toPath());
+
+                    EarliestCheckpointMapSnapshot snap = JdkMarshaller.DEFAULT.unmarshal(bytes, null);
+
+                    // Manual checkpoint count + one checkpoint on node start.
+                    return snap.checkpointIds().size() >= (cnt + 1);
+                }
+                catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }, TimeUnit.SECONDS.toMillis(3)));
+        }
+
         stopGrid(0, true);
 
-        if (removeSnapshot) {
+        if (action == REMOVE) {
             // Remove checkpoint map snapshot
-            File cpDir = dbMgr(grid).checkpointManager.checkpointDirectory();
-
-            File cpSnapshotMap = new File(cpDir, CheckpointMarkersStorage.EARLIEST_CP_SNAPSHOT_FILE);
 
             IgniteUtils.delete(cpSnapshotMap);
 
             assertFalse(cpSnapshotMap.exists());
+        }
+        else if (action == CLEAR_FILE) {
+            try (
+                FileOutputStream stream = new FileOutputStream(cpSnapshotMap, true);
+                FileChannel outChan = stream.getChannel()
+            ) {
+                outChan.truncate(0);
+                stream.flush();
+                stream.getFD().sync();
+            }
         }
 
         grid = startGrid(0);
@@ -213,9 +260,19 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
         stopGrid(2, true);
 
         // 1 is the count of checkpoint on start of the node (see checkpoint with reason "node started")
-        if (removeSnapshot)
+        if (action == REMOVE || action == CLEAR_FILE)
             assertEquals(cnt + 1, replayCount);
         else
             assertEquals(0, replayCount);
+    }
+
+    /** Action to perform on checkpoint map snapshot. */
+    enum SnapshotAction {
+        /** Keep checkpoint map snapshot. */
+        KEEP,
+        /** Remove checkpoint map snapshot. */
+        REMOVE,
+        /** Clear checkpoint map snapshot file. */
+        CLEAR_FILE
     }
 }

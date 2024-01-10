@@ -59,7 +59,7 @@ import org.apache.ignite.internal.processors.cache.transactions.TransactionInteg
 import org.apache.ignite.internal.processors.cluster.BaselineAutoAdjustMXBeanTest;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationInMemoryTest;
 import org.apache.ignite.internal.processors.database.BPlusTreeFakeReuseSelfTest;
-import org.apache.ignite.internal.processors.database.BPlusTreeReplaceRemoveRaceTest;
+import org.apache.ignite.internal.processors.database.BPlusTreeRacesTest;
 import org.apache.ignite.internal.processors.database.BPlusTreeReuseSelfTest;
 import org.apache.ignite.internal.processors.database.BPlusTreeSelfTest;
 import org.apache.ignite.internal.processors.database.CacheFreeListSelfTest;
@@ -126,7 +126,7 @@ import org.junit.runners.Suite;
     BPlusTreeSelfTest.class,
     BPlusTreeFakeReuseSelfTest.class,
     BPlusTreeReuseSelfTest.class,
-    BPlusTreeReplaceRemoveRaceTest.class,
+    BPlusTreeRacesTest.class,
     IndexStorageSelfTest.class,
     CacheFreeListSelfTest.class,
     DataRegionMetricsSelfTest.class,

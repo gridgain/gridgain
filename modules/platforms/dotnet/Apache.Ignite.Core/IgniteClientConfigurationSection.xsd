@@ -201,6 +201,11 @@
                                 <xs:documentation>Force timestamp flag.</xs:documentation>
                             </xs:annotation>
                         </xs:attribute>
+                        <xs:attribute name="unwrapNullablePrimitiveTypes" type="xs:boolean">
+                            <xs:annotation>
+                                <xs:documentation>Unwrap nullable primitive types flag.</xs:documentation>
+                            </xs:annotation>
+                        </xs:attribute>
                     </xs:complexType>
                 </xs:element>
                 <xs:element name="endpoints" minOccurs="0" maxOccurs="1">
@@ -332,6 +337,11 @@
             <xs:attribute name="enablePartitionAwareness" type="xs:boolean">
                 <xs:annotation>
                     <xs:documentation>Enables partition-aware connection: client will establish connection to every known server and route requests to primary nodes for cache operations.</xs:documentation>
+                </xs:annotation>
+            </xs:attribute>
+            <xs:attribute name="enableClusterDiscovery" type="xs:boolean">
+                <xs:annotation>
+                    <xs:documentation>Enables cluster discovery: client will maintain an actual list of all server nodes and connect to all of them.</xs:documentation>
                 </xs:annotation>
             </xs:attribute>
             <xs:attribute name="userName" type="xs:string">

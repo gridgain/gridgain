@@ -479,9 +479,11 @@ public class QueryUtils {
 
         desc.aliases(qryEntity.getAliases());
         
-        if (qryEntity instanceof QueryEntityEx)
+        if (qryEntity instanceof QueryEntityEx) {
             desc.setFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).fillAbsentPKsWithDefaults());
-        
+            desc.implicitPk(((QueryEntityEx)qryEntity).isImplicitPk());
+        }
+
         // Key and value classes still can be available if they are primitive or JDK part.
         // We need that to set correct types for _key and _val columns.
         // We better box these types - otherwise, if user provides, say, raw 'byte' for
@@ -1689,6 +1691,15 @@ public class QueryUtils {
         String fieldName = fieldNameByAlias(entity, alias);
 
         if (entity.getFields().remove(fieldName) != null) {
+            Set<String> notNullFields = entity.getNotNullFields();
+
+            if (notNullFields != null) {
+                notNullFields.remove(fieldName);
+            }
+
+            entity.getDefaultFieldValues().remove(fieldName);
+            entity.getFieldsPrecision().remove(fieldName);
+            entity.getFieldsScale().remove(fieldName);
             entity.getAliases().remove(fieldName);
 
             return true;

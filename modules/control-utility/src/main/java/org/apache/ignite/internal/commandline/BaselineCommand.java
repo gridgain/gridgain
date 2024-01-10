@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
-import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.baseline.AutoAdjustCommandArg;
 import org.apache.ignite.internal.commandline.baseline.BaselineArguments;
@@ -54,6 +53,7 @@ import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CO
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
 import static org.apache.ignite.internal.commandline.baseline.BaselineSubcommands.AUTO_ADJUST;
 import static org.apache.ignite.internal.commandline.baseline.BaselineSubcommands.of;
+import static org.apache.ignite.internal.commandline.util.TopologyUtils.coordinatorId;
 
 /**
  * Commands associated with baseline functionality.
@@ -100,13 +100,7 @@ public class BaselineCommand extends AbstractCommand<BaselineArguments> {
      */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            UUID coordinatorId = client.compute()
-                //Only non client node can be coordinator.
-                .nodes(node -> !node.isClient())
-                .stream()
-                .min(Comparator.comparingLong(GridClientNode::order))
-                .map(GridClientNode::nodeId)
-                .orElse(null);
+            UUID coordinatorId = coordinatorId(client.compute());
 
             VisorBaselineTaskResult res = executeTaskByNameOnNode(
                 client,

@@ -36,9 +36,6 @@ namespace Apache.Ignite.Core.Tests.Cache
         private const string CacheName = "lossTestCache";
 
         /** */
-        private const string WaitForRebalanceTask = "org.apache.ignite.platform.PlatformWaitForRebalanceTask";
-
-        /** */
         private const int TimeoutMs = 7000;
 
         /// <summary>
@@ -249,10 +246,7 @@ namespace Apache.Ignite.Core.Tests.Cache
                 TestUtils.WaitForTrueCondition(() => keys.Any(isPrimary), TimeoutMs);
 
                 var expectedTopVer = new AffinityTopologyVersion(2, 1);
-
-                Assert.IsTrue(ignite.GetCompute().ExecuteJavaTask<bool>(
-                    WaitForRebalanceTask,
-                    new object[] { CacheName, expectedTopVer.Version, expectedTopVer.MinorVersion, (long)TimeoutMs }));
+                Assert.IsTrue(ignite.WaitForRebalance(CacheName, expectedTopVer, TimeoutMs));
 
                 return keys.First(isPrimary);
             }

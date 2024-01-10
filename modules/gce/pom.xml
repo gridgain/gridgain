@@ -24,13 +24,13 @@
 
     <parent>
         <groupId>org.gridgain</groupId>
-        <artifactId>community.parent</artifactId>
-        <version>1</version>
-        <relativePath>../../parent</relativePath>
+        <artifactId>ignite-parent-internal</artifactId>
+        <version>8.9.127-SNAPSHOT</version>
+        <relativePath>../../parent-internal/pom.xml</relativePath>
     </parent>
 
     <artifactId>ignite-gce</artifactId>
-    <version>8.8.127-SNAPSHOT</version>
+
     <url>http://ignite.apache.org</url>
 
     <!-- Need to override this transitive dependency until google-api-client is updated. -->
@@ -39,7 +39,7 @@
             <dependency>
                 <groupId>io.grpc</groupId>
                 <artifactId>grpc-context</artifactId>
-                <version>1.27.2</version>
+                <version>${grpc-context.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -54,7 +54,7 @@
         <dependency>
             <groupId>com.google.api-client</groupId>
             <artifactId>google-api-client</artifactId>
-            <version>1.35.1</version>
+            <version>1.35.2</version>
             <exclusions>
                 <exclusion>
                     <groupId>commons-codec</groupId>
@@ -70,7 +70,7 @@
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-storage</artifactId>
-            <version>v1-rev92-1.22.0</version>
+            <version>v1-rev171-1.25.0</version>
         </dependency>
 
         <dependency>

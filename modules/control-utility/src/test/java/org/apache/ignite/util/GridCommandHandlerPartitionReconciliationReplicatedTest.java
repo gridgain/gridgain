@@ -32,7 +32,8 @@ public class GridCommandHandlerPartitionReconciliationReplicatedTest extends
         ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
             .setAffinity(new RendezvousAffinityFunction(false, 16))
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
-            .setCacheMode(CacheMode.REPLICATED));
+            .setCacheMode(CacheMode.REPLICATED)
+            .setReadFromBackup(true));
 
         try (IgniteDataStreamer streamer = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
             for (int i = 0; i < INVALID_KEY; i++)

@@ -22,16 +22,20 @@ import org.apache.ignite.internal.client.thin.CacheEntryListenersTest;
 import org.apache.ignite.internal.client.thin.ClusterApiTest;
 import org.apache.ignite.internal.client.thin.ClusterGroupTest;
 import org.apache.ignite.internal.client.thin.ComputeTaskTest;
+import org.apache.ignite.internal.client.thin.ConnectionLimitTest;
 import org.apache.ignite.internal.client.thin.IgniteSetTest;
 import org.apache.ignite.internal.client.thin.OptimizedMarshallerClassesCachedTest;
 import org.apache.ignite.internal.client.thin.ReliableChannelTest;
 import org.apache.ignite.internal.client.thin.ServicesTest;
-import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessDiscoveryTest;
 import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessConnectionTest;
 import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessStableTopologyTest;
 import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessUnstableTopologyTest;
+import org.apache.ignite.internal.client.thin.ThinClientEnpointsDiscoveryTest;
+import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessDiscoveryTest;
 import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessResourceReleaseTest;
 import org.apache.ignite.internal.client.thin.TimeoutTest;
+import org.apache.ignite.internal.client.thin.events.IgniteClientConnectionEventListenerTest;
+import org.apache.ignite.internal.client.thin.events.IgniteClientRequestEventListenerTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -47,9 +51,6 @@ import org.junit.runners.Suite;
     IgniteBinaryTest.class,
     LoadTest.class,
     ReliabilityTest.class,
-    ReliabilityTestAsync.class,
-    ReliabilityTestPartitionAware.class,
-    ReliabilityTestPartitionAwareAsync.class,
     SecurityTest.class,
     FunctionalQueryTest.class,
     IgniteBinaryQueryTest.class,
@@ -58,6 +59,7 @@ import org.junit.runners.Suite;
     ConnectToStartingNodeTest.class,
     AsyncChannelTest.class,
     ComputeTaskTest.class,
+    ConnectionLimitTest.class,
     ClusterApiTest.class,
     ClusterGroupTest.class,
     ServicesTest.class,
@@ -74,7 +76,10 @@ import org.junit.runners.Suite;
     OptimizedMarshallerClassesCachedTest.class,
     AtomicLongTest.class,
     BinaryConfigurationTest.class,
-    IgniteSetTest.class
+    IgniteSetTest.class,
+    ThinClientEnpointsDiscoveryTest.class,
+    IgniteClientConnectionEventListenerTest.class,
+    IgniteClientRequestEventListenerTest.class
 })
 public class ClientTestSuite {
     // No-op.

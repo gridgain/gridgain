@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.commandline;
 
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -25,7 +24,6 @@ import java.util.function.Consumer;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
-import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.cache.argument.TracingConfigurationCommandArg;
 import org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationArguments;
@@ -45,6 +43,7 @@ import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByN
 import static org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand.GET_ALL;
 import static org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand.RESET_ALL;
 import static org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand.of;
+import static org.apache.ignite.internal.commandline.util.TopologyUtils.coordinatorId;
 import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
 import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_NEVER;
 
@@ -135,13 +134,7 @@ public class TracingConfigurationCommand extends AbstractCommand<TracingConfigur
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         if (experimentalEnabled()) {
             try (GridClient client = Command.startClient(clientCfg)) {
-                UUID crdId = client.compute()
-                    //Only non client node can be coordinator.
-                    .nodes(node -> !node.isClient())
-                    .stream()
-                    .min(Comparator.comparingLong(GridClientNode::order))
-                    .map(GridClientNode::nodeId)
-                    .orElse(null);
+                UUID crdId = coordinatorId(client.compute());
 
                 VisorTracingConfigurationTaskResult res = executeTaskByNameOnNode(
                     client,

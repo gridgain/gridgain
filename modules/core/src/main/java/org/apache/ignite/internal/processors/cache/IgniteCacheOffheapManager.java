@@ -131,10 +131,33 @@ public interface IgniteCacheOffheapManager {
     /**
      * @param cctx Cache context.
      * @param key Key.
-     * @return Cached row, if available, null otherwise.
+     * @return Cached row, if available, null otherwise. In case of a row represents a tombstone, the method returns {@code null} as well.
      * @throws IgniteCheckedException If failed.
      */
     @Nullable public CacheDataRow read(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
+
+    /**
+     * Finds and returns a row for the given key.
+     * The returned row provides information about its version (it depends on the value of the {@code needVer} parameter), expiration time,
+     * and value type, value bytes are not available, however.
+     *
+     * @param entry Cache entry.
+     * @param needVer Whether to return version.
+     * @return Cached row, if available, null otherwise.
+     * @throws IgniteCheckedException If failed.
+     */
+    @Nullable public CacheDataRow find(GridCacheMapEntry entry, boolean needVer) throws IgniteCheckedException;
+
+    /**
+     * Finds and returns a row for the given key.
+     * The returned row provides information about its version, expiration time, and value type, value bytes are not available, however.
+     *
+     * @param cctx Cache context.
+     * @param key Key.
+     * @return Cached row, if available, null otherwise. In case of a row represents a tombstone, the method returns {@code null} as well.
+     * @throws IgniteCheckedException If failed.
+     */
+    @Nullable public CacheDataRow find(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
 
     /**
      * @param p Partition.
@@ -181,13 +204,12 @@ public interface IgniteCacheOffheapManager {
      * Fills the expiration queue by scanning suitable rows in PendingTree.
      *
      * @param tombstone {@code True} to process tombstones.
-     * @param amount The amount.
      * @param upper Upper limit.
      * @param c Fill closure.
-     * @return The number of entries loaded to expiration queue.
+     * @return Next entry expiration timestamp.
      * @throws IgniteCheckedException If failed.
      */
-    public int fillQueue(boolean tombstone, int amount, long upper, ToIntFunction<PendingRow> c) throws IgniteCheckedException;
+    public long fillQueue(boolean tombstone, long upper, ToIntFunction<PendingRow> c) throws IgniteCheckedException;
 
     /**
      * Gets the number of entries pending expire.
@@ -652,6 +674,15 @@ public interface IgniteCacheOffheapManager {
          * @return Old row.
          */
         @Nullable public CacheDataRow oldRow();
+
+        /**
+         * Specifies a mode that is used to find and prepare the old row before this closure is executed.
+         *
+         * @return Mode that is used to find a row.
+         */
+        default CacheDataRowAdapter.RowData rowData() {
+            return CacheDataRowAdapter.RowData.NO_KEY;
+        }
     }
 
     /**
@@ -772,6 +803,21 @@ public interface IgniteCacheOffheapManager {
             GridCacheVersion ver,
             long expireTime,
             @Nullable CacheDataRow oldRow) throws IgniteCheckedException;
+
+        /**
+         * Updates the old row with the new value of expiration time and returns the new row that represents the updated row.
+         * It is assumed that link to the old row and a new one are the same.
+         *
+         * @param cctx Cache context.
+         * @param expireTime New expiration time.
+         * @param oldRow Old row.
+         * @return New row.
+         * @throws IgniteCheckedException If failed.
+         */
+        public CacheDataRow createRowForTtlUpdate(
+            GridCacheContext cctx,
+            long expireTime,
+            CacheDataRow oldRow) throws IgniteCheckedException;
 
         /**
          * @param cctx Cache context.
@@ -1002,6 +1048,14 @@ public interface IgniteCacheOffheapManager {
          * @throws IgniteCheckedException If failed.
          */
         public CacheDataRow find(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException;
+
+        /**
+         * @param cctx Cache context.
+         * @param key Key.
+         * @return Data row.
+         * @throws IgniteCheckedException If failed.
+         */
+        public CacheDataRow find(GridCacheContext cctx, KeyCacheObject key, CacheDataRowAdapter.RowData x) throws IgniteCheckedException;
 
         /**
          * Returns iterator over the all row versions for the given key.

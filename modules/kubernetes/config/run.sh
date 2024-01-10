@@ -42,6 +42,14 @@ if [ "$IGNITE_QUIET" = "false" ]; then
   QUIET="-v"
 fi
 
+if [ "$IGNITE_QUIET" = "true" ]; then
+  QUIET="-q"
+fi
+
+ls -tr $IGNITE_WORK_DIR/java_pid1-*.hprof | head -n -5 | xargs --no-run-if-empty rm
+
+test -f $IGNITE_WORK_DIR/java_pid1.hprof && mv $IGNITE_WORK_DIR/java_pid1.hprof $IGNITE_WORK_DIR/java_pid1-$(stat -c %Y $IGNITE_WORK_DIR/java_pid1.hprof).hprof
+
 if [ -z $CONFIG_URI ]; then
   $IGNITE_HOME/bin/ignite.sh $QUIET
 else

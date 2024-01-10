@@ -100,7 +100,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             var sysMetrics = metrics[4];
             Assert.AreEqual("sysMemPlc", sysMetrics.Name);
-            AssertMetricsAreEmpty(sysMetrics);
+            AssertMetricsAreNotEmpty(sysMetrics);
 
             var volatileMetrics = metrics[6];
             Assert.AreEqual("volatileDsMemPlc", volatileMetrics.Name);
@@ -123,7 +123,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             sysMetrics = ignite.GetDataRegionMetrics("sysMemPlc");
             Assert.AreEqual("sysMemPlc", sysMetrics.Name);
-            AssertMetricsAreEmpty(sysMetrics);
+            AssertMetricsAreNotEmpty(sysMetrics);
 
             volatileMetrics = ignite.GetDataRegionMetrics("volatileDsMemPlc");
             Assert.AreEqual("volatileDsMemPlc", volatileMetrics.Name);
@@ -177,6 +177,17 @@ namespace Apache.Ignite.Core.Tests.Cache
             Assert.AreEqual(0, metrics.LargeEntriesPagesPercentage);
             Assert.AreEqual(0, metrics.PageFillFactor);
             Assert.AreEqual(0, metrics.OffheapUsedSize);
+        }
+
+        /// <summary>
+        /// Asserts that metrics are not empty.
+        /// </summary>
+        private static void AssertMetricsAreNotEmpty(IDataRegionMetrics metrics)
+        {
+            Assert.Greater(metrics.AllocationRate, 0);
+            Assert.Greater(metrics.PageFillFactor, 0);
+            Assert.Greater(metrics.TotalAllocatedPages, 0);
+            Assert.Greater(metrics.PhysicalMemoryPages, 0);
         }
 
         /// <summary>

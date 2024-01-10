@@ -388,7 +388,8 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
             .setAffinity(new RendezvousAffinityFunction(false, 16))
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
             .setCacheMode(CacheMode.PARTITIONED)
-            .setBackups(3));
+            .setBackups(3)
+            .setReadFromBackup(true));
 
         try (IgniteDataStreamer<Integer, String> streamer = ignite(0).dataStreamer(DEFAULT_CACHE_NAME)) {
             for (int i = 0; i < INVALID_KEY; i++)

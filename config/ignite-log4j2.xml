@@ -60,7 +60,8 @@
         <Logger name="org.eclipse.jetty" level="WARN"/>
         <Logger name="org.glassfish.grizzly" level="WARN"/>
 
-        <Logger name="org.gridgain.control.springframework" level="WARN"/>
+        <!-- Control Center Agent shaded dependencies. -->
+        <Logger name="org.gridgain.control.shade" level="WARN"/>
 
         <!--
         Avoid warnings about failed bind attempt when multiple nodes running on the same host.

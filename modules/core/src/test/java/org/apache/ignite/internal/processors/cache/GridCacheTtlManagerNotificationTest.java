@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
@@ -109,8 +109,6 @@ public class GridCacheTtlManagerNotificationTest extends GridCommonAbstractTest 
 
             cache.withExpiryPolicy(plc1).put(key + 1, 1);
 
-            Thread.sleep(1_000); // Cleaner should see entry.
-
             ExpiryPolicy plc2 = new CreatedExpiryPolicy(new Duration(MILLISECONDS, 1000));
 
             cache.withExpiryPolicy(plc2).put(key + 2, 1);
@@ -127,7 +125,7 @@ public class GridCacheTtlManagerNotificationTest extends GridCommonAbstractTest 
      */
     @Test
     public void testThatNotificationWorkAsExpectedInMultithreadedMode() throws Exception {
-        final CyclicBarrier barrier = new CyclicBarrier(21);
+        final CountDownLatch latch = new CountDownLatch(20);
         final AtomicInteger keysRangeGen = new AtomicInteger();
         final AtomicInteger evtCnt = new AtomicInteger();
         final int cnt = 1_000;
@@ -148,20 +146,21 @@ public class GridCacheTtlManagerNotificationTest extends GridCommonAbstractTest 
             int threadCnt = 10;
 
             GridTestUtils.runMultiThreadedAsync(
-                new CacheFiller(cache, 100_000, barrier, keysRangeGen, cnt),
+                new CacheFiller(cache, 100_000, latch, keysRangeGen, cnt),
                 threadCnt, "put-thread");
 
-            long t1 = System.currentTimeMillis();
-
             GridTestUtils.runMultiThreadedAsync(
-                new CacheFiller(cache, smallDuration, barrier, keysRangeGen, cnt),
+                new CacheFiller(cache, smallDuration, latch, keysRangeGen, cnt),
                 threadCnt, "ttl-put-thread");
 
-            barrier.await();
+            latch.await();
 
             assertEquals(2 * threadCnt * cnt, cache.size());
 
-            Thread.sleep(2 * smallDuration);
+            assertTrue(
+                "Unexpected size of " + cache.getName(),
+                GridTestUtils.waitForCondition(() -> threadCnt * cnt == cache.size(), 10_000)
+            );
 
             assertEquals(threadCnt * cnt, cache.size());
             assertEquals(threadCnt * cnt, evtCnt.get());
@@ -182,7 +181,7 @@ public class GridCacheTtlManagerNotificationTest extends GridCommonAbstractTest 
         final int cacheCnt = CACHES_CNT;
         final int threadCnt = 2;
 
-        final CyclicBarrier barrier = new CyclicBarrier(2 * threadCnt * cacheCnt + 1);
+        final CountDownLatch latch = new CountDownLatch(2 * threadCnt * cacheCnt);
         final AtomicInteger keysRangeGen = new AtomicInteger();
         final AtomicInteger evtCnt = new AtomicInteger(0);
         final List<IgniteCache<Object, Object>> caches = new ArrayList<>(cacheCnt);
@@ -204,25 +203,29 @@ public class GridCacheTtlManagerNotificationTest extends GridCommonAbstractTest 
 
             for (int i = 0; i < cacheCnt; i++) {
                 GridTestUtils.runMultiThreadedAsync(
-                    new CacheFiller(caches.get(i), 100_000, barrier, keysRangeGen, cnt),
+                    new CacheFiller(caches.get(i), 100_000, latch, keysRangeGen, cnt),
                     threadCnt,
                     "put-large-duration");
 
                 GridTestUtils.runMultiThreadedAsync(
-                    new CacheFiller(caches.get(i), smallDuration, barrier, keysRangeGen, cnt),
+                    new CacheFiller(caches.get(i), smallDuration, latch, keysRangeGen, cnt),
                     threadCnt,
                     "put-small-duration");
             }
 
-            barrier.await();
+            latch.await();
 
             for (int i = 0; i < cacheCnt; i++)
                 assertEquals("Unexpected size of " + CACHE_PREFIX + i, 2 * threadCnt * cnt, caches.get(i).size());
 
-            Thread.sleep(2 * smallDuration);
+            for (int i = 0; i < cacheCnt; i++) {
+                IgniteCache cache = caches.get(i);
 
-            for (int i = 0; i < cacheCnt; i++)
-                assertEquals("Unexpected size of " + CACHE_PREFIX + i, threadCnt * cnt, caches.get(i).size());
+                assertTrue(
+                    "Unexpected size of " + cache.getName(),
+                    GridTestUtils.waitForCondition(() -> threadCnt * cnt == cache.size(), 10_000)
+                );
+            }
 
             assertEquals("Unexpected count of expired entries", threadCnt * CACHES_CNT * cnt, evtCnt.get());
         }
@@ -231,7 +234,7 @@ public class GridCacheTtlManagerNotificationTest extends GridCommonAbstractTest 
     /** */
     private static class CacheFiller implements Runnable {
         /** Barrier. */
-        private final CyclicBarrier barrier;
+        private final CountDownLatch latch;
 
         /** Keys range generator. */
         private final AtomicInteger keysRangeGenerator;
@@ -248,14 +251,14 @@ public class GridCacheTtlManagerNotificationTest extends GridCommonAbstractTest 
         /**
          * @param cache Cache.
          * @param expirationDuration Expiration duration.
-         * @param barrier Barrier.
+         * @param latch Barrier.
          * @param keysRangeGenerator Keys.
          * @param cnt Count.
          */
-        CacheFiller(IgniteCache<Object, Object> cache, int expirationDuration, CyclicBarrier barrier,
+        CacheFiller(IgniteCache<Object, Object> cache, int expirationDuration, CountDownLatch latch,
             AtomicInteger keysRangeGenerator, int cnt) {
             this.expirationDuration = expirationDuration;
-            this.barrier = barrier;
+            this.latch = latch;
             this.keysRangeGenerator = keysRangeGenerator;
             this.cnt = cnt;
             this.cache = cache;
@@ -271,7 +274,7 @@ public class GridCacheTtlManagerNotificationTest extends GridCommonAbstractTest 
                 for (int i = keyStart; i < keyStart + cnt; i++)
                     cache.withExpiryPolicy(plc1).put("key" + i, 1);
 
-                barrier.await();
+                latch.countDown();
             }
             catch (Exception e) {
                 throw new IgniteException(e);

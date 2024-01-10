@@ -97,7 +97,7 @@ public class TaskEvent extends EventAdapter {
      * @param subjId Subject ID.
      */
     public TaskEvent(ClusterNode node, String msg, int type, IgniteUuid sesId, String taskName, String taskClsName,
-        boolean internal, @Nullable UUID subjId) {
+                     boolean internal, @Nullable UUID subjId) {
         super(node, msg, type);
 
         this.sesId = sesId;

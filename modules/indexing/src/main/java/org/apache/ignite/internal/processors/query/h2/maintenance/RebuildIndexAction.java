@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.maintenance;
 
 import java.util.List;
+import java.util.StringJoiner;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -39,6 +40,7 @@ import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.index.Index;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.stream.Collectors.joining;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
 
 /**
@@ -135,7 +137,11 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
         H2TreeIndex targetIndex = findIndex(cacheName, idxName, schemaManager);
 
         if (targetIndex == null) {
-            // Our job here is already done.
+            if (log.isInfoEnabled()) {
+                log.info("Could not find index: [indexName=" + idxName + ", "
+                    + createCacheTablesInfo(cacheName, schemaManager) + ']');
+            }
+
             return;
         }
 
@@ -225,28 +231,54 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
      *
      * @param cacheName Cache name.
      * @param idxName Index name.
-     * @param schemaManager Schema manager.
+     * @param schemaMgr Schema manager.
      * @return Index or {@code null} if index was not found.
      */
-    @Nullable private H2TreeIndex findIndex(String cacheName, String idxName, SchemaManager schemaManager) {
+    public static @Nullable H2TreeIndex findIndex(String cacheName, String idxName, SchemaManager schemaMgr) {
         H2TreeIndex targetIndex = null;
 
-        for (H2TableDescriptor tblDesc : schemaManager.tablesForCache(cacheName)) {
+        for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
             GridH2Table tbl = tblDesc.table();
 
             assert tbl != null;
 
-            Index index = tbl.getIndex(idxName);
+            Index index = tbl.getIndexSafe(idxName);
 
             if (index != null) {
                 assert index instanceof H2TreeIndex;
 
-                targetIndex = (H2TreeIndex) index;
+                targetIndex = (H2TreeIndex)index;
+
                 break;
             }
         }
 
         return targetIndex;
+    }
+
+    /**
+     * Creates information about the cache tables.
+     *
+     * @param cacheName Cache name.
+     * @param schemaMgr Schema manager.
+     * @return String in format: cacheName=foo, tables=[[name=user, rebuild=false, indexes=[IDX_1, IDX_2]].
+     */
+    public static String createCacheTablesInfo(String cacheName, SchemaManager schemaMgr) {
+        StringJoiner joiner = new StringJoiner("], [", "[", "]");
+
+        for (H2TableDescriptor tableDescriptor : schemaMgr.tablesForCache(cacheName)) {
+            GridH2Table tbl = tableDescriptor.table();
+
+            String idx = tbl.getIndexes().stream()
+                .filter(H2TreeIndex.class::isInstance)
+                .map(H2TreeIndex.class::cast)
+                .map(H2TreeIndex::getIndexName)
+                .collect(joining(", ", "[", "]"));
+
+            joiner.add("name=" + tbl.getName() + ", rebuild=" + tbl.rebuildFromHashInProgress() + ", indexes=" + idx);
+        }
+
+        return "cacheName=" + cacheName + ", tables=[" + joiner + ']';
     }
 
     /**

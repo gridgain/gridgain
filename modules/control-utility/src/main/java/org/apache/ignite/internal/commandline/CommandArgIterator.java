@@ -16,8 +16,11 @@
 
 package org.apache.ignite.internal.commandline;
 
-import java.util.*;
-
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.NotNull;
 

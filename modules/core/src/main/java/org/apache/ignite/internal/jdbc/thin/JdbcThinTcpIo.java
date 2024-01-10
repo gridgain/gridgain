@@ -76,7 +76,7 @@ import static org.apache.ignite.internal.jdbc.thin.JdbcThinUtils.nullableBoolean
  */
 public class JdbcThinTcpIo {
     /** Version 0.0.0. Used when server responded with authorization error. */
-    private static final ClientListenerProtocolVersion VER_0_0_0 = ClientListenerProtocolVersion.create(0, 0, 0);
+    private static final ClientListenerProtocolVersion VER_0_0_0 = ClientListenerProtocolVersion.VER_UNKNOWN;
 
     /** Version 2.1.0. */
     private static final ClientListenerProtocolVersion VER_2_1_0 = ClientListenerProtocolVersion.create(2, 1, 0);
@@ -188,7 +188,7 @@ public class JdbcThinTcpIo {
                     sock.connect(sockAddr, timeout);
                 }
                 catch (IOException e) {
-                    throw new SQLException("Failed to connect to server [host=" + sockAddr.getHostName() +
+                    throw new SQLException("Failed to connect to server [host=" + sockAddr.getAddress() +
                         ", port=" + sockAddr.getPort() + ']', SqlStateCode.CLIENT_CONNECTION_FAILED, e);
                 }
             }

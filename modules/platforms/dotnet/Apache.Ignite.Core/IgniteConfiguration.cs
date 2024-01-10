@@ -321,30 +321,30 @@ namespace Apache.Ignite.Core
             Debug.Assert(writer != null);
 
             // Simple properties
-            writer.WriteBooleanNullable(_clientMode);
+            writer.ConfigWriteBooleanNullable(_clientMode);
             writer.WriteIntArray(IncludedEventTypes == null ? null : IncludedEventTypes.ToArray());
 
-            writer.WriteTimeSpanAsLongNullable(_metricsExpireTime);
-            writer.WriteIntNullable(_metricsHistorySize);
-            writer.WriteTimeSpanAsLongNullable(_metricsLogFrequency);
-            writer.WriteTimeSpanAsLongNullable(_metricsUpdateFrequency);
-            writer.WriteIntNullable(_networkSendRetryCount);
-            writer.WriteTimeSpanAsLongNullable(_networkSendRetryDelay);
-            writer.WriteTimeSpanAsLongNullable(_networkTimeout);
+            writer.ConfigWriteTimeSpanAsLongNullable(_metricsExpireTime);
+            writer.ConfigWriteIntNullable(_metricsHistorySize);
+            writer.ConfigWriteTimeSpanAsLongNullable(_metricsLogFrequency);
+            writer.ConfigWriteTimeSpanAsLongNullable(_metricsUpdateFrequency);
+            writer.ConfigWriteIntNullable(_networkSendRetryCount);
+            writer.ConfigWriteTimeSpanAsLongNullable(_networkSendRetryDelay);
+            writer.ConfigWriteTimeSpanAsLongNullable(_networkTimeout);
             writer.WriteString(WorkDirectory);
             writer.WriteString(Localhost);
-            writer.WriteBooleanNullable(_isDaemon);
-            writer.WriteTimeSpanAsLongNullable(_failureDetectionTimeout);
-            writer.WriteTimeSpanAsLongNullable(_clientFailureDetectionTimeout);
-            writer.WriteTimeSpanAsLongNullable(_longQueryWarningTimeout);
-            writer.WriteBooleanNullable(_isActiveOnStart);
-            writer.WriteBooleanNullable(_authenticationEnabled);
-            writer.WriteLongNullable(_mvccVacuumFreq);
-            writer.WriteIntNullable(_mvccVacuumThreadCnt);
-            writer.WriteTimeSpanAsLongNullable(_sysWorkerBlockedTimeout);
-            writer.WriteIntNullable(_sqlQueryHistorySize);
-            writer.WriteBooleanNullable(_javaPeerClassLoadingEnabled);
-            writer.WriteIntNullable((int?) _asyncContinuationExecutor);
+            writer.ConfigWriteBooleanNullable(_isDaemon);
+            writer.ConfigWriteTimeSpanAsLongNullable(_failureDetectionTimeout);
+            writer.ConfigWriteTimeSpanAsLongNullable(_clientFailureDetectionTimeout);
+            writer.ConfigWriteTimeSpanAsLongNullable(_longQueryWarningTimeout);
+            writer.ConfigWriteBooleanNullable(_isActiveOnStart);
+            writer.ConfigWriteBooleanNullable(_authenticationEnabled);
+            writer.ConfigWriteLongNullable(_mvccVacuumFreq);
+            writer.ConfigWriteIntNullable(_mvccVacuumThreadCnt);
+            writer.ConfigWriteTimeSpanAsLongNullable(_sysWorkerBlockedTimeout);
+            writer.ConfigWriteIntNullable(_sqlQueryHistorySize);
+            writer.ConfigWriteBooleanNullable(_javaPeerClassLoadingEnabled);
+            writer.ConfigWriteIntNullable((int?) _asyncContinuationExecutor);
 
             if (SqlSchemas == null)
                 writer.WriteInt(0);
@@ -361,15 +361,15 @@ namespace Apache.Ignite.Core
             writer.WriteObjectDetached(ConsistentId);
 
             // Thread pools
-            writer.WriteIntNullable(_publicThreadPoolSize);
-            writer.WriteIntNullable(_stripedThreadPoolSize);
-            writer.WriteIntNullable(_serviceThreadPoolSize);
-            writer.WriteIntNullable(_systemThreadPoolSize);
-            writer.WriteIntNullable(_asyncCallbackThreadPoolSize);
-            writer.WriteIntNullable(_managementThreadPoolSize);
-            writer.WriteIntNullable(_dataStreamerThreadPoolSize);
-            writer.WriteIntNullable(_utilityCacheThreadPoolSize);
-            writer.WriteIntNullable(_queryThreadPoolSize);
+            writer.ConfigWriteIntNullable(_publicThreadPoolSize);
+            writer.ConfigWriteIntNullable(_stripedThreadPoolSize);
+            writer.ConfigWriteIntNullable(_serviceThreadPoolSize);
+            writer.ConfigWriteIntNullable(_systemThreadPoolSize);
+            writer.ConfigWriteIntNullable(_asyncCallbackThreadPoolSize);
+            writer.ConfigWriteIntNullable(_managementThreadPoolSize);
+            writer.ConfigWriteIntNullable(_dataStreamerThreadPoolSize);
+            writer.ConfigWriteIntNullable(_utilityCacheThreadPoolSize);
+            writer.ConfigWriteIntNullable(_queryThreadPoolSize);
 
             // Cache config
             writer.WriteCollectionRaw(CacheConfiguration);
@@ -728,29 +728,29 @@ namespace Apache.Ignite.Core
         private void ReadCore(BinaryReader r)
         {
             // Simple properties
-            _clientMode = r.ReadBooleanNullable();
+            _clientMode = r.ConfigReadBooleanNullable();
             IncludedEventTypes = r.ReadIntArray();
-            _metricsExpireTime = r.ReadTimeSpanNullable();
-            _metricsHistorySize = r.ReadIntNullable();
-            _metricsLogFrequency = r.ReadTimeSpanNullable();
-            _metricsUpdateFrequency = r.ReadTimeSpanNullable();
-            _networkSendRetryCount = r.ReadIntNullable();
-            _networkSendRetryDelay = r.ReadTimeSpanNullable();
-            _networkTimeout = r.ReadTimeSpanNullable();
+            _metricsExpireTime = r.ConfigReadTimeSpanNullable();
+            _metricsHistorySize = r.ConfigReadIntNullable();
+            _metricsLogFrequency = r.ConfigReadTimeSpanNullable();
+            _metricsUpdateFrequency = r.ConfigReadTimeSpanNullable();
+            _networkSendRetryCount = r.ConfigReadIntNullable();
+            _networkSendRetryDelay = r.ConfigReadTimeSpanNullable();
+            _networkTimeout = r.ConfigReadTimeSpanNullable();
             WorkDirectory = r.ReadString();
             Localhost = r.ReadString();
-            _isDaemon = r.ReadBooleanNullable();
-            _failureDetectionTimeout = r.ReadTimeSpanNullable();
-            _clientFailureDetectionTimeout = r.ReadTimeSpanNullable();
-            _longQueryWarningTimeout = r.ReadTimeSpanNullable();
-            _isActiveOnStart = r.ReadBooleanNullable();
-            _authenticationEnabled = r.ReadBooleanNullable();
-            _mvccVacuumFreq = r.ReadLongNullable();
-            _mvccVacuumThreadCnt = r.ReadIntNullable();
-            _sysWorkerBlockedTimeout = r.ReadTimeSpanNullable();
-            _sqlQueryHistorySize = r.ReadIntNullable();
-            _javaPeerClassLoadingEnabled = r.ReadBooleanNullable();
-            _asyncContinuationExecutor = (AsyncContinuationExecutor?) r.ReadIntNullable();
+            _isDaemon = r.ConfigReadBooleanNullable();
+            _failureDetectionTimeout = r.ConfigReadTimeSpanNullable();
+            _clientFailureDetectionTimeout = r.ConfigReadTimeSpanNullable();
+            _longQueryWarningTimeout = r.ConfigReadTimeSpanNullable();
+            _isActiveOnStart = r.ConfigReadBooleanNullable();
+            _authenticationEnabled = r.ConfigReadBooleanNullable();
+            _mvccVacuumFreq = r.ConfigReadLongNullable();
+            _mvccVacuumThreadCnt = r.ConfigReadIntNullable();
+            _sysWorkerBlockedTimeout = r.ConfigReadTimeSpanNullable();
+            _sqlQueryHistorySize = r.ConfigReadIntNullable();
+            _javaPeerClassLoadingEnabled = r.ConfigReadBooleanNullable();
+            _asyncContinuationExecutor = (AsyncContinuationExecutor?) r.ConfigReadIntNullable();
 
             int sqlSchemasCnt = r.ReadInt();
 
@@ -765,15 +765,15 @@ namespace Apache.Ignite.Core
             ConsistentId = r.ReadObject<object>();
 
             // Thread pools
-            _publicThreadPoolSize = r.ReadIntNullable();
-            _stripedThreadPoolSize = r.ReadIntNullable();
-            _serviceThreadPoolSize = r.ReadIntNullable();
-            _systemThreadPoolSize = r.ReadIntNullable();
-            _asyncCallbackThreadPoolSize = r.ReadIntNullable();
-            _managementThreadPoolSize = r.ReadIntNullable();
-            _dataStreamerThreadPoolSize = r.ReadIntNullable();
-            _utilityCacheThreadPoolSize = r.ReadIntNullable();
-            _queryThreadPoolSize = r.ReadIntNullable();
+            _publicThreadPoolSize = r.ConfigReadIntNullable();
+            _stripedThreadPoolSize = r.ConfigReadIntNullable();
+            _serviceThreadPoolSize = r.ConfigReadIntNullable();
+            _systemThreadPoolSize = r.ConfigReadIntNullable();
+            _asyncCallbackThreadPoolSize = r.ConfigReadIntNullable();
+            _managementThreadPoolSize = r.ConfigReadIntNullable();
+            _dataStreamerThreadPoolSize = r.ConfigReadIntNullable();
+            _utilityCacheThreadPoolSize = r.ConfigReadIntNullable();
+            _queryThreadPoolSize = r.ConfigReadIntNullable();
 
             // Cache config
             CacheConfiguration = r.ReadCollectionRaw(x => new CacheConfiguration(x));
@@ -1665,7 +1665,7 @@ namespace Apache.Ignite.Core
         /// Time interval between MVCC vacuum runs in milliseconds.
         /// </summary>
         [DefaultValue(DefaultMvccVacuumFrequency)]
-        [IgniteExperimentalAttribute]
+        [IgniteExperimental]
         public long MvccVacuumFrequency
         {
             get { return _mvccVacuumFreq ?? DefaultMvccVacuumFrequency; }
@@ -1678,7 +1678,7 @@ namespace Apache.Ignite.Core
         /// Number of MVCC vacuum threads.
         /// </summary>
         [DefaultValue(DefaultMvccVacuumThreadCount)]
-        [IgniteExperimentalAttribute]
+        [IgniteExperimental]
         public int MvccVacuumThreadCount
         {
             get { return _mvccVacuumThreadCnt ?? DefaultMvccVacuumThreadCount; }

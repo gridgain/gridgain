@@ -18,9 +18,12 @@ package org.apache.ignite.testsuites;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsReserveWalSegmentsWithCompactionTest;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
 
+import static java.util.Collections.singletonList;
 import static org.apache.ignite.testsuites.IgnitePdsCompressionTestSuite.enableCompressionByDefault;
 
 /** */
@@ -33,7 +36,8 @@ public class IgnitePdsCompressionTestSuite2 {
         List<Class<?>> suite = new ArrayList<>();
 
         enableCompressionByDefault();
-        IgnitePdsTestSuite2.addRealPageStoreTests(suite, null);
+        IgnitePdsTestSuite2.addRealPageStoreTests(suite,
+                singletonList(IgnitePdsReserveWalSegmentsWithCompactionTest.class));
 
         return suite;
     }

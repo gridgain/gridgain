@@ -27,6 +27,12 @@ public class QueryField implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
+    /** Undefined precision. */
+    public static final int UNDEFINED_PRECISION = -1;
+
+    /** Undefined scale. */
+    public static final int UNDEFINED_SCALE = -1;
+
     /** Field name. */
     private final String name;
 
@@ -54,7 +60,7 @@ public class QueryField implements Serializable {
      * @param nullable Nullable flag.
      */
     public QueryField(String name, String typeName, boolean nullable) {
-        this(name, typeName, nullable, null, -1, -1);
+        this(name, typeName, nullable, null, UNDEFINED_PRECISION, UNDEFINED_SCALE);
     }
 
     /**
@@ -64,7 +70,7 @@ public class QueryField implements Serializable {
      * @param dfltValue Default value.
      */
     public QueryField(String name, String typeName, boolean nullable, Object dfltValue) {
-        this(name, typeName, nullable, dfltValue, -1, -1);
+        this(name, typeName, nullable, dfltValue, UNDEFINED_PRECISION, UNDEFINED_SCALE);
     }
 
     /**

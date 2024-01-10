@@ -56,6 +56,7 @@ import org.apache.ignite.cache.CacheManager;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.query.AbstractContinuousQuery;
+import org.apache.ignite.cache.query.BulkLoadContextCursor;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.ContinuousQueryWithTransformer;
 import org.apache.ignite.cache.query.ContinuousQueryWithTransformer.EventListener;
@@ -82,6 +83,7 @@ import org.apache.ignite.internal.processors.cache.query.CacheQueryFuture;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.GridCloseableIteratorAdapter;
 import org.apache.ignite.internal.util.GridEmptyIterator;
@@ -553,6 +555,9 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
         else if (filter instanceof SpiQuery) {
             qry = ctx.queries().createSpiQuery(isKeepBinary);
 
+            if (filter.getPageSize() > 0)
+                qry.pageSize(filter.getPageSize());
+
             if (grp != null)
                 qry.projection(grp);
 
@@ -810,9 +815,18 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
             if (qry instanceof SqlQuery)
                 return (QueryCursor<R>)ctx.kernalContext().query().querySql(ctx, (SqlQuery)qry, keepBinary);
 
-            if (qry instanceof SqlFieldsQuery)
-                return (FieldsQueryCursor<R>)ctx.kernalContext().query().querySqlFields(ctx, (SqlFieldsQuery)qry,
+            if (qry instanceof SqlFieldsQuery) {
+                FieldsQueryCursor<R> cursor = (FieldsQueryCursor<R>)ctx.kernalContext().query().querySqlFields(ctx, (SqlFieldsQuery)qry,
                     null, keepBinary, true).get(0);
+
+                if (cursor instanceof BulkLoadContextCursor) {
+                    cursor.close();
+
+                    throw new IgniteSQLException("COPY command is currently supported only in thin JDBC driver.");
+                }
+
+                return cursor;
+            }
 
             if (qry instanceof ScanQuery)
                 return query((ScanQuery)qry, null, projection(qry.isLocal()));
@@ -2185,6 +2199,30 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
             return delegate.localPreloadPartition(part);
         }
         catch (IgniteCheckedException e) {
+            throw cacheException(e);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public int localEntrySize(K key) {
+        IgniteInternalCache<K, V> delegate = getDelegateSafe();
+
+        try {
+            return delegate.localEntrySize(key);
+        }
+        catch (IgniteCheckedException e) {
+            throw cacheException(e);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean touch(K key) {
+        IgniteInternalCache<K, V> delegate = getDelegateSafe();
+
+        try {
+            return delegate.touch(key);
+        }
+        catch (IgniteException e) {
             throw cacheException(e);
         }
     }

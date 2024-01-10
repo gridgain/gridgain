@@ -55,6 +55,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MIN_AFFINITY_HISTORY_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PART_DISTRIBUTION_WARN_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.getFloat;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
@@ -69,6 +70,9 @@ import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVE
 public class GridAffinityAssignmentCache {
     /** @see IgniteSystemProperties#IGNITE_AFFINITY_HISTORY_SIZE */
     public static final int DFLT_AFFINITY_HISTORY_SIZE = 25;
+
+    /** @see IgniteSystemProperties#IGNITE_MIN_AFFINITY_HISTORY_SIZE */
+    public static final int DFLT_MIN_AFFINITY_HISTORY_SIZE = 2;
 
     /** @see IgniteSystemProperties#IGNITE_PART_DISTRIBUTION_WARN_THRESHOLD */
     public static final float DFLT_PART_DISTRIBUTION_WARN_THRESHOLD = 50f;
@@ -93,7 +97,8 @@ public class GridAffinityAssignmentCache {
      * {@link GridCachePartitionExchangeManager#lastAffinityChangedTopologyVersion} in case cluster has experienced
      * too many client joins / client leaves / local cache starts.
      */
-    private final int MIN_NON_SHALLOW_HIST_SIZE = 2;
+    private final int MIN_NON_SHALLOW_HIST_SIZE =
+        getInteger(IGNITE_MIN_AFFINITY_HISTORY_SIZE, DFLT_MIN_AFFINITY_HISTORY_SIZE);
 
     /** Partition distribution. */
     private final float partDistribution = getFloat(IGNITE_PART_DISTRIBUTION_WARN_THRESHOLD,
@@ -819,19 +824,22 @@ public class GridAffinityAssignmentCache {
                     ", lastAffChangeTopVer=" + lastAffChangeTopVer +
                     ", head=" + head.get().topologyVersion() +
                     ", history=" + affCache.keySet() +
+                    ", minNonShallowHistorySize=" + MIN_NON_SHALLOW_HIST_SIZE +
                     ", maxNonShallowHistorySize=" + MAX_NON_SHALLOW_HIST_SIZE +
                     ']');
             }
 
             if (cache.topologyVersion().compareTo(topVer) > 0) {
                 throw new IllegalStateException("Getting affinity for too old topology version that is already " +
-                    "out of history (try to increase '" + IGNITE_AFFINITY_HISTORY_SIZE + "' system property)" +
+                    "out of history (try to increase '" + IGNITE_MIN_AFFINITY_HISTORY_SIZE + "' or '" +
+                    IGNITE_AFFINITY_HISTORY_SIZE + "' system properties)" +
                     " [locNode=" + ctx.discovery().localNode() +
                     ", grp=" + cacheOrGrpName +
                     ", topVer=" + topVer +
                     ", lastAffChangeTopVer=" + lastAffChangeTopVer +
                     ", head=" + head.get().topologyVersion() +
                     ", history=" + affCache.keySet() +
+                    ", minNonShallowHistorySize=" + MIN_NON_SHALLOW_HIST_SIZE +
                     ", maxNonShallowHistorySize=" + MAX_NON_SHALLOW_HIST_SIZE +
                     ']');
             }
@@ -966,8 +974,15 @@ public class GridAffinityAssignmentCache {
 
         int totalSize = affCache.size();
 
+        int originNonShallowSize = nonShallowSize;
+
+        int originTotalSize = totalSize;
+
         if (shouldContinueCleanup(nonShallowSize, totalSize)) {
             int initNonShallowSize = nonShallowSize;
+
+            AffinityTopologyVersion firstVer = null;
+            AffinityTopologyVersion lastVer = null;
 
             Iterator<HistoryAffinityAssignment> it = affCache.values().iterator();
 
@@ -983,6 +998,28 @@ public class GridAffinityAssignmentCache {
                         // GridAffinityProcessor#affMap has the same size and instance set as #affCache.
                         ctx.affinity().removeCachedAffinity(aff0.topologyVersion());
 
+                        if (log.isDebugEnabled()) {
+                            String msg = String.format(
+                                "Removed affinity assignments for group [name=%s, nonShallowSize=%s, totalSize=%s",
+                                cacheOrGrpName, originNonShallowSize, originTotalSize
+                            );
+
+                            if (lastVer == null) {
+                                msg += String.format(", version=[topVer=%s, minorTopVer=%s]]",
+                                    firstVer.topologyVersion(), firstVer.minorTopologyVersion()
+                                );
+                            }
+                            else {
+                                msg += String.format(", from=[topVer=%s, minorTopVer=%s], " +
+                                        "to=[topVer=%s, minorTopVer=%s]]",
+                                    firstVer.topologyVersion(), firstVer.minorTopologyVersion(),
+                                    lastVer.topologyVersion(), lastVer.minorTopologyVersion()
+                                );
+                            }
+
+                            log.debug(msg);
+                        }
+
                         return;
                     }
 
@@ -992,6 +1029,13 @@ public class GridAffinityAssignmentCache {
                 totalSize--;
 
                 it.remove();
+
+                if (log.isDebugEnabled()) {
+                    if (firstVer == null)
+                        firstVer = aff0.topologyVersion();
+                    else
+                        lastVer = aff0.topologyVersion();
+                }
             }
 
             assert false : "All elements have been removed from affinity cache during cleanup";

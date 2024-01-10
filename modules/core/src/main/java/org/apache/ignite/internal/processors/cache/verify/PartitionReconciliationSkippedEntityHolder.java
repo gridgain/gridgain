@@ -27,9 +27,7 @@ import org.jetbrains.annotations.Nullable;
  * Container for skipped entries with their reason.
  */
 public class PartitionReconciliationSkippedEntityHolder<T> extends IgniteDataTransferObject {
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 0L;
 
     /** Skipped entity. */
@@ -100,15 +98,14 @@ public class PartitionReconciliationSkippedEntityHolder<T> extends IgniteDataTra
      * Enumerates possible reasons for skipping entries.
      */
     public enum SkippingReason {
-        /**
-         *
-         */
+        /** */
         ENTITY_WITH_TTL("Given entity has ttl enabled."),
 
-        /**
-         *
-         */
-        KEY_WAS_NOT_REPAIRED("Key was not repaired. Repair attempts were over.");
+        /** */
+        KEY_WAS_NOT_REPAIRED("Key was not repaired. Repair attempts were over."),
+
+        /** */
+        LOST_PARTITION("The partition does not have any owner (it is possible that the partition is lost).");
 
         /** Reason. */
         private String reason;

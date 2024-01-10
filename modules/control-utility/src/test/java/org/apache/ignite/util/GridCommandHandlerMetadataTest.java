@@ -721,7 +721,8 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
     /** */
     protected ClientConfiguration clientConfiguration() {
         return new ClientConfiguration()
-            .setAddresses("127.0.0.1:10800");
+            .setAddressesFinder(() -> new String[] {"127.0.0.1:10800"})
+            .setAffinityAwarenessEnabled(false);
     }
 
     /** */

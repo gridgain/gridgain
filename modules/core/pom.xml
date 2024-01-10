@@ -24,13 +24,13 @@
 
     <parent>
         <groupId>org.gridgain</groupId>
-        <artifactId>community.parent</artifactId>
-        <version>1</version>
-        <relativePath>../../parent</relativePath>
+        <artifactId>ignite-parent-internal</artifactId>
+        <version>8.9.127-SNAPSHOT</version>
+        <relativePath>../../parent-internal/pom.xml</relativePath>
     </parent>
 
     <artifactId>ignite-core</artifactId>
-    <version>8.8.127-SNAPSHOT</version>
+
     <url>http://ignite.apache.org</url>
 
     <repositories>
@@ -214,7 +214,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>${guava.version}</version>
+            <version>${guava.jre.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -256,6 +256,16 @@
             </testResource>
             <testResource>
                 <directory>src/test/resources</directory>
+            </testResource>
+            <testResource>
+                <directory>src/test/config</directory>
+                <includes>
+                    <include>log4j-test.xml</include>
+                    <include>tests.properties</include>
+                </includes>
+                <!-- Hide the test logger configuration from the log4j autoconfigurator
+                     in case the user starts Ignite with test.jar on the classpath. -->
+                <targetPath>${project.build.testOutputDirectory}/test/config</targetPath>
             </testResource>
         </testResources>
 
@@ -482,9 +492,10 @@
                                 <javax.cache.Cache.Entry>org.apache.ignite.internal.processors.cache.CacheEntryImpl</javax.cache.Cache.Entry>
                                 <javax.cache.annotation.CacheInvocationContext>javax.cache.annotation.impl.cdi.CdiCacheKeyInvocationContextImpl</javax.cache.annotation.CacheInvocationContext>
                                 <IGNITE_QUIET>false</IGNITE_QUIET>
+                                <IGNITE_JCACHE_COMPLIANCE>true</IGNITE_JCACHE_COMPLIANCE>
                             </systemPropertyVariables>
                             <excludes>
-                                <exclude>**/org/apache/ignite/**/*Test.java</exclude>
+                                <exclude>**/org/apache/ignite/**/*.java</exclude>
                                 <exclude>**/annotation/*Test.java</exclude>
                                 <exclude>**/ClientServerTest.java</exclude>
                             </excludes>

@@ -256,6 +256,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CLIENT_MODE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CONSISTENCY_CHECK_SKIPPED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DAEMON;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DATA_REGIONS_TOTAL_ALLOCATED_SIZE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DATA_STORAGE_CONFIG;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DATA_STREAMER_POOL_SIZE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DEPLOYMENT_MODE;
@@ -340,8 +341,14 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** Default long operations dump timeout. */
     public static final long DFLT_LONG_OPERATIONS_DUMP_TIMEOUT = 60_000L;
 
+    /** PDS allocation size collection frequency. */
+    private static final long PERIODIC_COLLECTION_PDS_ALLOCATION_SIZE_FREQ = 60_000L;
+
+    /** PDS allocation size collection delay. */
+    private static final long PERIODIC_COLLECTION_PDS_ALLOCATION_SIZE_DELAY = 60_000L;
+
     /** @see IgniteSystemProperties#IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED */
-    public static final boolean DFLT_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED = false;
+    public static final boolean DFLT_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED = true;
 
     /** @see IgniteSystemProperties#IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP */
     public static final boolean DFLT_LOG_CLASSPATH_CONTENT_ON_STARTUP = true;
@@ -380,6 +387,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** */
     @GridToStringExclude
     private GridTimeoutProcessor.CancelableTask metricsLogTask;
+
+    /** */
+    @GridToStringExclude
+    private GridTimeoutProcessor.CancelableTask collectAllocationPDSTask;
 
     /** Indicate error on grid stop. */
     @GridToStringExclude
@@ -1458,13 +1469,26 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             }, metricsLogFreq, metricsLogFreq);
         }
 
+        collectAllocationPDSTask = ctx.timeout().schedule(new Runnable() {
+            @Override public void run() {
+                long allocatedPDSSize = allocatedPDSSize();
+
+                TcpDiscoveryNode node = (TcpDiscoveryNode) localNode();
+                Map<String, Object> attrs = new HashMap<>(node.getAttributes());
+
+                attrs.put(ATTR_DATA_REGIONS_TOTAL_ALLOCATED_SIZE, allocatedPDSSize);
+
+                node.setAttributes(attrs);
+            }
+        }, PERIODIC_COLLECTION_PDS_ALLOCATION_SIZE_DELAY, PERIODIC_COLLECTION_PDS_ALLOCATION_SIZE_FREQ);
+
         ctx.performance().add("Disable assertions (remove '-ea' from JVM options)", !U.assertionsEnabled());
 
         ctx.performance().logSuggestions(log, igniteInstanceName);
 
         U.quietAndInfo(log, "To start Console Management & Monitoring run ignitevisorcmd.{sh|bat}");
 
-        if (!IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_QUIET, true))
+        if (!IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_QUIET, false))
             ackClassPathContent();
 
         ackStart(rtBean);
@@ -2237,7 +2261,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             msg.nl()
                 .a("Metrics for local node (to disable set 'metricsLogFrequency' to 0)").nl()
-                .a("    ^-- Node [id=").a(id).a(name() != null ? ", name=" + name() : "").a(", uptime=")
+                .a("    ^-- Node [id=").a(id).a(", consistentId=").a(locNode.consistentId()).a(name() != null ? ", name=" + name() : "").a(", uptime=")
                 .a(getUpTimeFormatted()).a("]").nl()
                 .a("    ^-- Cluster [hosts=").a(hosts).a(", CPUs=").a(cpus).a(", servers=").a(servers)
                 .a(", clients=").a(clients).a(", topVer=").a(topVer.topologyVersion())
@@ -2269,6 +2293,33 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         catch (IgniteClientDisconnectedException ignore) {
             // No-op.
         }
+    }
+
+    /**
+     * Collects allocated pds size of all data regions.
+     *
+     * @return Allocated PDS size.
+     */
+    private long allocatedPDSSize() {
+        if (ctx.clientNode() || ctx.grid().cluster().state() == ClusterState.INACTIVE)
+            return 0;
+
+        DataStorageConfiguration dsCfg = ctx.config().getDataStorageConfiguration();
+
+        long res = ctx.grid()
+            .dataRegionMetrics(dsCfg.getDefaultDataRegionConfiguration().getName())
+            .getTotalAllocatedSize();
+
+        DataRegionConfiguration[] dataRegions = dsCfg.getDataRegionConfigurations();
+
+        if (dataRegions != null) {
+            for (DataRegionConfiguration dataReg : dataRegions) {
+                if (dataReg.isPersistenceEnabled())
+                    res += ctx.grid().dataRegionMetrics(dataReg.getName()).getTotalAllocatedSize();
+            }
+        }
+
+        return res;
     }
 
     /** */
@@ -2506,6 +2557,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             if (metricsLogTask != null)
                 metricsLogTask.close();
+
+            if (collectAllocationPDSTask != null)
+                collectAllocationPDSTask.close();
 
             if (longJVMPauseDetector != null)
                 longJVMPauseDetector.stop();
@@ -3144,7 +3198,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** {@inheritDoc} */
     @Override public <K, V> IgniteCache<K, V> createCache(CacheConfiguration<K, V> cacheCfg) {
         A.notNull(cacheCfg, "cacheCfg");
-        CU.validateNewCacheName(cacheCfg.getName());
+        CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
 
         guard();
 
@@ -3171,7 +3225,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** {@inheritDoc} */
     @Override public Collection<IgniteCache> createCaches(Collection<CacheConfiguration> cacheCfgs) {
         A.notNull(cacheCfgs, "cacheCfgs");
-        CU.validateConfigurationCacheNames(cacheCfgs);
+        CU.validateConfigurationCacheNames(cacheCfgs, ctx.config().getDataStorageConfiguration());
 
         guard();
 
@@ -3200,8 +3254,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
     /** {@inheritDoc} */
     @Override public <K, V> IgniteCache<K, V> createCache(String cacheName) {
-        CU.validateNewCacheName(cacheName);
-
         guard();
 
         try {
@@ -3230,7 +3282,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         A.notNull(cacheCfg, "cacheCfg");
         String cacheName = cacheCfg.getName();
 
-        CU.validateNewCacheName(cacheName);
+        CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
 
         guard();
 
@@ -3267,7 +3319,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** {@inheritDoc} */
     @Override public Collection<IgniteCache> getOrCreateCaches(Collection<CacheConfiguration> cacheCfgs) {
         A.notNull(cacheCfgs, "cacheCfgs");
-        CU.validateConfigurationCacheNames(cacheCfgs);
+        CU.validateConfigurationCacheNames(cacheCfgs, ctx.config().getDataStorageConfiguration());
 
         guard();
 
@@ -3300,7 +3352,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         NearCacheConfiguration<K, V> nearCfg
     ) {
         A.notNull(cacheCfg, "cacheCfg");
-        CU.validateNewCacheName(cacheCfg.getName());
+        CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
         A.notNull(nearCfg, "nearCfg");
 
         guard();
@@ -3329,7 +3381,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     @Override public <K, V> IgniteCache<K, V> getOrCreateCache(CacheConfiguration<K, V> cacheCfg,
         NearCacheConfiguration<K, V> nearCfg) {
         A.notNull(cacheCfg, "cacheCfg");
-        CU.validateNewCacheName(cacheCfg.getName());
+        CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
         A.notNull(nearCfg, "nearCfg");
 
         guard();
@@ -3531,8 +3583,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
     /** {@inheritDoc} */
     @Override public <K, V> IgniteCache<K, V> getOrCreateCache(String cacheName) {
-        CU.validateNewCacheName(cacheName);
-
         guard();
 
         try {
@@ -3565,7 +3615,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      */
     public IgniteInternalFuture<?> getOrCreateCacheAsync(String cacheName, String templateName,
         CacheConfigurationOverride cfgOverride, boolean checkThreadTx) {
-        CU.validateNewCacheName(cacheName);
 
         guard();
 
@@ -3585,7 +3634,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** {@inheritDoc} */
     @Override public <K, V> void addCacheConfiguration(CacheConfiguration<K, V> cacheCfg) {
         A.notNull(cacheCfg, "cacheCfg");
-        CU.validateNewCacheName(cacheCfg.getName());
+        CU.validateNewCacheName(cacheCfg, ctx.config().getDataStorageConfiguration());
 
         guard();
 
@@ -3780,7 +3829,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         guard();
 
         try {
-            ctx.cache().resetCacheState(cacheNames.isEmpty() ? ctx.cache().cacheNames() : cacheNames).get();
+            Collection<String> cacheNames0 = cacheNames.isEmpty() ? ctx.cache().cacheNames() : cacheNames;
+
+            ctx.cache().startCachesLocallyIfNotStarted(cacheNames0).get();
+
+            ctx.cache().resetCacheState(cacheNames0).get();
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);

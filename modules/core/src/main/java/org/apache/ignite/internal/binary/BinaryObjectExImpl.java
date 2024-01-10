@@ -193,6 +193,15 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
     }
 
     /** {@inheritDoc} */
+    @Override public String getString() {
+        try {
+            return deserialize().toString();
+        } catch (IgniteException ex) {
+            return null;
+        }
+    }
+
+    /** {@inheritDoc} */
     @Override public String toString() {
         GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
 

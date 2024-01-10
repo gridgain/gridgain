@@ -190,35 +190,48 @@ public class SharedPageLockTracker {
         Collection<PageLockTracker<?>> trackers = threadStacks.values();
         List<ThreadPageLockState> threadPageLockStates = new ArrayList<>(threadStacks.size());
 
-        for (PageLockTracker<?> tracker : trackers) {
-            boolean acquired = tracker.acquireSafePoint();
+        Set<PageLockTracker<?>> acquiredTrackers = new HashSet<>();
 
-            //TODO
-            assert acquired;
+        try {
+            for (PageLockTracker<?> tracker : trackers) {
+                boolean acquired = tracker.acquireSafePoint();
+
+                if (acquired)
+                    acquiredTrackers.add(tracker);
+
+                //TODO
+                assert acquired;
+            }
+
+            for (Map.Entry<Long, PageLockTracker<?>> entry : threadStacks.entrySet()) {
+                Long threadId = entry.getKey();
+                Thread thread = threadIdToThreadRef.get(threadId);
+
+                PageLockTracker<? extends PageLockDump> tracker = entry.getValue();
+
+                try {
+                    PageLockDump pageLockDump = tracker.dump();
+
+                    threadPageLockStates.add(
+                        new ThreadPageLockState(
+                            threadId,
+                            thread.getName(),
+                            thread.getState(),
+                            pageLockDump,
+                            tracker.invalidContext()
+                        )
+                    );
+                }
+                finally {
+                    tracker.releaseSafePoint();
+
+                    acquiredTrackers.remove(tracker);
+                }
+            }
         }
-
-        for (Map.Entry<Long, PageLockTracker<?>> entry : threadStacks.entrySet()) {
-            Long threadId = entry.getKey();
-            Thread thread = threadIdToThreadRef.get(threadId);
-
-            PageLockTracker<? extends PageLockDump> tracker = entry.getValue();
-
-            try {
-                PageLockDump pageLockDump = tracker.dump();
-
-                threadPageLockStates.add(
-                    new ThreadPageLockState(
-                        threadId,
-                        thread.getName(),
-                        thread.getState(),
-                        pageLockDump,
-                        tracker.invalidContext()
-                    )
-                );
-            }
-            finally {
+        finally {
+            for (PageLockTracker<?> tracker : acquiredTrackers)
                 tracker.releaseSafePoint();
-            }
         }
 
         Map<Integer, String> idToStructureName = structureNameToId.entrySet().stream()

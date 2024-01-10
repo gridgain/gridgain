@@ -30,7 +30,7 @@ namespace Apache.Ignite.Core.Impl.Binary
     /// <summary>
     /// Binary writer implementation.
     /// </summary>
-    internal class BinaryWriter : IBinaryWriter, IBinaryRawWriter
+    internal sealed class BinaryWriter : IBinaryWriter, IBinaryRawWriter
     {
         /** Marshaller. */
         private readonly Marshaller _marsh;
@@ -70,7 +70,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Invoked when binary object writing finishes.
         /// </summary>
-        internal event Action<BinaryObjectHeader, object> OnObjectWritten;
+        internal event Action<BinaryObjectHeader, BinaryObjectSchemaHolder, int> OnObjectWritten;
 
         /// <summary>
         /// Write named boolean value.
@@ -81,6 +81,25 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             WriteFieldId(fieldName, BinaryTypeId.Bool);
             WriteBooleanField(val);
+        }
+
+        /// <summary>
+        /// Write named boolean value.
+        /// </summary>
+        /// <param name="fieldName">Field name.</param>
+        /// <param name="val">Boolean value.</param>
+        internal void WriteBooleanNullable(string fieldName, bool? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Bool);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteBooleanField(val.Value);
+            }
         }
 
         /// <summary>
@@ -146,6 +165,20 @@ namespace Apache.Ignite.Core.Impl.Binary
             WriteByteField(val);
         }
 
+        public void WriteByteNullable(string fieldName, byte? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Byte);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteByteField(val.Value);
+            }
+        }
+
         /// <summary>
         /// Write byte field value.
         /// </summary>
@@ -209,6 +242,20 @@ namespace Apache.Ignite.Core.Impl.Binary
             WriteShortField(val);
         }
 
+        internal void WriteShortNullable(string fieldName, short? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Short);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteShortField(val.Value);
+            }
+        }
+
         /// <summary>
         /// Write short field value.
         /// </summary>
@@ -270,6 +317,20 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             WriteFieldId(fieldName, BinaryTypeId.Char);
             WriteCharField(val);
+        }
+
+        internal void WriteCharNullable(string fieldName, char? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Char);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteCharField(val.Value);
+            }
         }
 
         /// <summary>
@@ -336,6 +397,25 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /// <summary>
+        /// Write named int value.
+        /// </summary>
+        /// <param name="fieldName">Field name.</param>
+        /// <param name="val">Int value.</param>
+        public void WriteIntNullable(string fieldName, int? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Int);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteIntField(val.Value);
+            }
+        }
+
+        /// <summary>
         /// Writes the int field.
         /// </summary>
         /// <param name="val">The value.</param>
@@ -396,6 +476,20 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             WriteFieldId(fieldName, BinaryTypeId.Long);
             WriteLongField(val);
+        }
+
+        internal void WriteLongNullable(string fieldName, long? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Long);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteLongField(val.Value);
+            }
         }
 
         /// <summary>
@@ -461,6 +555,20 @@ namespace Apache.Ignite.Core.Impl.Binary
             WriteFloatField(val);
         }
 
+        internal void WriteFloatNullable(string fieldName, float? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Float);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteFloatField(val.Value);
+            }
+        }
+
         /// <summary>
         /// Writes the float field.
         /// </summary>
@@ -522,6 +630,20 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             WriteFieldId(fieldName, BinaryTypeId.Double);
             WriteDoubleField(val);
+        }
+
+        internal void WriteDoubleNullable(string fieldName, double? val)
+        {
+            WriteFieldId(fieldName, BinaryTypeId.Double);
+
+            if (val == null)
+            {
+                WriteNullField();
+            }
+            else
+            {
+                WriteDoubleField(val.Value);
+            }
         }
 
         /// <summary>
@@ -682,7 +804,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="val">Date array.</param>
         public void WriteTimestampArray(string fieldName, DateTime?[] val)
         {
-            WriteFieldId(fieldName, BinaryTypeId.Timestamp);
+            WriteFieldId(fieldName, BinaryTypeId.ArrayTimestamp);
 
             if (val == null)
                 WriteNullField();
@@ -1294,10 +1416,7 @@ namespace Apache.Ignite.Core.Impl.Binary
 
                 BinaryObjectHeader.Write(header, _stream, pos);
 
-                if (OnObjectWritten != null)
-                {
-                    OnObjectWritten(header, obj);
-                }
+                OnObjectWritten?.Invoke(header, _schema, schemaIdx);
 
                 Stream.Seek(pos + len, SeekOrigin.Begin); // Seek to the end
             }

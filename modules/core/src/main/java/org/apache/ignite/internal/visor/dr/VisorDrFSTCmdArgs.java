@@ -58,6 +58,9 @@ public class VisorDrFSTCmdArgs extends IgniteDataTransferObject {
     /** */
     private String senderGrpName;
 
+    /** */
+    private boolean syncMode;
+
     /**
      * Default constructor.
      */
@@ -79,7 +82,8 @@ public class VisorDrFSTCmdArgs extends IgniteDataTransferObject {
         long snapshotId,
         Set<Byte> dcIds,
         int senderGroup,
-        String senderGrpName
+        String senderGrpName,
+        boolean syncMode
     ) {
         this.action = action;
         this.caches = caches == null ? Collections.emptySet() : caches;
@@ -87,6 +91,7 @@ public class VisorDrFSTCmdArgs extends IgniteDataTransferObject {
         this.dcIds = dcIds == null ? Collections.emptySet() : dcIds;
         this.senderGroup = senderGroup;
         this.senderGrpName = senderGrpName == null ? "" : senderGrpName;
+        this.syncMode = syncMode;
     }
 
     /** {@inheritDoc} */
@@ -98,6 +103,7 @@ public class VisorDrFSTCmdArgs extends IgniteDataTransferObject {
         out.writeInt(senderGroup);
         out.writeUTF(senderGrpName);
         writeGridUuid(out, operationId);
+        out.writeBoolean(syncMode);
     }
 
     /** {@inheritDoc} */
@@ -109,6 +115,7 @@ public class VisorDrFSTCmdArgs extends IgniteDataTransferObject {
         senderGroup = in.readInt();
         senderGrpName = in.readUTF();
         operationId = readGridUuid(in);
+        syncMode = in.readBoolean();
     }
 
     /**
@@ -158,6 +165,13 @@ public class VisorDrFSTCmdArgs extends IgniteDataTransferObject {
      */
     public String senderGroupName() {
         return senderGrpName;
+    }
+
+    /**
+     * @return Sync mode.
+     */
+    public boolean isSyncMode() {
+        return syncMode;
     }
 
     /** {@inheritDoc} */

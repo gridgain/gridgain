@@ -33,6 +33,7 @@ import javax.cache.expiry.Duration;
 import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.expiry.ModifiedExpiryPolicy;
+import javax.cache.expiry.TouchedExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.MutableEntry;
 import org.apache.ignite.Ignite;
@@ -64,8 +65,10 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
+import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
@@ -113,6 +116,8 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
             cfg.setNearConfiguration(new NearCacheConfiguration());
 
         cfg.setExpiryPolicyFactory(factory);
+
+        cfg.setReadFromBackup(true);
 
         if (disableEagerTtl)
             cfg.setEagerTtl(false);
@@ -1132,6 +1137,69 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
     }
 
     /**
+     * Tests IgniteCache.touch(key) method.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testTouch() throws Exception {
+        // TODO https://ggsystems.atlassian.net/browse/GG-38173
+        if (atomicityMode() != ATOMIC || cacheMode() == LOCAL)
+            return;
+
+        factory = new FactoryBuilder.SingletonFactory<>(new TouchedExpiryPolicy(new Duration(SECONDS, 60_000L)));
+
+        startGrids();
+
+        IgniteCache<Integer, Integer> cache = grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        Collection<Integer> keys = keys();
+
+        for (final Integer key : keys) {
+            log.info("Put entry and set expiration time on access, key: " + key);
+
+            cache.put(key, 1);
+
+            // Set expiration time on access.
+            cache.get(key);
+
+            checkTtl(key, 60_000L);
+        }
+
+        // Small delay is added in order to prevent race based on IGNITE-305.
+        doSleep(500);
+
+        cache = cache.withExpiryPolicy(new TouchedExpiryPolicy(new Duration(SECONDS, 5)));
+
+        for (final Integer key : keys) {
+            log.info("Update duration on access, key: " + key);
+
+            boolean updated = cache.touch(key);
+
+            assertTrue(updated);
+
+            // Small delay is added in order to prevent race based on IGNITE-305.
+            doSleep(500);
+
+            checkTtl(key, 5_000);
+        }
+
+        // Wait for expiration.
+        doSleep(5_000);
+
+        for (final Integer key : keys) {
+            for (int i = 0; i < gridCount(); i++) {
+                log.info("Check that the key is expired, key: " + key + ", grid=" + grid(i).name());
+
+                assertNull(jcache(i).localPeek(key, CachePeekMode.BACKUP, CachePeekMode.PRIMARY));
+            }
+
+            // If store is enabled then skip it.
+            assertEquals(null, cache.withSkipStore().get(key));
+        }
+    }
+
+    /**
      * Put entry to server node and check how its expires in client NearCache.
      *
      * @throws Exception If failed.
@@ -1141,7 +1209,7 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
         if (cacheMode() != PARTITIONED)
             return;
 
-        factory = CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, 2));
+        factory = CreatedExpiryPolicy.factoryOf(new Duration(SECONDS, 2));
 
         nearCache = true;
 
@@ -1179,7 +1247,7 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
         if (cacheMode() != PARTITIONED)
             return;
 
-        factory = CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, 1));
+        factory = CreatedExpiryPolicy.factoryOf(new Duration(SECONDS, 1));
 
         nearCache = true;
 
