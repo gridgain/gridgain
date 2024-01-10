@@ -45,4 +45,9 @@ public interface BinaryObjectEx extends BinaryObject {
      * @return {@code true} if flag is set, {@code false} otherwise.
      */
     public boolean isFlagSet(short flag);
+
+    /**
+     * @return String representation of holding object or {@code null} if inapplicable.
+     */
+    @Nullable public String getString();
 }
