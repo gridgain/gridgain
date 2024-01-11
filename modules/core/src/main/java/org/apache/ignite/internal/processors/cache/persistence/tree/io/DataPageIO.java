@@ -233,6 +233,37 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     }
 
     /**
+     * Updates fragmented data row with the given payload.
+     *
+     * @param pageAddr Page address.
+     * @param itemId Item ID.
+     * @param pageSize Page size.
+     * @param linkToNextFragment Link to the next fragment.
+     * @param payload Payload.
+     */
+    public void updateFragmentedData(
+        long pageAddr,
+        int itemId,
+        int pageSize,
+        long linkToNextFragment,
+        byte[] payload
+    ) {
+        assertPageType(pageAddr);
+        assert checkIndex(itemId) : "Invalid item Id [itemId=" + itemId + ']';
+        assert payload != null : "Payload is null";
+
+        int dataOff = getDataOffset(pageAddr, itemId, pageSize);
+
+        PageUtils.putShort(pageAddr, dataOff, (short)(payload.length | FRAGMENTED_FLAG));
+        dataOff += PAYLOAD_LEN_SIZE;
+
+        PageUtils.putLong(pageAddr, dataOff, linkToNextFragment);
+        dataOff += LINK_SIZE;
+
+        PageUtils.putBytes(pageAddr, dataOff, payload);
+    }
+
+    /**
      * Calculates start position of the fragment defined by {@code type}.
      *
      * @param row Row.
