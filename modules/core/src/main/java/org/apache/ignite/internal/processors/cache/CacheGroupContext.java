@@ -487,6 +487,13 @@ public class CacheGroupContext {
     }
 
     /**
+     * @return {@code True} if cache it system one.
+     */
+    public boolean utilityCache() {
+        return cacheType == CacheType.UTILITY;
+    }
+
+    /**
      * Adds rebalancing event.
      *
      * @param part Partition.
