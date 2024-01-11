@@ -163,9 +163,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary> Default value for <see cref="EncryptionEnabled"/>. </summary>
         public const bool DefaultEncryptionEnabled = false;
 
-        /// <summary> Default value for <see cref="EnableStatistics"/>. </summary>
-        public const bool DefaultEnableStatistics = true;
-
         /// <summary>
         /// Gets or sets the cache name.
         /// </summary>
@@ -220,7 +217,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
             MaxQueryIteratorsCount = DefaultMaxQueryIteratorsCount;
             QueryParallelism = DefaultQueryParallelism;
             EncryptionEnabled = DefaultEncryptionEnabled;
-            EnableStatistics = DefaultEnableStatistics;
         }
 
         /// <summary>
@@ -822,7 +818,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Gets or sets a value indicating whether statistics gathering is enabled on a cache.
         /// These statistics can be retrieved via <see cref="ICache{TK,TV}.GetMetrics()"/>.
         /// </summary>
-        [DefaultValue(DefaultEnableStatistics)]
         public bool EnableStatistics { get; set; }
 
         /// <summary>
