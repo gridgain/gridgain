@@ -1818,6 +1818,12 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                             update(node, locked, req, res, updDhtRes, taskName);
 
+                            if (res.error() != null) {
+                                completionCb.apply(req, res);
+
+                                return;
+                            }
+
                             dhtFut = updDhtRes.dhtFuture();
                             expiry = updDhtRes.expiryPolicy();
                         }
