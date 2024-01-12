@@ -33,6 +33,22 @@
     <version>8.8.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
+    <!-- Need to override this transitive dependency to fix vulnerabilities. -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-transport-native-epoll</artifactId>
+                <version>${netty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-handler</artifactId>
+                <version>${netty.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>org.gridgain</groupId>
