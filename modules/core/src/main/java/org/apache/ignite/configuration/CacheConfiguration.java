@@ -471,6 +471,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
         evictFilter = cc.getEvictionFilter();
         evictPlc = cc.getEvictionPolicy();
         evictPlcFactory = cc.getEvictionPolicyFactory();
+        evtsDisabled = cc.isEventsDisabled();
         expiryPolicyFactory = cc.getExpiryPolicyFactory();
         grpName = cc.getGroupName();
         indexedTypes = cc.getIndexedTypes();
@@ -483,30 +484,34 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
         loadPrevVal = cc.isLoadPreviousValue();
         longQryWarnTimeout = cc.getLongQueryWarningTimeout();
         maxConcurrentAsyncOps = cc.getMaxConcurrentAsyncOperations();
+        maxQryIterCnt = cc.getMaxQueryIteratorsCount();
         memPlcName = cc.getDataRegionName();
         name = cc.getName();
         nearCfg = cc.getNearConfiguration();
-        platformCfg = cc.getPlatformCacheConfiguration();
         nodeFilter = cc.getNodeFilter();
         onheapCache = cc.isOnheapCacheEnabled();
         partLossPlc = cc.getPartitionLossPolicy();
+        platformCfg = cc.getPlatformCacheConfiguration();
         pluginCfgs = cc.getPluginConfigurations();
         qryDetailMetricsSz = cc.getQueryDetailMetricsSize();
         qryEntities = cc.getQueryEntities() == Collections.<QueryEntity>emptyList() ? null : cc.getQueryEntities();
         qryParallelism = cc.getQueryParallelism();
         readFromBackup = cc.isReadFromBackup();
-        rebalanceBatchSize = cc.getRebalanceBatchSize();
         rebalanceBatchesPrefetchCnt = cc.getRebalanceBatchesPrefetchCount();
+        rebalanceBatchSize = cc.getRebalanceBatchSize();
         rebalanceDelay = cc.getRebalanceDelay();
         rebalanceMode = cc.getRebalanceMode();
         rebalanceOrder = cc.getRebalanceOrder();
         rebalancePoolSize = cc.getRebalanceThreadPoolSize();
-        rebalanceTimeout = cc.getRebalanceTimeout();
         rebalanceThrottle = cc.getRebalanceThrottle();
-        sqlSchema = cc.getSqlSchema();
+        rebalanceTimeout = cc.getRebalanceTimeout();
         sqlEscapeAll = cc.isSqlEscapeAll();
         sqlFuncCls = cc.getSqlFunctionClasses();
         sqlIdxMaxInlineSize = cc.getSqlIndexMaxInlineSize();
+        sqlOnheapCache = cc.isSqlOnheapCacheEnabled();
+        sqlOnheapCacheMaxSize = cc.getSqlOnheapCacheMaxSize();
+        sqlSchema = cc.getSqlSchema();
+        storeConcurrentLoadAllThreshold = cc.getStoreConcurrentLoadAllThreshold();
         storeFactory = cc.getCacheStoreFactory();
         storeKeepBinary = cc.isStoreKeepBinary() != null ? cc.isStoreKeepBinary() : DFLT_STORE_KEEP_BINARY;
         storeSesLsnrs = cc.getCacheStoreSessionListenerFactories();
@@ -519,11 +524,6 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
         writeBehindFlushSize = cc.getWriteBehindFlushSize();
         writeBehindFlushThreadCnt = cc.getWriteBehindFlushThreadCount();
         writeSync = cc.getWriteSynchronizationMode();
-        storeConcurrentLoadAllThreshold = cc.getStoreConcurrentLoadAllThreshold();
-        maxQryIterCnt = cc.getMaxQueryIteratorsCount();
-        sqlOnheapCache = cc.isSqlOnheapCacheEnabled();
-        sqlOnheapCacheMaxSize = cc.getSqlOnheapCacheMaxSize();
-        evtsDisabled = cc.isEventsDisabled();
     }
 
     /**
