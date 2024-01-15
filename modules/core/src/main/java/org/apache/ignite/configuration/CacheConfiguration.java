@@ -63,9 +63,6 @@ import org.apache.ignite.spi.encryption.EncryptionSpi;
 import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_JCACHE_COMPLIANCE;
-import static org.apache.ignite.IgniteSystemProperties.getBoolean;
-
 /**
  * This class defines grid cache configuration. This configuration is passed to
  * grid via {@link IgniteConfiguration#getCacheConfiguration()} method. It defines all configuration
@@ -430,18 +427,15 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      */
     private EntryCompressionConfiguration entryCompressionCfg;
 
-    /** Constructor (all values are initialized to their defaults). */
+    /** Empty constructor (all values are initialized to their defaults). */
     public CacheConfiguration() {
-        if (!getBoolean(IGNITE_JCACHE_COMPLIANCE))
-            this.isStatisticsEnabled = true;
+        /* No-op. */
     }
 
     /**
      * @param name Cache name.
      */
     public CacheConfiguration(String name) {
-        this();
-
         this.name = name;
     }
 
@@ -484,7 +478,6 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
         interceptor = cc.getInterceptor();
         invalidate = cc.isInvalidate();
         isReadThrough = cc.isReadThrough();
-        isStatisticsEnabled = cc.isStatisticsEnabled();
         isWriteThrough = cc.isWriteThrough();
         keyCfg = cc.getKeyConfiguration();
         listenerConfigurations = cc.listenerConfigurations;

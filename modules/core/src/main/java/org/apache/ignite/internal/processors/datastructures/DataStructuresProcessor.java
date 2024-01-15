@@ -1092,7 +1092,6 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
         ccfg.setNodeFilter(CacheConfiguration.ALL_NODES);
         ccfg.setAffinity(cfg.getAffinity());
         ccfg.setDataRegionName(dataRegionName);
-        ccfg.setStatisticsEnabled(false);
 
         if (cfg.getCacheMode() == PARTITIONED)
             ccfg.setBackups(cfg.getBackups());
@@ -1117,7 +1116,6 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
         ccfg.setNodeFilter(cfg.getNodeFilter());
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setRebalanceMode(SYNC);
-        ccfg.setStatisticsEnabled(false);
 
         return ccfg;
     }

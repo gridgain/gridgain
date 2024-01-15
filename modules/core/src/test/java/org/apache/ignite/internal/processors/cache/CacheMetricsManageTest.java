@@ -142,24 +142,24 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
 
         CacheConfiguration<Object, Object> cfg2 = new CacheConfiguration<>(cfg1)
             .setName(CACHE2)
-            .setStatisticsEnabled(false);
+            .setStatisticsEnabled(true);
 
         mgr1.createCache(CACHE2, cfg2);
 
         assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
-                return isStatisticsEnabled(mgr1, CACHE1) && isStatisticsEnabled(mgr2, CACHE1)
-                    && !isStatisticsEnabled(mgr1, CACHE2) && !isStatisticsEnabled(mgr2, CACHE2);
+                return !isStatisticsEnabled(mgr1, CACHE1) && !isStatisticsEnabled(mgr2, CACHE1)
+                    && isStatisticsEnabled(mgr1, CACHE2) && isStatisticsEnabled(mgr2, CACHE2);
             }
         }, WAIT_CONDITION_TIMEOUT));
 
-        mgr1.enableStatistics(CACHE1, false);
-        mgr2.enableStatistics(CACHE2, true);
+        mgr1.enableStatistics(CACHE1, true);
+        mgr2.enableStatistics(CACHE2, false);
 
         assertTrue(GridTestUtils.waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
-                return !isStatisticsEnabled(mgr1, CACHE1) && !isStatisticsEnabled(mgr2, CACHE1)
-                    && isStatisticsEnabled(mgr1, CACHE2) && isStatisticsEnabled(mgr2, CACHE2);
+                return isStatisticsEnabled(mgr1, CACHE1) && isStatisticsEnabled(mgr2, CACHE1)
+                    && !isStatisticsEnabled(mgr1, CACHE2) && !isStatisticsEnabled(mgr2, CACHE2);
             }
         }, WAIT_CONDITION_TIMEOUT));
     }
@@ -177,19 +177,19 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
         CacheConfiguration<Object, Object> cacheCfg2 = new CacheConfiguration<Object, Object>(cache1.getConfiguration(CacheConfiguration.class));
 
         cacheCfg2.setName(CACHE2);
-        cacheCfg2.setStatisticsEnabled(false);
+        cacheCfg2.setStatisticsEnabled(true);
 
         ig1.getOrCreateCache(cacheCfg2);
 
-        assertCachesStatisticsMode(true, false);
+        assertCachesStatisticsMode(false, true);
 
-        cache1.enableStatistics(false);
-
-        assertCachesStatisticsMode(false, false);
-
-        ig1.cluster().enableStatistics(Arrays.asList(CACHE1, CACHE2), true);
+        cache1.enableStatistics(true);
 
         assertCachesStatisticsMode(true, true);
+
+        ig1.cluster().enableStatistics(Arrays.asList(CACHE1, CACHE2), false);
+
+        assertCachesStatisticsMode(false, false);
     }
 
     /**
@@ -415,7 +415,7 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
         CacheConfiguration<Object, Object> cacheCfg2 = new CacheConfiguration<>(ccfg);
 
         cacheCfg2.setName(CACHE2);
-        cacheCfg2.setStatisticsEnabled(false);
+        cacheCfg2.setStatisticsEnabled(true);
 
         ig2.getOrCreateCache(cacheCfg2);
 
@@ -423,34 +423,29 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
         CacheMetricsMXBean mxBeanCache2 = mxBean(2, CACHE2, CacheClusterMetricsMXBeanImpl.class);
         CacheMetricsMXBean mxBeanCache1loc = mxBean(2, CACHE1, CacheLocalMetricsMXBeanImpl.class);
 
-        mxBeanCache1.disableStatistics();
-        mxBeanCache2.enableStatistics();
+        mxBeanCache1.enableStatistics();
+        mxBeanCache2.disableStatistics();
 
-        assertCachesStatisticsMode(false, true);
+        assertCachesStatisticsMode(true, false);
 
         stopGrid(1);
 
         startGrid(3);
 
-        assertCachesStatisticsMode(false, true);
+        assertCachesStatisticsMode(true, false);
 
-        mxBeanCache1loc.enableStatistics();
+        mxBeanCache1loc.disableStatistics();
 
-        assertCachesStatisticsMode(true, true);
+        assertCachesStatisticsMode(false, false);
 
-        mxBeanCache1.disableStatistics();
-        mxBeanCache2.disableStatistics();
+        mxBeanCache1.enableStatistics();
+        mxBeanCache2.enableStatistics();
 
         // Start node 1 again.
         startGrid(1);
 
         if (persistence)
             ig2.resetLostPartitions(Arrays.asList(CACHE1, CACHE2));
-
-        assertCachesStatisticsMode(false, false);
-
-        mxBeanCache1.enableStatistics();
-        mxBeanCache2.enableStatistics();
 
         assertCachesStatisticsMode(true, true);
 
@@ -483,24 +478,19 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
             }
         }, 10_000L));
 
-        mxBeanCache1.disableStatistics();
-        mxBeanCache2.disableStatistics();
-
-        assertCachesStatisticsMode(false, false);
-
         stopAllGrids();
 
         ig1 = startGrid(1);
 
         ig1.cluster().active(true);
 
-        ig1.getOrCreateCache(cacheCfg2.setStatisticsEnabled(true));
+        ig1.getOrCreateCache(cacheCfg2.setStatisticsEnabled(false));
 
         if (persistence)
             // Both caches restored from pds.
-            assertCachesStatisticsMode(false, false);
-        else
             assertCachesStatisticsMode(true, true);
+        else
+            assertCachesStatisticsMode(false, false);
 
         mxBeanCache1 = mxBean(1, CACHE1, CacheLocalMetricsMXBeanImpl.class);
         mxBeanCache2 = mxBean(1, CACHE2, CacheLocalMetricsMXBeanImpl.class);
