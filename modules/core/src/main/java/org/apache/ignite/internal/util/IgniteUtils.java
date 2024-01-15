@@ -1474,6 +1474,13 @@ public abstract class IgniteUtils {
         return roundedHeapSize(totalAllocatedPDS, precision);
     }
 
+    /**
+     * Gets total host RAM size in GB rounded to specified precision.
+     *
+     * @param nodes Nodes.
+     * @param precision Precision.
+     * @return Total allocated PDS size in GB.
+     */
     public static double hostRamSize(Iterable<ClusterNode> nodes, int precision) {
         double totalHostRamSize = .0;
 
