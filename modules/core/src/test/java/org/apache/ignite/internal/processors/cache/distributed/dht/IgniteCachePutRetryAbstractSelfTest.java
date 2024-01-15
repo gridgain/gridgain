@@ -349,6 +349,8 @@ public abstract class IgniteCachePutRetryAbstractSelfTest extends GridCommonAbst
                         for (int i = 0; i < keysCnt; i++)
                             assertEquals(val, cache.get(i));
                     }
+
+                    break;
                 }
 
                 case PUT_ASYNC: {

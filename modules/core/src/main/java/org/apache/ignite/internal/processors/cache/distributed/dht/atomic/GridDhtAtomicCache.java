@@ -1820,6 +1820,15 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                             dhtFut = updDhtRes.dhtFuture();
                             expiry = updDhtRes.expiryPolicy();
+
+                            if (res.error() != null) {
+                                completionCb.apply(req, res);
+
+                                if (dhtFut != null)
+                                    dhtFut.onDone();
+
+                                return;
+                            }
                         }
                         else
                             // Should remap all keys.
@@ -1912,12 +1921,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         if (req.writeSynchronizationMode() != FULL_ASYNC)
             req.cleanup(!node.isLocal());
-
-        if (res.error() != null) {
-            completionCb.apply(req, res);
-
-            return;
-        }
 
         sendTtlUpdateRequest(expiry);
     }
