@@ -2183,7 +2183,6 @@ public class IgnitionEx {
             cache.setRebalanceOrder(-2); //Prior to user caches.
             cache.setCopyOnRead(false);
             cache.setMaxConcurrentAsyncOperations(Integer.MAX_VALUE);
-            cache.setStatisticsEnabled(false);
 
             return cache;
         }
