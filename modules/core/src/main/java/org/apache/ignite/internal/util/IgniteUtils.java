@@ -1630,7 +1630,10 @@ public abstract class IgniteUtils {
 
         ThreadInfo threadInfo = mxBean.getThreadInfo(threadId, Integer.MAX_VALUE);
 
-        printThreadInfo(threadInfo, sb, Collections.<Long>emptySet());
+        if (threadInfo != null)
+            printThreadInfo(threadInfo, sb, Collections.<Long>emptySet());
+        else
+            sb.a("The thread of the given id is not alive or does not exist [id=").a(threadId).a("]").a(NL);
     }
 
     /**
