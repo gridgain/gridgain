@@ -161,6 +161,9 @@ public final class IgniteNodeAttributes {
     /** V2 security subject for authenticated node. */
     public static final String ATTR_SECURITY_SUBJECT_V2 = ATTR_PREFIX + ".security.subject.v2";
 
+    /** V3 security subject for authenticated node. */
+    public static final String ATTR_SECURITY_SUBJECT_V3 = ATTR_PREFIX + ".security.subject.v3";
+
     /** Client mode flag. */
     public static final String ATTR_CLIENT_MODE = ATTR_PREFIX + ".cache.client";
 

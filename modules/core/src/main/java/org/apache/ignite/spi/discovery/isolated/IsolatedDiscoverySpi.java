@@ -240,7 +240,8 @@ public class IsolatedDiscoverySpi extends IgniteSpiAdapter implements IgniteDisc
             Map<String, Object> attrs = new HashMap<>(locNode.attributes());
 
             try {
-                attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2, U.marshal(marsh, subj));
+                attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V3, U.marshal(marsh, subj));
+                attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2, marshalWithSecurityVersion(marsh, subj, 2));
                 attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT, marshalWithSecurityVersion(marsh, subj, 1));
             }
             catch (IgniteCheckedException e) {

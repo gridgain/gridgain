@@ -109,6 +109,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SECURITY_CREDENTIALS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V3;
 import static org.apache.ignite.spi.discovery.zk.internal.ZookeeperDiscoveryImpl.ConnectionState.STARTED;
 import static org.apache.zookeeper.CreateMode.EPHEMERAL_SEQUENTIAL;
 import static org.apache.zookeeper.CreateMode.PERSISTENT;
@@ -1140,7 +1141,8 @@ public class ZookeeperDiscoveryImpl {
 
             Map<String, Object> attrs = new HashMap<>(locNode.attributes());
 
-            attrs.put(ATTR_SECURITY_SUBJECT_V2, U.marshal(marsh, subj));
+            attrs.put(ATTR_SECURITY_SUBJECT_V3, U.marshal(marsh, subj));
+            attrs.put(ATTR_SECURITY_SUBJECT_V2, marshalWithSecurityVersion(subj, 2));
 
             locNode.setAttributes(attrs);
         }
@@ -1159,7 +1161,7 @@ public class ZookeeperDiscoveryImpl {
 
         Map<String, Object> attrs = new HashMap<>(node.getAttributes());
 
-        attrs.put(ATTR_SECURITY_SUBJECT_V2, unzip(zipBytes));
+        attrs.put(ATTR_SECURITY_SUBJECT_V3, unzip(zipBytes));
 
         node.setAttributes(attrs);
     }
@@ -2152,7 +2154,8 @@ public class ZookeeperDiscoveryImpl {
             // Stick in authentication subject to node (use security-safe attributes for copy).
             Map<String, Object> attrs = new HashMap<>(node.getAttributes());
 
-            attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2, U.marshal(marsh, subj));
+            attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V3, U.marshal(marsh, subj));
+            attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2, marshalWithSecurityVersion(subj, 2));
             attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT, marshalWithSecurityVersion(subj, 1));
 
             node.setAttributes(attrs);
@@ -2931,7 +2934,7 @@ public class ZookeeperDiscoveryImpl {
                     exchange.onExchange(dataBag);
                 }
 
-                if (joinedEvtData.secSubjPartCnt > 0 && joiningData.node().attribute(ATTR_SECURITY_SUBJECT_V2) == null)
+                if (joinedEvtData.secSubjPartCnt > 0 && joiningData.node().attribute(ATTR_SECURITY_SUBJECT_V3) == null)
                     readAndInitSecuritySubject(joiningData.node(), joinedEvtData);
 
                 notifyNodeJoin(joinedEvtData, joiningData);

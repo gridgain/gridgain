@@ -35,7 +35,7 @@ import org.apache.ignite.plugin.security.SecurityPermission;
  */
 public class SecurityUtils {
     /** Default serialization version. */
-    private static final int DFLT_SERIALIZE_VERSION = isSecurityCompatibilityMode() ? 1 : 2;
+    private static final int DFLT_SERIALIZE_VERSION = isSecurityCompatibilityMode() ? 1 : 3;
 
     /** Current serialization version. */
     private static final ThreadLocal<Integer> SERIALIZE_VERSION = new ThreadLocal<Integer>() {
@@ -103,17 +103,42 @@ public class SecurityUtils {
     public static SecurityContext nodeSecurityContext(Marshaller marsh, ClassLoader ldr, ClusterNode node) {
         A.notNull(node, "node");
 
+        byte[] subjBytesV3 = node.attribute(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V3);
         byte[] subjBytesV2 = node.attribute(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2);
         byte[] subjBytes = node.attribute(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT);
 
-        if (subjBytes == null && subjBytesV2 == null)
+        if (subjBytes == null && subjBytesV2 == null && subjBytesV3 == null)
             throw new SecurityException("Security context isn't certain.");
 
+
         try {
-            return U.unmarshal(marsh, subjBytesV2 != null ? subjBytesV2 : subjBytes, ldr);
+            if (subjBytesV3 != null)
+                return U.unmarshal(marsh, subjBytesV3, ldr);
+
+            if (subjBytesV2 != null)
+                return nodeSecurityContext0(marsh, subjBytesV2, ldr, 2);
+
+            return nodeSecurityContext0(marsh, subjBytes, ldr, 1);
         }
         catch (IgniteCheckedException e) {
-            throw new SecurityException("Failed to get security context.", e);
+            throw new SecurityException("Failed to get security context. [node=" + node.consistentId() + ", id=" + node.id() +
+                ", bytesV3=" + (subjBytesV3!=null) + ", bytesV2=" + (subjBytesV2!=null) + ", bytesV1=" + (subjBytes!=null) + ']', e);
+        }
+    }
+
+    private static SecurityContext nodeSecurityContext0(
+        Marshaller marsh,
+        byte[] subjBytes,
+        ClassLoader ldr,
+        int ver
+    ) throws IgniteCheckedException {
+        try {
+            serializeVersion(ver);
+
+            return U.unmarshal(marsh, subjBytes, ldr);
+        }
+        finally {
+            restoreDefaultSerializeVersion();
         }
     }
 }
