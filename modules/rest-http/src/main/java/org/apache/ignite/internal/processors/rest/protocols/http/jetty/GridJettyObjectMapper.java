@@ -41,6 +41,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationConfig;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.cfg.CacheProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.DefaultSerializerProvider;
 import com.fasterxml.jackson.databind.ser.SerializerFactory;
@@ -122,9 +123,24 @@ public class GridJettyObjectMapper extends ObjectMapper {
             super(src, cfg, f);
         }
 
+        /**
+         * Constructor with cache provider.
+         *
+         * @param src Blueprint object used as the baseline for this instance.
+         * @param cacheProvider Cache provider.
+         */
+        CustomSerializerProvider(DefaultSerializerProvider src, CacheProvider cacheProvider) {
+            super(src, cacheProvider);
+        }
+
         /** {@inheritDoc} */
         @Override public DefaultSerializerProvider createInstance(SerializationConfig cfg, SerializerFactory jsf) {
             return new CustomSerializerProvider(this, cfg, jsf);
+        }
+
+        /** {@inheritDoc} */
+        @Override public DefaultSerializerProvider withCaches(CacheProvider cacheProvider) {
+            return new CustomSerializerProvider(this, cacheProvider);
         }
 
         /** {@inheritDoc} */
