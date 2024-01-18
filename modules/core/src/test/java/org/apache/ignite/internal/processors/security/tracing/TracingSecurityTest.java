@@ -56,8 +56,8 @@ public class TracingSecurityTest extends AbstractSecurityTest {
         return cfg;
     }
 
-    @Override
-    protected void afterTest() throws Exception {
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
         super.afterTest();
 
         stopAllGrids();
