@@ -102,7 +102,7 @@
         <jsch.version>0.1.54</jsch.version>
         <jsonlib.bundle.version>2.4_1</jsonlib.bundle.version>
         <jsonlib.version>2.4</jsonlib.version>
-        <jtidy.version>1.0.4</jtidy.version>
+        <jtidy.version>1.0.5</jtidy.version>
         <kafka.version>2.2.2</kafka.version>
         <karaf.version>4.0.2</karaf.version>
         <log4j.version>2.20.0</log4j.version>
