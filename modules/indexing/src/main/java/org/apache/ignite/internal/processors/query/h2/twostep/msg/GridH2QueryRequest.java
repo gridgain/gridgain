@@ -34,6 +34,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMarshallable;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
+import org.apache.ignite.internal.processors.cache.query.GridPriorityAware;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -52,7 +53,7 @@ import static org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuer
  * Query request.
  */
 @IgniteCodeGeneratingFail
-public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
+public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable, GridPriorityAware {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -168,6 +169,8 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     /** */
     private boolean explicitTimeout;
 
+    private byte priority = 0;
+
     /**
      * Required by {@link Externalizable}
      */
@@ -204,6 +207,11 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
      */
     @Nullable public MvccSnapshot mvccSnapshot() {
         return mvccSnapshot;
+    }
+
+    @Override
+    public byte priority() {
+        return priority;
     }
 
     /**

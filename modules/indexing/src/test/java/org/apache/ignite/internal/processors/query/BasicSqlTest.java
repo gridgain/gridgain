@@ -41,7 +41,7 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        startGrids(2);
+        startGrids(1);
     }
 
     /** {@inheritDoc} */

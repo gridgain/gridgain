@@ -71,6 +71,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsAbstractMessage;
 import org.apache.ignite.internal.processors.cache.mvcc.msg.MvccMessage;
+import org.apache.ignite.internal.processors.cache.query.GridPriorityAware;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.platform.message.PlatformMessageFilter;
 import org.apache.ignite.internal.processors.pool.PoolProcessor;
@@ -1303,7 +1304,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 }
             }
 
-            pools.poolForPolicy(plc).execute(c);
+            Message initMsg = msg.message();
+            pools.poolForPolicy(plc).execute(new Wrapper(c, initMsg));
         }
         catch (RejectedExecutionException e) {
             if (!ctx.isStopping()) {
@@ -1314,6 +1316,33 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             }
             else if (log.isDebugEnabled())
                 log.debug("Failed to process regular message due to execution rejection: " + msg);
+        }
+    }
+
+    private static class Wrapper implements Runnable, Comparable<Wrapper> {
+        Runnable clo;
+        Object holder;
+        boolean priority;
+
+        Wrapper(Runnable clo, Object obj) {
+            this.clo = clo;
+            holder = obj;
+            this.priority = obj instanceof GridPriorityAware;
+        }
+
+        @Override
+        public int compareTo(@NotNull Wrapper toComp) {
+            if (toComp.priority && priority) {
+                GridPriorityAware holder0 = (GridPriorityAware)holder;
+                GridPriorityAware toComp0 = (GridPriorityAware)toComp.holder;
+                return Byte.compare(holder0.priority(), toComp0.priority());
+            } else
+                return 0;
+        }
+
+        @Override
+        public void run() {
+            clo.run();
         }
     }
 
