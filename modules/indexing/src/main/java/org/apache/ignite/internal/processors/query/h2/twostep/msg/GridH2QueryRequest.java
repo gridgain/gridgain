@@ -169,7 +169,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable, 
     /** */
     private boolean explicitTimeout;
 
-    private byte priority = 0;
+    private byte priority;
 
     /**
      * Required by {@link Externalizable}
@@ -212,6 +212,12 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable, 
     @Override
     public byte priority() {
         return priority;
+    }
+
+    public GridH2QueryRequest priority(byte priority) {
+        this.priority = priority;
+
+        return this;
     }
 
     /**
@@ -735,6 +741,12 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable, 
                     return false;
 
                 writer.incrementState();
+
+            case 17:
+                if (!writer.writeByte("priority", priority))
+                    return false;
+
+                writer.incrementState();
         }
 
         return true;
@@ -883,6 +895,14 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable, 
                     return false;
 
                 reader.incrementState();
+
+            case 17:
+                priority = reader.readByte("priority");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
         }
 
         return reader.afterMessageRead(GridH2QueryRequest.class);
@@ -895,7 +915,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable, 
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 17;
+        return 18;
     }
 
     /** {@inheritDoc} */

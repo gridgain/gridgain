@@ -1327,7 +1327,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         Wrapper(Runnable clo, Object obj) {
             this.clo = clo;
             holder = obj;
-            this.priority = obj instanceof GridPriorityAware;
+            priority = obj instanceof GridPriorityAware;
         }
 
         @Override
@@ -1335,7 +1335,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             if (toComp.priority && priority) {
                 GridPriorityAware holder0 = (GridPriorityAware)holder;
                 GridPriorityAware toComp0 = (GridPriorityAware)toComp.holder;
-                return Byte.compare(holder0.priority(), toComp0.priority());
+                System.err.println("!!!compare: " + holder0.priority() + " vs " + toComp0.priority());
+                return Byte.compare(toComp0.priority(), holder0.priority());
             } else
                 return 0;
         }

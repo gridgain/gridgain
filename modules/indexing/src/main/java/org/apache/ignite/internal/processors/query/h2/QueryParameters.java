@@ -60,6 +60,8 @@ public class QueryParameters {
     /** Memory limit for query results. */
     private final long maxMem;
 
+    private final byte priority;
+
     /**
      * Constructor.
      *
@@ -87,7 +89,8 @@ public class QueryParameters {
         NestedTxMode nestedTxMode,
         boolean autoCommit,
         List<Object[]> batchedArgs,
-        int updateBatchSize
+        int updateBatchSize,
+        byte priority
     ) {
         this.args = args;
         this.parts = parts;
@@ -100,6 +103,7 @@ public class QueryParameters {
         this.autoCommit = autoCommit;
         this.batchedArgs = batchedArgs;
         this.updateBatchSize = updateBatchSize;
+        this.priority = priority;
     }
 
     /**
@@ -160,6 +164,10 @@ public class QueryParameters {
         return autoCommit;
     }
 
+    public byte priority() {
+        return priority;
+    }
+
     /**
      * @return Batched arguments.
      */
@@ -205,7 +213,8 @@ public class QueryParameters {
             this.nestedTxMode,
             this.autoCommit,
             null,
-            this.updateBatchSize
+            this.updateBatchSize,
+            priority
         );
     }
 }

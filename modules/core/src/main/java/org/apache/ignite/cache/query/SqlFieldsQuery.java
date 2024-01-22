@@ -107,6 +107,8 @@ public class SqlFieldsQuery extends Query<List<?>> {
     /** Whether server side DML should be enabled. */
     private boolean skipReducerOnUpdate;
 
+    private byte priority;
+
     /**
      * Copy constructs SQL fields query.
      *
@@ -126,6 +128,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
         updateBatchSize = qry.updateBatchSize;
         qryInitiatorId = qry.qryInitiatorId;
         skipReducerOnUpdate = qry.skipReducerOnUpdate;
+        priority = qry.priority;
     }
 
     /**
@@ -390,6 +393,16 @@ public class SqlFieldsQuery extends Query<List<?>> {
      */
     public boolean isLazy() {
         return lazy;
+    }
+
+    public SqlFieldsQuery setPriority(byte priority) {
+        this.priority = priority;
+
+        return this;
+    }
+
+    public byte priority() {
+        return priority;
     }
 
     /**

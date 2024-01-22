@@ -1924,7 +1924,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             mvccTracker,
                             qryParams.dataPageScanEnabled(),
                             qryParams.pageSize(),
-                            qryParams.maxMemory()
+                            qryParams.maxMemory(),
+                            qryParams.priority()
                         );
                     }
                     catch (Throwable e) {

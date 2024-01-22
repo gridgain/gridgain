@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -462,7 +463,7 @@ public class PoolProcessor extends GridProcessorAdapter {
             cfg.getQueryThreadPoolSize(),
             cfg.getQueryThreadPoolSize(),
             DFLT_THREAD_KEEP_ALIVE_TIME,
-            new LinkedBlockingQueue<>(),
+            new PriorityBlockingQueue<>(),
             GridIoPolicy.QUERY_POOL,
             oomeHnd);
 
