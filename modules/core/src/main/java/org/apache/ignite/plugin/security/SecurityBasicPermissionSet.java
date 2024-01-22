@@ -22,7 +22,6 @@ import java.io.ObjectOutputStream;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -43,6 +42,9 @@ public class SecurityBasicPermissionSet implements SecurityPermissionSet {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
+    /** Prefix key taht is used to track tracing permissions. */
+    public static final String TRACING_PERMISSIONS_SET =  "Tracing permissions set";
+
     /** Cache permissions. */
     @GridToStringInclude
     private Map<String, Collection<SecurityPermission>> cachePermissions = new HashMap<>();
@@ -56,10 +58,6 @@ public class SecurityBasicPermissionSet implements SecurityPermissionSet {
     private transient Map<String, Collection<SecurityPermission>> servicePermissions = isSecurityCompatibilityMode()
             ? compatibleServicePermissions()
             : new HashMap<String, Collection<SecurityPermission>>();
-
-    /** Tracing permissions. */
-    @GridToStringInclude
-    private Collection<SecurityPermission> tracingPermissions = new HashSet<>();
 
     /** System permissions. */
     @GridToStringInclude
@@ -109,7 +107,11 @@ public class SecurityBasicPermissionSet implements SecurityPermissionSet {
     public void setTracingPermissions(Collection<SecurityPermission> tracingPermissions) {
         A.notNull(tracingPermissions, "tracingPermissions");
 
-        this.tracingPermissions = tracingPermissions;
+        HashMap<String, Collection<SecurityPermission>> tmp = new HashMap<>(servicePermissions);
+
+        tmp.put(TRACING_PERMISSIONS_SET, tracingPermissions);
+
+        servicePermissions = tmp;
     }
 
     /**
@@ -142,12 +144,12 @@ public class SecurityBasicPermissionSet implements SecurityPermissionSet {
 
     /** {@inheritDoc} */
     @Override public Map<String, Collection<SecurityPermission>> servicePermissions() {
-        return servicePermissions;
+        return F.view(servicePermissions, s -> !s.equals(TRACING_PERMISSIONS_SET));
     }
 
     /** {@inheritDoc} */
     @Override public Collection<SecurityPermission> tracingPermissions() {
-        return tracingPermissions;
+        return servicePermissions.getOrDefault(TRACING_PERMISSIONS_SET, Collections.emptySet());
     }
 
     /** {@inheritDoc} */
@@ -174,8 +176,7 @@ public class SecurityBasicPermissionSet implements SecurityPermissionSet {
             F.eq(cachePermissions, other.cachePermissions) &&
             F.eq(taskPermissions, other.taskPermissions) &&
             F.eq(servicePermissions, other.servicePermissions) &&
-            F.eq(systemPermissions, other.systemPermissions) &&
-            F.eq(tracingPermissions, other.tracingPermissions);
+            F.eq(systemPermissions, other.systemPermissions);
     }
 
     /** {@inheritDoc} */
@@ -186,7 +187,6 @@ public class SecurityBasicPermissionSet implements SecurityPermissionSet {
         res = 31 * res + (taskPermissions != null ? taskPermissions.hashCode() : 0);
         res = 31 * res + (servicePermissions != null ? servicePermissions.hashCode() : 0);
         res = 31 * res + (systemPermissions != null ? systemPermissions.hashCode() : 0);
-        res = 31 * res + (tracingPermissions != null ? tracingPermissions.hashCode() : 0);
 
         return res;
     }
@@ -217,9 +217,6 @@ public class SecurityBasicPermissionSet implements SecurityPermissionSet {
             else
                 servicePermissions = Collections.emptyMap();
         }
-
-        if (tracingPermissions == null)
-            tracingPermissions = Collections.emptySet();
     }
 
     /** {@inheritDoc} */
