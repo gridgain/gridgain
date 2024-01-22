@@ -29,7 +29,7 @@
 
     <artifactId>ignite-examples</artifactId>
 
-	<!-- Need to override this transitive dependency to fix vulnerabilities. -->
+    <!-- Need to override this transitive dependency to fix vulnerabilities. -->
     <dependencyManagement>
         <dependencies>
             <dependency>
