@@ -187,4 +187,14 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>release</id>
+            <properties>
+                <spring.version>6.0.16</spring.version>
+            </properties>
+        </profile>
+    </profiles>
+
 </project>
