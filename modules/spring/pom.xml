@@ -33,6 +33,10 @@
     <version>8.8.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
+    <properties>
+        <spring6.version>6.0.16</spring6.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.gridgain</groupId>
@@ -185,16 +189,65 @@
                     <skip>false</skip>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-new-spring</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>commons-logging</groupId>
+                                    <artifactId>commons-logging</artifactId>
+                                    <version>1.2</version>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.springframework</groupId>
+                                    <artifactId>spring-core</artifactId>
+                                    <version>${spring6.version}</version>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.springframework</groupId>
+                                    <artifactId>spring-context</artifactId>
+                                    <version>${spring6.version}</version>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.springframework</groupId>
+                                    <artifactId>spring-beans</artifactId>
+                                    <version>${spring6.version}</version>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.springframework</groupId>
+                                    <artifactId>spring-aop</artifactId>
+                                    <version>${spring6.version}</version>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.springframework</groupId>
+                                    <artifactId>spring-expression</artifactId>
+                                    <version>${spring6.version}</version>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.springframework</groupId>
+                                    <artifactId>spring-jdbc</artifactId>
+                                    <version>${spring6.version}</version>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.springframework</groupId>
+                                    <artifactId>spring-tx</artifactId>
+                                    <version>${spring6.version}</version>
+                                </artifactItem>
+                            </artifactItems>
+                            <outputDirectory>target/libs-spring</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>release</id>
-            <properties>
-                <spring.version>6.0.16</spring.version>
-            </properties>
-        </profile>
-    </profiles>
 
 </project>
