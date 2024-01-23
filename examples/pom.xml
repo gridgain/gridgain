@@ -29,6 +29,30 @@
 
     <artifactId>ignite-examples</artifactId>
 
+    <!--
+     Need to override this transitive dependency to fix vulnerabilities.
+     List of CVEs fixed:
+     CVE-2022-22968
+     CVE-2022-22965
+     CVE-2021-22118
+     CVE-2021-22060
+     CVE-2022-22950
+     CVE-2021-22096
+     CVE-2022-22970
+     CVE-2023-20861
+     CVE-2022-22971
+     CVE-2023-20863
+    -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-beans</artifactId>
+                <version>5.2.24.RELEASE</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>javax.cache</groupId>
