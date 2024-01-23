@@ -43,7 +43,7 @@ public class SecurityBasicPermissionSet implements SecurityPermissionSet {
     private static final long serialVersionUID = 0L;
 
     /** Prefix key taht is used to track tracing permissions. */
-    public static final String TRACING_PERMISSIONS_SET =  "Tracing permissions set";
+    public static final String TRACING_PERMISSIONS_SET = "Tracing permissions set";
 
     /** Cache permissions. */
     @GridToStringInclude
