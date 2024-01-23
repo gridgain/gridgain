@@ -1159,7 +1159,7 @@ public class ZookeeperDiscoveryImpl {
 
         Map<String, Object> attrs = new HashMap<>(node.getAttributes());
 
-        attrs.put(ATTR_SECURITY_SUBJECT_V3, unzip(zipBytes));
+        attrs.put(ATTR_SECURITY_SUBJECT_V2, unzip(zipBytes));
 
         node.setAttributes(attrs);
     }
@@ -2152,8 +2152,7 @@ public class ZookeeperDiscoveryImpl {
             // Stick in authentication subject to node (use security-safe attributes for copy).
             Map<String, Object> attrs = new HashMap<>(node.getAttributes());
 
-            attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V3, U.marshal(marsh, subj));
-            attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2, marshalWithSecurityVersion(subj, 2));
+            attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT_V2, U.marshal(marsh, subj));
             attrs.put(IgniteNodeAttributes.ATTR_SECURITY_SUBJECT, marshalWithSecurityVersion(subj, 1));
 
             node.setAttributes(attrs);
