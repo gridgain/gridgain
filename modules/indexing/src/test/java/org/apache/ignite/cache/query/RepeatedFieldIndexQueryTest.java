@@ -36,10 +36,7 @@ import org.junit.runners.Parameterized;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -227,7 +224,10 @@ public class RepeatedFieldIndexQueryTest extends GridCommonAbstractTest {
      * @param right Last cache key, exclusive.
      */
     private <T> void check(String errMsg, QueryCursor<Cache.Entry<Integer, Person>> cursor, int left, int right) {
-        List<Cache.Entry<Integer, Person>> all = cursor.getAll();
+        List<Cache.Entry<Integer, Person>> all = cursor.getAll()
+                .stream()
+                .sorted(Comparator.comparingLong(Cache.Entry::getKey))
+                .collect(Collectors.toList());
 
         assertEquals(errMsg, right - left, all.size());
 

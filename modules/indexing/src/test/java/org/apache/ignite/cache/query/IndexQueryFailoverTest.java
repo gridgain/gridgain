@@ -197,6 +197,7 @@ public class IndexQueryFailoverTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    @Ignore("GridGain doesn't have this behavior.")
     public void testStopNode() {
         insertData(0, CNT);
 

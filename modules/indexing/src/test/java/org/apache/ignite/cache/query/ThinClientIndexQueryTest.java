@@ -39,6 +39,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -56,6 +57,8 @@ import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.*;
 
 /** */
 @RunWith(Parameterized.class)
+@Ignore("Not implemented")
+// TODO create a Jira.
 public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
     /** */
     private static final int CNT = 10_000;

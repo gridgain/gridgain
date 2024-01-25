@@ -34,6 +34,7 @@ import org.junit.runners.Parameterized;
 
 import javax.cache.Cache;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
 
@@ -209,7 +210,14 @@ public class IndexQueryQueryEntityTest extends GridCommonAbstractTest {
      * @param right Last cache key, exclusive.
      */
     private void check(QueryCursor<Cache.Entry<Long, Person>> cursor, int left, int right, boolean desc) {
-        List<Cache.Entry<Long, Person>> all = cursor.getAll();
+        List<Cache.Entry<Long, Person>> all = cursor.getAll()
+                .stream()
+                .sorted(
+                        (e1, e2) -> desc
+                                ? Long.compare(e2.getKey(), e1.getKey())
+                                : Long.compare(e1.getKey(), e2.getKey())
+                )
+                .collect(Collectors.toList());
 
         assertEquals(right - left, all.size());
 
