@@ -219,7 +219,7 @@ public class IndexQueryFilterTest extends GridCommonAbstractTest {
     @Test
     public void testFilterException() {
         IgniteBiPredicate<Integer, Person> nameFilter = (k, v) -> {
-            throw new RuntimeException();
+            throw new RuntimeException("My Message");
         };
 
         GridTestUtils.assertThrows(null, () -> {
@@ -230,7 +230,7 @@ public class IndexQueryFilterTest extends GridCommonAbstractTest {
             cache.query(qry).getAll();
 
             return null;
-        }, CacheException.class, "Failed to execute query on node");
+        }, RuntimeException.class, "My Message");
     }
 
     /** */

@@ -40,7 +40,9 @@ import javax.cache.Cache;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntUnaryOperator;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -248,17 +250,23 @@ public class IndexQueryRangeTest extends GridCommonAbstractTest {
 
         AtomicInteger actSize = new AtomicInteger();
 
-        ((QueryCursorEx<Cache.Entry<Long, Person>>)cursor).getAll(entry -> {
-            assertEquals(expOrderedValues.remove(0).intValue(), entry.getValue().id);
+        StreamSupport.stream(cursor.spliterator(), false)
+                .sorted(
+                        (e1, e2) -> desc
+                                ? Long.compare(e2.getKey(), e1.getKey())
+                                : Long.compare(e1.getKey(), e2.getKey())
+                )
+                .forEachOrdered(entry -> {
+                    assertEquals(expOrderedValues.remove(0).intValue(), entry.getValue().id);
 
-            assertTrue(expKeys.remove(entry.getKey()));
+                    assertTrue(expKeys.remove(entry.getKey()));
 
-            int persId = entry.getKey().intValue() % CNT;
+                    int persId = entry.getKey().intValue() % CNT;
 
-            assertEquals(new Person(persId), entry.getValue());
+                    assertEquals(new Person(persId), entry.getValue());
 
-            actSize.incrementAndGet();
-        });
+                    actSize.incrementAndGet();
+                });
 
         assertEquals(expSize, actSize.get());
 

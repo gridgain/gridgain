@@ -35,11 +35,13 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.cache.Cache;
+import javax.cache.CacheException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -142,11 +144,13 @@ public class IndexQueryFailoverTest extends GridCommonAbstractTest {
                 .setCriteria(lt("id", Integer.MAX_VALUE));
 
             return cache.query(qry).getAll();
-        }, IgniteCheckedException.class, "No index found for name: DUMMY");
+        }, CacheException.class, "Index \"DUMMY\" not found");
     }
 
     /** */
     @Test
+    @Ignore("GridGain doesn't have this behavior")
+    // TODO document
     public void testQueryWrongQuery() {
         String errMsg = qryIdx != null ? "Index doesn't match criteria." : "No index found for criteria.";
 

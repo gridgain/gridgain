@@ -28,6 +28,7 @@ import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -45,6 +46,8 @@ import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.*;
 
 /** */
 @RunWith(Parameterized.class)
+@Ignore("GridGain has a different inline size logic; inline size doesn't affect IndexQuery in GridGain.")
+// TODO document
 public class IndexQueryInlineSizesTest extends GridCommonAbstractTest {
     /** */
     private static final String TABLE_CACHE = "TEST_CACHE_TABLE";

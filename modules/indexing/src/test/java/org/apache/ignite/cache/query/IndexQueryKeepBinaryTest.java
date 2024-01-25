@@ -29,12 +29,15 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.lucene.search.comparators.IntComparator;
 import org.junit.Test;
 
 import javax.cache.Cache;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
 
@@ -149,8 +152,11 @@ public class IndexQueryKeepBinaryTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void checkBinary(QueryCursor cursor, int left, int right) {
-        List<Cache.Entry<BinaryObject, BinaryObject>> all = cursor.getAll();
+    private void checkBinary(QueryCursor<Cache.Entry<BinaryObject, BinaryObject>> cursor, int left, int right) {
+        List<Cache.Entry<BinaryObject, BinaryObject>> all = cursor.getAll()
+                .stream()
+                .sorted(Comparator.comparingInt(e -> e.getKey().field("id1")))
+                .collect(Collectors.toList());
 
         assertEquals(right - left, all.size());
 

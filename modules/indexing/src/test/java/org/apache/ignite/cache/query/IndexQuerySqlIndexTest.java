@@ -96,12 +96,12 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         tblCache = crd.cache(CACHE_TABLE);
 
-        IndexQuery<Long, Object> qry = new IndexQuery<Long, Object>(Person.class.getName(), qryDescIdxName)
+        IndexQuery<Long, Object> qry = new IndexQuery<Long, Object>(Person.class, qryDescIdxName)
             .setCriteria(lte("descId", Integer.MAX_VALUE));
 
         assertTrue(tblCache.query(qry).getAll().isEmpty());
 
-        qry = new IndexQuery<>(Person.class.getName(), qryDescIdxName);
+        qry = new IndexQuery<>(Person.class, qryDescIdxName);
 
         assertTrue(tblCache.query(qry).getAll().isEmpty());
     }
@@ -116,7 +116,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
         // Wrong fields in query.
         if (qryDescIdxName != null) {
             GridTestUtils.assertThrowsAnyCause(null, () -> {
-                IndexQuery<Long, Object> wrongQry = new IndexQuery<Long, Object>(Person.class.getName(), qryDescIdxName)
+                IndexQuery<Long, Object> wrongQry = new IndexQuery<Long, Object>(Person.class, qryDescIdxName)
                     .setCriteria(lt("id", Integer.MAX_VALUE));
 
                 return tblCache.query(wrongQry).getAll();
@@ -126,7 +126,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         // Wrong cache.
         GridTestUtils.assertThrowsAnyCause(null, () -> {
-            IndexQuery<Long, Object> wrongQry = new IndexQuery<Long, Object>(Person.class.getName(), qryDescIdxName)
+            IndexQuery<Long, Object> wrongQry = new IndexQuery<Long, Object>(Person.class, qryDescIdxName)
                 .setCriteria(lt("descId", Integer.MAX_VALUE));
 
             return cache.query(wrongQry).getAll();
@@ -143,17 +143,17 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         tblCache = crd.cache(CACHE_TABLE);
 
-        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class.getName(), qryDescIdxName)
+        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryDescIdxName)
             .setCriteria(lt("descId", pivot));
 
         check(qry, 0, pivot);
 
-        qry = new IndexQuery<Long, Person>(Person.class.getName(), qryDescIdxName)
+        qry = new IndexQuery<Long, Person>(Person.class, qryDescIdxName)
             .setCriteria(lt("DESCID", pivot));
 
         check(qry, 0, pivot);
 
-        qry = new IndexQuery<>(Person.class.getName(), qryDescIdxName);
+        qry = new IndexQuery<>(Person.class, qryDescIdxName);
 
         check(qry, 0, CNT);
     }
@@ -167,7 +167,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         tblCache = crd.cache(CACHE_TABLE);
 
-        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class.getName(), qryDescIdxName)
+        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryDescIdxName)
             .setCriteria(lt("descId", pivot));
 
         check(qry, 0, pivot);
@@ -175,7 +175,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
         String errMsg = qryDescIdxName != null ? "Index doesn't match criteria." : "No index found for criteria.";
 
         GridTestUtils.assertThrowsAnyCause(null, () -> {
-            IndexQuery<Long, Object> wrongQry = new IndexQuery<Long, Object>(Person.class.getName(), qryDescIdxName)
+            IndexQuery<Long, Object> wrongQry = new IndexQuery<Long, Object>(Person.class, qryDescIdxName)
                 .setCriteria(lt("DESCID", Integer.MAX_VALUE));
 
             return tblCache.query(wrongQry).getAll();
@@ -194,14 +194,14 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         String idx = qryDescIdxName == null ? qryDescIdxName : qryDescIdxName.toLowerCase();
 
-        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class.getName(), idx)
+        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, idx)
             .setCriteria(lt("descId", pivot));
 
         check(qry, 0, pivot);
 
         if (qryDescIdxName != null) {
             GridTestUtils.assertThrowsAnyCause(null, () -> {
-                IndexQuery<Long, Object> wrongQry = new IndexQuery<Long, Object>(Person.class.getName(), qryDescIdxName)
+                IndexQuery<Long, Object> wrongQry = new IndexQuery<Long, Object>(Person.class, qryDescIdxName)
                     .setCriteria(lt("descId", Integer.MAX_VALUE));
 
                 return tblCache.query(wrongQry).getAll();
@@ -219,7 +219,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         tblCache = crd.cache(CACHE_TABLE).withKeepBinary();
 
-        IndexQuery<Long, BinaryObject> qry = new IndexQuery<Long, BinaryObject>(Person.class.getName(), qryDescIdxName)
+        IndexQuery<Long, BinaryObject> qry = new IndexQuery<Long, BinaryObject>(Person.class, qryDescIdxName)
             .setCriteria(lt("descId", pivot));
 
         checkBinary(tblCache.query(qry), 0, pivot);
@@ -249,7 +249,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         tblCache = crd.cache(CACHE_TABLE);
 
-        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class.getName(), qryDescIdxName)
+        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryDescIdxName)
             .setCriteria(eq("_KEY", (long)pivot), lte("descId", pivot));
 
         check(qry, pivot, pivot + 1);
