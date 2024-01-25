@@ -1142,28 +1142,54 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 if (criterion instanceof InIndexQueryCriterion) {
                     InIndexQueryCriterion in = (InIndexQueryCriterion) criterion;
 
+                    if (in.values().isEmpty()) {
+                        throw new IllegalArgumentException("Unsupported criterion [criterion="
+                                + S.toString(InIndexQueryCriterion.class, in) + "]");
+                    }
+
+                    // SQL IN doesn't include NULLs, so must add IS NULL explicitly.
                     boolean hasNull = in.values().contains(null);
 
                     if (hasNull) {
-                        // SQL IN doesn't include NULLs
-                        sqlBuilder.append("(").append(in.field()).append("(")
-                                .append(in.field()).append(" IS NULL")
-                                .append(" OR ");
-                    }
-                    sqlBuilder.append(in.field()).append(" IN (");
-                    for (int j = 0; j < in.values().size(); j++) {
-                        if (j == 0) {
-                            sqlBuilder.append("?");
+                        if (in.values().size() == 1) {
+                            sqlBuilder.append(in.field()).append(" IS NULL");
                         } else {
-                            sqlBuilder.append(", ?");
-                        }
-                    }
-                    sqlBuilder.append(")");
-                    if (hasNull)
-                        sqlBuilder.append(")");
+                            sqlBuilder.append("(")
+                                    .append(in.field()).append(" IS NULL")
+                                    .append(" OR ");
 
-                    Collection<Object> noNulls = F.view(in.values(), Objects::nonNull);
-                    args.addAll(noNulls);
+                            sqlBuilder.append(in.field());
+                            boolean first = true;
+                            for (Object val : in.values()) {
+                                if (val == null)
+                                    continue;
+
+                                if (first) {
+                                    sqlBuilder.append(" IN (?");
+                                    first = false;
+                                } else {
+                                    sqlBuilder.append(", ?");
+                                }
+                                args.add(val);
+                            }
+                            sqlBuilder.append(")");
+
+                            sqlBuilder.append(")");
+                        }
+                    } else {
+                        sqlBuilder.append(in.field());
+                        boolean first = true;
+                        for (Object val : in.values()) {
+                            if (first) {
+                                sqlBuilder.append(" IN (?");
+                                first = false;
+                            } else {
+                                sqlBuilder.append(", ?");
+                            }
+                            args.add(val);
+                        }
+                        sqlBuilder.append(")");
+                    }
                 } else if (criterion instanceof RangeIndexQueryCriterion) {
                     RangeIndexQueryCriterion range = (RangeIndexQueryCriterion) criterion;
 
