@@ -124,7 +124,7 @@ public class IndexQueryFailoverTest extends GridCommonAbstractTest {
                 .setCriteria(lt("id", Integer.MAX_VALUE));
 
             return cache.query(qry).getAll();
-        }, IgniteCheckedException.class, "No table found for type: " + Integer.class.getName());
+        }, IgniteCheckedException.class, "Failed to find SQL table for type: " + Integer.class.getSimpleName());
     }
 
     /** */

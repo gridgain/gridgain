@@ -593,7 +593,7 @@ public class IndexQueryAllTypesTest extends GridCommonAbstractTest {
 
             assertTrue(expKeys.remove(entry.getKey()));
 
-            assertEquals(persGen.apply(valGen.apply(left + i)), all.get(i).getValue());
+            assertEquals(persGen.apply(valGen.apply(((int) (long)entry.getKey()))), entry.getValue());
         }
 
         assertTrue(expKeys.isEmpty());
