@@ -27,6 +27,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -709,6 +710,11 @@ public class IndexQueryAllTypesTest extends GridCommonAbstractTest {
 
             result = 31 * result + Arrays.hashCode(bytesId);
             return result;
+        }
+
+        @Override
+        public String toString() {
+            return S.toString(Person.class, this);
         }
     }
 

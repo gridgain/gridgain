@@ -50,10 +50,7 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
-import org.apache.ignite.cache.query.FieldsQueryCursor;
-import org.apache.ignite.cache.query.QueryCursor;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.SqlQuery;
+import org.apache.ignite.cache.query.*;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -115,10 +112,7 @@ import org.apache.ignite.internal.util.GridBoundedConcurrentLinkedHashSet;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.lang.GridCloseableIterator;
-import org.apache.ignite.internal.util.lang.GridClosureException;
-import org.apache.ignite.internal.util.lang.GridPlainOutClosure;
-import org.apache.ignite.internal.util.lang.IgniteOutClosureX;
+import org.apache.ignite.internal.util.lang.*;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.T3;
@@ -126,15 +120,12 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.lang.IgniteFuture;
-import org.apache.ignite.lang.IgniteInClosure;
-import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.lang.*;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.thread.IgniteThread;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptySet;
@@ -3042,7 +3033,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      */
     public <K, V> QueryCursor<Cache.Entry<K, V>> querySql(
         final GridCacheContext<?, ?> cctx,
-        final SqlQuery qry,
+        final SqlQuery<K, V> qry,
         boolean keepBinary
     ) {
         // Generate.
@@ -3069,6 +3060,63 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         QueryKeyValueIterable<K, V> converted = new QueryKeyValueIterable<>(res);
 
         return new QueryCursorImpl<Cache.Entry<K, V>>(converted) {
+            @Override public void close() {
+                converted.cursor().close();
+            }
+        };
+    }
+
+    /**
+     * Execute distributed SQL query.
+     *
+     * @param cctx Cache context.
+     * @param qry Query.
+     * @param keepBinary Keep binary flag.
+     * @return Cursor.
+     */
+    public <K, V> QueryCursor<Cache.Entry<K, V>> queryIndex(
+            final GridCacheContext<?, ?> cctx,
+            final IndexQuery<K, V> qry,
+            boolean keepBinary
+    ) {
+        // Generate.
+        String type = qry.getValueType();
+
+        String typeName = typeName(cctx.name(), type);
+
+        // TODO
+//        qry.setType(typeName);
+
+        SqlFieldsQuery fieldsQry = idx.generateFieldsQuery(cctx.name(), qry, typeName);
+
+        // Execute.
+        FieldsQueryCursor<List<?>> res = querySqlFields(
+                cctx,
+                fieldsQry,
+                null,
+                keepBinary,
+                true,
+                GridCacheQueryType.SQL, // TODO change to Index
+                null
+        ).get(0);
+
+        // Convert.
+        QueryKeyValueIterable<K, V> converted = new QueryKeyValueIterable<>(res);
+
+        Iterable<Cache.Entry<K, V>> finalIterable;
+        if (qry.getFilter() != null) {
+            IgniteBiPredicate<K, V> filter = qry.getFilter();
+            finalIterable = () -> new GridFilteredIterator<Cache.Entry<K, V>>(converted.iterator()) {
+                @Override
+                protected boolean accept(Cache.Entry<K, V> kvEntry) {
+                    return filter.apply(kvEntry.getKey(), kvEntry.getValue());
+                }
+            };
+        } else {
+            finalIterable = converted;
+        }
+
+        return new QueryCursorImpl<Cache.Entry<K, V>>(finalIterable) {
             @Override public void close() {
                 converted.cursor().close();
             }
@@ -3434,6 +3482,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         if (type == null)
             throw new IgniteException("Failed to find SQL table for type: " + typeName);
 
+        // This seems redundant as typeName must always be equal to type.name().
         return type.name();
     }
 

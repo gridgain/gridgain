@@ -45,10 +45,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheServerNotFoundException;
-import org.apache.ignite.cache.query.FieldsQueryCursor;
-import org.apache.ignite.cache.query.QueryCancelledException;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.SqlQuery;
+import org.apache.ignite.cache.query.*;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.EventType;
@@ -56,6 +53,8 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.cache.query.InIndexQueryCriterion;
+import org.apache.ignite.internal.cache.query.RangeIndexQueryCriterion;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.managers.IgniteMBeansManager;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
@@ -191,6 +190,7 @@ import org.apache.ignite.internal.util.lang.IgniteSingletonIterator;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiClosure;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -229,7 +229,7 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.request
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.tx;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.txStart;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.TEXT;
-import static org.apache.ignite.internal.processors.query.QueryUtils.matches;
+import static org.apache.ignite.internal.processors.query.QueryUtils.*;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.UPDATE_RESULT_META;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.generateFieldsQueryString;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.session;
@@ -1102,6 +1102,131 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         return res;
     }
 
+
+    /** {@inheritDoc} */
+    @Override public <K, V> SqlFieldsQuery generateFieldsQuery(String cacheName, IndexQuery<K, V> qry, String type) {
+        String schemaName = schema(cacheName);
+
+        H2TableDescriptor tblDesc = schemaMgr.tableForType(schemaName, cacheName, type);
+
+        if (tblDesc == null)
+            throw new IgniteSQLException("Failed to find SQL table for type: " + type,
+                    IgniteQueryErrorCode.TABLE_NOT_FOUND);
+
+
+        StringBuilder sqlBuilder = new StringBuilder();
+        List<Object> args = null;
+
+        sqlBuilder.append("SELECT ").append(KEY_FIELD_NAME).append(", ").append(VAL_FIELD_NAME).append(" ");
+        sqlBuilder.append("FROM ").append(tblDesc.fullTableName()).append(" ");
+        if (qry.getIndexName() != null) {
+            sqlBuilder.append("USE INDEX (").append(qry.getIndexName()).append(")").append(" ");
+        }
+        if (qry.getCriteria() != null) {
+            List<IndexQueryCriterion> criteria = qry.getCriteria();
+            args = new ArrayList<>();
+            for (int i = 0; i < criteria.size(); i++) {
+                IndexQueryCriterion criterion = criteria.get(i);
+                if (i == 0) {
+                    sqlBuilder.append(" WHERE ");
+                }
+                else {
+                    sqlBuilder.append(" AND ");
+                }
+
+                // TODO validate field name (alphanumeric only? exists in tblDesc?)
+
+                if (criterion instanceof InIndexQueryCriterion) {
+                    InIndexQueryCriterion in = (InIndexQueryCriterion) criterion;
+                    if (i > 0)
+                    sqlBuilder.append(in.field()).append(" IN (");
+                    for (int j = 0; j < in.values().size(); j++) {
+                        if (j == 0) {
+                            sqlBuilder.append("?");
+                        } else {
+                            sqlBuilder.append(", ?");
+                        }
+                    }
+                    sqlBuilder.append(")");
+
+                    args.addAll(in.values());
+                } else if (criterion instanceof RangeIndexQueryCriterion) {
+                    RangeIndexQueryCriterion range = (RangeIndexQueryCriterion) criterion;
+
+                    // TODO handle or delete upperNull and lowerNull
+
+                    Object lower = range.lower();
+                    Object upper = range.upper();
+                    boolean lowerIncl = range.lowerIncl();
+                    boolean upperIncl = range.upperIncl();
+                    boolean lowerNull = range.lowerNull();
+                    boolean upperNull = range.upperNull();
+                    String field = range.field();
+
+                    if (lower == null && upper == null) {
+                        // IS NULL
+
+                        // Can only be set via between(null, null) or eq(null) in which case all flags are true.
+                        if (!(lowerIncl && upperIncl && lowerNull && upperNull)) {
+                            throw new IllegalArgumentException("Unsupported criterion [criterion="
+                                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
+                        }
+
+                        sqlBuilder.append(field).append(" IS NULL");
+                    } else {
+                        // Lower part.
+                        if (lower != null) {
+                            sqlBuilder.append(field).append(lowerIncl ? " >= ?" : " > ?");
+                            args.add(lower);
+                        } else {
+                            // Must not be set explicitly.
+                            if (lowerIncl || lowerNull) {
+                                throw new IllegalArgumentException("Unsupported criterion [criterion="
+                                        + S.toString(RangeIndexQueryCriterion.class, range) + "]");
+                            }
+                        }
+
+                        if (lower != null && upper != null)
+                            sqlBuilder.append(" AND ");
+
+                        if (upper != null) {
+                            sqlBuilder.append(field).append(upperIncl ? " <= ?" : " < ?");
+                            args.add(upper);
+                        } else {
+                            // Must not be set explicitly.
+                            if (upperIncl || upperNull) {
+                                throw new IllegalArgumentException("Unsupported criterion [criterion="
+                                        + S.toString(RangeIndexQueryCriterion.class, range) + "]");
+                            }
+                        }
+                    }
+                } else {
+                    // Mimic Ignite error.
+                    throw new IllegalArgumentException(
+                            String.format("Unknown IndexQuery criterion type [%s]", criterion.getClass().getSimpleName())
+                    );
+                }
+            }
+        }
+        if (qry.getLimit() != 0) {
+            sqlBuilder.append("LIMIT ").append(qry.getLimit());
+        }
+
+        SqlFieldsQuery res = new SqlFieldsQuery(sqlBuilder.toString());
+
+        log.info(">>>>>>> " + res.getSql());
+
+        res.setArgs(args != null ? args.toArray() : null);
+        res.setLocal(qry.isLocal());
+        res.setPageSize(qry.getPageSize());
+        res.setSchema(schemaName);
+        if (qry.getPartition() != null) {
+            res.setPartitions(qry.getPartition());
+        }
+
+        return res;
+    }
+
     /**
      * Execute command.
      *
@@ -1222,7 +1347,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         if (qryParamsCnt < parseRes.parametersCount())
                             throw new IgniteSQLException("Invalid number of query parameters [expected=" +
-                                parseRes.parametersCount() + ", actual=" + qryParamsCnt + ']');
+                                parseRes.parametersCount() + ", actual=" + qryParamsCnt + ", newQryParams=" + newQryParams + ']');
                     }
 
                     // Check if cluster state is valid.
