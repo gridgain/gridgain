@@ -605,6 +605,57 @@ public final class GridTestUtils {
     }
 
     /**
+     * Checks whether callable throws expected exception or not.
+     *
+     * @param log Logger (optional).
+     * @param call Callable.
+     * @param cls Exception class.
+     * @param msg Exception message (optional). If provided exception message
+     *      and this message should be equal.
+     * @param notThrowsMsg Optional exception message if expected exception wasn't thrown.
+     * @return Thrown throwable.
+     */
+    public static Throwable assertThrows(@Nullable IgniteLogger log, Callable<?> call,
+                                         Class<? extends Throwable> cls, @Nullable String msg, @Nullable String notThrowsMsg) {
+        assert call != null;
+        assert cls != null;
+
+        try {
+            call.call();
+        }
+        catch (Throwable e) {
+            if (cls != e.getClass() && !cls.isAssignableFrom(e.getClass())) {
+                if (e.getClass() == CacheException.class && e.getCause() != null && e.getCause().getClass() == cls)
+                    e = e.getCause();
+                else {
+                    U.error(log, "Unexpected exception.", e);
+
+                    fail("Exception class is not as expected [expected=" + cls + ", actual=" + e.getClass() + ']', e);
+                }
+            }
+
+            if (msg != null && (e.getMessage() == null || !e.getMessage().contains(msg))) {
+                U.error(log, "Unexpected exception message.", e);
+
+                fail("Exception message is not as expected [expected=" + msg + ", actual=" + e.getMessage() + ']', e);
+            }
+
+            if (log != null) {
+                if (log.isInfoEnabled())
+                    log.info("Caught expected exception: " + e.getMessage());
+            }
+            else
+                X.println("Caught expected exception: " + e.getMessage());
+
+            return e;
+        }
+
+        String asrtMsg = notThrowsMsg == null ? "Exception has not been thrown." : notThrowsMsg;
+
+        throw new AssertionError(asrtMsg);
+    }
+
+    /**
      * Checks whether callable throws an exception with specified cause.
      *
      * @param log Logger (optional).
