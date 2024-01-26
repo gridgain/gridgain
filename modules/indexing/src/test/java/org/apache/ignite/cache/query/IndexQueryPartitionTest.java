@@ -23,7 +23,6 @@ import java.util.Random;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -37,7 +36,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -62,7 +60,7 @@ public class IndexQueryPartitionTest extends GridCommonAbstractTest {
         return F.asList(
             new Object[]{ CacheMode.PARTITIONED, false },
             new Object[]{ CacheMode.PARTITIONED, true }
-            // TODO Investigate
+            // TODO SqlFieldsQuery partitions can be set only for partitioned caches (verify exception?).
             // new Object[]{ CacheMode.REPLICATED, false },
             // new Object[]{ CacheMode.REPLICATED, true }
         );
@@ -111,7 +109,7 @@ public class IndexQueryPartitionTest extends GridCommonAbstractTest {
 
             QueryCursor<Cache.Entry<Integer, Person>> cursor = grid().cache("CACHE").query(qry);
 
-            for (Cache.Entry<Integer, Person> e: cursor) {
+            for (Cache.Entry<Integer, Person> e : cursor) {
                 Person p = expRes.remove(e.getKey());
 
                 assertEquals(e.getKey().toString(), p, e.getValue());
@@ -144,8 +142,6 @@ public class IndexQueryPartitionTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    // TODO Investigate precisely.
-    @Ignore
     public void testLocalWithPartition() {
         load();
 
@@ -155,15 +151,18 @@ public class IndexQueryPartitionTest extends GridCommonAbstractTest {
 
             qry.setLocal(true);
 
-            boolean fail = client || (
-                    cacheMode == CacheMode.PARTITIONED
-                    && !grid().affinity("CACHE").mapPartitionToNode(part).equals(grid().localNode())
-                );
-
-            if (fail) {
+            if (client) {
                 GridTestUtils.assertThrows(null, () -> grid().cache("CACHE").query(qry).getAll(),
-                    IgniteException.class,
-                    "Cluster group is empty.");
+                    CacheException.class,
+                    "Execution of local SqlFieldsQuery on client node disallowed.");
+            }
+            else if (cacheMode == CacheMode.PARTITIONED
+                && !grid().affinity("CACHE").mapPartitionToNode(part).equals(grid().localNode())) {
+                // TODO Query.setLocal(true).partition(N) where local does not owns N partition must throw exception?
+                grid().cache("CACHE").query(qry).getAll();
+                // GridTestUtils.assertThrows(null, () -> grid().cache("CACHE").query(qry).getAll(),
+                //     IgniteException.class,
+                //     "Cluster group is empty.");
             }
             else
                 assertTrue(!grid().cache("CACHE").query(qry).getAll().isEmpty());
