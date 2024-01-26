@@ -83,9 +83,9 @@ public class H2QueryFetchSizeInterceptor {
      *
      */
     public void checkOnClose() {
-//        if (bigResults) {
+        if (bigResults) {
             qryInfo.printLogMessage(log, "Query produced big result set. ",
                 "fetched=" + fetchedSize);
-//        }
+        }
     }
 }

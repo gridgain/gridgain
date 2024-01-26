@@ -44,7 +44,6 @@ import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lte;
 
 /** */
 @RunWith(Parameterized.class)
-//@Ignore("Reverted before...")
 public class MultiTableIndexQuery extends GridCommonAbstractTest {
     /** */
     private static final String CACHE = "TEST_CACHE";

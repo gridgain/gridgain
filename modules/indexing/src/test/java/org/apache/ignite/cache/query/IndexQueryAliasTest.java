@@ -36,7 +36,6 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -45,7 +44,6 @@ import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
 
 /** */
 @RunWith(Parameterized.class)
-//@Ignore("Reversed to version before IGNITE-15530")
 public class IndexQueryAliasTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE = "TEST_CACHE";

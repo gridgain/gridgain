@@ -28,7 +28,6 @@ import org.junit.runners.Suite;
     IndexQueryAllTypesTest.class,
     IndexQueryFailoverTest.class,
     IndexQueryFilterTest.class,
-    IndexQueryInlineSizesTest.class,
     IndexQueryKeepBinaryTest.class,
     IndexQueryLocalTest.class,
     IndexQueryQueryEntityTest.class,

@@ -31,12 +31,10 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -54,7 +52,6 @@ import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lte;
 
 /** */
 @RunWith(Parameterized.class)
-//@Ignore("Reversed to version before IGNITE-15530")
 public class IndexQueryRangeTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE = "TEST_CACHE";
@@ -162,10 +159,6 @@ public class IndexQueryRangeTest extends GridCommonAbstractTest {
             .setCacheMode(cacheMode)
             .setQueryParallelism(qryParallelism)
             .setBackups(backups);
-
-        // TODO: remove after IGNITE-15671.
-        if (atomicityMode == ATOMIC)
-            ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
 
         cfg.setCacheConfiguration(ccfg);
 

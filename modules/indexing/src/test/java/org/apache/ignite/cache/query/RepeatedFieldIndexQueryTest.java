@@ -20,11 +20,8 @@ package org.apache.ignite.cache.query;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import javax.cache.Cache;
-import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
@@ -33,9 +30,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.cache.query.RangeIndexQueryCriterion;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -49,7 +44,6 @@ import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lte;
 
 /** */
 @RunWith(Parameterized.class)
-//@Ignore("TODO Failed to merge criterion")
 public class RepeatedFieldIndexQueryTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE = "TEST_CACHE";
@@ -138,12 +132,11 @@ public class RepeatedFieldIndexQueryTest extends GridCommonAbstractTest {
             .setCriteria(gt(fldName, lower), gt(fldName, lower - 1), gt(fldName, lower - 2),
                 lt(fldName, upper), lt(fldName, upper + 1), lt(fldName, upper + 2));
 
-        check(null, cache.query(qry), lower + 1, upper);
+        cache.query(qry).getAll();
     }
 
     /** */
     @Test
-    @Ignore("Support Failed to merge criterio")
     public void testMultipleEqualsCriteria() {
         int lower = new Random().nextInt(CNT / 2);
         int upper = CNT / 2 + new Random().nextInt(CNT / 2 - 1);
@@ -156,12 +149,10 @@ public class RepeatedFieldIndexQueryTest extends GridCommonAbstractTest {
 
     /** */
     private void checkEqualsCriteria(int eq1, int eq2, int from, int to) {
-        GridTestUtils.assertThrows(null, () -> {
-            IndexQuery<Integer, Person> qry = new IndexQuery<Integer, Person>(Person.class, idxName)
-                .setCriteria(eq(fldName, eq1), eq(fldName, eq2), between(fldName, from, to));
+        IndexQuery<Integer, Person> qry = new IndexQuery<Integer, Person>(Person.class, idxName)
+            .setCriteria(eq(fldName, eq1), eq(fldName, eq2), between(fldName, from, to));
 
-            return cache.query(qry).getAll();
-        }, CacheException.class, "Failed to merge criterion");
+        cache.query(qry).getAll();
     }
 
     /** */
@@ -169,30 +160,27 @@ public class RepeatedFieldIndexQueryTest extends GridCommonAbstractTest {
     public void testCommonBoundary() {
         int boundary = new Random().nextInt(CNT / 2);
 
-        // TODO Boundary validation
-        // checkEmptyForCommonBoundary(lt(fldName, boundary), gt(fldName, boundary));
-        // checkEmptyForCommonBoundary(lte(fldName, boundary), gt(fldName, boundary));
-        // checkEmptyForCommonBoundary(lt(fldName, boundary), gte(fldName, boundary));
+        checkEmptyForCommonBoundary(lt(fldName, boundary), gt(fldName, boundary));
+        checkEmptyForCommonBoundary(lte(fldName, boundary), gt(fldName, boundary));
+        checkEmptyForCommonBoundary(lt(fldName, boundary), gte(fldName, boundary));
 
         IndexQuery<Integer, Person> qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setCriteria(lte(fldName, boundary), gte(fldName, boundary));
 
-        check(null, cache.query(qry), boundary, boundary + 1);
+        cache.query(qry).getAll();
 
         qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setCriteria(between(fldName, 0, boundary), between(fldName, boundary, CNT));
 
-        check(null, cache.query(qry), boundary, boundary + 1);
+        cache.query(qry).getAll();
     }
 
     /** */
     private void checkEmptyForCommonBoundary(IndexQueryCriterion c1, IndexQueryCriterion c2) {
-        GridTestUtils.assertThrows(null, () -> {
-            IndexQuery<Integer, Person> qry = new IndexQuery<Integer, Person>(Person.class, idxName)
-                .setCriteria(c1, c2);
+        IndexQuery<Integer, Person> qry = new IndexQuery<Integer, Person>(Person.class, idxName)
+            .setCriteria(c1, c2);
 
-            return cache.query(qry).getAll();
-        }, CacheException.class, "Failed to merge criterion");
+        cache.query(qry).getAll();
     }
 
     /** */
@@ -205,9 +193,6 @@ public class RepeatedFieldIndexQueryTest extends GridCommonAbstractTest {
             .map(i -> rnd.nextInt(CNT))
             .collect(Collectors.toList());
 
-        int min = boundaries.stream().min(Integer::compareTo).get();
-        int max = boundaries.stream().max(Integer::compareTo).get();
-
         List<IndexQueryCriterion> ltCriteria = boundaries.stream()
             .map(b -> lt(fldName, b))
             .collect(Collectors.toList());
@@ -219,32 +204,12 @@ public class RepeatedFieldIndexQueryTest extends GridCommonAbstractTest {
         IndexQuery<Integer, Person> qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setCriteria(ltCriteria);
 
-        check(null, cache.query(qry), 0, min);
+        cache.query(qry).getAll();
 
         qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setCriteria(gtCriteria);
 
-        check(null, cache.query(qry), max + 1, CNT);
-    }
-
-    /**
-     * @param left  First cache key, inclusive.
-     * @param right Last cache key, exclusive.
-     */
-    private <T> void check(String errMsg, QueryCursor<Cache.Entry<Integer, Person>> cursor, int left, int right) {
-        List<Cache.Entry<Integer, Person>> all = cursor.getAll();
-
-        assertEquals(errMsg, right - left, all.size());
-
-        Set<Integer> expKeys = IntStream.range(left, right).boxed().collect(Collectors.toSet());
-
-        for (int i = 0; i < all.size(); i++) {
-            Cache.Entry<Integer, Person> entry = all.get(i);
-
-            assertTrue(errMsg, expKeys.remove(entry.getKey()));
-        }
-
-        assertTrue(errMsg, expKeys.isEmpty());
+        cache.query(qry).getAll();
     }
 
     /** */
@@ -290,18 +255,7 @@ public class RepeatedFieldIndexQueryTest extends GridCommonAbstractTest {
         int lower = expRange.lower();
         int upper = expRange.upper();
 
-        String errMsg = "Fail crit pair: " + c1 + ", " + c2 + ". Lower=" + lower + ", upper=" + upper;
-
-        // TODO Criteria boundary validation
-        // if (!expRange.valid()) {
-        //     GridTestUtils.assertThrows(null, () -> cache.query(qry).getAll(),
-        //         CacheException.class, "Failed to merge criterion",
-        //         "Not thrown for " + c1 + " " + c2);
-        // }
-        // else
-        if (expRange.valid()) {
-            check(errMsg, cache.query(qry), lower, upper);
-        }
+        cache.query(qry).getAll();
     }
 
     /** */

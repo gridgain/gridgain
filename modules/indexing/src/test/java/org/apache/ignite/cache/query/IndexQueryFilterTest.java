@@ -34,7 +34,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -43,7 +42,6 @@ import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
 
 /** */
 @RunWith(Parameterized.class)
-//@Ignore("Reversed to stage before IGNITE-15530")
 public class IndexQueryFilterTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE = "TEST_CACHE";

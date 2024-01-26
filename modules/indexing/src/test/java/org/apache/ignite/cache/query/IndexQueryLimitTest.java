@@ -33,7 +33,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -81,15 +80,17 @@ public class IndexQueryLimitTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void testRangeQueriesWithoutDuplicates() throws Exception {
-        checkRangeQueries(1);
-    }
+    public void testRangeQueries() throws Exception {
+        // Add data
+        insertData();
 
-    /** */
-    @Test
-    @Ignore("Incorrect order")
-    public void testRangeQueriesWithDuplicates() throws Exception {
-        checkRangeQueries(10);
+        // All
+        checkLimit(null, 0, CNT);
+
+        int pivot = new Random().nextInt(CNT);
+
+        // Lt.
+        checkLimit(lt("id", pivot), 0, pivot);
     }
 
     /** */
@@ -111,37 +112,23 @@ public class IndexQueryLimitTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void checkRangeQueries(int duplicates) throws Exception {
-        // Add data
-        insertData(duplicates);
-
-        // All
-        checkLimit(null, 0, CNT, duplicates);
-
-        int pivot = new Random().nextInt(CNT);
-
-        // Lt.
-        checkLimit(lt("id", pivot), 0, pivot, duplicates);
-    }
-
-    /** */
-    private void checkLimit(IndexQueryCriterion criterion, int left, int right, int duplicates) throws Exception {
+    private void checkLimit(IndexQueryCriterion criterion, int left, int right) throws Exception {
         int rows = right - left;
         int limit = new Random().nextInt(rows) + 1;
 
         // limit < rows
-        checkLimit(criterion, limit, left, left + limit, duplicates);
+        checkLimit(criterion, limit, left, left + limit);
 
         // limit >= rows
         if (rows > 1) {
             limit = new Random().nextInt(CNT + 2 - rows) + rows;
 
-            checkLimit(criterion, limit, left, right, duplicates);
+            checkLimit(criterion, limit, left, right);
         }
     }
 
     /** */
-    private void checkLimit(IndexQueryCriterion criterion, int limit, int left, int right, int duplicates) throws Exception {
+    private void checkLimit(IndexQueryCriterion criterion, int limit, int left, int right) throws Exception {
         IndexQuery<Long, Person> qry = new IndexQuery<>(Person.class, IDX);
 
         if (criterion != null)
@@ -151,7 +138,7 @@ public class IndexQueryLimitTest extends GridCommonAbstractTest {
 
         QueryCursor<Cache.Entry<Long, Person>> cursor = crd.cache(CACHE).query(qry);
 
-        int expSize = (right - left) * duplicates;
+        int expSize = right - left;
 
         if (limit > 0 && limit < expSize)
             expSize = limit;
@@ -160,13 +147,11 @@ public class IndexQueryLimitTest extends GridCommonAbstractTest {
         List<Integer> expOrderedValues = new LinkedList<>();
 
         loop: for (int i = left; i != right; i++) {
-            for (int j = 0; j < duplicates; j++) {
-                expOrderedValues.add(i);
+            expOrderedValues.add(i);
 
-                expKeys.add((long)CNT * j + i);
-                if (expOrderedValues.size() >= limit)
-                    break loop;
-            }
+            expKeys.add((long)CNT + i);
+            if (expOrderedValues.size() >= limit)
+                break loop;
         }
 
         AtomicInteger actSize = new AtomicInteger();
@@ -188,12 +173,10 @@ public class IndexQueryLimitTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void insertData(int duplicates) {
+    private void insertData() {
         try (IgniteDataStreamer<Long, Person> streamer = crd.dataStreamer(CACHE)) {
             for (int persId = 0; persId < CNT; persId++) {
-                // Create duplicates of data.
-                for (int i = 0; i < duplicates; i++)
-                    streamer.addData((long)CNT * i + persId, new Person(persId));
+                streamer.addData((long)CNT + persId, new Person(persId));
             }
         }
     }

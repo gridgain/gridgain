@@ -17,42 +17,34 @@
 
 package org.apache.ignite.cache.query;
 
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.query.IndexQuery;
-import org.apache.ignite.cache.query.QueryCursor;
-import org.apache.ignite.cache.query.annotations.QuerySqlField;
-import org.apache.ignite.cluster.ClusterTopologyException;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-//TODO
-//import org.apache.ignite.internal.cache.query.index.IndexName;
-import org.apache.ignite.internal.processors.cache.GatewayProtectedCacheProxy;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import javax.cache.Cache;
-import javax.cache.CacheException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
+import javax.cache.Cache;
+import javax.cache.CacheException;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.query.annotations.QuerySqlField;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.*;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.between;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.eq;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.gt;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
 
 /** */
 @RunWith(Parameterized.class)
-//@Ignore("all except testDestroyIdx")
 public class IndexQueryFailoverTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE = "TEST_CACHE";
@@ -150,17 +142,13 @@ public class IndexQueryFailoverTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    @Ignore("GridGain doesn't have this behavior")
-    // TODO document
     public void testQueryWrongQuery() {
-        String errMsg = qryIdx != null ? "Index doesn't match criteria." : "No index found for criteria.";
-
         GridTestUtils.assertThrowsAnyCause(null, () -> {
             IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryIdx)
                 .setCriteria(lt("dummy", Integer.MAX_VALUE));
 
             return cache.query(qry).getAll();
-        }, IgniteCheckedException.class, errMsg);
+        }, CacheException.class, "Column \"DUMMY\" not found.");
 
         GridTestUtils.assertThrowsAnyCause(null, () -> {
             IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryIdx)
@@ -169,14 +157,15 @@ public class IndexQueryFailoverTest extends GridCommonAbstractTest {
                     lt("nonExistedField", Integer.MAX_VALUE));
 
             return cache.query(qry).getAll();
-        }, IgniteCheckedException.class, errMsg);
+        }, IgniteException.class, "Column \"NONEXISTEDFIELD\" not found.");
 
-        GridTestUtils.assertThrowsAnyCause(null, () -> {
+        {
             IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryIdx)
                 .setCriteria(between("id", 432, 40));
 
-            return cache.query(qry).getAll();
-        }, IgniteCheckedException.class, "Illegal criterion: lower boundary is greater than the upper boundary: ID[432; 40]");
+            // Ensures that there will be no exceptions.
+            cache.query(qry).getAll();
+        }
 
         Stream.of(
             Arrays.asList(lt("id", 100), gt("id", 101)),
@@ -187,57 +176,12 @@ public class IndexQueryFailoverTest extends GridCommonAbstractTest {
             String msg = "Failed to merge criterion " + crit.get(1).toString().replace("id", "ID")
                 + " with previous criteria range " + crit.get(0).toString().replace("id", "ID");
 
-            GridTestUtils.assertThrowsAnyCause(null, () -> {
-                IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryIdx)
-                    .setCriteria(crit);
+            IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryIdx)
+                .setCriteria(crit);
 
-                return cache.query(qry).getAll();
-            }, IgniteCheckedException.class, msg);
+            // Ensures that there will be no exceptions.
+            cache.query(qry).getAll();
         });
-    }
-
-    /** */
-    @Test
-    @Ignore("GridGain doesn't have this behavior.")
-    public void testStopNode() {
-        insertData(0, CNT);
-
-        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryIdx)
-            .setCriteria(lt("id", CNT));
-
-        QueryCursor<Cache.Entry<Long, Person>> cursor = cache.query(qry);
-
-        stopGrid(1);
-
-        GridTestUtils.assertThrows(null,
-            () -> cursor.getAll(), ClusterTopologyException.class,
-            null);
-    }
-
-    /** */
-    @Test
-    @Ignore("TODO Not supported")
-    public void testDestroyIndex() {
-        insertData(0, CNT);
-
-        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryIdx)
-            .setCriteria(lt("id", CNT));
-
-        Iterator<Cache.Entry<Long, Person>> cursor = cache.query(qry).iterator();
-
-        for (int i = 0; i < 10; i++)
-            cursor.next();
-
-        destroyIndex();
-
-        // SQL doesn't lock index for querying. SQL is eager and fetch all data from index before return it to user by pages.
-        // IndexQuery doesn't lock to, but IndexQuery is lazy and concurrent index operations will affect result of this query.
-        GridTestUtils.assertThrows(null,
-            () -> {
-                while (cursor.hasNext())
-                    cursor.next();
-
-            }, IgniteException.class, null);
     }
 
     /** */
@@ -263,17 +207,6 @@ public class IndexQueryFailoverTest extends GridCommonAbstractTest {
         }
 
         assertEquals(CNT + 1, size);
-    }
-
-    /** */
-    private void destroyIndex() {
-        // TODO
-//        IndexName idxName = new IndexName(CACHE, CACHE, Person.class.getSimpleName().toUpperCase(), IDX);
-//
-//        GridCacheContext cctx = ((GatewayProtectedCacheProxy)cache).context();
-//
-//        cctx.kernalContext().indexProcessor()
-//            .removeIndex(idxName, false);
     }
 
     /** */

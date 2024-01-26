@@ -27,10 +27,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import javax.cache.Cache;
-import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
@@ -38,9 +36,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -54,7 +50,6 @@ import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lte;
 
 /** */
 @RunWith(Parameterized.class)
-//@Ignore("added sorting, all except testWrongBoundaryClass works")
 public class MultifieldIndexQueryTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE = "TEST_CACHE";
@@ -441,19 +436,15 @@ public class MultifieldIndexQueryTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    @Ignore("Gridgain not supported such validation")
-    public void testWrongBoundaryClass() {
+    public void testIncorrectBoundaryClass() {
         insertData();
 
         // Use long boundary instead of int.
         IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryIdx)
             .setCriteria(lt("id", "0"));
 
-        GridTestUtils.assertThrows(null,
-            () -> cache.query(qry).getAll(), CacheException.class, null);
-
-        GridTestUtils.assertThrowsWithCause(
-            () -> cache.query(qry).getAll(), IgniteCheckedException.class);
+        // Ensures that there will be no exceptions.
+        cache.query(qry).getAll();
     }
 
     /** */

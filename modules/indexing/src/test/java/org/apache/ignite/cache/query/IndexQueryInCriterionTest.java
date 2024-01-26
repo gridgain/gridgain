@@ -53,7 +53,6 @@ import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lte;
 
 /** */
-//@Ignore("except criterion merge checks")
 public class IndexQueryInCriterionTest extends GridCommonAbstractTest {
     /** */
     private static final String IDX = "IDX";
@@ -317,8 +316,7 @@ public class IndexQueryInCriterionTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    @Ignore("Criterion merge not supported")
-    public void testDuplicatedInCriterionFailure() {
+    public void testDuplicatedInCriterion() {
         List<IndexQueryCriterion[]> criteria = F.asList(
             new IndexQueryCriterion[] {
                 in("age", Collections.singleton(10)),
@@ -353,12 +351,8 @@ public class IndexQueryInCriterionTest extends GridCommonAbstractTest {
             IndexQuery<Integer, Person> qry = new IndexQuery<Integer, Person>(Person.class)
                 .setCriteria(c);
 
-            GridTestUtils.assertThrows(
-                log,
-                () -> grid(0).cache("CACHE").query(qry).getAll(),
-                IgniteCheckedException.class,
-                "Multiple IN criteria for same field arent't supported."
-            );
+            // Ensures that there will be no exceptions.
+            grid(0).cache("CACHE").query(qry).getAll();
         }
     }
 

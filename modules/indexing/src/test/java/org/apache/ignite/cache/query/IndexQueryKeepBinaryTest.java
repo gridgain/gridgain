@@ -33,13 +33,11 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
 
 /** */
-//@Ignore("Ordering not supported")
 public class IndexQueryKeepBinaryTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE = "TEST_CACHE";
@@ -130,10 +128,9 @@ public class IndexQueryKeepBinaryTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void checkBinary(QueryCursor cursor, int left, int right) {
+    private void checkBinary(QueryCursor<Cache.Entry<BinaryObject, BinaryObject>> cursor, int left, int right) {
         List<Cache.Entry<BinaryObject, BinaryObject>> all = cursor.getAll();
 
-        // TODO Gridgain doesn't warranty ordering.
         all.sort((o1, o2) -> ((Integer)o1.getKey().field("id1")).compareTo(o2.getKey().field("id1")));
 
         assertEquals(right - left, all.size());

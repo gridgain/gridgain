@@ -1127,8 +1127,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         sqlBuilder.a("SELECT ").a(KEY_FIELD_NAME).a(", ").a(VAL_FIELD_NAME).a(" ");
         sqlBuilder.a("FROM ").a(tblDesc.fullTableName()).a(" ");
-        // TODO PK_IDX_NAME
-        String idxName = normalizeIdxName(qry.getIndexName(), tblDesc);
+
+        String idxName = normalizeIndexName(qry.getIndexName(), tblDesc);
 
         if (idxName != null) {
             sqlBuilder.a("USE INDEX (").a(idxName).a(")").a(" ");
@@ -1151,7 +1151,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                 // Ignite's IndexQuery allows to compare with NULL and treats it as the smallest value.
                 // While SQL doesn't allow this, we mimic Ignite's behavior for compatibility.
-
                 if (criterion instanceof InIndexQueryCriterion) {
                     InIndexQueryCriterion in = (InIndexQueryCriterion) criterion;
 
@@ -1215,7 +1214,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                     // Consider all flags to decipher which condition was requested.
                     // TODO refactor - replace RangeIndexQueryCriterion with per-condition criterions.
-
                     if (lower == null && upper == null) {
                         if (lowerNull && upperNull) {
                             // between(null, null) or eq(null) in which case all flags are true.
@@ -1356,7 +1354,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         throw new IgniteException("Column \"" + upperCaseField+ "\" not found.");
     }
 
-    private @Nullable String normalizeIdxName(@Nullable String idxName, H2TableDescriptor descriptor) {
+    private @Nullable String normalizeIndexName(@Nullable String idxName, H2TableDescriptor descriptor) {
         if (idxName == null) {
             return null;
         }
@@ -1379,8 +1377,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         throw new IgniteException("Index \"" + upperCaseIdxName+ "\" not found.");
     }
 
-    private static String quoteString(String str) {
-        return "\"" + str + "\"";
+    /** Returns quoted string. */
+    private static String quoteString(String input) {
+        return "\"" + input + "\"";
     }
 
     /**

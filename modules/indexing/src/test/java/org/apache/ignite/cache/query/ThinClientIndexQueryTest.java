@@ -17,6 +17,12 @@
 
 package org.apache.ignite.cache.query;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.Ignition;
@@ -25,13 +31,11 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.client.ClientCache;
 import org.apache.ignite.client.ClientException;
-import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
-import org.apache.ignite.internal.client.thin.ProtocolBitmaskFeature;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryNextPageRequest;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -44,21 +48,17 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.cache.Cache;
-import java.lang.reflect.Field;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Random;
-import java.util.function.Consumer;
-import java.util.function.Function;
-
-import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.*;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.between;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.eq;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.gt;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.gte;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.in;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lte;
 
 /** */
 @RunWith(Parameterized.class)
-@Ignore("Not implemented")
-// TODO create a Jira.
+@Ignore("https://ggsystems.atlassian.net/browse/GG-38379")
 public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
     /** */
     private static final int CNT = 10_000;

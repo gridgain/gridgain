@@ -32,7 +32,6 @@ import org.junit.Test;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
 
 /** */
-//@Ignore("except testClientNodeReplicatedCache - verify exception message")
 public class IndexQueryLocalTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE = "TEST_CACHE";

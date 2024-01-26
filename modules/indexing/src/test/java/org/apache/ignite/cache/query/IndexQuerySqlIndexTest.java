@@ -27,13 +27,11 @@ import javax.cache.Cache;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -113,24 +111,11 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    @Ignore("Gridgain doesn't provide such validations.")
-    public void testWrongQueries() {
+    public void testWrongCache() {
         prepareTable(Person.class.getName(), DESC_ID_IDX, "descId", false);
 
         tblCache = crd.cache(CACHE_TABLE);
 
-        // Wrong fields in query.
-        if (qryDescIdxName != null) {
-            GridTestUtils.assertThrowsAnyCause(null, () -> {
-                IndexQuery<Long, Object> wrongQry = new IndexQuery<Long, Object>(Person.class, qryDescIdxName)
-                    .setCriteria(lt("id", Integer.MAX_VALUE));
-
-                return tblCache.query(wrongQry).getAll();
-
-            }, IgniteException.class, "Index doesn't match criteria.");
-        }
-
-        // Wrong cache.
         GridTestUtils.assertThrowsAnyCause(null, () -> {
             IndexQuery<Long, Object> wrongQry = new IndexQuery<Long, Object>(Person.class, qryDescIdxName)
                 .setCriteria(lt("descId", Integer.MAX_VALUE));
