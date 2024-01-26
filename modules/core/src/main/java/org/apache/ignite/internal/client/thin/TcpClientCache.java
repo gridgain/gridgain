@@ -40,16 +40,13 @@ import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
-import org.apache.ignite.client.ClientCache;
-import org.apache.ignite.client.ClientCacheConfiguration;
-import org.apache.ignite.client.ClientDisconnectListener;
-import org.apache.ignite.client.ClientException;
-import org.apache.ignite.client.IgniteClientFuture;
+import org.apache.ignite.client.*;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
+import org.apache.ignite.internal.cache.query.InIndexQueryCriterion;
 import org.apache.ignite.internal.cache.query.RangeIndexQueryCriterion;
 import org.apache.ignite.internal.client.thin.TcpClientTransactions.TcpClientTransaction;
 import org.apache.ignite.internal.util.typedef.internal.A;
@@ -940,6 +937,9 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
     /** Handle index query. */
     private QueryCursor<Cache.Entry<K, V>> indexQuery(IndexQuery<K, V> qry) {
         Consumer<PayloadOutputChannel> qryWriter = payloadCh -> {
+            if (!payloadCh.clientChannel().protocolCtx().isFeatureSupported(ProtocolBitmaskFeature.INDEX_QUERY))
+                throw new ClientFeatureNotSupportedByServerException(ProtocolBitmaskFeature.INDEX_QUERY);
+
             writeCacheInfo(payloadCh);
 
             BinaryOutputStream out = payloadCh.out();
@@ -970,6 +970,17 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
 
                             serDes.writeObject(out, range.lower());
                             serDes.writeObject(out, range.upper());
+                        }
+                        else if (c instanceof InIndexQueryCriterion) {
+                            out.writeByte((byte)1); // Criterion type.
+
+                            InIndexQueryCriterion in = (InIndexQueryCriterion)c;
+
+                            w.writeString(in.field());
+                            w.writeInt(in.values().size());
+
+                            for (Object v: in.values())
+                                serDes.writeObject(out, v);
                         }
                         else {
                             throw new IllegalArgumentException(
