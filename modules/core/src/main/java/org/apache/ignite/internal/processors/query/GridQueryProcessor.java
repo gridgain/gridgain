@@ -116,10 +116,7 @@ import org.apache.ignite.internal.util.lang.*;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.T3;
-import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.LT;
-import org.apache.ignite.internal.util.typedef.internal.SB;
-import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.typedef.internal.*;
 import org.apache.ignite.lang.*;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
@@ -2885,6 +2882,15 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         if (qry.isLocal() && ctx.clientNode() && (cctx == null || cctx.config().getCacheMode() != CacheMode.LOCAL))
             throw new CacheException("Execution of local SqlFieldsQuery on client node disallowed.");
+
+        // Provide a friendly exception message if possible.
+        if (cctx != null && qry.getPartitions() != null) {
+            int partsNum = cctx.affinity().partitions();
+            for (int part : qry.getPartitions())
+                if (!(part >= 0 && part < partsNum))
+                    throw new CacheException("Specified partition must be in the range [0, N) " +
+                            "where N is partition number in the cache. [partsNum=" + partsNum + ", part=" + part + "]");
+        }
 
         return executeQuerySafe(cctx, () -> {
             assert idx != null;
