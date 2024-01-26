@@ -1313,11 +1313,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 }
             }
         }
-        if (qry.getLimit() != 0) {
-            sqlBuilder.append("LIMIT ").append(qry.getLimit());
-        }
 
         SqlFieldsQuery res = new SqlFieldsQuery(sqlBuilder.toString());
+
+        log.info(">>>>> generated sql: " + res.getSql());
 
         res.setArgs(args != null ? args.toArray() : null);
         res.setLocal(qry.isLocal());

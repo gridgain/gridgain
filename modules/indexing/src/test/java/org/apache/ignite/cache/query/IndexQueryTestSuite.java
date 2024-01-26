@@ -46,8 +46,7 @@ import org.junit.runners.Suite;
     ThinClientIndexQueryTest.class,
     RepeatedFieldIndexQueryTest.class,
     IndexQueryInCriterionTest.class,
-    IndexQueryInCriterionDescTest.class,
-    IndexQueryLimitTest.class
+    IndexQueryInCriterionDescTest.class
 })
 public class IndexQueryTestSuite {
 }
