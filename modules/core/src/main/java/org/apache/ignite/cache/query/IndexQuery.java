@@ -156,29 +156,6 @@ public final class IndexQuery<K, V> extends Query<Cache.Entry<K, V>> {
     }
 
     /**
-     * Gets limit to response records count.
-     *
-     * @return Limit value.
-     */
-    public int getLimit() {
-        return limit;
-    }
-
-    /**
-     * Sets limit to response records count.
-     *
-     * @param limit POsitive limit to set.
-     * @return {@code this} For chaining.
-     */
-    public IndexQuery<K, V> setLimit(int limit) {
-        A.ensure(limit > 0, "Limit must be positive.");
-
-        this.limit = limit;
-
-        return this;
-    }
-
-    /**
      * Sets remote cache entries filter.
      *
      * @param filter Predicate for remote filtering of query result cursor.

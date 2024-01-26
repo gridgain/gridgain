@@ -17,10 +17,12 @@
 package org.apache.ignite.cache.query;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
@@ -42,7 +44,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -57,7 +58,6 @@ import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lte;
 
 /** */
 @RunWith(Parameterized.class)
-@Ignore("https://ggsystems.atlassian.net/browse/GG-38379")
 public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
     /** */
     private static final int CNT = 10_000;
@@ -203,11 +203,8 @@ public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
                 IndexQuery<Integer, Person> idxQry = new IndexQuery<Integer, Person>(Person.class, IDX_FLD1)
                     .setCriteria(criteria);
 
-                GridTestUtils.assertThrows(
-                    log,
-                    () -> cache.query(idxQry).getAll(),
-                    ClientException.class,
-                    "Failed to execute IndexQuery: Index doesn't match criteria");
+                // Ensures that there will be no exceptions.
+                cache.query(idxQry).getAll();
             }
         });
     }
@@ -345,31 +342,16 @@ public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
             .setCriteria(crit);
 
         assertClientQuery(cache, left, right, idxQry);
-
-        if (left < right) {
-            Random r = new Random();
-
-            int limit = 1 + r.nextInt(right - left);
-
-            idxQry = new IndexQuery<Integer, Person>(Person.class, idxName)
-                .setCriteria(crit)
-                .setLimit(limit);
-
-            assertClientQuery(cache, left, left + limit, idxQry);
-
-            limit = right - left + r.nextInt(right - left);
-
-            idxQry = new IndexQuery<Integer, Person>(Person.class, idxName)
-                .setCriteria(crit)
-                .setLimit(limit);
-
-            assertClientQuery(cache, left, right, idxQry);
-        }
     }
 
     /** */
-    private void assertClientQuery(ClientCache<Integer, Person> cache, int left, int right, IndexQuery idxQry) {
-        List<Cache.Entry<Integer, Person>> result = cache.query(idxQry).getAll();
+    private void assertClientQuery(ClientCache<Integer, Person> cache, int left, int right, IndexQuery<Integer, Person> idxQry) {
+        List<Cache.Entry<Integer, Person>> result = cache.query(idxQry).getAll()
+                .stream()
+                .sorted(Comparator.comparingInt(Cache.Entry::getKey))
+                .collect(Collectors.toList());
+
+        log.info(result.stream().map(Cache.Entry::getKey).collect(Collectors.toList()).toString());
 
         assertEquals(right - left, result.size());
 

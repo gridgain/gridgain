@@ -38,7 +38,7 @@ public class IndexQueryCriteriaBuilder {
     }
 
     /**
-     * Less Then.
+     * Less Than.
      *
      * @param field Index field to apply criterion.
      * @param val Exclusive upper bound.
@@ -55,7 +55,7 @@ public class IndexQueryCriteriaBuilder {
     }
 
     /**
-     * Less Then or Equal To.
+     * Less Than or Equal To.
      *
      * @param field Index field to apply criterion.
      * @param val Inclusive upper bound.
@@ -73,7 +73,7 @@ public class IndexQueryCriteriaBuilder {
     }
 
     /**
-     * Greater Then.
+     * Greater Than.
      *
      * @param field Index field to apply criterion.
      * @param val Exclusive lower bound.
@@ -90,7 +90,7 @@ public class IndexQueryCriteriaBuilder {
     }
 
     /**
-     * Greater Then or Equal To.
+     * Greater Than or Equal To.
      *
      * @param field Index field to apply criterion.
      * @param val Inclusive lower bound.

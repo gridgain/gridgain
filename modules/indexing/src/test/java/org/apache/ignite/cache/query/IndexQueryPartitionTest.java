@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import javax.cache.Cache;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -178,6 +179,14 @@ public class IndexQueryPartitionTest extends GridCommonAbstractTest {
 
         GridTestUtils.assertThrows(null, () -> new IndexQuery<Integer, Person>(Person.class).setPartition(-23),
             IllegalArgumentException.class,
+            "Specified partition must be in the range [0, N) where N is partition number in the cache.");
+
+        GridTestUtils.assertThrows(null, () -> {
+                IndexQuery qry = new IndexQuery<Integer, Person>(Person.class).setPartition(1000);
+
+                grid().cache("CACHE").query(qry);
+            },
+            CacheException.class,
             "Specified partition must be in the range [0, N) where N is partition number in the cache.");
     }
 

@@ -62,7 +62,12 @@ public enum ProtocolBitmaskFeature {
     SERVICE_INVOKE_CALLCTX(10),
 
     /** Handle OP_HEARTBEAT and OP_GET_IDLE_TIMEOUT. */
-    HEARTBEAT(11);
+    HEARTBEAT(11),
+
+    // 12, 13 - reserved, used in Ignite.
+
+    /** IndexQuery. */
+    INDEX_QUERY(14);
 
     /** */
     private static final EnumSet<ProtocolBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =

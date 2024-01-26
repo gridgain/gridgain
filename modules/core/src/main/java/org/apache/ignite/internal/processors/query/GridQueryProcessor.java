@@ -2898,6 +2898,15 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         if (qry.isLocal() && ctx.clientNode() && (cctx == null || cctx.config().getCacheMode() != CacheMode.LOCAL))
             throw new CacheException("Execution of local SqlFieldsQuery on client node disallowed.");
 
+        // Provide a friendly exception message if possible.
+        if (cctx != null && qry.getPartitions() != null) {
+            int partsNum = cctx.affinity().partitions();
+            for (int part : qry.getPartitions())
+                if (!(part >= 0 && part < partsNum))
+                    throw new CacheException("Specified partition must be in the range [0, N) " +
+                            "where N is partition number in the cache. [partsNum=" + partsNum + ", part=" + part + "]");
+        }
+
         return executeQuerySafe(cctx, () -> {
             assert idx != null;
 
