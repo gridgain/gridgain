@@ -3096,9 +3096,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         String typeName = typeName(cctx.name(), type);
 
-        // TODO
-//        qry.setType(typeName);
-
         SqlFieldsQuery fieldsQry = idx.generateFieldsQuery(cctx.name(), qry, typeName);
 
         // Execute.
@@ -3108,7 +3105,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 null,
                 keepBinary,
                 true,
-                GridCacheQueryType.SQL, // TODO change to Index
+                GridCacheQueryType.INDEX,
                 null
         ).get(0);
 

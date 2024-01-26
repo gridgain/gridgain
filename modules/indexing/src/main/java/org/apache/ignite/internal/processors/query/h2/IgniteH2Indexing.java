@@ -1125,8 +1125,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         SB sqlBuilder = new SB();
         List<Object> args = null;
 
-        sqlBuilder.a("SELECT ").a(KEY_FIELD_NAME).a(", ").a(VAL_FIELD_NAME).a(" ");
-        sqlBuilder.a("FROM ").a(tblDesc.fullTableName()).a(" ");
+        sqlBuilder.a("SELECT ").a(KEY_FIELD_NAME).a(", ").a(VAL_FIELD_NAME).a(' ');
+        sqlBuilder.a("FROM ").a(tblDesc.fullTableName()).a(' ');
 
         String idxName = normalizeIndexName(qry.getIndexName(), tblDesc);
 
@@ -1143,7 +1143,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 String column = normalizeColumnName(criterion.field(), tblDesc);
 
                 if (i == 0) {
-                    sqlBuilder.a(" WHERE ");
+                    sqlBuilder.a("WHERE ");
                 }
                 else {
                     sqlBuilder.a(" AND ");
@@ -1235,8 +1235,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                                 sqlBuilder.a(column).a(" IS NOT NULL");
                             } else {
                                 // gte(null) - same as TRUE - no condition
-                                // TODO check if tested
-                                sqlBuilder.a(" TRUE");
+                                sqlBuilder.a("TRUE");
                             }
                         } else if (upperNull) {
                             // lt(null) or lte(null), lowerIncl is always true.
@@ -1247,8 +1246,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                             if (!upperIncl) {
                                 // lt(null) - same as FALSE
-                                // TODO check if tested
-                                sqlBuilder.a(column).a(" FALSE");
+                                sqlBuilder.a("FALSE");
                             }
                             else {
                                 // lte(null) - same as IS NULL

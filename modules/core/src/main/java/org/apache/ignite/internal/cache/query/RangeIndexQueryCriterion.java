@@ -53,18 +53,6 @@ public final class RangeIndexQueryCriterion implements IndexQueryCriterion {
         this.upper = upper;
     }
 
-    /** Swap boundaries. */
-    public RangeIndexQueryCriterion swap() {
-        RangeIndexQueryCriterion c = new RangeIndexQueryCriterion(field, upper, lower);
-
-        c.lowerIncl(upperIncl);
-        c.upperIncl(lowerIncl);
-        c.lowerNull(upperNull);
-        c.upperNull(lowerNull);
-
-        return c;
-    }
-
     /** */
     public Object lower() {
         return lower;

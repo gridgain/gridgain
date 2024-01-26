@@ -164,6 +164,12 @@ public class IndexQueryAllTypesTest extends GridCommonAbstractTest {
 
         check(cache.query(qry), 0, CNT, i -> i, persGen);
 
+        // Should not return any item.
+        qry = new IndexQuery<Long, Person>(Person.class, intNullIdx)
+            .setCriteria(lt("intNullId", null));
+
+        assertTrue(cache.query(qry).getAll().isEmpty());
+
         // Should return only nulls.
         qry = new IndexQuery<Long, Person>(Person.class, intNullIdx)
             .setCriteria(in("intNullId", Collections.singleton(null)));

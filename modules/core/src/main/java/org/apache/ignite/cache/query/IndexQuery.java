@@ -87,7 +87,7 @@ public final class IndexQuery<K, V> extends Query<Cache.Entry<K, V>> {
      * @param idxName Index name.
      */
     public IndexQuery(Class<?> valCls, @Nullable String idxName) {
-        this(valCls.getSimpleName(), idxName); // TODO Ignite uses Class.getName() - why???
+        this(valCls.getSimpleName(), idxName);
     }
 
     /**
