@@ -1319,8 +1319,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         SqlFieldsQuery res = new SqlFieldsQuery(sqlBuilder.toString());
 
-        log.info(">>>>>>> " + res.getSql());
-
         res.setArgs(args != null ? args.toArray() : null);
         res.setLocal(qry.isLocal());
         res.setPageSize(qry.getPageSize());
