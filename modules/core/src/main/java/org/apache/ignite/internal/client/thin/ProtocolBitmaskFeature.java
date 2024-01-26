@@ -67,7 +67,10 @@ public enum ProtocolBitmaskFeature {
     // 12, 13 - reserved, used in Ignite.
 
     /** IndexQuery. */
-    INDEX_QUERY(14);
+    INDEX_QUERY(14),
+
+    /** IndexQuery limit. */
+    INDEX_QUERY_LIMIT(15);
 
     /** */
     private static final EnumSet<ProtocolBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =
