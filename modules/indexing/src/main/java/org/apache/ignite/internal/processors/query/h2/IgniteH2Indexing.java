@@ -1225,7 +1225,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                                 sqlBuilder.append(field).append(" IS NOT NULL");
                             } else {
                                 // gte(null) - same as TRUE - no condition
-                                // TODO check if tested
                                 sqlBuilder.append(" TRUE");
                             }
                         } else if (upperNull) {
@@ -1237,8 +1236,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                             if (!upperIncl) {
                                 // lt(null) - same as FALSE
-                                // TODO check if tested
-                                sqlBuilder.append(field).append(" FALSE");
+                                sqlBuilder.append(" FALSE");
                             }
                             else {
                                 // lte(null) - same as IS NULL
@@ -1315,8 +1313,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
 
         SqlFieldsQuery res = new SqlFieldsQuery(sqlBuilder.toString());
-
-        log.info(">>>>> generated sql: " + res.getSql());
 
         res.setArgs(args != null ? args.toArray() : null);
         res.setLocal(qry.isLocal());
