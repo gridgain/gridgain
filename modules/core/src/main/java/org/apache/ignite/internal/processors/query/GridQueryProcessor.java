@@ -3119,8 +3119,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         if (qry.getFilter() != null) {
             IgniteBiPredicate<K, V> filter = qry.getFilter();
             finalIterable = () -> new GridFilteredIterator<Cache.Entry<K, V>>(converted.iterator()) {
-                @Override
-                protected boolean accept(Cache.Entry<K, V> kvEntry) {
+                @Override protected boolean accept(Cache.Entry<K, V> kvEntry) {
                     return filter.apply(kvEntry.getKey(), kvEntry.getValue());
                 }
             };

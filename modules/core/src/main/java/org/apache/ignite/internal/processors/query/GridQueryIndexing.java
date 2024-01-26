@@ -92,7 +92,6 @@ public interface GridQueryIndexing {
      */
     public SqlFieldsQuery generateFieldsQuery(String cacheName, SqlQuery qry);
 
-
     /**
      * Generate SqlFieldsQuery from IndexQuery.
      *
