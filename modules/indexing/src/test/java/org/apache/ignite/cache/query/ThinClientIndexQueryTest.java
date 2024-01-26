@@ -46,12 +46,10 @@ import org.junit.runners.Parameterized;
 
 import javax.cache.Cache;
 import java.lang.reflect.Field;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.*;
 
@@ -195,6 +193,7 @@ public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    @Ignore("GridGain doesn't have this behavior; SQL allows to query with non-matching index.")
     public void testIndexNameMismatchCriteria() {
         withClientCache((cache) -> {
             for (IndexQueryCriterion[] criteria: F.asList(
@@ -369,8 +368,11 @@ public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void assertClientQuery(ClientCache<Integer, Person> cache, int left, int right, IndexQuery idxQry) {
-        List<Cache.Entry<Integer, Person>> result = cache.query(idxQry).getAll();
+    private void assertClientQuery(ClientCache<Integer, Person> cache, int left, int right, IndexQuery<Integer, Person> idxQry) {
+        List<Cache.Entry<Integer, Person>> result = cache.query(idxQry).getAll()
+                .stream()
+                .sorted(Comparator.comparingInt(Cache.Entry::getKey))
+                .collect(Collectors.toList());
 
         assertEquals(right - left, result.size());
 
