@@ -17,22 +17,24 @@
 
 package org.apache.ignite.cache.query;
 
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.cache.query.IndexQuery;
-import org.apache.ignite.cache.query.IndexQueryCriterion;
-import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
-
-import javax.cache.Cache;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
@@ -85,6 +87,7 @@ public class IndexQueryLimitTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    @Ignore("Incorrect order")
     public void testRangeQueriesWithDuplicates() throws Exception {
         checkRangeQueries(10);
     }

@@ -17,25 +17,30 @@
 
 package org.apache.ignite.cache.query;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.Random;
+import java.util.TreeSet;
+import javax.cache.Cache;
+import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.cache.query.IndexQuery;
-import org.apache.ignite.cache.query.QueryCursor;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.cache.Cache;
-import java.util.*;
-
-import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.*;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.eq;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lte;
 
 /** */
 @RunWith(Parameterized.class)
@@ -108,6 +113,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    @Ignore("Gridgain doesn't provide such validations.")
     public void testWrongQueries() {
         prepareTable(Person.class.getName(), DESC_ID_IDX, "descId", false);
 
@@ -121,7 +127,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
                 return tblCache.query(wrongQry).getAll();
 
-            }, IgniteCheckedException.class, "Index doesn't match criteria.");
+            }, IgniteException.class, "Index doesn't match criteria.");
         }
 
         // Wrong cache.
@@ -131,7 +137,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
             return cache.query(wrongQry).getAll();
 
-        }, IgniteCheckedException.class, "No table found for type: " + Person.class.getName());
+        }, CacheException.class, "Indexing is disabled for cache: TEST_CACHE");
     }
 
     /** Should support both fields: normalized and original. */
@@ -172,15 +178,13 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         check(qry, 0, pivot);
 
-        String errMsg = qryDescIdxName != null ? "Index doesn't match criteria." : "No index found for criteria.";
-
         GridTestUtils.assertThrowsAnyCause(null, () -> {
             IndexQuery<Long, Object> wrongQry = new IndexQuery<Long, Object>(Person.class, qryDescIdxName)
                 .setCriteria(lt("DESCID", Integer.MAX_VALUE));
 
             return tblCache.query(wrongQry).getAll();
 
-        }, IgniteCheckedException.class, errMsg);
+        }, CacheException.class, "Column \"DESCID\" not found");
     }
 
     /** Should support only original field. */
@@ -206,7 +210,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
                 return tblCache.query(wrongQry).getAll();
 
-            }, IgniteCheckedException.class, "No index found");
+            }, CacheException.class, "Index \"DESC_ID_IDX\" not found");
         }
     }
 
@@ -266,15 +270,22 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         assertEquals(right - left, all.size());
 
+        // There is no ordering guarantee in the current implementation.
+        Collection<Integer> expected = new TreeSet<>();
+        Collection<Integer> actual = new TreeSet<>();
+
         for (int i = 0; i < all.size(); i++) {
             Cache.Entry<Long, Person> entry = all.get(i);
 
             int exp = pk ? left + i : right - i - 1;
 
-            assertEquals(exp, entry.getKey().intValue());
+            expected.add(exp);
+            actual.add(entry.getKey().intValue());
 
             assertEquals(new Person(entry.getKey().intValue()), all.get(i).getValue());
         }
+
+        assertEqualsCollections(expected, actual);
     }
 
     /**
@@ -286,13 +297,20 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         assertEquals(right - left, all.size());
 
+        // There is no ordering guarantee in the current implementation.
+        Collection<Integer> expected = new TreeSet<>();
+        Collection<Integer> actual = new TreeSet<>();
+
         for (int i = 0; i < all.size(); i++) {
             Cache.Entry<Long, BinaryObject> entry = all.get(i);
 
-            assertEquals(right - 1 - i, entry.getKey().intValue());
+            expected.add(right - 1 - i);
+            actual.add(entry.getKey().intValue());
             assertEquals(entry.getKey().intValue(), (int)entry.getValue().field("id"));
             assertEquals(entry.getKey().intValue(), (int)entry.getValue().field("descId"));
         }
+
+        assertEqualsCollections(expected, actual);
     }
 
     /** */

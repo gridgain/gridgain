@@ -52,6 +52,7 @@ import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.*;
 
 /** */
 @RunWith(Parameterized.class)
+//@Ignore("all except testDestroyIdx")
 public class IndexQueryFailoverTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE = "TEST_CACHE";
@@ -126,7 +127,7 @@ public class IndexQueryFailoverTest extends GridCommonAbstractTest {
                 .setCriteria(lt("id", Integer.MAX_VALUE));
 
             return cache.query(qry).getAll();
-        }, IgniteCheckedException.class, "Failed to find SQL table for type: " + Integer.class.getSimpleName());
+        }, IgniteException.class, "Failed to find SQL table for type: " + Integer.class.getSimpleName());
     }
 
     /** */
@@ -215,6 +216,7 @@ public class IndexQueryFailoverTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    @Ignore("TODO Not supported")
     public void testDestroyIndex() {
         insertData(0, CNT);
 

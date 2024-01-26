@@ -18,6 +18,7 @@
 package org.apache.ignite.cache.query;
 
 /** */
+//@Ignore("See parent")
 public class IndexQueryInCriterionDescTest extends IndexQueryInCriterionTest {
     /** */
     @Override protected boolean asc() {

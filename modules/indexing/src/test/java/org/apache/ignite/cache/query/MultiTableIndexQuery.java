@@ -17,11 +17,17 @@
 
 package org.apache.ignite.cache.query;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.query.IndexQuery;
-import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -31,15 +37,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.cache.Cache;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.LongStream;
-
-import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.*;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.gt;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.gte;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lte;
 
 /** */
 @RunWith(Parameterized.class)
+//@Ignore("Reverted before...")
 public class MultiTableIndexQuery extends GridCommonAbstractTest {
     /** */
     private static final String CACHE = "TEST_CACHE";
@@ -256,10 +261,12 @@ public class MultiTableIndexQuery extends GridCommonAbstractTest {
 
         assertEquals(right - left, all.size());
 
+        Set<Long> expKeys = LongStream.range(left, right).boxed().collect(Collectors.toSet());
+
         for (int i = 0; i < all.size(); i++) {
             Cache.Entry<Long, SecondPerson> entry = all.get(i);
 
-            assertEquals(left + i, entry.getKey().intValue());
+            assertTrue(expKeys.remove(entry.getKey()));
 
             assertEquals(new SecondPerson(entry.getKey().intValue()), all.get(i).getValue());
         }

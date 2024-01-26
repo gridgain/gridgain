@@ -17,23 +17,20 @@
 
 package org.apache.ignite.cache.query;
 
+import java.util.LinkedHashMap;
+import java.util.Random;
+import javax.cache.Cache;
+import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
-import org.apache.ignite.cache.query.IndexQuery;
-import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-
-import javax.cache.Cache;
-import java.util.LinkedHashMap;
-import java.util.Random;
 
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.gt;
 
@@ -160,7 +157,7 @@ public class IndexQueryCacheKeyValueFieldsTest extends GridCommonAbstractTest {
             grid(0).cache(CACHE).query(
                 new IndexQuery<String, Integer>(Integer.class).setCriteria(gt(fld, key ? key(0) : 0))
             ).getAll();
-        }, IgniteException.class, "Failed to execute IndexQuery: No index found for criteria.");
+        }, CacheException.class, "Column \"" + fld + "\" not found");
     }
 
     /** */

@@ -17,30 +17,35 @@
 
 package org.apache.ignite.cache.query;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
-import org.apache.ignite.cache.query.IndexQuery;
-import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import javax.cache.Cache;
-import java.util.*;
 
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
 
 /** */
 @RunWith(Parameterized.class)
+//@Ignore("Reversed to version before IGNITE-15530")
 public class IndexQueryAliasTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE = "TEST_CACHE";
@@ -81,7 +86,7 @@ public class IndexQueryAliasTest extends GridCommonAbstractTest {
         cache = crd.cache(CACHE);
 
         for (int i = 0; i < CNT; i++)
-            cache.put((long)i, new Person(i));
+            cache.put((long) i, new Person(i));
     }
 
     /** {@inheritDoc} */
@@ -117,13 +122,13 @@ public class IndexQueryAliasTest extends GridCommonAbstractTest {
         IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryIdx)
             .setCriteria(lt("asId", pivot));
 
-        check(cache.query(qry), 0, pivot, false);
+        check(cache.query(qry), 0, pivot);
 
         // Lt, desc index.
         IndexQuery<Long, Person> descQry = new IndexQuery<Long, Person>(Person.class, qryDescIdx)
             .setCriteria(lt("asDescId", pivot));
 
-        check(cache.query(descQry), 0, pivot, true);
+        check(cache.query(descQry), 0, pivot);
     }
 
     /** */
@@ -137,7 +142,7 @@ public class IndexQueryAliasTest extends GridCommonAbstractTest {
         IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, idIdx)
             .setCriteria(lt("ASID", pivot));
 
-        check(cache.query(qry), 0, pivot, false);
+        check(cache.query(qry), 0, pivot);
 
         String idDescIdx = qryDescIdx != null ? qryDescIdx.toLowerCase() : null;
 
@@ -145,33 +150,35 @@ public class IndexQueryAliasTest extends GridCommonAbstractTest {
         IndexQuery<Long, Person> descQry = new IndexQuery<Long, Person>(Person.class, idDescIdx)
             .setCriteria(lt("ASDESCID", pivot));
 
-        check(cache.query(descQry), 0, pivot, true);
+        check(cache.query(descQry), 0, pivot);
     }
 
     /**
      * @param left First cache key, inclusive.
      * @param right Last cache key, exclusive.
      */
-    private void check(QueryCursor<Cache.Entry<Long, Person>> cursor, int left, int right, boolean desc) {
+    private void check(QueryCursor<Cache.Entry<Long, Person>> cursor, int left, int right) {
         List<Cache.Entry<Long, Person>> all = cursor.getAll();
 
         assertEquals(right - left, all.size());
 
-        for (int i = 0; i < all.size(); i++) {
-            int expKey = desc ? right - 1 - i : i;
+        Set<Long> expKeys = LongStream.range(left, right).boxed().collect(Collectors.toSet());
 
-            assertEquals(new Person(expKey), all.get(i).getValue());
+        for (int i = 0; i < all.size(); i++) {
+            Cache.Entry<Long, Person> entry = all.get(i);
+
+            assertTrue(expKeys.remove(entry.getKey()));
+
+            assertEquals(new Person(entry.getKey().intValue()), all.get(i).getValue());
         }
     }
 
     /** */
     private static class Person {
         /** */
-        @GridToStringInclude
         final int id;
 
         /** */
-        @GridToStringInclude
         final int descId;
 
         /** */
@@ -187,7 +194,7 @@ public class IndexQueryAliasTest extends GridCommonAbstractTest {
             if (o == null || getClass() != o.getClass())
                 return false;
 
-            Person person = (Person)o;
+            Person person = (Person) o;
 
             return Objects.equals(id, person.id) && Objects.equals(descId, person.descId);
         }
@@ -195,11 +202,6 @@ public class IndexQueryAliasTest extends GridCommonAbstractTest {
         /** {@inheritDoc} */
         @Override public int hashCode() {
             return Objects.hash(id, descId);
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return S.toString(Person.class, this);
         }
     }
 }

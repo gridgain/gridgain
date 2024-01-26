@@ -45,7 +45,12 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheServerNotFoundException;
-import org.apache.ignite.cache.query.*;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.IndexQuery;
+import org.apache.ignite.cache.query.IndexQueryCriterion;
+import org.apache.ignite.cache.query.QueryCancelledException;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.EventType;
@@ -191,6 +196,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiClosure;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -229,7 +235,10 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.request
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.tx;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.txStart;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.TEXT;
-import static org.apache.ignite.internal.processors.query.QueryUtils.*;
+import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_FIELD_NAME;
+import static org.apache.ignite.internal.processors.query.QueryUtils.VAL_FIELD_NAME;
+import static org.apache.ignite.internal.processors.query.QueryUtils.matches;
+import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.UPDATE_RESULT_META;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.generateFieldsQueryString;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.session;
@@ -1102,7 +1111,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         return res;
     }
 
-
     /** {@inheritDoc} */
     @Override public <K, V> SqlFieldsQuery generateFieldsQuery(String cacheName, IndexQuery<K, V> qry, String type) {
         String schemaName = schema(cacheName);
@@ -1114,27 +1122,32 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     IgniteQueryErrorCode.TABLE_NOT_FOUND);
 
 
-        StringBuilder sqlBuilder = new StringBuilder();
+        SB sqlBuilder = new SB();
         List<Object> args = null;
 
-        sqlBuilder.append("SELECT ").append(KEY_FIELD_NAME).append(", ").append(VAL_FIELD_NAME).append(" ");
-        sqlBuilder.append("FROM ").append(tblDesc.fullTableName()).append(" ");
-        if (qry.getIndexName() != null) {
-            sqlBuilder.append("USE INDEX (").append(qry.getIndexName()).append(")").append(" ");
+        sqlBuilder.a("SELECT ").a(KEY_FIELD_NAME).a(", ").a(VAL_FIELD_NAME).a(" ");
+        sqlBuilder.a("FROM ").a(tblDesc.fullTableName()).a(" ");
+        // TODO PK_IDX_NAME
+        String idxName = normalizeIdxName(qry.getIndexName(), tblDesc);
+
+        if (idxName != null) {
+            sqlBuilder.a("USE INDEX (").a(idxName).a(")").a(" ");
         }
+
         if (qry.getCriteria() != null) {
             List<IndexQueryCriterion> criteria = qry.getCriteria();
             args = new ArrayList<>();
+
             for (int i = 0; i < criteria.size(); i++) {
                 IndexQueryCriterion criterion = criteria.get(i);
+                String column = normalizeColumnName(criterion.field(), tblDesc);
+
                 if (i == 0) {
-                    sqlBuilder.append(" WHERE ");
+                    sqlBuilder.a(" WHERE ");
                 }
                 else {
-                    sqlBuilder.append(" AND ");
+                    sqlBuilder.a(" AND ");
                 }
-
-                // TODO validate field name (alphanumeric only? exists in tblDesc?)
 
                 // Ignite's IndexQuery allows to compare with NULL and treats it as the smallest value.
                 // While SQL doesn't allow this, we mimic Ignite's behavior for compatibility.
@@ -1152,43 +1165,43 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                     if (hasNull) {
                         if (in.values().size() == 1) {
-                            sqlBuilder.append(in.field()).append(" IS NULL");
+                            sqlBuilder.a(column).a(" IS NULL");
                         } else {
-                            sqlBuilder.append("(")
-                                    .append(in.field()).append(" IS NULL")
-                                    .append(" OR ");
+                            sqlBuilder.a("(")
+                                    .a(column).a(" IS NULL")
+                                    .a(" OR ");
 
-                            sqlBuilder.append(in.field());
+                            sqlBuilder.a(column);
                             boolean first = true;
                             for (Object val : in.values()) {
                                 if (val == null)
                                     continue;
 
                                 if (first) {
-                                    sqlBuilder.append(" IN (?");
+                                    sqlBuilder.a(" IN (?");
                                     first = false;
                                 } else {
-                                    sqlBuilder.append(", ?");
+                                    sqlBuilder.a(", ?");
                                 }
                                 args.add(val);
                             }
-                            sqlBuilder.append(")");
+                            sqlBuilder.a(")");
 
-                            sqlBuilder.append(")");
+                            sqlBuilder.a(")");
                         }
                     } else {
-                        sqlBuilder.append(in.field());
+                        sqlBuilder.a(column);
                         boolean first = true;
                         for (Object val : in.values()) {
                             if (first) {
-                                sqlBuilder.append(" IN (?");
+                                sqlBuilder.a(" IN (?");
                                 first = false;
                             } else {
-                                sqlBuilder.append(", ?");
+                                sqlBuilder.a(", ?");
                             }
                             args.add(val);
                         }
-                        sqlBuilder.append(")");
+                        sqlBuilder.a(")");
                     }
                 } else if (criterion instanceof RangeIndexQueryCriterion) {
                     RangeIndexQueryCriterion range = (RangeIndexQueryCriterion) criterion;
@@ -1199,7 +1212,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     boolean upperIncl = range.upperIncl();
                     boolean lowerNull = range.lowerNull();
                     boolean upperNull = range.upperNull();
-                    String field = range.field();
 
                     // Consider all flags to decipher which condition was requested.
                     // TODO refactor - replace RangeIndexQueryCriterion with per-condition criterions.
@@ -1212,7 +1224,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                                         + S.toString(RangeIndexQueryCriterion.class, range) + "]");
                             }
 
-                            sqlBuilder.append(field).append(" IS NULL");
+                            sqlBuilder.a(column).a(" IS NULL");
                         } else if (lowerNull) {
                             // gt(null) or gte(null), upperIncl is always true.
                             if (!upperIncl) {
@@ -1222,11 +1234,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                             if (!lowerIncl) {
                                 // gt(null) - same as NOT NULL
-                                sqlBuilder.append(field).append(" IS NOT NULL");
+                                sqlBuilder.a(column).a(" IS NOT NULL");
                             } else {
                                 // gte(null) - same as TRUE - no condition
                                 // TODO check if tested
-                                sqlBuilder.append(" TRUE");
+                                sqlBuilder.a(" TRUE");
                             }
                         } else if (upperNull) {
                             // lt(null) or lte(null), lowerIncl is always true.
@@ -1238,11 +1250,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             if (!upperIncl) {
                                 // lt(null) - same as FALSE
                                 // TODO check if tested
-                                sqlBuilder.append(field).append(" FALSE");
+                                sqlBuilder.a(column).a(" FALSE");
                             }
                             else {
                                 // lte(null) - same as IS NULL
-                                sqlBuilder.append(field).append(" IS NULL");
+                                sqlBuilder.a(column).a(" IS NULL");
                             }
                         } else {
                             // Neither lower nor upper are set explicitly.
@@ -1263,10 +1275,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             }
 
                             // Same as FALSE.
-                            sqlBuilder.append(" FALSE");
+                            sqlBuilder.a(" FALSE");
                         } else {
                             // gt(lower) or gte(lower), upperIncl is always true.
-                            sqlBuilder.append(field).append(lowerIncl ? " >= ?" : " > ?");
+                            sqlBuilder.a(column).a(lowerIncl ? " >= ?" : " > ?");
                             args.add(lower);
                         }
                     } else if (lower == null /*&& upper != null*/) {
@@ -1286,11 +1298,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                                     + S.toString(RangeIndexQueryCriterion.class, range) + "]");
                         }
 
-                        sqlBuilder.append("(")
-                                .append(field).append(" IS NULL")
-                                .append(" OR ")
-                                .append(field).append(upperIncl ? " <= ?" : " < ?")
-                                .append(")");
+                        sqlBuilder.a("(")
+                                .a(column).a(" IS NULL")
+                                .a(" OR ")
+                                .a(column).a(upperIncl ? " <= ?" : " < ?")
+                                .a(")");
                         args.add(upper);
                     } else /*if (lower != null && upper != null)*/ {
                         // between(lower, upper), flags are always the same.
@@ -1299,9 +1311,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                                     + S.toString(RangeIndexQueryCriterion.class, range) + "]");
                         }
 
-                        sqlBuilder.append(field).append(" >= ?")
-                                .append(" AND ")
-                                .append(field).append(" <= ?");
+                        sqlBuilder.a(column).a(" >= ?")
+                                .a(" AND ")
+                                .a(column).a(" <= ?");
                         args.add(lower);
                         args.add(upper);
                     }
@@ -1314,7 +1326,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             }
         }
         if (qry.getLimit() != 0) {
-            sqlBuilder.append("LIMIT ").append(qry.getLimit());
+            sqlBuilder.a("LIMIT ").a(qry.getLimit());
         }
 
         SqlFieldsQuery res = new SqlFieldsQuery(sqlBuilder.toString());
@@ -1330,6 +1342,45 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
 
         return res;
+    }
+
+    private String normalizeColumnName(String field, H2TableDescriptor descriptor) {
+        String upperCaseField = field.toUpperCase();
+
+        if (descriptor.table().doesColumnExist(upperCaseField))
+            return field;
+
+        if (descriptor.table().doesColumnExist(field))
+            return quoteString(field);
+
+        throw new IgniteException("Column \"" + upperCaseField+ "\" not found.");
+    }
+
+    private @Nullable String normalizeIdxName(@Nullable String idxName, H2TableDescriptor descriptor) {
+        if (idxName == null) {
+            return null;
+        }
+
+        if (PK_IDX_NAME.equals(idxName)) {
+            return null;
+        }
+
+        ArrayList<Index> indexes = descriptor.table().getIndexes();
+        String upperCaseIdxName = idxName.toUpperCase();
+
+        for (Index idx : indexes) {
+            if (idx.getName().equals(upperCaseIdxName))
+                return idxName;
+
+            if (idx.getName().equals(idxName))
+                return quoteString(idxName);
+        }
+
+        throw new IgniteException("Index \"" + upperCaseIdxName+ "\" not found.");
+    }
+
+    private static String quoteString(String str) {
+        return "\"" + str + "\"";
     }
 
     /**

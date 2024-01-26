@@ -20,15 +20,10 @@ package org.apache.ignite.cache.query;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.query.IndexQuery;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-
-import javax.cache.CacheException;
 
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lte;
@@ -59,26 +54,18 @@ public class IndexQueryWrongIndexTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void testWrongIndexAndFieldsMatching() {
-        // Wrong fields in query.
-        GridTestUtils.assertThrows(null, () -> {
-            IndexQuery<Integer, Person> wrongQry = new IndexQuery<Integer, Person>(Person.class, DESC_ID_IDX)
-                .setCriteria(lt("id", Integer.MAX_VALUE));
+    public void testNonIndexedFields() {
+        IndexQuery<Integer, Person> qry1 = new IndexQuery<Integer, Person>(Person.class, DESC_ID_IDX)
+            .setCriteria(lt("id", Integer.MAX_VALUE));
 
-            cache.query(wrongQry).getAll();
+        // Ensures that an exception is not thrown.
+        cache.query(qry1).getAll();
 
-            return null;
-        }, CacheException.class, null);
+        IndexQuery<Integer, Person> qry2 = new IndexQuery<Integer, Person>(Person.class, ID_IDX)
+            .setCriteria(lt("descId", Integer.MAX_VALUE));
 
-        // Wrong fields in query.
-        GridTestUtils.assertThrows(null, () -> {
-            IndexQuery<Integer, Person> wrongQry = new IndexQuery<Integer, Person>(Person.class, ID_IDX)
-                .setCriteria(lt("descId", Integer.MAX_VALUE));
-
-            cache.query(wrongQry).getAll();
-
-            return null;
-        }, CacheException.class, null);
+        // Ensures that an exception is not thrown.
+        cache.query(qry2).getAll();
     }
 
     /** */

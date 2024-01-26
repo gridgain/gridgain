@@ -17,31 +17,29 @@
 
 package org.apache.ignite.cache.query;
 
+import java.util.List;
+import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.query.IndexQuery;
-import org.apache.ignite.cache.query.QueryCursor;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.lucene.search.comparators.IntComparator;
+import org.junit.Ignore;
 import org.junit.Test;
-
-import javax.cache.Cache;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Random;
-import java.util.stream.Collectors;
 
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
 
 /** */
+//@Ignore("Ordering not supported")
 public class IndexQueryKeepBinaryTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE = "TEST_CACHE";
@@ -131,32 +129,12 @@ public class IndexQueryKeepBinaryTest extends GridCommonAbstractTest {
         checkBinary(tblCache.withKeepBinary().query(idxQry), 0, pivot);
     }
 
-    /**
-     * @param left First cache key, inclusive.
-     * @param right Last cache key, exclusive.
-     */
-    private void check(QueryCursor cursor, int left, int right) {
-        List<Cache.Entry<Long, BinaryObject>> all = cursor.getAll();
-
-        assertEquals(right - left, all.size());
-
-        for (int i = 0; i < all.size(); i++) {
-            Cache.Entry<Long, ?> entry = all.get(i);
-
-            assertEquals(left + i, entry.getKey().intValue());
-
-            BinaryObject o = all.get(i).getValue();
-
-            assertEquals(new Person(entry.getKey().intValue()), o.deserialize());
-        }
-    }
-
     /** */
-    private void checkBinary(QueryCursor<Cache.Entry<BinaryObject, BinaryObject>> cursor, int left, int right) {
-        List<Cache.Entry<BinaryObject, BinaryObject>> all = cursor.getAll()
-                .stream()
-                .sorted(Comparator.comparingInt(e -> e.getKey().field("id1")))
-                .collect(Collectors.toList());
+    private void checkBinary(QueryCursor cursor, int left, int right) {
+        List<Cache.Entry<BinaryObject, BinaryObject>> all = cursor.getAll();
+
+        // TODO Gridgain doesn't warranty ordering.
+        all.sort((o1, o2) -> ((Integer)o1.getKey().field("id1")).compareTo(o2.getKey().field("id1")));
 
         assertEquals(right - left, all.size());
 
@@ -169,11 +147,35 @@ public class IndexQueryKeepBinaryTest extends GridCommonAbstractTest {
         }
     }
 
+    /**
+     * @param left First cache key, inclusive.
+     * @param right Last cache key, exclusive.
+     */
+    private void check(QueryCursor cursor, int left, int right) {
+        List<Cache.Entry<Long, BinaryObject>> all = cursor.getAll();
+
+        assertEquals(right - left, all.size());
+
+        Set<Long> expKeys = LongStream.range(left, right).boxed().collect(Collectors.toSet());
+
+        for (int i = 0; i < all.size(); i++) {
+            Cache.Entry<Long, ?> entry = all.get(i);
+
+            assertTrue(expKeys.remove(entry.getKey()));
+
+            BinaryObject o = all.get(i).getValue();
+
+            assertEquals(new Person(entry.getKey().intValue()), o.deserialize());
+        }
+
+        assertTrue(expKeys.isEmpty());
+    }
+
     /** */
     private void insertData(Ignite ignite, IgniteCache cache) {
         try (IgniteDataStreamer<Long, Person> streamer = ignite.dataStreamer(cache.getName())) {
             for (int i = 0; i < CNT; i++)
-                streamer.addData((long)i, new Person(i));
+                streamer.addData((long) i, new Person(i));
         }
     }
 
@@ -200,7 +202,7 @@ public class IndexQueryKeepBinaryTest extends GridCommonAbstractTest {
             if (o == null || getClass() != o.getClass())
                 return false;
 
-            Person person = (Person)o;
+            Person person = (Person) o;
 
             return Objects.equals(id, person.id);
         }
