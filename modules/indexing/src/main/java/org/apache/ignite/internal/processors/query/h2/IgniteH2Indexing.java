@@ -1121,7 +1121,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             throw new IgniteSQLException("Failed to find SQL table for type: " + type,
                     IgniteQueryErrorCode.TABLE_NOT_FOUND);
 
-
         SB sqlBuilder = new SB();
         List<Object> args = null;
 
@@ -1344,7 +1343,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (descriptor.table().doesColumnExist(field))
             return quoteString(field);
 
-        throw new IgniteException("Column \"" + upperCaseField+ "\" not found.");
+        throw new IgniteException("Column \"" + upperCaseField + "\" not found.");
     }
 
     private @Nullable String normalizeIndexName(@Nullable String idxName, H2TableDescriptor descriptor) {
@@ -1367,7 +1366,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 return quoteString(idxName);
         }
 
-        throw new IgniteException("Index \"" + upperCaseIdxName+ "\" not found.");
+        throw new IgniteException("Index \"" + upperCaseIdxName + "\" not found.");
     }
 
     /** Returns quoted string. */

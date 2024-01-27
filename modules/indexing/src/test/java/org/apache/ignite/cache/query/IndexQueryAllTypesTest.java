@@ -728,8 +728,7 @@ public class IndexQueryAllTypesTest extends GridCommonAbstractTest {
             return result;
         }
 
-        @Override
-        public String toString() {
+        @Override public String toString() {
             return S.toString(Person.class, this);
         }
     }
