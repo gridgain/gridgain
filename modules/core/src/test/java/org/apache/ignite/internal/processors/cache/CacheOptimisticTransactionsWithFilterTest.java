@@ -436,10 +436,11 @@ public class CacheOptimisticTransactionsWithFilterTest extends GridCommonAbstrac
     private List<CacheConfiguration> cacheConfigurations() {
         List<CacheConfiguration> cfgs = new ArrayList<>();
 
-        cfgs.add(cacheConfiguration(PARTITIONED, 0, false));
-        cfgs.add(cacheConfiguration(PARTITIONED, 1, false));
-        cfgs.add(cacheConfiguration(PARTITIONED, 1, true));
-        cfgs.add(cacheConfiguration(REPLICATED, 0, false));
+        cfgs.add(cacheConfiguration(PARTITIONED, 0, false, false));
+        cfgs.add(cacheConfiguration(PARTITIONED, 1, false, false));
+        cfgs.add(cacheConfiguration(PARTITIONED, 1, true, false));
+        cfgs.add(cacheConfiguration(PARTITIONED, 1, true, true));
+        cfgs.add(cacheConfiguration(REPLICATED, 0, false, false));
 
         return cfgs;
     }
@@ -453,7 +454,9 @@ public class CacheOptimisticTransactionsWithFilterTest extends GridCommonAbstrac
     private CacheConfiguration<Integer, Integer> cacheConfiguration(
         CacheMode cacheMode,
         int backups,
-        boolean nearCache) {
+        boolean nearCache,
+        boolean enableStatistics
+    ) {
         CacheConfiguration<Integer, Integer> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
         ccfg.setCacheMode(cacheMode);
@@ -462,6 +465,8 @@ public class CacheOptimisticTransactionsWithFilterTest extends GridCommonAbstrac
 
         if (cacheMode == PARTITIONED)
             ccfg.setBackups(backups);
+
+        ccfg.setStatisticsEnabled(enableStatistics);
 
         if (nearCache)
             ccfg.setNearConfiguration(new NearCacheConfiguration<Integer, Integer>());
