@@ -56,6 +56,8 @@ public class ClientCacheIndexQueryRequest extends ClientCacheRequest {
 
         int part = reader.readInt();
 
+        int limit = reader.readInt();
+
         String valType = reader.readString();
 
         String idxName = reader.readString();
@@ -88,6 +90,9 @@ public class ClientCacheIndexQueryRequest extends ClientCacheRequest {
 
         if (filterObj != null)
             qry.setFilter(((BinaryObject)filterObj).deserialize());
+
+        if (limit > 0)
+            qry.setLimit(limit);
     }
 
     /** */

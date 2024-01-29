@@ -267,6 +267,20 @@ public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    public void testLimit() {
+        IndexQuery<Integer, Person> idxQry = new IndexQuery<>(Person.class);
+        idxQry.setLimit(1000);
+
+        withClientCache((cache) -> {
+                List<Cache.Entry<Integer, Person>> result = cache.query(idxQry).getAll();
+
+                assertEquals(1000, result.size());
+            }
+        );
+    }
+
+    /** */
+    @Test
     public void testPartition() {
         withClientCache(cache -> {
             IndexQuery<Integer, Person> idxQry = new IndexQuery<>(Person.class);
@@ -370,48 +384,6 @@ public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
             else
                 assertEquals(null, fldOneVal.apply(e));
         }
-    }
-
-    /** */
-    @Test
-    public void testIndexQueryLimitOnOlderProtocolVersion() throws Exception {
-        // TODO
-//        // Exclude INDEX_QUERY_LIMIT from protocol.
-//        Class<?> clazz = Class.forName("org.apache.ignite.internal.client.thin.ProtocolBitmaskFeature");
-//
-//        Field field = clazz.getDeclaredField("ALL_FEATURES_AS_ENUM_SET");
-//
-//        field.setAccessible(true);
-//
-//        EnumSet<ProtocolBitmaskFeature> allFeaturesEnumSet = (EnumSet<ProtocolBitmaskFeature>)field.get(null);
-//
-//        allFeaturesEnumSet.remove(ProtocolBitmaskFeature.INDEX_QUERY_LIMIT);
-//
-//        try {
-//            withClientCache((cache) -> {
-//                // No limit.
-//                IndexQuery<Integer, Person> idxQry = new IndexQuery<>(Person.class, IDX_FLD1);
-//
-//                assertClientQuery(cache, NULLS_CNT, CNT, idxQry);
-//
-//                // With limit.
-//                IndexQuery<Integer, Person> idxQryWithLImit = new IndexQuery<Integer, Person>(Person.class, IDX_FLD1)
-//                    .setLimit(10);
-//
-//                GridTestUtils.assertThrowsAnyCause(
-//                    log,
-//                    () -> {
-//                        cache.query(idxQryWithLImit).getAll();
-//                        return null;
-//                    },
-//                    ClientFeatureNotSupportedByServerException.class,
-//                    "Feature INDEX_QUERY_LIMIT is not supported by the server");
-//            });
-//        }
-//        finally {
-//            //revert the features set
-//            allFeaturesEnumSet.add(ProtocolBitmaskFeature.INDEX_QUERY_LIMIT);
-//        }
     }
 
     /** */
