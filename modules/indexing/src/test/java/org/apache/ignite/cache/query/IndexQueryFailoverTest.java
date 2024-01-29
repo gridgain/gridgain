@@ -111,7 +111,7 @@ public class IndexQueryFailoverTest extends GridCommonAbstractTest {
             NullPointerException.class, "Ouch! Argument cannot be null: valType");
 
         GridTestUtils.assertThrows(null, () -> new IndexQuery<Long, Integer>("", qryIdx),
-            IllegalArgumentException.class, "Ouch! Argument is invalid: valType must not be empty");
+            IllegalArgumentException.class, "Ouch! Argument is invalid: valType must not be null or empty");
 
         GridTestUtils.assertThrowsAnyCause(null, () -> {
             IndexQuery<Long, Integer> qry = new IndexQuery<Long, Integer>(Integer.class, qryIdx)

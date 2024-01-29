@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.stream.IntStream;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.QueryEntity;
@@ -37,9 +36,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteBiPredicate;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.stream.Collectors.toSet;
@@ -353,109 +350,6 @@ public class IndexQueryInCriterionTest extends GridCommonAbstractTest {
             // Ensures that there will be no exceptions.
             grid(0).cache("CACHE").query(qry).getAll();
         }
-    }
-
-    /** */
-    @Test
-    @Ignore("Criterion merge not supported")
-    public void testSingleInCriteriaAndRangeCriteriaNoCross() {
-        List<IndexQueryCriterion> criteria = F.asList(
-            lt("age", 10),
-            lt("age", 5),
-            lte("age", 5),
-            eq("age", 5),
-            eq("age", 20),
-            between("age", 0, 5),
-            between("age", 15, 20),
-            gt("age", 10),
-            gt("age", 15),
-            gte("age", 20)
-        );
-
-        for (IndexQueryCriterion c: criteria) {
-            IndexQuery<Integer, Person> qry1 = new IndexQuery<Integer, Person>(Person.class)
-                .setCriteria(in("age", Collections.singleton(10)), c);
-
-            GridTestUtils.assertThrows(
-                log,
-                () -> grid(0).cache("CACHE").query(qry1).getAll(),
-                IgniteCheckedException.class,
-                "Failed to merge criterion"
-            );
-
-            IndexQuery<Integer, Person> qry2 = new IndexQuery<Integer, Person>(Person.class)
-                .setCriteria(c, in("age", Collections.singleton(10)));
-
-            GridTestUtils.assertThrows(
-                log,
-                () -> grid(0).cache("CACHE").query(qry2).getAll(),
-                IgniteCheckedException.class,
-                "Failed to merge criterion"
-            );
-        }
-    }
-
-    /** */
-    @Test
-    @Ignore("TODO Failed to merge")
-    public void testMultipleInCriteriaAndRangeCriteriaNoCross() {
-        List<IndexQueryCriterion[]> criteria = F.asList(
-            new IndexQueryCriterion[] { lt("age", 15), lt("age", 5) },
-            new IndexQueryCriterion[] { lt("age", 10), lte("age", 10) },
-            new IndexQueryCriterion[] { lt("age", 10), gt("age", 5) },
-            new IndexQueryCriterion[] { lt("age", 10), gte("age", 5) },
-            new IndexQueryCriterion[] { lt("age", 10), between("age", 5, 15) },
-            new IndexQueryCriterion[] { lt("age", 10), gte("age", 10) },
-            new IndexQueryCriterion[] { lte("age", 10), gt("age", 10) },
-            new IndexQueryCriterion[] { lt("age", 10), gt("age", 10) }
-        );
-
-        for (IndexQueryCriterion[] c: criteria) {
-            IndexQuery<Integer, Person> qry1 = new IndexQuery<Integer, Person>(Person.class)
-                .setCriteria(in("age", Collections.singleton(10)), c[0], c[1]);
-
-            GridTestUtils.assertThrows(
-                log,
-                () -> grid(0).cache("CACHE").query(qry1).getAll(),
-                IgniteCheckedException.class,
-                "Failed to merge"
-            );
-
-            IndexQuery<Integer, Person> qry2 = new IndexQuery<Integer, Person>(Person.class)
-                .setCriteria(c[0], in("age", Collections.singleton(10)), c[1]);
-
-            GridTestUtils.assertThrows(
-                log,
-                () -> grid(0).cache("CACHE").query(qry2).getAll(),
-                IgniteCheckedException.class,
-                "Failed to merge"
-            );
-
-            IndexQuery<Integer, Person> qry3 = new IndexQuery<Integer, Person>(Person.class)
-                .setCriteria(c[0], c[1], in("age", Collections.singleton(10)));
-
-            GridTestUtils.assertThrows(
-                log,
-                () -> grid(0).cache("CACHE").query(qry3).getAll(),
-                IgniteCheckedException.class,
-                "Failed to merge"
-            );
-        }
-    }
-
-    /** */
-    @Test
-    @Ignore("TODO")
-    public void testOnlySecondFieldCriterionFailed() {
-        IndexQuery<Integer, Person> idxQry = new IndexQuery<Integer, Person>(Person.class, IDX)
-            .setCriteria(in("_KEY", Collections.singleton(0)));
-
-        GridTestUtils.assertThrows(
-            log,
-            () -> grid(0).cache("CACHE").query(idxQry).getAll(),
-            IgniteCheckedException.class,
-            "Index doesn't match criteria"
-        );
     }
 
     /** */
