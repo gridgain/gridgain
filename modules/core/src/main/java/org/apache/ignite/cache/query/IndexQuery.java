@@ -28,7 +28,7 @@ import org.apache.ignite.lang.IgniteExperimental;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Index query is a high-level API that allows the user to retrieve cache entries that match specified criteria.
+ * Index query is a high-level API that allows user to retrieve cache entries that match specified criteria.
  * This API was designed to perform queries against indexes, but the final decision about whether an index will
  * be used is made by the SQL query planner.
  */

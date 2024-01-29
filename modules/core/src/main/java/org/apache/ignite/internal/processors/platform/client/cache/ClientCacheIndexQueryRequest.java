@@ -28,7 +28,9 @@ import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.internal.binary.BinaryRawReaderEx;
 import org.apache.ignite.internal.cache.query.InIndexQueryCriterion;
 import org.apache.ignite.internal.cache.query.RangeIndexQueryCriterion;
+import org.apache.ignite.internal.processors.platform.client.ClientBitmaskFeature;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
+import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
 import static org.apache.ignite.internal.binary.GridBinaryMarshaller.ARR_LIST;
@@ -46,8 +48,12 @@ public class ClientCacheIndexQueryRequest extends ClientCacheRequest {
 
     /**
      * @param reader Reader.
+     * @param protocolCtx Protocol context.
      */
-    public ClientCacheIndexQueryRequest(BinaryRawReaderEx reader) {
+    public ClientCacheIndexQueryRequest(
+        BinaryRawReaderEx reader,
+        ClientProtocolContext protocolCtx
+    ) {
         super(reader);
 
         pageSize = reader.readInt();
@@ -56,7 +62,10 @@ public class ClientCacheIndexQueryRequest extends ClientCacheRequest {
 
         int part = reader.readInt();
 
-        int limit = reader.readInt();
+        int limit = 0;
+
+        if (protocolCtx.isFeatureSupported(ClientBitmaskFeature.INDEX_QUERY_LIMIT))
+            limit = reader.readInt();
 
         String valType = reader.readString();
 

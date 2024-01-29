@@ -474,7 +474,7 @@ public class MultifieldIndexQueryTest extends GridCommonAbstractTest {
         List<Cache.Entry<Long, Person>> all = cache.query(qry).getAll();
 
         if (desc) {
-            all.sort((o1, o2) -> o2.getKey().compareTo(o1.getKey()));
+            all.sort(Comparator.comparing(Cache.Entry::getKey, Comparator.reverseOrder()));
         } else {
             all.sort(Comparator.comparing(Cache.Entry::getKey));
         }
