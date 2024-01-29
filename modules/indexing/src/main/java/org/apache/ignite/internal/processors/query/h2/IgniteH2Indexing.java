@@ -1130,7 +1130,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         sqlBuilder.a("SELECT ").a(KEY_FIELD_NAME).a(", ").a(VAL_FIELD_NAME).a(' ');
         sqlBuilder.a("FROM ").a(tblDesc.fullTableName()).a(' ');
 
-        String idxName = normalizeIndexName(qry.getIndexName(), tblDesc);
+        String idxName = normalizeIndexName(qry.getIndexName(), tblDesc.table());
 
         if (idxName != null) {
             sqlBuilder.a("USE INDEX (").a(idxName).a(")").a(" ");
@@ -1142,7 +1142,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             for (int i = 0; i < criteria.size(); i++) {
                 IndexQueryCriterion criterion = criteria.get(i);
-                String column = normalizeColumnName(criterion.field(), tblDesc);
+                String column = normalizeColumnName(criterion.field(), tblDesc.table());
 
                 if (i == 0) {
                     sqlBuilder.a("WHERE ");
@@ -1154,171 +1154,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 // Ignite's IndexQuery allows to compare with NULL and treats it as the smallest value.
                 // While SQL doesn't allow this, we mimic Ignite's behavior for compatibility.
                 if (criterion instanceof InIndexQueryCriterion) {
-                    InIndexQueryCriterion in = (InIndexQueryCriterion) criterion;
-
-                    if (in.values().isEmpty()) {
-                        throw new IllegalArgumentException("Unsupported criterion [criterion="
-                                + S.toString(InIndexQueryCriterion.class, in) + "]");
-                    }
-
-                    // SQL IN doesn't include NULLs, so must add IS NULL explicitly.
-                    boolean hasNull = in.values().contains(null);
-
-                    if (hasNull) {
-                        if (in.values().size() == 1) {
-                            sqlBuilder.a(column).a(" IS NULL");
-                        } else {
-                            sqlBuilder.a("(")
-                                    .a(column).a(" IS NULL")
-                                    .a(" OR ");
-
-                            sqlBuilder.a(column);
-                            boolean first = true;
-                            for (Object val : in.values()) {
-                                if (val == null)
-                                    continue;
-
-                                if (first) {
-                                    sqlBuilder.a(" IN (?");
-                                    first = false;
-                                } else {
-                                    sqlBuilder.a(", ?");
-                                }
-                                args.add(val);
-                            }
-                            sqlBuilder.a(")");
-
-                            sqlBuilder.a(")");
-                        }
-                    } else {
-                        sqlBuilder.a(column);
-                        boolean first = true;
-                        for (Object val : in.values()) {
-                            if (first) {
-                                sqlBuilder.a(" IN (?");
-                                first = false;
-                            } else {
-                                sqlBuilder.a(", ?");
-                            }
-                            args.add(val);
-                        }
-                        sqlBuilder.a(")");
-                    }
-                } else if (criterion instanceof RangeIndexQueryCriterion) {
-                    RangeIndexQueryCriterion range = (RangeIndexQueryCriterion) criterion;
-
-                    Object lower = range.lower();
-                    Object upper = range.upper();
-                    boolean lowerIncl = range.lowerIncl();
-                    boolean upperIncl = range.upperIncl();
-                    boolean lowerNull = range.lowerNull();
-                    boolean upperNull = range.upperNull();
-
-                    // Consider all flags to decipher which condition was requested.
-                    // TODO refactor - replace RangeIndexQueryCriterion with per-condition criterions.
-                    if (lower == null && upper == null) {
-                        if (lowerNull && upperNull) {
-                            // between(null, null) or eq(null) in which case all flags are true.
-                            if (!lowerIncl || !upperIncl) {
-                                throw new IllegalArgumentException("Unsupported criterion [criterion="
-                                        + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-                            }
-
-                            sqlBuilder.a(column).a(" IS NULL");
-                        } else if (lowerNull) {
-                            // gt(null) or gte(null), upperIncl is always true.
-                            if (!upperIncl) {
-                                throw new IllegalArgumentException("Unsupported criterion [criterion="
-                                        + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-                            }
-
-                            if (!lowerIncl) {
-                                // gt(null) - same as NOT NULL
-                                sqlBuilder.a(column).a(" IS NOT NULL");
-                            } else {
-                                // gte(null) - same as TRUE - no condition
-                                sqlBuilder.a("TRUE");
-                            }
-                        } else if (upperNull) {
-                            // lt(null) or lte(null), lowerIncl is always true.
-                            if (!lowerIncl) {
-                                throw new IllegalArgumentException("Unsupported criterion [criterion="
-                                        + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-                            }
-
-                            if (!upperIncl) {
-                                // lt(null) - same as FALSE
-                                sqlBuilder.a("FALSE");
-                            }
-                            else {
-                                // lte(null) - same as IS NULL
-                                sqlBuilder.a(column).a(" IS NULL");
-                            }
-                        } else {
-                            // Neither lower nor upper are set explicitly.
-                            throw new IllegalArgumentException("Unsupported criterion [criterion="
-                                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-                        }
-                    } else if (lower != null && upper == null) {
-                        if (lowerNull || !upperIncl) {
-                            throw new IllegalArgumentException("Unsupported criterion [criterion="
-                                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-                        }
-
-                        if (upperNull) {
-                            // between(lower, NULL), flags are always the same.
-                            if (!(lowerIncl)) {
-                                throw new IllegalArgumentException("Unsupported criterion [criterion="
-                                        + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-                            }
-
-                            // Same as FALSE.
-                            sqlBuilder.a(" FALSE");
-                        } else {
-                            // gt(lower) or gte(lower), upperIncl is always true.
-                            sqlBuilder.a(column).a(lowerIncl ? " >= ?" : " > ?");
-                            args.add(lower);
-                        }
-                    } else if (lower == null /*&& upper != null*/) {
-                        if (upperNull || !lowerIncl) {
-                            throw new IllegalArgumentException("Unsupported criterion [criterion="
-                                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-                        }
-
-                        // lowerNull is technically irrelevant.
-                        // lowerNull == true means between(NULL, upper).
-                        // lowerNull == false means gt(upper) or gte(upper).
-                        // However, gt(upper) and gte(upper) must include IS NULL anyway.
-
-                        // Still, the following flags invariant holds for between(NULL, upper).
-                        if (lowerNull && !upperIncl) {
-                            throw new IllegalArgumentException("Unsupported criterion [criterion="
-                                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-                        }
-
-                        sqlBuilder.a("(")
-                                .a(column).a(" IS NULL")
-                                .a(" OR ")
-                                .a(column).a(upperIncl ? " <= ?" : " < ?")
-                                .a(")");
-                        args.add(upper);
-                    } else /*if (lower != null && upper != null)*/ {
-                        // between(lower, upper), flags are always the same.
-                        if (!(lowerIncl && upperIncl && !lowerNull && !upperNull)) {
-                            throw new IllegalArgumentException("Unsupported criterion [criterion="
-                                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-                        }
-
-                        sqlBuilder.a(column).a(" >= ?")
-                                .a(" AND ")
-                                .a(column).a(" <= ?");
-                        args.add(lower);
-                        args.add(upper);
-                    }
-                } else {
+                    appendInCriterion(column, (InIndexQueryCriterion)criterion, args, sqlBuilder);
+                }
+                else if (criterion instanceof RangeIndexQueryCriterion) {
+                    appendRangeCriterion(column, (RangeIndexQueryCriterion)criterion, args, sqlBuilder);
+                }
+                else {
                     // Mimic Ignite error.
                     throw new IllegalArgumentException(
-                            String.format("Unknown IndexQuery criterion type [%s]", criterion.getClass().getSimpleName())
+                        String.format("Unknown IndexQuery criterion type [%s]", criterion.getClass().getSimpleName())
                     );
                 }
             }
@@ -1337,19 +1181,181 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         return res;
     }
 
-    private String normalizeColumnName(String field, H2TableDescriptor descriptor) {
+    private void appendInCriterion(String column, InIndexQueryCriterion in, List<Object> args, SB buf) {
+        if (in.values().isEmpty()) {
+            throw new IllegalArgumentException("Unsupported criterion [criterion="
+                + S.toString(InIndexQueryCriterion.class, in) + "]");
+        }
+
+        // SQL IN doesn't include NULLs, so must add IS NULL explicitly.
+        boolean hasNull = in.values().contains(null);
+
+        if (hasNull) {
+            if (in.values().size() == 1) {
+                buf.a(column).a(" IS NULL");
+            } else {
+                buf.a("(")
+                    .a(column).a(" IS NULL")
+                    .a(" OR ");
+
+                buf.a(column);
+                boolean first = true;
+                for (Object val : in.values()) {
+                    if (val == null)
+                        continue;
+
+                    if (first) {
+                        buf.a(" IN (?");
+                        first = false;
+                    } else {
+                        buf.a(", ?");
+                    }
+                    args.add(val);
+                }
+                buf.a(")");
+
+                buf.a(")");
+            }
+        } else {
+            buf.a(column);
+            boolean first = true;
+            for (Object val : in.values()) {
+                if (first) {
+                    buf.a(" IN (?");
+                    first = false;
+                } else {
+                    buf.a(", ?");
+                }
+                args.add(val);
+            }
+            buf.a(")");
+        }
+    }
+
+    private void appendRangeCriterion(String column, RangeIndexQueryCriterion range, List<Object> args, SB buf) {
+        Object lower = range.lower();
+        Object upper = range.upper();
+        boolean lowerIncl = range.lowerIncl();
+        boolean upperIncl = range.upperIncl();
+        boolean lowerNull = range.lowerNull();
+        boolean upperNull = range.upperNull();
+
+        // Consider all flags to decipher which condition was requested.
+        // TODO refactor - replace RangeIndexQueryCriterion with per-condition criterions.
+        if (lower == null && upper == null) {
+            if (lowerNull && upperNull) {
+                // between(null, null) or eq(null) in which case all flags are true.
+                if (!lowerIncl || !upperIncl) {
+                    throw new IllegalArgumentException("Unsupported criterion [criterion="
+                        + S.toString(RangeIndexQueryCriterion.class, range) + "]");
+                }
+
+                buf.a(column).a(" IS NULL");
+            } else if (lowerNull) {
+                // gt(null) or gte(null), upperIncl is always true.
+                if (!upperIncl) {
+                    throw new IllegalArgumentException("Unsupported criterion [criterion="
+                        + S.toString(RangeIndexQueryCriterion.class, range) + "]");
+                }
+
+                if (!lowerIncl) {
+                    // gt(null) - same as NOT NULL
+                    buf.a(column).a(" IS NOT NULL");
+                } else {
+                    // gte(null) - same as TRUE - no condition
+                    buf.a("TRUE");
+                }
+            } else if (upperNull) {
+                // lt(null) or lte(null), lowerIncl is always true.
+                if (!lowerIncl) {
+                    throw new IllegalArgumentException("Unsupported criterion [criterion="
+                        + S.toString(RangeIndexQueryCriterion.class, range) + "]");
+                }
+
+                if (!upperIncl) {
+                    // lt(null) - same as FALSE
+                    buf.a("FALSE");
+                }
+                else {
+                    // lte(null) - same as IS NULL
+                    buf.a(column).a(" IS NULL");
+                }
+            } else {
+                // Neither lower nor upper are set explicitly.
+                throw new IllegalArgumentException("Unsupported criterion [criterion="
+                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
+            }
+        } else if (lower != null && upper == null) {
+            if (lowerNull || !upperIncl) {
+                throw new IllegalArgumentException("Unsupported criterion [criterion="
+                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
+            }
+
+            if (upperNull) {
+                // between(lower, NULL), flags are always the same.
+                if (!(lowerIncl)) {
+                    throw new IllegalArgumentException("Unsupported criterion [criterion="
+                        + S.toString(RangeIndexQueryCriterion.class, range) + "]");
+                }
+
+                // Same as FALSE.
+                buf.a(" FALSE");
+            } else {
+                // gt(lower) or gte(lower), upperIncl is always true.
+                buf.a(column).a(lowerIncl ? " >= ?" : " > ?");
+                args.add(lower);
+            }
+        } else if (lower == null /*&& upper != null*/) {
+            if (upperNull || !lowerIncl) {
+                throw new IllegalArgumentException("Unsupported criterion [criterion="
+                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
+            }
+
+            // lowerNull is technically irrelevant.
+            // lowerNull == true means between(NULL, upper).
+            // lowerNull == false means gt(upper) or gte(upper).
+            // However, gt(upper) and gte(upper) must include IS NULL anyway.
+
+            // Still, the following flags invariant holds for between(NULL, upper).
+            if (lowerNull && !upperIncl) {
+                throw new IllegalArgumentException("Unsupported criterion [criterion="
+                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
+            }
+
+            buf.a("(")
+                .a(column).a(" IS NULL")
+                .a(" OR ")
+                .a(column).a(upperIncl ? " <= ?" : " < ?")
+                .a(")");
+            args.add(upper);
+        } else /*if (lower != null && upper != null)*/ {
+            // between(lower, upper), flags are always the same.
+            if (!(lowerIncl && upperIncl && !lowerNull && !upperNull)) {
+                throw new IllegalArgumentException("Unsupported criterion [criterion="
+                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
+            }
+
+            buf.a(column).a(" >= ?")
+                .a(" AND ")
+                .a(column).a(" <= ?");
+            args.add(lower);
+            args.add(upper);
+        }
+    }
+
+    private String normalizeColumnName(String field, GridH2Table table) {
         String upperCaseField = field.toUpperCase();
 
-        if (descriptor.table().doesColumnExist(upperCaseField))
+        if (table.doesColumnExist(upperCaseField))
             return field;
 
-        if (descriptor.table().doesColumnExist(field))
+        if (table.doesColumnExist(field))
             return quoteString(field);
 
         throw new IgniteException("Column \"" + upperCaseField + "\" not found.");
     }
 
-    private @Nullable String normalizeIndexName(@Nullable String idxName, H2TableDescriptor descriptor) {
+    private @Nullable String normalizeIndexName(@Nullable String idxName, GridH2Table table) {
         if (idxName == null) {
             return null;
         }
@@ -1358,7 +1364,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             return null;
         }
 
-        ArrayList<Index> indexes = descriptor.table().getIndexes();
+        ArrayList<Index> indexes = table.getIndexes();
         String upperCaseIdxName = idxName.toUpperCase();
 
         for (Index idx : indexes) {
