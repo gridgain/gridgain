@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Random;
 import javax.cache.Cache;
 import javax.cache.CacheException;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
@@ -43,26 +44,22 @@ import org.junit.runners.Parameterized;
 /** */
 @RunWith(Parameterized.class)
 public class IndexQueryPartitionTest extends GridCommonAbstractTest {
-    /** */
-    @Parameterized.Parameter
-    public CacheMode cacheMode;
+    private static final String CACHE_PARTITIONED = "CACHE-PARTIIONED";
+    private static final String CACHE_REPLICATED = "CACHE-REPLICATED";
 
     /** */
-    @Parameterized.Parameter(1)
+    @Parameterized.Parameter
     public boolean client;
 
     /** */
     private static Map<Integer, Person> data;
 
     /** */
-    @Parameterized.Parameters(name = "mode={0}, client={1}")
+    @Parameterized.Parameters(name = "client={0}")
     public static List<Object[]> params() {
         return F.asList(
-            new Object[]{ CacheMode.PARTITIONED, false },
-            new Object[]{ CacheMode.PARTITIONED, true }
-            // TODO SqlFieldsQuery partitions can be set only for partitioned caches (verify exception?).
-            // new Object[]{ CacheMode.REPLICATED, false },
-            // new Object[]{ CacheMode.REPLICATED, true }
+            new Object[] {false},
+            new Object[] {true}
         );
     }
 
@@ -70,14 +67,21 @@ public class IndexQueryPartitionTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        CacheConfiguration<Integer, Person> ccfg = new CacheConfiguration<Integer, Person>()
-            .setName("CACHE")
+        CacheConfiguration<Integer, Person> ccfg1 = new CacheConfiguration<Integer, Person>()
+            .setName(CACHE_PARTITIONED)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-            .setCacheMode(cacheMode)
+            .setCacheMode(CacheMode.PARTITIONED)
             .setIndexedTypes(Integer.class, Person.class)
             .setAffinity(new RendezvousAffinityFunction().setPartitions(100));
 
-        cfg.setCacheConfiguration(ccfg);
+        CacheConfiguration<Integer, Person> ccfg2 = new CacheConfiguration<Integer, Person>()
+            .setName(CACHE_REPLICATED)
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setCacheMode(CacheMode.REPLICATED)
+            .setIndexedTypes(Integer.class, Person.class)
+            .setAffinity(new RendezvousAffinityFunction().setPartitions(100));
+
+        cfg.setCacheConfiguration(ccfg1, ccfg2);
 
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
@@ -107,7 +111,7 @@ public class IndexQueryPartitionTest extends GridCommonAbstractTest {
             IndexQuery<Integer, Person> qry = new IndexQuery<Integer, Person>(Person.class)
                 .setPartition(part);
 
-            QueryCursor<Cache.Entry<Integer, Person>> cursor = grid().cache("CACHE").query(qry);
+            QueryCursor<Cache.Entry<Integer, Person>> cursor = grid().cache(CACHE_PARTITIONED).query(qry);
 
             for (Cache.Entry<Integer, Person> e : cursor) {
                 Person p = expRes.remove(e.getKey());
@@ -122,7 +126,7 @@ public class IndexQueryPartitionTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testSetNullNotAffect() {
-        try (IgniteDataStreamer<Integer, Person> dataStreamer = grid().dataStreamer("CACHE")) {
+        try (IgniteDataStreamer<Integer, Person> dataStreamer = grid().dataStreamer(CACHE_PARTITIONED)) {
             Random rnd = new Random();
 
             for (int i = 0; i < 10_000; i++)
@@ -132,12 +136,12 @@ public class IndexQueryPartitionTest extends GridCommonAbstractTest {
         IndexQuery<Integer, Person> qry = new IndexQuery<Integer, Person>(Person.class)
             .setPartition(0);
 
-        assertTrue(grid().cache("CACHE").query(qry).getAll().size() < 10_000);
+        assertTrue(grid().cache(CACHE_PARTITIONED).query(qry).getAll().size() < 10_000);
 
         qry = new IndexQuery<Integer, Person>(Person.class)
             .setPartition(null);
 
-        assertTrue(grid().cache("CACHE").query(qry).getAll().size() == 10_000);
+        assertTrue(grid().cache(CACHE_PARTITIONED).query(qry).getAll().size() == 10_000);
     }
 
     /** */
@@ -151,21 +155,18 @@ public class IndexQueryPartitionTest extends GridCommonAbstractTest {
 
             qry.setLocal(true);
 
+            IgniteCache<Integer, Person> cache = grid().cache(CACHE_PARTITIONED);
+
             if (client) {
-                GridTestUtils.assertThrows(null, () -> grid().cache("CACHE").query(qry).getAll(),
+                GridTestUtils.assertThrows(null, () -> cache.query(qry).getAll(),
                     CacheException.class,
                     "Execution of local IndexQuery on client node disallowed.");
             }
-            else if (cacheMode == CacheMode.PARTITIONED
-                && !grid().affinity("CACHE").mapPartitionToNode(part).equals(grid().localNode())) {
-                // TODO Query.setLocal(true).partition(N) where local does not owns N partition must throw exception?
-                grid().cache("CACHE").query(qry).getAll();
-                // GridTestUtils.assertThrows(null, () -> grid().cache("CACHE").query(qry).getAll(),
-                //     IgniteException.class,
-                //     "Cluster group is empty.");
+            else {
+                boolean owner = grid().affinity(CACHE_PARTITIONED).mapPartitionToNode(part).equals(grid().localNode());
+
+                assertEquals(!owner, cache.query(qry).getAll().isEmpty());
             }
-            else
-                assertTrue(!grid().cache("CACHE").query(qry).getAll().isEmpty());
         }
     }
 
@@ -183,10 +184,23 @@ public class IndexQueryPartitionTest extends GridCommonAbstractTest {
         GridTestUtils.assertThrows(null, () -> {
                 IndexQuery qry = new IndexQuery<Integer, Person>(Person.class).setPartition(1000);
 
-                grid().cache("CACHE").query(qry);
+                grid().cache(CACHE_PARTITIONED).query(qry);
             },
             CacheException.class,
             "Specified partition must be in the range [0, N) where N is partition number in the cache.");
+    }
+
+    @Test
+    public void testSetPartitionOnReplicatedCacheFails() {
+        IgniteCache<Integer, Person> cache = grid().cache(CACHE_REPLICATED);
+
+        cache.put(1, new Person(1));
+
+        IndexQuery<Integer, Person> idxQuery =
+            new IndexQuery<Integer, Person>(Person.class).setPartition(1);
+
+        GridTestUtils.assertThrows(null, () -> cache.query(idxQuery).getAll(),
+            CacheException.class, "Partitions are not supported for replicated caches");
     }
 
     /** {@inheritDoc} */
@@ -202,7 +216,7 @@ public class IndexQueryPartitionTest extends GridCommonAbstractTest {
     private void load() {
         data = new HashMap<>();
 
-        try (IgniteDataStreamer<Integer, Person> dataStreamer = grid(0).dataStreamer("CACHE")) {
+        try (IgniteDataStreamer<Integer, Person> dataStreamer = grid(0).dataStreamer(CACHE_PARTITIONED)) {
             Random rnd = new Random();
 
             for (int i = 0; i < 10_000; i++) {
@@ -219,7 +233,7 @@ public class IndexQueryPartitionTest extends GridCommonAbstractTest {
         Map<Integer, Person> exp = new HashMap<>();
 
         for (Integer key: data.keySet()) {
-            int p = grid(0).affinity("CACHE").partition(key);
+            int p = grid(0).affinity(CACHE_PARTITIONED).partition(key);
 
             if (p == part)
                 exp.put(key, data.get(key));

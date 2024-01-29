@@ -3105,6 +3105,10 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         String typeName = typeName(cctx.name(), type);
 
+        if (cctx.isReplicated() && qry.getPartition() != null) {
+            throw new CacheException("Partitions are not supported for replicated caches");
+        }
+
         SqlFieldsQuery fieldsQry = idx.generateFieldsQuery(cctx.name(), qry, typeName);
 
         // Execute.
