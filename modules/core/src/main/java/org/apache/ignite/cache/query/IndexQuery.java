@@ -16,28 +16,21 @@
 
 package org.apache.ignite.cache.query;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import javax.cache.Cache;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteExperimental;
 import org.jetbrains.annotations.Nullable;
 
-import javax.cache.Cache;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 /**
- * Index queries work over distributed indexes and retrieve cache entries that match the specified criteria.
- * {@code QueryCursor} delivers sorted cache entries by the order defined for queried index.
- *
- * {@code IndexQuery} has to be initialized with cache value class or type. The algorithm of discovering index is as follows:
- * 1. If {@link #idxName} is set, then use it.
- * 2. If {@link #idxName} is not set, then find an index that matches criteria fields.
- * 3. If neither {@link #idxName}, nor {@link #setCriteria(List)} is used, then perform index scan over PK index for specified Value type.
- *
- * Conjuction of items in {@link #criteria} has to represent a valid range to traverse the index tree.
+ * Index query is a high-level API that allows the user to retrieve cache entries that match specified criteria.
+ * This API was designed to perform queries against indexes, but the final decision about whether an index will
+ * be used is made by the SQL query planner.
  */
 @IgniteExperimental
 public final class IndexQuery<K, V> extends Query<Cache.Entry<K, V>> {
@@ -49,9 +42,6 @@ public final class IndexQuery<K, V> extends Query<Cache.Entry<K, V>> {
 
     /** Index name. */
     private final @Nullable String idxName;
-
-    /** Limit */
-    private int limit;
 
     /** Index query criteria. */
     private @Nullable List<IndexQueryCriterion> criteria;
@@ -97,7 +87,7 @@ public final class IndexQuery<K, V> extends Query<Cache.Entry<K, V>> {
      * @param idxName Index name.
      */
     public IndexQuery(String valType, @Nullable String idxName) {
-        A.notEmpty(valType, "valType");
+        A.notNullOrEmpty(valType, "valType");
         A.nullableNotEmpty(idxName, "idxName");
 
         this.valType = valType;

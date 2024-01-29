@@ -1113,6 +1113,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** {@inheritDoc} */
     @Override public <K, V> SqlFieldsQuery generateFieldsQuery(String cacheName, IndexQuery<K, V> qry, String type) {
+        if (qry.isLocal() && ctx.clientNode())
+            throw new CacheException("Execution of local IndexQuery on client node disallowed.");
+
         String schemaName = schema(cacheName);
 
         H2TableDescriptor tblDesc = schemaMgr.tableForType(schemaName, cacheName, type);

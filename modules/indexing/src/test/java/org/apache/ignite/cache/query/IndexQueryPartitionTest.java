@@ -154,7 +154,7 @@ public class IndexQueryPartitionTest extends GridCommonAbstractTest {
             if (client) {
                 GridTestUtils.assertThrows(null, () -> grid().cache("CACHE").query(qry).getAll(),
                     CacheException.class,
-                    "Execution of local SqlFieldsQuery on client node disallowed.");
+                    "Execution of local IndexQuery on client node disallowed.");
             }
             else if (cacheMode == CacheMode.PARTITIONED
                 && !grid().affinity("CACHE").mapPartitionToNode(part).equals(grid().localNode())) {

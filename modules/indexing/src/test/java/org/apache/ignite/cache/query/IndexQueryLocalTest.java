@@ -110,9 +110,8 @@ public class IndexQueryLocalTest extends GridCommonAbstractTest {
         IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, IDX)
             .setCriteria(lt("id", CNT / 2));
 
-        // TODO Ensure message text SqlFieldsQuery vs IndexQuery!
         GridTestUtils.assertThrows(null, () -> cache.query(qry.setLocal(true)).getAll(),
-            CacheException.class, "Execution of local SqlFieldsQuery on client node disallowed.");
+            CacheException.class, "Execution of local IndexQuery on client node disallowed.");
     }
 
     /** */
