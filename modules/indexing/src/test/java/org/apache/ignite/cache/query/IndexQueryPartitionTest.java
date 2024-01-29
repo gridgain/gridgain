@@ -44,7 +44,10 @@ import org.junit.runners.Parameterized;
 /** */
 @RunWith(Parameterized.class)
 public class IndexQueryPartitionTest extends GridCommonAbstractTest {
+    /** */
     private static final String CACHE_PARTITIONED = "CACHE-PARTIIONED";
+
+    /** */
     private static final String CACHE_REPLICATED = "CACHE-REPLICATED";
 
     /** */
