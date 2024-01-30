@@ -21,6 +21,7 @@ import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.IndexQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.internal.GridKernalContext;
@@ -72,6 +73,12 @@ public class DummyQueryIndexing implements GridQueryIndexing {
 
     /** {@inheritDoc} */
     @Override public SqlFieldsQuery generateFieldsQuery(String cacheName, SqlQuery qry) {
+        return null;
+    }
+
+
+    /** {@inheritDoc} */
+    @Override public SqlFieldsQuery generateFieldsQuery(String cacheName, IndexQuery qry, String type) {
         return null;
     }
 

@@ -16,7 +16,6 @@
 
 package org.apache.ignite.spi.discovery.zk;
 
-import org.apache.curator.test.ByteCodeRewrite;
 import org.apache.ignite.spi.discovery.zk.internal.ZookeeperClientTest;
 import org.apache.ignite.spi.discovery.zk.internal.ZookeeperDiscoveryClientDisconnectTest;
 import org.apache.ignite.spi.discovery.zk.internal.ZookeeperDiscoveryClientReconnectTest;
@@ -29,9 +28,6 @@ import org.apache.ignite.spi.discovery.zk.internal.ZookeeperDiscoverySpiSaslFail
 import org.apache.ignite.spi.discovery.zk.internal.ZookeeperDiscoverySpiSaslSuccessfulAuthTest;
 import org.apache.ignite.spi.discovery.zk.internal.ZookeeperDiscoverySplitBrainTest;
 import org.apache.ignite.spi.discovery.zk.internal.ZookeeperDiscoveryTopologyChangeAndReconnectTest;
-import org.apache.zookeeper.jmx.MBeanRegistry;
-import org.apache.zookeeper.server.ZooKeeperServer;
-import org.apache.zookeeper.server.quorum.LearnerZooKeeperServer;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -55,28 +51,10 @@ import org.junit.runners.Suite;
     ZookeeperDiscoverySpiSaslSuccessfulAuthTest.class,
 })
 public class ZookeeperDiscoverySpiTestSuite1 {
-    /**
-     * During test suite processing GC can unload some classes whose bytecode has been rewritten here
-     * {@link ByteCodeRewrite}. And the next time these classes will be loaded without bytecode rewriting.
-     *
-     * This workaround prevents unloading of these classes.
-     *
-     * @see <a href="https://github.com/Netflix/curator/issues/121">Issue link.</a>.
-     */
-    @SuppressWarnings("unused")
-    private static final Class[] WORKAROUND;
-
-    static {
-        ByteCodeRewrite.apply();
-
-        // GC will not unload this classes.
-        WORKAROUND = new Class[] {ZooKeeperServer.class, LearnerZooKeeperServer.class, MBeanRegistry.class};
-    }
-
-    /** */
     @BeforeClass
     public static void init() {
         System.setProperty("zookeeper.forceSync", "false");
         System.setProperty("zookeeper.jmx.log4j.disable", "true");
+        System.setProperty("jute.maxbuffer", String.valueOf(2 * 1024 * 1024));  // 2 MB.
     }
 }

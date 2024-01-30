@@ -26,6 +26,7 @@ import java.util.TimeZone;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.IndexQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.internal.GridKernalContext;
@@ -90,6 +91,16 @@ public interface GridQueryIndexing {
      * @return Fields query.
      */
     public SqlFieldsQuery generateFieldsQuery(String cacheName, SqlQuery qry);
+
+    /**
+     * Generate SqlFieldsQuery from IndexQuery.
+     *
+     * @param cacheName Cache name.
+     * @param qry Query.
+     * @param type Type name.
+     * @return Fields query.
+     */
+    public <K, V> SqlFieldsQuery generateFieldsQuery(String cacheName, IndexQuery<K, V> qry, String type);
 
     /**
      * Detect whether SQL query should be executed in distributed or local manner and execute it.

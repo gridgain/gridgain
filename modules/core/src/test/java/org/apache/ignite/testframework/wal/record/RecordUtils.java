@@ -47,6 +47,7 @@ import org.apache.ignite.internal.pagemem.wal.record.SwitchSegmentRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.ClusterSnapshotRecord;
+import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageFragmentedUpdateRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageInsertFragmentRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageInsertRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccMarkUpdatedRecord;
@@ -125,6 +126,7 @@ import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.CHECKPOINT_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.CLUSTER_SNAPSHOT;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.CONSISTENT_CUT;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_PAGE_FRAGMENTED_UPDATE_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_PAGE_INSERT_FRAGMENT_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_PAGE_INSERT_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_PAGE_REMOVE_RECORD;
@@ -242,6 +244,7 @@ public class RecordUtils {
             put(PAGE_LIST_META_RESET_COUNT_RECORD, RecordUtils::buildPageListMetaResetCountRecord);
             put(SWITCH_SEGMENT_RECORD, RecordUtils::buildSwitchSegmentRecord);
             put(DATA_PAGE_UPDATE_RECORD, RecordUtils::buildDataPageUpdateRecord);
+            put(DATA_PAGE_FRAGMENTED_UPDATE_RECORD, RecordUtils::buildDataPageFragmentedUpdateRecord);
             put(BTREE_META_PAGE_INIT_ROOT2, RecordUtils::buildMetaPageInitRootInlineRecord);
             put(PARTITION_DESTROY, RecordUtils::buildPartitionDestroyRecord);
             put(SNAPSHOT, RecordUtils::buildSnapshotRecord);
@@ -519,6 +522,12 @@ public class RecordUtils {
         byte[] random = {1, 3, 5};
 
         return new DataPageUpdateRecord(1, 1, 1, random);
+    }
+
+    public static DataPageFragmentedUpdateRecord buildDataPageFragmentedUpdateRecord() {
+        byte[] random = {1, 3, 5};
+
+        return new DataPageFragmentedUpdateRecord(1, 1, 1, 123L, random);
     }
 
     /** **/

@@ -80,7 +80,6 @@ namespace Apache.Ignite.Core.Client.Cache
             RebalanceBatchesPrefetchCount = CacheConfiguration.DefaultRebalanceBatchesPrefetchCount;
             MaxQueryIteratorsCount = CacheConfiguration.DefaultMaxQueryIteratorsCount;
             QueryParallelism = CacheConfiguration.DefaultQueryParallelism;
-            EnableStatistics = CacheConfiguration.DefaultEnableStatistics;
         }
 
         /// <summary>
@@ -317,7 +316,6 @@ namespace Apache.Ignite.Core.Client.Cache
         /// Gets or sets a value indicating whether statistics gathering is enabled on a cache.
         /// These statistics can be retrieved via <see cref="ICache{TK,TV}.GetMetrics()"/>.
         /// </summary>
-        [DefaultValue(CacheConfiguration.DefaultEnableStatistics)]
         public bool EnableStatistics { get; set; }
 
         /// <summary>

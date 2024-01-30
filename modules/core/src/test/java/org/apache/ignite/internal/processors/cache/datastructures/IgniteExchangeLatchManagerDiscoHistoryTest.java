@@ -24,22 +24,19 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.AbstractFailureHandler;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgnitionEx;
-import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.TestPartitionsExchangeAwareLifecycleBean;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.latch.ExchangeLatchManager;
-import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
-import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lifecycle.LifecycleBean;
-import org.apache.ignite.lifecycle.LifecycleEventType;
-import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TestTcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
@@ -150,41 +147,21 @@ public class IgniteExchangeLatchManagerDiscoHistoryTest extends GridCommonAbstra
         final AtomicReference<Exception> err = new AtomicReference<>();
 
         // Lifecycle bean that is used to register PartitionsExchangeAware listener.
-        lifecycleBean = new LifecycleBean() {
-            /** Ignite instance. */
-            @IgniteInstanceResource
-            IgniteEx ignite;
-
+        lifecycleBean = new TestPartitionsExchangeAwareLifecycleBean(new PartitionsExchangeAware() {
             /** {@inheritDoc} */
-            @Override public void onLifecycleEvent(LifecycleEventType evt) throws IgniteException {
-                if (evt == LifecycleEventType.BEFORE_NODE_START) {
-                    // The goal is registering PartitionsExchangeAware listener before the discovery manager is started.
-                    ignite.context().internalSubscriptionProcessor()
-                        .registerDistributedMetastorageListener(new DistributedMetastorageLifecycleListener() {
-                            @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
-                                ignite.context().cache().context().exchange()
-                                    .registerExchangeAwareComponent(new PartitionsExchangeAware() {
-                                        /** {@inheritDoc} */
-                                        @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-                                            try {
-                                                // Let's start nodes.
-                                                startSrvsLatch.countDown();
+            @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+                try {
+                    // Let's start nodes.
+                    startSrvsLatch.countDown();
 
-                                                // Blocks the initial exchange and waits for other nodes.
-                                                exchangeLatch.await(DEFAULT_TIMEOUT, TimeUnit.MILLISECONDS);
-                                            }
-                                            catch (Exception e) {
-                                                err.compareAndSet(null, e);
-                                            }
-
-                                            int i = 0;
-                                        }
-                                });
-                            }
-                    });
+                    // Blocks the initial exchange and waits for other nodes.
+                    exchangeLatch.await(DEFAULT_TIMEOUT, TimeUnit.MILLISECONDS);
+                }
+                catch (Exception e) {
+                    err.compareAndSet(null, e);
                 }
             }
-        };
+        });
 
         // Start server node with short topology history.
         victim = true;

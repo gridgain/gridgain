@@ -24,6 +24,7 @@ import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
+import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageFragmentedUpdateRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageUpdateRecord;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
@@ -131,7 +132,17 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
         ) throws IgniteCheckedException {
             DataPageIO io = (DataPageIO) iox;
 
-            Boolean updated = updateTtl(cacheId, pageId, page, pageAddr, io, row, itemId, walPlc, statHolder);
+            Boolean updated;
+
+            // Read payload to determine that the row is fragmented.
+            DataPagePayload data = io.readPayload(pageAddr, itemId, pageSize());
+
+            if (data.nextLink() == 0) {
+                // The data is not fragmented, so it is one page update.
+                updated = updateTtl(cacheId, pageId, page, pageAddr, io, row, itemId, walPlc);
+            }
+            else
+                updated = updateFragmentedTtl(cacheId, pageId, page, pageAddr, row, itemId, walPlc, statHolder);
 
             evictionTracker().touchPage(pageId);
 
@@ -159,39 +170,62 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
             DataPageIO io,
             CacheDataRow row,
             int itemId,
+            Boolean walPlc
+        ) throws IgniteCheckedException {
+            // Read payload to determine that the row is fragmented.
+            DataPagePayload data = io.readPayload(pageAddr, itemId, pageSize());
+
+            assert data.nextLink() == 0 : "This method must be called only for not fragmented rows.";
+
+            // The data is not fragmented, so it is one page update.
+            io.updateExpirationTime(pageAddr, data.offset(), row);
+
+            if (needWalDeltaRecord(pageId, page, walPlc)) {
+                // TODO IGNITE-5829
+                // This record must contain only a reference to a logical WAL record with the actual data.
+                int rowSize = data.payloadSize();
+
+                byte[] payload = new byte[rowSize];
+
+                // Reload the payload to get the actual data.
+                data = io.readPayload(pageAddr, itemId, pageSize());
+
+                assert data.payloadSize() == rowSize;
+
+                PageUtils.getBytes(pageAddr, data.offset(), payload, 0, rowSize);
+
+                wal.log(new DataPageUpdateRecord(
+                    cacheId,
+                    pageId,
+                    itemId,
+                    payload));
+            }
+
+            return Boolean.TRUE;
+        }
+
+        /**
+         * Updats the expiration time of CacheDataRow.
+         *
+         * @param cacheId Cache ID.
+         * @param pageId Page ID.
+         * @param page Page pointer.
+         * @param pageAddr Page address.
+         * @param row Row.
+         * @param itemId Item id.
+         * @return {@code true} If the expiration time was updated.
+         * @throws IgniteCheckedException If failed.
+         */
+        private Boolean updateFragmentedTtl(
+            int cacheId,
+            long pageId,
+            long page,
+            long pageAddr,
+            CacheDataRow row,
+            int itemId,
             Boolean walPlc,
             IoStatisticsHolder statHolder
         ) throws IgniteCheckedException {
-            // Read payload to determine that the row is fragmented.
-            DataPagePayload data = io.readPayload(pageAddr, itemId, pageMem.realPageSize(grpId));
-            if (data.nextLink() == 0) {
-                // The data is not fragmented, so it is one page update.
-                io.updateExpirationTime(pageAddr, data.offset(), row);
-
-                if (needWalDeltaRecord(pageId, page, walPlc)) {
-                    // TODO IGNITE-5829
-                    // This record must contain only a reference to a logical WAL record with the actual data.
-                    int rowSize = data.payloadSize();
-
-                    byte[] payload = new byte[rowSize];
-
-                    // Reload the payload to get the actual data.
-                    data = io.readPayload(pageAddr, itemId, pageSize());
-
-                    assert data.payloadSize() == rowSize;
-
-                    PageUtils.getBytes(pageAddr, data.offset(), payload, 0, rowSize);
-
-                    wal.log(new DataPageUpdateRecord(
-                        cacheId,
-                        pageId,
-                        itemId,
-                        payload));
-                }
-
-                return Boolean.TRUE;
-            }
-
             // The data is fragmented, so need to update the required fragment.
             long nextLink = 0L;
             boolean pageUpdated = false;
@@ -220,16 +254,16 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
 
                         ByteBuffer buf = pageMem.pageBuffer(curPageAddr);
 
-                        DataPageIO curIo = DataPageIO.VERSIONS.forPage(curPageAddr);
+                        DataPageIO io = DataPageIO.VERSIONS.forPage(curPageAddr);
 
-                        data = curIo.readPayload(curPageAddr, cutItemId, pageMem.realPageSize(grpId));
+                        DataPagePayload data = io.readPayload(curPageAddr, cutItemId, pageSize());
 
                         buf.position(data.offset());
                         buf.limit(data.offset() + data.payloadSize());
 
                         // This variable contains the number of bytes that were updated on the current page.
                         // Take into account that in the case when all bytes were updated, the method below returns Integer.MAX_VALUE.
-                        int updatedOnCurrPage = curIo.updateExpirationTimeFragmentData(
+                        int updatedOnCurrPage = io.updateExpirationTimeFragmentData(
                             row,
                             buf,
                             data.payloadSize(),
@@ -241,10 +275,21 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
                         scannedBytes += data.payloadSize();
                         updatedBytes += updatedOnCurrPage;
 
-                        if (pageUpdated && needWalDeltaRecord(pageId, page, walPlc)) {
-                            // TODO https://ggsystems.atlassian.net/browse/GG-38158
-                            // Log a new version of DataPageUpdateRecord.
-                            // For now, DataPageUpdateRecord cannot update fragmented data.
+                        if (pageUpdated && needWalDeltaRecord(curPageId, curPage, walPlc)) {
+                            // This record must contain only a reference to a logical WAL record with the actual data.
+                            // Reload the payload to get the actual data.
+                            data = io.readPayload(curPageAddr, cutItemId, pageSize());
+
+                            byte[] payload = new byte[data.payloadSize()];
+
+                            PageUtils.getBytes(curPageAddr, data.offset(), payload, 0, data.payloadSize());
+
+                            wal.log(new DataPageFragmentedUpdateRecord(
+                                cacheId,
+                                curPageId,
+                                cutItemId,
+                                data.nextLink(),
+                                payload));
                         }
 
                         if (updatedOnCurrPage == Integer.MAX_VALUE) {

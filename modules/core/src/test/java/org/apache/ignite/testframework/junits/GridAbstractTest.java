@@ -1187,6 +1187,16 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
+     * Starts new client grid.
+     *
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startClientGrid() throws Exception {
+        return startClientGrid(getTestIgniteInstanceName(), (UnaryOperator<IgniteConfiguration>)null);
+    }
+
+    /**
      * Starts new client grid with given configuration.
      *
      * @param cfg Ignite configuration.

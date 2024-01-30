@@ -46,6 +46,7 @@ import org.apache.ignite.internal.pagemem.wal.record.SnapshotRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType;
+import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageFragmentedUpdateRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.TrackingPageRepairDeltaRecord;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
@@ -134,6 +135,12 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
 
             case PARTITION_CLEARING_START_RECORD:
                 return 4 + 4 + 8;
+
+            case DATA_PAGE_FRAGMENTED_UPDATE_RECORD:
+                DataPageFragmentedUpdateRecord uRec = (DataPageFragmentedUpdateRecord)rec;
+
+                return /*group id*/4 + /*page id*/8 + /*item id*/4 + /*link to the next entry fragment*/8 +
+                    /*payload length*/2 + uRec.payload().length;
 
             default:
                 return super.plainSize(rec);
@@ -276,6 +283,25 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
 
                 return new OutOfOrderDataRecord(entries, timeStamp);
 
+            case DATA_PAGE_FRAGMENTED_UPDATE_RECORD: {
+                cacheId = in.readInt();
+                pageId = in.readLong();
+
+                int itemId = in.readInt();
+
+                int size = in.readUnsignedShort();
+
+                long linkToNextEntryFragment = in.readLong();
+
+                in.ensure(size);
+
+                byte[] payload = new byte[size];
+
+                in.readFully(payload);
+
+                return new DataPageFragmentedUpdateRecord(cacheId, pageId, itemId, linkToNextEntryFragment, payload);
+            }
+
             default:
                 return super.readPlainRecord(type, in, encrypted, recordSize);
         }
@@ -379,6 +405,20 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
                 break;
 
             case CONSISTENT_CUT:
+                break;
+
+            case DATA_PAGE_FRAGMENTED_UPDATE_RECORD:
+                DataPageFragmentedUpdateRecord uRec = (DataPageFragmentedUpdateRecord)rec;
+
+                buf.putInt(uRec.groupId());
+                buf.putLong(uRec.pageId());
+                buf.putInt(uRec.itemId());
+
+                buf.putShort((short)uRec.payload().length);
+                buf.putLong(uRec.linkToNextFragment());
+
+                buf.put(uRec.payload());
+
                 break;
 
             default:

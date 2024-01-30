@@ -57,7 +57,15 @@ public enum ClientBitmaskFeature implements ThinProtocolFeature {
     SERVICE_INVOKE_CALLCTX(10),
 
     /** Handle OP_HEARTBEAT and OP_GET_IDLE_TIMEOUT. */
-    HEARTBEAT(11);
+    HEARTBEAT(11),
+
+    // 12, 13 - reserved, used in Ignite.
+
+    /** IndexQuery. */
+    INDEX_QUERY(14),
+
+    /** IndexQuery limit. */
+    INDEX_QUERY_LIMIT(15);
 
     /** */
     private static final EnumSet<ClientBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =

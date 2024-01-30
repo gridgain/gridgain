@@ -23,6 +23,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.curator.test.TestingZooKeeperServer;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteState;
 import org.apache.ignite.ShutdownPolicy;
@@ -36,14 +37,12 @@ import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.zk.curator.TestingZooKeeperServer;
 import org.apache.ignite.spi.discovery.zk.ZookeeperDiscoverySpi;
 import org.apache.ignite.spi.discovery.zk.ZookeeperDiscoverySpiTestUtil;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.zookeeper.ZkTestClientCnxnSocketNIO;
 import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.server.quorum.QuorumPeer;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -254,10 +253,7 @@ public class ZookeeperDiscoverySegmentationAndConnectionRestoreTest extends Zook
             srvs.get(0).stop();
             srvs.get(1).stop();
 
-            QuorumPeer qp = srvs.get(2).getQuorumPeer();
-
-            // Zookeeper's socket timeout [tickTime * initLimit] + 5 additional seconds for other logic
-            assertTrue(l.await(qp.getTickTime() * qp.getInitLimit() + 5000, TimeUnit.MILLISECONDS));
+            assertTrue(l.await(60_000, TimeUnit.MILLISECONDS));
         }
         finally {
             zkCluster.close();
