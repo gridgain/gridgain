@@ -442,7 +442,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
             }
 
             // If there are readers updates then nearNode should not finish before primary response received.
-            sendDhtRequests(nearNode, ret, !readersOnlyNodes);
+            sendDhtRequests(nearNode, ret, !readersOnlyNodes, updateRes);
 
             if (needReplyToNear)
                 completionCb.apply(updateReq, updateRes);
@@ -471,7 +471,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
      * @param sndRes {@code True} if allow to send result from DHT nodes.
      * @param ret Return value.
      */
-    private void sendDhtRequests(ClusterNode nearNode, GridCacheReturn ret, boolean sndRes) {
+    private void sendDhtRequests(ClusterNode nearNode, GridCacheReturn ret, boolean sndRes, GridNearAtomicUpdateResponse updateRes) {
         for (GridDhtAtomicAbstractUpdateRequest req : mappings.values()) {
             try {
                 assert !cctx.localNodeId().equals(req.nodeId()) : req;
@@ -485,6 +485,16 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
 
                 if (cntQryClsrs != null)
                     req.replyWithoutDelay(true);
+
+                if (updateRes.error() != null) {
+                    System.out.println("sendDhtRequests updateRes.error()");
+                    req.error(updateRes.error());
+                }
+
+                if (updateRes.failedKeys() != null) {
+                    System.out.println("sendDhtRequests updateRes.failedKeys()");
+                    req.addFailedKeys(updateRes.failedKeys(), updateRes.error());
+                }
 
                 cctx.io().send(req.nodeId(), req, cctx.ioPolicy());
 

@@ -18,8 +18,11 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
 
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.UUID;
 import javax.cache.processor.EntryProcessor;
+
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.internal.GridDirectTransient;
@@ -99,6 +102,62 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
 
     /** Additional flags. */
     protected byte flags;
+
+    /** */
+    protected UpdateErrors errs;
+
+    /**
+     * @return Collection of failed keys.
+     */
+    public Collection<KeyCacheObject> failedKeys() {
+        return errs != null ? errs.failedKeys() : null;
+    }
+
+    /**
+     * Adds key to collection of failed keys.
+     *
+     * @param key Key to add.
+     * @param e Error cause.
+     */
+    public synchronized void addFailedKey(KeyCacheObject key, Throwable e) {
+        assert key != null;
+        assert e != null;
+
+        if (errs == null)
+            errs = new UpdateErrors();
+
+        errs.addFailedKey(key, e);
+    }
+
+    /**
+     * Adds keys to collection of failed keys.
+     *
+     * @param keys Key to add.
+     * @param e Error cause.
+     */
+    synchronized void addFailedKeys(Collection<KeyCacheObject> keys, Throwable e) {
+        if (errs == null)
+            errs = new UpdateErrors();
+
+        errs.addFailedKeys(keys, e);
+    }
+
+    /**
+     * Sets update error.
+     *
+     * @param err Error.
+     */
+    public void error(IgniteCheckedException err) {
+        if (errs == null)
+            errs = new UpdateErrors();
+
+        errs.onError(err);
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteCheckedException error() {
+        return errs != null ? errs.error() : null;
+    }
 
     /**
      * Empty constructor required by {@link Externalizable}.
@@ -555,6 +614,12 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
 
                 writer.incrementState();
 
+            case 13:
+                if (!writer.writeMessage("errs", errs))
+                    return false;
+
+                writer.incrementState();
+
         }
 
         return true;
@@ -647,6 +712,13 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
 
                 reader.incrementState();
 
+            case 13:
+                errs = reader.readMessage("errs");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
         }
 
         return reader.afterMessageRead(GridDhtAtomicAbstractUpdateRequest.class);
