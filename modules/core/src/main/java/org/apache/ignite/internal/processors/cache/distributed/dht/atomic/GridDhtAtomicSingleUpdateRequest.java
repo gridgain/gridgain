@@ -67,7 +67,6 @@ public class GridDhtAtomicSingleUpdateRequest extends GridDhtAtomicAbstractUpdat
      */
     public GridDhtAtomicSingleUpdateRequest() {
         // No-op.
-        System.out.println();
     }
 
     /**
@@ -109,7 +108,6 @@ public class GridDhtAtomicSingleUpdateRequest extends GridDhtAtomicAbstractUpdat
             addDepInfo,
             keepBinary,
             skipStore);
-        System.out.println();
     }
 
     /**
