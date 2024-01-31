@@ -16,11 +16,27 @@
 
 package org.apache.ignite.cache.query;
 
+import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
+import org.apache.ignite.transactions.TransactionException;
+
+import javax.cache.CacheException;
 import java.util.List;
 
 /**
  * Query result cursor. Implements {@link Iterable} only for convenience, e.g. {@link #iterator()}
  * can be obtained only once. Also if iteration is started then {@link #getAll()} method calls are prohibited.
+ * <p/>
+ * During execution, {@link #getAll()} and {@link #iterator()} may throw exceptions:
+ * <ul>
+ *   <li>{@link SqlMemoryQuotaExceededException} if the query memory quota is exceeded</li>
+ *   <li>{@link CacheException} if an error occurs, possibly caused by:
+ *       <ul>
+ *           <li>{@link TransactionException}</li>
+ *           <li>{@link QueryRetryException}</li>
+ *           <li>{@link QueryCancelledException}</li>
+ *       </ul>
+ *   </li>
+ * </ul>
  */
 public interface QueryCursor<T> extends Iterable<T>, AutoCloseable {
     /**
