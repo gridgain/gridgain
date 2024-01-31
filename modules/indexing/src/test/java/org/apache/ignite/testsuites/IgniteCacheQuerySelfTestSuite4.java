@@ -62,30 +62,6 @@ import org.junit.runners.Suite;
     CacheContinuousQueryAsyncFailoverAtomicSelfTest.class,
     CacheContinuousQueryAsyncFailoverTxReplicatedSelfTest.class,
     CacheContinuousQueryAsyncFailoverTxSelfTest.class,
-
-    // Index queries.
-    // TODO Remove after https://ggsystems.atlassian.net/browse/GG-38392
-    IndexQueryAllTypesTest.class,
-    IndexQueryFailoverTest.class,
-    IndexQueryFilterTest.class,
-    IndexQueryKeepBinaryTest.class,
-    IndexQueryLocalTest.class,
-    IndexQueryQueryEntityTest.class,
-    IndexQueryAliasTest.class,
-    IndexQuerySqlIndexTest.class,
-    IndexQueryRangeTest.class,
-    IndexQueryPartitionTest.class,
-    IndexQueryCacheKeyValueFieldsTest.class,
-    IndexQueryCacheKeyValueEscapedFieldsTest.class,
-    IndexQueryWrongIndexTest.class,
-    MultifieldIndexQueryTest.class,
-    MultiTableIndexQuery.class,
-    RepeatedFieldIndexQueryTest.class,
-    ThinClientIndexQueryTest.class,
-    RepeatedFieldIndexQueryTest.class,
-    IndexQueryInCriterionTest.class,
-    IndexQueryInCriterionDescTest.class,
-    IndexQueryLimitTest.class,
 })
 public class IgniteCacheQuerySelfTestSuite4 {
 }
