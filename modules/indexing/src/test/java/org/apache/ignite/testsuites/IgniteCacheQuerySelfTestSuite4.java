@@ -16,26 +16,6 @@
 
 package org.apache.ignite.testsuites;
 
-import org.apache.ignite.cache.query.IndexQueryAliasTest;
-import org.apache.ignite.cache.query.IndexQueryAllTypesTest;
-import org.apache.ignite.cache.query.IndexQueryCacheKeyValueEscapedFieldsTest;
-import org.apache.ignite.cache.query.IndexQueryCacheKeyValueFieldsTest;
-import org.apache.ignite.cache.query.IndexQueryFailoverTest;
-import org.apache.ignite.cache.query.IndexQueryFilterTest;
-import org.apache.ignite.cache.query.IndexQueryInCriterionDescTest;
-import org.apache.ignite.cache.query.IndexQueryInCriterionTest;
-import org.apache.ignite.cache.query.IndexQueryKeepBinaryTest;
-import org.apache.ignite.cache.query.IndexQueryLimitTest;
-import org.apache.ignite.cache.query.IndexQueryLocalTest;
-import org.apache.ignite.cache.query.IndexQueryPartitionTest;
-import org.apache.ignite.cache.query.IndexQueryQueryEntityTest;
-import org.apache.ignite.cache.query.IndexQueryRangeTest;
-import org.apache.ignite.cache.query.IndexQuerySqlIndexTest;
-import org.apache.ignite.cache.query.IndexQueryWrongIndexTest;
-import org.apache.ignite.cache.query.MultiTableIndexQuery;
-import org.apache.ignite.cache.query.MultifieldIndexQueryTest;
-import org.apache.ignite.cache.query.RepeatedFieldIndexQueryTest;
-import org.apache.ignite.cache.query.ThinClientIndexQueryTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryAsyncFailoverAtomicSelfTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryAsyncFailoverTxReplicatedSelfTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryAsyncFailoverTxSelfTest;
