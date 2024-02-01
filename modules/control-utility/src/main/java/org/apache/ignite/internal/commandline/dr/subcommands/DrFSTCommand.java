@@ -145,7 +145,7 @@ public class DrFSTCommand
     /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
         return arg().legacyMode() || arg().action() == Action.START ?
-            "Warning: this command will execute full state transfer for all caches. This migth take a long time." : null;
+            "Warning: this command will execute full state transfer for all caches. This might take a long time." : null;
     }
 
     /** {@inheritDoc} */
