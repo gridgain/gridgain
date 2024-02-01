@@ -43,7 +43,6 @@ import org.junit.runners.Suite;
 /**
  * Suite with tests for {@link IndexQuery}.
  */
-// TODO Create TeamCity configuration https://ggsystems.atlassian.net/browse/GG-38392
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     IndexQueryAllTypesTest.class,
