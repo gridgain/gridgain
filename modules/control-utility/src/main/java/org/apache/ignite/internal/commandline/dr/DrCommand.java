@@ -97,7 +97,7 @@ public class DrCommand extends AbstractCommand<Object> {
             optional(DrCacheCommand.METRICS_PARAM),
             optional(DrCacheCommand.CACHE_FILTER_PARAM, join("|", DrCacheCommand.CacheFilter.values())),
             optional(DrCacheCommand.SENDER_GROUP_PARAM, "<groupName>|" + join("|", DrCacheCommand.SenderGroup.values())),
-            optional(DrCacheCommand.ACTION_PARAM, DrCacheCommand.Action.START.text() + "|" + DrCacheCommand.Action.STOP.text()),
+            optional(DrCacheCommand.ACTION_PARAM, DrCacheCommand.Action.START.argName() + "|" + DrCacheCommand.Action.STOP.argName()),
             optional(CMD_AUTO_CONFIRMATION)
         );
 
@@ -113,7 +113,7 @@ public class DrCommand extends AbstractCommand<Object> {
                 "data center is configured:",
             DATA_CENTER_REPLICATION,
             FULL_STATE_TRANSFER.toString(),
-            optional(DrFSTCommand.Action.START.action()),
+            optional(DrFSTCommand.Action.START.argName()),
             optional(SNAPSHOT_ID, "<snapshotId>"),
             optional(CACHES_PARAM, "<cacheName1, ...>"),
             optional(SENDER_GROUP, "<groupName>|ALL|DEFAULT|NONE"),
@@ -125,7 +125,7 @@ public class DrCommand extends AbstractCommand<Object> {
         usage(log, "Cancel active full state transfer by id:",
             DATA_CENTER_REPLICATION,
             FULL_STATE_TRANSFER.toString(),
-            DrFSTCommand.Action.CANCEL.action(),
+            DrFSTCommand.Action.CANCEL.argName(),
             "<fullStateTransferUID>",
             optional(CMD_AUTO_CONFIRMATION)
         );
@@ -133,7 +133,7 @@ public class DrCommand extends AbstractCommand<Object> {
         usage(log, "Print list of active full state transfers:",
             DATA_CENTER_REPLICATION,
             FULL_STATE_TRANSFER.toString(),
-            DrFSTCommand.Action.LIST.action()
+            DrFSTCommand.Action.LIST.argName()
         );
 
         usage(log, "Stop data center replication on all caches in cluster:",

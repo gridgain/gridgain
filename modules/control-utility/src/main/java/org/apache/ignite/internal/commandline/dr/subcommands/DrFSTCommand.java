@@ -32,6 +32,8 @@ import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientDisconnectedException;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
+import org.apache.ignite.internal.commandline.argument.CommandArg;
+import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -41,13 +43,12 @@ import org.apache.ignite.internal.visor.dr.VisorDrCacheTaskArgs;
 import org.apache.ignite.internal.visor.dr.VisorDrCacheTaskResult;
 import org.apache.ignite.internal.visor.dr.VisorDrFSTCmdArgs;
 import org.apache.ignite.lang.IgniteUuid;
+
 import static org.apache.ignite.internal.IgniteFeatures.NEW_DR_FST_COMMANDS;
 import static org.apache.ignite.internal.client.util.GridClientUtils.applyFilter;
 import static org.apache.ignite.internal.commandline.CommandHandler.DELIM;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
-import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CHECK;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.FULL_STATE_TRANSFER;
-import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
 
 /** */
 public class DrFSTCommand
@@ -111,7 +112,7 @@ public class DrFSTCommand
                     return new VisorDrFSTCmdArgs(action.ordinal(), params0.operationId());
 
                 default:
-                    throw new IllegalArgumentException("Action [" + action.action() + "] not supported.");
+                    throw new IllegalArgumentException("Action [" + action.argName() + "] not supported.");
             }
         }
 
@@ -145,7 +146,7 @@ public class DrFSTCommand
     /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
         return arg().legacyMode() || arg().action() == Action.START ?
-            "Warning: this command will execute full state transfer for all caches. This migth take a long time." : null;
+            "Warning: this command will execute full state transfer for all caches. This might take a long time." : null;
     }
 
     /** {@inheritDoc} */
@@ -172,7 +173,7 @@ public class DrFSTCommand
 
         String actionStr = argIter.nextArg("One of possible actions: " + actions + " is required.");
 
-        Action action = Action.parse(actionStr);
+        Action action = CommandArgUtils.ofArg(Action.class, actionStr);
 
         if (action == null)
             throw new IllegalArgumentException("Action [" + actionStr + "] not supported.");
@@ -252,7 +253,7 @@ public class DrFSTCommand
     }
 
     /** FST actions. */
-    public enum Action {
+    public enum Action implements CommandArg {
         /** Start FST. */
         START("start", new ParseStart()),
 
@@ -263,30 +264,20 @@ public class DrFSTCommand
         LIST("list", new ParseNone());
 
         /** String representation. */
-        private final String action;
+        private final String name;
 
         /** */
         private final ParseAction parseAction;
 
         /** */
         Action(String item, ParseAction parseAction) {
-            action = item;
+            name = item;
             this.parseAction = parseAction;
         }
 
-        /** */
-        public String action() {
-            return action;
-        }
-
-        /** */
-        public static Action parse(String item) {
-            for (Action action : values()) {
-                if (action.action.equalsIgnoreCase(item))
-                    return action;
-            }
-
-            return null;
+        /** {@inheritDoc} */
+        @Override public String argName() {
+            return name;
         }
 
         /**
@@ -298,12 +289,12 @@ public class DrFSTCommand
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return action;
+            return name;
         }
     }
 
     /** */
-    private static interface ActionParams {
+    private interface ActionParams {
     }
 
     /** */
@@ -413,7 +404,7 @@ public class DrFSTCommand
     }
 
     /** */
-    private static interface ParseAction<T extends ActionParams> {
+    private interface ParseAction<T extends ActionParams> {
         /** Parse further params. */
         T parse(CommandArgIterator argIter);
     }
@@ -453,6 +444,7 @@ public class DrFSTCommand
         /** Data center id`s. */
         public static final String DATA_CENTERS = "--data-centers";
 
+        /** Sync mode flag. */
         public static final String SYNC_MODE = "--sync";
 
         /** {@inheritDoc} */
@@ -461,7 +453,7 @@ public class DrFSTCommand
             Long snapshotId = null;
             DrCacheCommand.SenderGroup sndGrp = DrCacheCommand.SenderGroup.ALL;
             String sndGrpName = null;
-            Set<Byte> dcIds = null;
+            final Set<Byte> dcIds = new HashSet<>();
             boolean syncMode = false;
 
             while (argIter.hasNextSubArg()) {
@@ -469,29 +461,17 @@ public class DrFSTCommand
 
                 switch (nextArg.toLowerCase(Locale.ENGLISH)) {
                     case SNAPSHOT_ID:
-                        snapshotId = Long.parseLong(argIter.nextArg("Snapshot identificator expected."));
+                        snapshotId = argIter.nextLongArg("snapshot identificator");
                         break;
 
                     case CACHES_PARAM:
-                        if (!argIter.hasNextSubArg())
-                            throw new IllegalArgumentException(
-                                "Set of cache names for '" + nextArg + "' parameter expected.");
-
-                        caches = argIter.parseStringSet(argIter.nextArg(""));
-
-                        if (F.constainsStringIgnoreCase(caches, UTILITY_CACHE_NAME)) {
-                            throw new IllegalArgumentException(
-                                CHECK + " not allowed for `" + UTILITY_CACHE_NAME + "` cache."
-                            );
-                        }
+                        caches = CommandArgUtils.validateCachesArgument(argIter.nextCachesSet(CACHES_PARAM), FULL_STATE_TRANSFER.toString());
                         break;
 
                     case SENDER_GROUP:
-                        argIter.nextArg(null);
+                        String arg = argIter.nextArgValue(SENDER_GROUP);
 
-                        String arg = argIter.nextArg(SENDER_GROUP + " parameter value required.");
-
-                        sndGrp = DrCacheCommand.SenderGroup.parse(arg);
+                        sndGrp = CommandArgUtils.ofEnum(DrCacheCommand.SenderGroup.class, arg);
 
                         if (sndGrp == null)
                             sndGrpName = arg;
@@ -499,23 +479,14 @@ public class DrFSTCommand
                         break;
 
                     case DATA_CENTERS:
-                        if (!argIter.hasNextSubArg())
-                            throw new IllegalArgumentException(
-                                "Set of datacenter id`s for '" + nextArg + "' parameter expected.");
+                        Set<String> dcIdsStr = argIter.nextNonEmptyStringSet("set of datacenter ids for '" + DATA_CENTERS + "' parameter");
 
-                        Set<String> dcIdsStr = argIter.parseStringSet(argIter.nextArg(""));
-
-                        dcIds = new HashSet<>();
-
-                        Set<Byte> dcIds0 = dcIds;
-
-                        dcIdsStr.forEach(dc -> dcIds0.add(Byte.parseByte(dc)));
+                        dcIdsStr.forEach(dc -> dcIds.add(Byte.parseByte(dc)));
 
                         break;
 
                     case SYNC_MODE:
                         syncMode = true;
-
                         break;
 
                     default:
