@@ -138,6 +138,20 @@ fi
 # Final CONTROL_JVM_OPTS for Java 9+ compatibility
 #
 CONTROL_JVM_OPTS=$(getJavaSpecificOpts $version "$CONTROL_JVM_OPTS")
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED"
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-exports=java.base/sun.nio.ch=ALL-UNNAMED"
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED"
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED"
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED"
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED"
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/java.io=ALL-UNNAMED"
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/java.nio=ALL-UNNAMED"
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/java.util=ALL-UNNAMED"
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/java.lang=ALL-UNNAMED"
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --illegal-access=warn"
 
 if [ -n "${JVM_OPTS}" ] ; then
   echo "JVM_OPTS environment variable is set, but will not be used. To pass JVM options use CONTROL_JVM_OPTS"
