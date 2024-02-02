@@ -23,7 +23,7 @@
 <suppressions>
     <suppress checks="EmptyLineSeparator|SingleSpaceSeparator|MethodParamPad" files="BCrypt\.java|ConcurrentLinkedDeque8\.java"/>
 
-    <suppress checks="SingleSpaceSeparator" files="JdbcThinCacheToJdbcDataTypesCoverageTest\.java" lines="86-103"/>
+    <suppress checks="SingleSpaceSeparator" files="JdbcThinCacheToJdbcDataTypesCoverageTest\.java" lines="87-104"/>
 
     <suppress checks="EmptyLineSeparator|GenericWhitespace|SingleSpaceSeparator|NoWhitespaceBefore|WhitespaceAround|org.apache.ignite.tools.checkstyle.OverrideAnnotationOnTheSameLineCheck"
               files="modules[\/\\]h2[\/\\].*\.java"/>
