@@ -61,6 +61,7 @@ import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.ContinuousQueryWithTransformer;
 import org.apache.ignite.cache.query.ContinuousQueryWithTransformer.EventListener;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.IndexQuery;
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.QueryDetailMetrics;
@@ -814,6 +815,9 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
 
             if (qry instanceof SqlQuery)
                 return (QueryCursor<R>)ctx.kernalContext().query().querySql(ctx, (SqlQuery)qry, keepBinary);
+
+            if (qry instanceof IndexQuery)
+                return (QueryCursor<R>)ctx.kernalContext().query().queryIndex(ctx, (IndexQuery)qry, keepBinary);
 
             if (qry instanceof SqlFieldsQuery) {
                 FieldsQueryCursor<R> cursor = (FieldsQueryCursor<R>)ctx.kernalContext().query().querySqlFields(ctx, (SqlFieldsQuery)qry,
