@@ -25,6 +25,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
 import org.apache.ignite.spi.tracing.TracingConfigurationManager;
@@ -147,6 +148,8 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
         @NotNull TracingConfigurationCoordinates coordinates,
         @NotNull TracingConfigurationParameters parameters)
     {
+        ctx.security().authorize(SecurityPermission.TRACING_CONFIGURATION_UPDATE);
+
         HashMap<TracingConfigurationCoordinates, TracingConfigurationParameters> newTracingConfiguration =
             new HashMap<>(tracingConfiguration);
 
@@ -188,6 +191,8 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
 
     /** {@inheritDoc} */
     @Override public void reset(@NotNull TracingConfigurationCoordinates coordinates) {
+        ctx.security().authorize(SecurityPermission.TRACING_CONFIGURATION_UPDATE);
+
         HashMap<TracingConfigurationCoordinates, TracingConfigurationParameters> newTracingConfiguration =
             new HashMap<>(tracingConfiguration);
 
@@ -210,6 +215,8 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
 
     /** {@inheritDoc} */
     @Override public void resetAll(@Nullable Scope scope) throws IgniteException {
+        ctx.security().authorize(SecurityPermission.TRACING_CONFIGURATION_UPDATE);
+
         HashMap<TracingConfigurationCoordinates, TracingConfigurationParameters> newTracingConfiguration;
 
         if (scope != null) {

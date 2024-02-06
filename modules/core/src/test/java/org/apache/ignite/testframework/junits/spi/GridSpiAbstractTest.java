@@ -738,6 +738,11 @@ public abstract class GridSpiAbstractTest<T extends IgniteSpi> extends GridAbstr
         }
 
         /** {@inheritDoc} */
+        @Override public Collection<SecurityPermission> tracingPermissions() {
+            return Collections.emptySet();
+        }
+
+        /** {@inheritDoc} */
         @Nullable @Override public Collection<SecurityPermission> systemPermissions() {
             return null;
         }

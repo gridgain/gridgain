@@ -415,6 +415,11 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         }
 
         /** {@inheritDoc} */
+        @Override public boolean tracingOperationAllowed(SecurityPermission perm) {
+            return false;
+        }
+
+        /** {@inheritDoc} */
         @Override public boolean systemOperationAllowed(SecurityPermission perm) {
             return false;
         }
@@ -495,6 +500,11 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         /** {@inheritDoc} */
         @Override public Map<String, Collection<SecurityPermission>> servicePermissions() {
             return Collections.emptyMap();
+        }
+
+        /** {@inheritDoc} */
+        @Override public Collection<SecurityPermission> tracingPermissions() {
+            return Collections.emptySet();
         }
 
         /** {@inheritDoc} */
