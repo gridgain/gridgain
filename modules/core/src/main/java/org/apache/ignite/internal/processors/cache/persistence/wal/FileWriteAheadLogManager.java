@@ -44,10 +44,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.locks.LockSupport;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -384,6 +387,18 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     /** Pointer to the last successful checkpoint until which WAL segments can be safely deleted. */
     private volatile FileWALPointer lastCheckpointPtr = new FileWALPointer(0, 0, 0);
 
+    private final boolean useAsyncRollover;
+
+    /**
+     * WAL segment status in case of async close.
+     * 0 - segment closed.
+     * 1 - segment active/in use.
+     * -1 - segment inactive and scheduled for closing.
+     */
+    private final AtomicIntegerArray segmentStatus;
+
+    private final WalSegmentAsyncCloser walSegmentAsyncCloser;
+
     /**
      * Constructor.
      *
@@ -424,6 +439,19 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             / dsCfg.getWalSegmentSize());
 
         switchSegmentRecordOffset = isArchiverEnabled() ? new AtomicLongArray(dsCfg.getWalSegments()) : null;
+
+        //todo temp
+        useAsyncRollover = mode != WALMode.FSYNC;
+
+        segmentStatus = useAsyncRollover ? new AtomicIntegerArray(dsCfg.getWalSegments()) : null;
+
+        if (useAsyncRollover)
+            walSegmentAsyncCloser = new WalSegmentAsyncCloser(
+                    cctx.igniteInstanceName(),
+                    cctx.kernalContext().log(WalSegmentAsyncCloser.class)
+            );
+        else
+            walSegmentAsyncCloser = null;
     }
 
     /**
@@ -517,7 +545,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             segmentRouter = new SegmentRouter(walWorkDir, walArchiveDir, segmentAware, dsCfg);
 
             fileHandleManager = fileHandleManagerFactory.build(
-                cctx, metrics, mmap, serializer, this::currentHandle
+                cctx, metrics, mmap, serializer, this::currentHandle, useAsyncRollover
             );
 
             lockedSegmentFileInputFactory = new LockedSegmentFileInputFactory(
@@ -684,6 +712,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             if (cleaner != null)
                 cleaner.shutdown();
+
+            if (walSegmentAsyncCloser != null)
+                walSegmentAsyncCloser.shutdown();
         }
         catch (IgniteInterruptedCheckedException e) {
             U.error(log, "Failed to gracefully shutdown WAL components, thread was interrupted.", e);
@@ -735,6 +766,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         assert lastPtr == null || lastPtr instanceof FileWALPointer;
 
         startArchiveWorkers();
+
+        if (walSegmentAsyncCloser != null)
+            walSegmentAsyncCloser.restart();
 
         assert (isArchiverEnabled() && archiver != null) || (!isArchiverEnabled() && archiver == null) :
             "Trying to restore FileWriteHandle on deactivated write ahead log manager";
@@ -1310,7 +1344,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         if (hnd != cur)
             return hnd;
 
-        if (hnd.close(true)) {
+        if (closeHandle(hnd, true)) {
             if (metrics.metricsEnabled())
                 metrics.onWallRollOver();
 
@@ -1370,6 +1404,43 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             hnd.awaitNext();
 
         return currentHandle();
+    }
+
+    private boolean closeHandle(FileWriteHandle hnd, boolean rollover) throws IgniteCheckedException {
+        if (useAsyncRollover) {
+            boolean statusChanged = setSegmentStatus(
+                    hnd.getSegmentId(),
+                    SegmentStatus.ACTIVE,
+                    SegmentStatus.SCHEDULED_FOR_CLOSE
+            );
+
+            walSegmentAsyncCloser.add(hnd, rollover);
+
+            if (statusChanged && log.isDebugEnabled())
+                log.debug("Status for segment " + hnd.getSegmentId() +
+                        " was changed to " + SegmentStatus.SCHEDULED_FOR_CLOSE);
+
+            return true;
+        }
+
+        boolean closed = hnd.close(rollover);
+
+        if (closed) {
+            boolean statusChanged = setSegmentStatus(hnd.getSegmentId(), SegmentStatus.ACTIVE, SegmentStatus.CLOSED);
+
+            if (statusChanged && log.isDebugEnabled())
+                log.debug("Status for segment " + hnd.getSegmentId() + " was changed to " + SegmentStatus.CLOSED);
+        }
+
+        return closed;
+    }
+
+    private boolean setSegmentStatus(long segmentId, SegmentStatus expectedStatus, SegmentStatus newStatus) {
+        if (segmentStatus == null)
+            return false;
+
+        int idx = (int) segmentId % segmentStatus.length();
+        return segmentStatus.compareAndSet(idx, expectedStatus.intCode, newStatus.intCode);
     }
 
     /**
@@ -3621,4 +3692,80 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     @Override public void startAutoReleaseSegments() {
         segmentAware.startAutoReleaseSegments();
     }
+
+    private enum SegmentStatus {
+        CLOSED(0),
+        ACTIVE(1),
+        SCHEDULED_FOR_CLOSE(-1);
+
+        final int intCode;
+
+        SegmentStatus(int intCode) {
+            this.intCode = intCode;
+        }
+    }
+
+    private class WalSegmentAsyncCloser extends GridWorker {
+
+        final ConcurrentLinkedQueue<IgniteBiTuple<FileWriteHandle, Boolean>> tasks = new ConcurrentLinkedQueue<>();
+
+        public WalSegmentAsyncCloser(@Nullable String igniteInstanceName, IgniteLogger log) {
+            super(igniteInstanceName, "wal-segment-async-closer", log);
+        }
+
+        @Override protected void body() throws InterruptedException, IgniteInterruptedCheckedException {
+            while (!isCancelled()) {
+                processRemainingTasks();
+
+                LockSupport.park();
+            }
+        }
+
+        private void processRemainingTasks() {
+            while (!tasks.isEmpty()) {
+                IgniteBiTuple<FileWriteHandle, Boolean> task = tasks.poll();
+
+                FileWriteHandle hnd = task.get1();
+                Boolean rollover = task.get2();
+
+                try {
+                    boolean closed = hnd.close(rollover);
+
+                    if (closed)
+                        setSegmentStatus(hnd.getSegmentId(), SegmentStatus.SCHEDULED_FOR_CLOSE, SegmentStatus.CLOSED);
+
+                } catch (IgniteCheckedException e) {
+                    cctx.kernalContext().failure().process(new FailureContext(CRITICAL_ERROR, e));
+                }
+            }
+        }
+
+        public void add(FileWriteHandle hnd, boolean rollover) {
+            tasks.offer(new IgniteBiTuple<>(hnd, rollover));
+
+            LockSupport.unpark(runner());
+        }
+
+        private void shutdown() throws IgniteInterruptedCheckedException {
+            synchronized (this) {
+                U.cancel(this);
+            }
+            // in case of cluster deactivation
+            processRemainingTasks();
+
+            U.join(runner());
+        }
+
+        /**
+         * Restart worker in IgniteThread.
+         */
+        private void restart() {
+            assert runner() == null : "WalSegmentSyncer is running.";
+
+            isCancelled.set(false);
+
+            new IgniteThread(walSegmentAsyncCloser).start();
+        }
+    }
+
 }

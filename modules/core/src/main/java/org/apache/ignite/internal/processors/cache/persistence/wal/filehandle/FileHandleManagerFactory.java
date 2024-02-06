@@ -55,7 +55,8 @@ public class FileHandleManagerFactory {
         DataStorageMetricsImpl metrics,
         boolean mmap,
         RecordSerializer serializer,
-        Supplier<FileWriteHandle> currHandleSupplier
+        Supplier<FileWriteHandle> currHandleSupplier,
+        boolean useAsyncRollover
     ) {
         if (dsConf.getWalMode() == WALMode.FSYNC && !walFsyncWithDedicatedWorker)
             return new FsyncFileHandleManagerImpl(
@@ -78,7 +79,8 @@ public class FileHandleManagerFactory {
                 dsConf.getWalMode(),
                 dsConf.getWalBufferSize(),
                 dsConf.getWalSegmentSize(),
-                dsConf.getWalFsyncDelayNanos()
+                dsConf.getWalFsyncDelayNanos(),
+                useAsyncRollover
             );
     }
 }
