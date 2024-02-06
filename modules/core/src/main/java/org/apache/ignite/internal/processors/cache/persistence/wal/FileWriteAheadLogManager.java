@@ -134,6 +134,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT;
@@ -447,8 +448,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         if (useAsyncRollover)
             walSegmentAsyncCloser = new WalSegmentAsyncCloser(
-                    cctx.igniteInstanceName(),
-                    cctx.kernalContext().log(WalSegmentAsyncCloser.class)
+                    ctx.igniteInstanceName(),
+                    ctx.log(WalSegmentAsyncCloser.class)
             );
         else
             walSegmentAsyncCloser = null;
@@ -1410,7 +1411,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         if (useAsyncRollover) {
             boolean statusChanged = setSegmentStatus(
                     hnd.getSegmentId(),
-                    SegmentStatus.ACTIVE,
+                    asList(SegmentStatus.ACTIVE, SegmentStatus.SCHEDULED_FOR_CLOSE),
                     SegmentStatus.SCHEDULED_FOR_CLOSE
             );
 
@@ -1426,7 +1427,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         boolean closed = hnd.close(rollover);
 
         if (closed) {
-            boolean statusChanged = setSegmentStatus(hnd.getSegmentId(), SegmentStatus.ACTIVE, SegmentStatus.CLOSED);
+            boolean statusChanged = setSegmentStatus(hnd.getSegmentId(), asList(SegmentStatus.ACTIVE), SegmentStatus.CLOSED);
 
             if (statusChanged && log.isDebugEnabled())
                 log.debug("Status for segment " + hnd.getSegmentId() + " was changed to " + SegmentStatus.CLOSED);
@@ -1435,12 +1436,27 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         return closed;
     }
 
-    private boolean setSegmentStatus(long segmentId, SegmentStatus expectedStatus, SegmentStatus newStatus) {
+    private boolean setSegmentStatus(long segmentId, List<SegmentStatus> expected, SegmentStatus newStatus) {
         if (segmentStatus == null)
             return false;
 
         int idx = (int) segmentId % segmentStatus.length();
-        return segmentStatus.compareAndSet(idx, expectedStatus.intCode, newStatus.intCode);
+        int curCode;
+        do {
+            curCode = segmentStatus.get(idx);
+
+            if (curCode == newStatus.intCode)
+                return false;
+
+            SegmentStatus curStatus = SegmentStatus.byCode(curCode);
+
+            if (!expected.contains(curStatus)){
+                return false;
+            }
+
+        } while (segmentStatus.compareAndSet(idx, curCode, newStatus.intCode));
+
+        return true;
     }
 
     /**
@@ -2973,7 +2989,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 if (!F.isEmpty(descs)) {
                     if (descs[0].idx() > start.index())
                         throw new IgniteCheckedException("WAL history is too short " +
-                            "[descs=" + Arrays.asList(descs) + ", start=" + start + ']');
+                            "[descs=" + asList(descs) + ", start=" + start + ']');
 
                     for (AbstractFileDescriptor desc : descs) {
                         if (desc.idx() == start.index()) {
@@ -3703,10 +3719,18 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         SegmentStatus(int intCode) {
             this.intCode = intCode;
         }
+
+        static SegmentStatus byCode(int intCode) {
+            for (SegmentStatus segmentStatus : SegmentStatus.values()) {
+                if (segmentStatus.intCode == intCode)
+                    return segmentStatus;
+            }
+
+            return null;
+        }
     }
 
     private class WalSegmentAsyncCloser extends GridWorker {
-
         final ConcurrentLinkedQueue<IgniteBiTuple<FileWriteHandle, Boolean>> tasks = new ConcurrentLinkedQueue<>();
 
         public WalSegmentAsyncCloser(@Nullable String igniteInstanceName, IgniteLogger log) {
@@ -3732,7 +3756,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     boolean closed = hnd.close(rollover);
 
                     if (closed)
-                        setSegmentStatus(hnd.getSegmentId(), SegmentStatus.SCHEDULED_FOR_CLOSE, SegmentStatus.CLOSED);
+                        setSegmentStatus(hnd.getSegmentId(), asList(SegmentStatus.SCHEDULED_FOR_CLOSE), SegmentStatus.CLOSED);
 
                 } catch (IgniteCheckedException e) {
                     cctx.kernalContext().failure().process(new FailureContext(CRITICAL_ERROR, e));
