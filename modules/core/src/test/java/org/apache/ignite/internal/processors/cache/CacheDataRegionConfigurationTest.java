@@ -153,56 +153,6 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
 
         ccfg = new CacheConfiguration(DEFAULT_CACHE_NAME);
 
-        boolean oomeThrown = false;
-
-        try {
-            startGrid(0);
-        }
-        catch (Exception e) {
-            Throwable cause = e;
-
-            do {
-                if (cause instanceof IgniteOutOfMemoryException) {
-                    oomeThrown = true;
-                    break;
-                }
-
-                if (cause == null)
-                    break;
-
-                if (cause.getSuppressed() == null || cause.getSuppressed().length == 0)
-                    cause = cause.getCause();
-                else
-                    cause = cause.getSuppressed()[0];
-            }
-            while (true);
-        }
-
-        if (!oomeThrown)
-            fail("OutOfMemoryException hasn't been thrown");
-    }
-
-    /**
-     * Verifies that {@link IgniteOutOfMemoryException} is thrown when cache is configured with too small DataRegion.
-     */
-    @Test
-    public void testSmallDataRegion() throws Exception {
-        memCfg = new DataStorageConfiguration();
-
-        DataRegionConfiguration dfltPlcCfg = new DataRegionConfiguration();
-        dfltPlcCfg.setName("dfltPlc");
-        dfltPlcCfg.setInitialSize(DFLT_MEM_PLC_SIZE);
-        dfltPlcCfg.setMaxSize(2 * DFLT_MEM_PLC_SIZE);
-
-        DataRegionConfiguration bigPlcCfg = new DataRegionConfiguration();
-        bigPlcCfg.setName("bigPlc");
-        bigPlcCfg.setMaxSize(BIG_MEM_PLC_SIZE);
-
-        memCfg.setDataRegionConfigurations(bigPlcCfg);
-        memCfg.setDefaultDataRegionConfiguration(dfltPlcCfg);
-
-        ccfg = new CacheConfiguration(DEFAULT_CACHE_NAME);
-
         IgniteEx ignite0 = startGrid(0);
 
         IgniteCache<Object, Object> cache = ignite0.cache(DEFAULT_CACHE_NAME);

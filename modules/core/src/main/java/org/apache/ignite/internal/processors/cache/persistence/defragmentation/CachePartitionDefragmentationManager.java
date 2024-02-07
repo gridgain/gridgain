@@ -65,7 +65,7 @@ import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
 import org.apache.ignite.internal.processors.cache.tree.DataRow;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingRow;
-import org.apache.ignite.internal.processors.cache.tree.updatelog.PartitionLogTree;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLog;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogRow;
 import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
@@ -879,12 +879,16 @@ public class CachePartitionDefragmentationManager {
 
     /** */
     private void copyLogTree(PartitionContext partCtx, TreeIterator treeIter) throws IgniteCheckedException {
-        PartitionLogTree oldLogTree = partCtx.oldCacheDataStore.logTree();
-        PartitionLogTree newLogTree = partCtx.newCacheDataStore.logTree();
+        if (!partCtx.oldCacheDataStore.logTree().hasTree()) {
+            return;
+        }
+
+        UpdateLog oldUpdateLog = partCtx.oldCacheDataStore.logTree();
+        UpdateLog newUpdateLog = partCtx.newCacheDataStore.logTree();
 
         AtomicBoolean warningPrinted = new AtomicBoolean();
 
-        treeIter.iterate(oldLogTree, partCtx.cachePageMemory, (tree, io, pageAddr, idx) -> {
+        treeIter.iterate(oldUpdateLog.tree(), partCtx.cachePageMemory, (tree, io, pageAddr, idx) -> {
             UpdateLogRow oldRow = tree.getRow(io, pageAddr, idx);
 
             long newLink = partCtx.linkMap.get(oldRow.link());
@@ -907,7 +911,7 @@ public class CachePartitionDefragmentationManager {
             defragmentationCheckpoint.checkpointTimeoutLock().checkpointReadLock();
 
             try {
-                newLogTree.putx(newRow);
+                newUpdateLog.put(newRow);
             }
             finally {
                 defragmentationCheckpoint.checkpointTimeoutLock().checkpointReadUnlock();

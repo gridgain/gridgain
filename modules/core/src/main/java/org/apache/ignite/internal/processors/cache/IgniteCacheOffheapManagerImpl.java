@@ -94,6 +94,9 @@ import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccMinSearc
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccSnapshotSearchRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccTreeClosure;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.PartitionLogTree;
+import org.apache.ignite.internal.Factory;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLog;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogImpl;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
@@ -1333,22 +1336,23 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             FLAG_IDX
         );
 
-        String logTreeName = BPlusTree.treeName(grp.cacheOrGroupName() + "-p-" + p, "CacheData");
+        Factory<PartitionLogTree> factory = () ->
+            new PartitionLogTree(
+                grp,
+                p,
+                BPlusTree.treeName(grp.cacheOrGroupName() + "-p-" + p, "CacheData"),
+                grp.dataRegion().pageMemory(),
+                allocateForTree(),
+                grp.reuseList(),
+                true,
+                ctx.diagnostic().pageLockTracker(),
+                FLAG_IDX,
+                log
+            );
 
-        PartitionLogTree logTree = new PartitionLogTree(
-            grp,
-            p,
-            logTreeName,
-            grp.dataRegion().pageMemory(),
-            allocateForTree(),
-            grp.reuseList(),
-            true,
-            ctx.diagnostic().pageLockTracker(),
-            FLAG_IDX,
-            log
-        );
+        UpdateLogImpl updateLog = new UpdateLogImpl(factory);
 
-        return new CacheDataStoreImpl(p, rowStore, dataTree, logTree, () -> pendingEntries, grp, busyLock, log, null);
+        return new CacheDataStoreImpl(p, rowStore, dataTree, updateLog, () -> pendingEntries, grp, busyLock, log, null);
     }
 
     /** {@inheritDoc} */
@@ -1499,7 +1503,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @param ctx Cache context.
      * @param cacheId Cache id for tree scan.
      * @param tombstone Tombstone.
-     * @param amount The amount to fill.
      * @param upper Upper limit.
      * @param c Fill closure.
      * @return Next entry expiration timestamp.
@@ -1575,7 +1578,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private final CacheDataTree dataTree;
 
         /** */
-        private final PartitionLogTree logTree;
+        private final UpdateLog logTree;
 
         /** */
         private final Supplier<PendingEntriesTree> pendingEntries;
@@ -1631,7 +1634,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 int partId,
                 CacheDataRowStore rowStore,
                 CacheDataTree dataTree,
-                PartitionLogTree logTree,
+                UpdateLog logTree,
                 Supplier<PendingEntriesTree> pendingEntries,
                 CacheGroupContext grp,
                 GridSpinBusyLock busyLock,
@@ -3510,7 +3513,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /** {@inheritDoc} */
-        @Override public PartitionLogTree logTree() {
+        @Override public UpdateLog logTree() {
             return logTree;
         }
 
@@ -3523,7 +3526,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private void removeFromLog(UpdateLogRow row) throws IgniteCheckedException {
             assert row.updateCounter() > 0;
 
-            logTree.removex(row);
+            logTree.remove(row);
         }
 
         /**
@@ -3535,7 +3538,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private void addUpdateToLog(UpdateLogRow row) throws IgniteCheckedException {
             assert row.updateCounter() > 0;
 
-            logTree.putx(row);
+            logTree.put(row);
         }
 
         /** {@inheritDoc} */
