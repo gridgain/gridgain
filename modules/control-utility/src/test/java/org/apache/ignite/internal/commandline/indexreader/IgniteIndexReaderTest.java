@@ -812,7 +812,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
         try {
             for (File dir : workDirs) {
                 corruptFile(dir, INDEX_PARTITION, 5);
-                corruptFile(dir, 0, 10);
+                corruptFile(dir, 0, 8);
             }
 
             String output = runIndexReader(workDirs.get(0), CACHE_GROUP_NAME, null, false);
@@ -846,7 +846,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
 
         try {
             for (File dir : workDirs)
-                corruptFile(dir, 0, 10);
+                corruptFile(dir, 0, 8);
 
             String output = runIndexReader(workDirs.get(0), CACHE_GROUP_NAME, null, false);
 
