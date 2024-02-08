@@ -53,6 +53,7 @@
         <module>modules/extdata/platform</module>
         <module>modules/clients</module>
         <module>modules/spring</module>
+        <module>modules/spring-6</module>
         <module>modules/spring-data-commons</module>
         <module>modules/spring-data-2.2</module>
         <module>modules/web</module>

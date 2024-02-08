@@ -135,6 +135,7 @@
         <slf4j16.version>1.6.4</slf4j16.version>
         <snappy.version>1.1.10.4</snappy.version>
         <spring.version>5.3.31</spring.version>
+        <spring6.version>6.0.16</spring6.version>
         <spring.data-2.2.version>2.2.13.RELEASE</spring.data-2.2.version> <!-- don't forget to update spring version -->
         <spring41.osgi.feature.version>4.1.7.RELEASE_1</spring41.osgi.feature.version>
         <storm.version>1.2.3</storm.version>
