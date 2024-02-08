@@ -16,11 +16,15 @@
 
 package org.apache.ignite.cache.query;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
@@ -29,7 +33,9 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -38,6 +44,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
+import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_IDX_NAME;
 
 /** */
 @RunWith(Parameterized.class)
@@ -109,18 +116,18 @@ public class IndexQueryFilterTest extends GridCommonAbstractTest {
             .setCriteria(lt("age", MAX_AGE))
             .setFilter(nameFilter);
 
-        check(cache.query(qry), nameFilter);
+        check(qry, nameFilter);
 
         qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setCriteria(lt("age", 18))
             .setFilter(nameFilter);
 
-        check(cache.query(qry), (k, v) -> v.age < 18 && nameFilter.apply(k, v));
+        check(qry, (k, v) -> v.age < 18 && nameFilter.apply(k, v));
 
-        qry = new IndexQuery<Integer, Person>(Person.class, idxName)
+        qry = new IndexQuery<Integer, Person>(Person.class, PK_IDX_NAME)
             .setFilter(nameFilter);
 
-        check(cache.query(qry), nameFilter);
+        check(qry, nameFilter);
     }
 
     /** */
@@ -132,7 +139,7 @@ public class IndexQueryFilterTest extends GridCommonAbstractTest {
             .setCriteria(lt("age", MAX_AGE))
             .setFilter(ageFilter);
 
-        check(cache.query(qry), ageFilter);
+        check(qry, ageFilter);
 
         qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setCriteria(lt("age", 18))
@@ -143,7 +150,7 @@ public class IndexQueryFilterTest extends GridCommonAbstractTest {
         qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setFilter(ageFilter);
 
-        check(cache.query(qry), ageFilter);
+        check(qry, ageFilter);
     }
 
     /** */
@@ -155,18 +162,18 @@ public class IndexQueryFilterTest extends GridCommonAbstractTest {
             .setCriteria(lt("age", MAX_AGE))
             .setFilter(keyFilter);
 
-        check(cache.query(qry), keyFilter);
+        check(qry, keyFilter);
 
         qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setCriteria(lt("age", 18))
             .setFilter(keyFilter);
 
-        check(cache.query(qry), (k, v) -> v.age < 18 && keyFilter.apply(k, v));
+        check(qry, (k, v) -> v.age < 18 && keyFilter.apply(k, v));
 
         qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setFilter(keyFilter);
 
-        check(cache.query(qry), keyFilter);
+        check(qry, keyFilter);
     }
 
     /** */
@@ -179,12 +186,12 @@ public class IndexQueryFilterTest extends GridCommonAbstractTest {
             .setCriteria(lt("age", MAX_AGE))
             .setFilter(valFilter);
 
-        check(cache.query(qry), valFilter);
+        check(qry, valFilter);
 
         qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setFilter(valFilter);
 
-        check(cache.query(qry), valFilter);
+        check(qry, valFilter);
     }
 
     /** */
@@ -200,7 +207,7 @@ public class IndexQueryFilterTest extends GridCommonAbstractTest {
             .setCriteria(lt("age", 18))
             .setFilter((k, v) -> true);
 
-        check(cache.query(qry), (k, v) -> v.age < 18);
+        check(qry, (k, v) -> v.age < 18);
 
         qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setCriteria(lt("age", MAX_AGE))
@@ -233,38 +240,95 @@ public class IndexQueryFilterTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void check(QueryCursor<Cache.Entry<Integer, Person>> cursor, IgniteBiPredicate<Integer, Person> filter) {
-        Map<Integer, Person> expected = persons.entrySet().stream()
-            .filter(e -> filter.apply(e.getKey(), e.getValue()))
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    private void check(IndexQuery<Integer, Person> qry, IgniteBiPredicate<Integer, Person> filter) {
+        List<Cache.Entry<Integer, Person>> all = cache.query(qry).getAll();
 
-        List<Cache.Entry<Integer, Person>> all = cursor.getAll();
+        if (qry.getIndexName() == null) { // Unordered results
+            Map<Integer, Person> expected = persons.entrySet().stream()
+                .filter(e -> filter.apply(e.getKey(), e.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        assertEquals(expected.size(), all.size());
+            assertEquals(expected.size(), all.size());
+
+            for (int i = 0; i < all.size(); i++) {
+                Cache.Entry<Integer, Person> entry = all.get(i);
+
+                Person p = expected.remove(entry.getKey());
+
+                assertNotNull(p);
+
+                assertEquals(p, entry.getValue());
+            }
+
+            assertTrue(expected.isEmpty());
+
+            return;
+        }
+
+        boolean pk = PK_IDX_NAME.equals(qry.getIndexName());
+
+        TreeMap<Integer, Set<Person>> expected = pk ? pkPersons(filter) : ageIndexedPersons(filter);
 
         for (int i = 0; i < all.size(); i++) {
+            Map.Entry<Integer, Set<Person>> exp = expected.firstEntry();
+
             Cache.Entry<Integer, Person> entry = all.get(i);
 
-            Person p = expected.remove(entry.getKey());
+            assertTrue(exp.getValue().remove(entry.getValue()));
 
-            assertNotNull(p);
-
-            assertEquals(p, entry.getValue());
+            if (exp.getValue().isEmpty())
+                expected.remove(exp.getKey());
         }
 
         assertTrue(expected.isEmpty());
     }
 
     /** */
+    private TreeMap<Integer, Set<Person>> ageIndexedPersons(IgniteBiPredicate<Integer, Person> filter) {
+        return persons.entrySet().stream()
+            .filter(e -> filter.apply(e.getKey(), e.getValue()))
+            .collect(TreeMap::new, (m, e) -> {
+                int age = e.getValue().age;
+
+                m.computeIfAbsent(age, a -> new HashSet<>());
+
+                m.get(age).add(e.getValue());
+
+            }, (l, r) -> {
+                r.forEach((k, v) -> {
+                    int age = ((Person)v).age;
+
+                    l.computeIfAbsent(age, a -> new HashSet<>());
+
+                    l.get(age).add((Person)v);
+                });
+            });
+    }
+
+    /** */
+    private TreeMap<Integer, Set<Person>> pkPersons(IgniteBiPredicate<Integer, Person> filter) {
+        return persons.entrySet().stream()
+            .filter(e -> filter.apply(e.getKey(), e.getValue()))
+            .collect(
+                TreeMap::new,
+                (m, e) -> m.put(e.getKey(), new HashSet<>(Collections.singleton(e.getValue()))),
+                TreeMap::putAll
+            );
+    }
+
+    /** */
     private static class Person {
         /** */
+        @GridToStringInclude
         final int id;
 
         /** */
+        @GridToStringInclude
         @QuerySqlField(orderedGroups = @QuerySqlField.Group(name = IDX, order = 0))
         final int age;
 
         /** */
+        @GridToStringInclude
         final String name;
 
         /** */
@@ -282,7 +346,7 @@ public class IndexQueryFilterTest extends GridCommonAbstractTest {
             if (o == null || getClass() != o.getClass())
                 return false;
 
-            Person person = (Person) o;
+            Person person = (Person)o;
 
             return Objects.equals(id, person.id) && Objects.equals(age, person.age) && Objects.equals(name, person.name);
         }
@@ -290,6 +354,11 @@ public class IndexQueryFilterTest extends GridCommonAbstractTest {
         /** {@inheritDoc} */
         @Override public int hashCode() {
             return Objects.hash(id, age, name);
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return S.toString(Person.class, this);
         }
     }
 }

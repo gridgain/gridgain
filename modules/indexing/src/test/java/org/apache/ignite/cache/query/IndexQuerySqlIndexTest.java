@@ -28,7 +28,6 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -38,6 +37,7 @@ import org.junit.runners.Parameterized;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.eq;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lte;
+import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_IDX_NAME;
 
 /** */
 @RunWith(Parameterized.class)
@@ -98,12 +98,12 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         tblCache = crd.cache(CACHE_TABLE);
 
-        IndexQuery<Long, Object> qry = new IndexQuery<Long, Object>(Person.class, qryDescIdxName)
+        IndexQuery<Long, Object> qry = new IndexQuery<Long, Object>(Person.class.getSimpleName(), qryDescIdxName)
             .setCriteria(lte("descId", Integer.MAX_VALUE));
 
         assertTrue(tblCache.query(qry).getAll().isEmpty());
 
-        qry = new IndexQuery<>(Person.class, qryDescIdxName);
+        qry = new IndexQuery<>(Person.class.getSimpleName(), qryDescIdxName);
 
         assertTrue(tblCache.query(qry).getAll().isEmpty());
     }
@@ -116,7 +116,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
         tblCache = crd.cache(CACHE_TABLE);
 
         GridTestUtils.assertThrowsAnyCause(null, () -> {
-            IndexQuery<Long, Object> wrongQry = new IndexQuery<Long, Object>(Person.class, qryDescIdxName)
+            IndexQuery<Long, Object> wrongQry = new IndexQuery<Long, Object>(Person.class.getSimpleName(), qryDescIdxName)
                 .setCriteria(lt("descId", Integer.MAX_VALUE));
 
             return cache.query(wrongQry).getAll();
@@ -133,17 +133,17 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         tblCache = crd.cache(CACHE_TABLE);
 
-        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryDescIdxName)
+        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class.getSimpleName(), qryDescIdxName)
             .setCriteria(lt("descId", pivot));
 
         check(qry, 0, pivot);
 
-        qry = new IndexQuery<Long, Person>(Person.class, qryDescIdxName)
+        qry = new IndexQuery<Long, Person>(Person.class.getSimpleName(), qryDescIdxName)
             .setCriteria(lt("DESCID", pivot));
 
         check(qry, 0, pivot);
 
-        qry = new IndexQuery<>(Person.class, qryDescIdxName);
+        qry = new IndexQuery<>(Person.class.getSimpleName(), PK_IDX_NAME);
 
         check(qry, 0, CNT);
     }
@@ -157,7 +157,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         tblCache = crd.cache(CACHE_TABLE);
 
-        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryDescIdxName)
+        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class.getSimpleName(), qryDescIdxName)
             .setCriteria(lt("descId", pivot));
 
         check(qry, 0, pivot);
@@ -182,7 +182,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         String idx = qryDescIdxName == null ? qryDescIdxName : qryDescIdxName.toLowerCase();
 
-        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, idx)
+        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class.getSimpleName(), idx)
             .setCriteria(lt("descId", pivot));
 
         check(qry, 0, pivot);
@@ -207,7 +207,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         tblCache = crd.cache(CACHE_TABLE).withKeepBinary();
 
-        IndexQuery<Long, BinaryObject> qry = new IndexQuery<Long, BinaryObject>(Person.class, qryDescIdxName)
+        IndexQuery<Long, BinaryObject> qry = new IndexQuery<Long, BinaryObject>(Person.class.getSimpleName(), qryDescIdxName)
             .setCriteria(lt("descId", pivot));
 
         checkBinary(tblCache.query(qry), 0, pivot);
@@ -237,7 +237,7 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         tblCache = crd.cache(CACHE_TABLE);
 
-        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryDescIdxName)
+        IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class.getSimpleName(), qryDescIdxName)
             .setCriteria(eq("_KEY", (long)pivot), lte("descId", pivot));
 
         check(qry, pivot, pivot + 1);
@@ -248,28 +248,25 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
      * @param right Last cache key, exclusive.
      */
     private void check(IndexQuery<Long, Person> qry, int left, int right) {
-        boolean pk = qry.getIndexName() == null && F.isEmpty(qry.getCriteria());
-
         List<Cache.Entry<Long, Person>> all = tblCache.query(qry).getAll();
 
-        assertEquals(right - left, all.size());
+        if (qry.getIndexName() == null) {
+            all.sort((o1, o2) -> Long.compare(o2.getKey(), o1.getKey()));
+        }
 
-        // There is no ordering guarantee in the current implementation.
-        Collection<Integer> expected = new TreeSet<>();
-        Collection<Integer> actual = new TreeSet<>();
+        boolean pk = PK_IDX_NAME.equals(qry.getIndexName());
+
+        assertEquals(right - left, all.size());
 
         for (int i = 0; i < all.size(); i++) {
             Cache.Entry<Long, Person> entry = all.get(i);
 
             int exp = pk ? left + i : right - i - 1;
 
-            expected.add(exp);
-            actual.add(entry.getKey().intValue());
+            assertEquals(exp, entry.getKey().intValue());
 
             assertEquals(new Person(entry.getKey().intValue()), all.get(i).getValue());
         }
-
-        assertEqualsCollections(expected, actual);
     }
 
     /**
@@ -281,20 +278,32 @@ public class IndexQuerySqlIndexTest extends GridCommonAbstractTest {
 
         assertEquals(right - left, all.size());
 
-        // There is no ordering guarantee in the current implementation.
-        Collection<Integer> expected = new TreeSet<>();
-        Collection<Integer> actual = new TreeSet<>();
+        if (qryDescIdxName == null) {
+            // There is no ordering guarantee if index is not specified.
+            Collection<Integer> expected = new TreeSet<>();
+            Collection<Integer> actual = new TreeSet<>();
+
+            for (int i = 0; i < all.size(); i++) {
+                Cache.Entry<Long, BinaryObject> entry = all.get(i);
+
+                expected.add(right - 1 - i);
+                actual.add(entry.getKey().intValue());
+                assertEquals(entry.getKey().intValue(), (int)entry.getValue().field("id"));
+                assertEquals(entry.getKey().intValue(), (int)entry.getValue().field("descId"));
+            }
+
+            assertEqualsCollections(expected, actual);
+
+            return;
+        }
 
         for (int i = 0; i < all.size(); i++) {
             Cache.Entry<Long, BinaryObject> entry = all.get(i);
 
-            expected.add(right - 1 - i);
-            actual.add(entry.getKey().intValue());
+            assertEquals(right - 1 - i, entry.getKey().intValue());
             assertEquals(entry.getKey().intValue(), (int)entry.getValue().field("id"));
             assertEquals(entry.getKey().intValue(), (int)entry.getValue().field("descId"));
         }
-
-        assertEqualsCollections(expected, actual);
     }
 
     /** */

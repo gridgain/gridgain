@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
@@ -59,6 +58,7 @@ import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.gte;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.in;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lte;
+import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_IDX_NAME;
 
 /** */
 @RunWith(Parameterized.class)
@@ -216,7 +216,7 @@ public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testPageSize() {
-        IndexQuery<Integer, Person> idxQry = new IndexQuery<>(Person.class);
+        IndexQuery<Integer, Person> idxQry = new IndexQuery<>(Person.class, PK_IDX_NAME);
 
         withClientCache(cache -> {
             for (int pageSize: F.asList(1, 10, 100, 1000, 10_000)) {
@@ -246,7 +246,7 @@ public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
     @Test
     public void testLocal() {
         withClientCache(cache -> {
-            IndexQuery<Integer, Person> idxQry = new IndexQuery<>(Person.class);
+            IndexQuery<Integer, Person> idxQry = new IndexQuery<>(Person.class, PK_IDX_NAME);
 
             idxQry.setLocal(true);
 
@@ -263,24 +263,10 @@ public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testFilter() {
-        IndexQuery idxQry = new IndexQuery(Person.class);
+        IndexQuery idxQry = new IndexQuery(Person.class, PK_IDX_NAME);
         idxQry.setFilter((k, v) -> (int)k >= 0 && (int)k < 1000);
 
         withClientCache((cache) -> assertClientQuery(cache, 0, 1000, idxQry));
-    }
-
-    /** */
-    @Test
-    public void testLimit() {
-        IndexQuery<Integer, Person> idxQry = new IndexQuery<>(Person.class);
-        idxQry.setLimit(1000);
-
-        withClientCache((cache) -> {
-                List<Cache.Entry<Integer, Person>> result = cache.query(idxQry).getAll();
-
-                assertEquals(1000, result.size());
-            }
-        );
     }
 
     /** */
@@ -349,6 +335,72 @@ public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
     }
 
     /** */
+    private void assertClientQuery(
+        ClientCache<Integer, Person> cache,
+        int left,
+        int right,
+        @Nullable String idxName,
+        IndexQueryCriterion... crit
+    ) {
+        IndexQuery<Integer, Person> idxQry = new IndexQuery<Integer, Person>(Person.class, idxName)
+            .setCriteria(crit);
+
+        assertClientQuery(cache, left, right, idxQry);
+
+        if (left < right) {
+            Random r = new Random();
+
+            int limit = 1 + r.nextInt(right - left);
+
+            idxQry = new IndexQuery<Integer, Person>(Person.class, idxName)
+                .setCriteria(crit)
+                .setLimit(limit);
+
+            assertClientQuery(cache, left, left + limit, idxQry);
+
+            limit = right - left + r.nextInt(right - left);
+
+            idxQry = new IndexQuery<Integer, Person>(Person.class, idxName)
+                .setCriteria(crit)
+                .setLimit(limit);
+
+            assertClientQuery(cache, left, right, idxQry);
+        }
+    }
+
+    /** */
+    private void assertClientQuery(ClientCache<Integer, Person> cache, int left, int right, IndexQuery idxQry) {
+        List<Cache.Entry<Integer, Person>> result = cache.query(idxQry).getAll();
+
+        assertEquals(right - left, result.size());
+
+        if (idxQry.getIndexName() == null) {
+            if (idxQry.getLimit() > 0) {
+                // Unpredictable result set.
+                return;
+            }
+
+            result.sort(Comparator.comparingLong(Cache.Entry::getKey));
+        }
+
+        Function<Cache.Entry<Integer, Person>, Object> fldOneVal = (e) ->
+            keepBinary ? ((BinaryObject)e.getValue()).field("fld1") : e.getValue().fld1;
+
+        for (int i = 0; i < result.size(); i++) {
+            Cache.Entry<Integer, Person> e = result.get(i);
+
+            int key = left + i;
+
+            if (key >= 0) {
+                assertEquals(key, e.getKey().intValue());
+                assertEquals(key, (int)fldOneVal.apply(e));
+            }
+            else
+                assertEquals(null, fldOneVal.apply(e));
+        }
+    }
+
+    /** */
     @Test
     public void testIndexQueryLimitOnOlderProtocolVersion() throws Exception {
         // Exclude INDEX_QUERY_LIMIT from protocol.
@@ -386,48 +438,6 @@ public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
         finally {
             //revert the features set
             allFeaturesEnumSet.add(ProtocolBitmaskFeature.INDEX_QUERY_LIMIT);
-        }
-    }
-
-    /** */
-    private void assertClientQuery(
-        ClientCache<Integer, Person> cache,
-        int left,
-        int right,
-        @Nullable String idxName,
-        IndexQueryCriterion... crit
-    ) {
-        IndexQuery<Integer, Person> idxQry = new IndexQuery<Integer, Person>(Person.class, idxName)
-            .setCriteria(crit);
-
-        assertClientQuery(cache, left, right, idxQry);
-    }
-
-    /** */
-    private void assertClientQuery(ClientCache<Integer, Person> cache, int left, int right, IndexQuery<Integer, Person> idxQry) {
-        List<Cache.Entry<Integer, Person>> result = cache.query(idxQry).getAll()
-                .stream()
-                .sorted(Comparator.comparingInt(Cache.Entry::getKey))
-                .collect(Collectors.toList());
-
-        log.info(result.stream().map(Cache.Entry::getKey).collect(Collectors.toList()).toString());
-
-        assertEquals(right - left, result.size());
-
-        Function<Cache.Entry<Integer, Person>, Object> fldOneVal = (e) ->
-            keepBinary ? ((BinaryObject)e.getValue()).field("fld1") : e.getValue().fld1;
-
-        for (int i = 0; i < result.size(); i++) {
-            Cache.Entry<Integer, Person> e = result.get(i);
-
-            int key = left + i;
-
-            if (key >= 0) {
-                assertEquals(key, e.getKey().intValue());
-                assertEquals(key, (int)fldOneVal.apply(e));
-            }
-            else
-                assertEquals(null, fldOneVal.apply(e));
         }
     }
 

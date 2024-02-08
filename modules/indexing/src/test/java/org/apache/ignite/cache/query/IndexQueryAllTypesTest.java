@@ -47,7 +47,6 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -596,7 +595,7 @@ public class IndexQueryAllTypesTest extends GridCommonAbstractTest {
      * @param right Last cache key, exclusive.
      */
     private <T> void check(QueryCursor<Cache.Entry<Long, Person>> cursor, int left, int right,
-                           Function<Integer, T> valGen, Function<T, Person> persGen) {
+        Function<Integer, T> valGen, Function<T, Person> persGen) {
 
         List<Cache.Entry<Long, Person>> all = cursor.getAll();
 
@@ -609,7 +608,11 @@ public class IndexQueryAllTypesTest extends GridCommonAbstractTest {
 
             assertTrue(expKeys.remove(entry.getKey()));
 
-            assertEquals(persGen.apply(valGen.apply(((int) (long)entry.getKey()))), entry.getValue());
+            if (useIdxName) {
+                assertEquals(persGen.apply(valGen.apply(left + i)), all.get(i).getValue());
+            } else {
+                assertEquals(persGen.apply(valGen.apply(((int) (long)entry.getKey()))), entry.getValue());
+            }
         }
 
         assertTrue(expKeys.isEmpty());
@@ -726,10 +729,6 @@ public class IndexQueryAllTypesTest extends GridCommonAbstractTest {
 
             result = 31 * result + Arrays.hashCode(bytesId);
             return result;
-        }
-
-        @Override public String toString() {
-            return S.toString(Person.class, this);
         }
     }
 

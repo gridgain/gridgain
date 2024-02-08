@@ -18,9 +18,11 @@ package org.apache.ignite.cache.query;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
@@ -131,7 +133,7 @@ public class RepeatedFieldIndexQueryTest extends GridCommonAbstractTest {
             .setCriteria(gt(fldName, lower), gt(fldName, lower - 1), gt(fldName, lower - 2),
                 lt(fldName, upper), lt(fldName, upper + 1), lt(fldName, upper + 2));
 
-        cache.query(qry).getAll();
+        check(null, cache.query(qry), lower + 1, upper);
     }
 
     /** */
@@ -166,12 +168,12 @@ public class RepeatedFieldIndexQueryTest extends GridCommonAbstractTest {
         IndexQuery<Integer, Person> qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setCriteria(lte(fldName, boundary), gte(fldName, boundary));
 
-        cache.query(qry).getAll();
+        check(null, cache.query(qry), boundary, boundary + 1);
 
         qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setCriteria(between(fldName, 0, boundary), between(fldName, boundary, CNT));
 
-        cache.query(qry).getAll();
+        check(null, cache.query(qry), boundary, boundary + 1);
     }
 
     /** */
@@ -192,6 +194,9 @@ public class RepeatedFieldIndexQueryTest extends GridCommonAbstractTest {
             .map(i -> rnd.nextInt(CNT))
             .collect(Collectors.toList());
 
+        int min = boundaries.stream().min(Integer::compareTo).get();
+        int max = boundaries.stream().max(Integer::compareTo).get();
+
         List<IndexQueryCriterion> ltCriteria = boundaries.stream()
             .map(b -> lt(fldName, b))
             .collect(Collectors.toList());
@@ -203,12 +208,32 @@ public class RepeatedFieldIndexQueryTest extends GridCommonAbstractTest {
         IndexQuery<Integer, Person> qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setCriteria(ltCriteria);
 
-        cache.query(qry).getAll();
+        check(null, cache.query(qry), 0, min);
 
         qry = new IndexQuery<Integer, Person>(Person.class, idxName)
             .setCriteria(gtCriteria);
 
-        cache.query(qry).getAll();
+        check(null, cache.query(qry), max + 1, CNT);
+    }
+
+    /**
+     * @param left  First cache key, inclusive.
+     * @param right Last cache key, exclusive.
+     */
+    private <T> void check(String errMsg, QueryCursor<Cache.Entry<Integer, Person>> cursor, int left, int right) {
+        List<Cache.Entry<Integer, Person>> all = cursor.getAll();
+
+        assertEquals(errMsg, right - left, all.size());
+
+        boolean desc = Objects.equals(idxName, DESC_ID_IDX);
+
+        for (int i = 0; i < all.size(); i++) {
+            Cache.Entry<Integer, Person> entry = all.get(i);
+
+            int exp = desc ? right - 1 - i : left + i;
+
+            assertEquals(errMsg, exp, entry.getKey().intValue());
+        }
     }
 
     /** */

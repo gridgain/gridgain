@@ -79,17 +79,14 @@ public class IndexQueryLimitTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void testRangeQueries() throws Exception {
-        // Add data
-        insertData();
+    public void testRangeQueriesWithoutDuplicates() throws Exception {
+        checkRangeQueries(1);
+    }
 
-        // All
-        checkLimit(null, 0, CNT);
-
-        int pivot = new Random().nextInt(CNT);
-
-        // Lt.
-        checkLimit(lt("id", pivot), 0, pivot);
+    /** */
+    @Test
+    public void testRangeQueriesWithDuplicates() throws Exception {
+        checkRangeQueries(10);
     }
 
     /** */
@@ -111,23 +108,37 @@ public class IndexQueryLimitTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void checkLimit(IndexQueryCriterion criterion, int left, int right) throws Exception {
+    private void checkRangeQueries(int duplicates) throws Exception {
+        // Add data
+        insertData(duplicates);
+
+        // All
+        checkLimit(null, 0, CNT, duplicates);
+
+        int pivot = new Random().nextInt(CNT);
+
+        // Lt.
+        checkLimit(lt("id", pivot), 0, pivot, duplicates);
+    }
+
+    /** */
+    private void checkLimit(IndexQueryCriterion criterion, int left, int right, int duplicates) throws Exception {
         int rows = right - left;
         int limit = new Random().nextInt(rows) + 1;
 
         // limit < rows
-        checkLimit(criterion, limit, left, left + limit);
+        checkLimit(criterion, limit, left, left + limit, duplicates);
 
         // limit >= rows
         if (rows > 1) {
             limit = new Random().nextInt(CNT + 2 - rows) + rows;
 
-            checkLimit(criterion, limit, left, right);
+            checkLimit(criterion, limit, left, right, duplicates);
         }
     }
 
     /** */
-    private void checkLimit(IndexQueryCriterion criterion, int limit, int left, int right) throws Exception {
+    private void checkLimit(IndexQueryCriterion criterion, int limit, int left, int right, int duplicates) throws Exception {
         IndexQuery<Long, Person> qry = new IndexQuery<>(Person.class, IDX);
 
         if (criterion != null)
@@ -137,7 +148,7 @@ public class IndexQueryLimitTest extends GridCommonAbstractTest {
 
         QueryCursor<Cache.Entry<Long, Person>> cursor = crd.cache(CACHE).query(qry);
 
-        int expSize = right - left;
+        int expSize = (right - left) * duplicates;
 
         if (limit > 0 && limit < expSize)
             expSize = limit;
@@ -146,11 +157,13 @@ public class IndexQueryLimitTest extends GridCommonAbstractTest {
         List<Integer> expOrderedValues = new LinkedList<>();
 
         loop: for (int i = left; i != right; i++) {
-            expOrderedValues.add(i);
+            for (int j = 0; j < duplicates; j++) {
+                expOrderedValues.add(i);
 
-            expKeys.add((long)CNT + i);
-            if (expOrderedValues.size() >= limit)
-                break loop;
+                expKeys.add((long)CNT * j + i);
+                if (expOrderedValues.size() >= limit)
+                    break loop;
+            }
         }
 
         AtomicInteger actSize = new AtomicInteger();
@@ -172,10 +185,12 @@ public class IndexQueryLimitTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void insertData() {
+    private void insertData(int duplicates) {
         try (IgniteDataStreamer<Long, Person> streamer = crd.dataStreamer(CACHE)) {
             for (int persId = 0; persId < CNT; persId++) {
-                streamer.addData((long)CNT + persId, new Person(persId));
+                // Create duplicates of data.
+                for (int i = 0; i < duplicates; i++)
+                    streamer.addData((long)CNT * i + persId, new Person(persId));
             }
         }
     }

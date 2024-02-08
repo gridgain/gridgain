@@ -257,14 +257,16 @@ public class MultiTableIndexQuery extends GridCommonAbstractTest {
     private void checkSecondPerson(QueryCursor<Cache.Entry<Long, SecondPerson>> cursor, int left, int right) {
         List<Cache.Entry<Long, SecondPerson>> all = cursor.getAll();
 
-        assertEquals(right - left, all.size());
+        if (qryPersIdx == null) {
+            all.sort((o1, o2) -> Long.compare(o1.getKey(), o2.getKey()));
+        }
 
-        Set<Long> expKeys = LongStream.range(left, right).boxed().collect(Collectors.toSet());
+        assertEquals(right - left, all.size());
 
         for (int i = 0; i < all.size(); i++) {
             Cache.Entry<Long, SecondPerson> entry = all.get(i);
 
-            assertTrue(expKeys.remove(entry.getKey()));
+            assertEquals(left + i, entry.getKey().intValue());
 
             assertEquals(new SecondPerson(entry.getKey().intValue()), all.get(i).getValue());
         }
