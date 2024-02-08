@@ -464,8 +464,7 @@ public class MultifieldIndexQueryTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void testCompositeNullableOrder() {
-        // TODO check not only lt condition.
+    public void testNullsOrderCompositeFieldsIndex() {
         assumeThat(qryIdx, notNullValue());
         assertNotNull(qryDescIdx);
 
@@ -476,7 +475,7 @@ public class MultifieldIndexQueryTest extends GridCommonAbstractTest {
         cache.put(5L, new Person(null, null));
 
         {
-            // Expected order: id asc, secId asc
+            // Expected order:
             //         | id asc | secId asc
             // -----------------------------
             //       5 | null   | null
@@ -488,18 +487,17 @@ public class MultifieldIndexQueryTest extends GridCommonAbstractTest {
 
             List<Cache.Entry<Long, Person>> res = cache.query(new IndexQuery<Long, Person>(Person.class, qryIdx)
                 .setCriteria(lt("id", 2), lt("secId", 2))).getAll();
-
-            res.forEach(v -> {
-                System.out.println(v.getKey() + " | " + v.getValue().id + " | " + v.getValue().secId);
-            });
-
             long[] actualOrder = res.stream().map(Cache.Entry::getKey).mapToLong(Long::longValue).toArray();
+            assertArrayEquals(expectedAscOrder, actualOrder);
 
+            res = cache.query(new IndexQuery<Long, Person>(Person.class, qryIdx)
+                .setCriteria(lte("id", 1), lte("secId", 1))).getAll();
+            actualOrder = res.stream().map(Cache.Entry::getKey).mapToLong(Long::longValue).toArray();
             assertArrayEquals(expectedAscOrder, actualOrder);
         }
 
         {
-            // Expected order: id asc, descId desc
+            // Expected order:
             //         | id asc | descId desc
             // -------------------------------
             //       3 | null   | 1
@@ -511,13 +509,12 @@ public class MultifieldIndexQueryTest extends GridCommonAbstractTest {
 
             List<Cache.Entry<Long, Person>> res = cache.query(new IndexQuery<Long, Person>(Person.class, qryDescIdx)
                 .setCriteria(lt("id", 2), lt("descId", 2))).getAll();
-
-            res.forEach(v -> {
-                System.out.println(v.getKey() + " | " + v.getValue().id + " | " + v.getValue().secId);
-            });
-
             long[] actualOrder = res.stream().map(Cache.Entry::getKey).mapToLong(Long::longValue).toArray();
+            assertArrayEquals(expectedDescOrder, actualOrder);
 
+            res = cache.query(new IndexQuery<Long, Person>(Person.class, qryDescIdx)
+                .setCriteria(lte("id", 1), lte("descId", 1))).getAll();
+            actualOrder = res.stream().map(Cache.Entry::getKey).mapToLong(Long::longValue).toArray();
             assertArrayEquals(expectedDescOrder, actualOrder);
         }
     }

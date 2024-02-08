@@ -47,7 +47,6 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheServerNotFoundException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.IndexQuery;
-import org.apache.ignite.cache.query.IndexQueryCriterion;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -58,9 +57,6 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
-import org.apache.ignite.internal.cache.query.InIndexQueryCriterion;
-import org.apache.ignite.internal.cache.query.RangeIndexQueryCriterion;
-import org.apache.ignite.internal.cache.query.SqlBuilderContext;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.managers.IgniteMBeansManager;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
@@ -196,7 +192,6 @@ import org.apache.ignite.internal.util.lang.IgniteSingletonIterator;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiClosure;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -215,7 +210,6 @@ import org.gridgain.internal.h2.engine.Constants;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.index.Index;
-import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.store.DataHandler;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
@@ -236,8 +230,6 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.request
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.tx;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.txStart;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.TEXT;
-import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_FIELD_NAME;
-import static org.apache.ignite.internal.processors.query.QueryUtils.VAL_FIELD_NAME;
 import static org.apache.ignite.internal.processors.query.QueryUtils.matches;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.UPDATE_RESULT_META;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.generateFieldsQueryString;
@@ -1125,82 +1117,16 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 IgniteQueryErrorCode.TABLE_NOT_FOUND);
         }
 
-        SB sqlBuilder = new SB();
-        List<Object> args = null;
+        // TODO result
+        IndexQuerySqlGenerator sqlGen = new IndexQuerySqlGenerator(qry, tblDesc);
 
-        sqlBuilder.a("SELECT ").a(KEY_FIELD_NAME).a(", ").a(VAL_FIELD_NAME);
-        sqlBuilder.a(" FROM ").a(tblDesc.fullTableName());
-
-        Index index = getIndex(qry.getIndexName(), tblDesc.table());
-
-        if (index != null) {
-            sqlBuilder.a(" USE INDEX (\"").a(index.getName()).a("\")");
-        }
-
-        if (qry.getCriteria() != null) {
-            List<IndexQueryCriterion> criteria = qry.getCriteria();
-            args = new ArrayList<>();
-
-            for (int i = 0; i < criteria.size(); i++) {
-                IndexQueryCriterion criterion = criteria.get(i);
-
-                if (i == 0) {
-                    sqlBuilder.a(" WHERE ");
-                }
-                else {
-                    sqlBuilder.a(" AND ");
-                }
-
-                // Ignite's IndexQuery allows to compare with NULL and treats it as the smallest value.
-                // While SQL doesn't allow this, we mimic Ignite's behavior for compatibility.
-                SqlBuilderContext ctx = new SqlFromIndexQueryBuilderContext(tblDesc, criterion.field());
-
-                // TODO Common interface.
-                if (criterion instanceof InIndexQueryCriterion) {
-                    sqlBuilder.a(((InIndexQueryCriterion)criterion).toSqlString(ctx, args));
-                }
-                else if (criterion instanceof RangeIndexQueryCriterion) {
-                    sqlBuilder.a(((RangeIndexQueryCriterion)criterion).toSqlString(ctx, args));
-                }
-                else {
-                    // Mimic Ignite error.
-                    throw new IllegalArgumentException(
-                        String.format("Unknown IndexQuery criterion type [%s]", criterion.getClass().getSimpleName())
-                    );
-                }
-            }
-        }
-
-        if (index != null) {
-            sqlBuilder.a(" ORDER BY ");
-            // Just insert natural index order.
-            IndexColumn[] idxColumns = index.getIndexColumns();
-
-            for (int i = 0; i < idxColumns.length; i++) {
-                if (i > 0) {
-                    sqlBuilder.a(", ");
-                }
-
-                IndexColumn idxCol = idxColumns[i];
-
-                sqlBuilder.a('"').a(idxCol.columnName).a('"');
-
-                if (idxCol.sortType == SortOrder.DESCENDING)
-                    sqlBuilder.a(" DESC");
-            }
-        }
-
-        if (qry.getLimit() != 0) {
-            sqlBuilder.a(" LIMIT ").a(qry.getLimit());
-        }
-
-        String sql = sqlBuilder.toString();
+        String sql = sqlGen.sql();
 
         System.out.println(">xxxxx> " + sql);
 
         SqlFieldsQuery res = new SqlFieldsQuery(sql);
 
-        res.setArgs(args != null ? args.toArray() : null);
+        res.setArgs(sqlGen.arguments());
         res.setLocal(qry.isLocal());
         res.setPageSize(qry.getPageSize());
         res.setSchema(schemaName);
@@ -1210,25 +1136,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
 
         return res;
-    }
-
-    private @Nullable Index getIndex(@Nullable String idxName, GridH2Table table) {
-        if (idxName == null) {
-            return null;
-        }
-
-        ArrayList<Index> indexes = table.getIndexes();
-        String upperCaseIdxName = idxName.toUpperCase();
-
-        for (Index idx : indexes) {
-            if (idx.getName().equals(upperCaseIdxName))
-                return idx;
-
-            if (idx.getName().equals(idxName))
-                return idx;
-        }
-
-        throw new IgniteException("Index \"" + upperCaseIdxName + "\" not found.");
     }
 
     /**

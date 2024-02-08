@@ -21,13 +21,12 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.apache.ignite.cache.query.IndexQueryCriterion;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 
 /**
  * Criterion for IN operator.
  */
-public final class InIndexQueryCriterion implements IndexQueryCriterion {
+public final class InIndexQueryCriterion implements SqlIndexQueryCriterion {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -53,7 +52,8 @@ public final class InIndexQueryCriterion implements IndexQueryCriterion {
         return field;
     }
 
-    public String toSqlString(SqlBuilderContext ctx, List<Object> args) {
+    /** {@inheritDoc} */
+    @Override public String toSQL(SqlBuilderContext ctx, List<Object> args) {
         SB buf = new SB();
         String column = ctx.columnName();
 

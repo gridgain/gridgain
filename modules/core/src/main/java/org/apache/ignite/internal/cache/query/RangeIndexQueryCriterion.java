@@ -17,13 +17,12 @@
 package org.apache.ignite.internal.cache.query;
 
 import java.util.List;
-import org.apache.ignite.cache.query.IndexQueryCriterion;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 
 /**
  * Range index criterion that applies to BPlusTree based indexes.
  */
-public final class RangeIndexQueryCriterion implements IndexQueryCriterion {
+public final class RangeIndexQueryCriterion implements SqlIndexQueryCriterion {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -105,7 +104,7 @@ public final class RangeIndexQueryCriterion implements IndexQueryCriterion {
         return upperNull;
     }
 
-    public String toSqlString(SqlBuilderContext ctx, List<Object> args) {
+    @Override public String toSQL(SqlBuilderContext ctx, List<Object> args) {
         SB buf = new SB();
         String column = ctx.columnName();
         boolean nullable = ctx.nullable();

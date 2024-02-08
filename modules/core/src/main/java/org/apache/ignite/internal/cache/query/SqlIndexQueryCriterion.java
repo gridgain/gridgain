@@ -16,9 +16,13 @@
 
 package org.apache.ignite.internal.cache.query;
 
-/** TODO blah-blah. */
-public interface SqlBuilderContext {
-    String columnName();
+import java.util.List;
+import org.apache.ignite.cache.query.IndexQuery;
+import org.apache.ignite.cache.query.IndexQueryCriterion;
 
-    boolean nullable();
+/**
+ * Extended interface for {@link IndexQuery} criterion.
+ */
+public interface SqlIndexQueryCriterion extends IndexQueryCriterion {
+    String toSQL(SqlBuilderContext ctx, List<Object> args);
 }
