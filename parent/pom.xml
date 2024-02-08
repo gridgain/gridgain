@@ -53,7 +53,7 @@
         <asm.version>4.2</asm.version>
         <aspectj.bundle.version>1.9.8</aspectj.bundle.version>
         <aspectj.version>1.9.8</aspectj.version>
-        <aws.sdk.version>1.12.494</aws.sdk.version>
+        <aws.sdk.version>1.12.651</aws.sdk.version>
         <aws.encryption.sdk.version>2.4.0</aws.encryption.sdk.version>
         <camel.version>2.22.3</camel.version>
         <bouncycastle.version>1.75</bouncycastle.version>
