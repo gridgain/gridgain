@@ -16,7 +16,9 @@
 
 package org.apache.ignite.internal.cache.query;
 
+import java.util.List;
 import org.apache.ignite.cache.query.IndexQueryCriterion;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 
 /**
  * Range index criterion that applies to BPlusTree based indexes.
@@ -101,6 +103,114 @@ public final class RangeIndexQueryCriterion implements IndexQueryCriterion {
     /** */
     public boolean upperNull() {
         return upperNull;
+    }
+
+    public String toSqlString(SqlBuilderContext ctx, List<Object> args) {
+        SB buf = new SB();
+        String column = ctx.columnName();
+        boolean nullable = ctx.nullable();
+        // Consider all flags to decipher which condition was requested.
+        // TODO refactor - replace RangeIndexQueryCriterion with per-condition criterions.
+        if (lower == null && upper == null) {
+            if (lowerNull && upperNull) {
+                // between(null, null) or eq(null) in which case all flags are true.
+                if (!lowerIncl || !upperIncl) {
+                    throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
+                }
+
+                buf.a(column).a(" IS NULL");
+            } else if (lowerNull) {
+                // gt(null) or gte(null), upperIncl is always true.
+                if (!upperIncl) {
+                    throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
+                }
+
+                if (!lowerIncl) {
+                    // gt(null) - same as NOT NULL
+                    buf.a(column).a(" IS NOT NULL");
+                } else {
+                    // gte(null) - same as TRUE - no condition
+                    buf.a("TRUE");
+                }
+            } else if (upperNull) {
+                // lt(null) or lte(null), lowerIncl is always true.
+                if (!lowerIncl) {
+                    throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
+                }
+
+                if (!upperIncl) {
+                    // lt(null) - same as FALSE
+                    buf.a("FALSE");
+                }
+                else {
+                    // lte(null) - same as IS NULL
+                    buf.a(column).a(" IS NULL");
+                }
+            } else {
+                // Neither lower nor upper are set explicitly.
+                throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
+            }
+        } else if (lower != null && upper == null) {
+            if (lowerNull || !upperIncl) {
+                throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
+            }
+
+            if (upperNull) {
+                // between(lower, NULL), flags are always the same.
+                if (!(lowerIncl)) {
+                    throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
+                }
+
+                // Same as FALSE.
+                buf.a(" FALSE");
+            } else {
+                // gt(lower) or gte(lower), upperIncl is always true.
+                buf.a(column).a(lowerIncl ? " >= ?" : " > ?");
+                args.add(lower);
+            }
+        } else if (lower == null /*&& upper != null*/) {
+            if (upperNull || !lowerIncl) {
+                throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
+            }
+
+            // lowerNull is technically irrelevant.
+            // lowerNull == true means between(NULL, upper).
+            // lowerNull == false means gt(upper) or gte(upper).
+            // However, gt(upper) and gte(upper) must include IS NULL anyway.
+
+            // Still, the following flags invariant holds for between(NULL, upper).
+            if (lowerNull && !upperIncl) {
+                throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
+            }
+
+            String condition = column + (upperIncl ? " <= ?" : " < ?");
+
+            if (nullable) {
+                // TODO optimize for single index condition using UNION
+                buf.a("(")
+                    .a(column).a(" IS NULL")
+                    .a(" OR ")
+                    .a(condition)
+                    .a(")");
+            } else {
+                buf.a(condition);
+            }
+
+            args.add(upper);
+        } else /*if (lower != null && upper != null)*/ {
+            // between(lower, upper), flags are always the same.
+            if (!(lowerIncl && upperIncl && !lowerNull && !upperNull)) {
+                throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
+            }
+
+            buf.a(column).a(" >= ?")
+                .a(" AND ")
+                .a(column).a(" <= ?");
+            args.add(lower);
+            args.add(upper);
+        }
+
+        return buf.toString();
     }
 
     /** {@inheritDoc} */

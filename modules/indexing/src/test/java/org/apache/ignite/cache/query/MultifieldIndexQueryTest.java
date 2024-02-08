@@ -46,6 +46,9 @@ import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.gt;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.gte;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lte;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assume.assumeThat;
 
 /** */
 @RunWith(Parameterized.class)
@@ -460,6 +463,66 @@ public class MultifieldIndexQueryTest extends GridCommonAbstractTest {
     }
 
     /** */
+    @Test
+    public void testCompositeNullableOrder() {
+        // TODO check not only lt condition.
+        assumeThat(qryIdx, notNullValue());
+        assertNotNull(qryDescIdx);
+
+        cache.put(1L, new Person(0, null));
+        cache.put(2L, new Person(0, 1));
+        cache.put(3L, new Person(null, 1));
+        cache.put(4L, new Person(null, 0));
+        cache.put(5L, new Person(null, null));
+
+        {
+            // Expected order: id asc, secId asc
+            //         | id asc | secId asc
+            // -----------------------------
+            //       5 | null   | null
+            //       4 | null   | 0
+            //       3 | null   | 1
+            //       1 | 0      | null
+            //       2 | 0      | 1
+            long expectedAscOrder[] = {5L, 4L, 3L, 1L, 2L};
+
+            List<Cache.Entry<Long, Person>> res = cache.query(new IndexQuery<Long, Person>(Person.class, qryIdx)
+                .setCriteria(lt("id", 2), lt("secId", 2))).getAll();
+
+            res.forEach(v -> {
+                System.out.println(v.getKey() + " | " + v.getValue().id + " | " + v.getValue().secId);
+            });
+
+            long[] actualOrder = res.stream().map(Cache.Entry::getKey).mapToLong(Long::longValue).toArray();
+
+            assertArrayEquals(expectedAscOrder, actualOrder);
+        }
+
+        {
+            // Expected order: id asc, descId desc
+            //         | id asc | descId desc
+            // -------------------------------
+            //       3 | null   | 1
+            //       4 | null   | 0
+            //       5 | null   | null
+            //       2 | 0      | 1
+            //       1 | 0      | null
+            long expectedDescOrder[] = {3L, 4L, 5L, 2L, 1L};
+
+            List<Cache.Entry<Long, Person>> res = cache.query(new IndexQuery<Long, Person>(Person.class, qryDescIdx)
+                .setCriteria(lt("id", 2), lt("descId", 2))).getAll();
+
+            res.forEach(v -> {
+                System.out.println(v.getKey() + " | " + v.getValue().id + " | " + v.getValue().secId);
+            });
+
+            long[] actualOrder = res.stream().map(Cache.Entry::getKey).mapToLong(Long::longValue).toArray();
+
+            assertArrayEquals(expectedDescOrder, actualOrder);
+        }
+    }
+
+    /** */
     private void insertData() {
         try (IgniteDataStreamer<Long, Person> streamer = ignite.dataStreamer(cache.getName())) {
             for (int i = 0; i < CNT; i++)
@@ -473,10 +536,14 @@ public class MultifieldIndexQueryTest extends GridCommonAbstractTest {
 
         List<Cache.Entry<Long, Person>> all = cache.query(qry).getAll();
 
-        if (desc) {
-            all.sort(Comparator.comparing(Cache.Entry::getKey, Comparator.reverseOrder()));
-        } else {
-            all.sort(Comparator.comparing(Cache.Entry::getKey));
+        if (qryIdx == null) {
+            // Gridgain doesn't support ordering when index was not specified.
+            if (desc) {
+                all.sort(Comparator.comparing(Cache.Entry::getKey, Comparator.reverseOrder()));
+            }
+            else {
+                all.sort(Comparator.comparing(Cache.Entry::getKey));
+            }
         }
 
         assertEquals(right - left, all.size());
@@ -506,27 +573,27 @@ public class MultifieldIndexQueryTest extends GridCommonAbstractTest {
             @QuerySqlField.Group(name = INDEX, order = 0),
             @QuerySqlField.Group(name = DESC_INDEX, order = 0)}
         )
-        final int id;
+        final Integer id;
 
         /** */
         @GridToStringInclude
         @QuerySqlField(orderedGroups = @QuerySqlField.Group(name = INDEX, order = 1))
-        final int secId;
+        final Integer secId;
 
         /** */
         @GridToStringInclude
         @QuerySqlField(orderedGroups = @QuerySqlField.Group(name = DESC_INDEX, order = 1, descending = true))
-        final int descId;
+        final Integer descId;
 
         /** */
-        Person(int secId) {
+        Person(Integer secId) {
             id = 0;
             this.secId = secId;
             descId = secId;
         }
 
         /** */
-        Person(int id, int secId) {
+        Person(Integer id, Integer secId) {
             this.id = id;
             this.secId = secId;
             descId = secId;

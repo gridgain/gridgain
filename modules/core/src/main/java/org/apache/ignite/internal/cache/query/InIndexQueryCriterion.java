@@ -16,12 +16,13 @@
 
 package org.apache.ignite.internal.cache.query;
 
-import org.apache.ignite.cache.query.IndexQueryCriterion;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import org.apache.ignite.cache.query.IndexQueryCriterion;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 
 /**
  * Criterion for IN operator.
@@ -50,5 +51,60 @@ public final class InIndexQueryCriterion implements IndexQueryCriterion {
     /** {@inheritDoc} */
     @Override public String field() {
         return field;
+    }
+
+    public String toSqlString(SqlBuilderContext ctx, List<Object> args) {
+        SB buf = new SB();
+        String column = ctx.columnName();
+
+        if (vals.isEmpty()) {
+            throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + ']');
+        }
+
+        // SQL IN doesn't include NULLs, so must add IS NULL explicitly.
+        boolean hasNull = vals.contains(null);
+
+        if (hasNull) {
+            if (vals.size() == 1) {
+                buf.a(column).a(" IS NULL");
+            } else {
+                buf.a("(")
+                    .a(column).a(" IS NULL")
+                    .a(" OR ");
+
+                buf.a(column);
+                boolean first = true;
+                for (Object val : vals) {
+                    if (val == null)
+                        continue;
+
+                    if (first) {
+                        buf.a(" IN (?");
+                        first = false;
+                    } else {
+                        buf.a(", ?");
+                    }
+                    args.add(val);
+                }
+                buf.a(")");
+
+                buf.a(")");
+            }
+        } else {
+            buf.a(column);
+            boolean first = true;
+            for (Object val : vals) {
+                if (first) {
+                    buf.a(" IN (?");
+                    first = false;
+                } else {
+                    buf.a(", ?");
+                }
+                args.add(val);
+            }
+            buf.a(")");
+        }
+
+        return buf.toString();
     }
 }
