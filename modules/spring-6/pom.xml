@@ -32,13 +32,13 @@
     <artifactId>ignite-spring6</artifactId>
     <url>http://ignite.apache.org</url>
 
-    <properties>
-        <compiler.source>1.8</compiler.source>
-        <compiler.target>17</compiler.target>
-<!--        <compiler.compilerVersion>17</compiler.compilerVersion>-->
-        <compiler.executable>/opt/java/jdk-ora-17/bin/javac</compiler.executable>
-        <compiler.release>17</compiler.release>
-    </properties>
+<!--    <properties>-->
+<!--        <compiler.source>1.8</compiler.source>-->
+<!--        <compiler.target>17</compiler.target>-->
+<!--&lt;!&ndash;        <compiler.compilerVersion>17</compiler.compilerVersion>&ndash;&gt;-->
+<!--&lt;!&ndash;        <compiler.executable>/opt/java/jdk-ora-17/bin/javac</compiler.executable>&ndash;&gt;-->
+<!--&lt;!&ndash;        <compiler.release>17</compiler.release>&ndash;&gt;-->
+<!--    </properties>-->
 
     <dependencies>
         <dependency>
@@ -165,18 +165,18 @@
                  This bundle is a fragment attached to the ignite-core bundle, as it contains and exports classes in the org.apache.ignite
                  leading to a split package situation in OSGi.
             -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.10.1</version>
-                <configuration>
-                    <source>${compiler.source}</source>
-                    <target>${compiler.target}</target>
-                    <release>${compiler.release}</release>
-<!--                    <compilerVersion>${compiler.compilerVersion}</compilerVersion>-->
-                    <executable>${compiler.executable}</executable>
-                </configuration>
-            </plugin>
+<!--            <plugin>-->
+<!--                <groupId>org.apache.maven.plugins</groupId>-->
+<!--                <artifactId>maven-compiler-plugin</artifactId>-->
+<!--                <version>3.10.1</version>-->
+<!--                <configuration>-->
+<!--                    <source>${compiler.source}</source>-->
+<!--                    <target>${compiler.target}</target>-->
+<!--&lt;!&ndash;                    <release>${compiler.release}</release>&ndash;&gt;-->
+<!--&lt;!&ndash;                    <compilerVersion>${compiler.compilerVersion}</compilerVersion>&ndash;&gt;-->
+<!--                    <executable>${compiler.executable}</executable>-->
+<!--                </configuration>-->
+<!--            </plugin>-->
 
             <plugin>
                 <groupId>org.apache.felix</groupId>
