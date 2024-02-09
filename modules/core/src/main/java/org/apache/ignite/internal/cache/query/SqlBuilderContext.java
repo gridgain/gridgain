@@ -16,11 +16,21 @@
 
 package org.apache.ignite.internal.cache.query;
 
-/** TODO blah-blah. */
+/** SQL builder context. */
 public interface SqlBuilderContext {
-    String columnName();
-
-    boolean nullable();
-
+    /** Adds query argument. */
     void addArgument(Object arg);
+
+    /** Resolves column by name. */
+    ColumnDescriptor resolveColumn(String name);
+
+    /** Column attributes required for SQL generator. */
+    @SuppressWarnings("PublicInnerClass")
+    interface ColumnDescriptor {
+        /** Returns quoted column name. */
+        String name();
+
+        /** Returns {@code true} if column is nullable. */
+        boolean nullable();
+    }
 }

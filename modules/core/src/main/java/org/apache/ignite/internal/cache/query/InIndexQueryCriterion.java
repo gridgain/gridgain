@@ -52,58 +52,41 @@ public final class InIndexQueryCriterion implements SqlIndexQueryCriterion {
     }
 
     /** {@inheritDoc} */
-    @Override public String toSQL(SqlBuilderContext ctx) {
-        SB buf = new SB();
-        String column = ctx.columnName();
-
+    @Override public String toSql(SqlBuilderContext ctx) {
         if (vals.isEmpty()) {
             throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + ']');
         }
 
+        SqlBuilderContext.ColumnDescriptor column = ctx.resolveColumn(field);
+        String columnName = column.name();
+
         // SQL IN doesn't include NULLs, so must add IS NULL explicitly.
         boolean hasNull = vals.contains(null);
 
-        if (hasNull) {
-            if (vals.size() == 1) {
-                buf.a(column).a(" IS NULL");
-            } else {
-                buf.a("(")
-                    .a(column).a(" IS NULL")
-                    .a(" OR ");
+        if (!hasNull)
+            return buildInStatement(columnName, ctx);
 
-                buf.a(column);
-                boolean first = true;
-                for (Object val : vals) {
-                    if (val == null)
-                        continue;
+        if (vals.size() == 1)
+            return column.nullable() ? columnName + " IS NULL" : "FALSE";
 
-                    if (first) {
-                        buf.a(" IN (?");
-                        first = false;
-                    } else {
-                        buf.a(", ?");
-                    }
-                    ctx.addArgument(val);
-                }
-                buf.a(")");
+        return "(" + (column.nullable() ? columnName + " IS NULL OR " : "") + buildInStatement(columnName, ctx) + ')';
+    }
 
-                buf.a(")");
-            }
-        } else {
-            buf.a(column);
-            boolean first = true;
-            for (Object val : vals) {
-                if (first) {
-                    buf.a(" IN (?");
-                    first = false;
-                } else {
-                    buf.a(", ?");
-                }
-                ctx.addArgument(val);
-            }
-            buf.a(")");
-        }
+    private String buildInStatement(String columnName, SqlBuilderContext ctx) {
+        SB buf = new SB();
 
-        return buf.toString();
+        vals.forEach(val -> {
+            if (val == null)
+                return;
+
+            if (buf.length() > 0)
+                buf.a(", ");
+
+            buf.a('?');
+
+            ctx.addArgument(val);
+        });
+
+        return columnName + " IN (" + buf + ')';
     }
 }

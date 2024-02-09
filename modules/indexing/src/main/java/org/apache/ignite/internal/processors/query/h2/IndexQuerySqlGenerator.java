@@ -21,7 +21,6 @@ import java.util.List;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.IndexQuery;
 import org.apache.ignite.cache.query.IndexQueryCriterion;
-import org.apache.ignite.internal.cache.query.SqlBuilderContext;
 import org.apache.ignite.internal.cache.query.SqlIndexQueryCriterion;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.typedef.internal.SB;
@@ -33,37 +32,30 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_FIELD_NAME;
 import static org.apache.ignite.internal.processors.query.QueryUtils.VAL_FIELD_NAME;
 
-/** TODO blah-blah. */
+/**
+ * Utility class to generate SQL query from {@link IndexQuery}.
+ */
 public class IndexQuerySqlGenerator {
-    private final IndexQuery<?, ?> qry;
-    private final String sql;
-    private List<Object> args;
+    /**
+     * Generates SQL query from the provided {@link IndexQuery}.
+     *
+     * @param qry Index query.
+     * @param tblDesc Target table descriptor.
+     * @return SQL query text.
+     */
+    public static SqlGeneratorResult generate(IndexQuery<?, ?> qry, H2TableDescriptor tblDesc) {
+        SB buffer = new SB();
 
-    public IndexQuerySqlGenerator(IndexQuery<?, ?> qry, H2TableDescriptor tblDesc) {
-        this.qry = qry;
-
-        sql = generateSQL(tblDesc);
-    }
-
-    public String sql() {
-        return sql;
-    }
-
-    public @Nullable Object[] arguments() {
-        return args == null ? null : args.toArray();
-    }
-
-    private String generateSQL(H2TableDescriptor tblDesc) {
-        SB sql = new SB();
-
-        sql.a("SELECT ").a(KEY_FIELD_NAME).a(", ").a(VAL_FIELD_NAME);
-        sql.a(" FROM ").a(tblDesc.fullTableName());
+        buffer.a("SELECT ").a(KEY_FIELD_NAME).a(", ").a(VAL_FIELD_NAME);
+        buffer.a(" FROM ").a(tblDesc.fullTableName());
 
         Index index = getIndex(qry.getIndexName(), tblDesc.table());
 
         if (index != null) {
-            sql.a(" USE INDEX (\"").a(index.getName()).a("\")");
+            buffer.a(" USE INDEX (\"").a(index.getName()).a("\")");
         }
+
+        List<Object> args = null;
 
         if (qry.getCriteria() != null) {
             List<IndexQueryCriterion> criteria = qry.getCriteria();
@@ -73,18 +65,19 @@ public class IndexQuerySqlGenerator {
                 IndexQueryCriterion criterion = criteria.get(i);
 
                 if (i == 0) {
-                    sql.a(" WHERE ");
+                    buffer.a(" WHERE ");
                 }
                 else {
-                    sql.a(" AND ");
+                    buffer.a(" AND ");
                 }
 
-                // Ignite's IndexQuery allows to compare with NULL and treats it as the smallest value.
-                // While SQL doesn't allow this, we mimic Ignite's behavior for compatibility.
-                SqlBuilderContext ctx = new SqlFromIndexQueryBuilderContext(tblDesc, criterion.field(), args);
-
                 if (criterion instanceof SqlIndexQueryCriterion) {
-                    sql.a(((SqlIndexQueryCriterion)criterion).toSQL(ctx));
+                    // Ignite's IndexQuery allows to compare with NULL and treats it as the smallest value.
+                    // While SQL doesn't allow this, we mimic Ignite's behavior for compatibility.
+                    String condition = ((SqlIndexQueryCriterion)criterion)
+                        .toSql(new IndexQuerySqlBuilderContext(tblDesc.table(), args));
+
+                    buffer.a(condition);
                 }
                 else {
                     // Mimic Ignite error.
@@ -96,32 +89,32 @@ public class IndexQuerySqlGenerator {
         }
 
         if (index != null) {
-            sql.a(" ORDER BY ");
+            buffer.a(" ORDER BY ");
             // Just insert natural index order.
             IndexColumn[] idxColumns = index.getIndexColumns();
 
             for (int i = 0; i < idxColumns.length; i++) {
                 if (i > 0) {
-                    sql.a(", ");
+                    buffer.a(", ");
                 }
 
                 IndexColumn idxCol = idxColumns[i];
 
-                sql.a('"').a(idxCol.columnName).a('"');
+                buffer.a('"').a(idxCol.columnName).a('"');
 
                 if (idxCol.sortType == SortOrder.DESCENDING)
-                    sql.a(" DESC");
+                    buffer.a(" DESC");
             }
         }
 
         if (qry.getLimit() != 0) {
-            sql.a(" LIMIT ").a(qry.getLimit());
+            buffer.a(" LIMIT ").a(qry.getLimit());
         }
 
-        return sql.toString();
+        return new SqlGeneratorResult(buffer.toString(), args);
     }
 
-    private @Nullable Index getIndex(@Nullable String idxName, GridH2Table table) {
+    private static @Nullable Index getIndex(@Nullable String idxName, GridH2Table table) {
         if (idxName == null) {
             return null;
         }
@@ -138,5 +131,24 @@ public class IndexQuerySqlGenerator {
         }
 
         throw new IgniteException("Index \"" + upperCaseIdxName + "\" not found.");
+    }
+
+    static class SqlGeneratorResult {
+        private final String sql;
+
+        private final @Nullable List<Object> arguments;
+
+        public SqlGeneratorResult(String sql, @Nullable List<Object> arguments) {
+            this.sql = sql;
+            this.arguments = arguments;
+        }
+
+        public String sql() {
+            return sql;
+        }
+
+        public @Nullable Object[] arguments() {
+            return arguments == null ? null : arguments.toArray();
+        }
     }
 }

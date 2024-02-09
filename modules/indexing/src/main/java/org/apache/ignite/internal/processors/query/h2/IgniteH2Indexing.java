@@ -1117,25 +1117,19 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 IgniteQueryErrorCode.TABLE_NOT_FOUND);
         }
 
-        // TODO result
-        IndexQuerySqlGenerator sqlGen = new IndexQuerySqlGenerator(qry, tblDesc);
+        IndexQuerySqlGenerator.SqlGeneratorResult result = IndexQuerySqlGenerator.generate(qry, tblDesc);
+        SqlFieldsQuery fieldsQuery = new SqlFieldsQuery(result.sql());
 
-        String sql = sqlGen.sql();
-
-        System.out.println(">xxxxx> " + sql);
-
-        SqlFieldsQuery res = new SqlFieldsQuery(sql);
-
-        res.setArgs(sqlGen.arguments());
-        res.setLocal(qry.isLocal());
-        res.setPageSize(qry.getPageSize());
-        res.setSchema(schemaName);
+        fieldsQuery.setArgs(result.arguments());
+        fieldsQuery.setLocal(qry.isLocal());
+        fieldsQuery.setPageSize(qry.getPageSize());
+        fieldsQuery.setSchema(schemaName);
 
         if (qry.getPartition() != null) {
-            res.setPartitions(qry.getPartition());
+            fieldsQuery.setPartitions(qry.getPartition());
         }
 
-        return res;
+        return fieldsQuery;
     }
 
     /**

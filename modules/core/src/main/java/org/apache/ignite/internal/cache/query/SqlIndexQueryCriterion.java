@@ -16,12 +16,12 @@
 
 package org.apache.ignite.internal.cache.query;
 
-import org.apache.ignite.cache.query.IndexQuery;
 import org.apache.ignite.cache.query.IndexQueryCriterion;
 
 /**
- * Extended interface for {@link IndexQuery} criterion.
+ * Extended {@link IndexQueryCriterion} interface, that supports SQL generation.
  */
 public interface SqlIndexQueryCriterion extends IndexQueryCriterion {
-    String toSQL(SqlBuilderContext ctx);
+    /** Returns SQL condition, representing this criterion. */
+    String toSql(SqlBuilderContext ctx);
 }
