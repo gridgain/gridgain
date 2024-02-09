@@ -16,11 +16,10 @@
 
 package org.apache.ignite.cache.query;
 
+import java.util.Collection;
 import org.apache.ignite.internal.cache.query.InIndexQueryCriterion;
 import org.apache.ignite.internal.cache.query.RangeIndexQueryCriterion;
 import org.apache.ignite.internal.util.typedef.internal.A;
-
-import java.util.Collection;
 
 /**
  * Factory of {@link IndexQueryCriterion} for {@link IndexQuery}.
@@ -47,7 +46,7 @@ public class IndexQueryCriteriaBuilder {
     public static IndexQueryCriterion lt(String field, Object val) {
         A.notNullOrEmpty(field, "field");
 
-        RangeIndexQueryCriterion c = new RangeIndexQueryCriterion.LtCriterion(field, null, val);
+        RangeIndexQueryCriterion c = new RangeIndexQueryCriterion(field, null, val);
         c.lowerIncl(true);
         c.upperNull(val == null);
 
@@ -64,7 +63,7 @@ public class IndexQueryCriteriaBuilder {
     public static IndexQueryCriterion lte(String field, Object val) {
         A.notNullOrEmpty(field, "field");
 
-        RangeIndexQueryCriterion c = new RangeIndexQueryCriterion.LtCriterion(field, null, val);
+        RangeIndexQueryCriterion c = new RangeIndexQueryCriterion(field, null, val);
         c.lowerIncl(true);
         c.upperIncl(true);
         c.upperNull(val == null);
@@ -118,7 +117,7 @@ public class IndexQueryCriteriaBuilder {
     public static IndexQueryCriterion between(String field, Object lower, Object upper) {
         A.notNullOrEmpty(field, "field");
 
-        RangeIndexQueryCriterion c = new RangeIndexQueryCriterion.BetweenCriterion(field, lower, upper);
+        RangeIndexQueryCriterion c = new RangeIndexQueryCriterion(field, lower, upper);
         c.lowerIncl(true);
         c.upperIncl(true);
         c.lowerNull(lower == null);
