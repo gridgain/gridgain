@@ -21,7 +21,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.cache.query.SqlBuilderContext;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 
-/** Index query SQL builder context. */
+/** The context used when converting an index query to an SQL query. */
 class IndexQuerySqlBuilderContext implements SqlBuilderContext {
     /** Query arguments. */
     private final List<Object> arguments;

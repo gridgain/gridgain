@@ -24,25 +24,25 @@ public class RangeIndexQueryCriterion implements SqlIndexQueryCriterion {
     private static final long serialVersionUID = 0L;
 
     /** Index field name. */
-    protected final String field;
+    private final String field;
 
     /** Lower bound. */
-    protected final Object lower;
+    private final Object lower;
 
     /** Upper bound. */
-    protected final Object upper;
+    private final Object upper;
 
     /** Should include lower value. */
-    protected boolean lowerIncl;
+    private boolean lowerIncl;
 
     /** Should include upper value. */
-    protected boolean upperIncl;
+    private boolean upperIncl;
 
     /** Whether lower bound is explicitly set to {@code null}. */
-    protected boolean lowerNull;
+    private boolean lowerNull;
 
     /** Whether upper bound is explicitly set to {@code null}. */
-    protected boolean upperNull;
+    private boolean upperNull;
 
     /** */
     public RangeIndexQueryCriterion(String field, Object lower, Object upper) {
