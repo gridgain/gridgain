@@ -33,8 +33,10 @@
     <url>http://ignite.apache.org</url>
 
     <properties>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <compiler.source>1.8</compiler.source>
+        <compiler.target>17</compiler.target>
+        <compiler.compilerVersion>17</compiler.compilerVersion>
+        <compiler.executable>/opt/java/jdk-ora-17/bin/javac</compiler.executable>
     </properties>
 
     <dependencies>
@@ -166,6 +168,12 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.7.0</version>
+                <configuration>
+                    <source>${compiler.source}</source>
+                    <target>${compiler.target}</target>
+                    <compilerVersion>${compiler.compilerVersion}</compilerVersion>
+                    <executable>${compiler.executable}</executable>
+                </configuration>
             </plugin>
 
             <plugin>
