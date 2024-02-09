@@ -19,7 +19,6 @@ package org.apache.ignite.internal.cache.query;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 
@@ -53,7 +52,7 @@ public final class InIndexQueryCriterion implements SqlIndexQueryCriterion {
     }
 
     /** {@inheritDoc} */
-    @Override public String toSQL(SqlBuilderContext ctx, List<Object> args) {
+    @Override public String toSQL(SqlBuilderContext ctx) {
         SB buf = new SB();
         String column = ctx.columnName();
 
@@ -84,7 +83,7 @@ public final class InIndexQueryCriterion implements SqlIndexQueryCriterion {
                     } else {
                         buf.a(", ?");
                     }
-                    args.add(val);
+                    ctx.addArgument(val);
                 }
                 buf.a(")");
 
@@ -100,7 +99,7 @@ public final class InIndexQueryCriterion implements SqlIndexQueryCriterion {
                 } else {
                     buf.a(", ?");
                 }
-                args.add(val);
+                ctx.addArgument(val);
             }
             buf.a(")");
         }

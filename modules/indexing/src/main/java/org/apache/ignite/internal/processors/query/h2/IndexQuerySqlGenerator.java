@@ -81,10 +81,10 @@ public class IndexQuerySqlGenerator {
 
                 // Ignite's IndexQuery allows to compare with NULL and treats it as the smallest value.
                 // While SQL doesn't allow this, we mimic Ignite's behavior for compatibility.
-                SqlBuilderContext ctx = new SqlFromIndexQueryBuilderContext(tblDesc, criterion.field());
+                SqlBuilderContext ctx = new SqlFromIndexQueryBuilderContext(tblDesc, criterion.field(), args);
 
                 if (criterion instanceof SqlIndexQueryCriterion) {
-                    sql.a(((SqlIndexQueryCriterion)criterion).toSQL(ctx, args));
+                    sql.a(((SqlIndexQueryCriterion)criterion).toSQL(ctx));
                 }
                 else {
                     // Mimic Ignite error.

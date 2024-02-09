@@ -21,4 +21,6 @@ public interface SqlBuilderContext {
     String columnName();
 
     boolean nullable();
+
+    void addArgument(Object arg);
 }

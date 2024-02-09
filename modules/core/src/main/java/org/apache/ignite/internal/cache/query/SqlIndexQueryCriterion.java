@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.cache.query;
 
-import java.util.List;
 import org.apache.ignite.cache.query.IndexQuery;
 import org.apache.ignite.cache.query.IndexQueryCriterion;
 
@@ -24,5 +23,5 @@ import org.apache.ignite.cache.query.IndexQueryCriterion;
  * Extended interface for {@link IndexQuery} criterion.
  */
 public interface SqlIndexQueryCriterion extends IndexQueryCriterion {
-    String toSQL(SqlBuilderContext ctx, List<Object> args);
+    String toSQL(SqlBuilderContext ctx);
 }

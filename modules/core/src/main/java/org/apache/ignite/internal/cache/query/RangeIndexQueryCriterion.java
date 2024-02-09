@@ -16,36 +16,35 @@
 
 package org.apache.ignite.internal.cache.query;
 
-import java.util.List;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 
 /**
  * Range index criterion that applies to BPlusTree based indexes.
  */
-public final class RangeIndexQueryCriterion implements SqlIndexQueryCriterion {
+public class RangeIndexQueryCriterion implements SqlIndexQueryCriterion {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** Index field name. */
-    private final String field;
+    protected final String field;
 
     /** Lower bound. */
-    private final Object lower;
+    protected final Object lower;
 
     /** Upper bound. */
-    private final Object upper;
+    protected final Object upper;
 
     /** Should include lower value. */
-    private boolean lowerIncl;
+    protected boolean lowerIncl;
 
     /** Should include upper value. */
-    private boolean upperIncl;
+    protected boolean upperIncl;
 
     /** Whether lower bound is explicitly set to {@code null}. */
-    private boolean lowerNull;
+    protected boolean lowerNull;
 
     /** Whether upper bound is explicitly set to {@code null}. */
-    private boolean upperNull;
+    protected boolean upperNull;
 
     /** */
     public RangeIndexQueryCriterion(String field, Object lower, Object upper) {
@@ -104,10 +103,64 @@ public final class RangeIndexQueryCriterion implements SqlIndexQueryCriterion {
         return upperNull;
     }
 
-    @Override public String toSQL(SqlBuilderContext ctx, List<Object> args) {
+    public static class LtCriterion extends RangeIndexQueryCriterion {
+        public LtCriterion(String field, Object lower, Object upper) {
+            super(field, lower, upper);
+        }
+
+        @Override public String toSQL(SqlBuilderContext ctx) {
+            if (upperNull || !lowerIncl) {
+                throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
+            }
+
+            // lowerNull is technically irrelevant.
+            // lowerNull == true means between(NULL, upper).
+            // lowerNull == false means gt(upper) or gte(upper).
+            // However, gt(upper) and gte(upper) must include IS NULL anyway.
+
+            // Still, the following flags invariant holds for between(NULL, upper).
+            if (lowerNull && !upperIncl) {
+                throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
+            }
+
+            ctx.addArgument(upper);
+
+            String column = ctx.columnName();
+
+            String condition = column + (upperIncl ? " <= ?" : " < ?");
+
+            if (ctx.nullable()) {
+                // TODO optimize for single index condition using UNION
+                return '(' + column + " IS NULL OR " + condition + ')';
+            } else {
+                return condition;
+            }
+        }
+    }
+
+    public static class BetweenCriterion extends RangeIndexQueryCriterion {
+        public BetweenCriterion(String field, Object lower, Object upper) {
+            super(field, lower, upper);
+        }
+
+        @Override public String toSQL(SqlBuilderContext ctx) {
+            if (!(lowerIncl && upperIncl && !lowerNull && !upperNull)) {
+                throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
+            }
+
+            ctx.addArgument(lower);
+            ctx.addArgument(upper);
+
+            String column = ctx.columnName();
+
+            return column + " >= ? AND " + column + " <= ?";
+        }
+    }
+
+    @Override public String toSQL(SqlBuilderContext ctx) {
         SB buf = new SB();
         String column = ctx.columnName();
-        boolean nullable = ctx.nullable();
+
         // Consider all flags to decipher which condition was requested.
         // TODO refactor - replace RangeIndexQueryCriterion with per-condition criterions.
         if (lower == null && upper == null) {
@@ -165,48 +218,12 @@ public final class RangeIndexQueryCriterion implements SqlIndexQueryCriterion {
             } else {
                 // gt(lower) or gte(lower), upperIncl is always true.
                 buf.a(column).a(lowerIncl ? " >= ?" : " > ?");
-                args.add(lower);
+                ctx.addArgument(lower);
             }
         } else if (lower == null /*&& upper != null*/) {
-            if (upperNull || !lowerIncl) {
-                throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
-            }
-
-            // lowerNull is technically irrelevant.
-            // lowerNull == true means between(NULL, upper).
-            // lowerNull == false means gt(upper) or gte(upper).
-            // However, gt(upper) and gte(upper) must include IS NULL anyway.
-
-            // Still, the following flags invariant holds for between(NULL, upper).
-            if (lowerNull && !upperIncl) {
-                throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
-            }
-
-            String condition = column + (upperIncl ? " <= ?" : " < ?");
-
-            if (nullable) {
-                // TODO optimize for single index condition using UNION
-                buf.a("(")
-                    .a(column).a(" IS NULL")
-                    .a(" OR ")
-                    .a(condition)
-                    .a(")");
-            } else {
-                buf.a(condition);
-            }
-
-            args.add(upper);
+            assert false;
         } else /*if (lower != null && upper != null)*/ {
-            // between(lower, upper), flags are always the same.
-            if (!(lowerIncl && upperIncl && !lowerNull && !upperNull)) {
-                throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
-            }
-
-            buf.a(column).a(" >= ?")
-                .a(" AND ")
-                .a(column).a(" <= ?");
-            args.add(lower);
-            args.add(upper);
+            assert false;
         }
 
         return buf.toString();
