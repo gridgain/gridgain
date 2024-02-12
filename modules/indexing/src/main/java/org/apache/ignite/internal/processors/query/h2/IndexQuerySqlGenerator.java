@@ -121,14 +121,18 @@ public class IndexQuerySqlGenerator {
 
         ArrayList<Index> indexes = table.getIndexes();
         String upperCaseIdxName = idxName.toUpperCase();
+        Index upperCaseIndex = null;
 
         for (Index idx : indexes) {
             if (idx.getName().equals(idxName))
                 return idx;
 
-            if (idx.getName().equals(upperCaseIdxName))
-                return idx;
+            if (upperCaseIndex == null && idx.getName().equals(upperCaseIdxName))
+                upperCaseIndex = idx;
         }
+
+        if (upperCaseIndex != null)
+            return upperCaseIndex;
 
         throw new IgniteException("Index \"" + upperCaseIdxName + "\" not found.");
     }
