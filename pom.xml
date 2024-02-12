@@ -53,6 +53,7 @@
         <module>modules/extdata/platform</module>
         <module>modules/clients</module>
         <module>modules/spring</module>
+        <module>modules/spring-6</module>
         <module>modules/spring-data-commons</module>
         <module>modules/spring-data-2.2</module>
         <module>modules/web</module>
@@ -119,18 +120,74 @@
             </modules>
         </profile>
 
-        <profile>
-            <id>spring-6</id>
-            <modules>
-                <module>modules/spring-6</module>
-            </modules>
-        </profile>
+<!--        <profile>-->
+<!--            <id>spring-6</id>-->
+<!--            <modules>-->
+<!--                <module>modules/spring-6</module>-->
+<!--            </modules>-->
+<!--        </profile>-->
 
         <profile>
             <id>numa-allocator</id>
             <modules>
                 <module>modules/numa-allocator</module>
             </modules>
+        </profile>
+
+        <profile>
+            <id>java-17+</id>
+            <activation>
+                <jdk>[17,)</jdk>
+            </activation>
+            <dependencies/>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.7.0</version>
+                        <configuration>
+                            <compilerArgs>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/jdk.internal.misc=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/sun.nio.ch=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/java.io=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/java.nio=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/java.util=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/java.lang=ALL-UNNAMED</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <argLine>
+                                --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
+                                --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+                                --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
+                                --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
+                                --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
+                                --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+                                --add-opens=java.base/java.io=ALL-UNNAMED
+                                --add-opens=java.base/java.nio=ALL-UNNAMED
+                                --add-opens=java.base/java.util=ALL-UNNAMED
+                                --add-opens=java.base/java.lang=ALL-UNNAMED
+                            </argLine>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
 
         <profile>

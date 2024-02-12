@@ -32,13 +32,13 @@
     <artifactId>ignite-spring6</artifactId>
     <url>http://ignite.apache.org</url>
 
-<!--    <properties>-->
-<!--        <compiler.source>1.8</compiler.source>-->
-<!--        <compiler.target>17</compiler.target>-->
-<!--&lt;!&ndash;        <compiler.compilerVersion>17</compiler.compilerVersion>&ndash;&gt;-->
-<!--&lt;!&ndash;        <compiler.executable>/opt/java/jdk-ora-17/bin/javac</compiler.executable>&ndash;&gt;-->
-<!--&lt;!&ndash;        <compiler.release>17</compiler.release>&ndash;&gt;-->
-<!--    </properties>-->
+    <properties>
+        <compiler.source>17</compiler.source>
+        <compiler.target>17</compiler.target>
+<!--        <compiler.compilerVersion>17</compiler.compilerVersion>-->
+<!--        <compiler.executable>/opt/java/jdk-ora-17/bin/javac</compiler.executable>-->
+<!--        <compiler.release>17</compiler.release>-->
+    </properties>
 
     <dependencies>
         <dependency>
