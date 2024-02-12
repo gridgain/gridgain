@@ -49,11 +49,11 @@ class IndexQuerySqlBuilderContext implements SqlBuilderContext {
     private org.gridgain.internal.h2.table.Column resolveH2Column(String name, GridH2Table table) {
         String upperName = name.toUpperCase();
 
-        if (table.doesColumnExist(upperName))
-            return table.getColumn(upperName);
-
         if (table.doesColumnExist(name))
             return table.getColumn(name);
+
+        if (table.doesColumnExist(upperName))
+            return table.getColumn(upperName);
 
         throw new IgniteException("Column \"" + upperName + "\" not found.");
     }

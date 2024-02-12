@@ -123,10 +123,10 @@ public class IndexQuerySqlGenerator {
         String upperCaseIdxName = idxName.toUpperCase();
 
         for (Index idx : indexes) {
-            if (idx.getName().equals(upperCaseIdxName))
+            if (idx.getName().equals(idxName))
                 return idx;
 
-            if (idx.getName().equals(idxName))
+            if (idx.getName().equals(upperCaseIdxName))
                 return idx;
         }
 
