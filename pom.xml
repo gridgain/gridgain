@@ -264,16 +264,16 @@
                                 <phase>validate</phase>
                                 <configuration>
                                     <additionalJOption>
-                                        --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
-                                        --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
-                                        --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
-                                        --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
-                                        --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
-                                        --add-exports=jdk.management/com.sun.management.internal=ALL-UNNAMED
-                                        --add-exports=java.base/java.io=ALL-UNNAMED
-                                        --add-exports=java.base/java.nio=ALL-UNNAMED
-                                        --add-exports=java.base/java.util=ALL-UNNAMED
-                                        --add-exports=java.base/java.lang=ALL-UNNAMED
+                                        <additionalJOption>--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED</additionalJOption>
+                                        <additionalJOption>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</additionalJOption>
+                                        <additionalJOption>--add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED</additionalJOption>
+                                        <additionalJOption>--add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED</additionalJOption>
+                                        <additionalJOption>--add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED</additionalJOption>
+                                        <additionalJOption>--add-exports=jdk.management/com.sun.management.internal=ALL-UNNAMED</additionalJOption>
+                                        <additionalJOption>--add-exports=java.base/java.io=ALL-UNNAMED</additionalJOption>
+                                        <additionalJOption>--add-exports=java.base/java.nio=ALL-UNNAMED</additionalJOption>
+                                        <additionalJOption>--add-exports=java.base/java.util=ALL-UNNAMED</additionalJOption>
+                                        <additionalJOption>--add-exports=java.base/java.lang=ALL-UNNAMED</additionalJOption>
                                     </additionalJOption>
                                     <reportOutputDirectory>${basedir}/target/javadoc</reportOutputDirectory>
                                     <destDir>core</destDir>
