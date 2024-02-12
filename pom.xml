@@ -159,8 +159,6 @@
                                 <arg>--add-exports</arg>
                                 <arg>java.base/java.io=ALL-UNNAMED</arg>
                                 <arg>--add-exports</arg>
-                                <arg>java.base/jdk.internal.misc=ALL-UNNAMED</arg>
-                                <arg>--add-exports</arg>
                                 <arg>java.base/java.nio=ALL-UNNAMED</arg>
                                 <arg>--add-exports</arg>
                                 <arg>java.base/java.util=ALL-UNNAMED</arg>
