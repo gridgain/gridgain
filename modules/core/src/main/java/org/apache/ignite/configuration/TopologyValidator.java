@@ -38,7 +38,7 @@ import org.apache.ignite.cluster.ClusterNode;
  * </ul>
  * After returning {@code false} and declaring the topology not valid, the topology validator can return
  * to normal state whenever the next topology change happens.
- * <h1 class="header">Example</h1>
+ * <h2 class="header">Example</h2>
  * The example below shows how a validator can be used to allow cache updates only in case if the cluster
  * topology contains exactly 2 nodes:
  * <pre name="code" class="java">
@@ -48,7 +48,7 @@ import org.apache.ignite.cluster.ClusterNode;
  *    }
  * }
  * </pre>
- * <h1 class="header">Configuration</h1>
+ * <h2 class="header">Configuration</h2>
  * The topology validator can be configured either from code or XML via
  * {@link CacheConfiguration#setTopologyValidator(TopologyValidator)} method.
  */

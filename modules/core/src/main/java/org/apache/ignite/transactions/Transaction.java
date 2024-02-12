@@ -85,14 +85,14 @@ import org.apache.ignite.lang.IgniteUuid;
  * </li>
  * </ul>
  * <p>
- * <h1 class="header">Cache Atomicity Mode</h1>
+ * <h2 class="header">Cache Atomicity Mode</h2>
  * In addition to standard {@link org.apache.ignite.cache.CacheAtomicityMode#TRANSACTIONAL} behavior, Ignite also supports
  * a lighter {@link org.apache.ignite.cache.CacheAtomicityMode#ATOMIC} mode as well. In this mode distributed transactions
  * and distributed locking are not supported. Disabling transactions and locking allows to achieve much higher
  * performance and throughput ratios. It is recommended that {@link org.apache.ignite.cache.CacheAtomicityMode#ATOMIC} mode
  * is used whenever full {@code ACID}-compliant transactions are not needed.
  * <p>
- * <h1 class="header">Usage</h1>
+ * <h2 class="header">Usage</h2>
  * You can use cache transactions as follows:
  * <pre name="code" class="java">
  * Ignite ignite = Ignition.ignite();

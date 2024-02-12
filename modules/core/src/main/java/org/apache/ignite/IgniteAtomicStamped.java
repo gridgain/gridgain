@@ -46,7 +46,7 @@ import org.apache.ignite.lang.IgniteBiTuple;
  * Method {@link #name()} gets name of atomic stamped.
  * </li>
  * </ul>
- * <h1 class="header">Creating Distributed Atomic Stamped</h1>
+ * <h2 class="header">Creating Distributed Atomic Stamped</h2>
  * Instance of distributed atomic stamped can be created by calling the following method:
  * <ul>
  *     <li>{@link Ignite#atomicLong(String, long, boolean)}</li>

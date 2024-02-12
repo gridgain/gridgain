@@ -40,7 +40,7 @@ import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
  * Driver allows to get distributed data from Ignite cache using standard
  * SQL queries and standard JDBC API. It will automatically get only fields that
  * you actually need from objects stored in cache.
- * <h1 class="header">Limitations</h1>
+ * <h2 class="header">Limitations</h2>
  * Data in Ignite cache is usually distributed across several nodes,
  * so some queries may not work as expected since the query will be sent to each
  * individual node and results will then be collected and returned as JDBC result set.
@@ -61,16 +61,16 @@ import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
  *         will be duplicated.
  *     </li>
  * </ul>
- * <h1 class="header">SQL Notice</h1>
+ * <h2 class="header">SQL Notice</h2>
  * Driver allows to query data from several caches. Cache that driver is connected to is
  * treated as default schema in this case. Other caches can be referenced by their names.
  * <p>
  * Note that cache name is case sensitive and you have to always specify it in quotes.
- * <h1 class="header">Dependencies</h1>
+ * <h2 class="header">Dependencies</h2>
  * JDBC driver is located in main Ignite JAR and depends on all libraries located in
  * {@code IGNITE_HOME/libs} folder. So if you are using JDBC driver in any external tool,
  * you have to add main Ignite JAR will all dependencies to its classpath.
- * <h1 class="header">Configuration</h1>
+ * <h2 class="header">Configuration</h2>
  *
  * JDBC driver can return two different types of connection: Ignite Java client based connection and
  * Ignite client node based connection. Java client best connection is deprecated and left only for
@@ -259,7 +259,7 @@ import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
  *         <td>Yes</td>
  *     </tr>
  * </table>
- * <h1 class="header">Example</h1>
+ * <h2 class="header">Example</h2>
  * <pre name="code" class="java">
   * // Open JDBC connection.
  * Connection conn = DriverManager.getConnection("jdbc:ignite:cfg//cache=persons@file:///etc/configs/ignite-jdbc.xml");

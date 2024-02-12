@@ -22,11 +22,11 @@ import java.util.concurrent.TimeUnit;
 /**
  * This interface provides a rich API for working with distributed count down latch.
  * <p>
- * <h1 class="header">Functionality</h1>
+ * <h2 class="header">Functionality</h2>
  * Distributed count down latch provides functionality similar to {@code java.util.CountDownLatch}.
  * Note that you cannot remove count down latch having count greater that zero. It should be
  * counted down to zero first.
- * <h1 class="header">Creating Distributed Count Down Latch</h1>
+ * <h2 class="header">Creating Distributed Count Down Latch</h2>
  * Instance of cache count down latch can be created by calling the following method:
  * {@link Ignite#countDownLatch(String, int, boolean, boolean)}.
  */

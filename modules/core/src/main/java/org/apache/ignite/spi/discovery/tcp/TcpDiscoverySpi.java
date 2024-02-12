@@ -140,7 +140,7 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metr
  * {@link TcpDiscoveryIpFinder} about self start (stops when send succeeds)
  * and then this info goes to coordinator. When coordinator processes join request
  * and issues node added messages and all other nodes then receive info about new node.
- * <h1 class="header">Failure Detection</h1>
+ * <h2 class="header">Failure Detection</h2>
  * Configuration defaults (see Configuration section below and
  * {@link IgniteConfiguration#getFailureDetectionTimeout()}) for details) are chosen to make possible for discovery
  * SPI work reliably on most of hardware and virtual deployments, but this has made failure detection time worse.
@@ -159,10 +159,10 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metr
  * <li>Socket timeout (see {@link #setSocketTimeout(long)}) - 200ms</li>
  * <li>Message acknowledgement timeout (see {@link #setAckTimeout(long)}) - 50ms</li>
  * </ul>
- * <h1 class="header">Configuration</h1>
- * <h2 class="header">Mandatory</h2>
+ * <h2 class="header">Configuration</h2>
+ * <h3 class="header">Mandatory</h3>
  * There are no mandatory configuration parameters.
- * <h2 class="header">Optional</h2>
+ * <h3 class="header">Optional</h3>
  * The following configuration parameters are optional:
  * <ul>
  * <li>IP finder to share info about nodes IP addresses
@@ -195,7 +195,7 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metr
  * <li>Statistics print frequency (see {@link #setStatisticsPrintFrequency(long)}</li>
  * <li>Force server mode (see {@link #setForceServerMode(boolean)}</li>
  * </ul>
- * <h2 class="header">Java Example</h2>
+ * <h3 class="header">Java Example</h3>
  * <pre name="code" class="java">
  * TcpDiscoverySpi spi = new TcpDiscoverySpi();
  *
@@ -212,7 +212,7 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metr
  * // Start grid.
  * Ignition.start(cfg);
  * </pre>
- * <h2 class="header">Spring Example</h2>
+ * <h3 class="header">Spring Example</h3>
  * TcpDiscoverySpi can be configured from Spring XML configuration file:
  * <pre name="code" class="xml">
  * &lt;bean id="grid.custom.cfg" class="org.apache.ignite.configuration.IgniteConfiguration" singleton="true"&gt;

@@ -38,7 +38,7 @@ import org.apache.ignite.lang.IgniteUuid;
  *          to local grid events (events from remote nodes not included).
  *      </li>
  * </ul>
- * <h1 class="header">Events and Performance</h1>
+ * <h2 class="header">Events and Performance</h2>
  * Note that by default all events in Ignite are enabled and therefore generated and stored
  * by whatever event storage SPI is configured. Ignite can and often does generate thousands events per seconds
  * under the load and therefore it creates a significant additional load on the system. If these events are
@@ -48,7 +48,7 @@ import org.apache.ignite.lang.IgniteUuid;
  * by using either {@link org.apache.ignite.configuration.IgniteConfiguration#getIncludeEventTypes()} method in Ignite configuration. Note that certain
  * events are required for Ignite's internal operations and such events will still be generated but not stored by
  * event storage SPI if they are disabled in Ignite configuration.
- * <h1 class="header">Internal and Hidden Events</h1>
+ * <h2 class="header">Internal and Hidden Events</h2>
  * Also note that some events are considered to be internally used or hidden.
  * <p>
  * Internally used events are always "recordable" for notification purposes (regardless of whether they were

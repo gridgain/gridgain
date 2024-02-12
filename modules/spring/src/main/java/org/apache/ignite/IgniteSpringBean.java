@@ -65,7 +65,7 @@ import org.springframework.context.event.ContextRefreshedEvent;
  * </p>
  *
  * <p>
- * <h1 class="header">Spring Configuration Example</h1>
+ * <h2 class="header">Spring Configuration Example</h2>
  * Here is a typical example of describing it in Spring file:
  * <pre name="code" class="xml">
  * &lt;bean id="mySpringBean" class="org.apache.ignite.IgniteSpringBean"&gt;
@@ -80,7 +80,7 @@ import org.springframework.context.event.ContextRefreshedEvent;
  * <pre name="code" class="xml">
  * &lt;bean id="mySpringBean" class="org.apache.ignite.IgniteSpringBean"/&gt;
  * </pre>
- * <h1 class="header">Java Example</h1>
+ * <h2 class="header">Java Example</h2>
  * Here is how you may access this bean from code:
  * <pre name="code" class="java">
  * AbstractApplicationContext ctx = new FileSystemXmlApplicationContext("/path/to/spring/file");

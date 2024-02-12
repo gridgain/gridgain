@@ -21,7 +21,7 @@ import java.io.Closeable;
 /**
  * This interface provides a rich API for working with distributed atomic sequence.
  * <p>
- * <h1 class="header">Functionality</h1>
+ * <h2 class="header">Functionality</h2>
  * Distributed atomic sequence includes the following main functionality:
  * <ul>
  * <li>
@@ -45,7 +45,7 @@ import java.io.Closeable;
  * Method {@link #name()} gets name of atomic sequence.
  * </li>
  * </ul>
- * <h1 class="header">Creating Distributed Atomic Sequence</h1>
+ * <h2 class="header">Creating Distributed Atomic Sequence</h2>
  * Instance of distributed atomic sequence can be created by calling the following method:
  * <ul>
  *     <li>{@link Ignite#atomicSequence(String, long, boolean)}</li>

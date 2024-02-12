@@ -69,7 +69,7 @@ import java.lang.annotation.Target;
  * then you must implement custom grid task which will take care of proper state
  * initialization. In either case, Ignite must be able to serialize the state passed to remote node.
  * <p>
- * <h1 class="header">Java Example</h1>
+ * <h2 class="header">Java Example</h2>
  * <p>
  * Example for these types of functions would be any aggregate function returning single value from
  * the multiple inputs. For example:
@@ -92,7 +92,7 @@ import java.lang.annotation.Target;
  * <li>Logic of the method must allow for recursive apply on the subset of the original collection</li>
  * </ul>
  * <p>
- * <h1 class="header">Jboss AOP</h1>
+ * <h2 class="header">Jboss AOP</h2>
  * The following configuration needs to be applied to enable JBoss byte code
  * weaving. Note that Ignite is not shipped with JBoss and necessary
  * libraries will have to be downloaded separately (they come standard
@@ -118,7 +118,7 @@ import java.lang.annotation.Target;
  * </li>
  * </ul>
  * <p>
- * <h1 class="header">AspectJ AOP</h1>
+ * <h2 class="header">AspectJ AOP</h2>
  * The following configuration needs to be applied to enable AspectJ byte code
  * weaving.
  * <ul>
@@ -132,7 +132,7 @@ import java.lang.annotation.Target;
  * </li>
  * </ul>
  * <p>
- * <h1 class="header">Spring AOP</h1>
+ * <h2 class="header">Spring AOP</h2>
  * Spring AOP framework is based on dynamic proxy implementation and doesn't require
  * any specific runtime parameters for online weaving. All weaving is on-demand and should
  * be performed by calling method

@@ -46,10 +46,10 @@ import org.apache.ignite.spi.collision.CollisionSpi;
  * This class provides implementation for Collision SPI based on priority queue. Jobs are first ordered
  * by their priority, if one is specified, and only first {@link #getParallelJobsNumber()} jobs
  * is allowed to execute in parallel. Other jobs will be queued up.
- * <h1 class="header">Configuration</h1>
- * <h2 class="header">Mandatory</h2>
+ * <h2 class="header">Configuration</h2>
+ * <h3 class="header">Mandatory</h3>
  * This SPI has no mandatory configuration parameters.
- * <h2 class="header">Optional</h2>
+ * <h3 class="header">Optional</h3>
  * This SPI has following optional configuration parameters:
  * <ul>
  * <li>
@@ -104,7 +104,7 @@ import org.apache.ignite.spi.collision.CollisionSpi;
  * &lt;/property&gt;
  * </pre>
  * <p>
- * <h1 class="header">Coding Example</h1>
+ * <h2 class="header">Coding Example</h2>
  * Here is an example of a grid tasks that uses priority collision SPI configured in example above.
  * Note that priority collision resolution is absolutely transparent to the user and is simply a matter of proper
  * grid configuration. Also, priority may be defined only for task (it can be defined within the task,

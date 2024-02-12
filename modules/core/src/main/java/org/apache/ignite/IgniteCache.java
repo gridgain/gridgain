@@ -72,7 +72,7 @@ import org.apache.ignite.transactions.TransactionTimeoutException;
 /**
  * Main entry point for all <b>Data Grid APIs.</b> You can get a named cache by calling {@link Ignite#cache(String)}
  * method.
- * <h1 class="header">Functionality</h1>
+ * <h2 class="header">Functionality</h2>
  * This API extends {@link javax.cache.Cache} API which contains {@code JCache (JSR107)} cache functionality
  * and documentation. In addition to {@link javax.cache.Cache} functionality this API provides:
  * <ul>
@@ -89,7 +89,7 @@ import org.apache.ignite.transactions.TransactionTimeoutException;
  * <li>Ability to atomically collocate compute and data via {@link #invoke(Object, CacheEntryProcessor, Object...)}
  *  methods.</li>
  * </ul>
- * <h1 class="header">Transactions</h1>
+ * <h2 class="header">Transactions</h2>
  * Cache API supports transactions. You can group and set of cache methods within a transaction
  * to provide ACID-compliant behavior. See {@link IgniteTransactions} for more information.
  * <br>

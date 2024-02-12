@@ -21,7 +21,7 @@ import java.io.Serializable;
 /**
  * An instance of grid-managed service. Grid-managed services may be deployed from
  * {@link org.apache.ignite.IgniteServices} facade or directly from grid configuration at startup.
- * <h1 class="header">Deployment</h1>
+ * <h2 class="header">Deployment</h2>
  * Whenever service is deployed, Ignite will automatically calculate how many
  * instances of this service should be deployed on each node within the cluster.
  * Whenever service is deployed on a cluster node, Ignite will call
@@ -72,7 +72,7 @@ import java.io.Serializable;
  * ...
  * Ignition.start(gridCfg);
  * </pre>
- * <h1 class="header">Cancellation</h1>
+ * <h2 class="header">Cancellation</h2>
  * Services can be cancelled by calling any of the {@code cancel} methods on {@link org.apache.ignite.IgniteServices} API.
  * Whenever a deployed service is cancelled, Ignite will automatically call
  * {@link Service#cancel(ServiceContext)} method on that service.

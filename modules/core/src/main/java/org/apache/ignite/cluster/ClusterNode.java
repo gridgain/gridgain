@@ -31,7 +31,7 @@ import org.apache.ignite.lang.IgniteProductVersion;
  * {@code ClusterNode} list, which includes all nodes within task topology, is provided
  * to {@link org.apache.ignite.compute.ComputeTask#map(List, Object)} method.
  * <p>
- * <h1 class="header">Cluster Node Attributes</h1>
+ * <h2 class="header">Cluster Node Attributes</h2>
  * You can use cluster node attributes to provide static information about a node.
  * This information is initialized once within a cluster, during the node startup, and
  * remains the same throughout the lifetime of a node. Use
@@ -80,7 +80,7 @@ import org.apache.ignite.lang.IgniteProductVersion;
  * }
  * </pre>
  * <p>
- * <h1 class="header">Cluster Node Metrics</h1>
+ * <h2 class="header">Cluster Node Metrics</h2>
  * Cluster node metrics (see {@link #metrics()}) are updated frequently for all nodes
  * and can be used to get dynamic information about a node. The frequency of update
  * is controlled by  {@link org.apache.ignite.configuration.IgniteConfiguration#getMetricsUpdateFrequency()} parameter.

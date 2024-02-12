@@ -53,14 +53,14 @@ import java.util.TreeMap;
  * // Normal java getter.
  * String fieldVal = val.getMyFieldName();
  * </pre>
- * <h1 class="header">Working With Maps and Collections</h1>
+ * <h2 class="header">Working With Maps and Collections</h2>
  * All maps and collections in binary objects are serialized automatically. When working
  * with different platforms, e.g. C++ or .NET, Ignite will automatically pick the most
  * adequate collection or map in either language. For example, {@link ArrayList} in Java will become
  * {@code List} in C#, {@link LinkedList} in Java is {@link LinkedList} in C#, {@link HashMap}
  * in Java is {@code Dictionary} in C#, and {@link TreeMap} in Java becomes {@code SortedDictionary}
  * in C#, etc.
- * <h1 class="header">Dynamic Structure Changes</h1>
+ * <h2 class="header">Dynamic Structure Changes</h2>
  * Since objects are always cached in the binary format, server does not need to
  * be aware of the class definitions. Moreover, if class definitions are not present or not
  * used on the server, then clients can continuously change the structure of the binary
@@ -69,7 +69,7 @@ import java.util.TreeMap;
  * fields B and C, then the server-side binary object will have the fields A, B, and C.
  * As the structure of a binary object changes, the new fields become available for SQL queries
  * automatically.
- * <h1 class="header">Building Binary Objects</h1>
+ * <h2 class="header">Building Binary Objects</h2>
  * Ignite comes with {@link BinaryObjectBuilder} which allows to build binary objects dynamically:
  * <pre name=code class=java>
  * BinaryObjectBuilder builder = Ignition.ignite().binary().builder("org.project.MyObject");
@@ -90,7 +90,7 @@ import java.util.TreeMap;
  *
  * BinaryObject binaryObj = Ignition.ignite().binary().toBinary(obj);
  * </pre>
- * <h1 class="header">Binary Type Metadata</h1>
+ * <h2 class="header">Binary Type Metadata</h2>
  * Even though Ignite binary protocol only works with hash codes for type and field names
  * to achieve better performance, Ignite provides metadata for all binary types which
  * can be queried ar runtime via any of the {@link org.apache.ignite.IgniteBinary#type(Class)}

@@ -64,7 +64,7 @@ import static org.apache.ignite.events.EventType.EVT_TASK_FINISHED;
  * {@code per-task} mode) it is possible that even if split size may be equal to the
  * number of nodes, some jobs within the same task will be assigned to the same node if
  * multiple tasks are executing concurrently.
- * <h1 class="header">Coding Example</h1>
+ * <h2 class="header">Coding Example</h2>
  * If you are using {@link org.apache.ignite.compute.ComputeTaskSplitAdapter} then load balancing logic
  * is transparent to your code and is handled automatically by the adapter.
  * Here is an example of how your task will look:
@@ -128,7 +128,7 @@ import static org.apache.ignite.events.EventType.EVT_TASK_FINISHED;
  * }
  * </pre>
  * <p>
- * <h1 class="header">Configuration</h1>
+ * <h2 class="header">Configuration</h2>
  * In order to use this load balancer, you should configure your grid instance
  * to use {@link RoundRobinLoadBalancingSpi} either from Spring XML file or
  * directly. The following configuration parameters are supported:

@@ -31,7 +31,7 @@ import org.jetbrains.annotations.Nullable;
  * <li>{@link #SHARED}</li>
  * <li>{@link #CONTINUOUS}</li>
  * </ul>
- * <h1 class="header">User Version</h1>
+ * <h2 class="header">User Version</h2>
  * User version comes into play whenever you would like to redeploy tasks deployed
  * in {@link #SHARED} or {@link #CONTINUOUS} modes. By default, Ignite will
  * automatically detect if class-loader changed or a node is restarted. However,
@@ -52,7 +52,7 @@ import org.jetbrains.annotations.Nullable;
  * or {@code JAR} deployment, you should remember to provide {@code META-INF/ignite.xml}
  * file with desired user version in it.
  * <p>
- * <h1 class="header">Always-Local Development</h1>
+ * <h2 class="header">Always-Local Development</h2>
  * Ignite deployment (regardless of mode) allows you to develop everything as you would
  * locally. You never need to specifically write any kind of code for remote nodes. For
  * example, if you need to use a distributed cache from your {@link org.apache.ignite.compute.ComputeJob}, then you can

@@ -35,7 +35,7 @@ import java.util.concurrent.Callable;
  * to the nodes where the data for this computation is cached, the concept
  * otherwise known as {@code Collocation Of Computations And Data}.
  * <p>
- * <h1 class="header">Mapping Cache Keys</h1>
+ * <h2 class="header">Mapping Cache Keys</h2>
  * The default implementation of {@link AffinityKeyMapper}, which will be used
  * if no explicit affinity mapper is specified in cache configuration, will first look
  * for any field annotated with {@code @AffinityKeyMapped} annotation.
@@ -85,7 +85,7 @@ import java.util.concurrent.Callable;
  * cache.put(personKey2, new Person(..));
  * </pre>
  * <p>
- * <h1 class="header">Collocating Computations And Data</h1>
+ * <h2 class="header">Collocating Computations And Data</h2>
  * It is also possible to route computations to the nodes where the data is cached. This concept
  * is otherwise known as {@code Collocation Of Computations And Data}. In this case,
  * {@code @AffinityKeyMapped} annotation allows to specify a routing affinity key for a
