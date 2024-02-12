@@ -75,7 +75,7 @@ import org.apache.ignite.lang.IgniteUuid;
  * all compressed sections into one compressed file. Without session attribute
  * synchronization step this problem would be much harder to solve.
  * <p>
- * <h2 class="header">Session Injection</21>
+ * <h2 class="header">Session Injection</h2>
  * Session can be injected into a task or a job using IoC (dependency
  * injection) by attaching {@link org.apache.ignite.resources.TaskSessionResource @TaskSessionResource}
  * annotation to a field or a setter method inside of {@link ComputeTask} or
