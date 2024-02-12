@@ -45,6 +45,7 @@ public class IndexQueryCriteriaBuilder {
      */
     public static IndexQueryCriterion lt(String field, Object val) {
         A.notNullOrEmpty(field, "field");
+        A.notNull(val, "val");
 
         RangeIndexQueryCriterion c = new RangeIndexQueryCriterion(field, null, val);
         c.lowerIncl(true);
@@ -62,6 +63,7 @@ public class IndexQueryCriteriaBuilder {
      */
     public static IndexQueryCriterion lte(String field, Object val) {
         A.notNullOrEmpty(field, "field");
+        A.notNull(val, "val");
 
         RangeIndexQueryCriterion c = new RangeIndexQueryCriterion(field, null, val);
         c.lowerIncl(true);
@@ -80,6 +82,7 @@ public class IndexQueryCriteriaBuilder {
      */
     public static IndexQueryCriterion gt(String field, Object val) {
         A.notNullOrEmpty(field, "field");
+        A.notNull(val, "val");
 
         RangeIndexQueryCriterion c = new RangeIndexQueryCriterion(field, val, null);
         c.upperIncl(true);
@@ -97,6 +100,7 @@ public class IndexQueryCriteriaBuilder {
      */
     public static IndexQueryCriterion gte(String field, Object val) {
         A.notNullOrEmpty(field, "field");
+        A.notNull(val, "val");
 
         RangeIndexQueryCriterion c = new RangeIndexQueryCriterion(field, val, null);
         c.lowerIncl(true);

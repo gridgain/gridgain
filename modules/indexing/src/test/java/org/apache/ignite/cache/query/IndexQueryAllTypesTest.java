@@ -47,6 +47,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -127,11 +128,11 @@ public class IndexQueryAllTypesTest extends GridCommonAbstractTest {
 
         check(cache.query(qry), 0, CNT, i -> i, persGen);
 
-        // Should include nulls.
+        // Should exclude nulls.
         qry = new IndexQuery<Long, Person>(Person.class, intNullIdx)
             .setCriteria(lt("intNullId", pivot));
 
-        check(cache.query(qry), 0, CNT / 5, i -> i, persGen);
+        check(cache.query(qry), CNT / 10, CNT / 5, i -> i, persGen);
 
         // Should exclude nulls.
         qry = new IndexQuery<Long, Person>(Person.class, intNullIdx)
@@ -139,35 +140,32 @@ public class IndexQueryAllTypesTest extends GridCommonAbstractTest {
 
         check(cache.query(qry), CNT / 10, CNT, i -> i, persGen);
 
-        // Should return only nulls.
+        // Should return nothing.
         qry = new IndexQuery<Long, Person>(Person.class, intNullIdx)
             .setCriteria(lt("intNullId", 0));
 
-        check(cache.query(qry), 0, CNT / 10, i -> i, persGen);
+        check(cache.query(qry), 0, 0, i -> i, persGen);
 
-        // Should return only nulls.
-        qry = new IndexQuery<Long, Person>(Person.class, intNullIdx)
-            .setCriteria(lte("intNullId", null));
+        // gt(e)/lt(e) with null value produces exception.
+        GridTestUtils.assertThrows(null, () -> {
+            new IndexQuery<Long, Person>(Person.class, intNullIdx)
+                .setCriteria(lte("intNullId", null));
+        }, NullPointerException.class, "Ouch! Argument cannot be null: val");
 
-        check(cache.query(qry), 0, CNT / 10, i -> i, persGen);
+        GridTestUtils.assertThrows(null, () -> {
+            new IndexQuery<Long, Person>(Person.class, intNullIdx)
+                .setCriteria(gt("intNullId", null));
+        }, NullPointerException.class, "Ouch! Argument cannot be null: val");
 
-        // Should return all non nulls.
-        qry = new IndexQuery<Long, Person>(Person.class, intNullIdx)
-            .setCriteria(gt("intNullId", null));
+        GridTestUtils.assertThrows(null, () -> {
+            new IndexQuery<Long, Person>(Person.class, intNullIdx)
+                .setCriteria(gte("intNullId", null));
+        }, NullPointerException.class, "Ouch! Argument cannot be null: val");
 
-        check(cache.query(qry), CNT / 10, CNT, i -> i, persGen);
-
-        // Should return all items.
-        qry = new IndexQuery<Long, Person>(Person.class, intNullIdx)
-            .setCriteria(gte("intNullId", null));
-
-        check(cache.query(qry), 0, CNT, i -> i, persGen);
-
-        // Should not return any item.
-        qry = new IndexQuery<Long, Person>(Person.class, intNullIdx)
-            .setCriteria(lt("intNullId", null));
-
-        assertTrue(cache.query(qry).getAll().isEmpty());
+        GridTestUtils.assertThrows(null, () -> {
+            new IndexQuery<Long, Person>(Person.class, intNullIdx)
+                .setCriteria(lt("intNullId", null));
+        }, NullPointerException.class, "Ouch! Argument cannot be null: val");
 
         // Should return only nulls.
         qry = new IndexQuery<Long, Person>(Person.class, intNullIdx)

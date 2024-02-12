@@ -113,19 +113,13 @@ public class RangeIndexQueryCriterion implements SqlIndexQueryCriterion {
             return greaterThan(columnName, ctx);
 
         if (upper != null)
-            return lowerThan(column, ctx);
+            return lowerThan(columnName, ctx);
 
         // lower == null && upper == null
         if (lowerNull && upperNull)
             return betweenNull(columnName);
 
-        if (lowerNull)
-            return greaterThanNull(columnName);
-
-        if (upperNull)
-            return lowerThanNull(columnName);
-
-        // Neither lower nor upper are set explicitly.
+        // gt(null), gte(null), lt(null), lte(null) considered invalid and prohibited at a high level
         throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
     }
 
@@ -151,7 +145,7 @@ public class RangeIndexQueryCriterion implements SqlIndexQueryCriterion {
     }
 
     /** lt(notNull), lte(notNull) */
-    private String lowerThan(SqlBuilderContext.ColumnDescriptor column, SqlBuilderContext ctx) {
+    private String lowerThan(String columnName, SqlBuilderContext ctx) {
         if (upperNull || !lowerIncl) {
             throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
         }
@@ -168,25 +162,8 @@ public class RangeIndexQueryCriterion implements SqlIndexQueryCriterion {
 
         ctx.addArgument(upper);
 
-        String condition = column.name() + (upperIncl ? " <= ?" : " < ?");
-
-        if (column.nullable()) {
-            return '(' + column.name() + " IS NULL OR " + condition + ')';
-        } else {
-            return condition;
-        }
-    }
-
-    /** lt(null), lte(null) */
-    private String lowerThanNull(String column) {
-        // lt(null) or lte(null), lowerIncl is always true.
-        if (!lowerIncl) {
-            throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
-        }
-
-        return upperIncl
-            ? /* lte(null) */ column + " IS NULL"
-            : /* lt(null) */ "FALSE";
+        // NULLs will not be included.
+        return columnName + (upperIncl ? " <= ?" : " < ?");
     }
 
     /** gt(notNull), gte(notNull) */
@@ -208,21 +185,6 @@ public class RangeIndexQueryCriterion implements SqlIndexQueryCriterion {
             ctx.addArgument(lower);
 
             return column + (lowerIncl ? " >= ?" : " > ?");
-        }
-    }
-
-    /** gt(null), gte(null) */
-    private String greaterThanNull(String column) {
-        if (!upperIncl) {
-            throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
-        }
-
-        if (!lowerIncl) {
-            // gt(null) - same as NOT NULL
-            return column + " IS NOT NULL";
-        } else {
-            // gte(null) - same as TRUE - no condition
-            return "TRUE";
         }
     }
 

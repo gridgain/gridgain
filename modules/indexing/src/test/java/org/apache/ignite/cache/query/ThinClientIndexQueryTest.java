@@ -136,8 +136,8 @@ public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
                 // Single field, single criterion.
                 assertClientQuery(cache, left + 1, CNT, idxName, gt("fld1", left));
                 assertClientQuery(cache, left, CNT, idxName, gte("fld1", left));
-                assertClientQuery(cache, NULLS_CNT, left, idxName, lt("fld1", left));
-                assertClientQuery(cache, NULLS_CNT, left + 1, idxName, lte("fld1", left));
+                assertClientQuery(cache, 0, left, idxName, lt("fld1", left));
+                assertClientQuery(cache, 0, left + 1, idxName, lte("fld1", left));
                 assertClientQuery(cache, left, left + 1, idxName, eq("fld1", left));
                 assertClientQuery(cache, left, right + 1, idxName, between("fld1", left, right));
                 assertClientQuery(cache, left, left + 1, idxName, in("fld1", Collections.singleton(left)));
@@ -150,12 +150,10 @@ public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
                 assertClientQuery(cache, right, right + 1, idxName,
                     gte("fld1", left), in("fld1", Collections.singleton(right)));
 
-                // Single field, with nulls.
-                assertClientQuery(cache, NULLS_CNT, CNT, idxName, gte("fld1", null));
-                assertClientQuery(cache, 0, CNT, idxName, gt("fld1", null));
-                assertClientQuery(cache, 0, 0, idxName, lt("fld1", null));
-                assertClientQuery(cache, NULLS_CNT, 0, idxName, lte("fld1", null));
+                // Field, with nulls.
                 assertClientQuery(cache, NULLS_CNT, 0, idxName, in("fld1", Collections.singleton(null)));
+                assertClientQuery(cache, NULLS_CNT, 0, idxName, eq("fld1", null));
+                assertClientQuery(cache, NULLS_CNT, 0, idxName, between("fld1", null, null));
             });
         }
 
