@@ -254,6 +254,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
+
                         <executions>
                             <execution>
                                 <id>core-javadoc</id>
@@ -262,6 +263,18 @@
                                 </goals>
                                 <phase>validate</phase>
                                 <configuration>
+                                    <additionalJOption>
+                                        --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
+                                        --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+                                        --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
+                                        --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
+                                        --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
+                                        --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+                                        --add-opens=java.base/java.io=ALL-UNNAMED
+                                        --add-opens=java.base/java.nio=ALL-UNNAMED
+                                        --add-opens=java.base/java.util=ALL-UNNAMED
+                                        --add-opens=java.base/java.lang=ALL-UNNAMED
+                                    </additionalJOption>
                                     <reportOutputDirectory>${basedir}/target/javadoc</reportOutputDirectory>
                                     <destDir>core</destDir>
                                     <stylesheetfile>${basedir}/assembly/docfiles/css/stylesheet.css</stylesheetfile>
@@ -270,18 +283,6 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <additionalJOption>
-                                --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
-                                --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
-                                --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
-                                --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
-                                --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
-                                --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
-                                --add-opens=java.base/java.io=ALL-UNNAMED
-                                --add-opens=java.base/java.nio=ALL-UNNAMED
-                                --add-opens=java.base/java.util=ALL-UNNAMED
-                                --add-opens=java.base/java.lang=ALL-UNNAMED
-                            </additionalJOption>
                             <bottom>
                                 <![CDATA[
                                             <table width="100%" border="0" cellspacing=0 cellpadding=0 style="padding: 5px">
