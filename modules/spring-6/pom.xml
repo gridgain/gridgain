@@ -165,18 +165,50 @@
                  This bundle is a fragment attached to the ignite-core bundle, as it contains and exports classes in the org.apache.ignite
                  leading to a split package situation in OSGi.
             -->
-<!--            <plugin>-->
-<!--                <groupId>org.apache.maven.plugins</groupId>-->
-<!--                <artifactId>maven-compiler-plugin</artifactId>-->
-<!--                <version>3.10.1</version>-->
-<!--                <configuration>-->
-<!--                    <source>${compiler.source}</source>-->
-<!--                    <target>${compiler.target}</target>-->
-<!--&lt;!&ndash;                    <release>${compiler.release}</release>&ndash;&gt;-->
-<!--&lt;!&ndash;                    <compilerVersion>${compiler.compilerVersion}</compilerVersion>&ndash;&gt;-->
-<!--                    <executable>${compiler.executable}</executable>-->
-<!--                </configuration>-->
-<!--            </plugin>-->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.7.0</version>
+                    <configuration>
+                        <compilerArgs>
+                            <arg>--add-exports</arg>
+                            <arg>java.base/jdk.internal.misc=ALL-UNNAMED</arg>
+                            <arg>--add-exports</arg>
+                            <arg>java.base/sun.nio.ch=ALL-UNNAMED</arg>
+                            <arg>--add-exports</arg>
+                            <arg>java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED</arg>
+                            <arg>--add-exports</arg>
+                            <arg>jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED</arg>
+                            <arg>--add-exports</arg>
+                            <arg>java.base/java.io=ALL-UNNAMED</arg>
+                            <arg>--add-exports</arg>
+                            <arg>java.base/java.nio=ALL-UNNAMED</arg>
+                            <arg>--add-exports</arg>
+                            <arg>java.base/java.util=ALL-UNNAMED</arg>
+                            <arg>--add-exports</arg>
+                            <arg>java.base/java.lang=ALL-UNNAMED</arg>
+                        </compilerArgs>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <configuration>
+                        <argLine>
+                            --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
+                            --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+                            --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
+                            --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
+                            --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
+                            --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+                            --add-opens=java.base/java.io=ALL-UNNAMED
+                            --add-opens=java.base/java.nio=ALL-UNNAMED
+                            --add-opens=java.base/java.util=ALL-UNNAMED
+                            --add-opens=java.base/java.lang=ALL-UNNAMED
+                        </argLine>
+                    </configuration>
+                </plugin>
 
             <plugin>
                 <groupId>org.apache.felix</groupId>
