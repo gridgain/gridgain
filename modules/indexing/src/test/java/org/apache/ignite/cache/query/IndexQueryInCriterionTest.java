@@ -271,9 +271,6 @@ public class IndexQueryInCriterionTest extends GridCommonAbstractTest {
             assertExpect(c.toString(), qry, (k, p) -> p.age == 10);
         }
 
-        if (true)
-            return;
-
         List<IndexQueryCriterion> secondOnlyCriteria = F.asList(
             gte("age", 15),
             gte("age", 20),
