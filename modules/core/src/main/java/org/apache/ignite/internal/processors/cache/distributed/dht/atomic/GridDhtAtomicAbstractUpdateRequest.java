@@ -28,6 +28,7 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheDeployable;
 import org.apache.ignite.internal.processors.cache.GridCacheIdMessage;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
@@ -114,49 +115,16 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
     }
 
     /**
-     * Adds key to collection of failed keys.
-     *
-     * @param key Key to add.
-     * @param e Error cause.
-     */
-    public synchronized void addFailedKey(KeyCacheObject key, Throwable e) {
-        assert key != null;
-        assert e != null;
-
-        if (errs == null)
-            errs = new UpdateErrors();
-
-        errs.addFailedKey(key, e);
-    }
-
-    /**
      * Adds keys to collection of failed keys.
      *
-     * @param keys Key to add.
+     * @param keys Keys to add.
      * @param e Error cause.
      */
-    synchronized void addFailedKeys(Collection<KeyCacheObject> keys, Throwable e) {
+    void addFailedKeys(Collection<KeyCacheObject> keys, Throwable e) {
         if (errs == null)
             errs = new UpdateErrors();
 
         errs.addFailedKeys(keys, e);
-    }
-
-    /**
-     * Sets update error.
-     *
-     * @param err Error.
-     */
-    public void error(IgniteCheckedException err) {
-        if (errs == null)
-            errs = new UpdateErrors();
-
-        errs.onError(err);
-    }
-
-    /** {@inheritDoc} */
-    @Override public IgniteCheckedException error() {
-        return errs != null ? errs.error() : null;
     }
 
     /**
@@ -723,6 +691,26 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
         }
 
         return reader.afterMessageRead(GridDhtAtomicAbstractUpdateRequest.class);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void prepareMarshal(GridCacheSharedContext ctx) throws IgniteCheckedException {
+        super.prepareMarshal(ctx);
+
+        GridCacheContext cctx = ctx.cacheContext(cacheId);
+
+        if (errs != null)
+            errs.prepareMarshal(this, cctx);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void finishUnmarshal(GridCacheSharedContext ctx, ClassLoader ldr) throws IgniteCheckedException {
+        super.finishUnmarshal(ctx, ldr);
+
+        GridCacheContext cctx = ctx.cacheContext(cacheId);
+
+        if (errs != null)
+            errs.finishUnmarshal(this, cctx, ldr);
     }
 
     /** {@inheritDoc} */

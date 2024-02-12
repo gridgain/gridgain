@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheIdMessage;
@@ -123,6 +124,19 @@ public class GridDhtAtomicNearResponse extends GridCacheIdMessage {
             errs = new UpdateErrors();
 
         errs.addFailedKey(key, e);
+    }
+
+    /**
+     * Adds keys to collection of failed keys.
+     *
+     * @param keys Keys to add.
+     * @param e Error cause.
+     */
+    public void addFailedKeys(Collection<KeyCacheObject> keys, Throwable e) {
+        if (errs == null)
+            errs = new UpdateErrors();
+
+        errs.addFailedKeys(keys, e);
     }
 
     /**

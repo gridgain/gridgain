@@ -468,10 +468,16 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
 
     /**
      * @param nearNode Near node.
-     * @param sndRes {@code True} if allow to send result from DHT nodes.
      * @param ret Return value.
+     * @param sndRes {@code True} if allow to send result from DHT nodes.
+     * @param updateRes Response.
      */
-    private void sendDhtRequests(ClusterNode nearNode, GridCacheReturn ret, boolean sndRes, GridNearAtomicUpdateResponse updateRes) {
+    private void sendDhtRequests(
+            ClusterNode nearNode,
+            GridCacheReturn ret,
+            boolean sndRes,
+            GridNearAtomicUpdateResponse updateRes
+    ) {
         for (GridDhtAtomicAbstractUpdateRequest req : mappings.values()) {
             try {
                 assert !cctx.localNodeId().equals(req.nodeId()) : req;
@@ -486,10 +492,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
                 if (cntQryClsrs != null)
                     req.replyWithoutDelay(true);
 
-                if (updateRes.error() != null)
-                    req.error(updateRes.error());
-
-                if (updateRes.failedKeys() != null)
+                if (updateReq.fullSync() && updateRes.failedKeys() != null)
                     req.addFailedKeys(updateRes.failedKeys(), updateRes.error());
 
                 cctx.io().send(req.nodeId(), req, cctx.ioPolicy());
