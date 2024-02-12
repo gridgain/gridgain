@@ -33,12 +33,13 @@ import static org.apache.ignite.plugin.security.SecurityPermission.CACHE_DESTROY
 import static org.apache.ignite.plugin.security.SecurityPermission.CACHE_PUT;
 import static org.apache.ignite.plugin.security.SecurityPermission.CACHE_READ;
 import static org.apache.ignite.plugin.security.SecurityPermission.CACHE_REMOVE;
+import static org.apache.ignite.plugin.security.SecurityPermission.EVENTS_ENABLE;
 import static org.apache.ignite.plugin.security.SecurityPermission.JOIN_AS_SERVER;
 import static org.apache.ignite.plugin.security.SecurityPermission.SERVICE_DEPLOY;
 import static org.apache.ignite.plugin.security.SecurityPermission.SERVICE_INVOKE;
-import static org.apache.ignite.plugin.security.SecurityPermission.EVENTS_ENABLE;
 import static org.apache.ignite.plugin.security.SecurityPermission.TASK_CANCEL;
 import static org.apache.ignite.plugin.security.SecurityPermission.TASK_EXECUTE;
+import static org.apache.ignite.plugin.security.SecurityPermission.TRACING_CONFIGURATION_UPDATE;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
@@ -70,6 +71,8 @@ public class SecurityPermissionSetBuilderTest extends GridCommonAbstractTest {
 
         exp.setServicePermissions(permSrvc);
 
+        exp.setTracingPermissions(permissions(TRACING_CONFIGURATION_UPDATE));
+
         exp.setSystemPermissions(permissions(ADMIN_VIEW, EVENTS_ENABLE, JOIN_AS_SERVER, CACHE_CREATE, CACHE_DESTROY));
 
         final SecurityPermissionSetBuilder permsBuilder = new SecurityPermissionSetBuilder();
@@ -90,6 +93,15 @@ public class SecurityPermissionSetBuilderTest extends GridCommonAbstractTest {
                     }
                 }, IgniteException.class,
                 "you can assign permission only start with [TASK_], but you try CACHE_READ"
+        );
+
+        assertThrows(log, new Callable<Object>() {
+                @Override public Object call() throws Exception {
+                    permsBuilder.appendTracingPermissions(CACHE_READ);
+                    return null;
+                }
+            }, IgniteException.class,
+            "you can assign permission only start with [TRACING_], but you try CACHE_READ"
         );
 
         assertThrows(log, new Callable<Object>() {
@@ -126,6 +138,7 @@ public class SecurityPermissionSetBuilderTest extends GridCommonAbstractTest {
             .appendServicePermissions("service1", SERVICE_DEPLOY)
             .appendServicePermissions("service2", SERVICE_INVOKE)
             .appendServicePermissions("service2", SERVICE_INVOKE)
+            .appendTracingPermissions(TRACING_CONFIGURATION_UPDATE)
             .appendSystemPermissions(ADMIN_VIEW)
             .appendSystemPermissions(ADMIN_VIEW, EVENTS_ENABLE)
             .appendSystemPermissions(JOIN_AS_SERVER)
@@ -136,6 +149,7 @@ public class SecurityPermissionSetBuilderTest extends GridCommonAbstractTest {
         assertEquals(exp.cachePermissions(), actual.cachePermissions());
         assertEquals(exp.taskPermissions(), actual.taskPermissions());
         assertEquals(exp.servicePermissions(), actual.servicePermissions());
+        assertEquals(exp.tracingPermissions(), actual.tracingPermissions());
         assertEquals(exp.systemPermissions(), actual.systemPermissions());
         assertEquals(exp.defaultAllowAll(), actual.defaultAllowAll());
     }
@@ -163,6 +177,9 @@ public class SecurityPermissionSetBuilderTest extends GridCommonAbstractTest {
         permSrvc.put("service2", permissions(SERVICE_INVOKE));
         permSet.setServicePermissions(permSrvc);
 
+        Collection<SecurityPermission> permTracing = new ArrayList<>(permissions(TRACING_CONFIGURATION_UPDATE));
+        permSet.setTracingPermissions(permTracing);
+
         Collection<SecurityPermission> permSys = new ArrayList<>(permissions(ADMIN_VIEW, EVENTS_ENABLE, JOIN_AS_SERVER, CACHE_CREATE, CACHE_DESTROY));
         permSet.setSystemPermissions(permSys);
 
@@ -173,10 +190,14 @@ public class SecurityPermissionSetBuilderTest extends GridCommonAbstractTest {
         assertEquals(permCache, actual.cachePermissions());
         assertEquals(permTask, actual.taskPermissions());
         assertEquals(permSrvc, actual.servicePermissions());
+
         assertEquals(permSys.size(), actual.systemPermissions().size());
-        for (SecurityPermission permission : permSys) {
+        for (SecurityPermission permission : permSys)
             actual.systemPermissions().contains(permission);
-        }
+
+        assertEquals(permTracing.size(), actual.tracingPermissions().size());
+        for (SecurityPermission permission : permTracing)
+            actual.tracingPermissions().contains(permission);
     }
 
     /**

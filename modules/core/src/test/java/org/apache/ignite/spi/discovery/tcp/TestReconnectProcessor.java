@@ -179,6 +179,11 @@ public class TestReconnectProcessor extends GridProcessorAdapter implements Grid
         }
 
         /** {@inheritDoc} */
+        @Override public boolean tracingOperationAllowed(SecurityPermission perm) {
+            return true;
+        }
+
+        /** {@inheritDoc} */
         @Override public boolean systemOperationAllowed(SecurityPermission perm) {
             return true;
         }

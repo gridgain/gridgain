@@ -61,6 +61,9 @@ public class TestSecurityContext implements SecurityContext, Serializable {
             case SERVICE_CANCEL:
                 return serviceOperationAllowed(opName, perm);
 
+            case TRACING_CONFIGURATION_UPDATE:
+                return tracingOperationAllowed(perm);
+
             case EVENTS_DISABLE:
             case EVENTS_ENABLE:
             case ADMIN_VIEW:
@@ -93,6 +96,11 @@ public class TestSecurityContext implements SecurityContext, Serializable {
     /** {@inheritDoc} */
     @Override public boolean serviceOperationAllowed(String srvcName, SecurityPermission perm) {
         return hasPermission(subject.permissions().servicePermissions().get(srvcName), perm);
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean tracingOperationAllowed(SecurityPermission perm) {
+        return hasPermission(subject.permissions().tracingPermissions(), perm);
     }
 
     /** {@inheritDoc} */

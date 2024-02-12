@@ -64,6 +64,13 @@ public interface SecurityPermissionSet extends Serializable {
     public Map<String, Collection<SecurityPermission>> servicePermissions();
 
     /**
+     * Collection of tracing permissions.
+     *
+     * @return Collection of service names to service permissions.
+     */
+    public Collection<SecurityPermission> tracingPermissions();
+
+    /**
      * Collection of system-wide permissions (events enable/disable, Visor task execution).
      *
      * @return Collection of system-wide permissions ({@code null} if none).
