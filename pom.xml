@@ -120,13 +120,6 @@
             </modules>
         </profile>
 
-<!--        <profile>-->
-<!--            <id>spring-6</id>-->
-<!--            <modules>-->
-<!--                <module>modules/spring-6</module>-->
-<!--            </modules>-->
-<!--        </profile>-->
-
         <profile>
             <id>numa-allocator</id>
             <modules>
@@ -263,18 +256,6 @@
                                 </goals>
                                 <phase>validate</phase>
                                 <configuration>
-                                    <additionalJOptions>
-                                        <additionalJOption>--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED</additionalJOption>
-                                        <additionalJOption>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</additionalJOption>
-                                        <additionalJOption>--add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED</additionalJOption>
-                                        <additionalJOption>--add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED</additionalJOption>
-                                        <additionalJOption>--add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED</additionalJOption>
-                                        <additionalJOption>--add-exports=jdk.management/com.sun.management.internal=ALL-UNNAMED</additionalJOption>
-                                        <additionalJOption>--add-exports=java.base/java.io=ALL-UNNAMED</additionalJOption>
-                                        <additionalJOption>--add-exports=java.base/java.nio=ALL-UNNAMED</additionalJOption>
-                                        <additionalJOption>--add-exports=java.base/java.util=ALL-UNNAMED</additionalJOption>
-                                        <additionalJOption>--add-exports=java.base/java.lang=ALL-UNNAMED</additionalJOption>
-                                    </additionalJOptions>
                                     <reportOutputDirectory>${basedir}/target/javadoc</reportOutputDirectory>
                                     <destDir>core</destDir>
                                     <stylesheetfile>${basedir}/assembly/docfiles/css/stylesheet.css</stylesheetfile>
@@ -283,18 +264,6 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <additionalJOptions>
-                                <additionalJOption>--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED</additionalJOption>
-                                <additionalJOption>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</additionalJOption>
-                                <additionalJOption>--add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED</additionalJOption>
-                                <additionalJOption>--add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED</additionalJOption>
-                                <additionalJOption>--add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED</additionalJOption>
-                                <additionalJOption>--add-exports=jdk.management/com.sun.management.internal=ALL-UNNAMED</additionalJOption>
-                                <additionalJOption>--add-exports=java.base/java.io=ALL-UNNAMED</additionalJOption>
-                                <additionalJOption>--add-exports=java.base/java.nio=ALL-UNNAMED</additionalJOption>
-                                <additionalJOption>--add-exports=java.base/java.util=ALL-UNNAMED</additionalJOption>
-                                <additionalJOption>--add-exports=java.base/java.lang=ALL-UNNAMED</additionalJOption>
-                            </additionalJOptions>
                             <bottom>
                                 <![CDATA[
                                             <table width="100%" border="0" cellspacing=0 cellpadding=0 style="padding: 5px">
