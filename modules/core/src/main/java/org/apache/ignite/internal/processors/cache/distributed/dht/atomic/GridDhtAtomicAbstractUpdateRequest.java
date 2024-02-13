@@ -213,6 +213,11 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
         return nodeId;
     }
 
+    /** {@inheritDoc} */
+    @Override public IgniteCheckedException error() {
+        return errs != null ? errs.error() : null;
+    }
+
     /**
      * @return Flags.
      */

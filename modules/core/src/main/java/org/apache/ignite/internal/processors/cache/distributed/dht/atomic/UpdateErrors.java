@@ -97,7 +97,7 @@ public class UpdateErrors implements Message {
      * @param key Key to add.
      * @param e Error cause.
      */
-    void addFailedKey(KeyCacheObject key, Throwable e) {
+    public void addFailedKey(KeyCacheObject key, Throwable e) {
         if (failedKeys == null)
             failedKeys = new ArrayList<>();
 
@@ -113,7 +113,7 @@ public class UpdateErrors implements Message {
      * @param keys Keys.
      * @param e Error.
      */
-    void addFailedKeys(Collection<KeyCacheObject> keys, Throwable e) {
+    public void addFailedKeys(Collection<KeyCacheObject> keys, Throwable e) {
         if (failedKeys == null)
             failedKeys = new ArrayList<>(keys.size());
 
