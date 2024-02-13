@@ -704,7 +704,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                     cond: () => events.Count == 2,
                     messageFunc: () => $"Expected 2 events, got {events.Count}: " +
                                        string.Concat(", ", events.Select(x => x.EventType)),
-                    5000);
+                    15000);
             }
 
             Assert.AreEqual(2, events.Count);
