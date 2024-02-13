@@ -3226,10 +3226,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                 if (req.failedKeys() != null)
                     nearRes.addFailedKeys(req.failedKeys(), req.error());
-
-                if (req.error() != null) {
-                    nearRes.error(req.error());
-                }
             }
 
             boolean replicate = ctx.isDrEnabled();
