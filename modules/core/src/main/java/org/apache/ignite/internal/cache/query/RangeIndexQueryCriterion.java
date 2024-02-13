@@ -115,11 +115,7 @@ public class RangeIndexQueryCriterion implements SqlIndexQueryCriterion {
         if (upper != null)
             return lowerThan(columnName, ctx);
 
-        // lower == null && upper == null
-        if (lowerNull && upperNull)
-            return betweenNull(columnName);
-
-        // gt(null), gte(null), lt(null), lte(null) considered invalid and prohibited at a high level
+        // gt(null), gte(null), lt(null), lte(null), between(null, null) considered invalid and prohibited at a high level
         throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
     }
 
@@ -133,15 +129,6 @@ public class RangeIndexQueryCriterion implements SqlIndexQueryCriterion {
         ctx.addArgument(upper);
 
         return column + " >= ? AND " + column + " <= ?";
-    }
-
-    /** between(null, null)} */
-    private String betweenNull(String column) {
-        if (!lowerIncl || !upperIncl) {
-            throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + "]");
-        }
-
-        return column + " IS NULL";
     }
 
     /** lt(notNull), lte(notNull) */

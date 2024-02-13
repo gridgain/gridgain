@@ -153,7 +153,6 @@ public class ThinClientIndexQueryTest extends GridCommonAbstractTest {
                 // Field, with nulls.
                 assertClientQuery(cache, NULLS_CNT, 0, idxName, in("fld1", Collections.singleton(null)));
                 assertClientQuery(cache, NULLS_CNT, 0, idxName, eq("fld1", null));
-                assertClientQuery(cache, NULLS_CNT, 0, idxName, between("fld1", null, null));
             });
         }
 

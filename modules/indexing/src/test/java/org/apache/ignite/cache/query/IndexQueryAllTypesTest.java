@@ -53,6 +53,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.between;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.eq;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.gt;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.gte;
@@ -146,7 +147,7 @@ public class IndexQueryAllTypesTest extends GridCommonAbstractTest {
 
         check(cache.query(qry), 0, 0, i -> i, persGen);
 
-        // gt(e)/lt(e) with null value produces exception.
+        // gt(e)/lt(e)/between with null value produces exception.
         GridTestUtils.assertThrows(null, () -> {
             new IndexQuery<Long, Person>(Person.class, intNullIdx)
                 .setCriteria(lte("intNullId", null));
@@ -166,6 +167,16 @@ public class IndexQueryAllTypesTest extends GridCommonAbstractTest {
             new IndexQuery<Long, Person>(Person.class, intNullIdx)
                 .setCriteria(lt("intNullId", null));
         }, NullPointerException.class, "Ouch! Argument cannot be null: val");
+
+        GridTestUtils.assertThrows(null, () -> {
+            new IndexQuery<Long, Person>(Person.class, intNullIdx)
+                .setCriteria(between("intNullId", null, 0));
+        }, NullPointerException.class, "Ouch! Argument cannot be null: lower");
+
+        GridTestUtils.assertThrows(null, () -> {
+            new IndexQuery<Long, Person>(Person.class, intNullIdx)
+                .setCriteria(between("intNullId", 0, null));
+        }, NullPointerException.class, "Ouch! Argument cannot be null: upper");
 
         // Should return only nulls.
         qry = new IndexQuery<Long, Person>(Person.class, intNullIdx)

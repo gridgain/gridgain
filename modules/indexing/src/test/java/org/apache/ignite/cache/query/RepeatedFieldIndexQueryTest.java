@@ -256,7 +256,6 @@ public class RepeatedFieldIndexQueryTest extends GridCommonAbstractTest {
     /** */
     private List<IndexQueryCriterion> criteria(String fld, int val1, int val2) {
         return F.asList(
-            eq(fld, val1),
             lt(fld, val1),
             lte(fld, val1),
             gt(fld, val1),
@@ -279,7 +278,12 @@ public class RepeatedFieldIndexQueryTest extends GridCommonAbstractTest {
         int lower = expRange.lower();
         int upper = expRange.upper();
 
-        cache.query(qry).getAll();
+        String errMsg = "Fail crit pair: " + c1 + ", " + c2 + ". Lower=" + lower + ", upper=" + upper;
+
+        if (expRange.valid())
+            check(errMsg, cache.query(qry), lower, upper);
+        else
+            assertEquals(0, cache.query(qry).getAll().size());
     }
 
     /** */
