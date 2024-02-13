@@ -492,8 +492,13 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
                 if (cntQryClsrs != null)
                     req.replyWithoutDelay(true);
 
-                if (updateReq.fullSync() && updateRes.failedKeys() != null)
-                    req.addFailedKeys(updateRes.failedKeys(), updateRes.error());
+                if (updateReq.fullSync()) {
+                    if (updateRes.error() != null)
+                        req.error(updateRes.error());
+
+                    if (updateRes.failedKeys() != null)
+                        req.addFailedKeys(updateRes.failedKeys(), updateRes.error());
+                }
 
                 cctx.io().send(req.nodeId(), req, cctx.ioPolicy());
 

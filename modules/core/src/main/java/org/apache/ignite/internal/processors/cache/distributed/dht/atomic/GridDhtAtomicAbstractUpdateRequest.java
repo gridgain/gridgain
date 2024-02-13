@@ -108,26 +108,6 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
     protected UpdateErrors errs;
 
     /**
-     * @return Collection of failed keys.
-     */
-    public Collection<KeyCacheObject> failedKeys() {
-        return errs != null ? errs.failedKeys() : null;
-    }
-
-    /**
-     * Adds keys to collection of failed keys.
-     *
-     * @param keys Keys to add.
-     * @param e Error cause.
-     */
-    void addFailedKeys(Collection<KeyCacheObject> keys, Throwable e) {
-        if (errs == null)
-            errs = new UpdateErrors();
-
-        errs.addFailedKeys(keys, e);
-    }
-
-    /**
      * Empty constructor required by {@link Externalizable}.
      */
     protected GridDhtAtomicAbstractUpdateRequest() {
@@ -278,6 +258,38 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
     /** {@inheritDoc} */
     @Override public boolean addDeploymentInfo() {
         return addDepInfo;
+    }
+
+    /**
+     * @return Collection of failed keys.
+     */
+    public Collection<KeyCacheObject> failedKeys() {
+        return errs != null ? errs.failedKeys() : null;
+    }
+
+    /**
+     * Adds keys to collection of failed keys.
+     *
+     * @param keys Keys to add.
+     * @param e Error cause.
+     */
+    public void addFailedKeys(Collection<KeyCacheObject> keys, Throwable e) {
+        if (errs == null)
+            errs = new UpdateErrors();
+
+        errs.addFailedKeys(keys, e);
+    }
+
+    /**
+     * Sets update error.
+     *
+     * @param err Error.
+     */
+    public void error(IgniteCheckedException err) {
+        if (errs == null)
+            errs = new UpdateErrors();
+
+        errs.onError(err);
     }
 
     /**
