@@ -280,6 +280,23 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
         errs.addFailedKeys(keys, e);
     }
 
+    /** {@inheritDoc} */
+    @Override public IgniteCheckedException error() {
+        return errs != null ? errs.error() : null;
+    }
+
+    /**
+     * Sets update error.
+     *
+     * @param err Error.
+     */
+    public void error(IgniteCheckedException err) {
+        if (errs == null)
+            errs = new UpdateErrors();
+
+        errs.onError(err);
+    }
+
     /**
      * @return Force transform backups flag.
      */
