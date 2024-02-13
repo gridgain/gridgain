@@ -700,7 +700,11 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             {
                 cache[1] = 2;
 
-                TestUtils.WaitForTrueCondition(() => events.Count == 2, 5000);
+                TestUtils.WaitForTrueCondition(
+                    cond: () => events.Count == 2,
+                    messageFunc: () => $"Expected 2 events, got {events.Count}: " +
+                                       string.Concat(", ", events.Select(x => x.EventType)),
+                    15000);
             }
 
             Assert.AreEqual(2, events.Count);
