@@ -324,9 +324,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Continuous
                 cache[1] = Entry(2);
 
                 CB_EVTS.TryTake(out var event1, 9000);
-                CB_EVTS.TryTake(out var event2, 9000);
-
                 Assert.AreEqual(CacheEntryEventType.Created, event1.EventType);
+
+                CB_EVTS.TryTake(out var event2, 9000);
                 Assert.AreEqual(CacheEntryEventType.Expired, event2.EventType);
 
                 Assert.IsTrue(event2.HasValue);
