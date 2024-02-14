@@ -49,7 +49,6 @@
         <doxygen.exec>doxygen</doxygen.exec>
         <docfx.exec>docfx</docfx.exec>
         <git.exec>git</git.exec>
-        <javadoc.opts>-Xdoclint:none</javadoc.opts>
         <update.notifier.enabled.by.default>true</update.notifier.enabled.by.default>
         <failIfNoTests>false</failIfNoTests>
 
@@ -306,7 +305,7 @@
                         <use>true</use>
                         <author>false</author>
                         <version>false</version>
-                        <additionalparam>${javadoc.opts}</additionalparam>
+                        <doclint>none</doclint>
                         <links>
                             <link>https://hadoop.apache.org/docs/current/api/</link>
                         </links>
