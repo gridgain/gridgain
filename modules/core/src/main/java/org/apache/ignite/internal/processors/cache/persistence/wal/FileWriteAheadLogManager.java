@@ -453,15 +453,18 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         //todo temp
         useAsyncRollover = mode != WALMode.FSYNC;
 
-        segmentStatus = useAsyncRollover ? new AtomicIntegerArray(dsCfg.getWalSegments()) : null;
+        if (useAsyncRollover) {
+            segmentStatus = new AtomicIntegerArray(dsCfg.getWalSegments());
 
-        if (useAsyncRollover)
             walSegmentAsyncCloser = new WalSegmentAsyncCloser(
                     ctx.igniteInstanceName(),
                     ctx.log(WalSegmentAsyncCloser.class)
             );
-        else
+        }
+        else {
             walSegmentAsyncCloser = null;
+            segmentStatus = null;
+        }
     }
 
     /**
@@ -789,7 +792,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         updateCurrentHandle(restoreWriteHandle(filePtr), null);
 
-        if (getSegmentStatus(currentHandle().getSegmentId()) == SEGMENT_CLOSED) {
+        if (useAsyncRollover && getSegmentStatus(currentHandle().getSegmentId()) == SEGMENT_CLOSED) {
             setSegmentStatus(currentHandle().getSegmentId(), SEGMENT_CLOSED, SEGMENT_ACTIVE);
         }
 
