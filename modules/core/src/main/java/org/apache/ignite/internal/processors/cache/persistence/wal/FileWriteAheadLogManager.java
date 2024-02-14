@@ -1616,12 +1616,14 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
                     hnd = fileHandleManager.nextHandle(fileIO, serializer);
 
-                    boolean statusChanged = setSegmentStatus(nextSegmentId, SEGMENT_CLOSED, SEGMENT_ACTIVE);
+                    if (useAsyncRollover) {
+                        boolean statusChanged = setSegmentStatus(nextSegmentId, SEGMENT_CLOSED, SEGMENT_ACTIVE);
 
-                    assert statusChanged;
+                        assert statusChanged;
 
-                    if (log.isDebugEnabled())
-                        log.debug("Status for segment " + hnd.getSegmentId() + " was changed to SEGMENT_ACTIVE");
+                        if (log.isDebugEnabled())
+                            log.debug("Status for segment " + hnd.getSegmentId() + " was changed to SEGMENT_ACTIVE");
+                    }
 
                     if (interrupted)
                         Thread.currentThread().interrupt();
