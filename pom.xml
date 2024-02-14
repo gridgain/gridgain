@@ -265,6 +265,7 @@
                             </execution>
                         </executions>
                         <configuration>
+                            <doclint>none</doclint>
                             <verbose>true</verbose>
                             <additionalJOptions>
                                 <additionalJOption>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</additionalJOption>
