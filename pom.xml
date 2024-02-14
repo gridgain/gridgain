@@ -247,6 +247,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>${maven.javadoc.plugin.version}</version>
 
                         <executions>
                             <execution>
@@ -266,8 +267,7 @@
                         <configuration>
                             <verbose>true</verbose>
                             <additionalJOptions>
-                                <additionalJOption>-J--add-exports</additionalJOption>
-                                <additionalJOption>-Jjava.base/sun.nio.ch=ALL-UNNAMED</additionalJOption>
+                                <additionalJOption>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</additionalJOption>
                             </additionalJOptions>
                             <bottom>
                                 <![CDATA[
