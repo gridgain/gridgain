@@ -26,6 +26,7 @@ import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.compute.gridify.aop.GridifyDefaultTask;
 
 /**
+ * <h1 class="header">Description</h1>
  * {@code Gridify} annotation is the main way to grid-enable existing code.
  * <p>
  * This annotation can be applied to any public method that needs to be grid-enabled,

@@ -19,6 +19,7 @@ package org.apache.ignite;
 import java.io.Closeable;
 
 /**
+ * <h1 class="header">Description</h1>
  * This interface provides a rich API for working with distributed atomic sequence.
  * <p>
  * <h2 class="header">Functionality</h2>

@@ -54,6 +54,7 @@ import static org.apache.ignite.events.EventType.EVT_TASK_FAILED;
 import static org.apache.ignite.events.EventType.EVT_TASK_FINISHED;
 
 /**
+ * <h1 class="header">Description</h1>
  * Load balancing SPI that picks a random node for job execution. Note that you can
  * optionally assign weights to nodes, so nodes with larger weights will end up getting
  * proportionally more jobs routed to them (see {@link #setNodeWeight(int)}

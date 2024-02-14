@@ -70,6 +70,7 @@ import org.apache.ignite.transactions.TransactionRollbackException;
 import org.apache.ignite.transactions.TransactionTimeoutException;
 
 /**
+ * <h1 class="header">Description</h1>
  * Main entry point for all <b>Data Grid APIs.</b> You can get a named cache by calling {@link Ignite#cache(String)}
  * method.
  * <h2 class="header">Functionality</h2>

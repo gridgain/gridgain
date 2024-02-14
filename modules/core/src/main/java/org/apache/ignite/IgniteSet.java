@@ -24,8 +24,8 @@ import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteRunnable;
 
 /**
- * Set implementation based on on In-Memory Data Grid.
- * <h2 class="header">Overview</h2>
+ * Set implementation based on In-Memory Data Grid.
+ * <h1 class="header">Overview</h1>
  * Cache set implements {@link Set} interface and provides all methods from collections.
  * Note that all {@link Collection} methods in the set may throw {@link IgniteException} in case of failure
  * or if set was removed.

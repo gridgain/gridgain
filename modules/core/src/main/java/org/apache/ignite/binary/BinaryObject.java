@@ -23,6 +23,7 @@ import java.util.LinkedList;
 import java.util.TreeMap;
 
 /**
+ * <h1 class="header">Description</h1>
  * Wrapper for binary object in binary format. Once an object is defined as binary,
  * Ignite will always store it in memory in the binary format.
  * User can choose to work either with the binary format or with the deserialized form

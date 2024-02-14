@@ -106,6 +106,7 @@ import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpU
 import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionIndexAwareMessage.UNDEFINED_CONNECTION_INDEX;
 
 /**
+ * <h1 class="header">Description</h1>
  * <tt>TcpCommunicationSpi</tt> is default communication SPI which uses
  * TCP/IP protocol and Java NIO to communicate with other nodes.
  * <p>

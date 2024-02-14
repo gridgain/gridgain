@@ -19,6 +19,7 @@ package org.apache.ignite.configuration;
 import org.jetbrains.annotations.Nullable;
 
 /**
+ * <h1 class="header">Description</h1>
  * Grid deployment mode. Deployment mode is specified at grid startup via
  * {@link org.apache.ignite.configuration.IgniteConfiguration#getDeploymentMode()} configuration property
  * (it can also be specified in Spring XML configuration file). The main

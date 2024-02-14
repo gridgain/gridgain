@@ -23,6 +23,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 
 /**
+ * <h1 class="header">Description</h1>
  * Topology validator is used to verify that cluster topology is valid for further cache operations.
  * The topology validator is invoked every time the cluster topology changes (either a new node joined
  * or an existing node failed or left).

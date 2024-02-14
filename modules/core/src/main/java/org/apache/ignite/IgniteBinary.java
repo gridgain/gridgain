@@ -31,6 +31,7 @@ import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
 
 /**
+ * <h1 class="header">Description</h1>
  * Defines binary objects functionality. With binary objects you are able to:
  * <ul>
  * <li>Seamlessly interoperate between Java, .NET, and C++.</li>

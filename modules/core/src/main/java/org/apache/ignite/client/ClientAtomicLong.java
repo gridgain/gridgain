@@ -20,6 +20,7 @@ import java.io.Closeable;
 import org.apache.ignite.IgniteException;
 
 /**
+ * <h1 class="header">Description</h1>
  * Distributed atomic long API.
  * <p>
  * <h2 class="header">Functionality</h2>

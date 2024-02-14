@@ -19,6 +19,7 @@ package org.apache.ignite.lifecycle;
 import org.apache.ignite.IgniteException;
 
 /**
+ * <h1 class="header">Description</h1>
  * A bean that reacts to node lifecycle events defined in {@link LifecycleEventType}.
  * Use this bean whenever you need to plug some custom logic before or after
  * node startup and stopping routines.
