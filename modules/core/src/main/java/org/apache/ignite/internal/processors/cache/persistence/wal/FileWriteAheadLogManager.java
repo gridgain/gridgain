@@ -236,6 +236,15 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     private static final long THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT = IgniteSystemProperties.getLong(
         IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT, DFLT_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT);
 
+    /** Status for closed segments. */
+    private static final int SEGMENT_CLOSED = 0;
+
+    /** Status for active segment. */
+    private static final int SEGMENT_ACTIVE = 1;
+
+    /** Status for segment scheduled for asynchronous closing. */
+    private static final int SEGMENT_SCHEDULED_FOR_CLOSE = -1;
+
     /** */
     private final boolean alwaysWriteFullPages;
 
@@ -694,6 +703,18 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         try {
             fileHandleManager.onDeactivate();
+
+            if (useAsyncRollover) {
+                long segmentId = currentHandle().getSegmentId();
+
+                boolean statusChanged = setSegmentStatus(segmentId, SEGMENT_ACTIVE, SEGMENT_CLOSED);
+
+                if (statusChanged && log.isDebugEnabled())
+                    log.debug("Status for segment " + segmentId + " was changed to SEGMENT_CLOSED");
+
+                if (!statusChanged)
+                    U.error(log, "Failed to change current segment status on deactivation");
+            }
         }
         catch (Exception e) {
             U.error(log, "Failed to gracefully close WAL segment: " + currHnd, e);
@@ -1409,52 +1430,57 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     private boolean closeHandle(FileWriteHandle hnd, boolean rollover) throws IgniteCheckedException {
         if (useAsyncRollover) {
-            boolean statusChanged = setSegmentStatus(
-                    hnd.getSegmentId(),
-                    asList(SegmentStatus.ACTIVE, SegmentStatus.SCHEDULED_FOR_CLOSE),
-                    SegmentStatus.SCHEDULED_FOR_CLOSE
-            );
+            boolean statusChanged = setSegmentStatus(hnd.getSegmentId(), SEGMENT_ACTIVE, SEGMENT_SCHEDULED_FOR_CLOSE);
 
-            walSegmentAsyncCloser.add(hnd, rollover);
+            if (statusChanged) {
+                walSegmentAsyncCloser.add(hnd, rollover);
 
-            if (statusChanged && log.isDebugEnabled())
-                log.debug("Status for segment " + hnd.getSegmentId() +
-                        " was changed to " + SegmentStatus.SCHEDULED_FOR_CLOSE);
-
+                if (log.isDebugEnabled())
+                    log.debug("Status for segment " + hnd.getSegmentId() +
+                            " was changed to SEGMENT_SCHEDULED_FOR_CLOSE");
+            }
             return true;
         }
 
-        boolean closed = hnd.close(rollover);
-
-        if (closed) {
-            boolean statusChanged = setSegmentStatus(hnd.getSegmentId(), asList(SegmentStatus.ACTIVE), SegmentStatus.CLOSED);
-
-            if (statusChanged && log.isDebugEnabled())
-                log.debug("Status for segment " + hnd.getSegmentId() + " was changed to " + SegmentStatus.CLOSED);
-        }
-
-        return closed;
+        return hnd.close(rollover);
     }
 
-    private boolean setSegmentStatus(long segmentId, List<SegmentStatus> expected, SegmentStatus newStatus) {
+    /**
+     * Gets current status of WAL segment.
+     * @param segmentId WAL segment id.
+     * @return Current status of WAL segment.
+     */
+    private int getSegmentStatus(long segmentId) {
+        int idx = (int) segmentId % segmentStatus.length();
+
+        return segmentStatus.get(idx);
+    }
+
+    /**
+     * Change segment from expected to newStatus.
+     * @param segmentId WAL segment id.
+     * @param expected Expected status.
+     * @param newStatus Target status.
+     * @return {@code True} If status was changed, {@code false} if other thread has changed status.
+     * @throws AssertionError if current status didn't expected.
+     */
+    private boolean setSegmentStatus(long segmentId, int expected, int newStatus) throws IgniteCheckedException {
         if (segmentStatus == null)
             return false;
 
         int idx = (int) segmentId % segmentStatus.length();
-        int curCode;
+        int curStatus;
         do {
-            curCode = segmentStatus.get(idx);
+            curStatus = segmentStatus.get(idx);
 
-            if (curCode == newStatus.intCode)
+            if (curStatus != newStatus && curStatus != expected)
+                    throw new IgniteCheckedException("Invalid status transition for segmentId = " + segmentId
+                            + "; curStatus = " + curStatus + "; newStatus = " + newStatus);
+
+            if (curStatus == newStatus)
                 return false;
 
-            SegmentStatus curStatus = SegmentStatus.byCode(curCode);
-
-            if (!expected.contains(curStatus)){
-                return false;
-            }
-
-        } while (segmentStatus.compareAndSet(idx, curCode, newStatus.intCode));
+        } while (!segmentStatus.compareAndSet(idx, curStatus, newStatus));
 
         return true;
     }
@@ -1578,18 +1604,36 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             boolean interrupted = false;
 
+            long nextSegmentId = cur.getSegmentId() + 1;
+
             if (switchSegmentRecordOffset != null)
-                switchSegmentRecordOffset.set((int)((cur.getSegmentId() + 1) % dsCfg.getWalSegments()), 0);
+                switchSegmentRecordOffset.set((int)((nextSegmentId) % dsCfg.getWalSegments()), 0);
 
             while (true) {
                 try {
-                    fileIO = new SegmentIO(cur.getSegmentId() + 1, ioFactory.create(nextFile));
+                    if (useAsyncRollover) {
+                        // cheap test that segment with id = nextSegmentId - cfg.walSegments() has been closed
+                        // todo make code to wait until desired file/segment would be closed
+                        int nextSegmentStatus = getSegmentStatus(nextSegmentId);
+                        if (nextSegmentStatus == SEGMENT_SCHEDULED_FOR_CLOSE) {
+                            throw error = new IgniteCheckedException("WAL segment from previous cycle hasn't been closed");
+                        }
+                    }
+
+                    fileIO = new SegmentIO(nextSegmentId, ioFactory.create(nextFile));
 
                     IgniteInClosure<FileIO> lsnr = createWalFileListener;
                     if (lsnr != null)
                         lsnr.apply(fileIO);
 
                     hnd = fileHandleManager.nextHandle(fileIO, serializer);
+
+                    boolean statusChanged = setSegmentStatus(nextSegmentId, SEGMENT_CLOSED, SEGMENT_ACTIVE);
+
+                    assert statusChanged;
+
+                    if (log.isDebugEnabled())
+                        log.debug("Status for segment " + hnd.getSegmentId() + " was changed to SEGMENT_ACTIVE");
 
                     if (interrupted)
                         Thread.currentThread().interrupt();
@@ -3709,27 +3753,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         segmentAware.startAutoReleaseSegments();
     }
 
-    private enum SegmentStatus {
-        CLOSED(0),
-        ACTIVE(1),
-        SCHEDULED_FOR_CLOSE(-1);
-
-        final int intCode;
-
-        SegmentStatus(int intCode) {
-            this.intCode = intCode;
-        }
-
-        static SegmentStatus byCode(int intCode) {
-            for (SegmentStatus segmentStatus : SegmentStatus.values()) {
-                if (segmentStatus.intCode == intCode)
-                    return segmentStatus;
-            }
-
-            return null;
-        }
-    }
-
     private class WalSegmentAsyncCloser extends GridWorker {
         final ConcurrentLinkedQueue<IgniteBiTuple<FileWriteHandle, Boolean>> tasks = new ConcurrentLinkedQueue<>();
 
@@ -3755,8 +3778,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 try {
                     boolean closed = hnd.close(rollover);
 
-                    if (closed)
-                        setSegmentStatus(hnd.getSegmentId(), asList(SegmentStatus.SCHEDULED_FOR_CLOSE), SegmentStatus.CLOSED);
+                    if (closed) {
+                        boolean statusChanged = setSegmentStatus(hnd.getSegmentId(), SEGMENT_SCHEDULED_FOR_CLOSE, SEGMENT_CLOSED);
+
+                        if (statusChanged && log.isDebugEnabled())
+                            log.debug("Status for segment " + hnd.getSegmentId() + " was changed to SEGMENT_CLOSED");
+                    }
 
                 } catch (IgniteCheckedException e) {
                     cctx.kernalContext().failure().process(new FailureContext(CRITICAL_ERROR, e));
@@ -3791,5 +3818,4 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             new IgniteThread(walSegmentAsyncCloser).start();
         }
     }
-
 }
