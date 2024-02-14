@@ -123,8 +123,8 @@ import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 
 /**
- * <h1 class="header">Description</h1>
  * Discovery SPI implementation that uses TCP/IP for node discovery.
+ * <h1 class="header">Description</h1>
  * <p>
  * Nodes are organized in ring. So almost all network exchange (except few cases) is
  * done across it.

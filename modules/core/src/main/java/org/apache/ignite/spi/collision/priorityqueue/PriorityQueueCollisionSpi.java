@@ -43,14 +43,16 @@ import org.apache.ignite.spi.collision.CollisionJobContext;
 import org.apache.ignite.spi.collision.CollisionSpi;
 
 /**
- * This class provides implementation for Collision SPI based on priority queue. Jobs are first ordered
+ * This class provides implementation for Collision SPI based on priority queue.
+ * <h1 class="header">Description</h1>
+ * Jobs are first ordered
  * by their priority, if one is specified, and only first {@link #getParallelJobsNumber()} jobs
  * is allowed to execute in parallel. Other jobs will be queued up.
  * <h2 class="header">Configuration</h2>
  * <h3 class="header">Mandatory</h3>
  * This SPI has no mandatory configuration parameters.
  * <h3 class="header">Optional</h3>
- * This SPI has following optional configuration parameters:
+ * This SPI has the following optional configuration parameters:
  * <ul>
  * <li>
  *      Number of jobs that can be executed in parallel (see {@link #setParallelJobsNumber(int)}).

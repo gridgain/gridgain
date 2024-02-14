@@ -30,8 +30,8 @@ import org.apache.ignite.services.ServiceConfiguration;
 import org.apache.ignite.services.ServiceDescriptor;
 
 /**
- * <h1 class="header">Description</h1>
  * Defines functionality necessary to deploy distributed services on the grid.
+ * <h1 class="header">Description</h1>
  * <p>
  * Instance of {@code IgniteServices} which spans all cluster nodes can be obtained from Ignite as follows:
  * <pre class="brush:java">

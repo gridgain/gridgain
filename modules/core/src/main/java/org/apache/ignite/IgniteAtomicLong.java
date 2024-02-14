@@ -19,8 +19,8 @@ package org.apache.ignite;
 import java.io.Closeable;
 
 /**
- * <h1 class="header">Description</h1>
  * This interface provides a rich API for working with distributedly cached atomic long value.
+ * <h1 class="header">Description</h1>
  * <p>
  * <h2 class="header">Functionality</h2>
  * Distributed atomic long includes the following main functionality:

@@ -45,8 +45,8 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.event.ContextRefreshedEvent;
 
 /**
- * <h1 class="header">Description</h1>
  * Ignite Spring bean allows to bypass {@link Ignition} methods.
+ * <h1 class="header">Description</h1>
  * In other words, this bean class allows to inject new grid instance from
  * Spring configuration file directly without invoking static
  * {@link Ignition} methods. This class can be wired directly from

@@ -24,11 +24,12 @@ import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * <h2 class="header">Full Text Queries</h2>
+ * Full text queries based on Apache Lucene engine.
+ * <h1 class="header">Description</h1>
  * Ignite supports full text queries based on Apache Lucene engine.
  * Note that all fields that are expected to show up in text query results must be annotated with {@link QueryTextField}
  *
- * <h3 class="header">Query usage</h3>
+ * <h2 class="header">Query usage</h2>
  * Ignite TextQuery supports classic Lucene query syntax.
  * See Lucene classic MultiFieldQueryParser and StandardAnalyzer javadoc for details.
  * As an example, suppose we have data model consisting of {@code 'Employee'} class defined as follows:

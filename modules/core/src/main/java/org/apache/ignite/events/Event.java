@@ -21,9 +21,9 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.lang.IgniteUuid;
 
 /**
+ * Grid events are used for notification about what happens within the grid.
  * <h1 class="header">Description</h1>
- * Grid events are used for notification about what happens within the grid. Note that by
- * design Ignite keeps all events generated on the local node locally and it provides
+ * Note that by design Ignite keeps all events generated on the local node locally, and it provides
  * APIs for performing a distributed queries across multiple nodes:
  * <ul>
  *      <li>

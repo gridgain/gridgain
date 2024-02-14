@@ -23,9 +23,9 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 
 /**
+ * Grid task interface defines a task that can be executed on the grid.
  * <h1 class="header">Description</h1>
- * Grid task interface defines a task that can be executed on the grid. Grid task
- * is responsible for splitting business logic into multiple grid jobs, receiving
+ * Grid task is responsible for splitting business logic into multiple grid jobs, receiving
  * results from individual grid jobs executing on remote nodes, and reducing
  * (aggregating) received jobs' results into final grid task result.
  * <p>

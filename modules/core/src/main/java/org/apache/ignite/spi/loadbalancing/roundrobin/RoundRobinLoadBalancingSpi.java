@@ -49,9 +49,10 @@ import static org.apache.ignite.events.EventType.EVT_TASK_FAILED;
 import static org.apache.ignite.events.EventType.EVT_TASK_FINISHED;
 
 /**
- * <h1 class="header">Description</h1>
  * This SPI iterates through nodes in round-robin fashion and pick the next
- * sequential node. Two modes of operation are supported: per-task and global
+ * sequential node.
+ * <h1 class="header">Description</h1>
+ * Two modes of operation are supported: per-task and global
  * (see {@link #setPerTask(boolean)} configuration). Global mode is used be default.
  * <p>
  * When configured in per-task mode, implementation will pick a random node at the

@@ -19,8 +19,9 @@ package org.apache.ignite.services;
 import java.io.Serializable;
 
 /**
+ * An instance of grid-managed service.
  * <h1 class="header">Description</h1>
- * An instance of grid-managed service. Grid-managed services may be deployed from
+ * Grid-managed services may be deployed from
  * {@link org.apache.ignite.IgniteServices} facade or directly from grid configuration at startup.
  * <h2 class="header">Deployment</h2>
  * Whenever service is deployed, Ignite will automatically calculate how many

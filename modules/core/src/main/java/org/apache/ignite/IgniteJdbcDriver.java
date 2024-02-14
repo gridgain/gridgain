@@ -35,8 +35,8 @@ import static org.apache.ignite.ssl.SslContextFactory.DFLT_SSL_PROTOCOL;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
 
 /**
- * <h1 class="header">Description</h1>
  * JDBC driver implementation for In-Memory Data Grid.
+ * <h1 class="header">Description</h1>
  * <p>
  * Driver allows to get distributed data from Ignite cache using standard
  * SQL queries and standard JDBC API. It will automatically get only fields that

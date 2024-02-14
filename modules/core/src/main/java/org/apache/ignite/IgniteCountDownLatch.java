@@ -20,8 +20,8 @@ import java.io.Closeable;
 import java.util.concurrent.TimeUnit;
 
 /**
- * <h1 class="header">Description</h1>
  * This interface provides a rich API for working with distributed count down latch.
+ * <h1 class="header">Description</h1>
  * <p>
  * <h2 class="header">Functionality</h2>
  * Distributed count down latch provides functionality similar to {@code java.util.CountDownLatch}.

@@ -31,8 +31,8 @@ import org.apache.ignite.internal.jdbc.thin.JdbcThinConnection;
 import org.apache.ignite.internal.jdbc.thin.JdbcThinUtils;
 
 /**
- * <h1 class="header">Description</h1>
  * JDBC driver thin implementation for In-Memory Data Grid.
+ * <h1 class="header">Description</h1>
  * <p>
  * Driver allows to get distributed data from Ignite cache using standard
  * SQL queries and standard JDBC API. It will automatically get only fields that

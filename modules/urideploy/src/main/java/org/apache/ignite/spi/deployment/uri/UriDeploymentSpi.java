@@ -67,9 +67,9 @@ import org.apache.ignite.spi.deployment.uri.scanners.http.UriDeploymentHttpScann
 import org.jetbrains.annotations.Nullable;
 
 /**
- * <h1 class="header">Description</h1>
  * Implementation of {@link org.apache.ignite.spi.deployment.DeploymentSpi} which can deploy tasks from
  * different sources like file system folders, email and HTTP.
+ * <h1 class="header">Description</h1>
  * There are different ways to deploy tasks in grid and every deploy method
  * depends on selected source protocol. This SPI is configured to work
  * with a list of URI's. Every URI contains all data about protocol/transport

@@ -26,8 +26,9 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.lang.IgniteProductVersion;
 
 /**
+ * Interface representing a single cluster node.
  * <h1 class="header">Description</h1>
- * Interface representing a single cluster node. Use {@link #attribute(String)} or
+ * Use {@link #attribute(String)} or
  * {@link #metrics()} to get static and dynamic information about cluster nodes.
  * {@code ClusterNode} list, which includes all nodes within task topology, is provided
  * to {@link org.apache.ignite.compute.ComputeTask#map(List, Object)} method.

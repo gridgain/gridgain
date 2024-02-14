@@ -24,9 +24,9 @@ import java.lang.annotation.Target;
 import java.util.concurrent.Callable;
 
 /**
+ * Optional annotation to specify custom key-to-node affinity.
  * <h1 class="header">Description</h1>
- * Optional annotation to specify custom key-to-node affinity. Affinity key is a key
- * which will be used to determine a node on which given cache key will be stored. This
+ * Affinity key is a key which will be used to determine a node on which given cache key will be stored. This
  * annotation allows to mark a field in the cache key object that will be
  * used as an affinity key (instead of the entire cache key object that is used for
  * affinity by default). Note that a class can have only one field annotated

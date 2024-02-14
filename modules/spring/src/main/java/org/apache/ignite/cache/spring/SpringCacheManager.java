@@ -38,9 +38,8 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 
 /**
- * <h1 class="header">Description</h1>
  * Implementation of Spring cache abstraction based on Ignite cache.
- * <h2 class="header">Overview</h2>
+ * <h1 class="header">Overview</h1>
  * Spring cache abstraction allows to enable caching for Java methods
  * so that the result of a method execution is stored in some storage. If
  * later the same method is called with the same set of parameters,

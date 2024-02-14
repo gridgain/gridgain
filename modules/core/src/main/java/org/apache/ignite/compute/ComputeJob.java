@@ -22,9 +22,8 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 
 /**
- * <h1 class="header">Description</h1>
  * Defines executable unit for {@link ComputeTask}.
- * <h2 class="header">Description</h2>
+ * <h1 class="header">Description</h1>
  * Grid job is an executable unit of {@link ComputeTask}. Grid task gets split into jobs
  * when {@link ComputeTask#map(List, Object)} method is called. This method returns
  * all jobs for the task mapped to their corresponding grid nodes for execution. Grid

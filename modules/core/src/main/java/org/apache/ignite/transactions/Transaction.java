@@ -24,8 +24,9 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteUuid;
 
 /**
+ * Ignite cache transaction.
  * <h1 class="header">Description</h1>
- * Ignite cache transaction. Cache transactions have a default 2PC (two-phase-commit) behavior and
+ * Cache transactions have a default 2PC (two-phase-commit) behavior and
  * can be plugged into ongoing {@code JTA} transaction by properly implementing
  * {@ignitelink org.apache.ignite.cache.jta.CacheTmLookup}
  * interface. Cache transactions can also be started explicitly directly from {@link IgniteTransactions} API
