@@ -49,9 +49,11 @@ public class IndexQuerySqlGenerator {
         buffer.a("SELECT ").a(KEY_FIELD_NAME).a(", ").a(VAL_FIELD_NAME);
         buffer.a(" FROM ").a(tblDesc.fullTableName());
 
-        Index index = getIndex(qry.getIndexName(), tblDesc.table());
+        Index index = null;;
 
-        if (index != null) {
+        if (qry.getIndexName() != null) {
+            index = resolveIndex(qry.getIndexName(), tblDesc.table());
+
             buffer.a(" USE INDEX (\"").a(index.getName()).a("\")");
         }
 
@@ -72,8 +74,6 @@ public class IndexQuerySqlGenerator {
                 }
 
                 if (criterion instanceof SqlIndexQueryCriterion) {
-                    // Ignite's IndexQuery allows to compare with NULL and treats it as the smallest value.
-                    // While SQL doesn't allow this, we mimic Ignite's behavior for compatibility.
                     String condition = ((SqlIndexQueryCriterion)criterion)
                         .toSql(new IndexQuerySqlBuilderContext(tblDesc.table(), args));
 
@@ -114,11 +114,7 @@ public class IndexQuerySqlGenerator {
         return new SqlGeneratorResult(buffer.toString(), args);
     }
 
-    private static @Nullable Index getIndex(@Nullable String idxName, GridH2Table table) {
-        if (idxName == null) {
-            return null;
-        }
-
+    private static Index resolveIndex(String idxName, GridH2Table table) {
         ArrayList<Index> indexes = table.getIndexes();
         String upperCaseIdxName = idxName.toUpperCase();
         Index upperCaseIndex = null;
@@ -142,16 +138,16 @@ public class IndexQuerySqlGenerator {
 
         private final @Nullable List<Object> arguments;
 
-        public SqlGeneratorResult(String sql, @Nullable List<Object> arguments) {
+        SqlGeneratorResult(String sql, @Nullable List<Object> arguments) {
             this.sql = sql;
             this.arguments = arguments;
         }
 
-        public String sql() {
+        String sql() {
             return sql;
         }
 
-        public @Nullable Object[] arguments() {
+        @Nullable Object[] arguments() {
             return arguments == null ? null : arguments.toArray();
         }
     }
