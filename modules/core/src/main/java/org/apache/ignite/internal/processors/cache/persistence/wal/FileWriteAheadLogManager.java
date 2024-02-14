@@ -703,18 +703,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         try {
             fileHandleManager.onDeactivate();
-
-            if (useAsyncRollover) {
-                long segmentId = currentHandle().getSegmentId();
-
-                boolean statusChanged = setSegmentStatus(segmentId, SEGMENT_ACTIVE, SEGMENT_CLOSED);
-
-                if (statusChanged && log.isDebugEnabled())
-                    log.debug("Status for segment " + segmentId + " was changed to SEGMENT_CLOSED");
-
-                if (!statusChanged)
-                    U.error(log, "Failed to change current segment status on deactivation");
-            }
         }
         catch (Exception e) {
             U.error(log, "Failed to gracefully close WAL segment: " + currHnd, e);
