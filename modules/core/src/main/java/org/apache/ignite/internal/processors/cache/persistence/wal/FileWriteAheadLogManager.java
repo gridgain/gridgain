@@ -789,6 +789,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         updateCurrentHandle(restoreWriteHandle(filePtr), null);
 
+        if (getSegmentStatus(currentHandle().getSegmentId()) == SEGMENT_CLOSED) {
+            setSegmentStatus(currentHandle().getSegmentId(), SEGMENT_CLOSED, SEGMENT_ACTIVE);
+        }
+
         // For new handle write serializer version to it.
         if (filePtr == null)
             currHnd.writeHeader();
