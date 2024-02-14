@@ -33,7 +33,9 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -83,7 +85,7 @@ public class IndexQueryAliasTest extends GridCommonAbstractTest {
         cache = crd.cache(CACHE);
 
         for (int i = 0; i < CNT; i++)
-            cache.put((long) i, new Person(i));
+            cache.put((long)i, new Person(i));
     }
 
     /** {@inheritDoc} */
@@ -119,13 +121,13 @@ public class IndexQueryAliasTest extends GridCommonAbstractTest {
         IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryIdx)
             .setCriteria(lt("asId", pivot));
 
-        check(cache.query(qry), 0, pivot);
+        check(cache.query(qry), 0, pivot, false);
 
         // Lt, desc index.
         IndexQuery<Long, Person> descQry = new IndexQuery<Long, Person>(Person.class, qryDescIdx)
             .setCriteria(lt("asDescId", pivot));
 
-        check(cache.query(descQry), 0, pivot);
+        check(cache.query(descQry), 0, pivot, true);
     }
 
     /** */
@@ -139,7 +141,7 @@ public class IndexQueryAliasTest extends GridCommonAbstractTest {
         IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, idIdx)
             .setCriteria(lt("ASID", pivot));
 
-        check(cache.query(qry), 0, pivot);
+        check(cache.query(qry), 0, pivot, false);
 
         String idDescIdx = qryDescIdx != null ? qryDescIdx.toLowerCase() : null;
 
@@ -147,18 +149,29 @@ public class IndexQueryAliasTest extends GridCommonAbstractTest {
         IndexQuery<Long, Person> descQry = new IndexQuery<Long, Person>(Person.class, idDescIdx)
             .setCriteria(lt("ASDESCID", pivot));
 
-        check(cache.query(descQry), 0, pivot);
+        check(cache.query(descQry), 0, pivot, true);
     }
 
     /**
      * @param left First cache key, inclusive.
      * @param right Last cache key, exclusive.
      */
-    private void check(QueryCursor<Cache.Entry<Long, Person>> cursor, int left, int right) {
+    private void check(QueryCursor<Cache.Entry<Long, Person>> cursor, int left, int right, boolean desc) {
         List<Cache.Entry<Long, Person>> all = cursor.getAll();
 
         assertEquals(right - left, all.size());
 
+        if (qryIdx != null) {
+            for (int i = 0; i < all.size(); i++) {
+                int expKey = desc ? right - 1 - i : i;
+
+                assertEquals(new Person(expKey), all.get(i).getValue());
+            }
+
+            return;
+        }
+
+        // Check unordered results.
         Set<Long> expKeys = LongStream.range(left, right).boxed().collect(Collectors.toSet());
 
         for (int i = 0; i < all.size(); i++) {
@@ -173,9 +186,11 @@ public class IndexQueryAliasTest extends GridCommonAbstractTest {
     /** */
     private static class Person {
         /** */
+        @GridToStringInclude
         final int id;
 
         /** */
+        @GridToStringInclude
         final int descId;
 
         /** */
@@ -191,7 +206,7 @@ public class IndexQueryAliasTest extends GridCommonAbstractTest {
             if (o == null || getClass() != o.getClass())
                 return false;
 
-            Person person = (Person) o;
+            Person person = (Person)o;
 
             return Objects.equals(id, person.id) && Objects.equals(descId, person.descId);
         }
@@ -199,6 +214,11 @@ public class IndexQueryAliasTest extends GridCommonAbstractTest {
         /** {@inheritDoc} */
         @Override public int hashCode() {
             return Objects.hash(id, descId);
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return S.toString(Person.class, this);
         }
     }
 }

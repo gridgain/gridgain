@@ -41,6 +41,8 @@ import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.between;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.eq;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.gt;
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
+import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assume.assumeThat;
 
 /** */
 @RunWith(Parameterized.class)
@@ -186,6 +188,7 @@ public class IndexQueryFailoverTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testConcurrentUpdateIndex() {
+        assumeThat("Concurrent update is not supported with index ordering", qryIdx, nullValue());
         insertData(0, CNT);
 
         IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, qryIdx)

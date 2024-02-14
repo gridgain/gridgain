@@ -473,10 +473,14 @@ public class MultifieldIndexQueryTest extends GridCommonAbstractTest {
 
         List<Cache.Entry<Long, Person>> all = cache.query(qry).getAll();
 
-        if (desc) {
-            all.sort(Comparator.comparing(Cache.Entry::getKey, Comparator.reverseOrder()));
-        } else {
-            all.sort(Comparator.comparing(Cache.Entry::getKey));
+        if (qryIdx == null) {
+            // Gridgain doesn't support ordering when index was not specified.
+            if (desc) {
+                all.sort(Comparator.comparing(Cache.Entry::getKey, Comparator.reverseOrder()));
+            }
+            else {
+                all.sort(Comparator.comparing(Cache.Entry::getKey));
+            }
         }
 
         assertEquals(right - left, all.size());

@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.stream.IntStream;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.QueryEntity;
@@ -270,9 +271,6 @@ public class IndexQueryInCriterionTest extends GridCommonAbstractTest {
             assertExpect(c.toString(), qry, (k, p) -> p.age == 10);
         }
 
-        if (true)
-            return;
-
         List<IndexQueryCriterion> secondOnlyCriteria = F.asList(
             gte("age", 15),
             gte("age", 20),
@@ -308,6 +306,19 @@ public class IndexQueryInCriterionTest extends GridCommonAbstractTest {
             .setCriteria(in("age", F.asList(null, 10)));
 
         assertExpect(qry, (k, p) -> p.age == null || p.age == 10, true);
+
+        // Null on non-nullable column.
+        IgniteCache<Object, Object> cache = grid(0).cache("CACHE");
+
+        qry = new IndexQuery<Integer, Person>(Person.class, "_key_PK")
+            .setCriteria(in("_KEY", Collections.singleton(null)));
+
+        assertEquals(0, cache.query(qry).getAll().size());
+
+        qry = new IndexQuery<Integer, Person>(Person.class, "_key_PK")
+            .setCriteria(in("_KEY", F.asList(0, null, 1)));
+
+        assertEquals(2, cache.query(qry).getAll().size());
     }
 
     /** */
