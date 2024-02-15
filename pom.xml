@@ -267,9 +267,6 @@
                         <configuration>
                             <doclint>none</doclint>
                             <verbose>true</verbose>
-                            <additionalJOptions>
-                                <additionalJOption>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</additionalJOption>
-                            </additionalJOptions>
                             <bottom>
                                 <![CDATA[
                                             <table width="100%" border="0" cellspacing=0 cellpadding=0 style="padding: 5px">
