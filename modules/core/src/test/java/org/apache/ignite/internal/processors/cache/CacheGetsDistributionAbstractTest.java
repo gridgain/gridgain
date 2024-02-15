@@ -294,9 +294,11 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
 
         String clientMac = macs.get(grid(CLIENT_NAME).localNode().id());
 
-        macs.put(destId, clientMac);
+        String prevMac = macs.put(destId, clientMac);
 
         replaceMacAddresses(G.allGrids(), macs);
+
+        info("Mac changed for target [destId=" + destId + ", clientMac=" + clientMac + ", prevMac=" + prevMac + ']');
 
 //        TestRecordingCommunicationSpi.spi(grid(0)).blockMessages((node, message) -> {
 //            if ("client".equals(node.consistentId()) && message instanceof GridDhtPartitionsFullMessage) {
@@ -306,9 +308,7 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
 //            return false;
 //        });
 
-        IgniteCache<Integer, String> cache = grid(1).createCache(cacheConfiguration());
-
-        info("Start test " + grid(getTestIgniteInstanceName(0)).cluster().localNode().consistentId());
+        IgniteCache<Integer, String> cache = grid(0).createCache(cacheConfiguration());
 
         List<Integer> keys = primaryKeys(cache, PRIMARY_KEYS_NUMBER);
 
@@ -372,6 +372,8 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
      */
     private void replaceMacAddresses(List<Ignite> instances, Map<UUID, String> macs) {
         for (Ignite ignite : instances) {
+            log.info("replace mac for: " + ignite.cluster().localNode().consistentId());
+
             for (ClusterNode node : ignite.cluster().nodes()) {
                 String mac = macs.get(node.id());
 

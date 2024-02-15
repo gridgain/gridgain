@@ -3154,11 +3154,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
      * @param aff Affinity assignments.
      */
     private void updateRebalanceVersion(AffinityTopologyVersion affVer, List<List<ClusterNode>> aff) {
-        log.info("Call updateRebalanceVersion [grp=" + grp.cacheOrGroupName() +
-            ", top=" + affVer +
-            ", diffFromAffinityVer=" + diffFromAffinityVer +
-            ", readyTopVer=" + readyTopVer + ']');
-
         if (!affVer.equals(diffFromAffinityVer))
             return;
 
