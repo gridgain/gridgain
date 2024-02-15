@@ -257,6 +257,7 @@
                                 </goals>
                                 <phase>validate</phase>
                                 <configuration>
+                                    <doclint>none</doclint>
                                     <reportOutputDirectory>${basedir}/target/javadoc</reportOutputDirectory>
                                     <destDir>core</destDir>
                                     <stylesheetfile>${basedir}/assembly/docfiles/css/stylesheet.css</stylesheetfile>
