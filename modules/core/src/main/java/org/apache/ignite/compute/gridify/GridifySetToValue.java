@@ -25,6 +25,7 @@ import java.lang.annotation.Target;
 
 /**
  * {@code GridifySetToValue} annotation is the way to grid-enable existing code with specific semantics.
+ * <h1 class="header">Description</h1>
  * <p>
  * This annotation can be applied to any public method that needs to be grid-enabled,
  * static or non-static. When this annotation is applied to a method, the method
