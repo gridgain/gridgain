@@ -30,7 +30,7 @@
 
     <groupId>org.gridgain</groupId>
     <artifactId>ignite-apache-license-gen</artifactId>
-    <version>8.9.127-SNAPSHOT</version>
+    <version>8.9.2</version>
     <url>http://ignite.apache.org</url>
 
     <build>
