@@ -1427,13 +1427,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         if (useAsyncRollover) {
             boolean statusChanged = setSegmentStatus(hnd.getSegmentId(), SEGMENT_ACTIVE, SEGMENT_SCHEDULED_FOR_CLOSE);
 
-            if (statusChanged) {
+            if (statusChanged)
                 walSegmentAsyncCloser.add(hnd, rollover);
 
-                if (log.isDebugEnabled())
-                    log.debug("Status for segment " + hnd.getSegmentId() +
-                            " was changed to SEGMENT_SCHEDULED_FOR_CLOSE");
-            }
             return true;
         }
 
@@ -1477,7 +1473,23 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         } while (!segmentStatus.compareAndSet(idx, curStatus, newStatus));
 
+        log.info("Status for segment " + segmentId + " was changed from " + segmentStatusText(expected)
+                + " to " + segmentStatusText(newStatus));
+
         return true;
+    }
+
+    private @Nullable String segmentStatusText(int segmentStatus) {
+        switch (segmentStatus) {
+            case SEGMENT_CLOSED:
+                return "SEGMENT_CLOSED";
+            case SEGMENT_ACTIVE:
+                return "SEGMENT_ACTIVE";
+            case SEGMENT_SCHEDULED_FOR_CLOSE:
+                return "SEGMENT_SCHEDULED_FOR_CLOSE";
+        }
+
+        return null;
     }
 
     /**
@@ -1627,9 +1639,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         boolean statusChanged = setSegmentStatus(nextSegmentId, SEGMENT_CLOSED, SEGMENT_ACTIVE);
 
                         assert statusChanged;
-
-                        if (log.isDebugEnabled())
-                            log.debug("Status for segment " + hnd.getSegmentId() + " was changed to SEGMENT_ACTIVE");
                     }
 
                     if (interrupted)
@@ -3778,8 +3787,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     if (closed) {
                         boolean statusChanged = setSegmentStatus(hnd.getSegmentId(), SEGMENT_SCHEDULED_FOR_CLOSE, SEGMENT_CLOSED);
 
-                        if (statusChanged && log.isDebugEnabled())
-                            log.debug("Status for segment " + hnd.getSegmentId() + " was changed to SEGMENT_CLOSED");
+                        assert statusChanged;
                     }
 
                 } catch (IgniteCheckedException e) {
