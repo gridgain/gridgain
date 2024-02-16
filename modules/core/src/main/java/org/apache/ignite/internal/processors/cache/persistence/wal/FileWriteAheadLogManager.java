@@ -1430,7 +1430,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             if (statusChanged)
                 walSegmentAsyncCloser.add(hnd, rollover);
 
-            return true;
+            return statusChanged;
         }
 
         return hnd.close(rollover);
@@ -1466,14 +1466,15 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             if (curStatus != newStatus && curStatus != expected)
                     throw new IgniteCheckedException("Invalid status transition for segmentId = " + segmentId
-                            + "; curStatus = " + curStatus + "; newStatus = " + newStatus);
+                            + "; curStatus = " + segmentStatusText(curStatus) + "; newStatus = " + segmentStatusText(newStatus));
 
             if (curStatus == newStatus)
                 return false;
 
         } while (!segmentStatus.compareAndSet(idx, curStatus, newStatus));
 
-        log.info("Status for segment " + segmentId + " was changed from " + segmentStatusText(expected)
+
+        log.info("[" + cctx.localNodeId() + "] Status for segment " + segmentId + " was changed from " + segmentStatusText(expected)
                 + " to " + segmentStatusText(newStatus));
 
         return true;
