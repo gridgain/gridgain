@@ -390,6 +390,19 @@ public class SegmentedRingByteBuffer {
     }
 
     /**
+     * Create new instance with newly created byte buffer.
+     * @return New instance with newly created byt buffer.
+     */
+    public SegmentedRingByteBuffer allocateNew() {
+        return new SegmentedRingByteBuffer(
+                buf.capacity(),
+                maxSegmentSize,
+                mode,
+                metrics
+        );
+    }
+
+    /**
      * @param off Offset.
      * @param len Length.
      * @param readOnly Read only.
