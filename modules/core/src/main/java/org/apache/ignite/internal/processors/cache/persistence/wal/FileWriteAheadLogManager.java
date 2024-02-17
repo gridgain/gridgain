@@ -393,7 +393,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     /** Pointer to the last successful checkpoint until which WAL segments can be safely deleted. */
     private volatile FileWALPointer lastCheckpointPtr = new FileWALPointer(0, 0, 0);
 
-    private final boolean useAsyncRollover = true;
+    private final boolean useAsyncRollover;
 
     private final AtomicIntegerArray segmentStatus;
 
@@ -440,6 +440,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         switchSegmentRecordOffset = isArchiverEnabled() ? new AtomicLongArray(dsCfg.getWalSegments()) : null;
 
+        useAsyncRollover = mode != WALMode.FSYNC;
+
         if (useAsyncRollover) {
             segmentStatus = new AtomicIntegerArray(dsCfg.getWalSegments());
 
@@ -447,6 +449,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     ctx.igniteInstanceName(),
                     ctx.log(WalSegmentAsyncCloser.class)
             );
+        } else {
+            segmentStatus = null;
+
+            walSegmentAsyncCloser = null;
         }
     }
 
