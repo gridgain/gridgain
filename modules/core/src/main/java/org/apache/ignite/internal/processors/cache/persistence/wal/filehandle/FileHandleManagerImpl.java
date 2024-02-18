@@ -351,8 +351,11 @@ public class FileHandleManagerImpl implements FileHandleManager {
                         try {
                             assert pos == FILE_CLOSE || pos == FILE_FORCE : pos;
 
-                            if (pos == FILE_CLOSE)
-                                currentHandle().fileIO.close();
+                            if (pos == FILE_CLOSE) {
+                                FileWriteHandleImpl hnd = currentHandle();
+                                log.info("FileIO closed segmentId=" + hnd.getSegmentId());
+                                hnd.fileIO.close();
+                            }
                             else if (pos == FILE_FORCE)
                                 currentHandle().fileIO.force();
                         }
@@ -578,7 +581,7 @@ public class FileHandleManagerImpl implements FileHandleManager {
             catch (IOException e) {
                 err = e;
 
-                StorageException se = new StorageException("Failed to write buffer.", e);
+                StorageException se = new StorageException("Failed to write buffer segmentId=" + hdl.getSegmentId(), e);
 
                 cctx.kernalContext().failure().process(new FailureContext(CRITICAL_ERROR, se));
 
