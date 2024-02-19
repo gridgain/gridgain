@@ -140,18 +140,6 @@ public class GridDhtAtomicNearResponse extends GridCacheIdMessage {
     }
 
     /**
-     * Sets update error.
-     *
-     * @param err Error.
-     */
-    public void error(IgniteCheckedException err) {
-        if (errs == null)
-            errs = new UpdateErrors();
-
-        errs.onError(err);
-    }
-
-    /**
      * @return Operation result.
      */
     public GridCacheReturn result() {
