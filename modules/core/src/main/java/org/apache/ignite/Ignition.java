@@ -41,7 +41,7 @@ import org.apache.ignite.thread.IgniteThread;
  * <li>{@link org.apache.ignite.startup.cmdline.CommandLineStartup}</li>
  * <li>{@ignitelink org.apache.ignite.startup.servlet.ServletStartup}</li>
  * </ul>
- * <h1 class="header">Examples</h1>
+ * <h2 class="header">Examples</h2>
  * Use {@link #start()} method to start grid with default configuration. You can also use
  * {@link org.apache.ignite.configuration.IgniteConfiguration} to override some default configuration. Below is an
  * example on how to start grid with custom configuration for <strong>URI deployment</strong>.

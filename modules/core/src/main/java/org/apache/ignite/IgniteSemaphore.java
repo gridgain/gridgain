@@ -21,10 +21,11 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * This interface provides a rich API for working with distributed semaphore.
+ * <h1 class="header">Description</h1>
  * <p>
- * <h1 class="header">Functionality</h1>
+ * <h2 class="header">Functionality</h2>
  * Distributed semaphore provides functionality similar to {@code java.util.concurrent.Semaphore}.
- * <h1 class="header">Creating Distributed Semaphore</h1>
+ * <h2 class="header">Creating Distributed Semaphore</h2>
  * Instance of cache semaphore can be created by calling the following method:
  * {@link Ignite#semaphore(String, int, boolean, boolean)}.
  */

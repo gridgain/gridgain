@@ -20,8 +20,9 @@ import java.io.Closeable;
 
 /**
  * This interface provides a rich API for working with distributed atomic reference.
+ * <h1 class="header">Description</h1>
  * <p>
- * <h1 class="header">Functionality</h1>
+ * <h2 class="header">Functionality</h2>
  * Distributed atomic reference includes the following main functionality:
  * <ul>
  * <li>
@@ -37,7 +38,7 @@ import java.io.Closeable;
  * Method {@link #name()} gets name of atomic reference.
  * </li>
  * </ul>
- * <h1 class="header">Creating Distributed Atomic Reference</h1>
+ * <h2 class="header">Creating Distributed Atomic Reference</h2>
  * Instance of distributed atomic reference can be created by calling the following method:
  * <ul>
  *     <li>{@link Ignite#atomicReference(String, Object, boolean)}</li>

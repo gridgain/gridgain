@@ -87,7 +87,7 @@ import org.apache.ignite.IgniteException;
  * </li>
  * </ol>
  * <p>
- * <h1 class="header">Resource Injection</h1>
+ * <h2 class="header">Resource Injection</h2>
  * Grid job implementation can be injected using IoC (dependency injection) with
  * ignite resources. Both, field and method based injection are supported.
  * The following ignite resources can be injected:
@@ -101,12 +101,12 @@ import org.apache.ignite.IgniteException;
  * </ul>
  * Refer to corresponding resource documentation for more information.
  * <p>
- * <h1 class="header">ComputeJobAdapter</h1>
+ * <h2 class="header">ComputeJobAdapter</h2>
  * Ignite comes with convenience {@link ComputeJobAdapter} adapter that provides
  * default empty implementation for {@link ComputeJob#cancel()} method and also
  * allows user to set and get job argument, if there is one.
  * <p>
- * <h1 class="header">Distributed Session Attributes</h1>
+ * <h2 class="header">Distributed Session Attributes</h2>
  * Jobs can communicate with parent task and with other job siblings from the same
  * task by setting session attributes (see {@link ComputeTaskSession}). Other jobs
  * can wait for an attribute to be set either synchronously or asynchronously.
@@ -119,7 +119,7 @@ import org.apache.ignite.IgniteException;
  * Both, field and method based injections are supported. Refer to
  * {@link ComputeTaskSession} documentation for more information on session functionality.
  * <p>
- * <h1 class="header">Saving Checkpoints</h1>
+ * <h2 class="header">Saving Checkpoints</h2>
  * Long running jobs may wish to save intermediate checkpoints to protect themselves
  * from failures. There are three checkpoint management methods:
  * <ul>
