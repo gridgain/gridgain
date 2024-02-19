@@ -32,7 +32,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearSingleGetRequest;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
@@ -290,6 +290,15 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
      * @throws Exception In case of an error.
      */
     protected void runTestSameHostDistribution(final UUID destId, final boolean batchMode) throws Exception {
+        for (Ignite ign : G.allGrids()) {
+            TestRecordingCommunicationSpi.spi(ign).blockMessages((node, message) -> {
+                if (destId.equals(node.id()) && message instanceof GridNearSingleGetRequest)
+                    info("Message sent [node=" + node.consistentId() + ", msg=" + message.getClass().getSimpleName() + ']');
+
+                return false;
+            });
+        }
+
         Map<UUID, String> macs = getClusterMacs();
 
         String clientMac = macs.get(grid(CLIENT_NAME).localNode().id());
@@ -300,14 +309,6 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
 
         info("Mac changed for target [destId=" + destId + ", clientMac=" + clientMac + ", prevMac=" + prevMac + ']');
 
-//        TestRecordingCommunicationSpi.spi(grid(0)).blockMessages((node, message) -> {
-//            if ("client".equals(node.consistentId()) && message instanceof GridDhtPartitionsFullMessage) {
-//                return true;
-//            }
-//
-//            return false;
-//        });
-
         IgniteCache<Integer, String> cache = grid(0).createCache(cacheConfiguration());
 
         List<Integer> keys = primaryKeys(cache, PRIMARY_KEYS_NUMBER);
@@ -315,11 +316,11 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
         for (Integer key : keys)
             cache.put(key, VAL_PREFIX + key);
 
-//        GridTestUtils.runAsync(() -> {
-//            doSleep(1_000);
-//
-//            TestRecordingCommunicationSpi.spi(grid(0)).stopBlock();
-//        });
+        GridTestUtils.runAsync(() -> {
+            doSleep(1_000);
+
+            TestRecordingCommunicationSpi.spi(grid(0)).stopBlock();
+        });
 
         IgniteCache<Integer, String> clientCache = grid(CLIENT_NAME).cache(DEFAULT_CACHE_NAME)
             .withAllowAtomicOpsInTx();
