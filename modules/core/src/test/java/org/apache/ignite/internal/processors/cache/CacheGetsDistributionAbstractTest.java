@@ -293,7 +293,7 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
         for (Ignite ign : G.allGrids()) {
             TestRecordingCommunicationSpi.spi(ign).blockMessages((node, message) -> {
                 if (destId.equals(node.id()) && message instanceof GridNearSingleGetRequest)
-                    info("Message sent [node=" + node.consistentId() + ", msg=" + message.getClass().getSimpleName() + ']');
+                    info("PVD>> Message sent [node=" + node.consistentId() + ", msg=" + message.getClass().getSimpleName() + ']');
 
                 return false;
             });
