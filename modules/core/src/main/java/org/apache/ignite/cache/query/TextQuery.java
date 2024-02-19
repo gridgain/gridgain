@@ -24,7 +24,8 @@ import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * <h1 class="header">Full Text Queries</h1>
+ * Full text queries based on Apache Lucene engine.
+ * <h1 class="header">Description</h1>
  * Ignite supports full text queries based on Apache Lucene engine.
  * Note that all fields that are expected to show up in text query results must be annotated with {@link QueryTextField}
  *

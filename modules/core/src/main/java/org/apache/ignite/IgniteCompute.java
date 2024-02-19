@@ -43,7 +43,9 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Defines compute grid functionality for executing tasks and closures over nodes
- * in the {@link ClusterGroup}. Instance of {@code IgniteCompute} is obtained from {@link Ignite}
+ * in the {@link ClusterGroup}.
+ * <h1 class="header">Description</h1>
+ * Instance of {@code IgniteCompute} is obtained from {@link Ignite}
  * as follows:
  * <pre name="code" class="java">
  * Ignite ignite = Ignition.ignite();
@@ -72,21 +74,21 @@ import org.jetbrains.annotations.Nullable;
  * Note that if attempt is made to execute a computation over an empty cluster group (i.e. cluster group
  * that does not have any alive nodes), then {@link org.apache.ignite.cluster.ClusterGroupEmptyException}
  * will be thrown out of result future.
- * <h1 class="header">Load Balancing</h1>
+ * <h2 class="header">Load Balancing</h2>
  * In all cases other than {@code broadcast(...)}, Ignite must select a node for a computation
  * to be executed. The node will be selected based on the underlying {@link LoadBalancingSpi},
  * which by default sequentially picks next available node from the underlying cluster group. Other
  * load balancing policies, such as {@code random} or {@code adaptive}, can be configured as well by
  * selecting a different load balancing SPI in Ignite configuration. If your logic requires some custom
  * load balancing behavior, consider implementing {@link ComputeTask} directly.
- * <h1 class="header">Fault Tolerance</h1>
+ * <h2 class="header">Fault Tolerance</h2>
  * Ignite guarantees that as long as there is at least one grid node standing, every job will be
  * executed. Jobs will automatically failover to another node if a remote node crashed
  * or has rejected execution due to lack of resources. By default, in case of failover, next
  * load balanced node will be picked for job execution. Also jobs will never be re-routed to the
  * nodes they have failed on. This behavior can be changed by configuring any of the existing or a custom
  * {@link FailoverSpi} in grid configuration.
- * <h1 class="header">Resource Injection</h1>
+ * <h2 class="header">Resource Injection</h2>
  * All compute jobs, including closures, runnables, callables, and tasks can be injected with
  * ignite resources. Both, field and method based injections are supported. The following grid
  * resources can be injected:
@@ -107,7 +109,7 @@ import org.jetbrains.annotations.Nullable;
  *      ...
  *  }
  * </pre>
- * <h1 class="header">Computation SPIs</h1>
+ * <h2 class="header">Computation SPIs</h2>
  * Note that regardless of which method is used for executing computations, all relevant SPI implementations
  * configured for this compute instance will be used (i.e. failover, load balancing, collision resolution,
  * checkpoints, etc.). If you need to override configured defaults, you should use compute task together with
