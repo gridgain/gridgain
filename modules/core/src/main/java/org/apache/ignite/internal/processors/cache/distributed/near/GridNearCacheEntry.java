@@ -388,7 +388,8 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
             boolean hasVal = hasValueUnlocked();
 
             if (this.dhtVer == null || this.dhtVer.compareTo(dhtVer) < 0 || !valid(topVer)) {
-                this.topVer = topVer;
+                if (topVer.compareTo(this.topVer) > 0)
+                    this.topVer = topVer;
 
                 update(val, expireTime, ttl, ver, true);
 
