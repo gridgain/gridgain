@@ -74,6 +74,7 @@ if %java_version% GEQ 15 (
     --add-opens=java.base/java.lang.invoke=ALL-UNNAMED ^
     --add-opens=java.base/java.math=ALL-UNNAMED ^
     --add-opens=java.base/java.time=ALL-UNNAMED ^
+    --add-opens=java.base/sun.security.ssl=ALL-UNNAMED ^
     --add-opens=java.base/sun.security.x509=ALL-UNNAMED ^
     --add-opens=java.sql/java.sql=ALL-UNNAMED ^
     %current_value%
