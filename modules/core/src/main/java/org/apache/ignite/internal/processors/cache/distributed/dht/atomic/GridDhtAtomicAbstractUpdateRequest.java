@@ -18,13 +18,17 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.atomic;
 
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.UUID;
 import javax.cache.processor.EntryProcessor;
+
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheDeployable;
 import org.apache.ignite.internal.processors.cache.GridCacheIdMessage;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
@@ -99,6 +103,9 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
 
     /** Additional flags. */
     protected byte flags;
+
+    /** */
+    protected UpdateErrors errs;
 
     /**
      * Empty constructor required by {@link Externalizable}.
@@ -251,6 +258,31 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
     /** {@inheritDoc} */
     @Override public boolean addDeploymentInfo() {
         return addDepInfo;
+    }
+
+    /**
+     * @return Collection of failed keys.
+     */
+    public Collection<KeyCacheObject> failedKeys() {
+        return errs != null ? errs.failedKeys() : null;
+    }
+
+    /**
+     * Adds keys to collection of failed keys.
+     *
+     * @param keys Keys to add.
+     * @param e Error cause.
+     */
+    public void addFailedKeys(Collection<KeyCacheObject> keys, Throwable e) {
+        if (errs == null)
+            errs = new UpdateErrors();
+
+        errs.addFailedKeys(keys, e);
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteCheckedException error() {
+        return errs != null ? errs.error() : null;
     }
 
     /**
@@ -483,7 +515,7 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 13;
+        return 14;
     }
 
     /** {@inheritDoc} */
@@ -502,54 +534,60 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
 
         switch (writer.state()) {
             case 4:
-                if (!writer.writeByte("flags", flags))
+                if (!writer.writeMessage("errs", errs))
                     return false;
 
                 writer.incrementState();
 
             case 5:
-                if (!writer.writeLong("futId", futId))
+                if (!writer.writeByte("flags", flags))
                     return false;
 
                 writer.incrementState();
 
             case 6:
-                if (!writer.writeLong("nearFutId", nearFutId))
+                if (!writer.writeLong("futId", futId))
                     return false;
 
                 writer.incrementState();
 
             case 7:
-                if (!writer.writeUuid("nearNodeId", nearNodeId))
+                if (!writer.writeLong("nearFutId", nearFutId))
                     return false;
 
                 writer.incrementState();
 
             case 8:
-                if (!writer.writeUuid("subjId", subjId))
+                if (!writer.writeUuid("nearNodeId", nearNodeId))
                     return false;
 
                 writer.incrementState();
 
             case 9:
-                if (!writer.writeByte("syncMode", syncMode != null ? (byte)syncMode.ordinal() : -1))
+                if (!writer.writeUuid("subjId", subjId))
                     return false;
 
                 writer.incrementState();
 
             case 10:
-                if (!writer.writeInt("taskNameHash", taskNameHash))
+                if (!writer.writeByte("syncMode", syncMode != null ? (byte)syncMode.ordinal() : -1))
                     return false;
 
                 writer.incrementState();
 
             case 11:
-                if (!writer.writeAffinityTopologyVersion("topVer", topVer))
+                if (!writer.writeInt("taskNameHash", taskNameHash))
                     return false;
 
                 writer.incrementState();
 
             case 12:
+                if (!writer.writeAffinityTopologyVersion("topVer", topVer))
+                    return false;
+
+                writer.incrementState();
+
+            case 13:
                 if (!writer.writeMessage("writeVer", writeVer))
                     return false;
 
@@ -572,7 +610,7 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
 
         switch (reader.state()) {
             case 4:
-                flags = reader.readByte("flags");
+                errs = reader.readMessage("errs");
 
                 if (!reader.isLastRead())
                     return false;
@@ -580,7 +618,7 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
                 reader.incrementState();
 
             case 5:
-                futId = reader.readLong("futId");
+                flags = reader.readByte("flags");
 
                 if (!reader.isLastRead())
                     return false;
@@ -588,7 +626,7 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
                 reader.incrementState();
 
             case 6:
-                nearFutId = reader.readLong("nearFutId");
+                futId = reader.readLong("futId");
 
                 if (!reader.isLastRead())
                     return false;
@@ -596,7 +634,7 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
                 reader.incrementState();
 
             case 7:
-                nearNodeId = reader.readUuid("nearNodeId");
+                nearFutId = reader.readLong("nearFutId");
 
                 if (!reader.isLastRead())
                     return false;
@@ -604,7 +642,7 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
                 reader.incrementState();
 
             case 8:
-                subjId = reader.readUuid("subjId");
+                nearNodeId = reader.readUuid("nearNodeId");
 
                 if (!reader.isLastRead())
                     return false;
@@ -612,6 +650,14 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
                 reader.incrementState();
 
             case 9:
+                subjId = reader.readUuid("subjId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 10:
                 byte syncModeOrd;
 
                 syncModeOrd = reader.readByte("syncMode");
@@ -623,7 +669,7 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
 
                 reader.incrementState();
 
-            case 10:
+            case 11:
                 taskNameHash = reader.readInt("taskNameHash");
 
                 if (!reader.isLastRead())
@@ -631,7 +677,7 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
 
                 reader.incrementState();
 
-            case 11:
+            case 12:
                 topVer = reader.readAffinityTopologyVersion("topVer");
 
                 if (!reader.isLastRead())
@@ -639,7 +685,7 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
 
                 reader.incrementState();
 
-            case 12:
+            case 13:
                 writeVer = reader.readMessage("writeVer");
 
                 if (!reader.isLastRead())
@@ -650,6 +696,26 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
         }
 
         return reader.afterMessageRead(GridDhtAtomicAbstractUpdateRequest.class);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void prepareMarshal(GridCacheSharedContext ctx) throws IgniteCheckedException {
+        super.prepareMarshal(ctx);
+
+        GridCacheContext cctx = ctx.cacheContext(cacheId);
+
+        if (errs != null)
+            errs.prepareMarshal(this, cctx);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void finishUnmarshal(GridCacheSharedContext ctx, ClassLoader ldr) throws IgniteCheckedException {
+        super.finishUnmarshal(ctx, ldr);
+
+        GridCacheContext cctx = ctx.cacheContext(cacheId);
+
+        if (errs != null)
+            errs.finishUnmarshal(this, cctx, ldr);
     }
 
     /** {@inheritDoc} */
