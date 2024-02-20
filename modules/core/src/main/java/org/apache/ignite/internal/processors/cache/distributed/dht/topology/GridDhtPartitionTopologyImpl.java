@@ -3169,8 +3169,17 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     continue;
 
                 for (ClusterNode node : affNodes) {
-                    if (!hasState(i, node.id(), OWNING))
+                    if (!hasState(i, node.id(), OWNING)) {
+                        log.info(
+                            "Skip update rebalance topology [mode=" + node.consistentId() +
+                                ", cache=" + grp.cacheOrGroupName() +
+                                ", part=" + i +
+                                ", state=" + node2part.get(node.id()).get(i) +
+                                ", top=" + readyTopVer + ']'
+                        );
+
                         return;
+                    }
                 }
 
                 if (!grp.isReplicated()) {

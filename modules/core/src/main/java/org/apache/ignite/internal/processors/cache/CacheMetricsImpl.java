@@ -900,9 +900,6 @@ public class CacheMetricsImpl implements CacheMetrics {
     public void onRead(boolean isHit) {
         reads.increment();
 
-        if ("cache.ReplicatedAtomicCacheGetsDistributionTest0".equals(cctx.igniteInstanceName()))
-            U.dumpStack(cctx.logger(CacheMetricsImpl.class), "onRead");
-
         if (isHit)
             hits.increment();
         else
