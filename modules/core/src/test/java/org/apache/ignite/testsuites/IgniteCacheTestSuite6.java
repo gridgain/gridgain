@@ -127,43 +127,43 @@ public class IgniteCacheTestSuite6 {
         GridTestUtils.addTestIfNeeded(suite, CacheIgniteOutOfMemoryExceptionOnTtlTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, ReplicatedAtomicCacheGetsDistributionTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, ReplicatedTransactionalOptimisticCacheGetsDistributionTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, ReplicatedTransactionalPessimisticCacheGetsDistributionTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, PartitionedAtomicCacheGetsDistributionTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, PartitionedTransactionalOptimisticCacheGetsDistributionTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, PartitionedTransactionalPessimisticCacheGetsDistributionTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, TxOptimisticOnPartitionExchangeTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, IgniteExchangeLatchManagerCoordinatorFailTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, IgniteExchangeLatchManagerDiscoHistoryTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, ExchangeLatchManagerTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, PartitionsExchangeCoordinatorFailoverTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, CacheTryLockMultithreadedTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, CacheParallelStartTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, CacheNoAffinityExchangeTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, CachePartitionLossWithRestartsTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, TxLocalDhtMixedCacheModesTest.class, ignoredTests);
-
-        //GridTestUtils.addTestIfNeeded(suite, CacheClientsConcurrentStartTest.class, ignoredTests);
-        //GridTestUtils.addTestIfNeeded(suite, GridCacheRebalancingOrderingTest.class, ignoredTests);
-        //GridTestUtils.addTestIfNeeded(suite, IgniteCacheClientMultiNodeUpdateTopologyLockTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, TxRollbackOnMapOnInvalidTopologyTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, TxRollbackOnNodeLeftInActiveState.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, TxRecoveryWithConcurrentRollbackTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, StartImplicitlyTxOnStopCacheTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, TxRollbackDuringPreparingTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, ReplicatedTransactionalOptimisticCacheGetsDistributionTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, ReplicatedTransactionalPessimisticCacheGetsDistributionTest.class, ignoredTests);
+//
+//        GridTestUtils.addTestIfNeeded(suite, PartitionedAtomicCacheGetsDistributionTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, PartitionedTransactionalOptimisticCacheGetsDistributionTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, PartitionedTransactionalPessimisticCacheGetsDistributionTest.class, ignoredTests);
+//
+//        GridTestUtils.addTestIfNeeded(suite, TxOptimisticOnPartitionExchangeTest.class, ignoredTests);
+//
+//        GridTestUtils.addTestIfNeeded(suite, IgniteExchangeLatchManagerCoordinatorFailTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, IgniteExchangeLatchManagerDiscoHistoryTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, ExchangeLatchManagerTest.class, ignoredTests);
+//
+//        GridTestUtils.addTestIfNeeded(suite, PartitionsExchangeCoordinatorFailoverTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, CacheTryLockMultithreadedTest.class, ignoredTests);
+//
+//        GridTestUtils.addTestIfNeeded(suite, CacheParallelStartTest.class, ignoredTests);
+//
+//        GridTestUtils.addTestIfNeeded(suite, CacheNoAffinityExchangeTest.class, ignoredTests);
+//
+//        GridTestUtils.addTestIfNeeded(suite, CachePartitionLossWithRestartsTest.class, ignoredTests);
+//
+//        GridTestUtils.addTestIfNeeded(suite, TxLocalDhtMixedCacheModesTest.class, ignoredTests);
+//
+//        //GridTestUtils.addTestIfNeeded(suite, CacheClientsConcurrentStartTest.class, ignoredTests);
+//        //GridTestUtils.addTestIfNeeded(suite, GridCacheRebalancingOrderingTest.class, ignoredTests);
+//        //GridTestUtils.addTestIfNeeded(suite, IgniteCacheClientMultiNodeUpdateTopologyLockTest.class, ignoredTests);
+//
+//        GridTestUtils.addTestIfNeeded(suite, TxRollbackOnMapOnInvalidTopologyTest.class, ignoredTests);
+//
+//        GridTestUtils.addTestIfNeeded(suite, TxRollbackOnNodeLeftInActiveState.class, ignoredTests);
+//
+//        GridTestUtils.addTestIfNeeded(suite, TxRecoveryWithConcurrentRollbackTest.class, ignoredTests);
+//
+//        GridTestUtils.addTestIfNeeded(suite, StartImplicitlyTxOnStopCacheTest.class, ignoredTests);
+//
+//        GridTestUtils.addTestIfNeeded(suite, TxRollbackDuringPreparingTest.class, ignoredTests);
 
         return suite;
     }

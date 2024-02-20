@@ -899,6 +899,7 @@ public class CacheMetricsImpl implements CacheMetrics {
      */
     public void onRead(boolean isHit) {
         reads.increment();
+        U.dumpStack(cctx.logger(CacheMetricsImpl.class), "onRead");
 
         if (isHit)
             hits.increment();
