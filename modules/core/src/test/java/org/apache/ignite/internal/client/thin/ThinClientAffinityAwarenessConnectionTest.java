@@ -20,8 +20,12 @@ package org.apache.ignite.internal.client.thin;
 import org.apache.ignite.client.ClientCache;
 import org.apache.ignite.client.ClientConnectionException;
 import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
+
+import java.util.UUID;
 
 /**
  * Test connection algorithms with affinity awareness enabled.
@@ -57,16 +61,17 @@ public class ThinClientAffinityAwarenessConnectionTest extends ThinClientAbstrac
         // Warm up topology info
         cache.put(1, 1);
         opsQueue.clear();
+        connOrderQueue.clear();
 
         for (int i = 0; i < KEY_CNT; ++i)
             testAllOperations(cache, expCahnnel, i, i * 2);
     }
 
     /**
-     * Test that client do not connect to nodes which are not listed with correct exception.
+     * Test that client does not connect to nodes which are not listed with correct exception.
      *
      * 1. Start cluster with 3 nodes;
-     * 2. Connect client using multiple connections to non existing nodes;
+     * 2. Connect client using multiple connections to non-existing nodes;
      * 3. Check that no connection created with correct exception;
      */
     @Test
@@ -83,7 +88,7 @@ public class ThinClientAffinityAwarenessConnectionTest extends ThinClientAbstrac
     }
 
     /**
-     * Test that client do not connect to nodes which are not listed with correct exception.
+     * Test that client does not connect to nodes which are not listed with correct exception.
      *
      * 1. Start cluster with 3 nodes;
      * 2. Connect client using multiple connections to nodes;
@@ -109,6 +114,49 @@ public class ThinClientAffinityAwarenessConnectionTest extends ThinClientAbstrac
         }
         catch (ClientConnectionException err) {
             assertTrue(err.getMessage(), err.getMessage().contains("Connection refused"));
+        }
+    }
+
+    /**
+     * Test that client starts connecting to a random node.
+     *
+     * 1. Start cluster with 3 nodes;
+     * 2. Connect client using all nodes;
+     * 3. Check that client not always connects to the same node at the beginning (make 20 attempts);
+     */
+    @Test
+    public void testFirstNodeChoosenRandomly() throws Exception {
+        startGrids(3);
+
+        awaitPartitionMapExchange();
+
+        UUID firstConnected = connectToClusterAndGetFirstConnectedNodeId();
+        for (int i = 0; i < 20; ++i) {
+            UUID next = connectToClusterAndGetFirstConnectedNodeId();
+
+            if (!next.equals(firstConnected))
+                return;
+        }
+
+        fail("Must connnect to different nodes");
+    }
+
+    /**
+     * Connect to a cluster of 3 nodes and get the ID of the first connected node.
+     * @return ID of the first connected node.
+     */
+    private UUID connectToClusterAndGetFirstConnectedNodeId() throws Exception {
+        try {
+            ClientConfiguration cfg = getClientConfiguration(0, 1, 2);
+            initClient(cfg, 0, 1, 2);
+
+            return connOrderQueue.poll().serverNodeId();
+        }
+        finally {
+            opsQueue.clear();
+            connOrderQueue.clear();
+            U.closeQuiet(client);
+            client = null;
         }
     }
 
