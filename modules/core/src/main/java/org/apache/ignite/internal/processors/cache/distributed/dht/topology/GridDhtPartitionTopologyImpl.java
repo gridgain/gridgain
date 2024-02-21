@@ -2000,9 +2000,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public void onExchangeDone(@Nullable GridDhtPartitionsExchangeFuture fut,
-        AffinityAssignment assignment,
-        boolean updateRebalanceVer) {
+    @Override public void onExchangeDone(@Nullable GridDhtPartitionsExchangeFuture fut, AffinityAssignment assignment) {
         lock.writeLock().lock();
 
         try {
@@ -2020,8 +2018,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             } else
                 diffFromAffinityVer = readyTopVer;
 
-            if (!grp.isReplicated() || updateRebalanceVer)
-                updateRebalanceVersion(assignment.topologyVersion(), assignment.assignment());
+            updateRebalanceVersion(assignment.topologyVersion(), assignment.assignment());
 
             // Own orphan moving partitions (having no suppliers).
             if (fut != null && (fut.events().hasServerJoin() || fut.changedBaseline()))
@@ -3169,17 +3166,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     continue;
 
                 for (ClusterNode node : affNodes) {
-                    if (!hasState(i, node.id(), OWNING)) {
-                        log.info(
-                            "Skip update rebalance topology [mode=" + node.consistentId() +
-                                ", cache=" + grp.cacheOrGroupName() +
-                                ", part=" + i +
-                                ", state=" + (node2part.get(node.id()) == null ? "empty" : node2part.get(node.id()).get(i)) +
-                                ", top=" + readyTopVer + ']'
-                        );
-
+                    if (!hasState(i, node.id(), OWNING))
                         return;
-                    }
                 }
 
                 if (!grp.isReplicated()) {
@@ -3198,12 +3186,16 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
             }
 
-            rebalancedTopVer = readyTopVer;
+            if (rebalancedTopVer == AffinityTopologyVersion.NONE && "default".equals(grp.cacheOrGroupName())) {
+                U.dumpStack(log,
+                    "Topology updated updateRebalanceVersion [grp=" + grp.cacheOrGroupName() +
+                        ", top=" + affVer +
+                        ", diffFromAffinityVer=" + diffFromAffinityVer +
+                        ", readyTopVer=" + readyTopVer + ']'
+                );
+            }
 
-            log.info("Topology updated updateRebalanceVersion [grp=" + grp.cacheOrGroupName() +
-                ", top=" + affVer +
-                ", diffFromAffinityVer=" + diffFromAffinityVer +
-                ", readyTopVer=" + readyTopVer + ']');
+            rebalancedTopVer = readyTopVer;
 
             if (log.isDebugEnabled())
                 log.debug("Updated rebalanced version [grp=" + grp.cacheOrGroupName() + ", ver=" + rebalancedTopVer + ']');
