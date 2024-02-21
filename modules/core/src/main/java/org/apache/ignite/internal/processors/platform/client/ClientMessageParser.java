@@ -28,11 +28,7 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerMessageParser;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequest;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
 import org.apache.ignite.internal.processors.odbc.ClientMessage;
-import org.apache.ignite.internal.processors.platform.client.binary.ClientBinaryConfigurationGetRequest;
-import org.apache.ignite.internal.processors.platform.client.binary.ClientBinaryTypeGetRequest;
-import org.apache.ignite.internal.processors.platform.client.binary.ClientBinaryTypeNameGetRequest;
-import org.apache.ignite.internal.processors.platform.client.binary.ClientBinaryTypeNamePutRequest;
-import org.apache.ignite.internal.processors.platform.client.binary.ClientBinaryTypePutRequest;
+import org.apache.ignite.internal.processors.platform.client.binary.*;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheClearKeyRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheClearKeysRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheClearRequest;
@@ -266,6 +262,9 @@ public class ClientMessageParser implements ClientListenerMessageParser {
     /** */
     private static final short OP_BINARY_CONFIGURATION_GET = 3004;
 
+    /** */
+    private static final short OP_BINARY_TYPE_REMOVE = 3005;
+
     /** Start new transaction. */
     private static final short OP_TX_START = 4000;
 
@@ -453,6 +452,9 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
             case OP_BINARY_CONFIGURATION_GET:
                 return new ClientBinaryConfigurationGetRequest(reader);
+
+            case OP_BINARY_TYPE_REMOVE:
+                return new ClientBinaryTypeRemoveRequest(reader);
 
             case OP_QUERY_SCAN:
                 return new ClientCacheScanQueryRequest(reader);
