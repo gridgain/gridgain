@@ -445,7 +445,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         switchSegmentRecordOffset = isArchiverEnabled() ? new AtomicLongArray(dsCfg.getWalSegments()) : null;
 
-        useAsyncRollover = mode != WALMode.FSYNC && mmap && IgniteSystemProperties.getBoolean(USE_ASYNC_ROLLOVER);;
+        useAsyncRollover = mode != WALMode.FSYNC && mmap && IgniteSystemProperties.getBoolean(USE_ASYNC_ROLLOVER);
 
         if (useAsyncRollover) {
             segmentStatus = new AtomicIntegerArray(dsCfg.getWalSegments());

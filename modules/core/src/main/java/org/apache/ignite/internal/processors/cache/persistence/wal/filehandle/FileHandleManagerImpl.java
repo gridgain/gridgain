@@ -351,11 +351,8 @@ public class FileHandleManagerImpl implements FileHandleManager {
                         try {
                             assert pos == FILE_CLOSE || pos == FILE_FORCE : pos;
 
-                            if (pos == FILE_CLOSE) {
-                                FileWriteHandleImpl hnd = currentHandle();
-                                log.info("FileIO closed segmentId=" + hnd.getSegmentId());
-                                hnd.fileIO.close();
-                            }
+                            if (pos == FILE_CLOSE)
+                                currentHandle().fileIO.close();
                             else if (pos == FILE_FORCE)
                                 currentHandle().fileIO.force();
                         }
