@@ -114,6 +114,21 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Tests remove not existent type and checks the exception.
+     */
+    @Test
+    public void testRemoveNotExistentTypePublicApi() {
+        for (Ignite testNode : G.allGrids()) {
+            GridTestUtils.assertThrows(log, () -> {
+                    testNode.binary().removeType(testNode.binary().typeId("NotExistentType"));
+
+                    return null;
+                },
+                IgniteException.class, "Failed to remove metadata, type not found");
+        }
+    }
+
+    /**
      * Tests remove type metadata at all nodes (coordinator, server, client).
      */
     @Test
