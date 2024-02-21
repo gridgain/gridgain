@@ -14,18 +14,13 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.client.thin;
-
-import org.apache.ignite.marshaller.MarshallerContext;
-
-/**
- * Extended marshaller context for thin client.
- */
-interface ClientMarshallerContext extends MarshallerContext {
-    /**
-     * Remove (de-register) binary type with the specified id.
-     *
-     * @param typeId Type id.
-     */
-    public void removeType(int typeId);
+namespace Apache.Ignite.Core.Tests.Binary
+{
+    /// <summary>
+    /// Tests adding and removing binary types metadata dynamically.
+    /// </summary>
+    public class BinaryAddRemoveTypeTest
+    {
+        // TODO: Server, thick, thin
+    }
 }
