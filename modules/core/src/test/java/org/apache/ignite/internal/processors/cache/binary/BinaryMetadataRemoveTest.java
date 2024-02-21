@@ -133,6 +133,18 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRemoveTypeOnNodes() throws Exception {
+        testRemoveTypeOnNodes(false);
+    }
+
+    /**
+     * Tests remove type metadata at all nodes (coordinator, server, client) with public API.
+     */
+    @Test
+    public void testRemoveTypeOnNodesPublicApi() throws Exception {
+        testRemoveTypeOnNodes(true);
+    }
+
+    private void testRemoveTypeOnNodes(boolean publicApi) throws Exception {
         List<IgniteEx[]> testNodeSets = new ArrayList<>();
 
         // Add all servers permutations to tests sets.
@@ -170,7 +182,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
 
             delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
 
-            removeType(ignRemoveType, "Type0");
+            removeType(ignRemoveType, "Type0", publicApi);
 
             delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
 
@@ -181,7 +193,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
             delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
 
             // Remove type at the end of test case.
-            removeType(grid("srv0"), "Type0");
+            removeType(grid("srv0"), "Type0", publicApi);
 
             delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
         }
@@ -235,7 +247,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
 
         GridTestUtils.runAsync(() -> {
             try {
-                removeType(ign, "Type0");
+                removeType(ign, "Type0", false);
             }
             catch (Exception e) {
                 log.error("Unexpected exception", e);
@@ -275,12 +287,16 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
      * @param ign Node to remove type.
      * @param typeName Binary type name.
      */
-    protected void removeType(IgniteEx ign, String typeName) throws Exception {
+    protected void removeType(IgniteEx ign, String typeName, boolean publicApi) throws Exception {
         Exception err = null;
 
         for (int i = 0; i < MAX_RETRY_CONT; ++i) {
             try {
-                ign.context().cacheObjects().removeType(ign.context().cacheObjects().typeId(typeName));
+                if (publicApi) {
+                    ign.binary().removeType(ign.binary().typeId(typeName));
+                } else {
+                    ign.context().cacheObjects().removeType(ign.context().cacheObjects().typeId(typeName));
+                }
 
                 err = null;
 
