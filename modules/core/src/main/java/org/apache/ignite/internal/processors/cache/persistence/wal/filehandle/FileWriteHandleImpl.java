@@ -317,8 +317,6 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
         assert ptr.index() == getSegmentId() : "Pointer segment idx is not equals to current write segment idx. " +
             "ptr=" + ptr + " segmetntId=" + getSegmentId();
 
-        log.info("Buffer flush requested");
-
         walWriter.flushBuffer(ptr.fileOffset() + ptr.length());
     }
 
