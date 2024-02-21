@@ -18,7 +18,10 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
+    using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Client.Cache;
     using NUnit.Framework;
 
     /// <summary>
@@ -118,7 +121,17 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [Test]
         public void TestGetBinaryTypes()
         {
-            Assert.Throws<NotSupportedException>(() => Client.GetBinary().GetBinaryTypes());
+            // Add binary type from server.
+            GetBinaryCache()[1] = GetBinaryPerson(1);
+
+            // Get types from client.
+            ICollection<IBinaryType> types = Client.GetBinary().GetBinaryTypes();
+            var personType = types.Single(x => x.TypeName == typeof(Person).FullName);
+            var personTypeById = Client.GetBinary().GetBinaryType(personType.TypeId);
+
+            Assert.AreEqual(personTypeById.TypeName, personType.TypeName);
+            CollectionAssert.AreEquivalent(personType.Fields, new[] { "DateTime", "Id", "Name", "Parent" });
+            Assert.IsFalse(personType.IsEnum);
         }
     }
 }
