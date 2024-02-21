@@ -25,7 +25,6 @@ import org.apache.ignite.internal.binary.BinaryReaderHandles;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.logger.NullLogger;
-import org.apache.ignite.marshaller.MarshallerContext;
 
 /**
  * Marshals/unmarshals Ignite Binary Objects.
@@ -38,7 +37,7 @@ class ClientBinaryMarshaller {
     private final BinaryMetadataHandler metaHnd;
 
     /** Marshaller context. */
-    private final MarshallerContext marshCtx;
+    private final ClientMarshallerContext marshCtx;
 
     /** Re-using marshaller implementation from Ignite core. */
     private GridBinaryMarshaller impl;
@@ -46,7 +45,7 @@ class ClientBinaryMarshaller {
     /**
      * Constructor.
      */
-    ClientBinaryMarshaller(BinaryMetadataHandler metaHnd, MarshallerContext marshCtx) {
+    ClientBinaryMarshaller(BinaryMetadataHandler metaHnd, ClientMarshallerContext marshCtx) {
         this.metaHnd = metaHnd;
         this.marshCtx = marshCtx;
 

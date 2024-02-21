@@ -167,6 +167,9 @@ public enum ClientOperation {
     /** Get binary configuration. */
     GET_BINARY_CONFIGURATION(3004),
 
+    /** Remove binary type. */
+    REMOVE_BINARY_TYPE(3005),
+
     /** Start new transaction. */
     TX_START(4000),
 
