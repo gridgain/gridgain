@@ -422,7 +422,7 @@ public interface IgniteBinary {
      * Remove (de-register) binary type with the specified id.
      *
      * @param typeId Type id.
-     * @return {@code True} if type was removed, {@code false} if it was not found.
+     * @throws org.apache.ignite.IgniteException In case of error (type not found or already being removed).
      */
-    public boolean removeType(int typeId);
+    public void removeType(int typeId) throws IgniteException;
 }
