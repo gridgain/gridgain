@@ -63,7 +63,7 @@ public class BinaryMetadataRemoveWithPersistenceTest extends BinaryMetadataRemov
 
             delayIfClient(grid(nodeName));
 
-            removeType(grid(nodeName), "Type0", false);
+            removeType(grid(nodeName), "Type0", MODE_INTERNAL_API);
 
             delayIfClient(grid(nodeName));
 
@@ -77,7 +77,7 @@ public class BinaryMetadataRemoveWithPersistenceTest extends BinaryMetadataRemov
 
             delayIfClient(grid(nodeName));
 
-            removeType(grid(nodeName), "Type0", true);
+            removeType(grid(nodeName), "Type0", MODE_INTERNAL_API);
 
             delayIfClient(grid(nodeName));
         }

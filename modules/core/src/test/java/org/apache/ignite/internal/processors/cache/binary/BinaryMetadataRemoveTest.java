@@ -23,13 +23,17 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.binary.BinaryObjectException;
+import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
+import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -49,11 +53,11 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE_NAME = "cache";
 
-    private static final int MODE_INTERNAL_API = 0;
+    protected static final int MODE_INTERNAL_API = 0;
 
-    private static final int MODE_PUBLIC_API = 1;
+    protected static final int MODE_PUBLIC_API = 1;
 
-    private static final int MODE_THIN_CLIENT = 2;
+    protected static final int MODE_THIN_CLIENT = 2;
 
     /** */
     private GridTestUtils.DiscoveryHook discoveryHook;
@@ -316,8 +320,11 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
                         break;
 
                     case MODE_THIN_CLIENT:
-                        // TODO
-                        ign.binary().removeType(ign.binary().typeId(typeName));
+                        int port = ign.cluster().localNode().attribute(ClientListenerProcessor.CLIENT_LISTENER_PORT);
+                        try (IgniteClient client = Ignition.startClient(
+                                new ClientConfiguration().setAddresses("127.0.0.1:" + port))){
+                            client.binary().removeType(client.binary().typeId(typeName));
+                        }
                         break;
 
                     default:
