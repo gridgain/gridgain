@@ -78,6 +78,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopologyImpl;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearAtomicCache;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearGetRequest;
@@ -1954,6 +1955,14 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         assert ver != null : "Got null version for update request: " + req;
 
         boolean sndPrevVal = !top.rebalanceFinished(req.topologyVersion());
+
+        if (sndPrevVal) {
+            log.info("Update during rebalance [req=" + req.topologyVersion() +
+                ", readyTopVer=" + top.readyTopologyVersion() +
+                ", rebalancedTopVer=" + (top instanceof GridDhtPartitionTopologyImpl ?
+                ((GridDhtPartitionTopologyImpl)top).getRebalancedTopVer()
+                : "client top") + ']');
+        }
 
         if (dhtUpdRes.dhtFuture() == null)
             dhtUpdRes.dhtFuture(createDhtFuture(ver, req));
