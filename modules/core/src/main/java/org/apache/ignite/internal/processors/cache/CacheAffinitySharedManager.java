@@ -665,7 +665,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                 assert grp != null;
 
-                grp.topology().onExchangeDone(null, grp.affinity().cachedAffinity(topVer), true);
+                grp.topology().onExchangeDone(null, grp.affinity().cachedAffinity(topVer));
             }
         }
 
