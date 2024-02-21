@@ -30,7 +30,7 @@ public class AtomicLongMetric extends AbstractMetric implements LongMetric {
         AtomicLongFieldUpdater.newUpdater(AtomicLongMetric.class, "val");
 
     /** Field value. */
-    private volatile long val = 0;
+    private volatile long val;
 
     /**
      * @param name Name.

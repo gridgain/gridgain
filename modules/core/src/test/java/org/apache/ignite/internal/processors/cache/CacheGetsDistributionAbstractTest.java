@@ -31,8 +31,6 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.TestRecordingCommunicationSpi;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridNearSingleGetRequest;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
@@ -98,15 +96,13 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName)
-            .setConsistentId(igniteInstanceName);
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         TransactionConfiguration txCfg = new TransactionConfiguration()
             .setDefaultTxIsolation(transactionIsolation())
             .setDefaultTxConcurrency(transactionConcurrency());
 
         cfg.setTransactionConfiguration(txCfg);
-        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
         return cfg;
     }
@@ -290,24 +286,13 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
      * @throws Exception In case of an error.
      */
     protected void runTestSameHostDistribution(final UUID destId, final boolean batchMode) throws Exception {
-        for (Ignite ign : G.allGrids()) {
-            TestRecordingCommunicationSpi.spi(ign).blockMessages((node, message) -> {
-                if (destId.equals(node.id()) && message instanceof GridNearSingleGetRequest)
-                    info("PVD>> Message sent [node=" + node.consistentId() + ", msg=" + message.getClass().getSimpleName() + ']');
-
-                return false;
-            });
-        }
-
         Map<UUID, String> macs = getClusterMacs();
 
         String clientMac = macs.get(grid(CLIENT_NAME).localNode().id());
 
-        String prevMac = macs.put(destId, clientMac);
+        macs.put(destId, clientMac);
 
         replaceMacAddresses(G.allGrids(), macs);
-
-        info("Mac changed for target [destId=" + destId + ", clientMac=" + clientMac + ", prevMac=" + prevMac + ']');
 
         IgniteCache<Integer, String> cache = grid(0).createCache(cacheConfiguration());
 
@@ -315,10 +300,6 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
 
         for (Integer key : keys)
             cache.put(key, VAL_PREFIX + key);
-
-        for (Ignite ign : G.allGrids()) {
-            TestRecordingCommunicationSpi.spi(ign).stopBlock();
-        }
 
         IgniteCache<Integer, String> clientCache = grid(CLIENT_NAME).cache(DEFAULT_CACHE_NAME)
             .withAllowAtomicOpsInTx();
@@ -328,7 +309,8 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
 
             long getsCnt = ignite.cache(DEFAULT_CACHE_NAME).localMetrics().getCacheGets();
 
-            log.info("Before node: " + ignite.localNode().consistentId() + ": " + getsCnt);
+            assertEquals("Before any read operation is invoked, the metric is not zero [node=" + i +
+                "cacheGets=" + getsCnt + ']', 0, getsCnt);
         }
 
         try (Transaction tx = grid(CLIENT_NAME).transactions().txStart()) {
@@ -351,15 +333,10 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
 
             long getsCnt = ignite.cache(DEFAULT_CACHE_NAME).localMetrics().getCacheGets();
 
-            if (destId.equals(ignite.localNode().id())) {
-                log.info("Node: " + ignite.localNode().consistentId());
-
+            if (destId.equals(ignite.localNode().id()))
                 assertEquals(PRIMARY_KEYS_NUMBER, getsCnt);
-            }
-            else {
-                log.info("For node " + i);
+            else
                 assertEquals(0L, getsCnt);
-            }
         }
     }
 
@@ -369,8 +346,6 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
      */
     private void replaceMacAddresses(List<Ignite> instances, Map<UUID, String> macs) {
         for (Ignite ignite : instances) {
-            log.info("replace mac for: " + ignite.cluster().localNode().consistentId());
-
             for (ClusterNode node : ignite.cluster().nodes()) {
                 String mac = macs.get(node.id());
 

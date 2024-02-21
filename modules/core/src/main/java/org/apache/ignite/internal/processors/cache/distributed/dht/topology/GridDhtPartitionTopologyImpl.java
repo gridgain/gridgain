@@ -3186,15 +3186,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
             }
 
-            if (rebalancedTopVer == AffinityTopologyVersion.NONE && "default".equals(grp.cacheOrGroupName())) {
-                U.dumpStack(log,
-                    "Topology updated updateRebalanceVersion [grp=" + grp.cacheOrGroupName() +
-                        ", top=" + affVer +
-                        ", diffFromAffinityVer=" + diffFromAffinityVer +
-                        ", readyTopVer=" + readyTopVer + ']'
-                );
-            }
-
             rebalancedTopVer = readyTopVer;
 
             if (log.isDebugEnabled())
