@@ -220,6 +220,12 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /** <inheritDoc /> */
+        public IBinaryType RegisterBinaryType(Type type)
+        {
+            return GetBinaryType(type);
+        }
+
+        /** <inheritDoc /> */
         public void RemoveBinaryType(int typeId)
         {
             Marshaller.Ignite.BinaryProcessor.RemoveType(typeId);
