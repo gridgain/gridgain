@@ -56,6 +56,9 @@ public class PlatformBinaryProcessor extends PlatformAbstractTarget {
     /** */
     private static final int OP_GET_META_WITH_SCHEMAS = 8;
 
+    /** */
+    private static final int OP_REMOVE_TYPE = 9;
+
     /**
      * Constructor.
      *
@@ -170,6 +173,20 @@ public class PlatformBinaryProcessor extends PlatformAbstractTarget {
             default:
                 super.processInStreamOutStream(type, reader, writer);
                 break;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public long processInLongOutLong(int type, long val) throws IgniteCheckedException {
+        //noinspection SwitchStatementWithTooFewBranches
+        switch (type) {
+            case OP_REMOVE_TYPE:
+                platformCtx.kernalContext().cacheObjects().binary().removeType((int)val);
+
+                return TRUE;
+
+            default:
+                return super.processInLongOutLong(type, val);
         }
     }
 }
