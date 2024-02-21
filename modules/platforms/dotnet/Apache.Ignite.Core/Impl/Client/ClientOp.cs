@@ -73,6 +73,7 @@ namespace Apache.Ignite.Core.Impl.Client
         BinaryTypeGet = 3002,
         BinaryTypePut = 3003,
         BinaryConfigurationGet = 3004,
+        BinaryTypeRemove = 3005,
 
         // Transactions
         TxStart = 4000,

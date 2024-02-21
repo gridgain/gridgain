@@ -112,5 +112,11 @@ namespace Apache.Ignite.Core.Impl.Binary
                     ? (Func<ClientStatusCode, string, string>) null
                     : (statusCode, msg) => errorFunc(new BinaryObjectException(msg)));
         }
+
+        /** <inheritDoc /> */
+        public void RemoveType(int typeId)
+        {
+            _socket.DoOutInOp<object>(ClientOp.BinaryTypeRemove, ctx => ctx.Stream.WriteInt(typeId), null);
+        }
     }
 }

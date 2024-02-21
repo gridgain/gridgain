@@ -67,5 +67,11 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="errorAction">Error action.</param>
         /// <returns>Type or null.</returns>
         string GetTypeName(int id, byte platformId, Func<Exception, string> errorAction = null);
+
+        /// <summary>
+        /// Removes the type by id.
+        /// </summary>
+        /// <param name="typeId">Type id.</param>
+        void RemoveType(int typeId);
     }
 }

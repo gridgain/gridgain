@@ -154,5 +154,11 @@ namespace Apache.Ignite.Core.Binary
         /// <param name="values">Mapping of enum value names to int values.</param>
         /// <returns>Binary type for registered enum.</returns>
         IBinaryType RegisterEnum(string typeName, IEnumerable<KeyValuePair<string, int>> values);
+
+        /// <summary>
+        /// Removes (de-registers) binary type with the specified type id.
+        /// </summary>
+        /// <param name="typeId">Type id.</param>
+        void RemoveBinaryType(int typeId);
     }
 }
