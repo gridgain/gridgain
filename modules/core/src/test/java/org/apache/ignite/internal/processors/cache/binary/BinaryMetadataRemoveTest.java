@@ -49,6 +49,12 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE_NAME = "cache";
 
+    private static final int MODE_INTERNAL_API = 0;
+
+    private static final int MODE_PUBLIC_API = 1;
+
+    private static final int MODE_THIN_CLIENT = 2;
+
     /** */
     private GridTestUtils.DiscoveryHook discoveryHook;
 
@@ -133,7 +139,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRemoveTypeOnNodes() throws Exception {
-        testRemoveTypeOnNodes(false);
+        testRemoveTypeOnNodes(MODE_INTERNAL_API);
     }
 
     /**
@@ -141,10 +147,18 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRemoveTypeOnNodesPublicApi() throws Exception {
-        testRemoveTypeOnNodes(true);
+        testRemoveTypeOnNodes(MODE_PUBLIC_API);
     }
 
-    private void testRemoveTypeOnNodes(boolean publicApi) throws Exception {
+    /**
+     * Tests remove type metadata at all nodes (coordinator, server, client) with public API.
+     */
+    @Test
+    public void testRemoveTypeOnNodesThinClient() throws Exception {
+        testRemoveTypeOnNodes(MODE_THIN_CLIENT);
+    }
+
+    private void testRemoveTypeOnNodes(int mode) throws Exception {
         List<IgniteEx[]> testNodeSets = new ArrayList<>();
 
         // Add all servers permutations to tests sets.
@@ -182,7 +196,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
 
             delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
 
-            removeType(ignRemoveType, "Type0", publicApi);
+            removeType(ignRemoveType, "Type0", mode);
 
             delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
 
@@ -193,7 +207,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
             delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
 
             // Remove type at the end of test case.
-            removeType(grid("srv0"), "Type0", publicApi);
+            removeType(grid("srv0"), "Type0", mode);
 
             delayIfClient(ignCreateType, ignRemoveType, ignRecreateType);
         }
@@ -247,7 +261,7 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
 
         GridTestUtils.runAsync(() -> {
             try {
-                removeType(ign, "Type0", false);
+                removeType(ign, "Type0", MODE_INTERNAL_API);
             }
             catch (Exception e) {
                 log.error("Unexpected exception", e);
@@ -287,15 +301,27 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
      * @param ign Node to remove type.
      * @param typeName Binary type name.
      */
-    protected void removeType(IgniteEx ign, String typeName, boolean publicApi) throws Exception {
+    protected void removeType(IgniteEx ign, String typeName, int mode) throws Exception {
         Exception err = null;
 
         for (int i = 0; i < MAX_RETRY_CONT; ++i) {
             try {
-                if (publicApi) {
-                    ign.binary().removeType(ign.binary().typeId(typeName));
-                } else {
-                    ign.context().cacheObjects().removeType(ign.context().cacheObjects().typeId(typeName));
+                switch (mode) {
+                    case MODE_INTERNAL_API:
+                        ign.context().cacheObjects().removeType(ign.context().cacheObjects().typeId(typeName));
+                        break;
+
+                    case MODE_PUBLIC_API:
+                        ign.binary().removeType(ign.binary().typeId(typeName));
+                        break;
+
+                    case MODE_THIN_CLIENT:
+                        // TODO
+                        ign.binary().removeType(ign.binary().typeId(typeName));
+                        break;
+
+                    default:
+                        throw new IllegalArgumentException("Unknown mode: " + mode);
                 }
 
                 err = null;
