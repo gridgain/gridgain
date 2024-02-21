@@ -156,13 +156,6 @@ namespace Apache.Ignite.Core.Binary
         IBinaryType RegisterEnum(string typeName, IEnumerable<KeyValuePair<string, int>> values);
 
         /// <summary>
-        /// Registers a type in Ignite cluster.
-        /// </summary>
-        /// <param name="type">Type.</param>
-        /// <returns>Binary type info.</returns>
-        IBinaryType RegisterBinaryType(Type type);
-
-        /// <summary>
         /// Removes (de-registers) binary type with the specified type id.
         /// </summary>
         /// <param name="typeId">Type id.</param>

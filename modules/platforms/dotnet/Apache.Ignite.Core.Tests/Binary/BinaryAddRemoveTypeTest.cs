@@ -57,7 +57,7 @@ namespace Apache.Ignite.Core.Tests.Binary
 
         private void TestAddRemoveType(IBinary binary)
         {
-            var binaryType = binary.RegisterBinaryType(typeof(TestType));
+            var binaryType = binary.GetBinaryType(typeof(TestType));
             var binaryTypeById = binary.GetBinaryType(binaryType.TypeId);
             var binaryTypes = binary.GetBinaryTypes();
 
