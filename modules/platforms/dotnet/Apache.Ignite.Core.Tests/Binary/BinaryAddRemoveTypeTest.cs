@@ -72,7 +72,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.IsNull(binaryTypeById2);
         }
 
-        private class TestType
+        public class TestType
         {
             public int Id { get; set; }
         }
