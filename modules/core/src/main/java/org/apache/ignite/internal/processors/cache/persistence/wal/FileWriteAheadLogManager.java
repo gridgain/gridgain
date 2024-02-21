@@ -58,6 +58,7 @@ import java.util.zip.ZipOutputStream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.SystemProperty;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.DiskPageCompression;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -163,6 +164,7 @@ import static org.apache.ignite.internal.processors.compress.CompressionProcesso
  */
 @SuppressWarnings("IfMayBeConditional")
 public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter implements IgniteWriteAheadLogManager {
+
     /** */
     private static final FileDescriptor[] EMPTY_DESCRIPTORS = new FileDescriptor[0];
 
@@ -219,6 +221,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** @see IgniteSystemProperties#IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT */
     public static final long DFLT_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT = 1000L;
+
+    @SystemProperty(value = "Enables asynchronous WAL segment rollover for non-mmap non-fsync WAL mode",
+            type = boolean.class)
+    private static final String USE_ASYNC_ROLLOVER = "USE_ASYNC_ROLLOVER";
 
     /** Use mapped byte buffer. */
     private final boolean mmap = IgniteSystemProperties.getBoolean(IGNITE_WAL_MMAP, DFLT_WAL_MMAP);
@@ -440,7 +446,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         switchSegmentRecordOffset = isArchiverEnabled() ? new AtomicLongArray(dsCfg.getWalSegments()) : null;
 
-        useAsyncRollover = mode != WALMode.FSYNC && mmap;
+        useAsyncRollover = mode != WALMode.FSYNC && mmap && IgniteSystemProperties.getBoolean(USE_ASYNC_ROLLOVER);;
 
         if (useAsyncRollover) {
             segmentStatus = new AtomicIntegerArray(dsCfg.getWalSegments());
