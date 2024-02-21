@@ -265,6 +265,9 @@ public class ClientMessageParser implements ClientListenerMessageParser {
     /** */
     private static final short OP_BINARY_TYPE_REMOVE = 3005;
 
+    /** */
+    private static final short OP_BINARY_TYPES_GET = 3006;
+
     /** Start new transaction. */
     private static final short OP_TX_START = 4000;
 
@@ -455,6 +458,9 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
             case OP_BINARY_TYPE_REMOVE:
                 return new ClientBinaryTypeRemoveRequest(reader);
+
+            case OP_BINARY_TYPES_GET:
+                return new ClientBinaryTypesGetRequest(reader);
 
             case OP_QUERY_SCAN:
                 return new ClientCacheScanQueryRequest(reader);
