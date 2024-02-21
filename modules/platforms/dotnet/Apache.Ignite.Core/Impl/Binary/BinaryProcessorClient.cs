@@ -53,7 +53,19 @@ namespace Apache.Ignite.Core.Impl.Binary
         /** <inheritdoc /> */
         public List<IBinaryType> GetBinaryTypes()
         {
-            throw IgniteClient.GetClientNotSupportedException();
+            return _socket.DoOutInOp(ClientOp.BinaryTypesGet, null,
+                ctx =>
+                {
+                    var size = ctx.Stream.ReadInt();
+                    var res = new List<IBinaryType>(size);
+
+                    for (var i = 0; i < size; i++)
+                    {
+                        res.Add(new BinaryType(ctx.Reader));
+                    }
+
+                    return res;
+                });
         }
 
         /** <inheritdoc /> */
