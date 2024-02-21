@@ -87,10 +87,17 @@ class ClientBinaryMarshaller {
     }
 
     /**
-     * @return The marshaller context.
+     * @return The binary context.
      */
     public BinaryContext context() {
         return impl.context();
+    }
+
+    /**
+     * @return The marshaller context.
+     */
+    public ClientMarshallerContext marshallerContext() {
+        return marshCtx;
     }
 
     /** Create new marshaller implementation. */
