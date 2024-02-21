@@ -3174,7 +3174,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             "Skip update rebalance topology [mode=" + node.consistentId() +
                                 ", cache=" + grp.cacheOrGroupName() +
                                 ", part=" + i +
-                                ", state=" + node2part.get(node.id()) == null ? "empty" : node2part.get(node.id()).get(i) +
+                                ", state=" + (node2part.get(node.id()) == null ? "empty" : node2part.get(node.id()).get(i)) +
                                 ", top=" + readyTopVer + ']'
                         );
 
