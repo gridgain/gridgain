@@ -16,11 +16,48 @@
 
 namespace Apache.Ignite.Core.Tests.Binary
 {
+    using Apache.Ignite.Core.Binary;
+    using Apache.Ignite.Core.Client;
+    using NUnit.Framework;
+
     /// <summary>
     /// Tests adding and removing binary types metadata dynamically.
     /// </summary>
-    public class BinaryAddRemoveTypeTest
+    public class BinaryAddRemoveTypeTest : TestBase
     {
-        // TODO: Server, thick, thin
+        [Test]
+        public void TestAddRemoveTypeServerNode()
+        {
+            TestAddRemoveType(Ignite.GetBinary());
+        }
+
+        [Test]
+        public void TestAddRemoveTypeClientNode()
+        {
+            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
+            {
+                ClientMode = true,
+                IgniteInstanceName = "client"
+            };
+
+            using (var thickClient = Ignition.Start(cfg))
+            {
+                TestAddRemoveType(thickClient.GetBinary());
+            }
+        }
+
+        [Test]
+        public void TestAddRemoveTypeThinClient()
+        {
+            using (var thinClient = Ignition.StartClient(new IgniteClientConfiguration("localhost")))
+            {
+                TestAddRemoveType(thinClient.GetBinary());
+            }
+        }
+
+        private void TestAddRemoveType(IBinary binary)
+        {
+
+        }
     }
 }
