@@ -16,8 +16,11 @@
 
 namespace Apache.Ignite.Core.Tests.Binary
 {
+    using System.Linq;
     using Apache.Ignite.Core.Binary;
+    using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Client;
+    using Apache.Ignite.Core.Impl.Binary.Metadata;
     using NUnit.Framework;
 
     /// <summary>
@@ -28,7 +31,11 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestAddRemoveTypeServerNode()
         {
-            TestAddRemoveType(Ignite.GetBinary());
+            // Register type by putting it into cache.
+            var cache = Ignite.GetOrCreateCache<int, TestType>("c");
+            cache[1] = new TestType {Id = 1};
+
+            TestRemoveType(Ignite.GetBinary());
         }
 
         [Test]
@@ -42,7 +49,11 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             using (var thickClient = Ignition.Start(cfg))
             {
-                TestAddRemoveType(thickClient.GetBinary());
+                // Register type by putting it into cache.
+                var cache = thickClient.GetOrCreateCache<int, TestType>("c");
+                cache[1] = new TestType {Id = 1};
+
+                TestRemoveType(thickClient.GetBinary());
             }
         }
 
@@ -51,25 +62,32 @@ namespace Apache.Ignite.Core.Tests.Binary
         {
             using (var thinClient = Ignition.StartClient(new IgniteClientConfiguration("localhost")))
             {
-                TestAddRemoveType(thinClient.GetBinary());
+                // Register type by putting it into cache.
+                var cache = thinClient.GetOrCreateCache<int, TestType>("c");
+                cache[1] = new TestType {Id = 1};
+
+                TestRemoveType(thinClient.GetBinary());
             }
         }
 
-        private void TestAddRemoveType(IBinary binary)
+        private static void TestRemoveType(IBinary binary)
         {
             var binaryType = binary.GetBinaryType(typeof(TestType));
             var binaryTypeById = binary.GetBinaryType(binaryType.TypeId);
             var binaryTypes = binary.GetBinaryTypes();
 
-            Assert.AreEqual(binaryType, binaryTypeById);
-            CollectionAssert.Contains(binaryTypes, binaryTypeById);
+            Assert.AreNotSame(BinaryType.Empty, binaryType);
+            Assert.AreEqual(typeof(TestType).FullName, binaryType.TypeName);
+            Assert.AreEqual(binaryType.TypeName, binaryTypeById.TypeName);
+            CollectionAssert.Contains(binaryTypes.Select(x => x.TypeName), binaryTypeById.TypeName);
 
             binary.RemoveBinaryType(binaryType.TypeId);
 
             var binaryTypeById2 = binary.GetBinaryType(binaryType.TypeId);
             var binaryTypes2 = binary.GetBinaryTypes();
 
-            Assert.IsNull(binaryTypeById2);
+            Assert.AreSame(BinaryType.Empty, binaryTypeById2);
+            CollectionAssert.DoesNotContain(binaryTypes2.Select(x => x.TypeName), binaryTypeById.TypeName);
         }
 
         public class TestType
