@@ -1003,6 +1003,15 @@ namespace Apache.Ignite.Core.Impl.Binary
                 _typeNameToDesc.Remove(desc.TypeName, out _);
                 _typeToDesc.Remove(desc.Type, out _);
             }
+
+            lock (this)
+            {
+                var metas0 = new Dictionary<int, BinaryTypeHolder>(_metas);
+                if (metas0.Remove(typeId))
+                {
+                    _metas = metas0;
+                }
+            }
         }
 
         /// <summary>

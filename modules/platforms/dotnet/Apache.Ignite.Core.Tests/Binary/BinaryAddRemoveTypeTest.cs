@@ -112,7 +112,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(binaryType.TypeId, binaryType2.TypeId);
 
             CollectionAssert.AreEqual(new[] { "Id" }, binaryType2.Fields);
-            Assert.AreEqual("string", binaryType2.GetFieldTypeName("Id"));
+            Assert.AreEqual("String", binaryType2.GetFieldTypeName("Id"));
         }
 
         public class TestType : IBinarizable
