@@ -113,6 +113,9 @@ public abstract class GridUnsafe {
     /** {@link java.nio.Buffer#address} field offset. */
     private static final long DIRECT_BUF_ADDR_OFF = bufferAddressOffset();
 
+    /** Whether to use newDirectByteBuffer(long, long) constructor */
+    private static final boolean IS_DIRECT_BUF_LONG_CAP = majorJavaVersion(jdkVersion()) >= 21;
+
     /** Cleaner code for direct {@code java.nio.ByteBuffer}. */
     private static final DirectBufferCleaner DIRECT_BUF_CLEANER =
         majorJavaVersion(jdkVersion()) < 9
@@ -1627,7 +1630,8 @@ public abstract class GridUnsafe {
         try {
             Class<?> cls = nioAccessObj.getClass();
 
-            Method mtd = cls.getMethod("newDirectByteBuffer", long.class, int.class, Object.class);
+            Method mtd = IS_DIRECT_BUF_LONG_CAP ? cls.getMethod("newDirectByteBuffer", long.class, long.class, Object.class) :
+                    cls.getMethod("newDirectByteBuffer", long.class, int.class, Object.class);
 
             mtd.setAccessible(true);
 
@@ -1645,7 +1649,6 @@ public abstract class GridUnsafe {
 
         return javaVer < 9 ? "sun" : "jdk.internal";
     }
-
 
     /**
      * Creates and tests contructor for Direct ByteBuffer. Test is wrapping one-byte unsafe memory into a buffer.
@@ -1682,7 +1685,8 @@ public abstract class GridUnsafe {
         try {
             ByteBuffer buf = ByteBuffer.allocateDirect(1).order(NATIVE_BYTE_ORDER);
 
-            Constructor<?> ctor = buf.getClass().getDeclaredConstructor(long.class, int.class);
+            Constructor<?> ctor = IS_DIRECT_BUF_LONG_CAP ? buf.getClass().getDeclaredConstructor(long.class, long.class) :
+                    buf.getClass().getDeclaredConstructor(long.class, int.class);
 
             ctor.setAccessible(true);
 
