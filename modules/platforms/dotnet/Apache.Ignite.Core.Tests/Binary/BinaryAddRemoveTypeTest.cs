@@ -81,8 +81,9 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             Assert.AreNotSame(BinaryType.Empty, binaryType);
             Assert.AreEqual(typeof(TestType).FullName, binaryType.TypeName);
-            Assert.AreEqual(binaryType.TypeName, binaryTypeById.TypeName);
-            CollectionAssert.Contains(binaryTypes.Select(x => x.TypeName), binaryTypeById.TypeName);
+
+            AssertExtensions.ReflectionEqual(binaryType, binaryTypeById);
+            AssertExtensions.ReflectionEqual(binaryType, binaryTypes.Single());
 
             CollectionAssert.AreEqual(new[] { "Id" }, binaryType.Fields);
             Assert.AreEqual("int", binaryType.GetFieldTypeName("Id"));
@@ -108,11 +109,14 @@ namespace Apache.Ignite.Core.Tests.Binary
             // Trying to use a different field type now works.
             putAction(new TestType { Id = 2, WriteIdAsString = true });
 
-            var binaryType2 = binary.GetBinaryType(typeof(TestType));
-            Assert.AreEqual(binaryType.TypeId, binaryType2.TypeId);
+            var binaryType3 = binary.GetBinaryType(typeof(TestType));
+            var binaryTypes3 = binary.GetBinaryTypes();
 
-            CollectionAssert.AreEqual(new[] { "Id" }, binaryType2.Fields);
-            Assert.AreEqual("String", binaryType2.GetFieldTypeName("Id"));
+            Assert.AreEqual(binaryType.TypeId, binaryType3.TypeId);
+            AssertExtensions.ReflectionEqual(binaryType3, binaryTypes3.Single());
+
+            CollectionAssert.AreEqual(new[] { "Id" }, binaryType3.Fields);
+            Assert.AreEqual("String", binaryType3.GetFieldTypeName("Id"));
         }
 
         public class TestType : IBinarizable
