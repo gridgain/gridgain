@@ -19,8 +19,8 @@ namespace Apache.Ignite.Core.Tests.Binary
     using System;
     using System.Linq;
     using Apache.Ignite.Core.Binary;
-    using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Client;
+    using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.Metadata;
     using NUnit.Framework;
 
@@ -29,14 +29,20 @@ namespace Apache.Ignite.Core.Tests.Binary
     /// </summary>
     public class BinaryAddRemoveTypeTest : TestBase
     {
+        [TearDown]
+        public void RemoveBinaryTypes()
+        {
+            foreach (var binaryType in Ignite.GetBinary().GetBinaryTypes())
+            {
+                Ignite.GetBinary().RemoveBinaryType(binaryType.TypeId);
+            }
+        }
+
         [Test]
         public void TestAddRemoveTypeServerNode()
         {
-            // Register type by putting it into cache.
             var cache = Ignite.GetOrCreateCache<int, TestType>("c");
-            cache[1] = new TestType { Id = 1 };
-
-            TestRemoveType(Ignite.GetBinary(), val => cache.WithKeepBinary<int, IBinaryObject>().Put(1, val));
+            TestRemoveType(Ignite.GetBinary(), val => cache.Put(1, val));
         }
 
         [Test]
@@ -50,11 +56,8 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             using (var thickClient = Ignition.Start(cfg))
             {
-                // Register type by putting it into cache.
                 var cache = thickClient.GetOrCreateCache<int, TestType>("c");
-                cache[1] = new TestType { Id = 1 };
-
-                TestRemoveType(thickClient.GetBinary(), val => cache.WithKeepBinary<int, IBinaryObject>().Put(1, val));
+                TestRemoveType(thickClient.GetBinary(), val => cache.Put(1, val));
             }
         }
 
@@ -63,16 +66,15 @@ namespace Apache.Ignite.Core.Tests.Binary
         {
             using (var thinClient = Ignition.StartClient(new IgniteClientConfiguration("localhost")))
             {
-                // Register type by putting it into cache.
                 var cache = thinClient.GetOrCreateCache<int, TestType>("c");
-                cache[1] = new TestType { Id = 1 };
-
-                TestRemoveType(thinClient.GetBinary(), val => cache.WithKeepBinary<int, IBinaryObject>().Put(1, val));
+                TestRemoveType(thinClient.GetBinary(), val => cache.Put(1, val));
             }
         }
 
-        private static void TestRemoveType(IBinary binary, Action<IBinaryObject> putAction)
+        private static void TestRemoveType(IBinary binary, Action<TestType> putAction)
         {
+            putAction(new TestType { Id = 1 });
+
             var binaryType = binary.GetBinaryType(typeof(TestType));
             var binaryTypeById = binary.GetBinaryType(binaryType.TypeId);
             var binaryTypes = binary.GetBinaryTypes();
@@ -82,11 +84,17 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(binaryType.TypeName, binaryTypeById.TypeName);
             CollectionAssert.Contains(binaryTypes.Select(x => x.TypeName), binaryTypeById.TypeName);
 
+            CollectionAssert.AreEqual(new[] { "Id" }, binaryType.Fields);
+            Assert.AreEqual("int", binaryType.GetFieldTypeName("Id"));
+
             // Trying to use a different field type fails.
-            // TODO: How does this not fail??
-            var val = binary.GetBuilder(binaryType.TypeName).SetField(nameof(TestType.Id), "string").Build();
-            putAction(val);
-            Assert.AreEqual(binaryType.TypeId, val.GetBinaryType().TypeId);
+            var ex = Assert.Throws<BinaryObjectException>(
+                () => putAction(new TestType { Id = 2, WriteIdAsString = true }));
+
+            Assert.AreEqual(
+                "Field type mismatch detected [fieldName=Id, " +
+                $"expectedType={BinaryTypeId.Int}, actualType={BinaryTypeId.String}]",
+                ex.Message);
 
             // Remove binary type.
             binary.RemoveBinaryType(binaryType.TypeId);
@@ -98,11 +106,37 @@ namespace Apache.Ignite.Core.Tests.Binary
             CollectionAssert.DoesNotContain(binaryTypes2.Select(x => x.TypeName), binaryTypeById.TypeName);
 
             // Trying to use a different field type now works.
+            putAction(new TestType { Id = 2, WriteIdAsString = true });
+
+            var binaryType2 = binary.GetBinaryType(typeof(TestType));
+            Assert.AreEqual(binaryType.TypeId, binaryType2.TypeId);
+
+            CollectionAssert.AreEqual(new[] { "Id" }, binaryType2.Fields);
+            Assert.AreEqual("string", binaryType2.GetFieldTypeName("Id"));
         }
 
-        public class TestType
+        public class TestType : IBinarizable
         {
             public int Id { get; set; }
+
+            public bool WriteIdAsString { get; set; }
+
+            public void WriteBinary(IBinaryWriter writer)
+            {
+                if (WriteIdAsString)
+                {
+                    writer.WriteString("Id", Id.ToString());
+                }
+                else
+                {
+                    writer.WriteInt("Id", Id);
+                }
+            }
+
+            public void ReadBinary(IBinaryReader reader)
+            {
+                Id = Convert.ToInt32(reader.ReadObject<object>("Id"));
+            }
         }
     }
 }
