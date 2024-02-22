@@ -117,7 +117,7 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
     /** Enable automatic confirmation to avoid user interaction. */
     protected boolean autoConfirmation = true;
 
-    /** {@code True} if encription is enabled. */
+    /** {@code True} if encryption is enabled. */
     protected boolean encryptionEnabled;
 
     /**  Re-encryption rate limit in megabytes per second. */

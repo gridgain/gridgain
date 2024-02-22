@@ -592,7 +592,7 @@ public class CommandHandlerParsingTest {
             null,
             () -> parseArgs(asList("--cache", "validate_indexes", "cache1,ignite-sys-cache")),
             IllegalArgumentException.class,
-            "validate_indexes not allowed for `ignite-sys-cache` cache."
+            "validate_indexes not allowed for 'ignite-sys-cache' cache."
         );
     }
 
@@ -762,7 +762,7 @@ public class CommandHandlerParsingTest {
      *
      * --parallelism
      *      Int value from [0, 128] is expected.
-     *      If value is missing of differs from metioned integer -
+     *      If value is missing of differs from mentioned integer -
      *      IllegalArgumentException (Invalid parallelism) is expected.
      *
      * --batch-size
