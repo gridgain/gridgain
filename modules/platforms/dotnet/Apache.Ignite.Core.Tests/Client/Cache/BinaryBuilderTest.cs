@@ -123,15 +123,22 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         {
             // Add binary type from server.
             GetBinaryCache()[1] = GetBinaryPerson(1);
+            var serverBinaryType = Ignition.GetIgnite().GetBinary().GetBinaryType(typeof(Person).FullName);
 
             // Get types from client.
             ICollection<IBinaryType> types = Client.GetBinary().GetBinaryTypes();
             var personType = types.Single(x => x.TypeName == typeof(Person).FullName);
             var personTypeById = Client.GetBinary().GetBinaryType(personType.TypeId);
 
-            Assert.AreEqual(personTypeById.TypeName, personType.TypeName);
-            CollectionAssert.AreEquivalent(personType.Fields, new[] { "DateTime", "Id", "Name", "Parent" });
+            AssertExtensions.ReflectionEqual(serverBinaryType, personType);
+            AssertExtensions.ReflectionEqual(personType, personTypeById);
             Assert.IsFalse(personType.IsEnum);
+
+            CollectionAssert.AreEquivalent(personType.Fields, new[] { "DateTime", "Id", "Name", "Parent" });
+            Assert.AreEqual("Timestamp", personType.GetFieldTypeName("DateTime"));
+            Assert.AreEqual("int", personType.GetFieldTypeName("Id"));
+            Assert.AreEqual("String", personType.GetFieldTypeName("Name"));
+            Assert.AreEqual("Object", personType.GetFieldTypeName("Parent"));
         }
     }
 }
