@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Binary
     using System.Linq;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
+    using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.Metadata;
     using NUnit.Framework;
@@ -89,13 +90,13 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual("int", binaryType.GetFieldTypeName("Id"));
 
             // Trying to use a different field type fails.
-            var ex = Assert.Throws<BinaryObjectException>(
+            var fieldTypeMismatch = Assert.Throws<BinaryObjectException>(
                 () => putAction(new TestType { Id = 2, WriteIdAsString = true }));
 
             Assert.AreEqual(
                 "Field type mismatch detected [fieldName=Id, " +
                 $"expectedType={BinaryTypeId.Int}, actualType={BinaryTypeId.String}]",
-                ex.Message);
+                fieldTypeMismatch.Message);
 
             // Remove binary type.
             binary.RemoveBinaryType(binaryType.TypeId);
@@ -105,6 +106,10 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             Assert.AreSame(BinaryType.Empty, binaryTypeById2);
             CollectionAssert.DoesNotContain(binaryTypes2.Select(x => x.TypeName), binaryTypeById.TypeName);
+
+            // Remove non-existing type.
+            var notFound = Assert.Catch<IgniteException>(() => binary.RemoveBinaryType(binaryType.TypeId));
+            Assert.AreEqual("Failed to remove metadata, type not found: 271027036", notFound.Message);
 
             // Trying to use a different field type now works.
             putAction(new TestType { Id = 2, WriteIdAsString = true });
