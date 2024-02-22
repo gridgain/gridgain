@@ -133,6 +133,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             AssertExtensions.ReflectionEqual(serverBinaryType, personType);
             AssertExtensions.ReflectionEqual(personType, personTypeById);
             Assert.IsFalse(personType.IsEnum);
+            Assert.IsNull(personType.AffinityKeyFieldName);
 
             CollectionAssert.AreEquivalent(personType.Fields, new[] { "DateTime", "Id", "Name", "Parent" });
             Assert.AreEqual("Timestamp", personType.GetFieldTypeName("DateTime"));
