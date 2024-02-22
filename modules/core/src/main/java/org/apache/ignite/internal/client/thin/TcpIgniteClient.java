@@ -122,7 +122,7 @@ public class TcpIgniteClient implements IgniteClient {
     ) throws ClientException {
         final ClientBinaryMetadataHandler metadataHnd = new ClientBinaryMetadataHandler();
 
-        ClientMarshallerContext marshCtx = new ClientMarshallerContext();
+        ClientMarshallerContextImpl marshCtx = new ClientMarshallerContextImpl();
         marsh = new ClientBinaryMarshaller(metadataHnd, marshCtx);
 
         marsh.setBinaryConfiguration(cfg.getBinaryConfiguration());
@@ -664,7 +664,7 @@ public class TcpIgniteClient implements IgniteClient {
     /**
      * Thin client implementation of {@link MarshallerContext}.
      */
-    private class ClientMarshallerContext implements MarshallerContext {
+    private class ClientMarshallerContextImpl implements ClientMarshallerContext {
         /** Type ID -> class name map. */
         private final Map<Integer, String> cache = new ConcurrentHashMap<>();
 
@@ -674,7 +674,7 @@ public class TcpIgniteClient implements IgniteClient {
         /**
          * Default constructor.
          */
-        public ClientMarshallerContext() {
+        public ClientMarshallerContextImpl() {
             try {
                 MarshallerUtils.processSystemClasses(U.gridClassLoader(), null, sysTypes::add);
             }
@@ -803,6 +803,15 @@ public class TcpIgniteClient implements IgniteClient {
          */
         void clearUserTypesCache() {
             cache.clear();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void removeType(int typeId) {
+            ch.service(
+                    ClientOperation.REMOVE_BINARY_TYPE,
+                    payloadCh -> payloadCh.out().writeInt(typeId),
+                    null
+            );
         }
     }
 }

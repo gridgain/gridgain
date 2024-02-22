@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.apache.ignite.IgniteBinary;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.binary.BinaryObjectBuilder;
@@ -185,6 +186,18 @@ public class IgniteBinaryImpl implements IgniteBinary {
 
         try {
             return proc.registerClass(cls);
+        }
+        finally {
+            unguard();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void removeType(int typeId) throws IgniteException {
+        guard();
+
+        try {
+            proc.removeType(typeId);
         }
         finally {
             unguard();
