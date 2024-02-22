@@ -33,6 +33,8 @@ import org.apache.ignite.internal.client.GridClientDisconnectedException;
 import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
+import org.apache.ignite.internal.commandline.argument.CommandArg;
+import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.dr.DrSubCommandsList;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -112,13 +114,7 @@ public class DrCacheCommand extends
                 case CACHE_FILTER_PARAM: {
                     argIter.nextArg(null);
 
-                    String errorMsg = "--cache-filter parameter value required.";
-
-                    String cacheFilterStr = argIter.nextArg(errorMsg);
-                    cacheFilter = CacheFilter.valueOf(cacheFilterStr.toUpperCase(Locale.ENGLISH));
-
-                    if (cacheFilter == null)
-                        throw new IllegalArgumentException(errorMsg);
+                    cacheFilter = argIter.nextEnumOrFail(CacheFilter.class, CACHE_FILTER_PARAM);
 
                     break;
                 }
@@ -126,9 +122,9 @@ public class DrCacheCommand extends
                 case SENDER_GROUP_PARAM: {
                     argIter.nextArg(null);
 
-                    String arg = argIter.nextArg(SENDER_GROUP_PARAM + " parameter value required.");
+                    String arg = argIter.nextArgValue(SENDER_GROUP_PARAM);
 
-                    sndGrp = SenderGroup.parse(arg);
+                    sndGrp = CommandArgUtils.ofEnum(SenderGroup.class, arg);
 
                     if (sndGrp == null)
                         sndGrpName = arg;
@@ -139,12 +135,7 @@ public class DrCacheCommand extends
                 case ACTION_PARAM: {
                     argIter.nextArg(null);
 
-                    String errorMsg = ACTION_PARAM + " parameter value required.";
-
-                    act = Action.parse(argIter.nextArg(errorMsg));
-
-                    if (act == null)
-                        throw new IllegalArgumentException(errorMsg);
+                    act = argIter.nextCmdArgOrFail(Action.class, ACTION_PARAM);
 
                     break;
                 }
@@ -312,21 +303,11 @@ public class DrCacheCommand extends
     @SuppressWarnings("PublicInnerClass") public enum SenderGroup {
         /** All. */ ALL,
         /** Default. */ DEFAULT,
-        /** None. */ NONE;
-
-        /** */
-        public static SenderGroup parse(String text) {
-            try {
-                return valueOf(text.toUpperCase(Locale.ENGLISH));
-            }
-            catch (IllegalArgumentException e) {
-                return null;
-            }
-        }
+        /** None. */ NONE
     }
 
     /** */
-    @SuppressWarnings("PublicInnerClass") public enum Action {
+    @SuppressWarnings("PublicInnerClass") public enum Action implements CommandArg {
         /** Stop. */ STOP("stop"),
 
         /** Start. */ START("start"),
@@ -335,31 +316,20 @@ public class DrCacheCommand extends
         FULL_STATE_TRANSFER("full-state-transfer");
 
         /** String representation. */
-        private final String text;
+        private final String name;
 
         /** */
-        Action(String text) {
-            this.text = text;
+        Action(String name) {
+            this.name = name;
         }
 
-        /** */
-        public String text() {
-            return text;
-        }
-
-        /** */
-        public static Action parse(String text) {
-            for (Action action : values()) {
-                if (action.text.equalsIgnoreCase(text))
-                    return action;
-            }
-
-            return null;
+        @Override public String argName() {
+            return name;
         }
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return text;
+            return name;
         }
     }
 

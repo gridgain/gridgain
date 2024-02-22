@@ -27,7 +27,7 @@ import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
-import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.dr.VisorDrRebuildTreeOperation;
 import org.apache.ignite.internal.visor.dr.VisorDrRebuildTreeTask;
@@ -38,7 +38,6 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REBUILD_TREES;
 import static org.apache.ignite.internal.commandline.util.TopologyUtils.anyConnectableServerNode;
-import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
 
 /**
  * Repair partition counters command.
@@ -138,32 +137,11 @@ public class DrRebuildPartitionLogCommand extends AbstractCommand<DrRebuildParti
 
                     switch (nextArg) {
                         case CACHES_ARG:
-                            if (!argIter.hasNextSubArg())
-                                throw new IllegalArgumentException(
-                                    "Set of cache names for '" + nextArg + "' parameter expected.");
-
-                            cacheNames = argIter.parseStringSet(argIter.nextArg(""));
-
-                            if (F.constainsStringIgnoreCase(cacheNames, UTILITY_CACHE_NAME)) {
-                                throw new IllegalArgumentException(
-                                    REBUILD_TREES + " not allowed for `" + UTILITY_CACHE_NAME + "` cache."
-                                );
-                            }
-
+                            cacheNames = CommandArgUtils.validateCachesArgument(argIter.nextCachesSet(nextArg), REBUILD_TREES.toString());
                             break;
+
                         case GROUPS_ARG:
-                            if (!argIter.hasNextSubArg())
-                                throw new IllegalArgumentException(
-                                    "Set of cache group names for '" + nextArg + "' parameter expected.");
-
-                            cacheGrps = argIter.parseStringSet(argIter.nextArg(""));
-
-                            if (F.constainsStringIgnoreCase(cacheGrps, UTILITY_CACHE_NAME)) {
-                                throw new IllegalArgumentException(
-                                    REBUILD_TREES + " not allowed for `" + UTILITY_CACHE_NAME + "` cache."
-                                );
-                            }
-
+                            cacheGrps = CommandArgUtils.validateCachesArgument(argIter.nextCacheGroupsSet(nextArg), REBUILD_TREES.toString());
                             break;
 
                         default:

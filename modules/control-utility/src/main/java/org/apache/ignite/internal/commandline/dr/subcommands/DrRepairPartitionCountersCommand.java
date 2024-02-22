@@ -16,11 +16,6 @@
 
 package org.apache.ignite.internal.commandline.dr.subcommands;
 
-import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
-import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
-import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REPAIR;
-import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
-
 import java.util.Collection;
 import java.util.Locale;
 import java.util.Map.Entry;
@@ -29,11 +24,15 @@ import java.util.UUID;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
-import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.dr.VisorDrRepairPartitionCountersJobResult;
 import org.apache.ignite.internal.visor.dr.VisorDrRepairPartitionCountersTaskArg;
 import org.apache.ignite.internal.visor.dr.VisorDrRepairPartitionCountersTaskResult;
+
+import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
+import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REPAIR;
 
 /**
  * Repair partition counters command.
@@ -126,17 +125,7 @@ public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand
 
             switch (nextArg.toLowerCase(Locale.ENGLISH)) {
                 case CACHES_PARAM:
-                    if (!argIter.hasNextSubArg())
-                        throw new IllegalArgumentException(
-                                "Set of cache names for '" + nextArg + "' parameter expected.");
-
-                    caches = argIter.parseStringSet(argIter.nextArg(""));
-
-                    if (F.constainsStringIgnoreCase(caches, UTILITY_CACHE_NAME)) {
-                        throw new IllegalArgumentException(
-                                REPAIR + " not allowed for `" + UTILITY_CACHE_NAME + "` cache."
-                        );
-                    }
+                    caches = CommandArgUtils.validateCachesArgument(argIter.nextCachesSet(CACHES_PARAM), REPAIR.toString());
                     break;
                 case BATCH_SIZE:
                     batchSize = readBatchSizeParam(argIter, nextArg);
