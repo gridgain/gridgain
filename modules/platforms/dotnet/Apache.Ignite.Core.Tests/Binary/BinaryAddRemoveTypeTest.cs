@@ -34,7 +34,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         {
             // Register type by putting it into cache.
             var cache = Ignite.GetOrCreateCache<int, TestType>("c");
-            cache[1] = new TestType {Id = 1};
+            cache[1] = new TestType { Id = 1 };
 
             TestRemoveType(Ignite.GetBinary(), val => cache.WithKeepBinary<int, IBinaryObject>().Put(1, val));
         }
@@ -52,7 +52,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             {
                 // Register type by putting it into cache.
                 var cache = thickClient.GetOrCreateCache<int, TestType>("c");
-                cache[1] = new TestType {Id = 1};
+                cache[1] = new TestType { Id = 1 };
 
                 TestRemoveType(thickClient.GetBinary(), val => cache.WithKeepBinary<int, IBinaryObject>().Put(1, val));
             }
@@ -65,7 +65,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             {
                 // Register type by putting it into cache.
                 var cache = thinClient.GetOrCreateCache<int, TestType>("c");
-                cache[1] = new TestType {Id = 1};
+                cache[1] = new TestType { Id = 1 };
 
                 TestRemoveType(thinClient.GetBinary(), val => cache.WithKeepBinary<int, IBinaryObject>().Put(1, val));
             }
