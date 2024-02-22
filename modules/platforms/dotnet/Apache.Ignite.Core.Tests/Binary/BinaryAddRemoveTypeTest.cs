@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Binary
 {
+    using System;
     using System.Linq;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
@@ -35,7 +36,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             var cache = Ignite.GetOrCreateCache<int, TestType>("c");
             cache[1] = new TestType {Id = 1};
 
-            TestRemoveType(Ignite.GetBinary());
+            TestRemoveType(Ignite.GetBinary(), val => cache.WithKeepBinary<int, IBinaryObject>().Put(1, val));
         }
 
         [Test]
@@ -53,7 +54,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 var cache = thickClient.GetOrCreateCache<int, TestType>("c");
                 cache[1] = new TestType {Id = 1};
 
-                TestRemoveType(thickClient.GetBinary());
+                TestRemoveType(thickClient.GetBinary(), val => cache.WithKeepBinary<int, IBinaryObject>().Put(1, val));
             }
         }
 
@@ -66,11 +67,11 @@ namespace Apache.Ignite.Core.Tests.Binary
                 var cache = thinClient.GetOrCreateCache<int, TestType>("c");
                 cache[1] = new TestType {Id = 1};
 
-                TestRemoveType(thinClient.GetBinary());
+                TestRemoveType(thinClient.GetBinary(), val => cache.WithKeepBinary<int, IBinaryObject>().Put(1, val));
             }
         }
 
-        private static void TestRemoveType(IBinary binary)
+        private static void TestRemoveType(IBinary binary, Action<IBinaryObject> putAction)
         {
             var binaryType = binary.GetBinaryType(typeof(TestType));
             var binaryTypeById = binary.GetBinaryType(binaryType.TypeId);
@@ -81,6 +82,13 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(binaryType.TypeName, binaryTypeById.TypeName);
             CollectionAssert.Contains(binaryTypes.Select(x => x.TypeName), binaryTypeById.TypeName);
 
+            // Trying to use a different field type fails.
+            // TODO: How does this not fail??
+            var val = binary.GetBuilder(binaryType.TypeName).SetField(nameof(TestType.Id), "string").Build();
+            putAction(val);
+            Assert.AreEqual(binaryType.TypeId, val.GetBinaryType().TypeId);
+
+            // Remove binary type.
             binary.RemoveBinaryType(binaryType.TypeId);
 
             var binaryTypeById2 = binary.GetBinaryType(binaryType.TypeId);
@@ -88,6 +96,8 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             Assert.AreSame(BinaryType.Empty, binaryTypeById2);
             CollectionAssert.DoesNotContain(binaryTypes2.Select(x => x.TypeName), binaryTypeById.TypeName);
+
+            // Trying to use a different field type now works.
         }
 
         public class TestType
