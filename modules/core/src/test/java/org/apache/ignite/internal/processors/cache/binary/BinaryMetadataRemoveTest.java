@@ -321,10 +321,12 @@ public class BinaryMetadataRemoveTest extends GridCommonAbstractTest {
 
                     case MODE_THIN_CLIENT:
                         int port = ign.cluster().localNode().attribute(ClientListenerProcessor.CLIENT_LISTENER_PORT);
-                        try (IgniteClient client = Ignition.startClient(
-                                new ClientConfiguration().setAddresses("127.0.0.1:" + port))){
+                        ClientConfiguration cfg = new ClientConfiguration().setAddresses("127.0.0.1:" + port);
+
+                        try (IgniteClient client = Ignition.startClient(cfg)) {
                             client.binary().removeType(client.binary().typeId(typeName));
                         }
+
                         break;
 
                     default:

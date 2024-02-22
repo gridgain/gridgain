@@ -90,8 +90,7 @@ public class NoOpBinary implements IgniteBinary {
         throw unsupported();
     }
 
-    @Override
-    public void removeType(int typeId) throws IgniteException {
+    @Override public void removeType(int typeId) throws IgniteException {
         throw unsupported();
     }
 

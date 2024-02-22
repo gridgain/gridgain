@@ -193,8 +193,7 @@ public class IgniteBinaryImpl implements IgniteBinary {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public void removeType(int typeId) throws IgniteException {
+    @Override public void removeType(int typeId) throws IgniteException {
         guard();
 
         try {

@@ -41,8 +41,8 @@ public class ClientBinaryTypesGetResponse extends ClientResponse {
         this.types = types;
     }
 
-    @Override
-    public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
+    /** {@inheritDoc} */
+    @Override public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
         super.encode(ctx, writer);
 
         writer.writeInt(types.size());

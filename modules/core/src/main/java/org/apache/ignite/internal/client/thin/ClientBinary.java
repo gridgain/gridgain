@@ -175,8 +175,7 @@ class ClientBinary implements IgniteBinary {
 
 
     /** {@inheritDoc} */
-    @Override
-    public void removeType(int typeId) throws IgniteException {
+    @Override public void removeType(int typeId) throws IgniteException {
         marsh.marshallerContext().removeType(typeId);
     }
 }
