@@ -106,11 +106,11 @@ set JAVA_VER_STR=%JAVA_VER_STR:"=%
 for /f "tokens=1,2 delims=." %%a in ("%JAVA_VER_STR%.x") do set MAJOR_JAVA_VER=%%a& set MINOR_JAVA_VER=%%b
 if %MAJOR_JAVA_VER% == 1 set MAJOR_JAVA_VER=%MINOR_JAVA_VER%
 
-call "%SCRIPTS_HOME%\include\jvmdefaults.bat" %MAJOR_JAVA_VER% "%JVM_OPTS%" JVM_OPTS
+call "%SCRIPTS_HOME%\include\jvmdefaults.bat" %MAJOR_JAVA_VER% "%SQL_JVM_OPTS%" SQL_JVM_OPTS
 
 set CP=%IGNITE_LIBS%
 set CP=%CP%;%IGNITE_HOME%\bin\include\sqlline\*
 
-"%JAVA_HOME%\bin\java.exe" %JVM_OPTS% -cp "%CP%" sqlline.SqlLine -d org.apache.ignite.IgniteJdbcThinDriver %*
+"%JAVA_HOME%\bin\java.exe" %SQL_JVM_OPTS% -cp "%CP%" sqlline.SqlLine -d org.apache.ignite.IgniteJdbcThinDriver %*
 
 :error_finish

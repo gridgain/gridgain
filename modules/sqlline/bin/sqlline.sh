@@ -61,8 +61,8 @@ osname=`uname`
 
 if [ $osname = "OS/390" ] ; then
     export TERM=dumb
-    JVM_OPTS="-Dfile.encoding=IBM-1047 $JVM_OPTS"
-    JVM_OPTS="$(getIbmSslOpts $version) $JVM_OPTS"
+    SQL_JVM_OPTS="-Dfile.encoding=IBM-1047 $SQL_JVM_OPTS"
+    SQL_JVM_OPTS="$(getIbmSslOpts $version) $SQL_JVM_OPTS"
 fi
 
 #
@@ -70,12 +70,12 @@ fi
 #
 . "${SCRIPTS_HOME}"/include/setenv.sh
 
-JVM_OPTS=${JVM_OPTS:-}
+SQL_JVM_OPTS=${SQL_JVM_OPTS:-}
 
 #
-# Final JVM_OPTS for Java 9+ compatibility
+# Final SQL_JVM_OPTS for Java 9+ compatibility
 #
-JVM_OPTS=$(getJavaSpecificOpts $version "$JVM_OPTS")
+SQL_JVM_OPTS=$(getJavaSpecificOpts $version "$SQL_JVM_OPTS")
 
 JDBCLINK="jdbc:ignite:thin://${HOST_AND_PORT:-}${SCHEMA_DELIMITER:-}${SCHEMA:-}${PARAMS:-}"
 
@@ -83,4 +83,4 @@ CP="${IGNITE_LIBS}"
 
 CP="${CP}${SEP}${IGNITE_HOME_TMP}/bin/include/sqlline/*"
 
-"$JAVA" ${JVM_OPTS} -cp ${CP} sqlline.SqlLine -d org.apache.ignite.IgniteJdbcThinDriver $@
+"$JAVA" ${SQL_JVM_OPTS} -cp ${CP} sqlline.SqlLine -d org.apache.ignite.IgniteJdbcThinDriver $@
