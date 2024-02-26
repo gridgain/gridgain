@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
@@ -111,6 +112,8 @@ import org.apache.ignite.internal.util.typedef.internal.GPC;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.worker.GridWorker;
+import org.apache.ignite.internal.util.worker.GridWorkerFuture;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -1777,11 +1780,13 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
          * @param reqTopVer Request topology version.
          * @param curFut Current future.
          * @param plc Policy.
+         * @param stripeId Stripe id.
          */
         private void localUpdate(final Collection<DataStreamerEntry> entries,
             final AffinityTopologyVersion reqTopVer,
             final GridFutureAdapter<Object> curFut,
-            final byte plc) {
+            final byte plc,
+            int stripeId) {
             try {
                 GridCacheContext cctx = ctx.cache().internalCache(cacheName).context();
 
@@ -1815,8 +1820,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                     }
 
                     if (topWaitFut == null) {
-                        IgniteInternalFuture<Object> callFut = ctx.closure().callLocalSafe(
-                            new DataStreamerUpdateJob(
+                        DataStreamerUpdateJob dsUpdate = new DataStreamerUpdateJob(
                                 ctx,
                                 log,
                                 cacheName,
@@ -1824,8 +1828,9 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                                 false,
                                 skipStore,
                                 keepBinary,
-                                rcvr),
-                            plc);
+                                rcvr);
+
+                        GridWorkerFuture<Object> callFut = executeStripeAware(stripeId, dsUpdate);
 
                         locFuts.add(callFut);
 
@@ -1861,7 +1866,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                     // Need call 'listen' after topology read lock is released.
                     topWaitFut.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
                         @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> e) {
-                            localUpdate(entries, reqTopVer, curFut, plc);
+                            localUpdate(entries, reqTopVer, curFut, plc, stripeId);
                         }
                     });
                 }
@@ -1869,6 +1874,38 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
             catch (Throwable ex) {
                 curFut.onDone(new IgniteCheckedException("DataStreamer data handling failed.", ex));
             }
+        }
+
+        private <T> GridWorkerFuture<T> executeStripeAware(int stripeId, Callable<T> call) {
+            GridWorkerFuture<T> callFut = new GridWorkerFuture<>();
+
+            ClassLoader ldr = Thread.currentThread().getContextClassLoader();
+
+            GridWorker w = new GridWorker(ctx.igniteInstanceName(), "closure-proc-worker", log) {
+                @Override protected void body() {
+                    try {
+                        if (ldr != null)
+                            callFut.onDone(U.wrapThreadLoader(ldr, call));
+                        else
+                            callFut.onDone(call.call());
+                    }
+                    catch (Throwable e) {
+                        if (e instanceof Error)
+                            U.error(log, "Closure execution failed with error.", e);
+
+                        callFut.onDone(U.cast(e));
+
+                        if (e instanceof Error)
+                            throw (Error)e;
+                    }
+                }
+            };
+
+            callFut.setWorker(w);
+
+            ctx.pools().getDataStreamerExecutorService().execute(stripeId, w);
+
+            return callFut;
         }
 
         /**
@@ -1906,7 +1943,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
             byte plc = DataStreamProcessor.ioPolicy(ioPlcRslvr, node);
 
             if (isLocNode)
-                localUpdate(entries, topVer, curFut, plc);
+                localUpdate(entries, topVer, curFut, plc, partId);
             else {
                 try {
                     for (DataStreamerEntry e : entries) {
