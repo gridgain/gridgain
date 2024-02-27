@@ -47,7 +47,7 @@
         <profile>
             <id>java-15+</id>
             <activation>
-                <jdk>[15,)</jdk>
+                <jdk>[15,17,)</jdk>
             </activation>
             <properties>
                 <src.javaspecific.dir>src/main/java15</src.javaspecific.dir>
