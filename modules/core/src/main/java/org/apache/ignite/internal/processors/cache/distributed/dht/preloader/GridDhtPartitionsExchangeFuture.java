@@ -2551,7 +2551,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                 for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
                     if (!grp.isLocal())
-                        grp.topology().onExchangeDone(this, grp.affinity().readyAffinity(res), false);
+                        grp.topology().onExchangeDone(this, grp.affinity().readyAffinity(res));
                 }
 
                 if (changedAffinity())
