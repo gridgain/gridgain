@@ -126,7 +126,7 @@ public class PageLocksCommand extends AbstractCommand<PageLocksCommand.Arguments
 
                     break;
                 case NODES:
-                    nodeIds.addAll(argIter.nextStringSet(""));
+                    nodeIds.addAll(argIter.nextStringSet("list with node ids."));
 
                     break;
                 case PATH:
@@ -135,7 +135,7 @@ public class PageLocksCommand extends AbstractCommand<PageLocksCommand.Arguments
                     break;
                 default:
                     throw new IllegalArgumentException(
-                        "Unexpected argumetn:" + arg + ", supported:" + Arrays.toString(PageLocksCommandArg.values())
+                        "Unexpected argument:" + arg + ", supported:" + Arrays.toString(PageLocksCommandArg.values())
                     );
             }
         }
@@ -159,7 +159,7 @@ public class PageLocksCommand extends AbstractCommand<PageLocksCommand.Arguments
             optional(ALL),
             optional(CommandLogger.or(NODES, "nodeId1,nodeId2,..")),
             optional(CommandLogger.or(NODES, "consistentId1,consistentId2,..")),
-            "// Pring page locks dump to console on the node or nodes."));
+            "// Print page locks dump to console on the node or nodes."));
         logger.info("");
     }
 
