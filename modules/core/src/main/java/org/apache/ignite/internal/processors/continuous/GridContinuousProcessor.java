@@ -960,15 +960,6 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
         // Whether local node is included in routine.
         boolean locIncluded = prjPred == null || prjPred.apply(ctx.discovery().localNode());
 
-        AbstractContinuousMessage msg;
-
-        try {
-            msg = createStartMessage(routineId, hnd, bufSize, interval, autoUnsubscribe, prjPred);
-        }
-        catch (IgniteCheckedException e) {
-            return new GridFinishedFuture<>(e);
-        }
-
         // Register per-routine notifications listener if ordered messaging is used.
         registerMessageListener(hnd);
 
@@ -989,6 +980,15 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
                         interval,
                         autoUnsubscribe,
                         true);
+                }
+
+                AbstractContinuousMessage msg;
+
+                try {
+                    msg = createStartMessage(routineId, hnd, bufSize, interval, autoUnsubscribe, prjPred);
+                }
+                catch (IgniteCheckedException e) {
+                    return new GridFinishedFuture<>(e);
                 }
 
                 ctx.discovery().sendCustomEvent(msg);
@@ -1071,10 +1071,14 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
                 reqData.p2pMarshal(marsh);
             }
 
-            return new StartRoutineDiscoveryMessage(
-                routineId,
-                reqData,
-                reqData.handler().keepBinary());
+            StartRoutineDiscoveryMessage msg = new StartRoutineDiscoveryMessage(
+                    routineId,
+                    reqData,
+                    reqData.handler().keepBinary());
+
+            msg.addUpdateCounters(ctx.localNodeId(), hnd.updateCounters());
+
+            return msg;
         }
         else {
             assert discoProtoVer == 2 : discoProtoVer;
