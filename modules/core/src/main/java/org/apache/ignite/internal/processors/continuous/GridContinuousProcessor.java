@@ -1076,7 +1076,8 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
                     reqData,
                     reqData.handler().keepBinary());
 
-            msg.addUpdateCounters(ctx.localNodeId(), hnd.updateCounters());
+            if (hnd.updateCounters() != null)
+                msg.addUpdateCounters(ctx.localNodeId(), hnd.updateCounters());
 
             return msg;
         }
