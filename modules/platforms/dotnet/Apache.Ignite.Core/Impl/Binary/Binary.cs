@@ -219,6 +219,13 @@ namespace Apache.Ignite.Core.Impl.Binary
             return Marshaller.Ignite.BinaryProcessor.RegisterEnum(typeName, values);
         }
 
+        /** <inheritDoc /> */
+        public void RemoveBinaryType(int typeId)
+        {
+            Marshaller.Ignite.BinaryProcessor.RemoveType(typeId);
+            Marshaller.RemoveType(typeId);
+        }
+
         /// <summary>
         /// Marshaller.
         /// </summary>

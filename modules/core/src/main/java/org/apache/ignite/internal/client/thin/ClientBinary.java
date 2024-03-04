@@ -19,6 +19,7 @@ package org.apache.ignite.internal.client.thin;
 import java.util.Collection;
 import java.util.Map;
 import org.apache.ignite.IgniteBinary;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.binary.BinaryObjectException;
@@ -170,5 +171,11 @@ class ClientBinary implements IgniteBinary {
         BinaryClassDescriptor clsDesc = marsh.context().registerClass(cls, true, false);
 
         return marsh.context().metadata(clsDesc.typeId());
+    }
+
+
+    /** {@inheritDoc} */
+    @Override public void removeType(int typeId) throws IgniteException {
+        marsh.marshallerContext().removeType(typeId);
     }
 }

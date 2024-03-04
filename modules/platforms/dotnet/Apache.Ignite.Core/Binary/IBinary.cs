@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Binary
 {
     using System;
     using System.Collections.Generic;
+    using Apache.Ignite.Core.Common;
 
     /// <summary>
     /// Defines binary objects functionality. With binary objects you are able to:
@@ -154,5 +155,13 @@ namespace Apache.Ignite.Core.Binary
         /// <param name="values">Mapping of enum value names to int values.</param>
         /// <returns>Binary type for registered enum.</returns>
         IBinaryType RegisterEnum(string typeName, IEnumerable<KeyValuePair<string, int>> values);
+
+        /// <summary>
+        /// Removes (de-registers) binary type with the specified type id.
+        /// <para />
+        /// Throws <see cref="IgniteException"/> if the specified type id is not found or already being removed.
+        /// </summary>
+        /// <param name="typeId">Type id.</param>
+        void RemoveBinaryType(int typeId);
     }
 }
