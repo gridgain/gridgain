@@ -982,14 +982,7 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
                         true);
                 }
 
-                AbstractContinuousMessage msg;
-
-                try {
-                    msg = createStartMessage(routineId, hnd, bufSize, interval, autoUnsubscribe, prjPred);
-                }
-                catch (IgniteCheckedException e) {
-                    return new GridFinishedFuture<>(e);
-                }
+                AbstractContinuousMessage msg = createStartMessage(routineId, hnd, bufSize, interval, autoUnsubscribe, prjPred);
 
                 ctx.discovery().sendCustomEvent(msg);
             }

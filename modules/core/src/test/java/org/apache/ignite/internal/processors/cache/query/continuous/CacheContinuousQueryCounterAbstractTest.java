@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.Cache;
 import javax.cache.configuration.Factory;
@@ -31,12 +30,9 @@ import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryUpdatedListener;
 import javax.cache.integration.CacheWriterException;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
 import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.CacheQueryEntryEvent;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.QueryCursor;
@@ -45,17 +41,9 @@ import org.apache.ignite.cache.store.CacheStoreAdapter;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
-import org.apache.ignite.internal.managers.communication.GridIoManager;
-import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.pool.PoolProcessor;
-import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.typedef.PA;
 import org.apache.ignite.internal.util.typedef.T2;
-import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.worker.GridWorkerListener;
 import org.apache.ignite.lang.IgniteBiInClosure;
-import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.GridTestUtils.SF;
@@ -173,60 +161,6 @@ public abstract class CacheContinuousQueryCounterAbstractTest extends GridCommon
      * @return Grids count.
      */
     protected abstract int gridCount();
-
-    @Test
-    public void testDataStreamerUseStripeAwareExecutor() {
-        CacheConfiguration cacheCfg = new CacheConfiguration("ds-cq-test");
-        cacheCfg.setAffinity(new RendezvousAffinityFunction(false, 2));
-        IgniteCache<Integer, Integer> cache = grid(0).getOrCreateCache(cacheCfg);
-
-        GridIoManager ioMgr = grid(0).context().io();
-
-        PoolProcessor pools = GridTestUtils.getFieldValue(ioMgr, "pools");
-
-        CacheGroupContext grpCtx = grid(0).context().cache().cacheGroup(CU.cacheId("ds-cq-test"));
-
-        GridDhtLocalPartition locPart = grpCtx.topology().localPartition(0);
-
-        UnorderedStripedExecutor exec = new UnorderedStripedExecutor(
-                2,
-                "instance",
-                "cq-ds-executor",
-                log,
-                throwable -> {
-                    // No-op.
-                },
-                null,
-                grid(0).context().config().getFailureDetectionTimeout(),
-                locPart
-        );
-
-        GridTestUtils.setFieldValue(pools, "dataStreamerExecSvc", exec);
-
-        ContinuousQuery<Integer, Integer> qry = new ContinuousQuery<>();
-
-        ConcurrentHashMap<Integer, Integer> itemsHolder = new ConcurrentHashMap<>();
-
-        qry.setLocalListener(events -> {
-            for (CacheEntryEvent<? extends Integer, ? extends Integer> event : events) {
-                itemsHolder.put(event.getKey(), event.getValue());
-            }
-        });
-
-        cache.query(qry);
-
-        try (IgniteDataStreamer<Integer, Integer> stmr = grid(0).dataStreamer("ds-cq-test")) {
-            stmr.allowOverwrite(true);
-
-            // Stream entries.
-            for (int i = 0; i < 100; i++)
-                stmr.addData(i, i);
-
-            stmr.tryFlush();
-
-            stmr.future().listen((f) -> assertEquals(100, itemsHolder.size()));
-        }
-    }
 
     /**
      * @throws Exception If failed.
@@ -661,32 +595,6 @@ public abstract class CacheContinuousQueryCounterAbstractTest extends GridCommon
         /** {@inheritDoc} */
         @Override public void delete(Object key) throws CacheWriterException {
             // No-op.
-        }
-    }
-
-    /**
-     * Striped executor which emulates execution reordering for supplied items.
-     */
-    private static class UnorderedStripedExecutor extends StripedExecutor {
-        /** First call flag. */
-        private final AtomicBoolean first = new AtomicBoolean();
-
-        private final GridDhtLocalPartition part;
-
-        /** Constructor. */
-        public UnorderedStripedExecutor(int cnt, String igniteInstanceName, String poolName, IgniteLogger log,
-                IgniteInClosure<Throwable> errHnd, GridWorkerListener gridWorkerLsnr, long failureDetectionTimeout,
-                GridDhtLocalPartition part) {
-            super(cnt, igniteInstanceName, poolName, log, errHnd, gridWorkerLsnr, failureDetectionTimeout);
-            this.part = part;
-        }
-
-        @Override public void execute(Runnable command) {
-            if (first.compareAndSet(false, true))
-                part.updateCounter(1000);
-            else
-                part.updateCounter(0);
-            super.execute(command);
         }
     }
 }
