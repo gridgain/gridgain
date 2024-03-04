@@ -415,4 +415,12 @@ public interface IgniteBinary {
      * @throws org.apache.ignite.binary.BinaryObjectException In case of error.
      */
     public BinaryType registerClass(Class<?> cls) throws BinaryObjectException;
+
+    /**
+     * Remove (de-register) binary type with the specified id.
+     *
+     * @param typeId Type id.
+     * @throws org.apache.ignite.IgniteException In case of error (type not found or already being removed).
+     */
+    public void removeType(int typeId) throws IgniteException;
 }

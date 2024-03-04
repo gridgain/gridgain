@@ -993,6 +993,28 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /// <summary>
+        /// Removes the type from marshaller caches.
+        /// </summary>
+        /// <param name="typeId">Type id.</param>
+        public void RemoveType(int typeId)
+        {
+            if (_idToDesc.Remove(BinaryUtils.TypeKey(true, typeId), out var desc))
+            {
+                _typeNameToDesc.Remove(desc.TypeName, out _);
+                _typeToDesc.Remove(desc.Type, out _);
+            }
+
+            lock (this)
+            {
+                var metas0 = new Dictionary<int, BinaryTypeHolder>(_metas);
+                if (metas0.Remove(typeId))
+                {
+                    _metas = metas0;
+                }
+            }
+        }
+
+        /// <summary>
         /// Resolve type ID.
         /// </summary>
         /// <param name="typeName">Type name.</param>
