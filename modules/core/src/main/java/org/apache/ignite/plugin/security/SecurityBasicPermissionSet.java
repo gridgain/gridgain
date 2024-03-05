@@ -42,6 +42,9 @@ public class SecurityBasicPermissionSet implements SecurityPermissionSet {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
+    /** Prefix key taht is used to track tracing permissions. */
+    public static final String TRACING_PERMISSIONS_SET = "Tracing permissions set";
+
     /** Cache permissions. */
     @GridToStringInclude
     private Map<String, Collection<SecurityPermission>> cachePermissions = new HashMap<>();
@@ -97,6 +100,21 @@ public class SecurityBasicPermissionSet implements SecurityPermissionSet {
     }
 
     /**
+     * Setter for set tracing permissions.
+     *
+     * @param tracingPermissions Tracing permissions.
+     */
+    public void setTracingPermissions(Collection<SecurityPermission> tracingPermissions) {
+        A.notNull(tracingPermissions, "tracingPermissions");
+
+        HashMap<String, Collection<SecurityPermission>> tmp = new HashMap<>(servicePermissions);
+
+        tmp.put(TRACING_PERMISSIONS_SET, tracingPermissions);
+
+        servicePermissions = tmp;
+    }
+
+    /**
      * Setter for set collection system permission.
      *
      * @param systemPermissions System permissions.
@@ -126,7 +144,12 @@ public class SecurityBasicPermissionSet implements SecurityPermissionSet {
 
     /** {@inheritDoc} */
     @Override public Map<String, Collection<SecurityPermission>> servicePermissions() {
-        return servicePermissions;
+        return F.view(servicePermissions, s -> !s.equals(TRACING_PERMISSIONS_SET));
+    }
+
+    /** {@inheritDoc} */
+    @Override public Collection<SecurityPermission> tracingPermissions() {
+        return servicePermissions.getOrDefault(TRACING_PERMISSIONS_SET, Collections.emptySet());
     }
 
     /** {@inheritDoc} */

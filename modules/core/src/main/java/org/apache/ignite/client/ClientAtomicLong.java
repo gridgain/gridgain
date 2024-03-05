@@ -21,8 +21,9 @@ import org.apache.ignite.IgniteException;
 
 /**
  * Distributed atomic long API.
+ * <h1 class="header">Description</h1>
  * <p>
- * <h1 class="header">Functionality</h1>
+ * <h2 class="header">Functionality</h2>
  * Distributed atomic long includes the following main functionality:
  * <ul>
  * <li>
@@ -51,7 +52,7 @@ import org.apache.ignite.IgniteException;
  * </li>
  * </ul>
  * <p>
- * <h1 class="header">Creating Distributed Atomic Long</h1>
+ * <h2 class="header">Creating Distributed Atomic Long</h2>
  * Instance of distributed atomic long can be created by calling the following method:
  * <ul>
  *     <li>{@link IgniteClient#atomicLong(String, long, boolean)}</li>

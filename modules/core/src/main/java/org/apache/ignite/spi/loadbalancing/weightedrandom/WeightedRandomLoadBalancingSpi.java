@@ -54,12 +54,14 @@ import static org.apache.ignite.events.EventType.EVT_TASK_FAILED;
 import static org.apache.ignite.events.EventType.EVT_TASK_FINISHED;
 
 /**
- * Load balancing SPI that picks a random node for job execution. Note that you can
+ * Load balancing SPI that picks a random node for job execution.
+ * <h1 class="header">Description</h1>
+ * Note that you can
  * optionally assign weights to nodes, so nodes with larger weights will end up getting
  * proportionally more jobs routed to them (see {@link #setNodeWeight(int)}
  * configuration property). By default all nodes get equal weight defined by
  * {@link #DFLT_NODE_WEIGHT} (value is {@code 10}).
- * <h1 class="header">Coding Example</h1>
+ * <h2 class="header">Coding Example</h2>
  * If you are using {@link org.apache.ignite.compute.ComputeTaskSplitAdapter} then load balancing logic
  * is transparent to your code and is handled automatically by the adapter.
  * Here is an example of how your task could look:
@@ -123,7 +125,7 @@ import static org.apache.ignite.events.EventType.EVT_TASK_FINISHED;
  * }
  * </pre>
  * <p>
- * <h1 class="header">Configuration</h1>
+ * <h2 class="header">Configuration</h2>
  * In order to use this load balancer, you should configure your grid instance
  * to use {@link WeightedRandomLoadBalancingSpi} either from Spring XML file or
  * directly. The following configuration parameters are supported:

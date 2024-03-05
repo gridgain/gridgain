@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
@@ -57,11 +59,12 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointPagesWriter.CheckpointPageStoreInfo;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.syncfs.SyncFsUtils;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.CheckpointMetricsTracker;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.PartitionAllocationMap;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
-import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.GridConcurrentMultiPairQueue;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -196,6 +199,8 @@ public class CheckpointWorkflow {
         this.checkpointWriteOrder = checkpointWriteOrder;
         this.igniteInstanceName = igniteInstanceName;
         this.checkpointCollectPagesInfoPool = initializeCheckpointPool();
+
+        SyncFsUtils.logStartup(log);
     }
 
     /**
@@ -619,6 +624,30 @@ public class CheckpointWorkflow {
     }
 
     /**
+     * Tries to call {@code syncfs} on the stores if it's enabled and there are enough stores to exceed the threshold.
+     *
+     * @param updStores Map with updated page stores.
+     * @return {@code true} if {@code syncfs} has been called, {@code false} otherwise.
+     * @throws IgniteCheckedException If failed.
+     */
+    public boolean trySyncFs(
+        ConcurrentMap<PageStore, CheckpointPageStoreInfo> updStores
+    ) throws IgniteCheckedException {
+        if (SyncFsUtils.isActive()) {
+            if (updStores.size() > SyncFsUtils.SYNC_FS_THRESHOLD) {
+                SyncFsUtils.syncfs(updStores);
+
+                return true;
+            }
+
+            log.info("Skipping syncfs, falling back to fsync. Number of files doesn't exceed the threshold" +
+                " [files=" + updStores.size() + ", threshold=" + SyncFsUtils.SYNC_FS_THRESHOLD + ']');
+        }
+
+        return false;
+    }
+
+    /**
      * This method makes sense if node was stopped during the checkpoint(Start marker was written to disk while end
      * marker are not). It is able to write all pages to disk and create end marker.
      *
@@ -643,8 +672,8 @@ public class CheckpointWorkflow {
         GridConcurrentMultiPairQueue<PageMemoryEx, FullPageId> pages =
             splitAndSortCpPagesIfNeeded(cpPagesHolder);
 
-        // Identity stores set for future fsync.
-        Collection<PageStore> updStores = new GridConcurrentHashSet<>();
+        // Stores map for future fsync.
+        ConcurrentMap<PageStore, CheckpointPageStoreInfo> updStores = new ConcurrentHashMap<>();
 
         AtomicInteger cpPagesCnt = new AtomicInteger();
 
@@ -663,8 +692,10 @@ public class CheckpointWorkflow {
         long written = U.currentTimeMillis();
 
         // Fsync all touched stores.
-        for (PageStore updStore : updStores)
-            updStore.sync();
+        if (!trySyncFs(updStores)) {
+            for (PageStore updStore : updStores.keySet())
+                updStore.sync();
+        }
 
         long fsync = U.currentTimeMillis();
 

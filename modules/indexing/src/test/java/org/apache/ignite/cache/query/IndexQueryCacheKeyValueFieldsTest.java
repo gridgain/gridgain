@@ -81,7 +81,7 @@ public class IndexQueryCacheKeyValueFieldsTest extends GridCommonAbstractTest {
             new CacheConfiguration<String, Integer>(CACHE)
                 .setSqlEscapeAll(escape())
                 .setQueryEntities(F.asList(qryEntity))
-            );
+        );
     }
 
     /** */

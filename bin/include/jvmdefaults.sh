@@ -51,7 +51,7 @@ getJavaSpecificOpts() {
           --add-modules=java.xml.bind \
           ${current_value}"
 
-  elif [ "${version}" -ge 11 ] && [ "${version}" -lt 15 ]; then
+  elif [ "${version}" -ge 11 ] && [ "${version}" -lt 14 ]; then
       value="\
           --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
           --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
@@ -62,8 +62,21 @@ getJavaSpecificOpts() {
           --illegal-access=permit \
           ${current_value}"
 
+  elif [ "${version}" -ge 14 ] && [ "${version}" -lt 15 ]; then
+        value="\
+            --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
+            --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
+            --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
+            --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
+            --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
+            --add-opens=java.base/jdk.internal.access=ALL-UNNAMED \
+            --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
+            --illegal-access=permit \
+            ${current_value}"
+
   elif [ "${version}" -ge 15 ] ; then
       value="\
+          --add-opens=java.base/jdk.internal.access=ALL-UNNAMED \
           --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED \
           --add-opens=java.base/sun.nio.ch=ALL-UNNAMED \
           --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
@@ -82,6 +95,7 @@ getJavaSpecificOpts() {
           --add-opens=java.base/java.lang.invoke=ALL-UNNAMED \
           --add-opens=java.base/java.math=ALL-UNNAMED \
           --add-opens=java.base/java.time=ALL-UNNAMED \
+          --add-opens=java.base/sun.security.ssl=ALL-UNNAMED \
           --add-opens=java.base/sun.security.x509=ALL-UNNAMED \
           --add-opens=java.sql/java.sql=ALL-UNNAMED \
           ${current_value}"

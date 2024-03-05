@@ -329,7 +329,7 @@ public class GridNearAtomicUpdateResponse extends GridCacheIdMessage implements 
     /**
      * Adds keys to collection of failed keys.
      *
-     * @param keys Key to add.
+     * @param keys Keys to add.
      * @param e Error cause.
      */
     synchronized void addFailedKeys(Collection<KeyCacheObject> keys, Throwable e) {

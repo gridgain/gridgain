@@ -99,7 +99,10 @@ public enum SecurityPermission {
     ADMIN_READ_DISTRIBUTED_PROPERTY,
 
     /** Administration operation: write distributed properties values. */
-    ADMIN_WRITE_DISTRIBUTED_PROPERTY;
+    ADMIN_WRITE_DISTRIBUTED_PROPERTY,
+
+    /** Permission for setting and resetting tracing configuration. */
+    TRACING_CONFIGURATION_UPDATE;
 
     /** Enumerated values. */
     private static final SecurityPermission[] VALS = values();

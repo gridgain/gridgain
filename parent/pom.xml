@@ -59,7 +59,7 @@
         <asm.version>4.2</asm.version>
         <aspectj.bundle.version>1.9.8</aspectj.bundle.version>
         <aspectj.version>1.9.8</aspectj.version>
-        <aws.sdk.version>1.12.494</aws.sdk.version>
+        <aws.sdk.version>1.12.651</aws.sdk.version>
         <aws.encryption.sdk.version>2.4.0</aws.encryption.sdk.version>
         <camel.version>2.22.3</camel.version>
         <bouncycastle.version>1.75</bouncycastle.version>
@@ -134,7 +134,7 @@
         <slf4j.version>1.7.32</slf4j.version>
         <slf4j16.version>1.6.4</slf4j16.version>
         <snappy.version>1.1.10.4</snappy.version>
-        <spring.version>5.2.24.RELEASE</spring.version>
+        <spring.version>5.3.31</spring.version>
         <spring.data-2.2.version>2.2.13.RELEASE</spring.data-2.2.version> <!-- don't forget to update spring version -->
         <spring41.osgi.feature.version>4.1.7.RELEASE_1</spring41.osgi.feature.version>
         <storm.version>1.2.3</storm.version>
@@ -908,7 +908,7 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
-                            <argLine>--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED --illegal-access=permit</argLine>
+                            <argLine>--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED --add-opens=java.base/jdk.internal.access=ALL-UNNAMED --illegal-access=permit</argLine>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -963,6 +963,7 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <argLine>
+                                --add-opens=java.base/jdk.internal.access=ALL-UNNAMED
                                 --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
                                 --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
                                 --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
@@ -979,6 +980,7 @@
                                 --add-opens=java.base/java.lang=ALL-UNNAMED
                                 --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
                                 --add-opens=java.base/java.time=ALL-UNNAMED
+                                --add-opens=java.base/sun.security.ssl=ALL-UNNAMED
                                 --add-opens=java.base/sun.security.x509=ALL-UNNAMED
                                 --add-opens=java.sql/java.sql=ALL-UNNAMED
                             </argLine>

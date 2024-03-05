@@ -26,10 +26,10 @@ import java.util.concurrent.locks.Lock;
  * <p>
  * <h1 class="header">Functionality</h1>
  * Distributed reentrant lock provides functionality similar to {@code java.util.concurrent.ReentrantLock}.
- * <h1 class="header">Creating Distributed ReentrantLock</h1>
+ * <h2 class="header">Creating Distributed ReentrantLock</h2>
  * Instance of cache reentrant lock can be created by calling the following method:
  * {@link Ignite#reentrantLock(String, boolean, boolean, boolean)}.
- * <h1 class="header">Protection from failover</h1>
+ * <h2 class="header">Protection from failover</h2>
  * Ignite lock can automatically recover from node failure.
  * <ul>
  * <li>If failoverSafe flag is set to true upon creation,
@@ -42,7 +42,7 @@ import java.util.concurrent.locks.Lock;
  * Broken lock cannot be reused again.
  * </ul>
  *
- * <h1 class="header">Implementation issues</h1>
+ * <h2 class="header">Implementation issues</h2>
  * Ignite lock comes in two flavours: fair and non-fair. Non-fair lock assumes no ordering should be imposed
  * on acquiring threads; in case of contention, threads from all nodes compete for the lock once the lock is released.
  * In most cases this is the desired behaviour. However, in some cases, using the non-fair lock can lead to uneven load

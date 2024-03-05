@@ -20,8 +20,9 @@ import java.io.Closeable;
 
 /**
  * This interface provides a rich API for working with distributedly cached atomic long value.
+ * <h1 class="header">Description</h1>
  * <p>
- * <h1 class="header">Functionality</h1>
+ * <h2 class="header">Functionality</h2>
  * Distributed atomic long includes the following main functionality:
  * <ul>
  * <li>
@@ -50,7 +51,7 @@ import java.io.Closeable;
  * </li>
  * </ul>
  * <p>
- * <h1 class="header">Creating Distributed Atomic Long</h1>
+ * <h2 class="header">Creating Distributed Atomic Long</h2>
  * Instance of distributed atomic long can be created by calling the following method:
  * <ul>
  *     <li>{@link Ignite#atomicLong(String, long, boolean)}</li>

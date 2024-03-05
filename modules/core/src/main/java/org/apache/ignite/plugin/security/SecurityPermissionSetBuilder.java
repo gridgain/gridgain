@@ -60,6 +60,9 @@ public class SecurityPermissionSetBuilder {
     /** Service permissions.*/
     private Map<String, Collection<SecurityPermission>> srvcPerms = new HashMap<>();
 
+    /** Tracing permissions. */
+    private Set<SecurityPermission> tracingPerms = new HashSet<>();
+
     /** System permissions.*/
     private Set<SecurityPermission> sysPerms = new HashSet<>();
 
@@ -145,6 +148,20 @@ public class SecurityPermissionSetBuilder {
     }
 
     /**
+     * Append tracing permission set.
+     *
+     * @param perms Permissions.
+     * @return {@link SecurityPermissionSetBuilder} refer to same permission builder.
+     */
+    public SecurityPermissionSetBuilder appendTracingPermissions(SecurityPermission... perms) {
+        validate(toCollection("TRACING_"), perms);
+
+        tracingPerms.addAll(toCollection(perms));
+
+        return this;
+    }
+
+    /**
      * Append system permission set.
      *
      * @param perms Permission.
@@ -169,6 +186,9 @@ public class SecurityPermissionSetBuilder {
         append(cachePerms, permSet.cachePermissions());
         append(taskPerms, permSet.taskPermissions());
         append(srvcPerms, permSet.servicePermissions());
+
+        if (permSet.tracingPermissions() != null)
+            tracingPerms.addAll(permSet.tracingPermissions());
 
         if (permSet.systemPermissions() != null)
             sysPerms.addAll(permSet.systemPermissions());
@@ -291,6 +311,7 @@ public class SecurityPermissionSetBuilder {
         permSet.setCachePermissions(unmodifiableMap(cachePerms));
         permSet.setTaskPermissions(unmodifiableMap(taskPerms));
         permSet.setServicePermissions(unmodifiableMap(srvcPerms));
+        permSet.setTracingPermissions(unmodifiableSet(tracingPerms));
         permSet.setSystemPermissions(unmodifiableSet(sysPerms));
 
         return permSet;

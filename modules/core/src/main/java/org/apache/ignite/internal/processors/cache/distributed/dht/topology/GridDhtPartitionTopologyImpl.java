@@ -2000,9 +2000,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public void onExchangeDone(@Nullable GridDhtPartitionsExchangeFuture fut,
-        AffinityAssignment assignment,
-        boolean updateRebalanceVer) {
+    @Override public void onExchangeDone(@Nullable GridDhtPartitionsExchangeFuture fut, AffinityAssignment assignment) {
         lock.writeLock().lock();
 
         try {
@@ -2020,8 +2018,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             } else
                 diffFromAffinityVer = readyTopVer;
 
-            if (!grp.isReplicated() || updateRebalanceVer)
-                updateRebalanceVersion(assignment.topologyVersion(), assignment.assignment());
+            updateRebalanceVersion(assignment.topologyVersion(), assignment.assignment());
 
             // Own orphan moving partitions (having no suppliers).
             if (fut != null && (fut.events().hasServerJoin() || fut.changedBaseline()))

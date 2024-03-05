@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.apache.ignite.IgniteBinary;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.binary.BinaryObjectException;
@@ -86,6 +87,10 @@ public class NoOpBinary implements IgniteBinary {
 
     /** {@inheritDoc} */
     @Override public BinaryType registerClass(Class<?> cls) throws BinaryObjectException {
+        throw unsupported();
+    }
+
+    @Override public void removeType(int typeId) throws IgniteException {
         throw unsupported();
     }
 

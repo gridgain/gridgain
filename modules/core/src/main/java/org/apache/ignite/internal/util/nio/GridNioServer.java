@@ -2563,15 +2563,7 @@ public class GridNioServer<T> {
                     throw e;
                 }
                 catch (Exception | Error e) { // TODO IGNITE-2659.
-                    processKeysSelectionError(e, attach);
-
-                    GridSelectorNioSessionImpl ses = attach.session();
-
-                    // Can be null if async connect failed.
-                    if (ses != null)
-                        close(ses, new GridNioException(e));
-                    else
-                        closeKey(key);
+                    processKeysSelectionError(e, attach, key);
                 }
             }
         }
@@ -2620,7 +2612,7 @@ public class GridNioServer<T> {
                     throw e;
                 }
                 catch (Exception | Error e) { // TODO IGNITE-2659.
-                    processKeysSelectionError(e, attach);
+                    processKeysSelectionError(e, attach, key);
                 }
             }
         }
@@ -2630,8 +2622,9 @@ public class GridNioServer<T> {
          *
          * @param e Exception or error which occured.
          * @param attach GridNioKeyAttachment.
+         * @param key SelectionKey.
          */
-        private void processKeysSelectionError(Throwable e, GridNioKeyAttachment attach) {
+        private void processKeysSelectionError(Throwable e, GridNioKeyAttachment attach, SelectionKey key) {
             if (X.hasCause(e, Error.class)) { // TODO IGNITE-2659.
                 try {
                     U.sleep(1000);
@@ -2647,6 +2640,12 @@ public class GridNioServer<T> {
                 log.info("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
             else if (log.isDebugEnabled())
                 log.debug("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
+
+            // Can be null if async connect failed.
+            if (ses != null)
+                close(ses, new GridNioException(e));
+            else
+                closeKey(key);
         }
 
         /**

@@ -242,8 +242,8 @@ public class CommonArgParser {
 
             if (cmd != null) {
                 if (command != null)
-                    throw new IllegalArgumentException("Only one action can be specified, but found at least two:" +
-                        cmd.toString() + ", " + command.toString());
+                    throw new IllegalArgumentException("Only one action can be specified, but found at least two: " +
+                        cmd.name() + ", " + command.name());
 
                 cmd.parseArguments(argIter);
 
