@@ -20,7 +20,6 @@ package org.apache.ignite.internal.client.thin;
 import org.apache.ignite.client.ClientCache;
 import org.apache.ignite.client.ClientConnectionException;
 import org.apache.ignite.configuration.ClientConfiguration;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
