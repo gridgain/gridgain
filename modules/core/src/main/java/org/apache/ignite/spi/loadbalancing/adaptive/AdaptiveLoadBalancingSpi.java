@@ -131,14 +131,14 @@ import static org.apache.ignite.events.EventType.EVT_TASK_FINISHED;
  *     }
  * }
  * </pre>
- * <h1 class="header">Which Node Probe To Use</h1>
+ * <h2 class="header">Which Node Probe To Use</h2>
  * There is no correct answer here. Every single node probe will work better or worse in
  * different environments. CPU load probe (default option) is the safest approach to start
  * with as it simply attempts to utilize every CPU on the grid to the maximum. However, you should
  * experiment with other probes by executing load tests in your environment and observing
  * which probe gives you best performance and load balancing.
  * <p>
- * <h1 class="header">Task Coding Example</h1>
+ * <h2 class="header">Task Coding Example</h2>
  * If you are using {@link org.apache.ignite.compute.ComputeTaskSplitAdapter} then load balancing logic
  * is transparent to your code and is handled automatically by the adapter.
  * Here is an example of how your task will look:
@@ -202,13 +202,13 @@ import static org.apache.ignite.events.EventType.EVT_TASK_FINISHED;
  * }
  * </pre>
  * <p>
- * <h1 class="header">Configuration</h1>
+ * <h2 class="header">Configuration</h2>
  * In order to use this load balancer, you should configure your grid instance
  * to use {@code JobsLoadBalancingSpi} either from Spring XML file or
  * directly. The following configuration parameters are supported:
- * <h2 class="header">Mandatory</h2>
+ * <h3 class="header">Mandatory</h3>
  * This SPI has no mandatory configuration parameters.
- * <h2 class="header">Optional</h2>
+ * <h3 class="header">Optional</h3>
  * This SPI has the following optional configuration parameters:
  * <ul>
  * <li>

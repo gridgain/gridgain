@@ -31,7 +31,9 @@ import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
 
 /**
- * Defines binary objects functionality. With binary objects you are able to:
+ * Defines binary objects functionality.
+ * <h1 class="header">Description</h1>
+ * With binary objects you are able to:
  * <ul>
  * <li>Seamlessly interoperate between Java, .NET, and C++.</li>
  * <li>Make any object binary with zero code change to your existing code.</li>
@@ -46,7 +48,7 @@ import org.apache.ignite.binary.BinaryType;
  * <li>Dynamically change structure of the classes without having to restart the cluster.</li>
  * <li>Index into binary objects for querying purposes.</li>
  * </ul>
- * <h1 class="header">Working With Binaries Directly</h1>
+ * <h2 class="header">Working With Binaries Directly</h2>
  * Once an object is defined as binary,
  * Ignite will always store it in memory in the binary (i.e. binary) format.
  * User can choose to work either with the binary format or with the deserialized form
@@ -81,7 +83,7 @@ import org.apache.ignite.binary.BinaryType;
  * <pre name=code class=java>
  * IgniteCache&lt;Integer.class, BinaryObject&gt; prj = cache.withKeepBinary();
  * </pre>
- * <h1 class="header">Automatic Binary Types</h1>
+ * <h2 class="header">Automatic Binary Types</h2>
  * Note that only binary classes are converted to {@link org.apache.ignite.binary.BinaryObject} format. Following
  * classes are never converted (e.g., {@link #toBinary(Object)} method will return original
  * object, and instances of these classes will be stored in cache without changes):
@@ -98,14 +100,14 @@ import org.apache.ignite.binary.BinaryType;
  *         them will still be converted if they are binary)
  *     </li>
  * </ul>
- * <h1 class="header">Working With Maps and Collections</h1>
+ * <h2 class="header">Working With Maps and Collections</h2>
  * All maps and collections in the binary objects are serialized automatically. When working
  * with different platforms, e.g. C++ or .NET, Ignite will automatically pick the most
  * adequate collection or map in either language. For example, {@link ArrayList} in Java will become
  * {@code List} in C#, {@link LinkedList} in Java is {@link LinkedList} in C#, {@link HashMap}
  * in Java is {@code Dictionary} in C#, and {@link TreeMap} in Java becomes {@code SortedDictionary}
  * in C#, etc.
- * <h1 class="header">Building Binary Objects</h1>
+ * <h2 class="header">Building Binary Objects</h2>
  * Ignite comes with {@link org.apache.ignite.binary.BinaryObjectBuilder} which allows to build binary objects dynamically:
  * <pre name=code class=java>
  * BinaryBuilder builder = Ignition.ignite().binary().builder();
@@ -130,13 +132,13 @@ import org.apache.ignite.binary.BinaryType;
  * </pre>
  * NOTE: you don't need to convert typed objects to binary format before storing
  * them in cache, Ignite will do that automatically.
- * <h1 class="header">Binary Metadata</h1>
+ * <h2 class="header">Binary Metadata</h2>
  * Even though Ignite binary protocol only works with hash codes for type and field names
  * to achieve better performance, Ignite provides metadata for all binary types which
  * can be queried ar runtime via any of the {@link IgniteBinary#type(Class)}
  * methods. Having metadata also allows for proper formatting of {@code BinaryObject#toString()} method,
  * even when binary objects are kept in binary format only, which may be necessary for audit reasons.
- * <h1 class="header">Dynamic Structure Changes</h1>
+ * <h2 class="header">Dynamic Structure Changes</h2>
  * Since objects are always cached in the binary binary format, server does not need to
  * be aware of the class definitions. Moreover, if class definitions are not present or not
  * used on the server, then clients can continuously change the structure of the binary
@@ -145,7 +147,7 @@ import org.apache.ignite.binary.BinaryType;
  * fields B and C, then the server-side binary object will have the fields A, B, and C.
  * As the structure of a binary object changes, the new fields become available for SQL queries
  * automatically.
- * <h1 class="header">Configuration</h1>
+ * <h2 class="header">Configuration</h2>
  * By default all your objects are considered as binary and no specific configuration is needed.
  * The only requirement Ignite imposes is that your object has an empty
  * constructor. Note, that since server side does not have to know the class definition,
@@ -185,7 +187,7 @@ import org.apache.ignite.binary.BinaryType;
  * You can also specify class name for a binary object via {@link org.apache.ignite.binary.BinaryTypeConfiguration}.
  * Do it in case if you need to override other configuration properties on per-type level, like
  * ID-mapper, or serializer.
- * <h1 class="header">Custom Affinity Keys</h1>
+ * <h2 class="header">Custom Affinity Keys</h2>
  * Often you need to specify an alternate key (not the cache key) for affinity routing whenever
  * storing objects in cache. For example, if you are caching {@code Employee} object with
  * {@code Organization}, and want to colocate employees with organization they work for,
@@ -207,7 +209,7 @@ import org.apache.ignite.binary.BinaryType;
  *     &lt;/bean&gt;
  * &lt;/property&gt;
  * </pre>
- * <h1 class="header">Serialization</h1>
+ * <h2 class="header">Serialization</h2>
  * Serialization and deserialization works out-of-the-box in Ignite. However, you can provide your own custom
  * serialization logic by optionally implementing {@link org.apache.ignite.binary.Binarylizable} interface, like so:
  * <pre name=code class=java>
@@ -246,14 +248,14 @@ import org.apache.ignite.binary.BinaryType;
  *     </li>
  * </ul>
  *
- * <h1 class="header">Custom ID Mappers</h1>
+ * <h2 class="header">Custom ID Mappers</h2>
  * Ignite implementation uses name hash codes to generate IDs for class names or field names
  * internally. However, in cases when you want to provide your own ID mapping schema,
  * you can provide your own {@link org.apache.ignite.binary.BinaryIdMapper} implementation.
  * <p>
  * ID-mapper may be provided either globally in {@link org.apache.ignite.configuration.BinaryConfiguration},
  * or for a specific type via {@link org.apache.ignite.binary.BinaryTypeConfiguration} instance.
- * <h1 class="header">Query Indexing</h1>
+ * <h2 class="header">Query Indexing</h2>
  * Binary objects can be indexed for querying by specifying index fields in
  * {@link org.apache.ignite.cache.QueryEntity} inside of specific
  * {@link org.apache.ignite.configuration.CacheConfiguration} instance,

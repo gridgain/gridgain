@@ -33,8 +33,9 @@ import org.apache.ignite.spi.collision.CollisionJobContext;
 import org.apache.ignite.spi.collision.CollisionSpi;
 
 /**
- * This class provides implementation for Collision SPI based on FIFO queue. Jobs are ordered
- * as they arrived and only {@link #getParallelJobsNumber()} number of jobs is allowed to
+ * This class provides implementation for Collision SPI based on FIFO queue.
+ * <h1 class="header">Description</h1>
+ * Jobs are ordered as they arrived and only {@link #getParallelJobsNumber()} number of jobs is allowed to
  * execute in parallel. Other jobs will be buffered in the passive queue.
  * <h1 class="header">Configuration</h1>
  * <h2 class="header">Mandatory</h2>

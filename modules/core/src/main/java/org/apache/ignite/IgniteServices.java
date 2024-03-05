@@ -31,6 +31,7 @@ import org.apache.ignite.services.ServiceDescriptor;
 
 /**
  * Defines functionality necessary to deploy distributed services on the grid.
+ * <h1 class="header">Description</h1>
  * <p>
  * Instance of {@code IgniteServices} which spans all cluster nodes can be obtained from Ignite as follows:
  * <pre class="brush:java">
@@ -58,7 +59,7 @@ import org.apache.ignite.services.ServiceDescriptor;
  * <li>Undeploy any of the deployed services.</li>
  * <li>Get information about service deployment topology within the grid.</li>
  * </ul>
- * <h1 class="header">Deployment From Configuration</h1>
+ * <h2 class="header">Deployment From Configuration</h2>
  * In addition to deploying managed services by calling any of the provided {@code deploy(...)} methods,
  * you can also automatically deploy services on startup by specifying them in {@link IgniteConfiguration}
  * like so:
@@ -84,15 +85,15 @@ import org.apache.ignite.services.ServiceDescriptor;
  * ...
  * Ignition.start(cfg);
  * </pre>
- * <h1 class="header">Load Balancing</h1>
+ * <h2 class="header">Load Balancing</h2>
  * In all cases, other than singleton service deployment, Ignite will automatically make sure that
  * an about equal number of services are deployed on each node within the grid. Whenever cluster topology
  * changes, Ignite will re-evaluate service deployments and may re-deploy an already deployed service
  * on another node for better load balancing.
- * <h1 class="header">Fault Tolerance</h1>
+ * <h2 class="header">Fault Tolerance</h2>
  * Ignite guarantees that services are deployed according to specified configuration regardless
  * of any topology changes, including node crashes.
- * <h1 class="header">Resource Injection</h1>
+ * <h2 class="header">Resource Injection</h2>
  * All distributed services can be injected with
  * ignite resources. Both, field and method based injections are supported. The following ignite
  * resources can be injected:
@@ -103,7 +104,7 @@ import org.apache.ignite.services.ServiceDescriptor;
  * <li>{@link org.apache.ignite.resources.SpringResource}</li>
  * </ul>
  * Refer to corresponding resource documentation for more information.
- * <h1 class="header">Service Example</h1>
+ * <h2 class="header">Service Example</h2>
  * Here is an example of how an distributed service may be implemented and deployed:
  * <pre name="code" class="java">
  * // Simple service implementation.
