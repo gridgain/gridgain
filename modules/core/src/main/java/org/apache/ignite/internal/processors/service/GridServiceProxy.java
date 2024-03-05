@@ -102,6 +102,8 @@ public class GridServiceProxy<T> implements Serializable {
     /** */
     public static final String SUBJECT_ID_KEY = "subjId";
 
+    public static final String REQUEST_ID_KEY = "requestId";
+
     /** Grid logger. */
     @GridToStringExclude
     private final IgniteLogger log;
@@ -198,12 +200,19 @@ public class GridServiceProxy<T> implements Serializable {
         if (callCtx != null && callCtx.attribute(SUBJECT_ID_KEY) != null)
             subjId = UUID.fromString(callCtx.attribute(SUBJECT_ID_KEY));
 
+        UUID requestId = null;
+        if (callCtx != null && callCtx.attribute(REQUEST_ID_KEY) != null)
+            requestId = UUID.fromString(callCtx.attribute(REQUEST_ID_KEY));
+
         if (U.isHashCodeMethod(mtd))
-            return invokeObjectMethods(() -> System.identityHashCode(proxy), "hashCode", subjId);
+            return invokeObjectMethods(() ->
+                System.identityHashCode(proxy), "hashCode", subjId, requestId);
         else if (U.isEqualsMethod(mtd))
-            return invokeObjectMethods(() -> proxy == args[0], "equals", subjId);
+            return invokeObjectMethods(() ->
+                proxy == args[0], "equals", subjId, requestId);
         else if (U.isToStringMethod(mtd))
-            return invokeObjectMethods(() -> GridServiceProxy.class.getSimpleName() + " [name=" + name + ", sticky=" + sticky + ']', "toString", subjId);
+            return invokeObjectMethods(() ->
+                GridServiceProxy.class.getSimpleName() + " [name=" + name + ", sticky=" + sticky + ']', "toString", subjId, requestId);
 
         ctx.gateway().readLock();
 
@@ -227,7 +236,7 @@ public class GridServiceProxy<T> implements Serializable {
                             Service svc = svcCtx.service();
 
                             if (svc != null)
-                                return callServiceLocally(svc, mtd, args, callCtx, subjId);
+                                return callServiceLocally(svc, mtd, args, callCtx, subjId, requestId);
                         }
                     }
                     else {
@@ -300,24 +309,24 @@ public class GridServiceProxy<T> implements Serializable {
     }
 
     /** */
-    private Object invokeObjectMethods(Callable<Object> mtdCall, String mtdName, UUID subjId) throws Exception {
+    private Object invokeObjectMethods(Callable<Object> mtdCall, String mtdName, UUID subjId, UUID requestId) throws Exception {
         Object res;
 
         try {
             recordServiceEvent(ctx, EVT_SERVICE_METHOD_EXECUTION_STARTED,
-                    "Service method execution has started.", name, mtdName, subjId);
+                    "Service method execution has started.", name, mtdName, subjId, requestId);
 
             res = mtdCall.call();
         }
         catch (Exception ex) {
             recordServiceEvent(ctx, EVT_SERVICE_METHOD_EXECUTION_FAILED,
-                    "Service method execution failed. " + ex.getMessage(), name, mtdName, subjId);
+                    "Service method execution failed. " + ex.getMessage(), name, mtdName, subjId, requestId);
 
             throw ex;
         }
 
         recordServiceEvent(ctx, EVT_SERVICE_METHOD_EXECUTION_FINISHED,
-                "Service method execution finished.", name, mtdName, subjId);
+                "Service method execution finished.", name, mtdName, subjId, requestId);
 
         return res;
     }
@@ -334,12 +343,13 @@ public class GridServiceProxy<T> implements Serializable {
         Method mtd,
         Object[] args,
         @Nullable ServiceCallContext callCtx,
-        UUID subjId
+        UUID subjId,
+        UUID requestId
     ) throws Exception {
         String mtdName = methodName(mtd);
 
         recordServiceEvent(ctx, EVT_SERVICE_METHOD_EXECUTION_STARTED,
-                "Service method execution has started.", name, mtdName, subjId);
+                "Service method execution has started.", name, mtdName, subjId, requestId);
 
         Object res;
         try {
@@ -356,13 +366,13 @@ public class GridServiceProxy<T> implements Serializable {
         }
         catch (Exception ex) {
             recordServiceEvent(ctx, EVT_SERVICE_METHOD_EXECUTION_FAILED,
-                    "Service method execution failed. " + ex.getMessage(), name, mtdName, subjId);
+                    "Service method execution failed. " + ex.getMessage(), name, mtdName, subjId, requestId);
 
             throw ex;
         }
 
         recordServiceEvent(ctx, EVT_SERVICE_METHOD_EXECUTION_FINISHED,
-                "Service method execution finished.", name, mtdName, subjId);
+                "Service method execution finished.", name, mtdName, subjId, requestId);
 
         return res;
     }
@@ -393,7 +403,7 @@ public class GridServiceProxy<T> implements Serializable {
     }
 
     private static void recordServiceEvent(GridKernalContext ctx, int eventType, String msg,
-                                           String svcName, String mtdName, UUID subjId) {
+                                           String svcName, String mtdName, UUID subjId, UUID requestId) {
         if (ctx.event().isRecordable(eventType)) {
             ServiceEvent event = new ServiceEvent(
                     ctx.discovery().localNode(),
@@ -401,7 +411,8 @@ public class GridServiceProxy<T> implements Serializable {
                     eventType,
                     svcName,
                     mtdName,
-                    subjId
+                    subjId,
+                    requestId
             );
 
             ctx.event().record(event);
@@ -550,19 +561,26 @@ public class GridServiceProxy<T> implements Serializable {
 
         private ServiceCallContext getCallCtxWithSubjId() {
             UUID subjId;
-
             if (ctx.security().enabled())
-                subjId = ctx.security().securityContext().subject().id();
+                subjId = ctx.security().securityContext()
+                    .subject()
+                    .id();
             else
                 subjId = ctx.localNodeId();
+
+            UUID requestId = UUID.randomUUID();
 
             if (callCtxProvider == null || callCtxProvider.get() == null)
                 return ServiceCallContext.builder()
                         .put(SUBJECT_ID_KEY, subjId.toString())
+                        .put(REQUEST_ID_KEY, requestId.toString())
                         .build();
             else {
                 ((ServiceCallContextImpl) callCtxProvider.get()).values()
-                        .put(SUBJECT_ID_KEY, ctx.localNodeId().toString());
+                        .put(SUBJECT_ID_KEY, subjId.toString());
+
+                ((ServiceCallContextImpl) callCtxProvider.get()).values()
+                    .put(REQUEST_ID_KEY, requestId.toString());
 
                 return callCtxProvider.get();
             }
@@ -631,12 +649,16 @@ public class GridServiceProxy<T> implements Serializable {
             if (callCtx != null && callCtx.attribute(SUBJECT_ID_KEY) != null)
                 subjId = UUID.fromString(callCtx.attribute(SUBJECT_ID_KEY));
 
+            UUID requestId = null;
+            if (callCtx != null && callCtx.attribute(REQUEST_ID_KEY) != null)
+                requestId = UUID.fromString(callCtx.attribute(REQUEST_ID_KEY));
+
             recordServiceEvent(ignite.context(), EVT_SERVICE_METHOD_EXECUTION_STARTED,
-                    "Service method execution has started.", svcName, mtdName, subjId);
+                    "Service method execution has started.", svcName, mtdName, subjId, requestId);
 
             if (ctx == null || ctx.service() == null) {
                 recordServiceEvent(ignite.context(), EVT_SERVICE_METHOD_EXECUTION_FAILED,
-                        "Service method execution failed. Service not found: " + svcName, svcName, mtdName, subjId);
+                        "Service method execution failed. Service not found: " + svcName, svcName, mtdName, subjId, requestId);
 
                 throw new GridServiceNotFoundException(svcName);
             }
@@ -655,13 +677,13 @@ public class GridServiceProxy<T> implements Serializable {
             }
             catch (Exception ex) {
                 recordServiceEvent(ignite.context(), EVT_SERVICE_METHOD_EXECUTION_FAILED,
-                        "Service method execution failed. " + ex.getMessage(), svcName, mtdName, subjId);
+                        "Service method execution failed. " + ex.getMessage(), svcName, mtdName, subjId, requestId);
 
                 throw ex;
             }
 
             recordServiceEvent(ignite.context(), EVT_SERVICE_METHOD_EXECUTION_FINISHED,
-                    "Service method execution finished.", svcName, mtdName, subjId);
+                    "Service method execution finished.", svcName, mtdName, subjId, requestId);
 
             return res;
         }
