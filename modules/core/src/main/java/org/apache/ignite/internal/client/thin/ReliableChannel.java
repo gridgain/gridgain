@@ -645,7 +645,7 @@ final class ReliableChannel implements AutoCloseable {
         }
 
         if (dfltChannelIdx == -1) {
-            dfltChannelIdx = ThreadLocalRandom.current().nextInt(reinitHolders.size() + 1);
+            dfltChannelIdx = ThreadLocalRandom.current().nextInt(reinitHolders.size());
 
             Collections.rotate(reinitHolders, -dfltChannelIdx);
         }
