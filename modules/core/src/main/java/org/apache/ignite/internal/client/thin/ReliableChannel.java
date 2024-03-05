@@ -19,7 +19,7 @@ package org.apache.ignite.internal.client.thin;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -645,16 +645,9 @@ final class ReliableChannel implements AutoCloseable {
         }
 
         if (dfltChannelIdx == -1) {
-            // If holder is not specified get the random holder from the range of holders with the same port.
-            reinitHolders.sort(Comparator.comparingInt(h -> F.first(h.getAddresses()).getPort()));
+            dfltChannelIdx = ThreadLocalRandom.current().nextInt(reinitHolders.size());
 
-            int limit = 0;
-            int port = F.first(reinitHolders.get(0).getAddresses()).getPort();
-
-            while (limit + 1 < reinitHolders.size() && F.first(reinitHolders.get(limit + 1).getAddresses()).getPort() == port)
-                limit++;
-
-            dfltChannelIdx = ThreadLocalRandom.current().nextInt(limit + 1);
+            Collections.rotate(reinitHolders, -dfltChannelIdx);
         }
 
         curChannelsGuard.writeLock().lock();
