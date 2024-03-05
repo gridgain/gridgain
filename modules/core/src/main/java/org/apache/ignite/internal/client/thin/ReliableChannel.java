@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -116,9 +115,6 @@ final class ReliableChannel implements AutoCloseable {
 
     /** Open channels counter. */
     private final AtomicInteger channelsCnt = new AtomicInteger();
-
-    /** Used to choose channel to connect for the first time randomly. */
-    private final Random channelIdxGen = new Random();
 
     /**
      * Constructor.
