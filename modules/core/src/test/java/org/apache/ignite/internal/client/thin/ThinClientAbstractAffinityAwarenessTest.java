@@ -84,6 +84,9 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
     /** Operations queue. */
     protected final Queue<T2<TestTcpClientChannel, ClientOperation>> opsQueue = new ConcurrentLinkedQueue<>();
 
+    /** Connection order queue. */
+    protected final Queue<TestTcpClientChannel> connOrderQueue = new ConcurrentLinkedQueue<>();
+
     /** Client instance. */
     protected IgniteClient client;
 
@@ -333,6 +336,7 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
             int chIdx = F.first(cfg.getAddresses()).getPort() - DFLT_PORT;
 
             channels[chIdx] = this;
+            connOrderQueue.offer(this);
 
             addTopologyChangeListener(ch -> log.info("Topology change detected [ch=" + ch + ", topVer=" +
                     ch.serverTopologyVersion() + ']'));
