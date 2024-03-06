@@ -70,6 +70,9 @@ public class BulkLoadCsvFormat implements BulkLoadFormat {
     /**    */
     @Nullable private boolean trim;
 
+    /** whether header will be used */
+    @Nullable private boolean header;
+
     /**
      * Returns the line separator pattern.
      *
@@ -212,5 +215,21 @@ public class BulkLoadCsvFormat implements BulkLoadFormat {
      */
     public void trim(@Nullable boolean trim) {
         this.trim = trim;
+    }
+
+    /**
+     * Whether header will be used
+     */
+    public boolean header() {
+        return header;
+    }
+
+    /**
+     * Sets whether header should be used.
+     * On import this means that the first line (header) will be ignored.
+     * On export this means that column names will be exported.
+     */
+    public void header(@Nullable boolean header) {
+        this.header = header;
     }
 }
