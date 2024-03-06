@@ -246,6 +246,8 @@ public abstract class CacheContinuousQueryCounterAbstractTest extends GridCommon
      * The main idea of the test is to emulate entries reordering after update counter is already defined.
      * Thus we can obtain situation when entries from equal partition already obtained update counter but finally registered in different
      * order due to some pauses in data streamer striped pool threads. Sprecial latch on event is for race emulation.
+     * This test use assumption that {@link org.apache.ignite.internal.processors.cache.GridCacheMapEntry#innerSet} raises
+     * {@code EVT_CACHE_OBJECT_PUT} after update counter was invoked.
      */
     @Test
     public void testDataStreamerItemsReordered() throws IgniteInterruptedCheckedException {
