@@ -63,6 +63,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Continuous queries counter tests.
@@ -248,7 +249,7 @@ public abstract class CacheContinuousQueryCounterAbstractTest extends GridCommon
      * order due to some pauses in data streamer striped pool threads. Sprecial latch on event is for race emulation.
      */
     @Test
-    public void testDataStreamerItemsReordered() {
+    public void testDataStreamerItemsReordered() throws IgniteInterruptedCheckedException {
         AtomicInteger partitionWithSlowThread = new AtomicInteger(-1);
         CountDownLatch partLatch = new CountDownLatch(1);
 
@@ -303,17 +304,9 @@ public abstract class CacheContinuousQueryCounterAbstractTest extends GridCommon
             }
 
             stmr.flush();
-
-            if (itemsToProcess != itemsHolder.size()) {
-                try {
-                    U.sleep(1000);
-                } catch (IgniteInterruptedCheckedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-
-            assertTrue("size: " + itemsHolder.size(), itemsToProcess == itemsHolder.size());
         }
+
+        assertTrue(waitForCondition(() -> itemsToProcess == itemsHolder.size(), 2000));
     }
 
     /**
