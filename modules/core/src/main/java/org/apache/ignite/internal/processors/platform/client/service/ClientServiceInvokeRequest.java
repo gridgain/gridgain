@@ -190,6 +190,7 @@ public class ClientServiceInvokeRequest extends ClientRequest {
                         method, args,
                         ServiceCallContext.builder()
                                 .put(GridServiceProxy.SUBJECT_ID_KEY, subjId.toString())
+                                .put(GridServiceProxy.REQUEST_ID_KEY, UUID.randomUUID().toString())
                                 .build()
                 );
             }
