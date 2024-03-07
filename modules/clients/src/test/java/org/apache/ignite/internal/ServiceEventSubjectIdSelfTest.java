@@ -148,6 +148,10 @@ public class ServiceEventSubjectIdSelfTest extends GridCommonAbstractTest {
         assertEquals("simpleService", ((ServiceEvent)evt).serviceName());
         assertEquals("simpleMethod", ((ServiceEvent)evt).methodName());
 
+        UUID startRequestId = ((ServiceEvent)evt).requestId();
+
+        assertNotNull(startRequestId);
+
         assertTrue(it.hasNext());
 
         evt = it.next();
@@ -158,6 +162,12 @@ public class ServiceEventSubjectIdSelfTest extends GridCommonAbstractTest {
         assertEquals(subjId, ((ServiceEvent)evt).subjectId());
         assertEquals("simpleService", ((ServiceEvent)evt).serviceName());
         assertEquals("simpleMethod", ((ServiceEvent)evt).methodName());
+
+        UUID finishRequestId = ((ServiceEvent)evt).requestId();
+
+        assertNotNull(finishRequestId);
+
+        assertEquals(startRequestId, finishRequestId);
     }
 
     /**
@@ -198,6 +208,10 @@ public class ServiceEventSubjectIdSelfTest extends GridCommonAbstractTest {
         assertEquals("simpleService", evt.serviceName());
         assertEquals("simpleMethod", evt.methodName());
 
+        UUID startRequestId = evt.requestId();
+
+        assertNotNull(startRequestId);
+
         assertTrue(it.hasNext());
 
         evt = (ServiceEvent)it.next();
@@ -208,6 +222,12 @@ public class ServiceEventSubjectIdSelfTest extends GridCommonAbstractTest {
         assertEquals(subjId, evt.subjectId());
         assertEquals("simpleService", evt.serviceName());
         assertEquals("simpleMethod", evt.methodName());
+
+        UUID finishRequestId = evt.requestId();
+
+        assertNotNull(finishRequestId);
+
+        assertEquals(startRequestId, finishRequestId);
     }
 
     /**
@@ -246,6 +266,10 @@ public class ServiceEventSubjectIdSelfTest extends GridCommonAbstractTest {
         assertEquals("simpleService", evt.serviceName());
         assertEquals("simpleFailureMethod", evt.methodName());
 
+        UUID startRequestId = evt.requestId();
+
+        assertNotNull(startRequestId);
+
         assertTrue(it.hasNext());
 
         evt = (ServiceEvent)it.next();
@@ -256,6 +280,12 @@ public class ServiceEventSubjectIdSelfTest extends GridCommonAbstractTest {
         assertEquals(subjId, evt.subjectId());
         assertEquals("simpleService", evt.serviceName());
         assertEquals("simpleFailureMethod", evt.methodName());
+
+        UUID finishRequestId = evt.requestId();
+
+        assertNotNull(finishRequestId);
+
+        assertEquals(startRequestId, finishRequestId);
     }
 
     /** */
