@@ -307,6 +307,14 @@ public class SqlBulkLoadCommand implements SqlCommand {
                     break;
                 }
 
+                case SqlKeyword.HEADER: {
+                    lex.shift();
+
+                    format.header(true);
+
+                    break;
+                }
+
                 default:
                     return;
             }

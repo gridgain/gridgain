@@ -187,6 +187,9 @@ public class SqlKeyword {
     /** Keyword: NULLSTRING. */
     public static final String NULLSTRING = "NULLSTRING";
 
+    /** Keyword: HEADER. */
+    public static final String HEADER = "HEADER";
+
     /** Keyword: NUMBER. */
     public static final String NUMBER = "NUMBER";
 
