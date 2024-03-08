@@ -450,14 +450,13 @@ public class ClientCacheConfigurationSerializer {
                     break;
 
                 case PLUGIN_CONFIGURATIONS:
-                    // TODO: How do we make this extensible?
-                    // * Pass string name, or code for plugin?
-                    // * Pass config size for every plugin (to skip if not present)
+                    // TODO: New protocol feature.
+                    // TODO: See how plugin configurations are handled in thick cache.
                     int pluginCnt = reader.readInt();
 
                     for (int j = 0; j < pluginCnt; j++) {
-                        // Skip plugin name.
-                        reader.readString();
+                        // Arbitrary class name - potential security risk?
+                        String pluginConfigClassName = reader.readString();
 
                         int pluginCfgSize = reader.readInt();
                         byte[] pluginBytes = reader.readByteArray();
