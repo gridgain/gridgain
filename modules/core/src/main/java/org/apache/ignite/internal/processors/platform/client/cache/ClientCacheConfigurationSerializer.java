@@ -454,36 +454,8 @@ public class ClientCacheConfigurationSerializer {
                     break;
 
                 case PLUGIN_CONFIGURATIONS:
-                    // TODO: New protocol feature.
-                    // TODO: See how plugin configurations are handled in thick cache.
-                    int pluginCnt = reader.readInt();
-
-                    if (pluginCnt > 0) {
-                        IgnitePluginProcessor pluginProcessor; // TODO: get from kernal
-                        ArrayList<CachePluginConfiguration> cachePluginCfgs = new ArrayList<>(pluginCnt);
-
-                        for (int j = 0; j < pluginCnt; j++) {
-                            String pluginName = reader.readString();
-                            int pluginCfgSize = reader.readInt();
-                            int pos = reader.in().position();
-
-                            PluginProvider pluginProvider = pluginProcessor.pluginProvider(pluginName);
-
-                            if (pluginProvider != null) {
-                                CachePluginConfiguration cachePluginCfg = pluginProvider.readClientCachePluginConfiguration(reader);
-                                if (cachePluginCfg != null) {
-                                    cachePluginCfgs.add(cachePluginCfg);
-                                }
-                            }
-
-                            // Deserialize as CachePluginConfiguration?
-                            // How do we achieve compatibility? Use a separate interface ClientCachePluginConfiguration
-                            // with read() method and a similar approach - map of codes and values.
-                            reader.in().position(pos + pluginCfgSize);
-                        }
-
-                        cfg.setPluginConfigurations(cachePluginCfgs.toArray(new CachePluginConfiguration[0]));
-                    }
+                    IgnitePluginProcessor pluginProcessor; // TODO: get from kernal
+                    readCachePluginConfigurations(reader, cfg, pluginProcessor);
 
                     break;
             }
@@ -591,5 +563,47 @@ public class ClientCacheConfigurationSerializer {
         }
 
         return res;
+    }
+
+    /**
+     * Reads cache plugin configurations.
+     * @param reader Reader.
+     * @param cfg Configuration.
+     * @param pluginProcessor Plugin processor.
+     */
+    private static void readCachePluginConfigurations(
+            BinaryReaderExImpl reader,
+            CacheConfiguration cfg,
+            IgnitePluginProcessor pluginProcessor) {
+        int pluginCnt = reader.readInt();
+        if (pluginCnt <= 0) {
+            return;
+        }
+
+        ArrayList<CachePluginConfiguration> cachePluginCfgs = new ArrayList<>(pluginCnt);
+
+        for (int j = 0; j < pluginCnt; j++) {
+            String pluginName = reader.readString();
+            int pluginCfgSize = reader.readInt();
+            int pos = reader.in().position();
+
+            PluginProvider pluginProvider = pluginProcessor.pluginProvider(pluginName);
+
+            if (pluginProvider != null) {
+                CachePluginConfiguration cachePluginCfg = pluginProvider.readClientCachePluginConfiguration(reader);
+                if (cachePluginCfg != null) {
+                    cachePluginCfgs.add(cachePluginCfg);
+                }
+            }
+
+            // Deserialize as CachePluginConfiguration?
+            // How do we achieve compatibility? Use a separate interface ClientCachePluginConfiguration
+            // with read() method and a similar approach - map of codes and values.
+            reader.in().position(pos + pluginCfgSize);
+        }
+
+        if (!cachePluginCfgs.isEmpty()) {
+            cfg.setPluginConfigurations(cachePluginCfgs.toArray(new CachePluginConfiguration[0]));
+        }
     }
 }
