@@ -139,6 +139,9 @@ public class ClientCacheConfigurationSerializer {
     /** */
     private static final short EXPIRY_POLICY = 407;
 
+    /** */
+    private static final short PLUGIN_CONFIGURATIONS = 500;
+
     /**
      * Writes the cache configuration.
      * @param writer Writer.
@@ -444,6 +447,14 @@ public class ClientCacheConfigurationSerializer {
 
                         cfg.setQueryEntities(entities);
                     }
+                    break;
+
+                case PLUGIN_CONFIGURATIONS:
+                    // TODO: How do we make this extensible?
+                    // * Pass string name, or code for plugin?
+                    // * Pass config size for every plugin (to skip if not present)
+                    int pluginCnt = reader.readInt();
+
                     break;
             }
         }
