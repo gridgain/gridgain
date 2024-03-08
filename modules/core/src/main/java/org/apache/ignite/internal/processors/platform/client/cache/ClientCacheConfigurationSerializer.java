@@ -36,9 +36,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
 import org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature;
 import org.apache.ignite.internal.processors.platform.utils.PlatformConfigurationUtils;
+import org.apache.ignite.internal.processors.plugin.IgnitePluginProcessor;
+import org.apache.ignite.plugin.CachePluginConfiguration;
+import org.apache.ignite.plugin.PluginProvider;
 
 import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.QUERY_ENTITY_PRECISION_AND_SCALE;
 
@@ -295,7 +299,7 @@ public class ClientCacheConfigurationSerializer {
      * @param protocolCtx Client protocol context.
      * @return Configuration.
      */
-    static CacheConfiguration read(BinaryRawReader reader, ClientProtocolContext protocolCtx) {
+    static CacheConfiguration read(BinaryReaderExImpl reader, ClientProtocolContext protocolCtx, Plu) {
         reader.readInt();  // Skip length.
 
         short propCnt = reader.readShort();
@@ -454,16 +458,31 @@ public class ClientCacheConfigurationSerializer {
                     // TODO: See how plugin configurations are handled in thick cache.
                     int pluginCnt = reader.readInt();
 
-                    for (int j = 0; j < pluginCnt; j++) {
-                        // Arbitrary class name - potential security risk?
-                        String pluginConfigClassName = reader.readString();
+                    if (pluginCnt > 0) {
+                        IgnitePluginProcessor pluginProcessor; // TODO: get from kernal
+                        ArrayList<CachePluginConfiguration> cachePluginCfgs = new ArrayList<>(pluginCnt);
 
-                        int pluginCfgSize = reader.readInt();
-                        byte[] pluginBytes = reader.readByteArray();
+                        for (int j = 0; j < pluginCnt; j++) {
+                            String pluginName = reader.readString();
+                            int pluginCfgSize = reader.readInt();
+                            int pos = reader.in().position();
 
-                        // Deserialize as CachePluginConfiguration?
-                        // How do we achieve compatibility? Use a separate interface ClientCachePluginConfiguration
-                        // with read() method and a similar approach - map of codes and values.
+                            PluginProvider pluginProvider = pluginProcessor.pluginProvider(pluginName);
+
+                            if (pluginProvider != null) {
+                                CachePluginConfiguration cachePluginCfg = pluginProvider.readClientCachePluginConfiguration(reader);
+                                if (cachePluginCfg != null) {
+                                    cachePluginCfgs.add(cachePluginCfg);
+                                }
+                            }
+
+                            // Deserialize as CachePluginConfiguration?
+                            // How do we achieve compatibility? Use a separate interface ClientCachePluginConfiguration
+                            // with read() method and a similar approach - map of codes and values.
+                            reader.in().position(pos + pluginCfgSize);
+                        }
+
+                        cfg.setPluginConfigurations(cachePluginCfgs.toArray(new CachePluginConfiguration[0]));
                     }
 
                     break;

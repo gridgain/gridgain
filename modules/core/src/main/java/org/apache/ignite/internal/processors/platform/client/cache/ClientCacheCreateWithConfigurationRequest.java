@@ -16,9 +16,9 @@
 
 package org.apache.ignite.internal.processors.platform.client.cache;
 
-import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.cache.CacheExistsException;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
 import org.apache.ignite.internal.processors.platform.client.ClientRequest;
@@ -40,7 +40,7 @@ public class ClientCacheCreateWithConfigurationRequest extends ClientRequest {
      * @param reader Reader.
      * @param protocolCtx Client protocol context.
      */
-    public ClientCacheCreateWithConfigurationRequest(BinaryRawReader reader, ClientProtocolContext protocolCtx) {
+    public ClientCacheCreateWithConfigurationRequest(BinaryReaderExImpl reader, ClientProtocolContext protocolCtx) {
         super(reader);
 
         cacheCfg = ClientCacheConfigurationSerializer.read(reader, protocolCtx);
