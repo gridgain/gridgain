@@ -463,7 +463,8 @@ public class ClientCacheConfigurationSerializer {
                         byte[] pluginBytes = reader.readByteArray();
 
                         // Deserialize as CachePluginConfiguration?
-                        // How do we achieve compatibility?
+                        // How do we achieve compatibility? Use a separate interface ClientCachePluginConfiguration
+                        // with read() method and a similar approach - map of codes and values.
                     }
 
                     break;
