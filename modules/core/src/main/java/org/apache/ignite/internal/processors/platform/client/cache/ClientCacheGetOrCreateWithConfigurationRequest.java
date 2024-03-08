@@ -48,7 +48,7 @@ public class ClientCacheGetOrCreateWithConfigurationRequest extends ClientReques
             IgnitePluginProcessor pluginProc) {
         super(reader);
 
-        cacheCfg = ClientCacheConfigurationSerializer.read(reader, protocolCtx);
+        cacheCfg = ClientCacheConfigurationSerializer.read(reader, protocolCtx, pluginProc);
     }
 
     /** {@inheritDoc} */
