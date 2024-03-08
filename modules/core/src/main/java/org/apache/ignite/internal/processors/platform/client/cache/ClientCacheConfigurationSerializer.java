@@ -299,7 +299,10 @@ public class ClientCacheConfigurationSerializer {
      * @param protocolCtx Client protocol context.
      * @return Configuration.
      */
-    static CacheConfiguration read(BinaryReaderExImpl reader, ClientProtocolContext protocolCtx, Plu) {
+    static CacheConfiguration read(
+            BinaryReaderExImpl reader,
+            ClientProtocolContext protocolCtx,
+            IgnitePluginProcessor pluginProc) {
         reader.readInt();  // Skip length.
 
         short propCnt = reader.readShort();
@@ -454,8 +457,7 @@ public class ClientCacheConfigurationSerializer {
                     break;
 
                 case PLUGIN_CONFIGURATIONS:
-                    IgnitePluginProcessor pluginProcessor; // TODO: get from kernal
-                    readCachePluginConfigurations(reader, cfg, pluginProcessor);
+                    readCachePluginConfigurations(reader, cfg, pluginProc);
 
                     break;
             }
@@ -569,12 +571,12 @@ public class ClientCacheConfigurationSerializer {
      * Reads cache plugin configurations.
      * @param reader Reader.
      * @param cfg Configuration.
-     * @param pluginProcessor Plugin processor.
+     * @param pluginProc Plugin processor.
      */
     private static void readCachePluginConfigurations(
             BinaryReaderExImpl reader,
             CacheConfiguration cfg,
-            IgnitePluginProcessor pluginProcessor) {
+            IgnitePluginProcessor pluginProc) {
         int pluginCnt = reader.readInt();
         if (pluginCnt <= 0) {
             return;
@@ -587,7 +589,7 @@ public class ClientCacheConfigurationSerializer {
             int pluginCfgSize = reader.readInt();
             int pos = reader.in().position();
 
-            PluginProvider pluginProvider = pluginProcessor.pluginProvider(pluginName);
+            PluginProvider pluginProvider = pluginProc.pluginProvider(pluginName);
 
             if (pluginProvider != null) {
                 CachePluginConfiguration cachePluginCfg = pluginProvider.readClientCachePluginConfiguration(reader);

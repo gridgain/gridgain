@@ -25,6 +25,7 @@ import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
+import org.apache.ignite.internal.processors.plugin.IgnitePluginProcessor;
 
 /**
  * Cache get or create with configuration request.
@@ -39,8 +40,12 @@ public class ClientCacheGetOrCreateWithConfigurationRequest extends ClientReques
      *
      * @param reader Reader.
      * @param protocolCtx Client protocol context.
+     * @param pluginProc Plugin processor.
      */
-    public ClientCacheGetOrCreateWithConfigurationRequest(BinaryReaderExImpl reader, ClientProtocolContext protocolCtx) {
+    public ClientCacheGetOrCreateWithConfigurationRequest(
+            BinaryReaderExImpl reader,
+            ClientProtocolContext protocolCtx,
+            IgnitePluginProcessor pluginProc) {
         super(reader);
 
         cacheCfg = ClientCacheConfigurationSerializer.read(reader, protocolCtx);
