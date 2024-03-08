@@ -455,6 +455,17 @@ public class ClientCacheConfigurationSerializer {
                     // * Pass config size for every plugin (to skip if not present)
                     int pluginCnt = reader.readInt();
 
+                    for (int j = 0; j < pluginCnt; j++) {
+                        // Skip plugin name.
+                        reader.readString();
+
+                        int pluginCfgSize = reader.readInt();
+                        byte[] pluginBytes = reader.readByteArray();
+
+                        // Deserialize as CachePluginConfiguration?
+                        // How do we achieve compatibility?
+                    }
+
                     break;
             }
         }
