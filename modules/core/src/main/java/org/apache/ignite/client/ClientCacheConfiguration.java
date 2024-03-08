@@ -29,6 +29,7 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.plugin.CachePluginConfiguration;
 
 /** Cache configuration. */
 public final class ClientCacheConfiguration implements Serializable {
@@ -136,6 +137,11 @@ public final class ClientCacheConfiguration implements Serializable {
      */
     private ExpiryPolicy expiryPlc;
 
+    /**
+     * @serial Cache plugin configurations.
+     */
+    private CachePluginConfiguration[] pluginCfgs;
+
     /** Default constructor. */
     public ClientCacheConfiguration() {
         // No-op.
@@ -178,6 +184,7 @@ public final class ClientCacheConfiguration implements Serializable {
         sqlSchema = ccfg.getSqlSchema();
         statisticsEnabled = ccfg.isStatisticsEnabled();
         writeSynchronizationMode = ccfg.getWriteSynchronizationMode();
+        pluginCfgs = ccfg.getPluginConfigurations();
     }
 
     /**
@@ -716,6 +723,27 @@ public final class ClientCacheConfiguration implements Serializable {
      */
     public ClientCacheConfiguration setExpiryPolicy(ExpiryPolicy expiryPlc) {
         this.expiryPlc = expiryPlc;
+
+        return this;
+    }
+
+    /**
+     * Gets cache plugin configurations.
+     *
+     * @return Cache plugin configurations.
+     */
+    public CachePluginConfiguration[] getPluginConfigurations() {
+        return pluginCfgs != null ? pluginCfgs : new CachePluginConfiguration[0];
+    }
+
+    /**
+     * Sets cache plugin configurations.
+     *
+     * @param pluginCfgs Cache plugin configurations.
+     * @return {@code this} for chaining.
+     */
+    public ClientCacheConfiguration setPluginConfigurations(CachePluginConfiguration... pluginCfgs) {
+        this.pluginCfgs = pluginCfgs;
 
         return this;
     }

@@ -66,6 +66,7 @@ import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy;
 import org.apache.ignite.internal.util.MutableSingletonList;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.plugin.CachePluginConfiguration;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.EXPIRY_POLICY;
@@ -371,6 +372,17 @@ public final class ClientUtils {
             } else if (cfg.getExpiryPolicy() != null) {
                 throw new ClientProtocolError(String.format("Expire policies are not supported by the server " +
                         "version %s, required version %s", protocolCtx.version(), EXPIRY_POLICY.verIntroduced()));
+            }
+
+            CachePluginConfiguration[] cachePluginCfgs = cfg.getPluginConfigurations();
+            if (cachePluginCfgs != null && cachePluginCfgs.length > 0) {
+                protocolCtx.checkFeatureSupported(ProtocolBitmaskFeature.CACHE_PLUGIN_CONFIGURATIONS);
+
+                itemWriter.accept(CfgItem.PLUGIN_CONFIGURATIONS, w -> {
+                    w.writeInt(cachePluginCfgs.length);
+
+                    // TODO: Cast to some interface for serialization.
+                });
             }
 
             writer.writeInt(origPos, out.position() - origPos - 4); // configuration length
@@ -819,7 +831,12 @@ public final class ClientUtils {
         /**
          * Expire policy.
          */
-        EXPIRE_POLICY(407);
+        EXPIRE_POLICY(407),
+
+        /**
+         * Plugin configurations.
+         */
+        PLUGIN_CONFIGURATIONS(500);
 
         /**
          * Code.
