@@ -17,6 +17,9 @@
 package org.apache.ignite.plugin;
 
 import java.io.Serializable;
+
+import org.apache.ignite.binary.BinaryRawReader;
+import org.apache.ignite.binary.BinaryRawWriter;
 import org.apache.ignite.configuration.CacheConfiguration;
 
 /**
@@ -24,4 +27,17 @@ import org.apache.ignite.configuration.CacheConfiguration;
  * and extend existing functionality of cache.
  */
 public interface CachePluginConfiguration<K, V> extends Serializable {
+    /**
+     * Serializes the configuration on the client side.
+     *
+     * @param writer Writer.
+     */
+    void serializeFromClient(BinaryRawWriter writer);
+
+    /**
+     * Deserializes the configuration from the client side.
+     *
+     * @param reader Reader.
+     */
+    void deserializeFromClient(BinaryRawReader reader);
 }

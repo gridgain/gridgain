@@ -381,7 +381,8 @@ public final class ClientUtils {
                 itemWriter.accept(CfgItem.PLUGIN_CONFIGURATIONS, w -> {
                     w.writeInt(cachePluginCfgs.length);
 
-                    // TODO: Cast to some interface for serialization.
+                    for (CachePluginConfiguration cfg0 : cachePluginCfgs)
+                        cfg0.serializeFromClient(w);
                 });
             }
 
