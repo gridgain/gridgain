@@ -585,8 +585,8 @@ public class ClientCacheConfigurationSerializer {
         ArrayList<CachePluginConfiguration> cachePluginCfgs = new ArrayList<>(pluginCnt);
 
         for (int j = 0; j < pluginCnt; j++) {
-            String pluginName = reader.readString();
             int pluginCfgSize = reader.readInt();
+            String pluginName = reader.readString();
             int pos = reader.in().position();
 
             PluginProvider pluginProvider = pluginProc.pluginProvider(pluginName);

@@ -257,7 +257,7 @@ public final class ClientUtils {
 
             AtomicInteger propCnt = new AtomicInteger(0);
 
-            BiConsumer<CfgItem, Consumer<BinaryRawWriter>> itemWriter = (cfgItem, cfgWriter) -> {
+            BiConsumer<CfgItem, Consumer<BinaryRawWriterEx>> itemWriter = (cfgItem, cfgWriter) -> {
                 writer.writeShort(cfgItem.code());
 
                 cfgWriter.accept(writer);
@@ -381,8 +381,13 @@ public final class ClientUtils {
                 itemWriter.accept(CfgItem.PLUGIN_CONFIGURATIONS, w -> {
                     w.writeInt(cachePluginCfgs.length);
 
-                    for (ClientCachePluginConfiguration cfg0 : cachePluginCfgs)
+                    for (ClientCachePluginConfiguration cfg0 : cachePluginCfgs) {
+                        int sizePos = w.reserveInt();
+
                         cfg0.write(w);
+
+                        w.writeInt(sizePos, out.position() - sizePos - 4);
+                    }
                 });
             }
 
