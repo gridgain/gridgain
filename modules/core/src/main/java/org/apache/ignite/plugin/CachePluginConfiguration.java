@@ -16,11 +16,9 @@
 
 package org.apache.ignite.plugin;
 
-import java.io.Serializable;
-
-import org.apache.ignite.binary.BinaryRawReader;
-import org.apache.ignite.binary.BinaryRawWriter;
 import org.apache.ignite.configuration.CacheConfiguration;
+
+import java.io.Serializable;
 
 /**
  * Cache plugin configuration. It is a point to extend existing {@link CacheConfiguration} 
