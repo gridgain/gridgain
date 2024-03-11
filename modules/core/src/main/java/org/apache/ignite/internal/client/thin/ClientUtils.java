@@ -37,7 +37,6 @@ import java.util.stream.Collectors;
 import javax.cache.expiry.ExpiryPolicy;
 
 import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.binary.BinaryRawWriter;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.CacheMode;
