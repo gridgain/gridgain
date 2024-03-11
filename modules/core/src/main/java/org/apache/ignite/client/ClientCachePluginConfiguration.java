@@ -14,17 +14,21 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.plugin;
+package org.apache.ignite.client;
 
-import java.io.Serializable;
-
-import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.binary.BinaryRawWriter;
-import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.plugin.CachePluginConfiguration;
 
 /**
- * Cache plugin configuration. It is a point to extend existing {@link CacheConfiguration} 
- * and extend existing functionality of cache.
+ * Client cache plugin configuration. Maps to {@link CachePluginConfiguration} on the server side.
  */
-public interface CachePluginConfiguration<K, V> extends Serializable {
+public interface ClientCachePluginConfiguration {
+    /**
+     * Serializes the configuration on the client side.
+     *
+     * @param writer Writer.
+     */
+    default void serializeFromClient(BinaryRawWriter writer) {
+        throw new UnsupportedOperationException("CachePluginConfiguration does not support thin client: " + getClass());
+    }
 }

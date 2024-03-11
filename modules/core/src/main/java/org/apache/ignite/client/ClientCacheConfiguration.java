@@ -29,7 +29,6 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.plugin.CachePluginConfiguration;
 
 /** Cache configuration. */
 public final class ClientCacheConfiguration implements Serializable {
@@ -140,7 +139,7 @@ public final class ClientCacheConfiguration implements Serializable {
     /**
      * @serial Cache plugin configurations.
      */
-    private CachePluginConfiguration[] pluginCfgs;
+    private ClientCachePluginConfiguration[] pluginCfgs;
 
     /** Default constructor. */
     public ClientCacheConfiguration() {
@@ -732,8 +731,8 @@ public final class ClientCacheConfiguration implements Serializable {
      *
      * @return Cache plugin configurations.
      */
-    public CachePluginConfiguration[] getPluginConfigurations() {
-        return pluginCfgs != null ? pluginCfgs : new CachePluginConfiguration[0];
+    public ClientCachePluginConfiguration[] getPluginConfigurations() {
+        return pluginCfgs != null ? pluginCfgs : new ClientCachePluginConfiguration[0];
     }
 
     /**
@@ -742,7 +741,7 @@ public final class ClientCacheConfiguration implements Serializable {
      * @param pluginCfgs Cache plugin configurations.
      * @return {@code this} for chaining.
      */
-    public ClientCacheConfiguration setPluginConfigurations(CachePluginConfiguration... pluginCfgs) {
+    public ClientCacheConfiguration setPluginConfigurations(ClientCachePluginConfiguration... pluginCfgs) {
         this.pluginCfgs = pluginCfgs;
 
         return this;
