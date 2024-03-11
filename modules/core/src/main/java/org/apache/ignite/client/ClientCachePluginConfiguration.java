@@ -28,7 +28,5 @@ public interface ClientCachePluginConfiguration {
      *
      * @param writer Writer.
      */
-    default void serializeFromClient(BinaryRawWriter writer) {
-        throw new UnsupportedOperationException("CachePluginConfiguration does not support thin client: " + getClass());
-    }
+    void write(BinaryRawWriter writer);
 }

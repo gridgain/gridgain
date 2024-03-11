@@ -49,6 +49,7 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.client.ClientCacheConfiguration;
+import org.apache.ignite.client.ClientCachePluginConfiguration;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryFieldMetadata;
 import org.apache.ignite.internal.binary.BinaryMetadata;
@@ -66,7 +67,6 @@ import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy;
 import org.apache.ignite.internal.util.MutableSingletonList;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.plugin.CachePluginConfiguration;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.client.thin.ProtocolVersionFeature.EXPIRY_POLICY;
@@ -374,15 +374,15 @@ public final class ClientUtils {
                         "version %s, required version %s", protocolCtx.version(), EXPIRY_POLICY.verIntroduced()));
             }
 
-            CachePluginConfiguration[] cachePluginCfgs = cfg.getPluginConfigurations();
+            ClientCachePluginConfiguration[] cachePluginCfgs = cfg.getPluginConfigurations();
             if (cachePluginCfgs != null && cachePluginCfgs.length > 0) {
                 protocolCtx.checkFeatureSupported(ProtocolBitmaskFeature.CACHE_PLUGIN_CONFIGURATIONS);
 
                 itemWriter.accept(CfgItem.PLUGIN_CONFIGURATIONS, w -> {
                     w.writeInt(cachePluginCfgs.length);
 
-                    for (CachePluginConfiguration cfg0 : cachePluginCfgs)
-                        cfg0.serializeFromClient(w);
+                    for (ClientCachePluginConfiguration cfg0 : cachePluginCfgs)
+                        cfg0.write(w);
                 });
             }
 
