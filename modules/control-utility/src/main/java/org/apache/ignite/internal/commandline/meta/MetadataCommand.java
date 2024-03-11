@@ -117,11 +117,6 @@ public class MetadataCommand extends AbstractCommand<Object> {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean experimental() {
-        return false;
-    }
-
-    /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
         return delegate != null ? delegate.confirmationPrompt() : null;
     }
