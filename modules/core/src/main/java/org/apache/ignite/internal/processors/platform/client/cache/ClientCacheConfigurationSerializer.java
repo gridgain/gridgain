@@ -598,9 +598,7 @@ public class ClientCacheConfigurationSerializer {
                 }
             }
 
-            // Deserialize as CachePluginConfiguration?
-            // How do we achieve compatibility? Use a separate interface ClientCachePluginConfiguration
-            // with read() method and a similar approach - map of codes and values.
+            // Plugin provider is allowed to read fewer bytes than available.
             reader.in().position(pos + pluginCfgSize);
         }
 
