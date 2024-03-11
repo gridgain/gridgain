@@ -32,12 +32,16 @@ public interface CachePluginConfiguration<K, V> extends Serializable {
      *
      * @param writer Writer.
      */
-    void serializeFromClient(BinaryRawWriter writer);
+    default void serializeFromClient(BinaryRawWriter writer) {
+        throw new UnsupportedOperationException("CachePluginConfiguration does not support thin client: " + getClass());
+    }
 
     /**
      * Deserializes the configuration from the client side.
      *
      * @param reader Reader.
      */
-    void deserializeFromClient(BinaryRawReader reader);
+    default void deserializeFromClient(BinaryRawReader reader) {
+        throw new UnsupportedOperationException("CachePluginConfiguration does not support thin client: " + getClass());
+    }
 }
