@@ -37,10 +37,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
-import org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature;
-import org.apache.ignite.internal.processors.platform.client.ClientStatus;
-import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
+import org.apache.ignite.internal.processors.platform.client.*;
 import org.apache.ignite.internal.processors.platform.utils.PlatformConfigurationUtils;
 import org.apache.ignite.internal.processors.plugin.IgnitePluginProcessor;
 import org.apache.ignite.plugin.CachePluginConfiguration;
@@ -459,6 +456,8 @@ public class ClientCacheConfigurationSerializer {
                     break;
 
                 case PLUGIN_CONFIGURATIONS:
+                    assert protocolCtx.isFeatureSupported(ClientBitmaskFeature.CACHE_PLUGIN_CONFIGURATIONS);
+
                     readCachePluginConfigurations(reader, cfg, pluginProc);
 
                     break;
