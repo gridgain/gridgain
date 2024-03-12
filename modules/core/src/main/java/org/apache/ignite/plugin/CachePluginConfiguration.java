@@ -16,9 +16,8 @@
 
 package org.apache.ignite.plugin;
 
-import org.apache.ignite.configuration.CacheConfiguration;
-
 import java.io.Serializable;
+import org.apache.ignite.configuration.CacheConfiguration;
 
 /**
  * Cache plugin configuration. It is a point to extend existing {@link CacheConfiguration} 
