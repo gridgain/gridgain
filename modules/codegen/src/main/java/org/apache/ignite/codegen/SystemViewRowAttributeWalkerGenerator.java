@@ -38,6 +38,8 @@ import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnCon
 import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnLocalDataView;
 import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnPartitionDataView;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.systemview.view.BinaryMetadataView;
 import org.apache.ignite.spi.systemview.view.CacheGroupView;
 import org.apache.ignite.spi.systemview.view.CachePagesListView;
 import org.apache.ignite.spi.systemview.view.CacheView;
@@ -115,6 +117,7 @@ public class SystemViewRowAttributeWalkerGenerator {
         gen.generateAndWrite(StripedExecutorTaskView.class, DFLT_SRC_DIR);
         gen.generateAndWrite(PagesListView.class, DFLT_SRC_DIR);
         gen.generateAndWrite(CachePagesListView.class, DFLT_SRC_DIR);
+        gen.generateAndWrite(BinaryMetadataView.class, DFLT_SRC_DIR);
         gen.generateAndWrite(QueueView.class, DFLT_SRC_DIR);
         gen.generateAndWrite(SetView.class, DFLT_SRC_DIR);
         gen.generateAndWrite(AtomicLongView.class, DFLT_SRC_DIR);
@@ -305,23 +308,21 @@ public class SystemViewRowAttributeWalkerGenerator {
     private void addLicenseHeader(List<String> code) {
         List<String> lic = new ArrayList<>();
 
-        lic.add("/*");
-        lic.add(" * Licensed to the Apache Software Foundation (ASF) under one or more");
-        lic.add(" * contributor license agreements.  See the NOTICE file distributed with");
-        lic.add(" * this work for additional information regarding copyright ownership.");
-        lic.add(" * The ASF licenses this file to You under the Apache License, Version 2.0");
-        lic.add(" * (the \"License\"); you may not use this file except in compliance with");
-        lic.add(" * the License.  You may obtain a copy of the License at");
-        lic.add(" *");
-        lic.add(" *      http://www.apache.org/licenses/LICENSE-2.0");
-        lic.add(" *");
-        lic.add(" * Unless required by applicable law or agreed to in writing, software");
-        lic.add(" * distributed under the License is distributed on an \"AS IS\" BASIS,");
-        lic.add(" * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.");
-        lic.add(" * See the License for the specific language governing permissions and");
-        lic.add(" * limitations under the License.");
-        lic.add(" */");
-        lic.add("");
+        lic.add("/*" + U.nl()
+                + " * Copyright 2024 GridGain Systems, Inc. and Contributors." + U.nl()
+                + " *" + U.nl()
+                + " * Licensed under the GridGain Community Edition License (the \"License\");" + U.nl()
+                + " * you may not use this file except in compliance with the License." + U.nl()
+                + " * You may obtain a copy of the License at" + U.nl()
+                + " *" + U.nl()
+                + " *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license" + U.nl()
+                + " *" + U.nl()
+                + " * Unless required by applicable law or agreed to in writing, software" + U.nl()
+                + " * distributed under the License is distributed on an \"AS IS\" BASIS," + U.nl()
+                + " * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied." + U.nl()
+                + " * See the License for the specific language governing permissions and" + U.nl()
+                + " * limitations under the License." + U.nl()
+                + " */" + U.nl());
 
         code.addAll(0, lic);
     }
