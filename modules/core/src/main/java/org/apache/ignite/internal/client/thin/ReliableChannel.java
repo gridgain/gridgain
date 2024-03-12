@@ -645,9 +645,13 @@ final class ReliableChannel implements AutoCloseable {
         }
 
         if (dfltChannelIdx == -1) {
-            dfltChannelIdx = ThreadLocalRandom.current().nextInt(reinitHolders.size());
+            if (reinitHolders.isEmpty())
+                throw new ClientException("No nodes available for connection");
 
-            Collections.rotate(reinitHolders, -dfltChannelIdx);
+            dfltChannelIdx = 0;
+            int rotation = ThreadLocalRandom.current().nextInt(reinitHolders.size());
+
+            Collections.rotate(reinitHolders, -rotation);
         }
 
         curChannelsGuard.writeLock().lock();
