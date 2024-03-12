@@ -231,7 +231,7 @@ public class ClientDiscoveryContext {
                 ranges.add(HostAndPortRange.parse(
                     a,
                     ClientConnectorConfiguration.DFLT_PORT,
-                    ClientConnectorConfiguration.DFLT_PORT + ClientConnectorConfiguration.DFLT_PORT_RANGE,
+                    ClientConnectorConfiguration.DFLT_PORT,
                     "Failed to parse Ignite server address"
                 ));
             }
