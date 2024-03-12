@@ -381,11 +381,7 @@ public final class ClientUtils {
                     w.writeInt(cachePluginCfgs.length);
 
                     for (ClientCachePluginConfiguration cfg0 : cachePluginCfgs) {
-                        int sizePos = w.reserveInt();
-
                         cfg0.write(w);
-
-                        w.writeInt(sizePos, out.position() - sizePos - 4);
                     }
                 });
             }
