@@ -39,6 +39,8 @@ import java.util.Set;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
 import org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature;
+import org.apache.ignite.internal.processors.platform.client.ClientStatus;
+import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
 import org.apache.ignite.internal.processors.platform.utils.PlatformConfigurationUtils;
 import org.apache.ignite.internal.processors.plugin.IgnitePluginProcessor;
 import org.apache.ignite.plugin.CachePluginConfiguration;
@@ -585,21 +587,20 @@ public class ClientCacheConfigurationSerializer {
         ArrayList<CachePluginConfiguration> cachePluginCfgs = new ArrayList<>(pluginCnt);
 
         for (int j = 0; j < pluginCnt; j++) {
-            int pluginCfgSize = reader.readInt();
-            int pos = reader.in().position();
-
             String pluginName = reader.readString();
-            PluginProvider pluginProvider = pluginProc.pluginProvider(pluginName);
 
-            if (pluginProvider != null) {
-                CachePluginConfiguration cachePluginCfg = pluginProvider.readClientCachePluginConfiguration(reader);
-                if (cachePluginCfg != null) {
-                    cachePluginCfgs.add(cachePluginCfg);
-                }
+            PluginProvider pluginProvider = pluginProc.pluginProvider(pluginName);
+            if (pluginProvider == null) {
+                throw new IgniteClientException(ClientStatus.FAILED, "Plugin provider not found: " + pluginName);
             }
 
-            // Plugin provider is allowed to read fewer bytes than available.
-            reader.in().position(pos + pluginCfgSize);
+            CachePluginConfiguration cachePluginCfg = pluginProvider.readClientCachePluginConfiguration(reader);
+            if (cachePluginCfg == null) {
+                throw new IgniteClientException(
+                        ClientStatus.FAILED, "Cache plugin configuration not found: " + pluginName);
+            }
+
+            cachePluginCfgs.add(cachePluginCfg);
         }
 
         if (!cachePluginCfgs.isEmpty()) {
