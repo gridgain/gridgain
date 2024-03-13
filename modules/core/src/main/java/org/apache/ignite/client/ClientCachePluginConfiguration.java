@@ -24,6 +24,13 @@ import org.apache.ignite.plugin.CachePluginConfiguration;
  */
 public interface ClientCachePluginConfiguration {
     /**
+     * Gets the name of the plugin.
+     *
+     * @return Plugin name.
+     */
+    String pluginName();
+
+    /**
      * Serializes the configuration on the client side.
      *
      * @param writer Writer.

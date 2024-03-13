@@ -381,6 +381,7 @@ public final class ClientUtils {
                     w.writeInt(cachePluginCfgs.length);
 
                     for (ClientCachePluginConfiguration cfg0 : cachePluginCfgs) {
+                        w.writeString(cfg0.pluginName());
                         cfg0.write(w);
                     }
                 });
