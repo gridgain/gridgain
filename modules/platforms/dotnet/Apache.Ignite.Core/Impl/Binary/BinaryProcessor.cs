@@ -46,7 +46,8 @@ namespace Apache.Ignite.Core.Impl.Binary
             RegisterType = 5,
             GetType = 6,
             RegisterEnum = 7,
-            GetMetaWithSchemas = 8
+            GetMetaWithSchemas = 8,
+            RemoveType = 9
             // ReSharper restore UnusedMember.Local
         }
 
@@ -175,6 +176,12 @@ namespace Apache.Ignite.Core.Impl.Binary
                 w.WriteInt(id);
                 w.WriteByte(platformId);
             }, r => Marshaller.StartUnmarshal(r).ReadString(), errorAction);
+        }
+
+        /** <inheritDoc /> */
+        public void RemoveType(int typeId)
+        {
+            DoOutInOp((int)Op.RemoveType, typeId);
         }
 
         /// <summary>

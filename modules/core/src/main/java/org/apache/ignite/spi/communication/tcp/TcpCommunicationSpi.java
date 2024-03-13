@@ -108,6 +108,7 @@ import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionInde
 /**
  * <tt>TcpCommunicationSpi</tt> is default communication SPI which uses
  * TCP/IP protocol and Java NIO to communicate with other nodes.
+ * <h1 class="header">Description</h1>
  * <p>
  * To enable communication with other nodes, this SPI adds {@link #ATTR_ADDRS}
  * and {@link #ATTR_PORT} local node attributes (see {@link ClusterNode#attributes()}.
@@ -126,7 +127,7 @@ import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionInde
  * {@link #DFLT_IDLE_CONN_TIMEOUT} period and then are closed. Use
  * {@link #setIdleConnectionTimeout(long)} configuration parameter to configure
  * you own idle connection timeout.
- * <h1 class="header">Failure Detection</h1>
+ * <h2 class="header">Failure Detection</h2>
  * Configuration defaults (see Configuration section below and
  * {@link IgniteConfiguration#getFailureDetectionTimeout()}) for details) are chosen to make possible for
  * communication SPI work reliably on most of hardware and virtual deployments, but this has made failure detection
@@ -141,10 +142,10 @@ import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionInde
  * If it's required to perform advanced settings of failure detection and
  * {@link IgniteConfiguration#getFailureDetectionTimeout()} is unsuitable then various {@code TcpCommunicationSpi}
  * configuration parameters may be used.
- * <h1 class="header">Configuration</h1>
- * <h2 class="header">Mandatory</h2>
+ * <h2 class="header">Configuration</h2>
+ * <h3 class="header">Mandatory</h3>
  * This SPI has no mandatory configuration parameters.
- * <h2 class="header">Optional</h2>
+ * <h3 class="header">Optional</h3>
  * The following configuration parameters are optional:
  * <ul>
  * <li>Address resolver (see {@link #setAddressResolver(AddressResolver)}</li>
@@ -176,7 +177,7 @@ import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionInde
  * (see {@link #setAckSendThresholdMillis(long)})</li>
  * <li>Maximum number of unacknowledged messages (see {@link #setUnacknowledgedMessagesBufferSize(int)})</li>
  * </ul>
- * <h2 class="header">Java Example</h2>
+ * <h3 class="header">Java Example</h>
  * TcpCommunicationSpi is used by default and should be explicitly configured
  * only if some SPI configuration parameters need to be overridden.
  * <pre name="code" class="java">
@@ -193,7 +194,7 @@ import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionInde
  * // Start grid.
  * Ignition.start(cfg);
  * </pre>
- * <h2 class="header">Spring Example</h2>
+ * <h3 class="header">Spring Example</h3>
  * TcpCommunicationSpi can be configured from Spring XML configuration file:
  * <pre name="code" class="xml">
  * &lt;bean id="grid.custom.cfg" class="org.apache.ignite.configuration.IgniteConfiguration" singleton="true"&gt;

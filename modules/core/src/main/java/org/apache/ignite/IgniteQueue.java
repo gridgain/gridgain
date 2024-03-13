@@ -35,7 +35,7 @@ import org.apache.ignite.lang.IgniteRunnable;
  * {@link Collection} methods in the queue may throw {@link IgniteException} in case
  * of failure.
  * <p>
- * <h1 class="header">Bounded vs Unbounded</h1>
+ * <h2 class="header">Bounded vs Unbounded</h2>
  * Queues can be {@code unbounded} or {@code bounded}. {@code Bounded} queues can
  * have maximum capacity. Queue capacity can be set at creation time and cannot be
  * changed later. Here is an example of how to create {@code bounded} {@code LIFO} queue with
@@ -48,7 +48,7 @@ import org.apache.ignite.lang.IgniteRunnable;
  * For {@code bounded} queues <b>blocking</b> operations, such as {@link #take()} or {@link #put(Object)}
  * are available. These operations will block until queue capacity changes to make the operation
  * possible.
- * <h1 class="header">Collocated vs Non-collocated</h1>
+ * <h2 class="header">Collocated vs Non-collocated</h2>
  * Queue items can be placed on one node or distributed throughout grid nodes
  * (governed by {@code collocated} parameter). {@code Non-collocated} mode is provided only
  * for partitioned caches. If {@code collocated} parameter is {@code true}, then all queue items
@@ -62,7 +62,7 @@ import org.apache.ignite.lang.IgniteRunnable;
  * ...
  * queue.add("item");
  * </pre>
- * <h1 class="header">Creating Cache Queues</h1>
+ * <h2 class="header">Creating Cache Queues</h2>
  * Instances of distributed cache queues can be created by calling the following method
  * on {@link Ignite} API:
  * <ul>

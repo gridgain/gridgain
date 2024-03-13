@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCheckedException;
@@ -37,7 +38,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.util.GridConcurrentMultiPairQueue;
 import org.apache.ignite.internal.util.future.CountDownFuture;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
-import org.jsr166.ConcurrentLinkedHashMap;
 
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getType;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getVersion;
@@ -57,7 +57,7 @@ public class CheckpointPagesWriter implements Runnable {
     private final GridConcurrentMultiPairQueue<PageMemoryEx, FullPageId> writePageIds;
 
     /** Page store used to write -> Count of written pages. */
-    private final ConcurrentLinkedHashMap<PageStore, LongAdder> updStores;
+    private final ConcurrentMap<PageStore, CheckpointPageStoreInfo> updStores;
 
     /** Future which should be finished when all pages would be written. */
     private final CountDownFuture doneFut;
@@ -89,6 +89,20 @@ public class CheckpointPagesWriter implements Runnable {
     /** Shutdown now. */
     private final BooleanSupplier shutdownNow;
 
+    /** Pages store info helper class. */
+    public static class CheckpointPageStoreInfo {
+        /** Written pages tracker. */
+        public final LongAdder checkpointedPages = new LongAdder();
+
+        /** Page store's groupId.*/
+        public final int groupId;
+
+        /** */
+        public CheckpointPageStoreInfo(int id) {
+            groupId = id;
+        }
+    }
+
     /**
      * Creates task for write pages
      *
@@ -110,7 +124,7 @@ public class CheckpointPagesWriter implements Runnable {
     CheckpointPagesWriter(
         CheckpointMetricsTracker tracker,
         GridConcurrentMultiPairQueue<PageMemoryEx, FullPageId> writePageIds,
-        ConcurrentLinkedHashMap<PageStore, LongAdder> updStores,
+        ConcurrentMap<PageStore, CheckpointPageStoreInfo> updStores,
         CountDownFuture doneFut,
         Runnable beforePageWrite,
         IgniteCacheSnapshotManager snapshotManager,
@@ -264,7 +278,10 @@ public class CheckpointPagesWriter implements Runnable {
 
                 PageStore store = pageWriter.write(pageMemEx, fullPageId, buf, tag);
 
-                updStores.computeIfAbsent(store, k -> new LongAdder()).increment();
+                CheckpointPageStoreInfo info
+                    = updStores.computeIfAbsent(store, k -> new CheckpointPageStoreInfo(groupId));
+
+                info.checkpointedPages.increment();
             }
         };
     }

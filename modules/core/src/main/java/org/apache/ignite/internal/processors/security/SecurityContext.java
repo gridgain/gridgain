@@ -56,6 +56,14 @@ public interface SecurityContext {
     public boolean serviceOperationAllowed(String srvcName, SecurityPermission perm);
 
     /**
+     * Checks whether tracing operation is allowed.
+     *
+     * @param perm Permission to check.
+     * @return {@code True} if tracing operation is allowed.
+     */
+    public boolean tracingOperationAllowed(SecurityPermission perm);
+
+    /**
      * Checks whether system-wide permission is allowed (excluding Visor task operations).
      *
      * @param perm Permission to check.

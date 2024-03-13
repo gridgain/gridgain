@@ -24,12 +24,12 @@ import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteRunnable;
 
 /**
- * Set implementation based on on In-Memory Data Grid.
+ * Set implementation based on In-Memory Data Grid.
  * <h1 class="header">Overview</h1>
  * Cache set implements {@link Set} interface and provides all methods from collections.
  * Note that all {@link Collection} methods in the set may throw {@link IgniteException} in case of failure
  * or if set was removed.
- * <h1 class="header">Collocated vs Non-collocated</h1>
+ * <h2 class="header">Collocated vs Non-collocated</h2>
  * Set items can be placed on one node or distributed throughout grid nodes
  * (governed by {@code collocated} parameter). {@code Non-collocated} mode is provided only
  * for partitioned caches. If {@code collocated} parameter is {@code true}, then all set items

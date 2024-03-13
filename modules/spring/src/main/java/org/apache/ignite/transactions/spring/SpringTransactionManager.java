@@ -51,7 +51,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * For more information, refer to
  * <a href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/transaction.html">
  * Spring Transaction Abstraction documentation</a>.
- * <h1 class="header">How To Enable Transaction support</h1>
+ * <h2 class="header">How To Enable Transaction support</h2>
  * To enable declarative transaction management on Ignite cache in your Spring application,
  * you will need to do the following:
  * <ul>

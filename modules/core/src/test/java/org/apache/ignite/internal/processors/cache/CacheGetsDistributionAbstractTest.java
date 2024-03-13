@@ -304,6 +304,15 @@ public abstract class CacheGetsDistributionAbstractTest extends GridCommonAbstra
         IgniteCache<Integer, String> clientCache = grid(CLIENT_NAME).cache(DEFAULT_CACHE_NAME)
             .withAllowAtomicOpsInTx();
 
+        for (int i = 0; i < gridCount(); i++) {
+            IgniteEx ignite = grid(i);
+
+            long getsCnt = ignite.cache(DEFAULT_CACHE_NAME).localMetrics().getCacheGets();
+
+            assertEquals("Before any read operation is invoked, the metric is not zero [node=" + i +
+                "cacheGets=" + getsCnt + ']', 0, getsCnt);
+        }
+
         try (Transaction tx = grid(CLIENT_NAME).transactions().txStart()) {
             if (batchMode) {
                 Map<Integer, String> results = clientCache.getAll(new TreeSet<>(keys));

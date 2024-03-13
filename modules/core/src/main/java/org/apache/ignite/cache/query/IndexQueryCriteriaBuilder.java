@@ -16,11 +16,11 @@
 
 package org.apache.ignite.cache.query;
 
+import java.util.Collection;
+import java.util.Collections;
 import org.apache.ignite.internal.cache.query.InIndexQueryCriterion;
 import org.apache.ignite.internal.cache.query.RangeIndexQueryCriterion;
 import org.apache.ignite.internal.util.typedef.internal.A;
-
-import java.util.Collection;
 
 /**
  * Factory of {@link IndexQueryCriterion} for {@link IndexQuery}.
@@ -34,11 +34,16 @@ public class IndexQueryCriteriaBuilder {
      * @return Criterion.
      */
     public static IndexQueryCriterion eq(String field, Object val) {
-        return between(field, val, val);
+        return in(field, Collections.singletonList(val));
     }
 
     /**
      * Less Than.
+     * <p>
+     * Please note that {@code null} is not a valid value for setting search boundaries.
+     * The result of executing this criterion will not contain {@code NULL} values for the specified {@code field}.
+     * To obtain {@code NULL} values of the specified {@code field}, use explicit {@code eq(field, null)} or
+     * {@code in(field, null, ...)} criteria.
      *
      * @param field Index field to apply criterion.
      * @param val Exclusive upper bound.
@@ -46,6 +51,7 @@ public class IndexQueryCriteriaBuilder {
      */
     public static IndexQueryCriterion lt(String field, Object val) {
         A.notNullOrEmpty(field, "field");
+        A.notNull(val, "val");
 
         RangeIndexQueryCriterion c = new RangeIndexQueryCriterion(field, null, val);
         c.lowerIncl(true);
@@ -56,6 +62,11 @@ public class IndexQueryCriteriaBuilder {
 
     /**
      * Less Than or Equal To.
+     * <p>
+     * Please note that {@code null} is not a valid value for setting search boundaries.
+     * The result of executing this criterion will not contain {@code NULL} values for the specified {@code field}.
+     * To obtain {@code NULL} values of the specified {@code field}, use explicit {@code eq(field, null)} or
+     * {@code in(field, null, ...)} criteria.
      *
      * @param field Index field to apply criterion.
      * @param val Inclusive upper bound.
@@ -63,6 +74,7 @@ public class IndexQueryCriteriaBuilder {
      */
     public static IndexQueryCriterion lte(String field, Object val) {
         A.notNullOrEmpty(field, "field");
+        A.notNull(val, "val");
 
         RangeIndexQueryCriterion c = new RangeIndexQueryCriterion(field, null, val);
         c.lowerIncl(true);
@@ -74,6 +86,11 @@ public class IndexQueryCriteriaBuilder {
 
     /**
      * Greater Than.
+     * <p>
+     * Please note that {@code null} is not a valid value for setting search boundaries.
+     * The result of executing this criterion will not contain {@code NULL} values for the specified {@code field}.
+     * To obtain {@code NULL} values of the specified {@code field}, use explicit {@code eq(field, null)} or
+     * {@code in(field, null, ...)} criteria.
      *
      * @param field Index field to apply criterion.
      * @param val Exclusive lower bound.
@@ -81,6 +98,7 @@ public class IndexQueryCriteriaBuilder {
      */
     public static IndexQueryCriterion gt(String field, Object val) {
         A.notNullOrEmpty(field, "field");
+        A.notNull(val, "val");
 
         RangeIndexQueryCriterion c = new RangeIndexQueryCriterion(field, val, null);
         c.upperIncl(true);
@@ -91,6 +109,11 @@ public class IndexQueryCriteriaBuilder {
 
     /**
      * Greater Than or Equal To.
+     * <p>
+     * Please note that {@code null} is not a valid value for setting search boundaries.
+     * The result of executing this criterion will not contain {@code NULL} values for the specified {@code field}.
+     * To obtain {@code NULL} values of the specified {@code field}, use explicit {@code eq(field, null)} or
+     * {@code in(field, null, ...)} criteria.
      *
      * @param field Index field to apply criterion.
      * @param val Inclusive lower bound.
@@ -98,6 +121,7 @@ public class IndexQueryCriteriaBuilder {
      */
     public static IndexQueryCriterion gte(String field, Object val) {
         A.notNullOrEmpty(field, "field");
+        A.notNull(val, "val");
 
         RangeIndexQueryCriterion c = new RangeIndexQueryCriterion(field, val, null);
         c.lowerIncl(true);
@@ -109,6 +133,11 @@ public class IndexQueryCriteriaBuilder {
 
     /**
      * Between.
+     * <p>
+     * Please note that {@code null} is not a valid value for setting search boundaries.
+     * The result of executing this criterion will not contain {@code NULL} values for the specified {@code field}.
+     * To obtain {@code NULL} values of the specified {@code field}, use explicit {@code eq(field, null)} or
+     * {@code in(field, null, ...)} criteria.
      *
      * @param field Index field to apply criterion.
      * @param lower Inclusive lower bound.
@@ -117,6 +146,8 @@ public class IndexQueryCriteriaBuilder {
      */
     public static IndexQueryCriterion between(String field, Object lower, Object upper) {
         A.notNullOrEmpty(field, "field");
+        A.notNull(lower, "lower");
+        A.notNull(upper, "upper");
 
         RangeIndexQueryCriterion c = new RangeIndexQueryCriterion(field, lower, upper);
         c.lowerIncl(true);

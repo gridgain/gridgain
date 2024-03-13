@@ -69,6 +69,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Implementation of {@link org.apache.ignite.spi.deployment.DeploymentSpi} which can deploy tasks from
  * different sources like file system folders, email and HTTP.
+ * <h1 class="header">Description</h1>
  * There are different ways to deploy tasks in grid and every deploy method
  * depends on selected source protocol. This SPI is configured to work
  * with a list of URI's. Every URI contains all data about protocol/transport
@@ -92,7 +93,7 @@ import org.jetbrains.annotations.Nullable;
  * <li>Local disk folder with structure of an unpacked deployment archive.</li>
  * <li>Local disk folder containing only compiled Java classes.</li>
  * </ul>
- * <h1 class="header">Deployment package</h1>
+ * <h2 class="header">Deployment package</h2>
  * Deployment package can be represented as a regular JAR file with a specific structure similar to WAR format.
  * Package files can have {@code '.jar'} or {@code '.gar'} extension.
  * <p>
@@ -131,7 +132,7 @@ import org.jetbrains.annotations.Nullable;
  * By default, all downloaded packages that have digital signature in {@code META-INF}
  * folder will be verified and deployed only if signature is valid.
  * <p>
- * <h1 class="header">URI</h1>
+ * <h2 class="header">URI</h2>
  * This SPI uses a hierarchical URI definition. For more information about standard URI
  * syntax refer to {@link URI java.net.URI} documentation.
  * <blockquote class="snippet">
@@ -147,7 +148,7 @@ import org.jetbrains.annotations.Nullable;
  * URI 'path' field will be automatically encoded. By default this flag is
  * set to {@code true}.
  * <p>
- * <h1 class="header">Code Example</h1>
+ * <h2 class="header">Code Example</h2>
  * The following example demonstrates how the deployment SPI can be used. It expects that you have a package file
  * in 'home/username/ignite/work/my_deployment/file' folder which contains 'myproject.HelloWorldTask' class.
  * <pre name="code" class="java">
@@ -163,7 +164,7 @@ import org.jetbrains.annotations.Nullable;
  *     ignite.compute().execute("myproject.HelloWorldTask", "my args");
  * }
  * </pre>
- * <h1 class="header">Configuration</h1>
+ * <h2 class="header">Configuration</h2>
  * {@code UriDeploymentSpi} has the following optional configuration
  * parameters (there are no mandatory parameters):
  * <ul>
@@ -186,7 +187,7 @@ import org.jetbrains.annotations.Nullable;
  * (see {@link #setEncodeUri(boolean) setEncodeUri(boolean)}).
  * </li>
  * </ul>
- * <h1 class="header">Protocols</h1>
+ * <h2 class="header">Protocols</h2>
  * Following protocols are supported by this SPI out of the box:
  * <ul>
  * <li><a href="#file">file://</a> - File protocol</li>
@@ -203,7 +204,7 @@ import org.jetbrains.annotations.Nullable;
  * have different configuration parameters described below. Parameters are
  * separated by '{@code ;}' character.
  * <p>
- * <h1 class="header">File</h1>
+ * <h2 class="header">File</h2>
  * For this protocol SPI will scan folder specified by URI on file system and
  * download any deplloyment files or directories that end with .jar or .gar from source
  * directory defined in URI. For file system URI must have scheme equal to {@code file}.
@@ -223,7 +224,7 @@ import org.jetbrains.annotations.Nullable;
  *      <td>{@code 5000} ms specified in {@link UriDeploymentFileScanner#DFLT_SCAN_FREQ}.</td>
  *  </tr>
  * </table>
- * <h2 class="header">File URI Example</h2>
+ * <h3 class="header">File URI Example</h3>
  * The following example will scan {@code 'c:/Program files/ignite/deployment'}
  * folder on local box every {@code '1000'} milliseconds. Note that since path
  * has spaces, {@link #setEncodeUri(boolean) setEncodeUri(boolean)} parameter must
@@ -232,7 +233,7 @@ import org.jetbrains.annotations.Nullable;
  * {@code file://freq=2000@localhost/c:/Program files/ignite/deployment}
  * </blockquote>
  * <a name="classes"></a>
- * <h2 class="header">HTTP/HTTPS</h2>
+ * <h3 class="header">HTTP/HTTPS</h3>
  * URI deployment scanner tries to read DOM of the html it points to and parses out href attributes of all &lt;a&gt; tags
  * - this becomes the collection of URLs to deployment package files that should be deployed. It's important that
  * HTTP scanner uses {@code URLConnection.getLastModified()} method to check if there were any changes since last
@@ -253,14 +254,14 @@ import org.jetbrains.annotations.Nullable;
  *      <td>{@code 300000} ms specified in {@link UriDeploymentHttpScanner#DFLT_SCAN_FREQ}.</td>
  *  </tr>
  * </table>
- * <h2 class="header">HTTP URI Example</h2>
+ * <h3 class="header">HTTP URI Example</h3>
  * The following example will download the page `www.mysite.com/ignite/deployment`, parse it and download and deploy
  * all deployment packages specified by href attributes of &lt;a&gt; elements on the page using authentication
  * {@code 'username:password'} every '10000' milliseconds (only new/updated packages).
  * <blockquote class="snippet">
  * {@code http://username:password;freq=10000@www.mysite.com:110/ignite/deployment}
  * </blockquote>
- * <h2 class="header">Java Example</h2>
+ * <h3 class="header">Java Example</h3>
  * UriDeploymentSpi needs to be explicitly configured to override default local deployment SPI.
  * <pre name="code" class="java">
  * UriDeploymentSpi deploySpi = new UriDeploymentSpi();
@@ -281,7 +282,7 @@ import org.jetbrains.annotations.Nullable;
  * Ignition.start(cfg);
  * </pre>
  * <p>
- * <h2 class="header">Spring Example</h2>
+ * <h3 class="header">Spring Example</h3>
  * UriDeploymentSpi can be configured from Spring XML configuration file:
  * <pre name="code" class="xml">
  * &lt;bean id="grid.custom.cfg" class="org.apache.ignite.configuration.IgniteConfiguration" singleton="true"&gt;

@@ -32,11 +32,12 @@ import org.apache.ignite.internal.jdbc.thin.JdbcThinUtils;
 
 /**
  * JDBC driver thin implementation for In-Memory Data Grid.
+ * <h1 class="header">Description</h1>
  * <p>
  * Driver allows to get distributed data from Ignite cache using standard
  * SQL queries and standard JDBC API. It will automatically get only fields that
  * you actually need from objects stored in cache.
- * <h1 class="header">Limitations</h1>
+ * <h2 class="header">Limitations</h2>
  * Data in Ignite cache is usually distributed across several nodes,
  * so some queries may not work as expected since the query will be sent to each
  * individual node and results will then be collected and returned as JDBC result set.
@@ -57,13 +58,13 @@ import org.apache.ignite.internal.jdbc.thin.JdbcThinUtils;
  *         will be duplicated.
  *     </li>
  * </ul>
- * <h1 class="header">SQL Notice</h1>
+ * <h2 class="header">SQL Notice</h2>
  * Driver allows to query data from several caches. Cache that driver is connected to is
  * treated as default schema in this case. Other caches can be referenced by their names.\
  *
- * <h1 class="header">Dependencies</h1>
+ * <h2 class="header">Dependencies</h2>
  * JDBC driver is located in main Ignite JAR in {@code IGNITE_HOME/libs} folder.
- * <h1 class="header">Configuration</h1>
+ * <h2 class="header">Configuration</h2>
  *
  * <p>
  * JDBC connection URL has the following pattern:
@@ -95,7 +96,7 @@ import org.apache.ignite.internal.jdbc.thin.JdbcThinUtils;
  *         <td>Yes</td>
  *     </tr>
  * </table>
- * <h1 class="header">Example</h1>
+ * <h2 class="header">Example</h2>
  * <pre name="code" class="java">
  * // Open JDBC connection.
  * Connection conn = DriverManager.getConnection("jdbc:ignite:thin//localhost:10800");

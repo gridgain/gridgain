@@ -16,11 +16,15 @@
 
 package org.apache.ignite.cache.query;
 
+import java.util.List;
+import java.util.stream.Collectors;
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -72,22 +76,25 @@ public class IndexQueryWrongIndexTest extends GridCommonAbstractTest {
     public void testSimilarIndexName() {
         cache.query(new SqlFieldsQuery("create index \"aA\" on Person (descId);")).getAll();
         cache.query(new SqlFieldsQuery("create index \"AA\" on Person (id);")).getAll();
-        cache.query(new SqlFieldsQuery("create index \"Aa\" on Person (descId);")).getAll();
+        cache.query(new SqlFieldsQuery("create index \"Aa\" on Person (descId desc);")).getAll();
 
-        cache.query(new SqlFieldsQuery("insert into Person (_KEY, id, descId) values (1, 1, 1);")).getAll();
+        cache.query(new SqlFieldsQuery("insert into Person (_KEY, id, descId) values (1, 2, 1);")).getAll();
+        cache.query(new SqlFieldsQuery("insert into Person (_KEY, id, descId) values (2, 1, 2);")).getAll();
+        cache.query(new SqlFieldsQuery("insert into Person (_KEY, id, descId) values (3, 3, 3);")).getAll();
 
-        checkIndex("aA", "descId");
-        checkIndex("AA", "id");
-        checkIndex("Aa", "descId");
-        checkIndex("aa", "id");
+        checkIndex("aA", "descId", F.asList(1, 2, 3));
+        checkIndex("AA", "id", F.asList(2, 1, 3));
+        checkIndex("Aa", "descId", F.asList(3, 2, 1));
+        checkIndex("aa", "id", F.asList(2, 1, 3));
     }
 
     /** */
-    private void checkIndex(String idxName, String fldName) {
+    private void checkIndex(String idxName, String fldName, List<Integer> expectedKeys) {
         IndexQuery<Long, Person> qry = new IndexQuery<Long, Person>(Person.class, idxName)
             .setCriteria(lte(fldName, Integer.MAX_VALUE));
 
-        assertEquals(1, cache.query(qry).getAll().size());
+        assertEquals(expectedKeys,
+            cache.query(qry).getAll().stream().map(Cache.Entry::getKey).collect(Collectors.toList()));
     }
 
     /** */

@@ -1471,6 +1471,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         collectAllocationPDSTask = ctx.timeout().schedule(new Runnable() {
             @Override public void run() {
+                if (!(localNode() instanceof TcpDiscoveryNode))
+                    return;
+
                 long allocatedPDSSize = allocatedPDSSize();
 
                 TcpDiscoveryNode node = (TcpDiscoveryNode) localNode();

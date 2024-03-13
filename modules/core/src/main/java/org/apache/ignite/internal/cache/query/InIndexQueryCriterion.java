@@ -16,17 +16,16 @@
 
 package org.apache.ignite.internal.cache.query;
 
-import org.apache.ignite.cache.query.IndexQueryCriterion;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 
 /**
  * Criterion for IN operator.
  */
-public final class InIndexQueryCriterion implements IndexQueryCriterion {
+public final class InIndexQueryCriterion implements SqlIndexQueryCriterion {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -50,5 +49,44 @@ public final class InIndexQueryCriterion implements IndexQueryCriterion {
     /** {@inheritDoc} */
     @Override public String field() {
         return field;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toSql(SqlBuilderContext ctx) {
+        if (vals.isEmpty()) {
+            throw new IllegalArgumentException("Unsupported criterion [criterion=" + this + ']');
+        }
+
+        SqlBuilderContext.ColumnDescriptor column = ctx.resolveColumn(field);
+        String columnName = column.name();
+
+        // SQL IN doesn't include NULLs, so must add IS NULL explicitly.
+        boolean hasNull = vals.contains(null);
+
+        if (!hasNull)
+            return buildInStatement(columnName, ctx);
+
+        if (vals.size() == 1)
+            return column.nullable() ? columnName + " IS NULL" : "FALSE";
+
+        return "(" + (column.nullable() ? columnName + " IS NULL OR " : "") + buildInStatement(columnName, ctx) + ')';
+    }
+
+    private String buildInStatement(String columnName, SqlBuilderContext ctx) {
+        SB buf = new SB();
+
+        vals.forEach(val -> {
+            if (val == null)
+                return;
+
+            if (buf.length() > 0)
+                buf.a(", ");
+
+            buf.a('?');
+
+            ctx.addArgument(val);
+        });
+
+        return columnName + " IN (" + buf + ')';
     }
 }

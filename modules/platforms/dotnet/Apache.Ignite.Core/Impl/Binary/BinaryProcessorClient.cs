@@ -53,7 +53,19 @@ namespace Apache.Ignite.Core.Impl.Binary
         /** <inheritdoc /> */
         public List<IBinaryType> GetBinaryTypes()
         {
-            throw IgniteClient.GetClientNotSupportedException();
+            return _socket.DoOutInOp(ClientOp.BinaryTypesGet, null,
+                ctx =>
+                {
+                    var size = ctx.Stream.ReadInt();
+                    var res = new List<IBinaryType>(size);
+
+                    for (var i = 0; i < size; i++)
+                    {
+                        res.Add(new BinaryType(ctx.Reader));
+                    }
+
+                    return res;
+                });
         }
 
         /** <inheritdoc /> */
@@ -111,6 +123,12 @@ namespace Apache.Ignite.Core.Impl.Binary
                 errorFunc == null
                     ? (Func<ClientStatusCode, string, string>) null
                     : (statusCode, msg) => errorFunc(new BinaryObjectException(msg)));
+        }
+
+        /** <inheritDoc /> */
+        public void RemoveType(int typeId)
+        {
+            _socket.DoOutInOp<object>(ClientOp.BinaryTypeRemove, ctx => ctx.Stream.WriteInt(typeId), null);
         }
     }
 }

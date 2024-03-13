@@ -47,7 +47,6 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheServerNotFoundException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.IndexQuery;
-import org.apache.ignite.cache.query.IndexQueryCriterion;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -58,8 +57,6 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
-import org.apache.ignite.internal.cache.query.InIndexQueryCriterion;
-import org.apache.ignite.internal.cache.query.RangeIndexQueryCriterion;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.managers.IgniteMBeansManager;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
@@ -195,8 +192,6 @@ import org.apache.ignite.internal.util.lang.IgniteSingletonIterator;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiClosure;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -235,10 +230,7 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.request
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.tx;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.txStart;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.TEXT;
-import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_FIELD_NAME;
-import static org.apache.ignite.internal.processors.query.QueryUtils.VAL_FIELD_NAME;
 import static org.apache.ignite.internal.processors.query.QueryUtils.matches;
-import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.UPDATE_RESULT_META;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.generateFieldsQueryString;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.session;
@@ -1120,271 +1112,24 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         H2TableDescriptor tblDesc = schemaMgr.tableForType(schemaName, cacheName, type);
 
-        if (tblDesc == null)
+        if (tblDesc == null) {
             throw new IgniteSQLException("Failed to find SQL table for type: " + type,
-                    IgniteQueryErrorCode.TABLE_NOT_FOUND);
-
-        SB sqlBuilder = new SB();
-        List<Object> args = null;
-
-        sqlBuilder.a("SELECT ").a(KEY_FIELD_NAME).a(", ").a(VAL_FIELD_NAME).a(' ');
-        sqlBuilder.a("FROM ").a(tblDesc.fullTableName()).a(' ');
-
-        String idxName = normalizeIndexName(qry.getIndexName(), tblDesc.table());
-
-        if (idxName != null) {
-            sqlBuilder.a("USE INDEX (").a(idxName).a(")").a(" ");
+                IgniteQueryErrorCode.TABLE_NOT_FOUND);
         }
 
-        if (qry.getCriteria() != null) {
-            List<IndexQueryCriterion> criteria = qry.getCriteria();
-            args = new ArrayList<>();
+        IndexQuerySqlGenerator.SqlGeneratorResult result = IndexQuerySqlGenerator.generate(qry, tblDesc);
+        SqlFieldsQuery fieldsQuery = new SqlFieldsQuery(result.sql());
 
-            for (int i = 0; i < criteria.size(); i++) {
-                IndexQueryCriterion criterion = criteria.get(i);
-                String column = normalizeColumnName(criterion.field(), tblDesc.table());
+        fieldsQuery.setArgs(result.arguments());
+        fieldsQuery.setLocal(qry.isLocal());
+        fieldsQuery.setPageSize(qry.getPageSize());
+        fieldsQuery.setSchema(schemaName);
 
-                if (i == 0) {
-                    sqlBuilder.a("WHERE ");
-                }
-                else {
-                    sqlBuilder.a(" AND ");
-                }
-
-                // Ignite's IndexQuery allows to compare with NULL and treats it as the smallest value.
-                // While SQL doesn't allow this, we mimic Ignite's behavior for compatibility.
-                if (criterion instanceof InIndexQueryCriterion) {
-                    appendInCriterion(column, (InIndexQueryCriterion)criterion, args, sqlBuilder);
-                }
-                else if (criterion instanceof RangeIndexQueryCriterion) {
-                    appendRangeCriterion(column, (RangeIndexQueryCriterion)criterion, args, sqlBuilder);
-                }
-                else {
-                    // Mimic Ignite error.
-                    throw new IllegalArgumentException(
-                        String.format("Unknown IndexQuery criterion type [%s]", criterion.getClass().getSimpleName())
-                    );
-                }
-            }
-        }
-
-        if (qry.getLimit() != 0) {
-            sqlBuilder.a("LIMIT ").a(qry.getLimit());
-        }
-
-        SqlFieldsQuery res = new SqlFieldsQuery(sqlBuilder.toString());
-
-        res.setArgs(args != null ? args.toArray() : null);
-        res.setLocal(qry.isLocal());
-        res.setPageSize(qry.getPageSize());
-        res.setSchema(schemaName);
         if (qry.getPartition() != null) {
-            res.setPartitions(qry.getPartition());
+            fieldsQuery.setPartitions(qry.getPartition());
         }
 
-        return res;
-    }
-
-    private void appendInCriterion(String column, InIndexQueryCriterion in, List<Object> args, SB buf) {
-        if (in.values().isEmpty()) {
-            throw new IllegalArgumentException("Unsupported criterion [criterion="
-                + S.toString(InIndexQueryCriterion.class, in) + "]");
-        }
-
-        // SQL IN doesn't include NULLs, so must add IS NULL explicitly.
-        boolean hasNull = in.values().contains(null);
-
-        if (hasNull) {
-            if (in.values().size() == 1) {
-                buf.a(column).a(" IS NULL");
-            } else {
-                buf.a("(")
-                    .a(column).a(" IS NULL")
-                    .a(" OR ");
-
-                buf.a(column);
-                boolean first = true;
-                for (Object val : in.values()) {
-                    if (val == null)
-                        continue;
-
-                    if (first) {
-                        buf.a(" IN (?");
-                        first = false;
-                    } else {
-                        buf.a(", ?");
-                    }
-                    args.add(val);
-                }
-                buf.a(")");
-
-                buf.a(")");
-            }
-        } else {
-            buf.a(column);
-            boolean first = true;
-            for (Object val : in.values()) {
-                if (first) {
-                    buf.a(" IN (?");
-                    first = false;
-                } else {
-                    buf.a(", ?");
-                }
-                args.add(val);
-            }
-            buf.a(")");
-        }
-    }
-
-    private void appendRangeCriterion(String column, RangeIndexQueryCriterion range, List<Object> args, SB buf) {
-        Object lower = range.lower();
-        Object upper = range.upper();
-        boolean lowerIncl = range.lowerIncl();
-        boolean upperIncl = range.upperIncl();
-        boolean lowerNull = range.lowerNull();
-        boolean upperNull = range.upperNull();
-
-        // Consider all flags to decipher which condition was requested.
-        // TODO refactor - replace RangeIndexQueryCriterion with per-condition criterions.
-        if (lower == null && upper == null) {
-            if (lowerNull && upperNull) {
-                // between(null, null) or eq(null) in which case all flags are true.
-                if (!lowerIncl || !upperIncl) {
-                    throw new IllegalArgumentException("Unsupported criterion [criterion="
-                        + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-                }
-
-                buf.a(column).a(" IS NULL");
-            } else if (lowerNull) {
-                // gt(null) or gte(null), upperIncl is always true.
-                if (!upperIncl) {
-                    throw new IllegalArgumentException("Unsupported criterion [criterion="
-                        + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-                }
-
-                if (!lowerIncl) {
-                    // gt(null) - same as NOT NULL
-                    buf.a(column).a(" IS NOT NULL");
-                } else {
-                    // gte(null) - same as TRUE - no condition
-                    buf.a("TRUE");
-                }
-            } else if (upperNull) {
-                // lt(null) or lte(null), lowerIncl is always true.
-                if (!lowerIncl) {
-                    throw new IllegalArgumentException("Unsupported criterion [criterion="
-                        + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-                }
-
-                if (!upperIncl) {
-                    // lt(null) - same as FALSE
-                    buf.a("FALSE");
-                }
-                else {
-                    // lte(null) - same as IS NULL
-                    buf.a(column).a(" IS NULL");
-                }
-            } else {
-                // Neither lower nor upper are set explicitly.
-                throw new IllegalArgumentException("Unsupported criterion [criterion="
-                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-            }
-        } else if (lower != null && upper == null) {
-            if (lowerNull || !upperIncl) {
-                throw new IllegalArgumentException("Unsupported criterion [criterion="
-                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-            }
-
-            if (upperNull) {
-                // between(lower, NULL), flags are always the same.
-                if (!(lowerIncl)) {
-                    throw new IllegalArgumentException("Unsupported criterion [criterion="
-                        + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-                }
-
-                // Same as FALSE.
-                buf.a(" FALSE");
-            } else {
-                // gt(lower) or gte(lower), upperIncl is always true.
-                buf.a(column).a(lowerIncl ? " >= ?" : " > ?");
-                args.add(lower);
-            }
-        } else if (lower == null /*&& upper != null*/) {
-            if (upperNull || !lowerIncl) {
-                throw new IllegalArgumentException("Unsupported criterion [criterion="
-                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-            }
-
-            // lowerNull is technically irrelevant.
-            // lowerNull == true means between(NULL, upper).
-            // lowerNull == false means gt(upper) or gte(upper).
-            // However, gt(upper) and gte(upper) must include IS NULL anyway.
-
-            // Still, the following flags invariant holds for between(NULL, upper).
-            if (lowerNull && !upperIncl) {
-                throw new IllegalArgumentException("Unsupported criterion [criterion="
-                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-            }
-
-            buf.a("(")
-                .a(column).a(" IS NULL")
-                .a(" OR ")
-                .a(column).a(upperIncl ? " <= ?" : " < ?")
-                .a(")");
-            args.add(upper);
-        } else /*if (lower != null && upper != null)*/ {
-            // between(lower, upper), flags are always the same.
-            if (!(lowerIncl && upperIncl && !lowerNull && !upperNull)) {
-                throw new IllegalArgumentException("Unsupported criterion [criterion="
-                    + S.toString(RangeIndexQueryCriterion.class, range) + "]");
-            }
-
-            buf.a(column).a(" >= ?")
-                .a(" AND ")
-                .a(column).a(" <= ?");
-            args.add(lower);
-            args.add(upper);
-        }
-    }
-
-    private String normalizeColumnName(String field, GridH2Table table) {
-        String upperCaseField = field.toUpperCase();
-
-        if (table.doesColumnExist(upperCaseField))
-            return field;
-
-        if (table.doesColumnExist(field))
-            return quoteString(field);
-
-        throw new IgniteException("Column \"" + upperCaseField + "\" not found.");
-    }
-
-    private @Nullable String normalizeIndexName(@Nullable String idxName, GridH2Table table) {
-        if (idxName == null) {
-            return null;
-        }
-
-        if (PK_IDX_NAME.equals(idxName)) {
-            return null;
-        }
-
-        ArrayList<Index> indexes = table.getIndexes();
-        String upperCaseIdxName = idxName.toUpperCase();
-
-        for (Index idx : indexes) {
-            if (idx.getName().equals(upperCaseIdxName))
-                return idxName;
-
-            if (idx.getName().equals(idxName))
-                return quoteString(idxName);
-        }
-
-        throw new IgniteException("Index \"" + upperCaseIdxName + "\" not found.");
-    }
-
-    /** Returns quoted string. */
-    private static String quoteString(String input) {
-        return "\"" + input + "\"";
+        return fieldsQuery;
     }
 
     /**

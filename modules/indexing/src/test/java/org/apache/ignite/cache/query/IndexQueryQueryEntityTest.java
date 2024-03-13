@@ -22,7 +22,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
-import java.util.stream.Collectors;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -211,14 +210,13 @@ public class IndexQueryQueryEntityTest extends GridCommonAbstractTest {
      * @param right Last cache key, exclusive.
      */
     private void check(QueryCursor<Cache.Entry<Long, Person>> cursor, int left, int right, boolean desc) {
-        List<Cache.Entry<Long, Person>> all = cursor.getAll()
-                .stream()
-                .sorted(
-                        (e1, e2) -> desc
-                                ? Long.compare(e2.getKey(), e1.getKey())
-                                : Long.compare(e1.getKey(), e2.getKey())
-                )
-                .collect(Collectors.toList());
+        List<Cache.Entry<Long, Person>> all = cursor.getAll();
+
+        if (qryIdx == null) {
+            all.sort((e1, e2) -> desc
+                ? Long.compare(e2.getKey(), e1.getKey())
+                : Long.compare(e1.getKey(), e2.getKey()));
+        }
 
         assertEquals(right - left, all.size());
 

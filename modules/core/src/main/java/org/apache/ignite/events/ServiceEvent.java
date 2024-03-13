@@ -72,6 +72,8 @@ public class ServiceEvent extends EventAdapter {
     /**  */
     private final UUID subjId;
 
+    private final UUID requestId;
+
     /** {@inheritDoc} */
     @Override public String shortDisplay() {
         return name() + ": svcName=" + svcName;
@@ -88,11 +90,12 @@ public class ServiceEvent extends EventAdapter {
      * @param subjId Security subject ID.
      */
     public ServiceEvent(ClusterNode node, String msg, int type, String svcName,
-        @Nullable String mtdName, @Nullable UUID subjId) {
+        @Nullable String mtdName, @Nullable UUID subjId, UUID requestId) {
         super(node, msg, type);
         this.svcName = svcName;
         this.mtdName = mtdName;
         this.subjId = subjId;
+        this.requestId = requestId;
     }
 
     /**
@@ -123,6 +126,15 @@ public class ServiceEvent extends EventAdapter {
      */
     public UUID subjectId() {
         return subjId;
+    }
+
+    /**
+     * Gets service request ID initiated this service event.
+     *
+     * @return Request ID.
+     */
+    public UUID requestId() {
+        return requestId;
     }
 
     /** {@inheritDoc} */

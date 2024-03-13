@@ -47,7 +47,7 @@ import org.springframework.context.event.ContextRefreshedEvent;
  * executing the method. For more information, refer to
  * <a href="http://docs.spring.io/spring/docs/current/spring-framework-reference/html/cache.html">
  * Spring Cache Abstraction documentation</a>.
- * <h1 class="header">How To Enable Caching</h1>
+ * <h2 class="header">How To Enable Caching</h2>
  * To enable caching based on Ignite cache in your Spring application,
  * you will need to do the following:
  * <ul>
@@ -134,7 +134,7 @@ import org.springframework.context.event.ContextRefreshedEvent;
  * {@link #setIgniteInstanceName(String) igniteInstanceName} are provided, cache manager
  * will try to use default Grid instance (the one with the {@code null}
  * name). If it doesn't exist, exception will be thrown.
- * <h1>Starting Remote Nodes</h1>
+ * <h2>Starting Remote Nodes</h2>
  * Keep in mind that the node started inside your application is an entry point
  * to the whole topology it connects to. You can start as many remote standalone
  * nodes as you need using {@code bin/ignite.{sh|bat}} scripts provided in

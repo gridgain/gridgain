@@ -120,6 +120,11 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             {
                 return null;
             }
+
+            public void RemoveType(int typeId)
+            {
+                // No-op.
+            }
         }
     }
 }

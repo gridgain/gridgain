@@ -23,12 +23,13 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 
 /**
- * Grid task interface defines a task that can be executed on the grid. Grid task
- * is responsible for splitting business logic into multiple grid jobs, receiving
+ * Grid task interface defines a task that can be executed on the grid.
+ * <h1 class="header">Description</h1>
+ * Grid task is responsible for splitting business logic into multiple grid jobs, receiving
  * results from individual grid jobs executing on remote nodes, and reducing
  * (aggregating) received jobs' results into final grid task result.
  * <p>
- * <h1 class="header">Grid Task Execution Sequence</h1>
+ * <h2 class="header">Grid Task Execution Sequence</h2>
  * <ol>
  * <li>
  *      Upon request to execute a grid task with given task name system will find
@@ -105,7 +106,7 @@ import org.apache.ignite.cluster.ClusterNode;
  * </li>
  * </ol>
  * <p>
- * <h1 class="header">Continuous Job Mapper</h1>
+ * <h2 class="header">Continuous Job Mapper</h2>
  * For cases when jobs within split are too large to fit in memory at once or when
  * simply not all jobs in task are known during {@link #map(List, Object)} step,
  * use {@link ComputeTaskContinuousMapper} to continuously stream jobs from task even after {@code map(...)}
@@ -113,7 +114,7 @@ import org.apache.ignite.cluster.ClusterNode;
  * may grow too large - in this case it may make sense to use it in combination with
  * {@link ComputeTaskNoResultCache @ComputeTaskNoResultCache} annotation.
  * <p>
- * <h1 class="header">Task Result Caching</h1>
+ * <h2 class="header">Task Result Caching</h2>
  * Sometimes job results are too large or task simply has too many jobs to keep track
  * of which may hinder performance. In such cases it may make sense to disable task
  * result caching by attaching {@link ComputeTaskNoResultCache @ComputeTaskNoResultCache} annotation to task class, and
@@ -124,7 +125,7 @@ import org.apache.ignite.cluster.ClusterNode;
  * job siblings on {@link ComputeTaskSession} will also be empty to prevent number
  * of job siblings from growing as well.
  * <p>
- * <h1 class="header">Resource Injection</h1>
+ * <h2 class="header">Resource Injection</h2>
  * Grid task implementation can be injected using IoC (dependency injection) with
  * ignite resources. Both, field and method based injection are supported.
  * The following ignite resources can be injected:
@@ -137,7 +138,7 @@ import org.apache.ignite.cluster.ClusterNode;
  * </ul>
  * Refer to corresponding resource documentation for more information.
  * <p>
- * <h1 class="header">Grid Task Adapters</h1>
+ * <h2 class="header">Grid Task Adapters</h2>
  * {@code ComputeTask} comes with several convenience adapters to make the usage easier:
  * <ul>
  * <li>
