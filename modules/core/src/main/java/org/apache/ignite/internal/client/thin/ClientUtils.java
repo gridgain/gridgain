@@ -37,7 +37,6 @@ import java.util.stream.Collectors;
 import javax.cache.expiry.ExpiryPolicy;
 
 import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.binary.BinaryRawWriter;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.CacheMode;
@@ -49,6 +48,7 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.client.ClientCacheConfiguration;
+import org.apache.ignite.client.ClientCachePluginConfiguration;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryFieldMetadata;
 import org.apache.ignite.internal.binary.BinaryMetadata;
@@ -256,7 +256,7 @@ public final class ClientUtils {
 
             AtomicInteger propCnt = new AtomicInteger(0);
 
-            BiConsumer<CfgItem, Consumer<BinaryRawWriter>> itemWriter = (cfgItem, cfgWriter) -> {
+            BiConsumer<CfgItem, Consumer<BinaryRawWriterEx>> itemWriter = (cfgItem, cfgWriter) -> {
                 writer.writeShort(cfgItem.code());
 
                 cfgWriter.accept(writer);
@@ -371,6 +371,20 @@ public final class ClientUtils {
             } else if (cfg.getExpiryPolicy() != null) {
                 throw new ClientProtocolError(String.format("Expire policies are not supported by the server " +
                         "version %s, required version %s", protocolCtx.version(), EXPIRY_POLICY.verIntroduced()));
+            }
+
+            ClientCachePluginConfiguration[] cachePluginCfgs = cfg.getPluginConfigurations();
+            if (cachePluginCfgs != null && cachePluginCfgs.length > 0) {
+                protocolCtx.checkFeatureSupported(ProtocolBitmaskFeature.CACHE_PLUGIN_CONFIGURATIONS);
+
+                itemWriter.accept(CfgItem.PLUGIN_CONFIGURATIONS, w -> {
+                    w.writeInt(cachePluginCfgs.length);
+
+                    for (ClientCachePluginConfiguration cfg0 : cachePluginCfgs) {
+                        w.writeString(cfg0.pluginName());
+                        cfg0.write(w);
+                    }
+                });
             }
 
             writer.writeInt(origPos, out.position() - origPos - 4); // configuration length
@@ -819,7 +833,12 @@ public final class ClientUtils {
         /**
          * Expire policy.
          */
-        EXPIRE_POLICY(407);
+        EXPIRE_POLICY(407),
+
+        /**
+         * Plugin configurations.
+         */
+        PLUGIN_CONFIGURATIONS(500);
 
         /**
          * Code.

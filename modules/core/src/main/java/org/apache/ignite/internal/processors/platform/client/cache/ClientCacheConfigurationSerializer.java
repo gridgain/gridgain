@@ -36,9 +36,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
-import org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature;
+import org.apache.ignite.internal.binary.BinaryReaderExImpl;
+import org.apache.ignite.internal.processors.platform.client.*;
 import org.apache.ignite.internal.processors.platform.utils.PlatformConfigurationUtils;
+import org.apache.ignite.internal.processors.plugin.IgnitePluginProcessor;
+import org.apache.ignite.plugin.CachePluginConfiguration;
+import org.apache.ignite.plugin.PluginProvider;
 
 import static org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature.QUERY_ENTITY_PRECISION_AND_SCALE;
 
@@ -138,6 +141,9 @@ public class ClientCacheConfigurationSerializer {
 
     /** */
     private static final short EXPIRY_POLICY = 407;
+
+    /** */
+    private static final short PLUGIN_CONFIGURATIONS = 500;
 
     /**
      * Writes the cache configuration.
@@ -292,7 +298,10 @@ public class ClientCacheConfigurationSerializer {
      * @param protocolCtx Client protocol context.
      * @return Configuration.
      */
-    static CacheConfiguration read(BinaryRawReader reader, ClientProtocolContext protocolCtx) {
+    static CacheConfiguration read(
+            BinaryReaderExImpl reader,
+            ClientProtocolContext protocolCtx,
+            IgnitePluginProcessor pluginProc) {
         reader.readInt();  // Skip length.
 
         short propCnt = reader.readShort();
@@ -445,6 +454,13 @@ public class ClientCacheConfigurationSerializer {
                         cfg.setQueryEntities(entities);
                     }
                     break;
+
+                case PLUGIN_CONFIGURATIONS:
+                    assert protocolCtx.isFeatureSupported(ClientBitmaskFeature.CACHE_PLUGIN_CONFIGURATIONS);
+
+                    readCachePluginConfigurations(reader, cfg, pluginProc);
+
+                    break;
             }
         }
 
@@ -550,5 +566,44 @@ public class ClientCacheConfigurationSerializer {
         }
 
         return res;
+    }
+
+    /**
+     * Reads cache plugin configurations.
+     * @param reader Reader.
+     * @param cfg Configuration.
+     * @param pluginProc Plugin processor.
+     */
+    private static void readCachePluginConfigurations(
+            BinaryReaderExImpl reader,
+            CacheConfiguration cfg,
+            IgnitePluginProcessor pluginProc) {
+        int pluginCnt = reader.readInt();
+        if (pluginCnt <= 0) {
+            return;
+        }
+
+        ArrayList<CachePluginConfiguration> cachePluginCfgs = new ArrayList<>(pluginCnt);
+
+        for (int j = 0; j < pluginCnt; j++) {
+            String pluginName = reader.readString();
+
+            PluginProvider pluginProvider = pluginProc.pluginProvider(pluginName);
+            if (pluginProvider == null) {
+                throw new IgniteClientException(ClientStatus.FAILED, "Plugin provider not found: " + pluginName);
+            }
+
+            CachePluginConfiguration cachePluginCfg = pluginProvider.readClientCachePluginConfiguration(reader);
+            if (cachePluginCfg == null) {
+                throw new IgniteClientException(
+                        ClientStatus.FAILED, "Cache plugin configuration not found: " + pluginName);
+            }
+
+            cachePluginCfgs.add(cachePluginCfg);
+        }
+
+        if (!cachePluginCfgs.isEmpty()) {
+            cfg.setPluginConfigurations(cachePluginCfgs.toArray(new CachePluginConfiguration[0]));
+        }
     }
 }

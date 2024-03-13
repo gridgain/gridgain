@@ -22,6 +22,7 @@ import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.binary.BinaryRawReaderEx;
 
 /**
  * Pluggable Ignite component.
@@ -82,6 +83,18 @@ public interface PluginProvider<C extends PluginConfiguration> {
      * @param ctx Plugin context.
      */
     public CachePluginProvider createCacheProvider(CachePluginContext ctx);
+
+    /**
+     * Reads client cache plugin configuration.
+     *
+     * @param reader Reader.
+     * @return Cache plugin configuration or null when no configuration is provided.
+     * @param <K> Key type.
+     * @param <V> Value type.
+     */
+    public default <K, V> CachePluginConfiguration<K, V> readClientCachePluginConfiguration(BinaryRawReaderEx reader) {
+        return null;
+    }
 
     /**
      * Starts grid component.

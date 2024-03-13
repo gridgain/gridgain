@@ -70,7 +70,10 @@ public enum ProtocolBitmaskFeature {
     INDEX_QUERY(14),
 
     /** IndexQuery limit. */
-    INDEX_QUERY_LIMIT(15);
+    INDEX_QUERY_LIMIT(15),
+
+    /** Cache plugin configurations. GG-specific, use higher id to avoid conflicts. */
+    CACHE_PLUGIN_CONFIGURATIONS(32);
 
     /** */
     private static final EnumSet<ProtocolBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =
