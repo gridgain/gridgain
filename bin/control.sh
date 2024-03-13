@@ -40,12 +40,19 @@ fi
 # Set SCRIPTS_HOME - base path to scripts.
 #
 SCRIPTS_HOME="${IGNITE_HOME_TMP}/bin"
+. "${SCRIPTS_HOME}"/include/functions.sh
 
-source "${SCRIPTS_HOME}"/include/functions.sh
-source "${SCRIPTS_HOME}"/include/jvmdefaults.sh
+# Include JVM options from jvmdefaults.sh
+. "${SCRIPTS_HOME}"/include/jvmdefaults.sh ||exit 1
+
+# Call the function
+addReflectiveAccessOptions
+
+# Use the function
+CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} $(addReflectiveAccessOptions)"
 
 #
-# Discover path to Java executable and check it's version.
+# Discover path to Java executable and check its version.
 #
 checkJava
 
@@ -62,7 +69,7 @@ fi
 # Set IGNITE_LIBS.
 #
 . "${SCRIPTS_HOME}"/include/setenv.sh
-. "${SCRIPTS_HOME}"/include/build-classpath.sh # Will be removed in the binary release.
+
 CP="${IGNITE_LIBS}:${IGNITE_HOME}/libs/optional/ignite-zookeeper/*"
 
 RANDOM_NUMBER=$("$JAVA" -cp "${CP}" org.apache.ignite.startup.cmdline.CommandLineRandomNumberGenerator)
@@ -112,7 +119,7 @@ fi
 # Assertions are disabled by default since version 3.5.
 # If you want to enable them - set 'ENABLE_ASSERTIONS' flag to '1'.
 #
-ENABLE_ASSERTIONS="1"
+ENABLE_ASSERTIONS="0"
 
 #
 # Set '-ea' options if assertions are enabled.
@@ -137,21 +144,13 @@ fi
 #
 # Final CONTROL_JVM_OPTS for Java 9+ compatibility
 #
+
+
+
+# Get Java specific options
 CONTROL_JVM_OPTS=$(getJavaSpecificOpts $version "$CONTROL_JVM_OPTS")
-CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED"
-CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-exports=java.base/sun.nio.ch=ALL-UNNAMED"
-CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED"
-CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
-CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/sun.nio.ch=ALL-UNNAMED"
-CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED"
-CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED"
-CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED"
-CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED"
-CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/java.io=ALL-UNNAMED"
-CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/java.nio=ALL-UNNAMED"
-CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/java.util=ALL-UNNAMED"
-CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --add-opens=java.base/java.lang=ALL-UNNAMED"
-CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} --illegal-access=warn"
+
+
 
 if [ -n "${JVM_OPTS}" ] ; then
   echo "JVM_OPTS environment variable is set, but will not be used. To pass JVM options use CONTROL_JVM_OPTS"
@@ -161,18 +160,18 @@ fi
 case $osname in
     Darwin*)
         "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} "${DOCK_OPTS}" \
-         -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
+          -DIGNITE_HOME="${IGNITE_HOME}" \
          -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} "$@"
     ;;
     OS/390*)
         "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} \
-         -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
-         $(getIbmSslOpts $version) \
+          -DIGNITE_HOME="${IGNITE_HOME}" \
+         -Dcom.ibm.jsse2.overrideDefaultTLS=true -Dssl.KeyManagerFactory.algorithm=IbmX509 \
          -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} "$@"
     ;;
     *)
         "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} \
-         -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
+          -DIGNITE_HOME="${IGNITE_HOME}" \
          -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} "$@"
     ;;
 esac
