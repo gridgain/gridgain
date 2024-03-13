@@ -131,7 +131,7 @@ public class SqlQueryHistoryView {
      *
      * @return Minimum allocated size of data on disk.
      */
-    @Order(17)
+    @Order(9)
     public long diskAllocationMin() {
         return qry.minBytesAllocatedOnDisk();
     }
@@ -141,7 +141,7 @@ public class SqlQueryHistoryView {
      *
      * @return Maximum allocated size of data on disk.
      */
-    @Order(18)
+    @Order(8)
     public long diskAllocationMax() {
         return qry.maxBytesAllocatedOnDisk();
     }
@@ -151,7 +151,7 @@ public class SqlQueryHistoryView {
      *
      * @return Minimum of total allocated size of data on disk.
      */
-    @Order(19)
+    @Order(11)
     public long diskAllocationTotalMin() {
         return qry.minTotalBytesWrittenOnDisk();
     }
@@ -161,7 +161,7 @@ public class SqlQueryHistoryView {
      *
      * @return Maximum of total allocated size of data on disk.
      */
-    @Order(20)
+    @Order(10)
     public long diskAllocationTotalMax() {
         return qry.maxTotalBytesWrittenOnDisk();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 GridGain Systems, Inc. and Contributors.
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,15 +37,15 @@ public class SqlQueryHistoryViewWalker implements SystemViewRowAttributeWalker<S
         v.accept(5, "durationMin", long.class);
         v.accept(6, "durationMax", long.class);
         v.accept(7, "lastStartTime", Date.class);
-        v.accept(8, "memoryMax", long.class);
-        v.accept(9, "memoryMin", long.class);
-        v.accept(10, "distributedJoins", boolean.class);
-        v.accept(11, "enforceJoinOrder", boolean.class);
-        v.accept(12, "lazy", boolean.class);
-        v.accept(13, "diskAllocationMin", long.class);
-        v.accept(14, "diskAllocationMax", long.class);
-        v.accept(15, "diskAllocationTotalMin", long.class);
-        v.accept(16, "diskAllocationTotalMax", long.class);
+        v.accept(8, "diskAllocationMax", long.class);
+        v.accept(9, "diskAllocationMin", long.class);
+        v.accept(10, "diskAllocationTotalMax", long.class);
+        v.accept(11, "diskAllocationTotalMin", long.class);
+        v.accept(12, "memoryMax", long.class);
+        v.accept(13, "memoryMin", long.class);
+        v.accept(14, "distributedJoins", boolean.class);
+        v.accept(15, "enforceJoinOrder", boolean.class);
+        v.accept(16, "lazy", boolean.class);
     }
 
     /** {@inheritDoc} */
@@ -58,15 +58,15 @@ public class SqlQueryHistoryViewWalker implements SystemViewRowAttributeWalker<S
         v.acceptLong(5, "durationMin", row.durationMin());
         v.acceptLong(6, "durationMax", row.durationMax());
         v.accept(7, "lastStartTime", Date.class, row.lastStartTime());
-        v.acceptLong(8, "memoryMax", row.memoryMax());
-        v.acceptLong(9, "memoryMin", row.memoryMin());
-        v.acceptBoolean(10, "distributedJoins", row.distributedJoins());
-        v.acceptBoolean(11, "enforceJoinOrder", row.enforceJoinOrder());
-        v.acceptBoolean(12, "lazy", row.lazy());
-        v.acceptLong(13, "diskAllocationMin", row.diskAllocationMin());
-        v.acceptLong(14, "diskAllocationMax", row.diskAllocationMax());
-        v.acceptLong(15, "diskAllocationTotalMin", row.diskAllocationTotalMin());
-        v.acceptLong(16, "diskAllocationTotalMax", row.diskAllocationTotalMax());
+        v.acceptLong(8, "diskAllocationMax", row.diskAllocationMax());
+        v.acceptLong(9, "diskAllocationMin", row.diskAllocationMin());
+        v.acceptLong(10, "diskAllocationTotalMax", row.diskAllocationTotalMax());
+        v.acceptLong(11, "diskAllocationTotalMin", row.diskAllocationTotalMin());
+        v.acceptLong(12, "memoryMax", row.memoryMax());
+        v.acceptLong(13, "memoryMin", row.memoryMin());
+        v.acceptBoolean(14, "distributedJoins", row.distributedJoins());
+        v.acceptBoolean(15, "enforceJoinOrder", row.enforceJoinOrder());
+        v.acceptBoolean(16, "lazy", row.lazy());
     }
 
     /** {@inheritDoc} */

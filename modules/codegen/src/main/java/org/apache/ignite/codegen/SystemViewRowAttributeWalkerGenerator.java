@@ -309,7 +309,7 @@ public class SystemViewRowAttributeWalkerGenerator {
         List<String> lic = new ArrayList<>();
 
         lic.add("/*" + U.nl()
-                + " * Copyright 2024 GridGain Systems, Inc. and Contributors." + U.nl()
+                + " * Copyright 2019 GridGain Systems, Inc. and Contributors." + U.nl()
                 + " *" + U.nl()
                 + " * Licensed under the GridGain Community Edition License (the \"License\");" + U.nl()
                 + " * you may not use this file except in compliance with the License." + U.nl()
