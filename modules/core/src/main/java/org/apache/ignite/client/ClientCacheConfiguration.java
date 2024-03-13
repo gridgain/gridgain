@@ -136,6 +136,11 @@ public final class ClientCacheConfiguration implements Serializable {
      */
     private ExpiryPolicy expiryPlc;
 
+    /**
+     * @serial Cache plugin configurations.
+     */
+    private ClientCachePluginConfiguration[] pluginCfgs;
+
     /** Default constructor. */
     public ClientCacheConfiguration() {
         // No-op.
@@ -178,6 +183,7 @@ public final class ClientCacheConfiguration implements Serializable {
         sqlSchema = ccfg.getSqlSchema();
         statisticsEnabled = ccfg.isStatisticsEnabled();
         writeSynchronizationMode = ccfg.getWriteSynchronizationMode();
+        pluginCfgs = ccfg.getPluginConfigurations();
     }
 
     /**
@@ -716,6 +722,27 @@ public final class ClientCacheConfiguration implements Serializable {
      */
     public ClientCacheConfiguration setExpiryPolicy(ExpiryPolicy expiryPlc) {
         this.expiryPlc = expiryPlc;
+
+        return this;
+    }
+
+    /**
+     * Gets cache plugin configurations.
+     *
+     * @return Cache plugin configurations.
+     */
+    public ClientCachePluginConfiguration[] getPluginConfigurations() {
+        return pluginCfgs != null ? pluginCfgs : new ClientCachePluginConfiguration[0];
+    }
+
+    /**
+     * Sets cache plugin configurations.
+     *
+     * @param pluginCfgs Cache plugin configurations.
+     * @return {@code this} for chaining.
+     */
+    public ClientCacheConfiguration setPluginConfigurations(ClientCachePluginConfiguration... pluginCfgs) {
+        this.pluginCfgs = pluginCfgs;
 
         return this;
     }

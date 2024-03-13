@@ -16,15 +16,16 @@
 
 package org.apache.ignite.internal.processors.platform.client.cache;
 
-import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.cache.CacheExistsException;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
 import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
+import org.apache.ignite.internal.processors.plugin.IgnitePluginProcessor;
 
 /**
  * Cache get or create with configuration request.
@@ -39,11 +40,15 @@ public class ClientCacheGetOrCreateWithConfigurationRequest extends ClientReques
      *
      * @param reader Reader.
      * @param protocolCtx Client protocol context.
+     * @param pluginProc Plugin processor.
      */
-    public ClientCacheGetOrCreateWithConfigurationRequest(BinaryRawReader reader, ClientProtocolContext protocolCtx) {
+    public ClientCacheGetOrCreateWithConfigurationRequest(
+            BinaryReaderExImpl reader,
+            ClientProtocolContext protocolCtx,
+            IgnitePluginProcessor pluginProc) {
         super(reader);
 
-        cacheCfg = ClientCacheConfigurationSerializer.read(reader, protocolCtx);
+        cacheCfg = ClientCacheConfigurationSerializer.read(reader, protocolCtx, pluginProc);
     }
 
     /** {@inheritDoc} */
