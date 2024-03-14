@@ -458,7 +458,10 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
                 cfg.ExpiryPolicyFactory = ExpiryPolicySerializer.ReadPolicyFactory(reader);
             }
 
-            Debug.Assert(len == reader.Stream.Position - pos);
+            if (!features.HasFeature(ClientBitmaskFeature.CachePluginConfigurations))
+            {
+                Debug.Assert(len == reader.Stream.Position - pos);
+            }
         }
 
         /// <summary>
