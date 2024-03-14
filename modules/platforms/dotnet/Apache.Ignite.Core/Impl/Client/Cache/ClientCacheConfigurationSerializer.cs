@@ -314,7 +314,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             code(Op.ExpiryPolicy);
             ExpiryPolicySerializer.WritePolicyFactory(writer, cfg.ExpiryPolicyFactory);
 
-            if (cfg.PluginConfigurations != null && cfg.PluginConfigurations.Count > 0)
+            if (!skipCodes && cfg.PluginConfigurations != null && cfg.PluginConfigurations.Count > 0)
             {
                 features.RequireFeature(ClientBitmaskFeature.CachePluginConfigurations);
 
@@ -458,10 +458,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
                 cfg.ExpiryPolicyFactory = ExpiryPolicySerializer.ReadPolicyFactory(reader);
             }
 
-            if (!features.HasFeature(ClientBitmaskFeature.CachePluginConfigurations))
-            {
-                Debug.Assert(len == reader.Stream.Position - pos);
-            }
+            Debug.Assert(len == reader.Stream.Position - pos);
         }
 
         /// <summary>
