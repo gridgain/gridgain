@@ -18,12 +18,15 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 {
     using System;
     using System.Diagnostics;
+    using System.IO;
     using System.Linq;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client.Cache;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Cache.Expiry;
+    using BinaryReader = Apache.Ignite.Core.Impl.Binary.BinaryReader;
+    using BinaryWriter = Apache.Ignite.Core.Impl.Binary.BinaryWriter;
 
     /// <summary>
     /// Writes and reads <see cref="CacheConfiguration"/> for thin client mode.
@@ -82,9 +85,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             // Plugins.
             PluginConfigurations = 500,
         }
-
-        /** Property count. */
-        private static readonly short PropertyCount = (short) Enum.GetValues(typeof(Op)).Length;
 
         /// <summary>
         /// Copies one cache configuration to another.
@@ -214,12 +214,18 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 
             if (!skipCodes)
             {
-                writer.WriteShort(PropertyCount); // Property count.
+                writer.WriteShort(0); // Reserve for property count.
             }
+
+            short count = 0;
 
             var code = skipCodes
                 ? (Action<Op>) (o => { })
-                : o => writer.WriteShort((short) o);
+                : o =>
+                {
+                    writer.WriteShort((short)o);
+                    count++;
+                };
 
             code(Op.AtomicityMode);
             writer.WriteInt((int)cfg.AtomicityMode);
@@ -329,6 +335,14 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             // Write length (so that part of the config can be skipped).
             var len = writer.Stream.Position - pos - 4;
             writer.Stream.WriteInt(pos, len);
+
+            if (!skipCodes)
+            {
+                var oldPos = writer.Stream.Position;
+                writer.Stream.Seek(pos + 4, SeekOrigin.Begin);
+                writer.Stream.WriteShort(count);
+                writer.Stream.Seek(oldPos, SeekOrigin.Begin);
+            }
         }
 
         /// <summary>
