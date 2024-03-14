@@ -77,7 +77,10 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             PartitionLossPolicy = 404,
             EagerTtl = 405,
             StatisticsEnabled = 406,
-            ExpiryPolicy = 407
+            ExpiryPolicy = 407,
+
+            // Plugins.
+            PluginConfigurations = 500,
         }
 
         /** Property count. */
@@ -310,6 +313,9 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 
             code(Op.ExpiryPolicy);
             ExpiryPolicySerializer.WritePolicyFactory(writer, cfg.ExpiryPolicyFactory);
+
+            code(Op.PluginConfigurations);
+            writer.WriteCollectionRaw(cfg.PluginConfigurations, (w, plugin) => plugin.Write(w));
 
             // Write length (so that part of the config can be skipped).
             var len = writer.Stream.Position - pos - 4;
