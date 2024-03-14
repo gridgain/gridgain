@@ -450,7 +450,8 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".DS_ATOMICSTAMPED",
                 sysSchemaName() + ".DS_COUNTDOWNLATCHES",
                 sysSchemaName() + ".DS_SEMAPHORES",
-                sysSchemaName() + ".DS_REENTRANTLOCKS"
+                sysSchemaName() + ".DS_REENTRANTLOCKS",
+                sysSchemaName() + ".BINARY_METADATA"
         ));
 
         testGetTables(new String[] {"VIEW"}, expViews);
@@ -1102,7 +1103,14 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".DS_SETS.ID.null.2147483647",
                 sysSchemaName() + ".DS_SETS.NAME.null.2147483647",
                 sysSchemaName() + ".DS_SETS.REMOVED.null.1",
-                sysSchemaName() + ".DS_SETS.SIZE.null.10"
+                sysSchemaName() + ".DS_SETS.SIZE.null.10",
+                sysSchemaName() + ".BINARY_METADATA.FIELDS.null.2147483647",
+                sysSchemaName() + ".BINARY_METADATA.AFF_KEY_FIELD_NAME.null.2147483647",
+                sysSchemaName() + ".BINARY_METADATA.SCHEMAS_IDS.null.2147483647",
+                sysSchemaName() + ".BINARY_METADATA.TYPE_ID.null.10",
+                sysSchemaName() + ".BINARY_METADATA.IS_ENUM.null.1",
+                sysSchemaName() + ".BINARY_METADATA.FIELDS_COUNT.null.10",
+                sysSchemaName() + ".BINARY_METADATA.TYPE_NAME.null.2147483647"
             ));
 
             expectedCols.addAll(Arrays.asList(

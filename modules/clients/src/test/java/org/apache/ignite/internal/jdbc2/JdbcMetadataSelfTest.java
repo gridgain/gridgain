@@ -357,7 +357,8 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             "DS_ATOMICSTAMPED",
             "DS_COUNTDOWNLATCHES",
             "DS_SEMAPHORES",
-            "DS_REENTRANTLOCKS"
+            "DS_REENTRANTLOCKS",
+            "BINARY_METADATA"
         ));
 
         Set<String> actViews = new HashSet<>();
