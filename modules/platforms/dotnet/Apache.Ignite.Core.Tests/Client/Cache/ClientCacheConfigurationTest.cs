@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System;
     using System.IO;
     using System.Linq;
+    using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client.Cache;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -45,7 +46,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             var cfg = CacheConfigurationTest.GetCustomCacheConfiguration("bar");
             cfg.ReadThrough = true;
             cfg.WriteBehindEnabled = true;
-            
+
             TestSerializeDeserializeUnspported(cfg, "AffinityFunction");
             cfg.AffinityFunction = null;
 
@@ -149,6 +150,24 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         }
 
         /// <summary>
+        /// Tests the copy constructor.
+        /// </summary>
+        [Test]
+        public void TestCopyConstructor()
+        {
+            var clientCfg = new CacheClientConfiguration(
+                CacheConfigurationTest.GetCustomCacheConfiguration("z"), true)
+            {
+                PluginConfigurations = new[] { new TestCacheClientPluginConfiguration() }
+            };
+
+            var copy = new CacheClientConfiguration(clientCfg);
+
+            ClientTestBase.AssertClientConfigsAreEqual(clientCfg, copy);
+            CollectionAssert.AreEqual(clientCfg.PluginConfigurations, copy.PluginConfigurations);
+        }
+
+        /// <summary>
         /// Tests the serialization/deserialization of <see cref="CacheConfiguration"/>.
         /// </summary>
         private static void TestSerializeDeserializeUnspported(CacheConfiguration cfg, string propName)
@@ -186,6 +205,16 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             [QuerySqlField]
             // ReSharper disable once UnusedMember.Local
             public string Name { get; set; }
+        }
+
+        private class TestCacheClientPluginConfiguration : ICacheClientPluginConfiguration
+        {
+            public string PluginName => "test";
+
+            public void WriteBinary(IBinaryRawWriter writer)
+            {
+                writer.WriteInt(0);
+            }
         }
     }
 }

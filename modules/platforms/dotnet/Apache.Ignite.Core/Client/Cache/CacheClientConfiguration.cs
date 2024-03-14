@@ -186,6 +186,8 @@ namespace Apache.Ignite.Core.Client.Cache
                     }
                 }
             }
+
+            PluginConfigurations = cfg.PluginConfigurations;
         }
 
         /// <summary>
