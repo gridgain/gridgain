@@ -83,21 +83,47 @@ public class SqlQueryHistoryView {
     }
 
     /**
+     * Returns maximum size of reserved memory.
+     *
+     * @return Maximum size of reserved memory.
+     */
+    @Order(12)
+    public long memoryMax() {
+        return qry.maxMemory();
+    }
+
+    /**
      * Returns minimum size of reserved memory.
      *
      * @return Minimum size of reserved memory.
      */
+    @Order(13)
     public long memoryMin() {
         return qry.minMemory();
     }
 
     /**
-     * Returns maximum size of reserved memory.
-     *
-     * @return Maximum size of reserved memory.
+     * @return Distributed joins.
      */
-    public long memoryMax() {
-        return qry.maxMemory();
+    @Order(14)
+    public boolean distributedJoins() {
+        return qry.distributedJoins();
+    }
+
+    /**
+     * @return Enforce join order.
+     */
+    @Order(15)
+    public boolean enforceJoinOrder() {
+        return qry.enforceJoinOrder();
+    }
+
+    /**
+     * @return Lazy flag.
+     */
+    @Order(16)
+    public boolean lazy() {
+        return qry.lazy();
     }
 
     /**
@@ -105,6 +131,7 @@ public class SqlQueryHistoryView {
      *
      * @return Minimum allocated size of data on disk.
      */
+    @Order(9)
     public long diskAllocationMin() {
         return qry.minBytesAllocatedOnDisk();
     }
@@ -114,6 +141,7 @@ public class SqlQueryHistoryView {
      *
      * @return Maximum allocated size of data on disk.
      */
+    @Order(8)
     public long diskAllocationMax() {
         return qry.maxBytesAllocatedOnDisk();
     }
@@ -123,6 +151,7 @@ public class SqlQueryHistoryView {
      *
      * @return Minimum of total allocated size of data on disk.
      */
+    @Order(11)
     public long diskAllocationTotalMin() {
         return qry.minTotalBytesWrittenOnDisk();
     }
@@ -132,28 +161,8 @@ public class SqlQueryHistoryView {
      *
      * @return Maximum of total allocated size of data on disk.
      */
+    @Order(10)
     public long diskAllocationTotalMax() {
         return qry.maxTotalBytesWrittenOnDisk();
-    }
-
-    /**
-     * @return Distributed joins.
-     */
-    public boolean distributedJoins() {
-        return qry.distributedJoins();
-    }
-
-    /**
-     * @return Enforce join order.
-     */
-    public boolean enforceJoinOrder() {
-        return qry.enforceJoinOrder();
-    }
-
-    /**
-     * @return Lazy flag.
-     */
-    public boolean lazy() {
-        return qry.lazy();
     }
 }
