@@ -314,8 +314,13 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             code(Op.ExpiryPolicy);
             ExpiryPolicySerializer.WritePolicyFactory(writer, cfg.ExpiryPolicyFactory);
 
-            code(Op.PluginConfigurations);
-            writer.WriteCollectionRaw(cfg.PluginConfigurations, (w, plugin) => plugin.Write(w));
+            if (cfg.PluginConfigurations != null && cfg.PluginConfigurations.Count > 0)
+            {
+                features.RequireFeature(ClientBitmaskFeature.CachePluginConfigurations);
+
+                code(Op.PluginConfigurations);
+                writer.WriteCollectionRaw(cfg.PluginConfigurations, (w, plugin) => plugin.Write(w));
+            }
 
             // Write length (so that part of the config can be skipped).
             var len = writer.Stream.Position - pos - 4;
