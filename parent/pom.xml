@@ -954,6 +954,8 @@
                                 <arg>java.base/java.lang.invoke=ALL-UNNAMED</arg>
                                 <arg>--add-exports</arg>
                                 <arg>java.sql/java.sql=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/java.nio=ALL-UNNAMED</arg>
                             </compilerArgs>
                         </configuration>
                     </plugin>
@@ -983,6 +985,7 @@
                                 --add-opens=java.base/sun.security.ssl=ALL-UNNAMED
                                 --add-opens=java.base/sun.security.x509=ALL-UNNAMED
                                 --add-opens=java.sql/java.sql=ALL-UNNAMED
+                                --add-opens java.base/java.nio=ALL-UNNAMED
                             </argLine>
                         </configuration>
                     </plugin>

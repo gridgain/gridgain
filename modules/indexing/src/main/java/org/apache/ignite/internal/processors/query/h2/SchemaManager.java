@@ -154,39 +154,6 @@ public class SchemaManager {
         this.connMgr = connMgr;
 
         log = ctx.log(SchemaManager.class);
-
-        ctx.systemView().registerView(SQL_SCHEMA_VIEW, SQL_SCHEMA_VIEW_DESC,
-            new SqlSchemaViewWalker(),
-            schemas.values(),
-            SqlSchemaView::new);
-
-        ctx.systemView().registerView(SQL_TBLS_VIEW, SQL_TBLS_VIEW_DESC,
-            new SqlTableViewWalker(),
-            dataTables.values(),
-            SqlTableView::new);
-
-        ctx.systemView().registerView(SQL_VIEWS_VIEW, SQL_VIEWS_VIEW_DESC,
-            new SqlViewViewWalker(),
-            systemViews,
-            SqlViewView::new);
-
-        ctx.systemView().registerInnerCollectionView(SQL_IDXS_VIEW, SQL_IDXS_VIEW_DESC,
-            new SqlIndexViewWalker(),
-            dataTables.values(),
-            GridH2Table::indexesInformation,
-            SqlIndexView::new);
-
-        ctx.systemView().registerInnerArrayView(SQL_TBL_COLS_VIEW, SQL_TBL_COLS_VIEW_DESC,
-            new SqlTableColumnViewWalker(),
-            dataTables.values(),
-            GridH2Table::getColumns,
-            SqlTableColumnView::new);
-
-        ctx.systemView().registerInnerArrayView(SQL_VIEW_COLS_VIEW, SQL_VIEW_COLS_VIEW_DESC,
-            new SqlViewColumnViewWalker(),
-            systemViews,
-            SqlSystemView::getColumns,
-            SqlViewColumnView::new);
     }
 
     /**
@@ -203,6 +170,39 @@ public class SchemaManager {
 
         // Create schemas listed in node's configuration.
         createPredefinedSchemas(schemaNames);
+
+        ctx.systemView().registerView(SQL_SCHEMA_VIEW, SQL_SCHEMA_VIEW_DESC,
+                new SqlSchemaViewWalker(),
+                schemas.values(),
+                SqlSchemaView::new);
+
+        ctx.systemView().registerView(SQL_TBLS_VIEW, SQL_TBLS_VIEW_DESC,
+                new SqlTableViewWalker(),
+                dataTables.values(),
+                SqlTableView::new);
+
+        ctx.systemView().registerView(SQL_VIEWS_VIEW, SQL_VIEWS_VIEW_DESC,
+                new SqlViewViewWalker(),
+                systemViews,
+                SqlViewView::new);
+
+        ctx.systemView().registerInnerCollectionView(SQL_IDXS_VIEW, SQL_IDXS_VIEW_DESC,
+                new SqlIndexViewWalker(),
+                dataTables.values(),
+                GridH2Table::indexesInformation,
+                SqlIndexView::new);
+
+        ctx.systemView().registerInnerArrayView(SQL_TBL_COLS_VIEW, SQL_TBL_COLS_VIEW_DESC,
+                new SqlTableColumnViewWalker(),
+                dataTables.values(),
+                GridH2Table::getColumns,
+                SqlTableColumnView::new);
+
+        ctx.systemView().registerInnerArrayView(SQL_VIEW_COLS_VIEW, SQL_VIEW_COLS_VIEW_DESC,
+                new SqlViewColumnViewWalker(),
+                systemViews,
+                SqlSystemView::getColumns,
+                SqlViewColumnView::new);
     }
 
     /**

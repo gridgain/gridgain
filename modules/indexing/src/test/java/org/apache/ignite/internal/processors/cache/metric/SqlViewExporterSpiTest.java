@@ -15,10 +15,12 @@
  */
 package org.apache.ignite.internal.processors.cache.metric;
 
+import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.BrokenBarrierException;
@@ -46,6 +48,8 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.binary.mutabletest.GridBinaryTestClasses.TestObjectAllTypes;
+import org.apache.ignite.internal.binary.mutabletest.GridBinaryTestClasses.TestObjectEnum;
 import org.apache.ignite.internal.metric.AbstractExporterSpiTest;
 import org.apache.ignite.internal.metric.SystemViewSelfTest.TestPredicate;
 import org.apache.ignite.internal.metric.SystemViewSelfTest.TestRunnable;
@@ -131,7 +135,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
 
     /** */
     @Test
-    public void testEmptyFilter() throws Exception {
+    public void testEmptyFilter() {
         List<List<?>> res = execute(ignite0, "SELECT * FROM " + sysSchemaName() + ".METRICS");
 
         assertNotNull(res);
@@ -140,7 +144,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
 
     /** */
     @Test
-    public void testDataRegionMetrics() throws Exception {
+    public void testDataRegionMetrics() {
         List<List<?>> res = execute(ignite0,
             "SELECT REPLACE(name, 'io.dataregion.default.'), value, description FROM " + sysSchemaName() + ".METRICS");
 
@@ -170,7 +174,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
     /** */
     @Test
     @SuppressWarnings("SuspiciousMethodCalls")
-    public void testCachesView() throws Exception {
+    public void testCachesView() {
         Set<String> cacheNames = new HashSet<>(asList("cache-1", "cache-2"));
 
         for (String name : cacheNames)
@@ -189,7 +193,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
     /** */
     @Test
     @SuppressWarnings("SuspiciousMethodCalls")
-    public void testCacheGroupsView() throws Exception {
+    public void testCacheGroupsView() {
         Set<String> grpNames = new HashSet<>(asList("grp-1", "grp-2"));
 
         for (String grpName : grpNames)
@@ -252,7 +256,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
 
     /** */
     @Test
-    public void testServices() throws Exception {
+    public void testServices() {
         ServiceConfiguration srvcCfg = new ServiceConfiguration();
 
         srvcCfg.setName("service");
@@ -383,7 +387,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
 
     /** */
     @Test
-    public void testViews() throws Exception {
+    public void testViews() {
         Set<String> expViews = new HashSet<>(asList(
             "METRICS",
             "SERVICES",
@@ -424,7 +428,8 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
             "DS_REENTRANTLOCKS",
             "DS_SETS",
             "DS_SEMAPHORES",
-            "DS_QUEUES"
+            "DS_QUEUES",
+            "BINARY_METADATA"
         ));
 
         Set<String> actViews = new HashSet<>();
@@ -439,7 +444,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
 
     /** */
     @Test
-    public void testTable() throws Exception {
+    public void testTable() {
         assertTrue(execute(ignite0, "SELECT * FROM " + sysSchemaName() + ".TABLES").isEmpty());
 
         execute(ignite0, "CREATE TABLE T1(ID LONG PRIMARY KEY, NAME VARCHAR)");
@@ -477,7 +482,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
 
     /** */
     @Test
-    public void testTableColumns() throws Exception {
+    public void testTableColumns() {
         assertTrue(execute(ignite0, "SELECT * FROM " + sysSchemaName() + ".TABLE_COLUMNS").isEmpty());
 
         execute(ignite0, "CREATE TABLE T1(ID LONG PRIMARY KEY, NAME VARCHAR(40))");
@@ -515,7 +520,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
 
     /** */
     @Test
-    public void testViewColumns() throws Exception {
+    public void testViewColumns() {
         execute(ignite0, "SELECT * FROM " + sysSchemaName() + ".VIEW_COLUMNS");
 
         List<List<?>> expRes = asList(
@@ -922,6 +927,51 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
         // correctly reflects changes in free-lists.
         assertFalse(execute(ignite0, "SELECT * FROM " + sysSchemaName() + ".DATA_REGION_PAGE_LISTS WHERE NAME LIKE 'in-memory%' AND " +
             "BUCKET_SIZE > 0").isEmpty());
+    }
+
+    /** */
+    @Test
+    public void testBinaryMeta() {
+        IgniteCache<Integer, TestObjectAllTypes> c1 = ignite0.createCache("test-cache");
+        IgniteCache<Integer, TestObjectEnum> c2 = ignite0.createCache("test-enum-cache");
+
+        execute(ignite0, "CREATE TABLE T1(ID LONG PRIMARY KEY, NAME VARCHAR(40), ACCOUNT BIGINT)");
+        execute(ignite0, "INSERT INTO T1(ID, NAME, ACCOUNT) VALUES(1, 'test', 1)");
+
+        c1.put(1, new TestObjectAllTypes());
+        c2.put(1, TestObjectEnum.A);
+
+        List<List<?>> view =
+                execute(ignite0, "SELECT TYPE_NAME, FIELDS_COUNT, FIELDS, IS_ENUM FROM SYS.BINARY_METADATA");
+
+        assertNotNull(view);
+        assertEquals(3, view.size());
+
+        for (List<?> meta : view) {
+            if (Objects.equals(TestObjectEnum.class.getName(), meta.get(0))) {
+                assertTrue((Boolean)meta.get(3));
+
+                assertEquals(0, meta.get(1));
+            }
+            else if (Objects.equals(TestObjectAllTypes.class.getName(), meta.get(0))) {
+                assertFalse((Boolean)meta.get(3));
+
+                Field[] fields = TestObjectAllTypes.class.getDeclaredFields();
+
+                assertEquals(fields.length, meta.get(1));
+
+                for (Field field : fields)
+                    assertTrue(meta.get(2).toString().contains(field.getName()));
+            }
+            else {
+                assertFalse((Boolean)meta.get(3));
+
+                assertEquals(2, meta.get(1));
+
+                assertTrue(meta.get(2).toString().contains("NAME"));
+                assertTrue(meta.get(2).toString().contains("ACCOUNT"));
+            }
+        }
     }
 
     /**
