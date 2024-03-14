@@ -419,5 +419,11 @@ namespace Apache.Ignite.Core.Client.Cache
         /// Default is null, which means no expiration.
         /// </summary>
         public IFactory<IExpiryPolicy> ExpiryPolicyFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the plugin configurations.
+        /// </summary>
+        [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public ICollection<ICacheClientPluginConfiguration> PluginConfigurations { get; set; }
     }
 }
