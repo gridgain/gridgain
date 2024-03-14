@@ -32,6 +32,6 @@ namespace Apache.Ignite.Core.Client.Cache
         /// Serializes the configuration.
         /// </summary>
         /// <param name="writer">Writer.</param>
-        void Write(IBinaryRawWriter writer);
+        void WriteBinary(IBinaryRawWriter writer);
     }
 }

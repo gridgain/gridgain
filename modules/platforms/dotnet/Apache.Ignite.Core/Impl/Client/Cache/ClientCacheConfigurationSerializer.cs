@@ -319,7 +319,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
                 features.RequireFeature(ClientBitmaskFeature.CachePluginConfigurations);
 
                 code(Op.PluginConfigurations);
-                writer.WriteCollectionRaw(cfg.PluginConfigurations, (w, plugin) => plugin.Write(w));
+                writer.WriteCollectionRaw(cfg.PluginConfigurations, (w, plugin) => plugin.WriteBinary(w));
             }
 
             // Write length (so that part of the config can be skipped).
