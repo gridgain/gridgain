@@ -53,11 +53,6 @@ public class SqlQueryView {
         return qry.query();
     }
 
-    /** @return Schema name. */
-    public String schemaName() {
-        return qry.schemaName();
-    }
-
     /** @return Query start time. */
     @Order(3)
     public Date startTime() {
@@ -70,16 +65,12 @@ public class SqlQueryView {
         return System.currentTimeMillis() - qry.startTime();
     }
 
-    /** @return {@code True} if query is local. */
-    public boolean local() {
-        return qry.local();
-    }
-
     /**
      * Returns current allocated size of data on disk.
      *
      * @return Current allocated size of data on disk.
      */
+    @Order(5)
     public long diskAllocationCurrent() {
         return qry.memoryMetricProvider().writtenOnDisk();
     }
@@ -89,6 +80,7 @@ public class SqlQueryView {
      *
      * @return Maximum allocated size of data on disk.
      */
+    @Order(6)
     public long diskAllocationMax() {
         return qry.memoryMetricProvider().maxWrittenOnDisk();
     }
@@ -98,8 +90,25 @@ public class SqlQueryView {
      *
      * @return Total allocated size of data on disk.
      */
+    @Order(7)
     public long diskAllocationTotal() {
         return qry.memoryMetricProvider().totalWrittenOnDisk();
+    }
+
+    /**
+     * Returns query initiator ID.
+     *
+     * @return Query initiator ID.
+     */
+    @Order(8)
+    public String initiatorId() {
+        return qry.queryInitiatorId();
+    }
+
+    /** @return {@code True} if query is local. */
+    @Order(9)
+    public boolean local() {
+        return qry.local();
     }
 
     /**
@@ -107,6 +116,7 @@ public class SqlQueryView {
      *
      * @return Current size of reserved memory.
      */
+    @Order(10)
     public long memoryCurrent() {
         return qry.memoryMetricProvider().reserved();
     }
@@ -116,22 +126,21 @@ public class SqlQueryView {
      *
      * @return Maximum size of reserved memory.
      */
+    @Order(11)
     public long memoryMax() {
         return qry.memoryMetricProvider().maxReserved();
     }
 
-    /**
-     * Returns query initiator ID.
-     *
-     * @return Query initiator ID.
-     */
-    public String initiatorId() {
-        return qry.queryInitiatorId();
+    /** @return Schema name. */
+    @Order(12)
+    public String schemaName() {
+        return qry.schemaName();
     }
 
     /**
      * @return Distributed joins.
      */
+    @Order(13)
     public boolean distributedJoins() {
         return qry.distributedJoins();
     }
@@ -139,6 +148,7 @@ public class SqlQueryView {
     /**
      * @return Enforce join order.
      */
+    @Order(14)
     public boolean enforceJoinOrder() {
         return qry.enforceJoinOrder();
     }
@@ -146,6 +156,7 @@ public class SqlQueryView {
     /**
      * @return Lazy flag.
      */
+    @Order(15)
     public boolean lazy() {
         return qry.lazy();
     }
