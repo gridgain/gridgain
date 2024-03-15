@@ -62,7 +62,10 @@ public enum ProtocolBitmaskFeature {
     SERVICE_INVOKE_CALLCTX(10),
 
     /** Handle OP_HEARTBEAT and OP_GET_IDLE_TIMEOUT. */
-    HEARTBEAT(11);
+    HEARTBEAT(11),
+
+    /** Cache plugin configurations. GG-specific, use higher id to avoid conflicts. */
+    CACHE_PLUGIN_CONFIGURATIONS(32);
 
     /** */
     private static final EnumSet<ProtocolBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =

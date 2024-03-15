@@ -560,10 +560,16 @@ public class ClientMessageParser implements ClientListenerMessageParser {
                 return new ClientCacheGetConfigurationRequest(reader, protocolCtx);
 
             case OP_CACHE_CREATE_WITH_CONFIGURATION:
-                return new ClientCacheCreateWithConfigurationRequest(reader, protocolCtx);
+                return new ClientCacheCreateWithConfigurationRequest(
+                        reader,
+                        protocolCtx,
+                        ctx.kernalContext().plugins());
 
             case OP_CACHE_GET_OR_CREATE_WITH_CONFIGURATION:
-                return new ClientCacheGetOrCreateWithConfigurationRequest(reader, protocolCtx);
+                return new ClientCacheGetOrCreateWithConfigurationRequest(
+                        reader,
+                        protocolCtx,
+                        ctx.kernalContext().plugins());
 
             case OP_QUERY_SQL:
                 return new ClientCacheSqlQueryRequest(reader, protocolCtx);
