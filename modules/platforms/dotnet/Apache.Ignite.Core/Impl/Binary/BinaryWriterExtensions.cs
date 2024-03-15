@@ -145,8 +145,11 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Writes the collection of write-aware items.
         /// </summary>
-        public static void WriteCollectionRaw<T, TWriter>(this TWriter writer, ICollection<T> collection, Action<TWriter, T> action)
-            where T : IBinaryRawWriteAware<TWriter> where TWriter: IBinaryRawWriter
+        public static void WriteCollectionRaw<T, TWriter>(
+            this TWriter writer,
+            ICollection<T> collection,
+            Action<TWriter, T> action)
+            where TWriter: IBinaryRawWriter
         {
             Debug.Assert(writer != null);
 

@@ -18,12 +18,15 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 {
     using System;
     using System.Diagnostics;
+    using System.IO;
     using System.Linq;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client.Cache;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Cache.Expiry;
+    using BinaryReader = Apache.Ignite.Core.Impl.Binary.BinaryReader;
+    using BinaryWriter = Apache.Ignite.Core.Impl.Binary.BinaryWriter;
 
     /// <summary>
     /// Writes and reads <see cref="CacheConfiguration"/> for thin client mode.
@@ -77,11 +80,11 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             PartitionLossPolicy = 404,
             EagerTtl = 405,
             StatisticsEnabled = 406,
-            ExpiryPolicy = 407
-        }
+            ExpiryPolicy = 407,
 
-        /** Property count. */
-        private static readonly short PropertyCount = (short) Enum.GetValues(typeof(Op)).Length;
+            // Plugins.
+            PluginConfigurations = 500,
+        }
 
         /// <summary>
         /// Copies one cache configuration to another.
@@ -211,12 +214,18 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 
             if (!skipCodes)
             {
-                writer.WriteShort(PropertyCount); // Property count.
+                writer.WriteShort(0); // Reserve for property count.
             }
+
+            short count = 0;
 
             var code = skipCodes
                 ? (Action<Op>) (o => { })
-                : o => writer.WriteShort((short) o);
+                : o =>
+                {
+                    writer.WriteShort((short)o);
+                    count++;
+                };
 
             code(Op.AtomicityMode);
             writer.WriteInt((int)cfg.AtomicityMode);
@@ -311,9 +320,29 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             code(Op.ExpiryPolicy);
             ExpiryPolicySerializer.WritePolicyFactory(writer, cfg.ExpiryPolicyFactory);
 
+            if (!skipCodes && cfg.PluginConfigurations != null && cfg.PluginConfigurations.Count > 0)
+            {
+                features.RequireFeature(ClientBitmaskFeature.CachePluginConfigurations);
+
+                code(Op.PluginConfigurations);
+                writer.WriteCollectionRaw(cfg.PluginConfigurations, (w, plugin) =>
+                {
+                    w.WriteString(plugin.PluginName);
+                    plugin.WriteBinary(w);
+                });
+            }
+
             // Write length (so that part of the config can be skipped).
             var len = writer.Stream.Position - pos - 4;
             writer.Stream.WriteInt(pos, len);
+
+            if (!skipCodes)
+            {
+                var oldPos = writer.Stream.Position;
+                writer.Stream.Seek(pos + 4, SeekOrigin.Begin);
+                writer.Stream.WriteShort(count);
+                writer.Stream.Seek(oldPos, SeekOrigin.Begin);
+            }
         }
 
         /// <summary>
