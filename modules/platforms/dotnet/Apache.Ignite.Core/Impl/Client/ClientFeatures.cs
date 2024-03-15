@@ -84,6 +84,18 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /// <summary>
+        /// Checks whether specified feature is supported. Throws an exception when not supported.
+        /// </summary>
+        /// <param name="feature">Feature.</param>
+        public void RequireFeature(ClientBitmaskFeature feature)
+        {
+            if (!HasFeature(feature))
+            {
+                throw new IgniteClientException($"Feature {feature} is not supported by the server.");
+            }
+        }
+
+        /// <summary>
         /// Returns a value indicating whether specified operation is supported.
         /// </summary>
         public bool HasOp(ClientOp op)
