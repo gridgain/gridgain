@@ -742,7 +742,7 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
 
             ex = new ComputeExecutionRejectedException(e);
         }
-        else if ((e instanceof IllegalStateException)){
+        else if ((e instanceof IllegalStateException)) {
             U.warn(log, "Job cannot execute in current state: " + e);
 
             // Turn exception into InvalidUserCommandException so errors will not be highlighted in logs.

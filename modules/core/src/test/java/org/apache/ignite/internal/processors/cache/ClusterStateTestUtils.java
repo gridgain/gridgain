@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.List;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
