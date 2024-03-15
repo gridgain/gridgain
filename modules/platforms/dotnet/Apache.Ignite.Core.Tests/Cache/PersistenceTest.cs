@@ -382,7 +382,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             }
             else
             {
-                var ex = Assert.Throws<IgniteException>(() => ignite.GetOrCreateCache<int, int>("default"));
+                var ex = Assert.Throws<IllegalStateException>(() => ignite.GetOrCreateCache<int, int>("default"));
                 Assert.AreEqual("Can not perform the operation because the cluster is inactive.",
                     ex.Message.Substring(0, 62));
             }
