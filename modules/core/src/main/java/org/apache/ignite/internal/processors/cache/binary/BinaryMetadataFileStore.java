@@ -166,6 +166,8 @@ class BinaryMetadataFileStore {
         if (!isPersistenceEnabled)
             return;
 
+        ctx.marshallerContext().unregisterClassNameLocally(typeId);
+
         File file = new File(metadataDir, typeId + ".bin");
 
         if (!file.delete()) {

@@ -38,6 +38,8 @@ import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.MarshallerContext;
 
+import static org.apache.ignite.internal.MarshallerPlatformIds.otherPlatforms;
+
 /**
  * File-based persistence provider for {@link MarshallerContextImpl}.
  *
@@ -100,6 +102,20 @@ final class MarshallerMappingFileStore {
         this.log = log;
 
         fixLegacyFolder();
+    }
+
+    void deleteMapping(int typeId) {
+        byte[] allPlatforms = otherPlatforms((byte)-1);
+
+        for (byte platformId : allPlatforms) {
+            String fileName = getFileName(platformId, typeId);
+
+            File file = new File(mappingDir, fileName);
+
+            if (log.isDebugEnabled()) {
+                log.debug("Try to remove: " + file.getAbsolutePath());
+            }
+        }
     }
 
     /**
