@@ -87,7 +87,7 @@ public class ReliableChannelTest {
 
         rc.channelsInit();
 
-        assertEquals(ClientConnectorConfiguration.DFLT_PORT_RANGE + 1, rc.getChannelHolders().size());
+        assertEquals(1, rc.getChannelHolders().size());
 
         assertEquals(ClientConnectorConfiguration.DFLT_PORT,
             F.first(F.first(rc.getChannelHolders()).getAddresses()).getPort());
@@ -100,8 +100,8 @@ public class ReliableChannelTest {
      */
     @Test
     public void testDefaultChannelBalancing() {
-        assertEquals(new HashSet<>(F.asList("127.0.0.2:10800", "127.0.0.3:10800", "127.0.0.4:10800")),
-            usedDefaultChannels("127.0.0.1:10801..10809", "127.0.0.2", "127.0.0.3:10800", "127.0.0.4:10800..10809"));
+        assertEquals(new HashSet<>(F.asList("127.0.0.1:10800", "127.0.0.1:10801", "127.0.0.2:10800", "127.0.0.3:10801")),
+            usedDefaultChannels("127.0.0.1:10800", "127.0.0.1:10801", "127.0.0.2", "127.0.0.3:10801"));
 
         assertEquals(new HashSet<>(F.asList("127.0.0.1:10800", "127.0.0.2:10800", "127.0.0.3:10800", "127.0.0.4:10800")),
             usedDefaultChannels("127.0.0.1:10800", "127.0.0.2:10800", "127.0.0.3:10800", "127.0.0.4:10800"));
