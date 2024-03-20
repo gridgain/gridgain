@@ -112,8 +112,16 @@ final class MarshallerMappingFileStore {
 
             File file = new File(mappingDir, fileName);
 
-            if (log.isDebugEnabled()) {
-                log.debug("Try to remove: " + file.getAbsolutePath());
+            if (file.exists()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Try to remove: " + file.getAbsolutePath());
+                }
+
+                if (!file.delete()) {
+                    final String msg = "Failed to remove mapping for typeId: " + typeId;
+
+                    U.error(log, msg);
+                }
             }
         }
     }
