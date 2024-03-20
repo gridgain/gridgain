@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.rest.protocols.http.jetty;
 
+import com.fasterxml.jackson.databind.cfg.CacheProvider;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -122,9 +123,17 @@ public class GridJettyObjectMapper extends ObjectMapper {
             super(src, cfg, f);
         }
 
+        public CustomSerializerProvider(CustomSerializerProvider src, CacheProvider cache) {
+            super(src, cache);
+        }
+
         /** {@inheritDoc} */
         @Override public DefaultSerializerProvider createInstance(SerializationConfig cfg, SerializerFactory jsf) {
             return new CustomSerializerProvider(this, cfg, jsf);
+        }
+
+        @Override public DefaultSerializerProvider withCaches(CacheProvider provider) {
+            return new CustomSerializerProvider(this, provider);
         }
 
         /** {@inheritDoc} */
