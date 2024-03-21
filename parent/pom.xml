@@ -87,8 +87,8 @@
         <hamcrest.version>2.2</hamcrest.version>
         <httpclient.version>4.5.13</httpclient.version>
         <httpcore.version>4.4.3</httpcore.version>
-        <jackson.databind.version>2.13.4.2</jackson.databind.version>
-        <jackson.version>2.13.4</jackson.version>
+        <jackson.databind.version>2.16.0</jackson.databind.version>
+        <jackson.version>2.16.0</jackson.version>
         <jackson1.version>1.9.13</jackson1.version>
         <javassist.version>3.21.0-GA</javassist.version>
         <javax.cache.bundle.version>1.0.0_1</javax.cache.bundle.version>
