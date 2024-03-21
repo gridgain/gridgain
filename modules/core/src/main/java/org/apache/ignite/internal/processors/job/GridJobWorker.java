@@ -45,7 +45,6 @@ import org.apache.ignite.internal.GridJobExecuteResponse;
 import org.apache.ignite.internal.GridJobSessionImpl;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.InvalidUserCommandException;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.UserCommandExceptions;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
@@ -741,12 +740,6 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
             msg = "Job got interrupted due to system stop (will attempt failover).";
 
             ex = new ComputeExecutionRejectedException(e);
-        }
-        else if ((e instanceof IllegalStateException)) {
-            U.warn(log, "Job cannot execute in current state: " + e);
-
-            // Turn exception into InvalidUserCommandException so errors will not be highlighted in logs.
-            return new InvalidUserCommandException(e.getMessage());
         }
 
         if (msg == null) {
