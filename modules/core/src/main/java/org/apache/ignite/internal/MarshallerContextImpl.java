@@ -276,6 +276,18 @@ public class MarshallerContextImpl implements MarshallerContext {
         return true;
     }
 
+    public void unregisterClassNameLocally(int typeId) {
+        byte[] allPlatforms = otherPlatforms((byte)-1);
+
+        for (byte platformId : allPlatforms) {
+            ConcurrentMap<Integer, MappedName> cache = getCacheFor(platformId);
+
+            cache.remove(typeId);
+        }
+
+        fileStore.deleteMapping(typeId);
+    }
+
     /**
      * @param res result of exchange.
      */
@@ -621,6 +633,11 @@ public class MarshallerContextImpl implements MarshallerContext {
         /** {@inheritDoc} */
         @Override public boolean remove(@NotNull Object key, Object val) {
             return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public MappedName remove(@NotNull Object key) {
+            return userMap.remove(key);
         }
 
         /** {@inheritDoc} */
