@@ -56,7 +56,7 @@ public class IgniteMessageFactoryImpl implements IgniteMessageFactory {
     /**
      * Contructor.
      *
-     * @param factories Concrete message factories or message factory providers. Cfn't be empty or {@code null}.
+     * @param factories Concrete message factories or message factory providers. Can't be empty or {@code null}.
      */
     public IgniteMessageFactoryImpl(MessageFactory[] factories) {
         if (factories == null || factories.length == 0)

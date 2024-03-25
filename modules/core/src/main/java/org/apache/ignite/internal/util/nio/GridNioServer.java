@@ -34,16 +34,8 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.channels.spi.SelectorProvider;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
@@ -87,6 +79,8 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.spi.communication.tcp.messages.HeartBeatAckMessage;
+import org.apache.ignite.spi.communication.tcp.messages.HeartBeatMessage;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
@@ -97,6 +91,8 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATI
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.MSG_WRITER;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.NIO_OPERATION;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.HEARTBEAT_ACK_MSG_TYPE;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.HEARTBEAT_MSG_TYPE;
 
 /**
  * TCP NIO server. Due to asynchronous nature of connections processing
@@ -170,6 +166,11 @@ public class GridNioServer<T> {
 
     /** The name of the metric that provides the active TCP sessions count. */
     public static final String SESSIONS_CNT_METRIC_NAME = "ActiveSessionsCount";
+
+    /** Timeout for sending heartbeat messages for stale connection. */
+    public static final long HEARTBEAT_TIMEOUT = 1000L;
+
+    public static final long HEARTBEAT_FREQUENCY = 500L;
 
     /** Defines how many times selector should do {@code selectNow()} before doing {@code select(long)}. */
     private long selectorSpins;
@@ -1372,14 +1373,25 @@ public class GridNioServer<T> {
                 rcvdBytesCntMetric.add(cnt);
 
             ses.bytesReceived(cnt);
+
             onRead(cnt);
 
             readBuf.flip();
 
+            short msgType = msgType(readBuf);
+
+            if (msgType != HEARTBEAT_MSG_TYPE && msgType != HEARTBEAT_ACK_MSG_TYPE)
+                ses.updateLastRcvTime();
+
             assert readBuf.hasRemaining();
 
             try {
-                filterChain.onMessageReceived(ses, readBuf);
+                if (msgType == HEARTBEAT_MSG_TYPE)
+                    processHeartbeatMessage(ses, readBuf);
+                else if (msgType == HEARTBEAT_ACK_MSG_TYPE)
+                    processHeartbeatAckMessage(ses, readBuf);
+                else
+                    filterChain.onMessageReceived(ses, readBuf);
 
                 if (readBuf.hasRemaining())
                     readBuf.compact();
@@ -1395,6 +1407,36 @@ public class GridNioServer<T> {
             catch (IgniteCheckedException e) {
                 close(ses, e);
             }
+        }
+
+        private short msgType(ByteBuffer readBuf) {
+            assert readBuf.position() == 0;
+
+            try {
+                return readBuf.getShort();
+            } finally {
+                readBuf.position(0);
+            }
+        }
+
+        private void processHeartbeatMessage(GridNioSessionImpl ses, ByteBuffer buf) throws IgniteCheckedException {
+            HeartBeatMessage msg = new HeartBeatMessage();
+
+            msg.readFrom(buf, null);
+
+            log.info("Heartbeat message received. Msg=" + msg);
+
+            ses.sendNoFuture(new HeartBeatAckMessage(), null);
+        }
+
+        private void processHeartbeatAckMessage(GridSelectorNioSessionImpl ses, ByteBuffer buf) {
+            log.info("Heartbeat ack message received");
+
+            HeartBeatAckMessage msg = new HeartBeatAckMessage();
+
+            msg.readFrom(buf, null);
+
+            ses.updateHeartbeatReceived();
         }
 
         /**
@@ -2321,6 +2363,8 @@ public class GridNioServer<T> {
                         select = false;
                     }
 
+                    sendHeartbeatIfNeeded(selector.keys());
+
                     long now = U.currentTimeMillis();
 
                     if (now - lastIdleCheck > 2000) {
@@ -2688,13 +2732,40 @@ public class GridNioServer<T> {
 
                         // Update timestamp to avoid multiple notifications within one timeout interval.
                         ses.resetSendScheduleTime();
-                        ses.bytesReceived(0);
+                        ses.updateLastRcvTime();
                     }
                 }
                 catch (IgniteCheckedException e) {
                     close(ses, e);
                 }
             }
+        }
+
+        private void sendHeartbeatIfNeeded(Iterable<SelectionKey> keys) throws IgniteCheckedException {
+            for (SelectionKey key : keys) {
+                GridNioKeyAttachment attach = (GridNioKeyAttachment) key.attachment();
+
+                if (attach == null || !attach.hasSession())
+                    continue;
+
+                GridSelectorNioSessionImpl ses = attach.session();
+
+                long now = U.currentTimeMillis();
+
+                // We are checking last receive time to avoid unnecessary heartbeats
+                long lastMessageReceivedTs = Math.max(ses.lastHeartbeatReceived(), ses.lastReceiveTime());
+
+                if (now - lastMessageReceivedTs > HEARTBEAT_TIMEOUT && now - ses.lastHeartbeatSent() > HEARTBEAT_FREQUENCY) {
+                    sendHeartbeatMessage(ses);
+                }
+            }
+        }
+
+        private void sendHeartbeatMessage(GridSelectorNioSessionImpl ses) throws IgniteCheckedException {
+            log.info("Heartbeat message sent");
+
+            ses.updateHeartbeatSent();
+            ses.sendNoFuture(new HeartBeatMessage(), null);
         }
 
         /**
