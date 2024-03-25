@@ -185,11 +185,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageFactoryProvider;
 import org.apache.ignite.spi.collision.jobstealing.JobStealingRequest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.internal.TcpInverseConnectionResponseMessage;
-import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
-import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
-import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
-import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
-import org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage;
+import org.apache.ignite.spi.communication.tcp.messages.*;
 
 /**
  * Message factory implementation.
@@ -209,6 +205,8 @@ public class GridIoMessageFactory implements MessageFactoryProvider {
         factory.register((short)-45, GridChangeGlobalStateMessageResponse::new);
         factory.register((short)-44, HandshakeMessage2::new);
         factory.register((short)-43, IgniteIoTestMessage::new);
+        factory.register(TcpCommunicationSpi.HEARTBEAT_MSG_TYPE, HeartBeatMessage::new);
+        factory.register(TcpCommunicationSpi.HEARTBEAT_ACK_MSG_TYPE, HeartBeatMessage::new);
         factory.register((short)-36, GridDhtAtomicSingleUpdateRequest::new);
         factory.register((short)-27, GridDhtTxOnePhaseCommitAckRequest::new);
         factory.register((short)-26, TxLockList::new);

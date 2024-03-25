@@ -83,6 +83,9 @@ public class GridNioSessionImpl implements GridNioSession {
     /** For debug purposes. */
     private volatile boolean markedForClose;
 
+    private volatile long heartBeatSent;
+    private volatile long heartbeatReceived;
+
     /**
      * @param filterChain Chain.
      * @param locAddr Local address.
@@ -322,7 +325,9 @@ public class GridNioSessionImpl implements GridNioSession {
     public void bytesReceived(int cnt) {
         bytesRcvd += cnt;
         bytesRcvd0 += cnt;
+    }
 
+    public void updateLastRcvTime() {
         lastRcvTime = U.currentTimeMillis();
     }
 
@@ -387,6 +392,22 @@ public class GridNioSessionImpl implements GridNioSession {
     /** {@inheritDoc} */
     @Override public void systemMessage(Object msg) {
         throw new UnsupportedOperationException();
+    }
+
+    public long lastHeartbeatSent() {
+        return heartBeatSent;
+    }
+
+    public long lastHeartbeatReceived() {
+        return heartbeatReceived;
+    }
+
+    public void updateHeartbeatSent() {
+        heartBeatSent = U.currentTimeMillis();
+    }
+
+    public void updateHeartbeatReceived() {
+        heartbeatReceived = U.currentTimeMillis();
     }
 
     /** {@inheritDoc} */

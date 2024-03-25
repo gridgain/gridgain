@@ -318,6 +318,12 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     /** Handshake wait message type. */
     public static final short HANDSHAKE_WAIT_MSG_TYPE = -28;
 
+    /** Heartbeat message type. */
+    public static final short HEARTBEAT_MSG_TYPE = -42;
+
+    /** Heartbeat message type. */
+    public static final short HEARTBEAT_ACK_MSG_TYPE = -41;
+
     /** Communication metrics group name. */
     public static final String COMMUNICATION_METRICS_GROUP_NAME = MetricUtils.metricName("communication", "tcp");
 
