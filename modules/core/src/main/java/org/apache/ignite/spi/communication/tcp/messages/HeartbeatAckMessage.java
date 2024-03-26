@@ -8,8 +8,7 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 
 import java.nio.ByteBuffer;
 
-public class HeartBeatMessage implements Message {
-    /** */
+public class HeartbeatAckMessage implements Message {
     private static final long serialVersionUID = 0L;
 
     /** Message body size in bytes. */
@@ -18,9 +17,15 @@ public class HeartBeatMessage implements Message {
     /** Full message size (with message type) in bytes. */
     private static final int MESSAGE_FULL_SIZE = MESSAGE_SIZE + DIRECT_TYPE_SIZE;
 
-    private long timestamp = U.currentTimeMillis();
+    private long timestamp;
 
-    /** {@inheritDoc} */
+    public HeartbeatAckMessage() {
+    }
+
+    public HeartbeatAckMessage(long timestamp) {
+        this.timestamp = timestamp;
+    }
+
     @Override
     public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         if (buf.remaining() < MESSAGE_FULL_SIZE)
@@ -33,7 +38,6 @@ public class HeartBeatMessage implements Message {
         return true;
     }
 
-    /** {@inheritDoc} */
     @Override
     public boolean readFrom(ByteBuffer buf, MessageReader reader) {
         if (buf.remaining() < MESSAGE_SIZE)
@@ -44,21 +48,25 @@ public class HeartBeatMessage implements Message {
         return true;
     }
 
-    /** {@inheritDoc} */
     @Override
     public short directType() {
-        return TcpCommunicationSpi.HEARTBEAT_MSG_TYPE;
+        return TcpCommunicationSpi.HEARTBEAT_ACK_MSG_TYPE;
     }
 
-    /** {@inheritDoc} */
     @Override
     public byte fieldsCount() {
         return 1;
     }
 
-    /** {@inheritDoc} */
     @Override
     public void onAckReceived() {
         // No-op.
+    }
+
+    @Override
+    public String toString() {
+        return "HeartbeatAckMessage{" +
+                "timestamp=" + timestamp +
+                '}';
     }
 }

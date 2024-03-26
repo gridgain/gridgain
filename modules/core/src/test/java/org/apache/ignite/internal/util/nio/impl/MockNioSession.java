@@ -94,6 +94,16 @@ public class MockNioSession extends GridMetadataAwareAdapter implements GridNioS
     }
 
     /** {@inheritDoc} */
+    @Override public void updateLastReceiveTime() {
+        // No-op
+    }
+
+    /** {@inheritDoc} */
+    @Override public void updateHeartbeatReceived() {
+        // No-op
+    }
+
+    /** {@inheritDoc} */
     @Override public long lastSendTime() {
         return 0;
     }

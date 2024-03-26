@@ -77,6 +77,10 @@ public interface GridNioSession {
      */
     public long lastReceiveTime();
 
+    void updateLastReceiveTime();
+
+    void updateHeartbeatReceived();
+
     /**
      * Returns time when last send activity was performed on this session.
      *
