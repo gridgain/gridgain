@@ -219,6 +219,18 @@ public class GridCacheMessageSelfTest extends GridCommonAbstractTest {
         assert latch.await(3, SECONDS);
     }
 
+    @Test
+    public void theTest() throws Exception {
+        startGrids(2);
+
+        IgniteEx ign0 = grid(0);
+        IgniteEx ign1 = grid(1);
+
+        Thread.sleep(100000);
+
+        System.out.println();
+    }
+
     /** */
     private static class TestMessage extends GridCacheMessage {
         /** */

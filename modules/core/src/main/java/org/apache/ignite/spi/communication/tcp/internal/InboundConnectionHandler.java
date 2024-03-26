@@ -35,14 +35,7 @@ import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.nio.GridCommunicationClient;
-import org.apache.ignite.internal.util.nio.GridNioMessageTracker;
-import org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor;
-import org.apache.ignite.internal.util.nio.GridNioServerListenerAdapter;
-import org.apache.ignite.internal.util.nio.GridNioSession;
-import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
-import org.apache.ignite.internal.util.nio.GridShmemCommunicationClient;
-import org.apache.ignite.internal.util.nio.GridTcpNioCommunicationClient;
+import org.apache.ignite.internal.util.nio.*;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -54,10 +47,7 @@ import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.AttributeNames;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
-import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
-import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
-import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
-import org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage;
+import org.apache.ignite.spi.communication.tcp.messages.*;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
@@ -281,6 +271,11 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
         ConnectionKey connKey = ses.meta(CONN_IDX_META);
 
+        boolean isHeartbeat = msg instanceof HeartbeatMessage || msg instanceof HeartbeatAckMessage;
+
+        if (!isHeartbeat)
+            ses.updateLastReceiveTime();
+
         if (connKey == null) {
             assert ses.accepted() : ses;
 
@@ -321,6 +316,20 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
                     recovery.ackReceived(msg0.received());
                 }
+
+                return;
+            }
+            else if (msg instanceof HeartbeatMessage) {
+                log.info("Heartbeat message received. Msg = " + msg);
+
+                ses.send(new HeartbeatAckMessage(((HeartbeatMessage)msg).timestamp));
+
+                return;
+            }
+            else if (msg instanceof HeartbeatAckMessage) {
+                log.info("Heartbeat ack message received. Msg = " + msg);
+
+                ses.updateHeartbeatReceived();
 
                 return;
             }

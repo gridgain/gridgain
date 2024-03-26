@@ -79,8 +79,8 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.apache.ignite.spi.communication.tcp.messages.HeartBeatAckMessage;
-import org.apache.ignite.spi.communication.tcp.messages.HeartBeatMessage;
+import org.apache.ignite.spi.communication.tcp.messages.HeartbeatAckMessage;
+import org.apache.ignite.spi.communication.tcp.messages.HeartbeatMessage;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
@@ -91,8 +91,6 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATI
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.MSG_WRITER;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.NIO_OPERATION;
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.HEARTBEAT_ACK_MSG_TYPE;
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.HEARTBEAT_MSG_TYPE;
 
 /**
  * TCP NIO server. Due to asynchronous nature of connections processing
@@ -1373,25 +1371,14 @@ public class GridNioServer<T> {
                 rcvdBytesCntMetric.add(cnt);
 
             ses.bytesReceived(cnt);
-
             onRead(cnt);
 
             readBuf.flip();
 
-            short msgType = msgType(readBuf);
-
-            if (msgType != HEARTBEAT_MSG_TYPE && msgType != HEARTBEAT_ACK_MSG_TYPE)
-                ses.updateLastRcvTime();
-
             assert readBuf.hasRemaining();
 
             try {
-                if (msgType == HEARTBEAT_MSG_TYPE)
-                    processHeartbeatMessage(ses, readBuf);
-                else if (msgType == HEARTBEAT_ACK_MSG_TYPE)
-                    processHeartbeatAckMessage(ses, readBuf);
-                else
-                    filterChain.onMessageReceived(ses, readBuf);
+                filterChain.onMessageReceived(ses, readBuf);
 
                 if (readBuf.hasRemaining())
                     readBuf.compact();
@@ -1420,19 +1407,19 @@ public class GridNioServer<T> {
         }
 
         private void processHeartbeatMessage(GridNioSessionImpl ses, ByteBuffer buf) throws IgniteCheckedException {
-            HeartBeatMessage msg = new HeartBeatMessage();
+            HeartbeatMessage msg = new HeartbeatMessage();
 
             msg.readFrom(buf, null);
 
             log.info("Heartbeat message received. Msg=" + msg);
 
-            ses.sendNoFuture(new HeartBeatAckMessage(), null);
+            ses.sendNoFuture(new HeartbeatAckMessage(), null);
         }
 
         private void processHeartbeatAckMessage(GridSelectorNioSessionImpl ses, ByteBuffer buf) {
             log.info("Heartbeat ack message received");
 
-            HeartBeatAckMessage msg = new HeartBeatAckMessage();
+            HeartbeatAckMessage msg = new HeartbeatAckMessage();
 
             msg.readFrom(buf, null);
 
@@ -2732,7 +2719,7 @@ public class GridNioServer<T> {
 
                         // Update timestamp to avoid multiple notifications within one timeout interval.
                         ses.resetSendScheduleTime();
-                        ses.updateLastRcvTime();
+                        ses.updateLastReceiveTime();
                     }
                 }
                 catch (IgniteCheckedException e) {
@@ -2753,19 +2740,19 @@ public class GridNioServer<T> {
                 long now = U.currentTimeMillis();
 
                 // We are checking last receive time to avoid unnecessary heartbeats
-                long lastMessageReceivedTs = Math.max(ses.lastHeartbeatReceived(), ses.lastReceiveTime());
+                long lastReceivedTs = Math.max(ses.lastHeartbeatReceived(), ses.lastReceiveTime());
 
-                if (now - lastMessageReceivedTs > HEARTBEAT_TIMEOUT && now - ses.lastHeartbeatSent() > HEARTBEAT_FREQUENCY) {
+                if (now - lastReceivedTs > HEARTBEAT_TIMEOUT && now - ses.lastHeartbeatSent() > HEARTBEAT_FREQUENCY)
                     sendHeartbeatMessage(ses);
-                }
             }
         }
 
         private void sendHeartbeatMessage(GridSelectorNioSessionImpl ses) throws IgniteCheckedException {
-            log.info("Heartbeat message sent");
+            HeartbeatMessage msg = new HeartbeatMessage();
+            log.info("Heartbeat message sent. Msg = " + msg);
 
             ses.updateHeartbeatSent();
-            ses.sendNoFuture(new HeartBeatMessage(), null);
+            ses.sendNoFuture(msg, null);
         }
 
         /**
