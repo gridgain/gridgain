@@ -532,8 +532,8 @@ public class GridDhtPartitionDemander {
                 errMsg = "topology changed";
 
             if (errMsg != null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Supply message has been ignored (" + errMsg + ") [" +
+                if (log.isInfoEnabled()) {
+                    log.info("Supply message has been ignored (" + errMsg + ") [" +
                         demandRoutineInfo(nodeId, supplyMsg) + ']');
                 }
 
@@ -929,10 +929,8 @@ public class GridDhtPartitionDemander {
                     }
 
                     if (!preloadEntry(node, p, entry, topVer, cctx)) {
-                        if (log.isTraceEnabled()) {
-                            log.trace("Got entries for invalid partition during " +
-                                "preloading (will skip) [p=" + p + ", entry=" + entry + ']');
-                        }
+                        log.warning("Got entries for invalid partition during " +
+                            "preloading (will skip) [p=" + p + ", entry=" + entry + ']');
 
                         return;
                     }
