@@ -870,7 +870,8 @@ public class GridNioServerWrapper {
                     .skipRecoveryPredicate(skipRecoveryPred)
                     .messageQueueSizeListener(queueSizeMonitor)
                     .tracing(tracing)
-                    .readWriteSelectorsAssign(cfg.usePairedConnections());
+                    .readWriteSelectorsAssign(cfg.usePairedConnections())
+                    .useHeartbeats(true);
 
                 if (metricMgr != null) {
                     builder.workerListener(workersRegistry)
