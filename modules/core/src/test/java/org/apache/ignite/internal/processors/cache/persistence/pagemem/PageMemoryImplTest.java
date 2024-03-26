@@ -32,6 +32,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
@@ -40,6 +41,8 @@ import org.apache.ignite.internal.mem.DirectMemoryProvider;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
 import org.apache.ignite.internal.pagemem.FullPageId;
+import org.apache.ignite.internal.pagemem.PageIdAllocator;
+import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
 import org.apache.ignite.internal.pagemem.store.PageStore;
@@ -51,6 +54,8 @@ import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgressImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV3;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
@@ -70,6 +75,8 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -77,6 +84,9 @@ import org.mockito.Mockito;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.CHECKPOINT_POOL_OVERFLOW_ERROR_MSG;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 
 /**
  *
@@ -415,6 +425,94 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
 
                 assertTrue("Missing page: " + fullPageId, memory.hasLoadedPage(fullPageId));
             }, null);
+    }
+
+    @Test
+    public void test() throws Exception {
+        int pageCount = 800;
+        int grpId = 1;
+
+        TestPageStoreManager pageStoreMgr = new TestPageStoreManager();
+
+        PageMemoryImpl pageMemory = createPageMemory(1, PageMemoryImpl.ThrottlingPolicy.CHECKPOINT_BUFFER_ONLY, pageStoreMgr,
+            pageStoreMgr, null);
+
+        List<Long> realPageIds = new ArrayList<>();
+
+        for (int i = 0; i < pageCount; i++) {
+            long realPageId = pageMemory.allocatePage(grpId, 0, PageIdAllocator.FLAG_AUX);
+
+            long page = pageMemory.acquirePage(grpId, realPageId);
+
+            try {
+                long pageAddr = pageMemory.writeLock(grpId, realPageId, page);
+
+                try {
+                    PagePartitionMetaIOV3 io = (PagePartitionMetaIOV3) PagePartitionMetaIO.VERSIONS.latest();
+                    io.initNewPage(pageAddr, realPageId, pageMemory.pageSize(),
+                        pageMemory.metrics().cacheGrpPageMetrics(grpId));
+                }
+                finally {
+                    pageMemory.writeUnlock(grpId, realPageId, page, null, true);
+                }
+            }
+            finally {
+                pageMemory.releasePage(grpId, realPageId, page);
+            }
+
+            realPageIds.add(realPageId);
+        }
+
+        doCheckpoint(pageMemory.beginCheckpoint(new GridFinishedFuture()), pageMemory, pageStoreMgr);
+
+        pageMemory.stop(true);
+
+        PageMemoryImpl pageMemory2 = createPageMemory(1, PageMemoryImpl.ThrottlingPolicy.CHECKPOINT_BUFFER_ONLY, pageStoreMgr,
+            pageStoreMgr, null);
+
+        IgniteInternalFuture<?> fut1 = multithreadedAsync(() -> {
+            for (long realPageId : realPageIds) {
+                long notRealPageId = PageIdUtils.changeType(realPageId, PageIdAllocator.FLAG_DATA);
+
+                long page2 = pageMemory2.acquirePage(grpId, notRealPageId);
+
+                try {
+                    pageMemory2.writeLock(grpId, notRealPageId, page2, true);
+                    pageMemory2.writeUnlock(grpId, notRealPageId, page2, null, true);
+                }
+                finally {
+                    pageMemory2.releasePage(grpId, notRealPageId, page2);
+                }
+            }
+
+            return null;
+        }, 1);
+
+        IgniteInternalFuture<?> fut2 = multithreadedAsync(() -> {
+            for (long realPageId : realPageIds) {
+                long page3 = pageMemory2.acquirePage(grpId, realPageId);
+
+                try {
+                    long pageAddr = pageMemory2.readLock(grpId, realPageId, page3);
+
+                    try {
+                        assertThat(pageAddr, is(not(0L)));
+                    }
+                    finally {
+                        if (pageAddr != 0)
+                            pageMemory2.readUnlock(grpId, realPageId, page3);
+                    }
+                }
+                finally {
+                    pageMemory2.releasePage(grpId, realPageId, page3);
+                }
+            }
+
+            return null;
+        }, 1);
+
+        fut1.get();
+        fut2.get();
     }
 
     /**
