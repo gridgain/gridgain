@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.query.schema.operation;
 import java.util.Collection;
 import java.util.UUID;
 import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Enabling indexing on cache operation.
@@ -77,5 +78,9 @@ public class SchemaAddQueryEntityOperation extends SchemaAbstractOperation {
      */
     public boolean isSqlEscape() {
         return sqlEscape;
+    }
+
+    @Override public String toString() {
+        return S.toString(SchemaAddQueryEntityOperation.class, this);
     }
 }
