@@ -483,7 +483,7 @@ public class QueryUtils {
             desc.setFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).fillAbsentPKsWithDefaults());
             desc.implicitPk(((QueryEntityEx)qryEntity).isImplicitPk());
         }
-        
+
         // Key and value classes still can be available if they are primitive or JDK part.
         // We need that to set correct types for _key and _val columns.
         // We better box these types - otherwise, if user provides, say, raw 'byte' for
@@ -1334,6 +1334,8 @@ public class QueryUtils {
                 ", valFieldName=" + valFieldName + "]");
         }
 
+        validateAliases(entity);
+
         Collection<QueryIndex> idxs = entity.getIndexes();
 
         if (!F.isEmpty(idxs)) {
@@ -1389,6 +1391,21 @@ public class QueryUtils {
                             ", actual scale: " + dec.scale(), VALUE_SCALE_OUT_OF_RANGE);
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * @param entity Query entity which aliases should be validated.
+     * @throws IgniteException If validation failed.
+     */
+    private static void validateAliases(QueryEntity entity) {
+        Set<String> aliases = new HashSet<>();
+
+        for (String alias : entity.getAliases().values()) {
+            if (!aliases.add(alias)) {
+                throw new IgniteException(
+                    "Multiple query fields are associated with the same alias [alias=" + alias + "]");
             }
         }
     }
@@ -1664,13 +1681,13 @@ public class QueryUtils {
     }
 
     /**
-     * Remove field by alias.
+     * Remove field and corresponding alias by the alias name.
      *
      * @param entity Query entity.
-     * @param alias Filed's alias.
-     * @return {@code true} if the field is removed. Otherwise returns {@code false}.
+     * @param alias Name of the field alias.
+     * @return {@code true} if the field and corresponding alias is removed. Otherwise, returns {@code false}.
      */
-    public static boolean removeField(QueryEntity entity, String alias) {
+    public static boolean removeFieldAndAlias(QueryEntity entity, String alias) {
         String fieldName = fieldNameByAlias(entity, alias);
 
         if (entity.getFields().remove(fieldName) != null) {
@@ -1683,6 +1700,7 @@ public class QueryUtils {
             entity.getDefaultFieldValues().remove(fieldName);
             entity.getFieldsPrecision().remove(fieldName);
             entity.getFieldsScale().remove(fieldName);
+            entity.getAliases().remove(fieldName);
 
             return true;
         }
