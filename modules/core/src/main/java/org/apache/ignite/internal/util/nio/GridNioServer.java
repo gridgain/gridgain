@@ -287,6 +287,8 @@ public class GridNioServer<T> {
     /** Tracing processor. */
     private Tracing tracing;
 
+    private final boolean useHeartbeats;
+
     /**
      * @param addr Address.
      * @param port Port.
@@ -339,6 +341,7 @@ public class GridNioServer<T> {
         @Nullable GridWorkerListener workerLsnr,
         @Nullable MetricRegistry mreg,
         Tracing tracing,
+        boolean useHeartbeats,
         GridNioFilter... filters
     ) throws IgniteCheckedException {
         if (port != -1)
@@ -466,6 +469,8 @@ public class GridNioServer<T> {
 
             mreg.register(SSL_ENABLED_METRIC_NAME, () -> sslEnabled, "Whether SSL is enabled.");
         }
+
+        this.useHeartbeats = useHeartbeats;
     }
 
     /**
@@ -2729,6 +2734,9 @@ public class GridNioServer<T> {
         }
 
         private void sendHeartbeatIfNeeded(Iterable<SelectionKey> keys) throws IgniteCheckedException {
+            if (!useHeartbeats)
+                return;
+
             for (SelectionKey key : keys) {
                 GridNioKeyAttachment attach = (GridNioKeyAttachment) key.attachment();
 
@@ -2747,12 +2755,12 @@ public class GridNioServer<T> {
             }
         }
 
-        private void sendHeartbeatMessage(GridSelectorNioSessionImpl ses) throws IgniteCheckedException {
+        private void sendHeartbeatMessage(GridSelectorNioSessionImpl ses) {
             HeartbeatMessage msg = new HeartbeatMessage();
             log.info("Heartbeat message sent. Msg = " + msg);
 
             ses.updateHeartbeatSent();
-            ses.sendNoFuture(msg, null);
+            ses.send(msg);
         }
 
         /**
@@ -3938,6 +3946,8 @@ public class GridNioServer<T> {
         /** Tracing processor */
         private Tracing tracing;
 
+        private boolean useHeartbeats = false;
+
         /**
          * Finishes building the instance.
          *
@@ -3969,6 +3979,7 @@ public class GridNioServer<T> {
                 workerLsnr,
                 mreg,
                 tracing,
+                useHeartbeats,
                 filters != null ? Arrays.copyOf(filters, filters.length) : EMPTY_FILTERS
             );
 
@@ -4240,6 +4251,12 @@ public class GridNioServer<T> {
          */
         public Builder<T> metricRegistry(MetricRegistry mreg) {
             this.mreg = mreg;
+
+            return this;
+        }
+
+        public Builder<T> useHeartbeats(boolean useHeartbeats) {
+            this.useHeartbeats = useHeartbeats;
 
             return this;
         }
