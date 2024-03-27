@@ -2150,6 +2150,9 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
      * Remote filter that allows to avoid transferring unnecessary updates.
      */
     public static class ServiceProcessorFilter implements CacheEntryEventSerializableFilter {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         @Override public boolean evaluate(CacheEntryEvent evt) throws CacheEntryListenerException {
             return evt.getKey() instanceof GridServiceDeploymentKey || evt.getKey() instanceof GridServiceAssignmentsKey;
         }
