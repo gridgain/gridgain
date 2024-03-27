@@ -38,9 +38,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
+
+import org.apache.ignite.*;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
@@ -871,7 +870,7 @@ public class GridNioServerWrapper {
                     .messageQueueSizeListener(queueSizeMonitor)
                     .tracing(tracing)
                     .readWriteSelectorsAssign(cfg.usePairedConnections())
-                    .useHeartbeats(true);
+                    .useHeartbeats(cfg.useHeartbeats());
 
                 if (metricMgr != null) {
                     builder.workerListener(workersRegistry)

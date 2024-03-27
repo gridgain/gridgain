@@ -859,6 +859,13 @@ cfg.socketSendBuffer(sockSndBuf);
         return (TcpCommunicationSpi) this;
     }
 
+    @IgniteSpiConfiguration(optional = true)
+    public TcpCommunicationSpi setUseHeartbeats(boolean useHeartbeats) {
+        cfg.useHeartbeats(useHeartbeats);
+
+        return (TcpCommunicationSpi) this;
+    }
+
     /**
      * @return Bound TCP server port.
      */

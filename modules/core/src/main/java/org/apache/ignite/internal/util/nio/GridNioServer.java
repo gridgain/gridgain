@@ -2733,7 +2733,7 @@ public class GridNioServer<T> {
             }
         }
 
-        private void sendHeartbeatIfNeeded(Iterable<SelectionKey> keys) throws IgniteCheckedException {
+        private void sendHeartbeatIfNeeded(Iterable<SelectionKey> keys) {
             if (!useHeartbeats)
                 return;
 
