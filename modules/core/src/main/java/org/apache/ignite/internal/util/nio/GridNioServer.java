@@ -166,9 +166,9 @@ public class GridNioServer<T> {
     public static final String SESSIONS_CNT_METRIC_NAME = "ActiveSessionsCount";
 
     /** Timeout for sending heartbeat messages for stale connection. */
-    public static final long HEARTBEAT_TIMEOUT = 1000L;
+    public static final long HEARTBEAT_TIMEOUT = 5000L;
 
-    public static final long HEARTBEAT_FREQUENCY = 500L;
+    public static final long HEARTBEAT_FREQUENCY = 1000L;
 
     /** Defines how many times selector should do {@code selectNow()} before doing {@code select(long)}. */
     private long selectorSpins;
@@ -2766,8 +2766,10 @@ public class GridNioServer<T> {
             if (log.isDebugEnabled())
                 log.debug("Heartbeat message sent. Msg = " + msg);
 
+            log.info("Heartbeat message sent. Msg = " + msg);
+
             ses.updateHeartbeatSent();
-//            ses.send(msg);
+            ses.send(msg);
         }
 
         /**
