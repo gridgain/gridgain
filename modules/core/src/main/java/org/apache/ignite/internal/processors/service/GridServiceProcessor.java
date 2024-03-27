@@ -39,11 +39,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import javax.cache.Cache;
 import javax.cache.event.CacheEntryEvent;
+import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.CacheEntryUpdatedListener;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJobContext;
@@ -1530,7 +1532,7 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
     /**
      * Service deployment listener.
      */
-    private class ServiceEntriesListener implements CacheEntryUpdatedListener<Object, Object> {
+    public class ServiceEntriesListener implements CacheEntryUpdatedListener<Object, Object> {
         /** {@inheritDoc} */
         @Override public void onUpdated(final Iterable<CacheEntryEvent<?, ?>> deps) {
             GridSpinBusyLock busyLock = GridServiceProcessor.this.busyLock;
@@ -2141,6 +2143,15 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
             }
 
             return serviceTopology(cache, svcName);
+        }
+    }
+
+    /**
+     * Remote filter that allows to avoid transferring unnecessary updates.
+     */
+    public static class ServiceProcessorFilter implements CacheEntryEventSerializableFilter {
+        @Override public boolean evaluate(CacheEntryEvent evt) throws CacheEntryListenerException {
+            return evt.getKey() instanceof GridServiceDeploymentKey || evt.getKey() instanceof GridServiceAssignmentsKey;
         }
     }
 }
