@@ -35,7 +35,7 @@ public class HeartbeatMessage implements Message {
     private static final int MESSAGE_FULL_SIZE = MESSAGE_SIZE + DIRECT_TYPE_SIZE;
 
     /** Message timestamp. */
-    public long timestamp; // TODO public for debug; remove
+    private long timestamp; // TODO public for debug; remove
 
     /** */
     public HeartbeatMessage() {
@@ -77,6 +77,10 @@ public class HeartbeatMessage implements Message {
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
         // No-op.
+    }
+
+    public long getTimestamp() {
+        return timestamp;
     }
 
     @Override public String toString() {
