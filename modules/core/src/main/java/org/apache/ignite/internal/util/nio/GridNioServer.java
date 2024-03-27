@@ -2093,6 +2093,7 @@ public class GridNioServer<T> {
         private void bodyInternal() throws IgniteCheckedException, InterruptedException {
             try {
                 long lastIdleCheck = U.currentTimeMillis();
+                long lastHeartbeatCheck = U.currentTimeMillis();
 
                 mainLoop:
                 while (!closed && selector.isOpen()) {
@@ -2357,9 +2358,13 @@ public class GridNioServer<T> {
                         select = false;
                     }
 
-                    sendHeartbeatIfNeeded(selector.keys());
-
                     long now = U.currentTimeMillis();
+
+                    if (now - lastHeartbeatCheck > HEARTBEAT_FREQUENCY) {
+                        lastHeartbeatCheck = now;
+
+                        sendHeartbeatIfNeeded(selector.keys());
+                    }
 
                     if (now - lastIdleCheck > 2000) {
                         lastIdleCheck = now;
