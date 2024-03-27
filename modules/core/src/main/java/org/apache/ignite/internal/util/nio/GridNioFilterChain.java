@@ -21,8 +21,6 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.lang.IgniteInClosure;
-import org.apache.ignite.spi.communication.tcp.messages.HeartbeatAckMessage;
-import org.apache.ignite.spi.communication.tcp.messages.HeartbeatMessage;
 
 /**
  * Filter chain implementation for nio server filters.
