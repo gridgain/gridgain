@@ -1416,13 +1416,15 @@ public class GridNioServer<T> {
 
             msg.readFrom(buf, null);
 
-            log.info("Heartbeat message received. Msg=" + msg);
+            if (log.isDebugEnabled())
+                log.debug("Heartbeat message received. Msg=" + msg);
 
             ses.sendNoFuture(new HeartbeatAckMessage(), null);
         }
 
         private void processHeartbeatAckMessage(GridSelectorNioSessionImpl ses, ByteBuffer buf) {
-            log.info("Heartbeat ack message received");
+            if (log.isDebugEnabled())
+                log.debug("Heartbeat ack message received");
 
             HeartbeatAckMessage msg = new HeartbeatAckMessage();
 
@@ -2745,6 +2747,9 @@ public class GridNioServer<T> {
 
                 GridSelectorNioSessionImpl ses = attach.session();
 
+                if (ses.closed())
+                    continue;
+
                 long now = U.currentTimeMillis();
 
                 // We are checking last receive time to avoid unnecessary heartbeats
@@ -2757,10 +2762,12 @@ public class GridNioServer<T> {
 
         private void sendHeartbeatMessage(GridSelectorNioSessionImpl ses) {
             HeartbeatMessage msg = new HeartbeatMessage();
-            log.info("Heartbeat message sent. Msg = " + msg);
+
+            if (log.isDebugEnabled())
+                log.debug("Heartbeat message sent. Msg = " + msg);
 
             ses.updateHeartbeatSent();
-            ses.send(msg);
+//            ses.send(msg);
         }
 
         /**

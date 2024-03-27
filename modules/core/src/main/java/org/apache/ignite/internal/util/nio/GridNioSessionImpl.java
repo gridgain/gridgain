@@ -84,6 +84,7 @@ public class GridNioSessionImpl implements GridNioSession {
     private volatile boolean markedForClose;
 
     private volatile long heartBeatSent = U.currentTimeMillis();
+
     private volatile long heartbeatReceived = U.currentTimeMillis();
 
     /**

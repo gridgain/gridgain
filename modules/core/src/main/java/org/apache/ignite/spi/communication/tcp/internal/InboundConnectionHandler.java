@@ -320,14 +320,16 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 return;
             }
             else if (msg instanceof HeartbeatMessage) {
-                log.info("Heartbeat message received. Msg = " + msg);
+                if (log.isDebugEnabled())
+                    log.debug("Heartbeat message received. Msg = " + msg);
 
                 ses.send(new HeartbeatAckMessage(((HeartbeatMessage)msg).timestamp));
 
                 return;
             }
             else if (msg instanceof HeartbeatAckMessage) {
-                log.info("Heartbeat ack message received. Msg = " + msg);
+                if (log.isDebugEnabled())
+                    log.debug("Heartbeat ack message received. Msg = " + msg);
 
                 ses.updateHeartbeatReceived();
 

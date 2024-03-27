@@ -34,7 +34,6 @@ public class HeartbeatMessage implements Message {
     /** Full message size (with message type) in bytes. */
     private static final int MESSAGE_FULL_SIZE = MESSAGE_SIZE + DIRECT_TYPE_SIZE;
 
-
     /** Message timestamp. */
     public long timestamp; // TODO public for debug; remove
 
@@ -80,8 +79,7 @@ public class HeartbeatMessage implements Message {
         // No-op.
     }
 
-    @Override
-    public String toString() {
+    @Override public String toString() {
         return S.toString(HeartbeatMessage.class, this);
     }
 }
