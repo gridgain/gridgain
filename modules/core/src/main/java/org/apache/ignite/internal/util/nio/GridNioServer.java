@@ -1401,38 +1401,6 @@ public class GridNioServer<T> {
             }
         }
 
-        private short msgType(ByteBuffer readBuf) {
-            assert readBuf.position() == 0;
-
-            try {
-                return readBuf.getShort();
-            } finally {
-                readBuf.position(0);
-            }
-        }
-
-        private void processHeartbeatMessage(GridNioSessionImpl ses, ByteBuffer buf) throws IgniteCheckedException {
-            HeartbeatMessage msg = new HeartbeatMessage();
-
-            msg.readFrom(buf, null);
-
-            if (log.isDebugEnabled())
-                log.debug("Heartbeat message received. Msg=" + msg);
-
-            ses.sendNoFuture(new HeartbeatAckMessage(), null);
-        }
-
-        private void processHeartbeatAckMessage(GridSelectorNioSessionImpl ses, ByteBuffer buf) {
-            if (log.isDebugEnabled())
-                log.debug("Heartbeat ack message received");
-
-            HeartbeatAckMessage msg = new HeartbeatAckMessage();
-
-            msg.readFrom(buf, null);
-
-            ses.updateHeartbeatReceived();
-        }
-
         /**
          * Processes write-ready event on the key.
          *
@@ -2360,16 +2328,16 @@ public class GridNioServer<T> {
 
                     long now = U.currentTimeMillis();
 
-                    if (now - lastHeartbeatCheck > HEARTBEAT_FREQUENCY) {
-                        lastHeartbeatCheck = now;
-
-                        sendHeartbeatIfNeeded(selector.keys());
-                    }
-
                     if (now - lastIdleCheck > 2000) {
                         lastIdleCheck = now;
 
                         checkIdle(selector.keys());
+                    }
+
+                    if (useHeartbeats && now - lastHeartbeatCheck > HEARTBEAT_FREQUENCY) {
+                        lastHeartbeatCheck = now;
+
+                        sendHeartbeatIfNeeded(selector.keys());
                     }
                 }
             }
@@ -2741,9 +2709,6 @@ public class GridNioServer<T> {
         }
 
         private void sendHeartbeatIfNeeded(Iterable<SelectionKey> keys) {
-            if (!useHeartbeats)
-                return;
-
             for (SelectionKey key : keys) {
                 GridNioKeyAttachment attach = (GridNioKeyAttachment) key.attachment();
 
