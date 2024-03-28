@@ -141,7 +141,8 @@ public class CommunicationMessageAcknowledgeTest extends GridCommonAbstractTest 
         return Arrays.asList(
             "-Xmx" + REMOTE_HEAP_SIZE_MB + "m",
             "-Xms" + REMOTE_HEAP_SIZE_MB + "m",
-            "-XX:+CrashOnOutOfMemoryError"
+            "-XX:+CrashOnOutOfMemoryError",
+            "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=7007"
         );
     }
 
