@@ -280,7 +280,10 @@ public class ConnectionClientPool {
                             throw (Error)e;
                     }
                     finally {
-                        clientFuts.remove(connKey, fut);
+                        GridFutureAdapter<GridCommunicationClient> removed = clientFuts.remove(connKey);
+
+                        assert removed != null : "Connection future wasn't removed: this can block " +
+                                "further connections between nodes.";
                     }
                 }
                 else
