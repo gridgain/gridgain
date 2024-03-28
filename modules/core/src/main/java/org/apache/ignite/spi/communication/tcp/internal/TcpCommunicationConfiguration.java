@@ -177,7 +177,7 @@ public class TcpCommunicationConfiguration implements Serializable {
     private boolean forceClientToSrvConnections;
 
     /** Allows to send heartbeat messages for tcp communication connections. */
-    private boolean useHeartbeats = true;
+    private boolean useHeartbeats = false;
 
     /** Address resolver. */
     public AddressResolver addrRslvr() {
