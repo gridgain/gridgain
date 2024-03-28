@@ -2146,9 +2146,14 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
         }
     }
 
+    /** Remote filter instance that can be shared by counterparts simultaneously. */
+    @Deprecated
+    public static final ServiceProcessorFilter REMOTE_FILTER = new ServiceProcessorFilter();
+
     /**
      * Remote filter that allows to avoid transferring unnecessary updates.
      */
+    @Deprecated
     public static class ServiceProcessorFilter implements CacheEntryEventSerializableFilter {
         /** */
         private static final long serialVersionUID = 0L;
