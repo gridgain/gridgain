@@ -19,9 +19,28 @@ package org.apache.ignite.spi.communication.tcp.internal;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Connect future which uses as a marker of type connection related with TCP, no SHMEM.
  */
 public class ConnectFuture extends GridFutureAdapter<GridCommunicationClient> {
-    // No-op.
+    /**
+     * Counter which allows to pause attempts to establish outgoing connection in case when attempt was failed
+     * and multiple incoming connections were detected.
+     * This may speed-up cluster recovery after network problems.
+     */
+    private final AtomicInteger incomingConnectionAttempts = new AtomicInteger();
+
+    public int incomingConnectionAttempts() {
+        return incomingConnectionAttempts.get();
+    }
+
+    public void resetIncomingConnectionAttempts() {
+        incomingConnectionAttempts.set(0);
+    }
+
+    public int registerIncomingConnectionAttempt() {
+        return incomingConnectionAttempts.incrementAndGet();
+    }
 }

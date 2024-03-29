@@ -510,8 +510,6 @@ public class GridNioServerWrapper {
                         ses = null;
                     }
 
-                    failedAddrs.computeIfAbsent(addr, k -> new ArrayList<>()).add("Timeout exception:" + e.getMessage());
-
                     eRegistrySupplier.get().onException("Handshake timed out (will retry with increased timeout) [connTimeoutStrategy=" + connTimeoutStgy +
                         ", addr=" + addr + ']', e);
 
@@ -561,9 +559,6 @@ public class GridNioServerWrapper {
 
                     // check if timeout occurred in case of unrecoverable exception
                     if (connTimeoutStgy.checkTimeout()) {
-                        failedAddrs.computeIfAbsent(addr, k -> new ArrayList<>())
-                                .add("Timeout with other exception:" + e.getClass() + ": " + e.getMessage());
-
                         U.warn(log, "Connection timed out (will stop attempts to perform the connect) " +
                             "[node=" + node.id() + ", connTimeoutStgy=" + connTimeoutStgy +
                             ", failureDetectionTimeoutEnabled=" + cfg.failureDetectionTimeoutEnabled() +
