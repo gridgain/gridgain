@@ -346,6 +346,7 @@ public class GridNioServerWrapper {
         }
 
         Set<InetSocketAddress> failedAddrsSet = new HashSet<>();
+        Set<InetSocketAddress> timeoutAddrs = new HashSet<>();
         int skippedAddrs = 0;
 
         for (InetSocketAddress addr : addrs) {
@@ -512,6 +513,8 @@ public class GridNioServerWrapper {
                         ses = null;
                     }
 
+                    timeoutAddrs.add(addr);
+
                     eRegistrySupplier.get().onException("Handshake timed out (will retry with increased timeout) [connTimeoutStrategy=" + connTimeoutStgy +
                         ", addr=" + addr + ']', e);
 
@@ -561,11 +564,13 @@ public class GridNioServerWrapper {
 
                     // check if timeout occurred in case of unrecoverable exception
                     if (connTimeoutStgy.checkTimeout()) {
+                        timeoutAddrs.add(addr);
+
                         U.warn(log, "Connection timed out (will stop attempts to perform the connect) " +
                             "[node=" + node.id() + ", connTimeoutStgy=" + connTimeoutStgy +
                             ", failureDetectionTimeoutEnabled=" + cfg.failureDetectionTimeoutEnabled() +
                             ", timeout=" + timeout +
-                            ", err=" + e.getMessage() + ", addr=" + addr + ']');
+                            ", err=" + e.getClass() + ": " + e.getMessage() + ", addr=" + addr + ']');
 
                         String msg = "Failed to connect to node (is node still alive?). " +
                             "Make sure that each ComputeTask and cache Transaction has a timeout set " +
@@ -619,8 +624,9 @@ public class GridNioServerWrapper {
             // inverse connection so no point in throwing NodeUnreachableException
             if (!cfg.usePairedConnections() || !Boolean.TRUE.equals(node.attribute(attrs.pairedConnection()))) {
                 if (!(Thread.currentThread() instanceof IgniteDiscoveryThread) && locNodeIsSrv) {
-                    if (node.isClient() && (addrs.size() - skippedAddrs == failedAddrsSet.size())) {
-                        String msg = "Failed to connect to all addresses of node " + node.id() + ": " + failedAddrsSet +
+                    if (node.isClient() && (addrs.size() - skippedAddrs == failedAddrsSet.size() + timeoutAddrs.size())) {
+                        String msg = "Failed to connect to all addresses of node " + node.id() + ": "
+                                + "failedAddrsSet=" + failedAddrsSet + "timeoutAddrs=" + timeoutAddrs +
                             "; inverse connection will be requested.";
 
                         throw new NodeUnreachableException(msg);
