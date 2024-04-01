@@ -364,7 +364,7 @@ public class ConnectionClientPool {
             ConnectFuture origFut,
             Throwable e
     ) {
-        log.info("Outgoing connection failed while incoming connection attempt was detected. ");
+        log.info("Outgoing connection failed while incoming connection attempt was detected.");
 
         GridFutureAdapter<GridCommunicationClient> triggerFut = new GridFutureAdapter<>();
 
