@@ -26,10 +26,8 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -345,12 +343,12 @@ public class GridNioServerWrapper {
             );
         }
 
-        Set<InetSocketAddress> failedAddrsSet = new HashSet<>();
+        Map<InetSocketAddress,List<String>> failedAddrs = new HashMap<>();
         int skippedAddrs = 0;
 
         for (InetSocketAddress addr : addrs) {
             if (addr.isUnresolved()) {
-                failedAddrsSet.add(addr);
+                failedAddrs.computeIfAbsent(addr, k -> new ArrayList<>()).add("Unresolved addr");
 
                 continue;
             }
@@ -565,7 +563,7 @@ public class GridNioServerWrapper {
                             "[node=" + node.id() + ", connTimeoutStgy=" + connTimeoutStgy +
                             ", failureDetectionTimeoutEnabled=" + cfg.failureDetectionTimeoutEnabled() +
                             ", timeout=" + timeout +
-                            ", err=" + e.getMessage() + ", addr=" + addr + ']');
+                            ", err=" + e.getClass() + ": " + e.getMessage() + ", addr=" + addr + ']');
 
                         String msg = "Failed to connect to node (is node still alive?). " +
                             "Make sure that each ComputeTask and cache Transaction has a timeout set " +
@@ -582,7 +580,8 @@ public class GridNioServerWrapper {
 
                     // Inverse communication protocol works only for client nodes.
                     if (node.isClient() && isNodeUnreachableException(e))
-                        failedAddrsSet.add(addr);
+                        failedAddrs.computeIfAbsent(addr, k -> new ArrayList<>())
+                                .add("Exception:" + e.getClass() + ": " + e.getMessage());
 
                     if (isRecoverableException(e))
                         U.sleep(DFLT_RECONNECT_DELAY);
@@ -619,8 +618,8 @@ public class GridNioServerWrapper {
             // inverse connection so no point in throwing NodeUnreachableException
             if (!cfg.usePairedConnections() || !Boolean.TRUE.equals(node.attribute(attrs.pairedConnection()))) {
                 if (!(Thread.currentThread() instanceof IgniteDiscoveryThread) && locNodeIsSrv) {
-                    if (node.isClient() && (addrs.size() - skippedAddrs == failedAddrsSet.size())) {
-                        String msg = "Failed to connect to all addresses of node " + node.id() + ": " + failedAddrsSet +
+                    if (node.isClient() && (addrs.size() - skippedAddrs == failedAddrs.size())) {
+                        String msg = "Failed to connect to all addresses of node " + node.id() + ": " + failedAddrs +
                             "; inverse connection will be requested.";
 
                         throw new NodeUnreachableException(msg);

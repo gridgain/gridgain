@@ -686,11 +686,15 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
             }
             else {
                 if (oldFut instanceof ConnectFuture && locNode.order() < rmtNode.order()) {
+                    ConnectFuture conFut = (ConnectFuture) oldFut;
+
+                    int attemptNo = conFut.registerIncomingConnectionAttempt();
+
                     if (log.isInfoEnabled()) {
                         log.info("Received incoming connection from remote node while " +
-                            "connecting to this node, rejecting [locNode=" + locNode.id() +
-                            ", locNodeOrder=" + locNode.order() + ", rmtNode=" + rmtNode.id() +
-                            ", rmtNodeOrder=" + rmtNode.order() + ']');
+                                "connecting to this node, rejecting [locNode=" + locNode.id() +
+                                ", locNodeOrder=" + locNode.order() + ", rmtNode=" + rmtNode.id() +
+                                ", rmtNodeOrder=" + rmtNode.order() + ", attemptNo=" + attemptNo + ']');
                     }
 
                     ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
