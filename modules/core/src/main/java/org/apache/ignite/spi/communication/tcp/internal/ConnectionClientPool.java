@@ -40,6 +40,7 @@ import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.ipc.shmem.IpcOutOfSystemResourcesException;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
+import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.nio.GridShmemCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridTcpNioCommunicationClient;
 import org.apache.ignite.internal.util.typedef.X;
@@ -47,6 +48,7 @@ import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.internal.worker.WorkersRegistry;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFormatter;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutException;
@@ -359,6 +361,14 @@ public class ConnectionClientPool {
         }
     }
 
+    /**
+     * Waits up to configured time for future to be resolved by {@link InboundConnectionHandler}.
+     * Otherwise, resolves itself with error
+     * @param connKey Connection key.
+     * @param origFut Original connection future.
+     * @param e Original connection error.
+     * @return Trigger future which already resolved by this method or by accepting incoming connection.
+     */
     private GridFutureAdapter<GridCommunicationClient> handleConnectExceptionWhileIncomingConnectionOccurred(
             ConnectionKey connKey,
             ConnectFuture origFut,
@@ -368,6 +378,7 @@ public class ConnectionClientPool {
 
         GridFutureAdapter<GridCommunicationClient> triggerFut = new GridFutureAdapter<>();
 
+        // Original future would be completed when trigger future is resolved.
         triggerFut.listen(f -> {
             try {
                 origFut.onDone(f.get());
