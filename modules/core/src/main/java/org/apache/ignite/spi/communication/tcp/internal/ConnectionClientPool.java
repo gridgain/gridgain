@@ -74,6 +74,12 @@ public class ConnectionClientPool {
     /** Time threshold to log too long connection establish. */
     private static final int CONNECTION_ESTABLISH_THRESHOLD_MS = 100;
 
+    /**
+     * Threshold value to resolve situation when outgoing connection to the node has been failed
+     * while multiple incoming connection attempts from this node were detected.
+     */
+    private static final int INCOMING_CONNECTION_ATTEMPTS_THRESHOLD = 10;
+
     /** Clients. */
     private final ConcurrentMap<UUID, GridCommunicationClient[]> clients = GridConcurrentFactory.newMap();
 
@@ -271,13 +277,28 @@ public class ConnectionClientPool {
                         fut = handleUnreachableNodeException(node, connIdx, fut, e);
                     }
                     catch (Throwable e) {
-                        fut.onDone(e);
-
-                        if (e instanceof IgniteTooManyOpenFilesException)
+                        if (e instanceof IgniteTooManyOpenFilesException) {
+                            fut.onDone(e);
                             throw e;
+                        }
 
-                        if (e instanceof Error)
+                        if (e instanceof Error) {
+                            fut.onDone(e);
                             throw (Error)e;
+                        }
+
+                        ConnectFuture conFut = (ConnectFuture) (fut);
+
+                        if (conFut.incomingConnectionAttempts() > INCOMING_CONNECTION_ATTEMPTS_THRESHOLD) {
+                            try {
+                                fut = handleConnectExceptionWhileIncomingConnectionOccurred(connKey, conFut, e);
+
+                            } finally {
+                                conFut.resetIncomingConnectionAttempts();
+                            }
+                        }
+                        else
+                            fut.onDone(e);
                     }
                     finally {
                         clientFuts.remove(connKey, fut);
@@ -336,6 +357,52 @@ public class ConnectionClientPool {
                 // Client has just been closed by idle worker. Help it and try again.
                 removeNodeClient(nodeId, client);
         }
+    }
+
+    /**
+     * Waits up to configured time for future to be resolved by {@link InboundConnectionHandler}.
+     * Otherwise, resolves itself with error
+     * @param connKey Connection key.
+     * @param origFut Original connection future.
+     * @param e Original connection error.
+     * @return Trigger future which already resolved by this method or by accepting incoming connection.
+     */
+    private GridFutureAdapter<GridCommunicationClient> handleConnectExceptionWhileIncomingConnectionOccurred(
+            ConnectionKey connKey,
+            ConnectFuture origFut,
+            Throwable e
+    ) {
+        log.info("Outgoing connection failed while incoming connection attempt was detected.");
+
+        GridFutureAdapter<GridCommunicationClient> triggerFut = new GridFutureAdapter<>();
+
+        // Original future would be completed when trigger future is resolved.
+        triggerFut.listen(f -> {
+            try {
+                origFut.onDone(f.get());
+            }
+            catch (Throwable t) {
+                origFut.onDone(t);
+            }
+        });
+
+        clientFuts.put(connKey, triggerFut);
+
+        long failTimeout = cfg.failureDetectionTimeoutEnabled()
+                ? cfg.failureDetectionTimeout()
+                : cfg.connectionTimeout();
+
+        try {
+            triggerFut.get(failTimeout);
+        } catch (Throwable t) {
+            IgniteSpiException exc = new IgniteSpiException(e);
+
+            exc.addSuppressed(t);
+
+            triggerFut.onDone(exc);
+        }
+
+        return triggerFut;
     }
 
     /**
