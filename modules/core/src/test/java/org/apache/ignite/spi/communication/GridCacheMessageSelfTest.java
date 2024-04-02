@@ -219,31 +219,6 @@ public class GridCacheMessageSelfTest extends GridCommonAbstractTest {
         assert latch.await(3, SECONDS);
     }
 
-    @Test
-    public void theTest() throws Exception {
-        startGrids(2);
-
-        IgniteEx ign0 = grid(0);
-        IgniteEx ign1 = grid(1);
-
-        /*
-                Ignite ign0 = Ignition.start(
-                new IgniteConfiguration()
-                        .setIgniteInstanceName("node0")
-                        .setCommunicationSpi(new TcpCommunicationSpi().setUseHeartbeats(true))
-        );
-        Ignite ign1 = Ignition.start(
-                new IgniteConfiguration()
-                        .setIgniteInstanceName("node1")
-                        .setCommunicationSpi(new TcpCommunicationSpi().setUseHeartbeats(true))
-        );
-         */
-
-        Thread.sleep(100000);
-
-        System.out.println();
-    }
-
     /** */
     private static class TestMessage extends GridCacheMessage {
         /** */
