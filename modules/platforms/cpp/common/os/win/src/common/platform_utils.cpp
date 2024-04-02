@@ -19,6 +19,7 @@
 #include <sstream>
 #include <iomanip>
 
+#define _WINSOCKAPI_
 #include <windows.h>
 
 #include <ignite/ignite_error.h>
