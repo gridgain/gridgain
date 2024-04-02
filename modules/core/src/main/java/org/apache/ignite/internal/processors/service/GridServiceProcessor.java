@@ -1565,7 +1565,7 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
     /**
      * Service deployment listener.
      */
-    public class ServiceEntriesListener implements CacheEntryUpdatedListener<Object, Object> {
+    private class ServiceEntriesListener implements CacheEntryUpdatedListener<Object, Object> {
         /** {@inheritDoc} */
         @Override public void onUpdated(final Iterable<CacheEntryEvent<?, ?>> deps) {
             GridSpinBusyLock busyLock = GridServiceProcessor.this.busyLock;
