@@ -128,6 +128,7 @@ import static org.apache.ignite.internal.processors.query.schema.SchemaIndexCach
 import static org.apache.ignite.internal.processors.rest.GridRestProcessor.DFLT_SES_TIMEOUT;
 import static org.apache.ignite.internal.processors.rest.GridRestProcessor.DFLT_SES_TOKEN_INVALIDATE_INTERVAL;
 import static org.apache.ignite.internal.processors.rest.handlers.task.GridTaskCommandHandler.DFLT_MAX_TASK_RESULTS;
+import static org.apache.ignite.internal.processors.service.GridServiceProcessor.DFLT_IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START;
 import static org.apache.ignite.internal.util.GridLogThrottle.DFLT_LOG_THROTTLE_CAPACITY;
 import static org.apache.ignite.internal.util.GridReflectionCache.DFLT_REFLECTION_CACHE_SIZE;
 import static org.apache.ignite.internal.util.GridUnsafe.DFLT_MEMORY_PER_BYTE_COPY_THRESHOLD;
@@ -2216,6 +2217,13 @@ public final class IgniteSystemProperties {
     @SystemProperty(value = "SSL handshake timeout, in milliseconds", type = Long.class,
             defaults = DFLT_SSL_HANDSHAKE_TIMEOUT_MS + " milliseconds")
     public static final String IGNITE_SSL_HANDSHAKE_TIMEOUT = "IGNITE_SSL_HANDSHAKE_TIMEOUT";
+
+    /** This property allows reducing the number of internal notifications of thick clients
+     * when the cache-based implementation of the service framework is used. See  {@link #IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED}. */
+    @SystemProperty(value = "This property allows reducing the number of internal notifications of thick clients" +
+        " when the cache-based implementation of the service framework is used.",
+        defaults = "" + DFLT_IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START)
+    public static final String IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START = "IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START";
 
     /**
      * Enforces singleton.

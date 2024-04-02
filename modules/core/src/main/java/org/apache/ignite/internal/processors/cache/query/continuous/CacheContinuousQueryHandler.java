@@ -66,8 +66,6 @@ import org.apache.ignite.internal.processors.continuous.GridContinuousBatch;
 import org.apache.ignite.internal.processors.continuous.GridContinuousHandler;
 import org.apache.ignite.internal.processors.continuous.GridContinuousQueryBatch;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformContinuousQueryFilter;
-import org.apache.ignite.internal.processors.service.GridServiceProcessor;
-import org.apache.ignite.internal.processors.service.GridServiceProcessor.ServiceEntriesListener;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
@@ -815,12 +813,7 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
      * @return Cache entry event filter.
      */
     protected CacheEntryEventFilter getEventFilter0() {
-        CacheEntryEventFilter rmtFilter0 = rmtFilter;
-
-        if (rmtFilter0 == null && internal && locLsnr instanceof ServiceEntriesListener)
-            rmtFilter0 = GridServiceProcessor.REMOTE_FILTER;
-
-        return rmtFilter0;
+        return rmtFilter;
     }
 
     /**
