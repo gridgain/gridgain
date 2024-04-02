@@ -165,7 +165,7 @@ public class CommunicationMessageAcknowledgeTest extends GridCommonAbstractTest 
      */
     @Test
     public void acksShouldBeSentOnIdleConnectionTimeout() throws Exception {
-        testMessagesAcking(spi -> spi.setIdleConnectionTimeout(10));
+        testMessagesAcking(spi -> spi.setIdleConnectionTimeout(50));
     }
 
     /**
