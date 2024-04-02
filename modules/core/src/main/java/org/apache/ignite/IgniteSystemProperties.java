@@ -2221,7 +2221,7 @@ public final class IgniteSystemProperties {
     /** This property allows reducing the number of internal notifications of thick clients
      * when the cache-based implementation of the service framework is used. See  {@link #IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED}. */
     @SystemProperty(value = "This property allows reducing the number of internal notifications of thick clients" +
-        " when the cache-based implementation of the service framework is used.",
+        " when the cache-based implementation of the service framework is used",
         defaults = "" + DFLT_IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START)
     public static final String IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START = "IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START";
 
