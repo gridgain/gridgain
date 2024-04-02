@@ -20,10 +20,10 @@
 #include <set>
 #include <iostream>
 
-#include <winsock2.h>
+#include "network/sockets.h"
+
 #include <ws2ipdef.h>
 #include <ws2tcpip.h>
-#include <windows.h>
 #include <winbase.h>
 #include <iphlpapi.h>
 
