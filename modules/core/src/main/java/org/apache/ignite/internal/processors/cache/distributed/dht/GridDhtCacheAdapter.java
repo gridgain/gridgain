@@ -1447,7 +1447,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                     catch (IgniteCheckedException e) {
                         if (e instanceof ClusterTopologyCheckedException) {
                             if (log.isDebugEnabled())
-                                log.debug("Failed to send TTC update request, node left: " + req.getKey());
+                                log.debug("Failed to send TTL update request, node left: " + req.getKey());
                         }
                         else
                             U.error(log, "Failed to send TTL update request.", e);

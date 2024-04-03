@@ -39,11 +39,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import javax.cache.Cache;
 import javax.cache.event.CacheEntryEvent;
+import javax.cache.event.CacheEntryListenerException;
 import javax.cache.event.CacheEntryUpdatedListener;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJobContext;
@@ -72,6 +75,7 @@ import org.apache.ignite.internal.processors.cache.binary.MetadataUpdateProposed
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.query.CacheQuery;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryManager;
+import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryHandler;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 import org.apache.ignite.internal.processors.platform.services.PlatformService;
@@ -113,6 +117,7 @@ import org.apache.ignite.transactions.Transaction;
 import org.jetbrains.annotations.Nullable;
 
 import static javax.cache.event.EventType.REMOVED;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START;
 import static org.apache.ignite.configuration.DeploymentMode.ISOLATED;
 import static org.apache.ignite.configuration.DeploymentMode.PRIVATE;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
@@ -135,6 +140,29 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
 public class GridServiceProcessor extends ServiceProcessorAdapter implements IgniteChangeGlobalStateSupport {
     /** Time to wait before reassignment retries. */
     private static final long RETRY_TIMEOUT = 1000;
+
+    /** Default value of {@link IgniteSystemProperties#IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START}. */
+    public static final boolean DFLT_IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START = false;
+
+    /** This property indicates that a remote filter should be set on node start to filter unnecessary CQ events.
+     *
+     * In general, the right way to filter unnecessary updates is to register this remote filter while adding a continuous query
+     * at {@link #onContinuousProcessorStarted(GridKernalContext)} and {@link #onKernalStart0()} based on the managed RU feature.
+     * Unfortunately, this approach has the following disadvantages in this particular case:
+     *
+     *  - thick clients register their continuous query before the thick client joins the cluster,
+     *    please see {@link #onContinuousProcessorStarted(GridKernalContext)}. The CQ descriptor is sent as a part of the join request.
+     *    The managed rolling upgrade feature does not help with this due to the fact that the RU state is not available at the time
+     *    of the join request. So, the thick client cannot determine whether the class of the filter is available on the cluster nodes.
+     *    P2P class loading is also not an option, because it requires explicit configuration settings, and it does not work for internal
+     *    classes that represent remote filters (honestly, the reason is unclear, please see
+     *    {@link CacheContinuousQueryHandler#p2pMarshal(GridKernalContext)}).
+     *
+     *  - The continuous query is registered while the node is starting, and so even if all cluster nodes are updated,
+     *    and RU is switched off there is no callback or event that allows to re-deploy this continuous query with the new filter.
+     **/
+    private final boolean setRemoteFilterOnStart = IgniteSystemProperties.getBoolean(
+        IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START, DFLT_IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START);
 
     /** */
     private static final int[] EVTS = {
@@ -200,8 +228,10 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
             assert !ctx.isDaemon();
 
             ctx.continuous().registerStaticRoutine(
-                CU.UTILITY_CACHE_NAME, new ServiceEntriesListener(), null, null
-            );
+                CU.UTILITY_CACHE_NAME,
+                new ServiceEntriesListener(),
+                setRemoteFilterOnStart ? new ServiceProcessorFilter() : null,
+                null);
         }
     }
 
@@ -255,7 +285,12 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
                 // It is also invoked on rebalancing.
                 // Otherwise remote listener is registered.
                 serviceCache.context().continuousQueries().executeInternalQuery(
-                    new ServiceEntriesListener(), null, isLocLsnr, true, false, false
+                    new ServiceEntriesListener(),
+                    setRemoteFilterOnStart ? new ServiceProcessorFilter() : null,
+                    isLocLsnr,
+                    true,
+                    false,
+                    false
                 );
             }
             else { // Listener for client nodes is registered in onContinuousProcessorStarted method.
@@ -265,7 +300,7 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
                     @Override public void run() {
                         try {
                             Iterable<CacheEntryEvent<?, ?>> entries =
-                                serviceCache.context().continuousQueries().existingEntries(false, null);
+                                serviceCache.context().continuousQueries().existingEntries(false, new ServiceProcessorFilter());
 
                             onSystemCacheUpdated(entries);
                         }
@@ -2141,6 +2176,18 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
             }
 
             return serviceTopology(cache, svcName);
+        }
+    }
+
+    /**
+     * Remote filter that allows to avoid transferring unnecessary updates.
+     */
+    public static class ServiceProcessorFilter implements CacheEntryEventSerializableFilter {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        @Override public boolean evaluate(CacheEntryEvent evt) throws CacheEntryListenerException {
+            return evt.getKey() instanceof GridServiceDeploymentKey || evt.getKey() instanceof GridServiceAssignmentsKey;
         }
     }
 }
