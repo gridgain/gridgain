@@ -79,7 +79,6 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.apache.ignite.spi.communication.tcp.messages.HeartbeatAckMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HeartbeatMessage;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
@@ -165,9 +164,7 @@ public class GridNioServer<T> {
     /** The name of the metric that provides the active TCP sessions count. */
     public static final String SESSIONS_CNT_METRIC_NAME = "ActiveSessionsCount";
 
-    /** Timeout for sending heartbeat messages for stale connection. */
-    public static final long HEARTBEAT_TIMEOUT = 5000L;
-
+    /** Time in ms between different heartbeat messages. */
     public static final long HEARTBEAT_FREQUENCY = 1000L;
 
     /** Defines how many times selector should do {@code selectNow()} before doing {@code select(long)}. */
@@ -2706,40 +2703,6 @@ public class GridNioServer<T> {
                     close(ses, e);
                 }
             }
-        }
-
-        private void sendHeartbeatIfNeeded(Iterable<SelectionKey> keys) {
-            for (SelectionKey key : keys) {
-                GridNioKeyAttachment attach = (GridNioKeyAttachment) key.attachment();
-
-                if (attach == null || !attach.hasSession())
-                    continue;
-
-                GridSelectorNioSessionImpl ses = attach.session();
-
-                if (ses.closed())
-                    continue;
-
-                long now = U.currentTimeMillis();
-
-                // We are checking last receive time to avoid unnecessary heartbeats
-                long lastReceivedTs = Math.max(ses.lastHeartbeatReceived(), ses.lastReceiveTime());
-
-                if (now - lastReceivedTs > HEARTBEAT_TIMEOUT && now - ses.lastHeartbeatSent() > HEARTBEAT_FREQUENCY)
-                    sendHeartbeatMessage(ses);
-            }
-        }
-
-        private void sendHeartbeatMessage(GridSelectorNioSessionImpl ses) {
-            HeartbeatMessage msg = new HeartbeatMessage();
-
-            if (log.isDebugEnabled())
-                log.debug("Heartbeat message sent. Msg = " + msg);
-
-            log.info("Heartbeat message sent. Msg = " + msg);
-
-            ses.updateHeartbeatSent();
-            ses.send(msg);
         }
 
         /**

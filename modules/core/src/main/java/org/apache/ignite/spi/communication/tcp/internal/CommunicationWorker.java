@@ -36,10 +36,7 @@ import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
-import org.apache.ignite.internal.util.nio.GridCommunicationClient;
-import org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor;
-import org.apache.ignite.internal.util.nio.GridNioSession;
-import org.apache.ignite.internal.util.nio.GridTcpNioCommunicationClient;
+import org.apache.ignite.internal.util.nio.*;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.internal.worker.WorkersRegistry;
@@ -272,8 +269,12 @@ public class CommunicationWorker extends GridWorker {
                     }
                 }
 
-                if (doMaintenance)
+                if (doMaintenance) {
                     closeConnectionIfIdleAndHasNoUnackedMessages(nodeId, node, client, recovery);
+
+                    if (client instanceof HeartbeatSupported)
+                        ((HeartbeatSupported) client).sendHeartbeatsIfNeeded();
+                }
             }
         }
 
@@ -349,6 +350,24 @@ public class CommunicationWorker extends GridWorker {
         if (client.close() || client.closed())
             clientPool.removeNodeClient(nodeId, client);
     }
+
+    /**
+     * Sends heartbeat message for connections which weren't active recently.
+     * Trying to send message over a connection which was closed by remote node will lead for session closing.
+     * @param keys Selector keys.
+     */
+    private void sendHeartbeatIfNeeded(GridCommunicationClient client) {
+        if (client.getIdleTime() > HEARTBEAT_FREQUENCY && client.sinceLastHeartbeat() > HEARTBEAT_FREQUENCY) {
+            HeartbeatMessage msg = new HeartbeatMessage();
+
+            if (log.isDebugEnabled())
+                log.debug("Heartbeat message sent. Msg = " + msg);
+
+            client.updateHeartbeatSent();
+            client.sendMessage(null, new HeartbeatMessage(), null);
+        }
+    }
+
 
     /***/
     private void sendAcksOnSessionsUsingPairedConnections() {

@@ -83,9 +83,7 @@ public class GridNioSessionImpl implements GridNioSession {
     /** For debug purposes. */
     private volatile boolean markedForClose;
 
-    private volatile long heartBeatSent = U.currentTimeMillis();
-
-    private volatile long heartbeatReceived = U.currentTimeMillis();
+    private volatile long heartbeatSent = U.currentTimeMillis();
 
     /**
      * @param filterChain Chain.
@@ -395,20 +393,12 @@ public class GridNioSessionImpl implements GridNioSession {
         throw new UnsupportedOperationException();
     }
 
-    public long lastHeartbeatSent() {
-        return heartBeatSent;
+    @Override public long lastHeartbeat() {
+        return heartbeatSent;
     }
 
-    public long lastHeartbeatReceived() {
-        return heartbeatReceived;
-    }
-
-    public void updateHeartbeatSent() {
-        heartBeatSent = U.currentTimeMillis();
-    }
-
-    @Override public void updateHeartbeatReceived() {
-        heartbeatReceived = U.currentTimeMillis();
+    @Override public void updateHeartbeat() {
+        heartbeatSent = U.currentTimeMillis();
     }
 
     /** {@inheritDoc} */

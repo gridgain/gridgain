@@ -29,12 +29,13 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.spi.communication.tcp.messages.HeartbeatMessage;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Grid client for NIO server.
  */
-public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClient {
+public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClient implements HeartbeatSupported {
     /** Session. */
     private final GridNioSession ses;
 
@@ -147,5 +148,21 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridTcpNioCommunicationClient.class, this, super.toString());
+    }
+
+    @Override public void sendHeartbeatsIfNeeded() {
+        long HEARTBEAT_FREQUENCY = 1000L;
+        long sinceLastHeartbeat = U.currentTimeMillis() - ses.lastHeartbeat();
+
+        if (getIdleTime() > HEARTBEAT_FREQUENCY && sinceLastHeartbeat > HEARTBEAT_FREQUENCY) {
+            HeartbeatMessage msg = new HeartbeatMessage();
+
+            if (log.isDebugEnabled())
+                log.debug("Heartbeat message sent. Msg = " + msg);
+
+            ses.updateHeartbeat();
+
+            ses.send(msg);
+        }
     }
 }

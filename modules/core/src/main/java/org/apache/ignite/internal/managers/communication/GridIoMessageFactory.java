@@ -206,7 +206,6 @@ public class GridIoMessageFactory implements MessageFactoryProvider {
         factory.register((short)-44, HandshakeMessage2::new);
         factory.register((short)-43, IgniteIoTestMessage::new);
         factory.register(TcpCommunicationSpi.HEARTBEAT_MSG_TYPE, HeartbeatMessage::new);
-        factory.register(TcpCommunicationSpi.HEARTBEAT_ACK_MSG_TYPE, HeartbeatAckMessage::new);
         factory.register((short)-36, GridDhtAtomicSingleUpdateRequest::new);
         factory.register((short)-27, GridDhtTxOnePhaseCommitAckRequest::new);
         factory.register((short)-26, TxLockList::new);
