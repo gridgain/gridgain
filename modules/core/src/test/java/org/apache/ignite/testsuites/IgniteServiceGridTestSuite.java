@@ -21,6 +21,7 @@ import org.apache.ignite.internal.ComputeJobCancelWithServiceSelfTest;
 import org.apache.ignite.internal.processors.service.ClosureServiceClientsNodesTest;
 import org.apache.ignite.internal.processors.service.GridServiceClientNodeTest;
 import org.apache.ignite.internal.processors.service.GridServiceClusterReadOnlyModeTest;
+import org.apache.ignite.internal.processors.service.GridServiceContinuousQueryNotificationTest;
 import org.apache.ignite.internal.processors.service.GridServiceContinuousQueryRedeployTest;
 import org.apache.ignite.internal.processors.service.GridServiceDeployClusterReadOnlyModeTest;
 import org.apache.ignite.internal.processors.service.GridServiceDeploymentCompoundFutureSelfTest;
@@ -120,6 +121,8 @@ import org.junit.runners.Suite;
     GridServiceDeployClusterReadOnlyModeTest.class,
     GridServiceClusterReadOnlyModeTest.class,
     IgniteServiceCallContextTest.class,
+
+    GridServiceContinuousQueryNotificationTest.class
 })
 public class IgniteServiceGridTestSuite {
     /** Old service grid property. */
@@ -135,6 +138,8 @@ public class IgniteServiceGridTestSuite {
         // Enable event-driven service grid implementation unless legacy implementation is directly enforced.
         if (oldSrvcGridProp == null)
             System.setProperty(IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED, "true");
+        else
+            System.setProperty(IgniteSystemProperties.IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START, "true");
     }
 
     /**
@@ -144,5 +149,7 @@ public class IgniteServiceGridTestSuite {
     public static void cleanUp() {
         if (oldSrvcGridProp == null)
             System.clearProperty(IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED);
+        else
+            System.clearProperty(IgniteSystemProperties.IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START);
     }
 }
