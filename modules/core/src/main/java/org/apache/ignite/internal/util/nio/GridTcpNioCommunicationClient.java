@@ -35,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Grid client for NIO server.
  */
-public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClient implements HeartbeatSupported {
+public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClient implements HeartbeatAware {
     /** Time in ms between different heartbeat messages. */
     public static final long HEARTBEAT_FREQUENCY = 2000L;
 

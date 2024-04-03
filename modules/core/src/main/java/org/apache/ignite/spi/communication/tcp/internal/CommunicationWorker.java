@@ -272,8 +272,8 @@ public class CommunicationWorker extends GridWorker {
                 if (doMaintenance) {
                     closeConnectionIfIdleAndHasNoUnackedMessages(nodeId, node, client, recovery);
 
-                    if (client instanceof HeartbeatSupported)
-                        ((HeartbeatSupported) client).sendHeartbeatsIfNeeded();
+                    if (client instanceof HeartbeatAware)
+                        ((HeartbeatAware) client).sendHeartbeatsIfNeeded();
                 }
             }
         }
