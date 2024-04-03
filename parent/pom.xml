@@ -140,7 +140,7 @@
         <yammer.metrics.core.version>2.2.0</yammer.metrics.core.version>
         <yardstick.version>0.8.3</yardstick.version>
         <zkclient.version>0.5</zkclient.version>
-        <zookeeper.version>3.8.3</zookeeper.version>
+        <zookeeper.version>3.8.4</zookeeper.version>
         <zstd.version>1.5.0-4</zstd.version>
         <opencensus.version>0.31.1</opencensus.version>
         <!--Spark 2.4 version support -->
