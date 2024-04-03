@@ -99,11 +99,6 @@ public class MockNioSession extends GridMetadataAwareAdapter implements GridNioS
     }
 
     /** {@inheritDoc} */
-    @Override public void updateHeartbeatReceived() {
-        // No-op
-    }
-
-    /** {@inheritDoc} */
     @Override public long lastSendTime() {
         return 0;
     }
@@ -177,5 +172,15 @@ public class MockNioSession extends GridMetadataAwareAdapter implements GridNioS
     /** {@inheritDoc} */
     @Override public void systemMessage(Object msg) {
         // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override public long lastHeartbeat() {
+        return 0;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void updateHeartbeat() {
+        // No-op
     }
 }
