@@ -60,7 +60,7 @@ public class GridServiceContinuousQueryNotificationTest extends GridCommonAbstra
      */
     @Test
     @WithSystemProperty(key = IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START, value = "true")
-    public void testServiceRedeploymentAfterCancel() throws Exception {
+    public void testFilteringUnnecessaryEvents() throws Exception {
         assumeFalse(
             "This test is only for cache-based implementation of the service framework.",
             getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED, false));
