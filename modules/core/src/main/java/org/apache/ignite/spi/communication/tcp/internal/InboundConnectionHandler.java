@@ -781,7 +781,9 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         GridTcpNioCommunicationClient client = null;
 
         if (createClient) {
-            client = new GridTcpNioCommunicationClient(connKey.connectionIndex(), ses, log);
+            boolean useHeartbeats = cfg.useHeartbeats() && stateProvider.isTcpCommunicationHeartbeatSupported(node);
+
+            client = new GridTcpNioCommunicationClient(connKey.connectionIndex(), ses, log, useHeartbeats);
 
             clientPool.addNodeClient(node, connKey.connectionIndex(), client);
         }

@@ -79,7 +79,6 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.apache.ignite.spi.communication.tcp.messages.HeartbeatMessage;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
@@ -163,9 +162,6 @@ public class GridNioServer<T> {
 
     /** The name of the metric that provides the active TCP sessions count. */
     public static final String SESSIONS_CNT_METRIC_NAME = "ActiveSessionsCount";
-
-    /** Time in ms between different heartbeat messages. */
-    public static final long HEARTBEAT_FREQUENCY = 1000L;
 
     /** Defines how many times selector should do {@code selectNow()} before doing {@code select(long)}. */
     private long selectorSpins;
@@ -284,8 +280,6 @@ public class GridNioServer<T> {
     /** Tracing processor. */
     private Tracing tracing;
 
-    private final boolean useHeartbeats;
-
     /**
      * @param addr Address.
      * @param port Port.
@@ -338,7 +332,6 @@ public class GridNioServer<T> {
         @Nullable GridWorkerListener workerLsnr,
         @Nullable MetricRegistry mreg,
         Tracing tracing,
-        boolean useHeartbeats,
         GridNioFilter... filters
     ) throws IgniteCheckedException {
         if (port != -1)
@@ -466,8 +459,6 @@ public class GridNioServer<T> {
 
             mreg.register(SSL_ENABLED_METRIC_NAME, () -> sslEnabled, "Whether SSL is enabled.");
         }
-
-        this.useHeartbeats = useHeartbeats;
     }
 
     /**
@@ -2330,12 +2321,6 @@ public class GridNioServer<T> {
 
                         checkIdle(selector.keys());
                     }
-
-                    if (useHeartbeats && now - lastHeartbeatCheck > HEARTBEAT_FREQUENCY) {
-                        lastHeartbeatCheck = now;
-
-                        sendHeartbeatIfNeeded(selector.keys());
-                    }
                 }
             }
             // Ignore this exception as thread interruption is equal to 'close' call.
@@ -3888,8 +3873,6 @@ public class GridNioServer<T> {
         /** Tracing processor */
         private Tracing tracing;
 
-        private boolean useHeartbeats = false;
-
         /**
          * Finishes building the instance.
          *
@@ -3921,7 +3904,6 @@ public class GridNioServer<T> {
                 workerLsnr,
                 mreg,
                 tracing,
-                useHeartbeats,
                 filters != null ? Arrays.copyOf(filters, filters.length) : EMPTY_FILTERS
             );
 
@@ -4193,12 +4175,6 @@ public class GridNioServer<T> {
          */
         public Builder<T> metricRegistry(MetricRegistry mreg) {
             this.mreg = mreg;
-
-            return this;
-        }
-
-        public Builder<T> useHeartbeats(boolean useHeartbeats) {
-            this.useHeartbeats = useHeartbeats;
 
             return this;
         }

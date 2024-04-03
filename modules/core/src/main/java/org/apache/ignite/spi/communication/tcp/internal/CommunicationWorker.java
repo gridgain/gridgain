@@ -351,24 +351,6 @@ public class CommunicationWorker extends GridWorker {
             clientPool.removeNodeClient(nodeId, client);
     }
 
-    /**
-     * Sends heartbeat message for connections which weren't active recently.
-     * Trying to send message over a connection which was closed by remote node will lead for session closing.
-     * @param keys Selector keys.
-     */
-    private void sendHeartbeatIfNeeded(GridCommunicationClient client) {
-        if (client.getIdleTime() > HEARTBEAT_FREQUENCY && client.sinceLastHeartbeat() > HEARTBEAT_FREQUENCY) {
-            HeartbeatMessage msg = new HeartbeatMessage();
-
-            if (log.isDebugEnabled())
-                log.debug("Heartbeat message sent. Msg = " + msg);
-
-            client.updateHeartbeatSent();
-            client.sendMessage(null, new HeartbeatMessage(), null);
-        }
-    }
-
-
     /***/
     private void sendAcksOnSessionsUsingPairedConnections() {
         for (GridNioSession ses : nioSrvWrapper.nio().sessions()) {

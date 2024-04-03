@@ -654,8 +654,10 @@ public class GridNioServerWrapper {
         else {
             GridNioSession ses = createNioSession(node, connIdx);
 
+            boolean useHeartbeats = cfg.useHeartbeats() && stateProvider.isTcpCommunicationHeartbeatSupported(node);
+
             return ses == null ?
-                null : new GridTcpNioCommunicationClient(connIdx, ses, log);
+                null : new GridTcpNioCommunicationClient(connIdx, ses, log, useHeartbeats);
         }
     }
 
@@ -868,8 +870,7 @@ public class GridNioServerWrapper {
                     .skipRecoveryPredicate(skipRecoveryPred)
                     .messageQueueSizeListener(queueSizeMonitor)
                     .tracing(tracing)
-                    .readWriteSelectorsAssign(cfg.usePairedConnections())
-                    .useHeartbeats(cfg.useHeartbeats());
+                    .readWriteSelectorsAssign(cfg.usePairedConnections());
 
                 if (metricMgr != null) {
                     builder.workerListener(workersRegistry)

@@ -36,11 +36,16 @@ import org.jetbrains.annotations.Nullable;
  * Grid client for NIO server.
  */
 public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClient implements HeartbeatSupported {
+    /** Time in ms between different heartbeat messages. */
+    public static final long HEARTBEAT_FREQUENCY = 2000L;
+
     /** Session. */
     private final GridNioSession ses;
 
     /** Logger. */
     private final IgniteLogger log;
+
+    private final boolean useHeartbeats;
 
     /**
      * @param connIdx Connection index.
@@ -50,7 +55,8 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
     public GridTcpNioCommunicationClient(
         int connIdx,
         GridNioSession ses,
-        IgniteLogger log
+        IgniteLogger log,
+        boolean useHeartbeats
     ) {
         super(connIdx);
 
@@ -59,6 +65,7 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
 
         this.ses = ses;
         this.log = log;
+        this.useHeartbeats = useHeartbeats;
     }
 
     /**
@@ -151,7 +158,9 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
     }
 
     @Override public void sendHeartbeatsIfNeeded() {
-        long HEARTBEAT_FREQUENCY = 1000L;
+        if (!useHeartbeats)
+            return;
+
         long sinceLastHeartbeat = U.currentTimeMillis() - ses.lastHeartbeat();
 
         if (getIdleTime() > HEARTBEAT_FREQUENCY && sinceLastHeartbeat > HEARTBEAT_FREQUENCY) {

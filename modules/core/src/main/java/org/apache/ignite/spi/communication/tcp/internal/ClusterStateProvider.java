@@ -34,6 +34,7 @@ import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 
 import static org.apache.ignite.internal.IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE;
+import static org.apache.ignite.internal.IgniteFeatures.TCP_COMMUNICATION_HEARTBEATS;
 
 /**
  * The role of this is aggregate logic of cluster states.
@@ -180,6 +181,17 @@ public class ClusterStateProvider {
             safeLocalNodeId();
 
         return new NodeIdMessage(locNodeId);
+    }
+
+    /**
+     * Checks whether node supports heartbeat messages over tcp communication
+     * @param node
+     * @return
+     */
+    public boolean isTcpCommunicationHeartbeatSupported(ClusterNode node) {
+        GridKernalContext ctx = (ignite instanceof IgniteEx) ? ((IgniteEx)ignite).context() : null;
+
+        return IgniteFeatures.nodeSupports(ctx, node, TCP_COMMUNICATION_HEARTBEATS);
     }
 
     /**
