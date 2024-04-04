@@ -1742,7 +1742,6 @@ public class GridNioServer<T> {
                     sentBytesCntMetric.add(cnt);
 
                 ses.bytesSent(cnt);
-
                 onWrite(cnt);
             }
             else {
@@ -2688,7 +2687,7 @@ public class GridNioServer<T> {
 
                         // Update timestamp to avoid multiple notifications within one timeout interval.
                         ses.resetSendScheduleTime();
-                        ses.bytesSent(0);
+                        ses.bytesReceived(0);
                     }
                 }
                 catch (IgniteCheckedException e) {

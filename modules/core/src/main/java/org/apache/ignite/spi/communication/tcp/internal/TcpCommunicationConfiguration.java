@@ -629,10 +629,12 @@ public class TcpCommunicationConfiguration implements Serializable {
         this.forceClientToSrvConnections = forceClientToSrvConnections;
     }
 
+    /** */
     public boolean useHeartbeats() {
         return useHeartbeats;
     }
 
+    /** */
     public void useHeartbeats(boolean useHeartbeats) {
         this.useHeartbeats = useHeartbeats;
     }
