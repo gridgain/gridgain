@@ -19,7 +19,6 @@ package org.apache.ignite.internal.util.nio;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.lang.IgniteInClosure;
-import org.jetbrains.annotations.Nullable;
 
 /**
  *

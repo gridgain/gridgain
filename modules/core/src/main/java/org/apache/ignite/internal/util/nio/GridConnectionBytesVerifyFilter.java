@@ -23,7 +23,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Verifies that first bytes received in accepted (incoming)

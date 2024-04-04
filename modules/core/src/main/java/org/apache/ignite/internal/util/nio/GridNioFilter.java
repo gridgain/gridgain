@@ -19,7 +19,6 @@ package org.apache.ignite.internal.util.nio;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.lang.IgniteInClosure;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * This interface defines the general element in transformation chain between the nio server and

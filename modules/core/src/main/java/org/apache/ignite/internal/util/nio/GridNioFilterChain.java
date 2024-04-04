@@ -21,7 +21,6 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.lang.IgniteInClosure;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Filter chain implementation for nio server filters.
@@ -180,7 +179,6 @@ public class GridNioFilterChain<T> extends GridNioFilterAdapter {
      *
      * @param ses  Session to which message should be written.
      * @param msg  Message to write.
-     * @param meta
      * @return Send future.
      * @throws IgniteCheckedException If IgniteCheckedException occurred while handling event.
      */
@@ -266,8 +264,7 @@ public class GridNioFilterChain<T> extends GridNioFilterAdapter {
         @Override public GridNioFuture<?> onSessionWrite(GridNioSession ses,
             Object msg,
             boolean fut,
-            IgniteInClosure<IgniteException> ackC
-        ) throws IgniteCheckedException {
+            IgniteInClosure<IgniteException> ackC) throws IgniteCheckedException {
             return proceedSessionWrite(ses, msg, fut, ackC);
         }
 

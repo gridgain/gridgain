@@ -34,8 +34,16 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.channels.spi.SelectorProvider;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
@@ -79,7 +87,6 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
-import org.apache.ignite.spi.communication.tcp.messages.HeartbeatMessage;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
@@ -582,8 +589,7 @@ public class GridNioServer<T> {
     GridNioFuture<?> send(GridNioSession ses,
         ByteBuffer msg,
         boolean createFut,
-        IgniteInClosure<IgniteException> ackC
-    ) throws IgniteCheckedException {
+        IgniteInClosure<IgniteException> ackC) throws IgniteCheckedException {
         assert ses instanceof GridSelectorNioSessionImpl : ses;
 
         GridSelectorNioSessionImpl impl = (GridSelectorNioSessionImpl)ses;
@@ -614,8 +620,7 @@ public class GridNioServer<T> {
     GridNioFuture<?> send(GridNioSession ses,
         Message msg,
         boolean createFut,
-        IgniteInClosure<IgniteException> ackC
-    ) throws IgniteCheckedException {
+        IgniteInClosure<IgniteException> ackC) throws IgniteCheckedException {
         assert ses instanceof GridSelectorNioSessionImpl;
 
         GridSelectorNioSessionImpl impl = (GridSelectorNioSessionImpl)ses;
@@ -2056,7 +2061,6 @@ public class GridNioServer<T> {
         private void bodyInternal() throws IgniteCheckedException, InterruptedException {
             try {
                 long lastIdleCheck = U.currentTimeMillis();
-                long lastHeartbeatCheck = U.currentTimeMillis();
 
                 mainLoop:
                 while (!closed && selector.isOpen()) {
@@ -3365,8 +3369,7 @@ public class GridNioServer<T> {
         WriteRequestImpl(GridNioSession ses,
             Object msg,
             boolean skipRecovery,
-            IgniteInClosure<IgniteException> ackC
-        ) {
+            IgniteInClosure<IgniteException> ackC) {
             this.ses = ses;
             this.msg = msg;
             this.skipRecovery = skipRecovery;
@@ -3525,8 +3528,7 @@ public class GridNioServer<T> {
         NioOperationFuture(GridSelectorNioSessionImpl ses,
             NioOperation op,
             Object msg,
-            IgniteInClosure<IgniteException> ackC
-        ) {
+            IgniteInClosure<IgniteException> ackC) {
             super(ackC);
 
             assert ses != null;
@@ -3553,8 +3555,7 @@ public class GridNioServer<T> {
             NioOperation op,
             Message commMsg,
             boolean skipRecovery,
-            IgniteInClosure<IgniteException> ackC
-        ) {
+            IgniteInClosure<IgniteException> ackC) {
             super(ackC);
 
             assert ses != null;
@@ -3737,8 +3738,7 @@ public class GridNioServer<T> {
         @Override public GridNioFuture<?> onSessionWrite(GridNioSession ses,
             Object msg,
             boolean fut,
-            IgniteInClosure<IgniteException> ackC
-        ) throws IgniteCheckedException {
+            IgniteInClosure<IgniteException> ackC) throws IgniteCheckedException {
             if (directMode) {
                 boolean sslSys = sslFilter != null && msg instanceof ByteBuffer;
 
