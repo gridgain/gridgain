@@ -1454,7 +1454,6 @@ public class GridNioServer<T> {
                         sentBytesCntMetric.add(cnt);
 
                     ses.bytesSent(cnt);
-                    ses.updateLastSendTime();
 
                     if (sslNetBuf.hasRemaining()) {
                         ses.addMeta(BUF_META_KEY, sslNetBuf);
@@ -1542,7 +1541,6 @@ public class GridNioServer<T> {
                             sentBytesCntMetric.add(cnt);
 
                         ses.bytesSent(cnt);
-                        ses.updateLastSendTime();
                     }
                     else {
                         // For test purposes only (skipWrite is set to true in tests only).
@@ -1644,7 +1642,6 @@ public class GridNioServer<T> {
                     sentBytesCntMetric.add(cnt);
 
                 ses.bytesSent(cnt);
-                ses.updateLastSendTime();
 
                 if (!buf.hasRemaining())
                     queue.poll();
@@ -1745,7 +1742,6 @@ public class GridNioServer<T> {
                     sentBytesCntMetric.add(cnt);
 
                 ses.bytesSent(cnt);
-                ses.updateLastSendTime();
 
                 onWrite(cnt);
             }
@@ -2387,7 +2383,7 @@ public class GridNioServer<T> {
                     key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
 
                 // Update timestamp to protected against false write timeout.
-                ses.updateLastSendTime();
+                ses.bytesSent(0);
             }
         }
 
@@ -2678,7 +2674,7 @@ public class GridNioServer<T> {
                         filterChain.onSessionWriteTimeout(ses);
 
                         // Update timestamp to avoid multiple notifications within one timeout interval.
-                        ses.updateLastSendTime();
+                        ses.bytesSent(0);
 
                         continue;
                     }
@@ -2692,7 +2688,7 @@ public class GridNioServer<T> {
 
                         // Update timestamp to avoid multiple notifications within one timeout interval.
                         ses.resetSendScheduleTime();
-                        ses.updateLastReceiveTime();
+                        ses.bytesSent(0);
                     }
                 }
                 catch (IgniteCheckedException e) {
