@@ -36,7 +36,10 @@ import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
-import org.apache.ignite.internal.util.nio.*;
+import org.apache.ignite.internal.util.nio.GridCommunicationClient;
+import org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor;
+import org.apache.ignite.internal.util.nio.GridNioSession;
+import org.apache.ignite.internal.util.nio.GridTcpNioCommunicationClient;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.internal.worker.WorkersRegistry;
@@ -155,7 +158,6 @@ public class CommunicationWorker extends GridWorker {
 
         long lastConnMaintenanceTs = U.currentTimeMillis();
         long lastAckSendingTs = U.currentTimeMillis();
-        long lastHeartbeatTs = U.currentTimeMillis();
 
         long awakeEachMs = Math.min(cfg.idleConnectionTimeout(), cfg.ackSendThresholdMillis());
 

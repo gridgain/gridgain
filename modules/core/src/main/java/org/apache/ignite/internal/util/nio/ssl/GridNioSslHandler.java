@@ -29,10 +29,13 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.internal.util.nio.*;
+import org.apache.ignite.internal.util.nio.GridNioEmbeddedFuture;
+import org.apache.ignite.internal.util.nio.GridNioException;
+import org.apache.ignite.internal.util.nio.GridNioFuture;
+import org.apache.ignite.internal.util.nio.GridNioFutureImpl;
+import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
-import org.jetbrains.annotations.Nullable;
 
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
@@ -504,9 +507,7 @@ public class GridNioSslHandler extends ReentrantLock {
      * @return Write future.
      * @throws GridNioException If send failed.
      */
-    GridNioFuture<?> writeNetBuffer(
-            IgniteInClosure<IgniteException> ackC
-    ) throws IgniteCheckedException {
+    GridNioFuture<?> writeNetBuffer(IgniteInClosure<IgniteException> ackC) throws IgniteCheckedException {
         assert isHeldByCurrentThread();
 
         ByteBuffer cp = copy(outNetBuf);
@@ -725,8 +726,7 @@ public class GridNioSslHandler extends ReentrantLock {
          */
         private WriteRequest(GridNioEmbeddedFuture<Object> fut,
             ByteBuffer buf,
-            IgniteInClosure<IgniteException> ackC
-        ) {
+            IgniteInClosure<IgniteException> ackC) {
             this.fut = fut;
             this.buf = buf;
             this.ackC = ackC;

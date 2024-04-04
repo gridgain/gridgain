@@ -177,8 +177,8 @@ public class GridNioFilterChain<T> extends GridNioFilterAdapter {
     /**
      * Starts chain notification from tail to head.
      *
-     * @param ses  Session to which message should be written.
-     * @param msg  Message to write.
+     * @param ses Session to which message should be written.
+     * @param msg Message to write.
      * @return Send future.
      * @throws IgniteCheckedException If IgniteCheckedException occurred while handling event.
      */

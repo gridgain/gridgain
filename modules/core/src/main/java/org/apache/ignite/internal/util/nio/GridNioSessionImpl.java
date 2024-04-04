@@ -125,10 +125,8 @@ public class GridNioSessionImpl implements GridNioSession {
     }
 
     /** {@inheritDoc} */
-    @Override public void sendNoFuture(
-            Object msg,
-            @Nullable IgniteInClosure<IgniteException> ackC
-    ) throws IgniteCheckedException {
+    @Override public void sendNoFuture(Object msg, IgniteInClosure<IgniteException> ackC)
+        throws IgniteCheckedException {
         try {
             chain().onSessionWrite(this, msg, false, ackC);
         }
@@ -312,9 +310,7 @@ public class GridNioSessionImpl implements GridNioSession {
     public void bytesSent(int cnt) {
         bytesSent += cnt;
         bytesSent0 += cnt;
-    }
 
-    public void updateLastSendTime() {
         lastSndTime = U.currentTimeMillis();
     }
 
@@ -328,9 +324,7 @@ public class GridNioSessionImpl implements GridNioSession {
     public void bytesReceived(int cnt) {
         bytesRcvd += cnt;
         bytesRcvd0 += cnt;
-    }
 
-    @Override public void updateLastReceiveTime() {
         lastRcvTime = U.currentTimeMillis();
     }
 
