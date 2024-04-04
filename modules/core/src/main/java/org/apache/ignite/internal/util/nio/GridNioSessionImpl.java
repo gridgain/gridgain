@@ -118,7 +118,8 @@ public class GridNioSessionImpl implements GridNioSession {
     /** {@inheritDoc} */
     @Override public GridNioFuture<?> send(Object msg, @Nullable MessageMeta meta) {
         try {
-            resetSendScheduleTime();
+            if (meta == null || !meta.isHeartbeat())
+                resetSendScheduleTime();
 
             return chain().onSessionWrite(this, msg, true, null, meta);
         }

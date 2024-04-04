@@ -162,12 +162,14 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
             return;
 
         long sinceLastHeartbeat = U.currentTimeMillis() - ses.lastHeartbeat();
+        long idleTime = getIdleTime();
 
-        if (getIdleTime() > HEARTBEAT_FREQUENCY && sinceLastHeartbeat > HEARTBEAT_FREQUENCY) {
+        if (idleTime > HEARTBEAT_FREQUENCY && sinceLastHeartbeat > HEARTBEAT_FREQUENCY) {
             HeartbeatMessage msg = new HeartbeatMessage();
 
             //if (log.isDebugEnabled())
-                log.info("Heartbeat message sent [rmtAddr=" + ses.remoteAddress() + "]");
+                log.info("Heartbeat message sent [rmtAddr=" + ses.remoteAddress() + "], idleTime=" + idleTime + ", sinceLastHeartbeat=" + sinceLastHeartbeat
+                        + " lastSent=" + ses.lastSendTime() + " lastReceived=" + ses.lastReceiveTime() + " scheduletTime=" + ses.lastSendScheduleTime());
 
             ses.updateHeartbeat();
 
