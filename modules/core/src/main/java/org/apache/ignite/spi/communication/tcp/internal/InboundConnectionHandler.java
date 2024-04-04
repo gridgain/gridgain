@@ -271,9 +271,6 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
         ConnectionKey connKey = ses.meta(CONN_IDX_META);
 
-        if (!(msg instanceof HeartbeatMessage))
-            ses.updateLastReceiveTime();
-
         if (connKey == null) {
             assert ses.accepted() : ses;
 
