@@ -166,12 +166,12 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
         if (getIdleTime() > HEARTBEAT_FREQUENCY && sinceLastHeartbeat > HEARTBEAT_FREQUENCY) {
             HeartbeatMessage msg = new HeartbeatMessage();
 
-            if (log.isDebugEnabled())
-                log.debug("Heartbeat message sent. Msg = " + msg);
+            //if (log.isDebugEnabled())
+                log.info("Heartbeat message sent [rmtAddr=" + ses.remoteAddress() + "]");
 
             ses.updateHeartbeat();
 
-            ses.send(msg);
+            ses.send(msg, new MessageMetaImpl(true));
         }
     }
 }

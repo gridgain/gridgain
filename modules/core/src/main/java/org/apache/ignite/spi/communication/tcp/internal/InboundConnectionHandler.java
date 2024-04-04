@@ -271,9 +271,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
         ConnectionKey connKey = ses.meta(CONN_IDX_META);
 
-        boolean isHeartbeat = msg instanceof HeartbeatMessage;
-
-        if (!isHeartbeat)
+        if (!(msg instanceof HeartbeatMessage))
             ses.updateLastReceiveTime();
 
         if (connKey == null) {
@@ -321,7 +319,8 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
             }
             else if (msg instanceof HeartbeatMessage) {
                 if (log.isDebugEnabled())
-                    log.debug("Heartbeat message received. Msg = " + msg);
+                    log.debug("Heartbeat message received [rmtNode=" + connKey.nodeId() +
+                            ", connIdx=" + connKey.connectionIndex() + "]");
 
                 return;
             }

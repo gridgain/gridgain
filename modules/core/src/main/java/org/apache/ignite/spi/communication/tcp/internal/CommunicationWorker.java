@@ -155,6 +155,7 @@ public class CommunicationWorker extends GridWorker {
 
         long lastConnMaintenanceTs = U.currentTimeMillis();
         long lastAckSendingTs = U.currentTimeMillis();
+        long lastHeartbeatTs = U.currentTimeMillis();
 
         long awakeEachMs = Math.min(cfg.idleConnectionTimeout(), cfg.ackSendThresholdMillis());
 
@@ -184,6 +185,12 @@ public class CommunicationWorker extends GridWorker {
                     sendAcks();
 
                     lastAckSendingTs = now;
+                }
+
+                if (now - lastHeartbeatTs > 1000L) {
+                    sendHeartbeats();
+
+                    lastHeartbeatTs = U.currentTimeMillis();
                 }
 
                 onIdle();
@@ -269,16 +276,26 @@ public class CommunicationWorker extends GridWorker {
                     }
                 }
 
-                if (doMaintenance) {
+                if (doMaintenance)
                     closeConnectionIfIdleAndHasNoUnackedMessages(nodeId, node, client, recovery);
-
-                    if (client instanceof HeartbeatAware)
-                        ((HeartbeatAware) client).sendHeartbeatsIfNeeded();
-                }
             }
         }
 
         sendAcksOnSessionsUsingPairedConnections();
+    }
+
+    private void sendHeartbeats() {
+        for (Map.Entry<UUID, GridCommunicationClient[]> e : clientPool.entrySet()) {
+            GridCommunicationClient[] clients = e.getValue();
+
+            for (GridCommunicationClient client : clients) {
+                if (client == null)
+                    continue;
+
+                if (client instanceof HeartbeatAware)
+                    ((HeartbeatAware) client).sendHeartbeatsIfNeeded();
+            }
+        }
     }
 
     /***/

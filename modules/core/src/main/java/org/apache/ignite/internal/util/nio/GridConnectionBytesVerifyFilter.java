@@ -23,6 +23,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Verifies that first bytes received in accepted (incoming)
@@ -75,9 +76,10 @@ public class GridConnectionBytesVerifyFilter extends GridNioFilterAdapter {
         GridNioSession ses,
         Object msg,
         boolean fut,
-        IgniteInClosure<IgniteException> ackC
+        IgniteInClosure<IgniteException> ackC,
+        @Nullable MessageMeta meta
     ) throws IgniteCheckedException {
-        return proceedSessionWrite(ses, msg, fut, ackC);
+        return proceedSessionWrite(ses, msg, fut, ackC, meta);
     }
 
     /** {@inheritDoc} */

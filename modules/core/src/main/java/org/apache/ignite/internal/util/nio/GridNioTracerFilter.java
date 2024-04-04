@@ -28,6 +28,7 @@ import org.apache.ignite.internal.processors.tracing.messages.SpanTransport;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_SOCKET_READ;
 
@@ -83,12 +84,13 @@ public class GridNioTracerFilter extends GridNioFilterAdapter {
         GridNioSession ses,
         Object msg,
         boolean fut,
-        IgniteInClosure<IgniteException> ackC
+        IgniteInClosure<IgniteException> ackC,
+        @Nullable MessageMeta meta
     ) throws IgniteCheckedException {
         if (msg instanceof SpanTransport && MTC.span() != NoopSpan.INSTANCE)
             ((SpanTransport)msg).span(tracer.serialize(MTC.span()));
 
-        return proceedSessionWrite(ses, msg, fut, ackC);
+        return proceedSessionWrite(ses, msg, fut, ackC, meta);
 
     }
 

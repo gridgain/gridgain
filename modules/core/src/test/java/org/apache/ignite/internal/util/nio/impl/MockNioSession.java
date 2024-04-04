@@ -21,10 +21,7 @@ import java.security.cert.Certificate;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.util.lang.GridMetadataAwareAdapter;
-import org.apache.ignite.internal.util.nio.GridNioFinishedFuture;
-import org.apache.ignite.internal.util.nio.GridNioFuture;
-import org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor;
-import org.apache.ignite.internal.util.nio.GridNioSession;
+import org.apache.ignite.internal.util.nio.*;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.Nullable;
 
@@ -115,12 +112,26 @@ public class MockNioSession extends GridMetadataAwareAdapter implements GridNioS
 
     /** {@inheritDoc} */
     @Override public GridNioFuture<?> send(Object msg) {
+        return send(msg, null);
+    }
+
+    @Override
+    public GridNioFuture<?> send(Object msg, @Nullable MessageMeta meta) {
         return new GridNioFinishedFuture<>(true);
     }
 
     /** {@inheritDoc} */
     @Override public void sendNoFuture(Object msg, @Nullable IgniteInClosure<IgniteException> ackC)
         throws IgniteCheckedException {
+        // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override public void sendNoFuture(
+            Object msg,
+            @Nullable IgniteInClosure<IgniteException> ackC,
+            @Nullable MessageMeta meta
+    ) throws IgniteCheckedException {
         // No-op.
     }
 

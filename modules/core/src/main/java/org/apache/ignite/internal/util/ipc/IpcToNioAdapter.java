@@ -27,18 +27,11 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
-import org.apache.ignite.internal.util.nio.GridNioFilter;
-import org.apache.ignite.internal.util.nio.GridNioFilterAdapter;
-import org.apache.ignite.internal.util.nio.GridNioFilterChain;
-import org.apache.ignite.internal.util.nio.GridNioFinishedFuture;
-import org.apache.ignite.internal.util.nio.GridNioFuture;
-import org.apache.ignite.internal.util.nio.GridNioMessageWriterFactory;
-import org.apache.ignite.internal.util.nio.GridNioServerListener;
-import org.apache.ignite.internal.util.nio.GridNioSession;
-import org.apache.ignite.internal.util.nio.GridNioSessionImpl;
+import org.apache.ignite.internal.util.nio.*;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.util.nio.GridNioServer.RECEIVED_BYTES_METRIC_DESC;
 import static org.apache.ignite.internal.util.nio.GridNioServer.RECEIVED_BYTES_METRIC_NAME;
@@ -216,9 +209,9 @@ public class IpcToNioAdapter<T> {
 
         /** {@inheritDoc} */
         @Override public GridNioFuture<?> onSessionWrite(GridNioSession ses,
-            Object msg,
-            boolean fut,
-            IgniteInClosure<IgniteException> ackC) {
+                                                         Object msg,
+                                                         boolean fut,
+                                                         IgniteInClosure<IgniteException> ackC, @Nullable MessageMeta meta) {
             assert ses == IpcToNioAdapter.this.ses;
 
             return send((Message)msg);

@@ -29,13 +29,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.IntMetricImpl;
-import org.apache.ignite.internal.util.nio.GridNioException;
-import org.apache.ignite.internal.util.nio.GridNioFilterAdapter;
-import org.apache.ignite.internal.util.nio.GridNioFinishedFuture;
-import org.apache.ignite.internal.util.nio.GridNioFuture;
-import org.apache.ignite.internal.util.nio.GridNioFutureImpl;
-import org.apache.ignite.internal.util.nio.GridNioSession;
-import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
+import org.apache.ignite.internal.util.nio.*;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.Nullable;
@@ -285,10 +279,11 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
         GridNioSession ses,
         Object msg,
         boolean fut,
-        IgniteInClosure<IgniteException> ackC
+        IgniteInClosure<IgniteException> ackC,
+        @Nullable MessageMeta meta
     ) throws IgniteCheckedException {
         if (directMode)
-            return proceedSessionWrite(ses, msg, fut, ackC);
+            return proceedSessionWrite(ses, msg, fut, ackC, meta);
 
         ByteBuffer input = checkMessage(ses, msg);
 
@@ -307,13 +302,13 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
             if (hnd.isHandshakeFinished()) {
                 hnd.encrypt(input);
 
-                return hnd.writeNetBuffer(ackC);
+                return hnd.writeNetBuffer(ackC, meta);
             }
             else {
                 if (log.isDebugEnabled())
                     log.debug("Write request received during handshake, scheduling deferred write: " + ses);
 
-                return hnd.deferredWrite(input, ackC);
+                return hnd.deferredWrite(input, ackC, meta);
             }
         }
         catch (SSLException e) {
@@ -391,7 +386,7 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
                     catch (SSLException ignored) {
                     }
                     // Try to write TLS error to the remote.
-                    hnd.writeNetBuffer(null);
+                    hnd.writeNetBuffer(null, null);
                 }
             }
 
@@ -429,7 +424,7 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
         try {
             hnd.closeOutbound();
 
-            hnd.writeNetBuffer(null);
+            hnd.writeNetBuffer(null, null);
         }
         catch (SSLException e) {
             U.warn(log, "Failed to shutdown SSL session gracefully (will force close) [ex=" + e + ", ses=" + ses + ']');

@@ -19,6 +19,7 @@ package org.apache.ignite.internal.util.nio;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * This interface defines the general element in transformation chain between the nio server and
@@ -104,10 +105,11 @@ public interface GridNioFilter {
     /**
      * Forwards write request to the next logical filter in filter chain.
      *
-     * @param ses Session instance.
-     * @param msg Message to send.
-     * @param fut {@code True} if write future should be created.
+     * @param ses  Session instance.
+     * @param msg  Message to send.
+     * @param fut  {@code True} if write future should be created.
      * @param ackC Closure invoked when message ACK is received.
+     * @param meta Meta-information about message.
      * @return Write future or {@code null}.
      * @throws IgniteCheckedException If filter is not in chain or GridNioException occurred in the underlying filter.
      */
@@ -115,7 +117,8 @@ public interface GridNioFilter {
         GridNioSession ses,
         Object msg,
         boolean fut,
-        IgniteInClosure<IgniteException> ackC
+        IgniteInClosure<IgniteException> ackC,
+        @Nullable MessageMeta meta
     ) throws IgniteCheckedException;
 
     /**
@@ -155,17 +158,20 @@ public interface GridNioFilter {
     /**
      * Invoked when a write request is performed on a session.
      *
-     * @param ses Session on which message should be written.
-     * @param msg Message being written.
-     * @param fut {@code True} if write future should be created.
+     * @param ses  Session on which message should be written.
+     * @param msg  Message being written.
+     * @param fut  {@code True} if write future should be created.
      * @param ackC Closure invoked when message ACK is received.
+     * @param meta Meta-information about message.
      * @return Write future or {@code null}.
      * @throws GridNioException If GridNioException occurred while handling event.
      */
     public GridNioFuture<?> onSessionWrite(GridNioSession ses,
         Object msg,
         boolean fut,
-        IgniteInClosure<IgniteException> ackC) throws IgniteCheckedException;
+        IgniteInClosure<IgniteException> ackC,
+        @Nullable MessageMeta meta
+    ) throws IgniteCheckedException;
 
     /**
      * Invoked when a new messages received.

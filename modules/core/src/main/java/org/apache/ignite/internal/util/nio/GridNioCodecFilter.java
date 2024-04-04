@@ -25,6 +25,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Filter that transforms byte buffers to user-defined objects and vice-versa with specified {@link GridNioParser}.
@@ -83,16 +84,17 @@ public class GridNioCodecFilter extends GridNioFilterAdapter {
         GridNioSession ses,
         Object msg,
         boolean fut,
-        IgniteInClosure<IgniteException> ackC
+        IgniteInClosure<IgniteException> ackC,
+        @Nullable MessageMeta meta
     ) throws IgniteCheckedException {
         // No encoding needed in direct mode.
         if (directMode)
-            return proceedSessionWrite(ses, msg, fut, ackC);
+            return proceedSessionWrite(ses, msg, fut, ackC, meta);
 
         try {
             ByteBuffer res = parser.encode(ses, msg);
 
-            return proceedSessionWrite(ses, res, fut, ackC);
+            return proceedSessionWrite(ses, res, fut, ackC, meta);
         }
         catch (IOException e) {
             throw new GridNioException(e);

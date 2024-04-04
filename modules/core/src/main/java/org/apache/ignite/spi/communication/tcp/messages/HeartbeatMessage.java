@@ -23,7 +23,6 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Heartbeat message for TCP communication SPI.
@@ -32,21 +31,15 @@ public class HeartbeatMessage implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Message timestamp counter for debug. */
-    private static final AtomicLong counter = new AtomicLong(1); // TODO remove
-
     /** Message body size in bytes. */
-    static final int MESSAGE_SIZE = 8;
+    static final int MESSAGE_SIZE = 0;
 
     /** Full message size (with message type) in bytes. */
     private static final int MESSAGE_FULL_SIZE = MESSAGE_SIZE + DIRECT_TYPE_SIZE;
 
-    /** Message timestamp. */
-    private long timestamp; // TODO public for debug; remove
-
     /** */
     public HeartbeatMessage() {
-        this.timestamp = counter.getAndIncrement();
+        // No-op
     }
 
     /** {@inheritDoc} */
@@ -56,8 +49,6 @@ public class HeartbeatMessage implements Message {
 
         TcpCommunicationSpi.writeMessageType(buf, directType());
 
-        buf.putLong(timestamp);
-
         return true;
     }
 
@@ -65,8 +56,6 @@ public class HeartbeatMessage implements Message {
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
         if (buf.remaining() < MESSAGE_SIZE)
             return false;
-
-        timestamp = buf.getLong();
 
         return true;
     }
@@ -78,16 +67,12 @@ public class HeartbeatMessage implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 1;
+        return 0;
     }
 
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
         // No-op.
-    }
-
-    public long getTimestamp() {
-        return timestamp;
     }
 
     @Override public String toString() {

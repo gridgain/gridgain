@@ -112,10 +112,15 @@ public class GridNioSessionImpl implements GridNioSession {
 
     /** {@inheritDoc} */
     @Override public GridNioFuture<?> send(Object msg) {
+        return send(msg, null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridNioFuture<?> send(Object msg, @Nullable MessageMeta meta) {
         try {
             resetSendScheduleTime();
 
-            return chain().onSessionWrite(this, msg, true, null);
+            return chain().onSessionWrite(this, msg, true, null, meta);
         }
         catch (IgniteCheckedException e) {
             close();
@@ -127,8 +132,17 @@ public class GridNioSessionImpl implements GridNioSession {
     /** {@inheritDoc} */
     @Override public void sendNoFuture(Object msg, IgniteInClosure<IgniteException> ackC)
         throws IgniteCheckedException {
+        sendNoFuture(msg, ackC, null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void sendNoFuture(
+            Object msg,
+            @Nullable IgniteInClosure<IgniteException> ackC,
+            @Nullable MessageMeta meta
+    ) throws IgniteCheckedException {
         try {
-            chain().onSessionWrite(this, msg, false, ackC);
+            chain().onSessionWrite(this, msg, false, ackC, null);
         }
         catch (IgniteCheckedException e) {
             close();
@@ -310,7 +324,9 @@ public class GridNioSessionImpl implements GridNioSession {
     public void bytesSent(int cnt) {
         bytesSent += cnt;
         bytesSent0 += cnt;
+    }
 
+    public void updateLastSendTime() {
         lastSndTime = U.currentTimeMillis();
     }
 
@@ -393,10 +409,12 @@ public class GridNioSessionImpl implements GridNioSession {
         throw new UnsupportedOperationException();
     }
 
+    /** {@inheritDoc} */
     @Override public long lastHeartbeat() {
         return heartbeatSent;
     }
 
+    /** {@inheritDoc} */
     @Override public void updateHeartbeat() {
         heartbeatSent = U.currentTimeMillis();
     }
