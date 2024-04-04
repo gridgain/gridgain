@@ -117,8 +117,7 @@ public interface GridNioFilter {
         GridNioSession ses,
         Object msg,
         boolean fut,
-        IgniteInClosure<IgniteException> ackC,
-        @Nullable MessageMeta meta
+        IgniteInClosure<IgniteException> ackC
     ) throws IgniteCheckedException;
 
     /**
@@ -162,15 +161,13 @@ public interface GridNioFilter {
      * @param msg  Message being written.
      * @param fut  {@code True} if write future should be created.
      * @param ackC Closure invoked when message ACK is received.
-     * @param meta Meta-information about message.
      * @return Write future or {@code null}.
      * @throws GridNioException If GridNioException occurred while handling event.
      */
     public GridNioFuture<?> onSessionWrite(GridNioSession ses,
         Object msg,
         boolean fut,
-        IgniteInClosure<IgniteException> ackC,
-        @Nullable MessageMeta meta
+        IgniteInClosure<IgniteException> ackC
     ) throws IgniteCheckedException;
 
     /**

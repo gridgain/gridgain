@@ -110,30 +110,12 @@ public interface GridNioSession {
     public GridNioFuture<?> send(Object msg);
 
     /**
-     * Performs a request for asynchronous data send.
-     *
-     * @param msg Message to be sent. This message will be eventually passed in to a parser plugged
-     *            to the nio server.
-     * @param meta Meta-information about message.
-     * @return Future representing result.
-     */
-    GridNioFuture<?> send(Object msg, @Nullable MessageMeta meta);
-
-    /**
      * @param msg Message to be sent.
      * @param ackC Optional closure invoked when ack for message is received.
      * @throws IgniteCheckedException If failed.
      */
     public void sendNoFuture(Object msg, @Nullable IgniteInClosure<IgniteException> ackC)
         throws IgniteCheckedException;
-
-    /**
-     * @param msg Message to be sent.
-     * @param ackC Optional closure invoked when ack for message is received.
-     * @throws IgniteCheckedException If failed.
-     */
-    public void sendNoFuture(Object msg, @Nullable IgniteInClosure<IgniteException> ackC, @Nullable MessageMeta meta)
-            throws IgniteCheckedException;
 
     /**
      * Gets metadata associated with specified key.

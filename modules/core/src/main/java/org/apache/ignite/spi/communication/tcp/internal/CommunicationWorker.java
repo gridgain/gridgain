@@ -187,12 +187,6 @@ public class CommunicationWorker extends GridWorker {
                     lastAckSendingTs = now;
                 }
 
-                if (now - lastHeartbeatTs > 1000L) {
-                    sendHeartbeats();
-
-                    lastHeartbeatTs = U.currentTimeMillis();
-                }
-
                 onIdle();
             }
         }
@@ -282,20 +276,6 @@ public class CommunicationWorker extends GridWorker {
         }
 
         sendAcksOnSessionsUsingPairedConnections();
-    }
-
-    private void sendHeartbeats() {
-        for (Map.Entry<UUID, GridCommunicationClient[]> e : clientPool.entrySet()) {
-            GridCommunicationClient[] clients = e.getValue();
-
-            for (GridCommunicationClient client : clients) {
-                if (client == null)
-                    continue;
-
-                if (client instanceof HeartbeatAware)
-                    ((HeartbeatAware) client).sendHeartbeatsIfNeeded();
-            }
-        }
     }
 
     /***/

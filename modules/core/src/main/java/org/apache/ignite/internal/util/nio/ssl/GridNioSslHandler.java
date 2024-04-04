@@ -284,7 +284,7 @@ public class GridNioSslHandler extends ReentrantLock {
                             log.debug("Wrapped handshake data [status=" + res.getStatus() + ", handshakeStatus=" +
                                 handshakeStatus + ", ses=" + ses + ']');
 
-                        writeNetBuffer(null, null);
+                        writeNetBuffer(null);
 
                         break;
                     }
@@ -440,14 +440,14 @@ public class GridNioSslHandler extends ReentrantLock {
      * @param ackC Closure invoked when message ACK is received.
      * @return Write future.
      */
-    GridNioFuture<?> deferredWrite(ByteBuffer buf, IgniteInClosure<IgniteException> ackC, @Nullable MessageMeta meta) {
+    GridNioFuture<?> deferredWrite(ByteBuffer buf, IgniteInClosure<IgniteException> ackC) {
         assert isHeldByCurrentThread();
 
         GridNioEmbeddedFuture<Object> fut = new GridNioEmbeddedFuture<>();
 
         ByteBuffer cp = copy(buf);
 
-        deferredWriteQueue.offer(new WriteRequest(fut, cp, ackC, meta));
+        deferredWriteQueue.offer(new WriteRequest(fut, cp, ackC));
 
         return fut;
     }
@@ -464,7 +464,7 @@ public class GridNioSslHandler extends ReentrantLock {
         while (!deferredWriteQueue.isEmpty()) {
             WriteRequest req = deferredWriteQueue.poll();
 
-            req.future().onDone((GridNioFuture<Object>)parent.proceedSessionWrite(ses, req.buffer(), true, req.ackC, req.meta));
+            req.future().onDone((GridNioFuture<Object>)parent.proceedSessionWrite(ses, req.buffer(), true, req.ackC));
         }
     }
 
@@ -505,14 +505,13 @@ public class GridNioSslHandler extends ReentrantLock {
      * @throws GridNioException If send failed.
      */
     GridNioFuture<?> writeNetBuffer(
-            IgniteInClosure<IgniteException> ackC,
-            @Nullable MessageMeta meta
+            IgniteInClosure<IgniteException> ackC
     ) throws IgniteCheckedException {
         assert isHeldByCurrentThread();
 
         ByteBuffer cp = copy(outNetBuf);
 
-        return parent.proceedSessionWrite(ses, cp, true, ackC, meta);
+        return parent.proceedSessionWrite(ses, cp, true, ackC);
     }
 
     /**
@@ -717,9 +716,6 @@ public class GridNioSslHandler extends ReentrantLock {
         /** */
         private final IgniteInClosure<IgniteException> ackC;
 
-        /** Message meta-information. */
-        private final MessageMeta meta;
-
         /**
          * Creates write request.
          *
@@ -729,13 +725,11 @@ public class GridNioSslHandler extends ReentrantLock {
          */
         private WriteRequest(GridNioEmbeddedFuture<Object> fut,
             ByteBuffer buf,
-            IgniteInClosure<IgniteException> ackC,
-            @Nullable MessageMeta meta
+            IgniteInClosure<IgniteException> ackC
         ) {
             this.fut = fut;
             this.buf = buf;
             this.ackC = ackC;
-            this.meta = meta;
         }
 
         /**

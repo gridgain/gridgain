@@ -84,17 +84,16 @@ public class GridNioCodecFilter extends GridNioFilterAdapter {
         GridNioSession ses,
         Object msg,
         boolean fut,
-        IgniteInClosure<IgniteException> ackC,
-        @Nullable MessageMeta meta
+        IgniteInClosure<IgniteException> ackC
     ) throws IgniteCheckedException {
         // No encoding needed in direct mode.
         if (directMode)
-            return proceedSessionWrite(ses, msg, fut, ackC, meta);
+            return proceedSessionWrite(ses, msg, fut, ackC);
 
         try {
             ByteBuffer res = parser.encode(ses, msg);
 
-            return proceedSessionWrite(ses, res, fut, ackC, meta);
+            return proceedSessionWrite(ses, res, fut, ackC);
         }
         catch (IOException e) {
             throw new GridNioException(e);

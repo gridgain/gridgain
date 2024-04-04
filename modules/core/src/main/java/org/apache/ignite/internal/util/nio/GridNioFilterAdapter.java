@@ -114,12 +114,11 @@ public abstract class GridNioFilterAdapter implements GridNioFilter {
         GridNioSession ses,
         Object msg,
         boolean fut,
-        IgniteInClosure<IgniteException> ackC,
-        @Nullable MessageMeta meta
+        IgniteInClosure<IgniteException> ackC
     ) throws IgniteCheckedException {
         checkNext();
 
-        return nextFilter.onSessionWrite(ses, msg, fut, ackC, meta);
+        return nextFilter.onSessionWrite(ses, msg, fut, ackC);
     }
 
     /** {@inheritDoc} */

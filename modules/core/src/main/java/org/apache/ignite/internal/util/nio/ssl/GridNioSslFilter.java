@@ -279,11 +279,10 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
         GridNioSession ses,
         Object msg,
         boolean fut,
-        IgniteInClosure<IgniteException> ackC,
-        @Nullable MessageMeta meta
+        IgniteInClosure<IgniteException> ackC
     ) throws IgniteCheckedException {
         if (directMode)
-            return proceedSessionWrite(ses, msg, fut, ackC, meta);
+            return proceedSessionWrite(ses, msg, fut, ackC);
 
         ByteBuffer input = checkMessage(ses, msg);
 
@@ -302,13 +301,13 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
             if (hnd.isHandshakeFinished()) {
                 hnd.encrypt(input);
 
-                return hnd.writeNetBuffer(ackC, meta);
+                return hnd.writeNetBuffer(ackC);
             }
             else {
                 if (log.isDebugEnabled())
                     log.debug("Write request received during handshake, scheduling deferred write: " + ses);
 
-                return hnd.deferredWrite(input, ackC, meta);
+                return hnd.deferredWrite(input, ackC);
             }
         }
         catch (SSLException e) {
@@ -386,7 +385,7 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
                     catch (SSLException ignored) {
                     }
                     // Try to write TLS error to the remote.
-                    hnd.writeNetBuffer(null, null);
+                    hnd.writeNetBuffer(null);
                 }
             }
 
@@ -424,7 +423,7 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
         try {
             hnd.closeOutbound();
 
-            hnd.writeNetBuffer(null, null);
+            hnd.writeNetBuffer(null);
         }
         catch (SSLException e) {
             U.warn(log, "Failed to shutdown SSL session gracefully (will force close) [ex=" + e + ", ses=" + ses + ']');

@@ -112,26 +112,12 @@ public class MockNioSession extends GridMetadataAwareAdapter implements GridNioS
 
     /** {@inheritDoc} */
     @Override public GridNioFuture<?> send(Object msg) {
-        return send(msg, null);
-    }
-
-    @Override
-    public GridNioFuture<?> send(Object msg, @Nullable MessageMeta meta) {
         return new GridNioFinishedFuture<>(true);
     }
 
     /** {@inheritDoc} */
     @Override public void sendNoFuture(Object msg, @Nullable IgniteInClosure<IgniteException> ackC)
         throws IgniteCheckedException {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public void sendNoFuture(
-            Object msg,
-            @Nullable IgniteInClosure<IgniteException> ackC,
-            @Nullable MessageMeta meta
-    ) throws IgniteCheckedException {
         // No-op.
     }
 

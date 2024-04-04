@@ -188,10 +188,9 @@ public class GridNioFilterChain<T> extends GridNioFilterAdapter {
         GridNioSession ses,
         Object msg,
         boolean fut,
-        IgniteInClosure<IgniteException> ackC,
-        @Nullable MessageMeta meta
+        IgniteInClosure<IgniteException> ackC
     ) throws IgniteCheckedException {
-        return tail.onSessionWrite(ses, msg, fut, ackC, meta);
+        return tail.onSessionWrite(ses, msg, fut, ackC);
     }
 
     /**
@@ -267,10 +266,9 @@ public class GridNioFilterChain<T> extends GridNioFilterAdapter {
         @Override public GridNioFuture<?> onSessionWrite(GridNioSession ses,
             Object msg,
             boolean fut,
-            IgniteInClosure<IgniteException> ackC,
-            @Nullable MessageMeta meta
+            IgniteInClosure<IgniteException> ackC
         ) throws IgniteCheckedException {
-            return proceedSessionWrite(ses, msg, fut, ackC, meta);
+            return proceedSessionWrite(ses, msg, fut, ackC);
         }
 
         /** {@inheritDoc} */

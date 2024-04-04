@@ -112,16 +112,10 @@ public class GridNioSessionImpl implements GridNioSession {
 
     /** {@inheritDoc} */
     @Override public GridNioFuture<?> send(Object msg) {
-        return send(msg, null);
-    }
-
-    /** {@inheritDoc} */
-    @Override public GridNioFuture<?> send(Object msg, @Nullable MessageMeta meta) {
         try {
-            if (meta == null || !meta.isHeartbeat())
-                resetSendScheduleTime();
+            resetSendScheduleTime();
 
-            return chain().onSessionWrite(this, msg, true, null, meta);
+            return chain().onSessionWrite(this, msg, true, null);
         }
         catch (IgniteCheckedException e) {
             close();
@@ -131,19 +125,12 @@ public class GridNioSessionImpl implements GridNioSession {
     }
 
     /** {@inheritDoc} */
-    @Override public void sendNoFuture(Object msg, IgniteInClosure<IgniteException> ackC)
-        throws IgniteCheckedException {
-        sendNoFuture(msg, ackC, null);
-    }
-
-    /** {@inheritDoc} */
     @Override public void sendNoFuture(
             Object msg,
-            @Nullable IgniteInClosure<IgniteException> ackC,
-            @Nullable MessageMeta meta
+            @Nullable IgniteInClosure<IgniteException> ackC
     ) throws IgniteCheckedException {
         try {
-            chain().onSessionWrite(this, msg, false, ackC, null);
+            chain().onSessionWrite(this, msg, false, ackC);
         }
         catch (IgniteCheckedException e) {
             close();

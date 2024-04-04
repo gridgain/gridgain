@@ -83,6 +83,4 @@ public interface SessionWriteRequest {
      * @return Span.
      */
     Span span();
-
-    @Nullable MessageMeta messageMeta();
 }

@@ -582,22 +582,21 @@ public class GridNioServer<T> {
     GridNioFuture<?> send(GridNioSession ses,
         ByteBuffer msg,
         boolean createFut,
-        IgniteInClosure<IgniteException> ackC,
-        @Nullable MessageMeta meta
+        IgniteInClosure<IgniteException> ackC
     ) throws IgniteCheckedException {
         assert ses instanceof GridSelectorNioSessionImpl : ses;
 
         GridSelectorNioSessionImpl impl = (GridSelectorNioSessionImpl)ses;
 
         if (createFut) {
-            NioOperationFuture<?> fut = new NioOperationFuture<Void>(impl, NioOperation.REQUIRE_WRITE, msg, ackC, meta);
+            NioOperationFuture<?> fut = new NioOperationFuture<Void>(impl, NioOperation.REQUIRE_WRITE, msg, ackC);
 
             send0(impl, fut, false);
 
             return fut;
         }
         else {
-            SessionWriteRequest req = new WriteRequestImpl(ses, msg, true, ackC, meta);
+            SessionWriteRequest req = new WriteRequestImpl(ses, msg, true, ackC);
 
             send0(impl, req, false);
 
@@ -615,8 +614,7 @@ public class GridNioServer<T> {
     GridNioFuture<?> send(GridNioSession ses,
         Message msg,
         boolean createFut,
-        IgniteInClosure<IgniteException> ackC,
-        @Nullable MessageMeta meta
+        IgniteInClosure<IgniteException> ackC
     ) throws IgniteCheckedException {
         assert ses instanceof GridSelectorNioSessionImpl;
 
@@ -624,14 +622,14 @@ public class GridNioServer<T> {
 
         if (createFut) {
             NioOperationFuture<?> fut = new NioOperationFuture<Void>(impl, NioOperation.REQUIRE_WRITE, msg,
-                skipRecoveryPred.apply(msg), ackC, meta);
+                skipRecoveryPred.apply(msg), ackC);
 
             send0(impl, fut, false);
 
             return fut;
         }
         else {
-            SessionWriteRequest req = new WriteRequestImpl(ses, msg, skipRecoveryPred.apply(msg), ackC, meta);
+            SessionWriteRequest req = new WriteRequestImpl(ses, msg, skipRecoveryPred.apply(msg), ackC);
 
             send0(impl, req, false);
 
@@ -703,7 +701,7 @@ public class GridNioServer<T> {
                 NioOperation.REQUIRE_WRITE,
                 msg,
                 skipRecoveryPred.apply(msg),
-                null, null);
+                null);
 
             fut.listen(lsnr);
 
@@ -1267,12 +1265,6 @@ public class GridNioServer<T> {
                             sentBytesCntMetric.add(cnt);
 
                         ses.bytesSent(cnt);
-
-                        MessageMeta messageMeta = req.messageMeta();
-
-                        if (messageMeta == null || !messageMeta.isHeartbeat()) {
-                            ses.updateLastSendTime();
-                        }
                     }
                 }
                 else {
@@ -1498,14 +1490,8 @@ public class GridNioServer<T> {
 
                     List<SessionWriteRequest> pendingRequests = new ArrayList<>(2);
 
-                    boolean hasNonHeartbeat = false;
-
-                    if (req != null) {
+                    if (req != null)
                         finished = writeToBuffer(writer, buf, req, pendingRequests);
-
-                        MessageMeta messageMeta = req.messageMeta();
-                        hasNonHeartbeat |= (messageMeta == null || !messageMeta.isHeartbeat());
-                    }
 
                     // Fill up as many messages as possible to write buffer.
                     while (finished) {
@@ -1516,9 +1502,6 @@ public class GridNioServer<T> {
 
                         if (req == null)
                             break;
-
-                        MessageMeta messageMeta = req.messageMeta();
-                        hasNonHeartbeat |= (messageMeta == null || !messageMeta.isHeartbeat());
 
                         finished = writeToBuffer(writer, buf, req, pendingRequests);
                     }
@@ -1554,9 +1537,7 @@ public class GridNioServer<T> {
                             sentBytesCntMetric.add(cnt);
 
                         ses.bytesSent(cnt);
-
-                        if (hasNonHeartbeat)
-                            ses.updateLastSendTime();
+                        ses.updateLastSendTime();
                     }
                     else {
                         // For test purposes only (skipWrite is set to true in tests only).
@@ -1726,14 +1707,9 @@ public class GridNioServer<T> {
             }
 
             boolean finished = false;
-            boolean hasNonHeartbeat = false;
 
-            if (req != null) {
+            if (req != null)
                 finished = writeToBuffer(ses, buf, req, writer);
-
-                MessageMeta messageMeta = req.messageMeta();
-                hasNonHeartbeat |= messageMeta == null || !messageMeta.isHeartbeat();
-            }
 
             // Fill up as many messages as possible to write buffer.
             while (finished) {
@@ -1748,9 +1724,6 @@ public class GridNioServer<T> {
                     break;
 
                 finished = writeToBuffer(ses, buf, req, writer);
-
-                MessageMeta messageMeta = req.messageMeta();
-                hasNonHeartbeat |= (messageMeta == null || !messageMeta.isHeartbeat());
             }
 
             buf.flip();
@@ -1767,9 +1740,7 @@ public class GridNioServer<T> {
                     sentBytesCntMetric.add(cnt);
 
                 ses.bytesSent(cnt);
-
-                if (hasNonHeartbeat)
-                    ses.updateLastSendTime();
+                ses.updateLastSendTime();
 
                 onWrite(cnt);
             }
@@ -3357,10 +3328,6 @@ public class GridNioServer<T> {
             return span;
         }
 
-        @Override public @Nullable MessageMeta messageMeta() {
-            return null;
-        }
-
         /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(WriteRequestSystemImpl.class, this);
@@ -3386,9 +3353,6 @@ public class GridNioServer<T> {
         /** */
         private final IgniteInClosure<IgniteException> ackC;
 
-        /** */
-        private final MessageMeta messageMeta;
-
         /** Span for tracing. */
         private Span span;
 
@@ -3401,14 +3365,12 @@ public class GridNioServer<T> {
         WriteRequestImpl(GridNioSession ses,
             Object msg,
             boolean skipRecovery,
-            IgniteInClosure<IgniteException> ackC,
-            @Nullable MessageMeta messageMeta
+            IgniteInClosure<IgniteException> ackC
         ) {
             this.ses = ses;
             this.msg = msg;
             this.skipRecovery = skipRecovery;
             this.ackC = ackC;
-            this.messageMeta = messageMeta;
             this.span = MTC.span();
         }
 
@@ -3475,11 +3437,6 @@ public class GridNioServer<T> {
         }
 
         /** {@inheritDoc} */
-        @Override public @Nullable MessageMeta messageMeta() {
-            return messageMeta;
-        }
-
-        /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(WriteRequestImpl.class, this);
         }
@@ -3515,8 +3472,6 @@ public class GridNioServer<T> {
         /** */
         @GridToStringExclude
         private boolean skipRecovery;
-
-        private MessageMeta messageMeta;
 
         /** */
         private Span span;
@@ -3570,8 +3525,7 @@ public class GridNioServer<T> {
         NioOperationFuture(GridSelectorNioSessionImpl ses,
             NioOperation op,
             Object msg,
-            IgniteInClosure<IgniteException> ackC,
-            @Nullable MessageMeta meta
+            IgniteInClosure<IgniteException> ackC
         ) {
             super(ackC);
 
@@ -3599,8 +3553,7 @@ public class GridNioServer<T> {
             NioOperation op,
             Message commMsg,
             boolean skipRecovery,
-            IgniteInClosure<IgniteException> ackC,
-            @Nullable MessageMeta messageMeta
+            IgniteInClosure<IgniteException> ackC
         ) {
             super(ackC);
 
@@ -3613,7 +3566,6 @@ public class GridNioServer<T> {
             this.op = op;
             this.msg = commMsg;
             this.skipRecovery = skipRecovery;
-            this.messageMeta = messageMeta;
             this.span = MTC.span();
         }
 
@@ -3690,11 +3642,6 @@ public class GridNioServer<T> {
         /** {@inheritDoc} */
         @Override public boolean skipRecovery() {
             return skipRecovery;
-        }
-
-        /** {@inheritDoc} */
-        @Override public @Nullable MessageMeta messageMeta() {
-            return messageMeta;
         }
 
         /** {@inheritDoc} */
@@ -3790,8 +3737,7 @@ public class GridNioServer<T> {
         @Override public GridNioFuture<?> onSessionWrite(GridNioSession ses,
             Object msg,
             boolean fut,
-            IgniteInClosure<IgniteException> ackC,
-            @Nullable MessageMeta meta
+            IgniteInClosure<IgniteException> ackC
         ) throws IgniteCheckedException {
             if (directMode) {
                 boolean sslSys = sslFilter != null && msg instanceof ByteBuffer;
@@ -3815,10 +3761,10 @@ public class GridNioServer<T> {
                     return null;
                 }
                 else
-                    return send(ses, (Message)msg, fut, ackC, meta);
+                    return send(ses, (Message)msg, fut, ackC);
             }
             else
-                return send(ses, (ByteBuffer)msg, fut, ackC, meta);
+                return send(ses, (ByteBuffer)msg, fut, ackC);
         }
 
         /** {@inheritDoc} */

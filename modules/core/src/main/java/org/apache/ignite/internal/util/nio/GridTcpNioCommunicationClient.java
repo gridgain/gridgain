@@ -35,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Grid client for NIO server.
  */
-public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClient implements HeartbeatAware {
+public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClient {
     /** Time in ms between different heartbeat messages. */
     public static final long HEARTBEAT_FREQUENCY = 2000L;
 
@@ -157,23 +157,22 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
         return S.toString(GridTcpNioCommunicationClient.class, this, super.toString());
     }
 
-    @Override public void sendHeartbeatsIfNeeded() {
+    public void sendHeartbeatsIfNeeded() {
         if (!useHeartbeats)
             return;
 
         long sinceLastHeartbeat = U.currentTimeMillis() - ses.lastHeartbeat();
-        long idleTime = getIdleTime();
 
-        if (idleTime > HEARTBEAT_FREQUENCY && sinceLastHeartbeat > HEARTBEAT_FREQUENCY) {
+        if (sinceLastHeartbeat > HEARTBEAT_FREQUENCY) {
             HeartbeatMessage msg = new HeartbeatMessage();
 
             //if (log.isDebugEnabled())
-                log.info("Heartbeat message sent [rmtAddr=" + ses.remoteAddress() + "], idleTime=" + idleTime + ", sinceLastHeartbeat=" + sinceLastHeartbeat
+                log.info("Heartbeat message sent [rmtAddr=" + ses.remoteAddress() + "], sinceLastHeartbeat=" + sinceLastHeartbeat
                         + " lastSent=" + ses.lastSendTime() + " lastReceived=" + ses.lastReceiveTime() + " scheduletTime=" + ses.lastSendScheduleTime());
 
             ses.updateHeartbeat();
 
-            ses.send(msg, new MessageMetaImpl(true));
+            ses.send(msg);
         }
     }
 }

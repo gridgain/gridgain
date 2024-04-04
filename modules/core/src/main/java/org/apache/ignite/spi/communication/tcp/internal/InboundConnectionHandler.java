@@ -606,6 +606,9 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
                     ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
 
+                    // sending heartbeat message through old session to validate if session isn't broken.
+                    ((GridTcpNioCommunicationClient) oldClient).sendHeartbeatsIfNeeded();
+
                     closeStaleConnections(connKey);
 
                     return;

@@ -84,13 +84,12 @@ public class GridNioTracerFilter extends GridNioFilterAdapter {
         GridNioSession ses,
         Object msg,
         boolean fut,
-        IgniteInClosure<IgniteException> ackC,
-        @Nullable MessageMeta meta
+        IgniteInClosure<IgniteException> ackC
     ) throws IgniteCheckedException {
         if (msg instanceof SpanTransport && MTC.span() != NoopSpan.INSTANCE)
             ((SpanTransport)msg).span(tracer.serialize(MTC.span()));
 
-        return proceedSessionWrite(ses, msg, fut, ackC, meta);
+        return proceedSessionWrite(ses, msg, fut, ackC);
 
     }
 
