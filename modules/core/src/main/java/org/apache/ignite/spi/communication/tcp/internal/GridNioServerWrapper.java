@@ -668,10 +668,10 @@ public class GridNioServerWrapper {
         else {
             GridNioSession ses = createNioSession(node, connIdx);
 
-            boolean useHeartbeats = cfg.useHeartbeats() && stateProvider.isTcpCommunicationHeartbeatSupported(node);
+            boolean enableConnectionCheck = cfg.enableConnectionCheck() && stateProvider.isTcpCommunicationConnectionCheckSupported(node);
 
             return ses == null ?
-                null : new GridTcpNioCommunicationClient(connIdx, ses, log, useHeartbeats);
+                null : new GridTcpNioCommunicationClient(connIdx, ses, log, enableConnectionCheck);
         }
     }
 

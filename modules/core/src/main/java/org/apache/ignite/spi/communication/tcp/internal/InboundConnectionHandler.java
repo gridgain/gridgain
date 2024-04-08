@@ -35,7 +35,14 @@ import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.nio.*;
+import org.apache.ignite.internal.util.nio.GridCommunicationClient;
+import org.apache.ignite.internal.util.nio.GridNioMessageTracker;
+import org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor;
+import org.apache.ignite.internal.util.nio.GridNioServerListenerAdapter;
+import org.apache.ignite.internal.util.nio.GridNioSession;
+import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
+import org.apache.ignite.internal.util.nio.GridShmemCommunicationClient;
+import org.apache.ignite.internal.util.nio.GridTcpNioCommunicationClient;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -47,7 +54,11 @@ import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.AttributeNames;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
-import org.apache.ignite.spi.communication.tcp.messages.*;
+import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
+import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
+import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
+import org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage;
+import org.apache.ignite.spi.communication.tcp.messages.ConnectionCheckMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
@@ -314,7 +325,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
                 return;
             }
-            else if (msg instanceof HeartbeatMessage) {
+            else if (msg instanceof ConnectionCheckMessage) {
                 if (log.isDebugEnabled())
                     log.debug("Heartbeat message received [rmtNode=" + connKey.nodeId() +
                             ", connIdx=" + connKey.connectionIndex() + "]");
@@ -603,8 +614,8 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
                     ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
 
-                    // sending heartbeat message through old session to validate if session isn't broken.
-                    ((GridTcpNioCommunicationClient) oldClient).sendHeartbeatsIfNeeded();
+                    // We are sending ConectionCheckMessage through old session to validate if session is alive.
+                    ((GridTcpNioCommunicationClient) oldClient).checkConnection();
 
                     closeStaleConnections(connKey);
 
@@ -780,9 +791,10 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         GridTcpNioCommunicationClient client = null;
 
         if (createClient) {
-            boolean useHeartbeats = cfg.useHeartbeats() && stateProvider.isTcpCommunicationHeartbeatSupported(node);
+            boolean enableConnectionCheck = cfg.enableConnectionCheck()
+                    && stateProvider.isTcpCommunicationConnectionCheckSupported(node);
 
-            client = new GridTcpNioCommunicationClient(connKey.connectionIndex(), ses, log, useHeartbeats);
+            client = new GridTcpNioCommunicationClient(connKey.connectionIndex(), ses, log, enableConnectionCheck);
 
             clientPool.addNodeClient(node, connKey.connectionIndex(), client);
         }

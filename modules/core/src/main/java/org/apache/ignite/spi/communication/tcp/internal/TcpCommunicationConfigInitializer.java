@@ -860,8 +860,8 @@ cfg.socketSendBuffer(sockSndBuf);
     }
 
     @IgniteSpiConfiguration(optional = true)
-    public TcpCommunicationSpi setUseHeartbeats(boolean useHeartbeats) {
-        cfg.useHeartbeats(useHeartbeats);
+    public TcpCommunicationSpi setEnableConnectionCheck(boolean enableConnectionCheck) {
+        cfg.enableConnectionCheck(enableConnectionCheck);
 
         return (TcpCommunicationSpi) this;
     }

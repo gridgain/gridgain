@@ -25,9 +25,9 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import java.nio.ByteBuffer;
 
 /**
- * Heartbeat message for TCP communication SPI.
+ * Special message to check TCP communication connection is alive.
  */
-public class HeartbeatMessage implements Message {
+public class ConnectionCheckMessage implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -38,7 +38,7 @@ public class HeartbeatMessage implements Message {
     private static final int MESSAGE_FULL_SIZE = MESSAGE_SIZE + DIRECT_TYPE_SIZE;
 
     /** */
-    public HeartbeatMessage() {
+    public ConnectionCheckMessage() {
         // No-op
     }
 
@@ -62,7 +62,7 @@ public class HeartbeatMessage implements Message {
 
     /** {@inheritDoc} */
     @Override public short directType() {
-        return TcpCommunicationSpi.HEARTBEAT_MSG_TYPE;
+        return TcpCommunicationSpi.CONNECTION_CHECK_MSG_TYPE;
     }
 
     /** {@inheritDoc} */
@@ -76,6 +76,6 @@ public class HeartbeatMessage implements Message {
     }
 
     @Override public String toString() {
-        return S.toString(HeartbeatMessage.class, this);
+        return S.toString(ConnectionCheckMessage.class, this);
     }
 }

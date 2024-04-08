@@ -29,15 +29,15 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.spi.communication.tcp.messages.HeartbeatMessage;
+import org.apache.ignite.spi.communication.tcp.messages.ConnectionCheckMessage;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Grid client for NIO server.
  */
 public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClient {
-    /** Time in ms between different heartbeat messages. */
-    public static final long HEARTBEAT_FREQUENCY = 2000L;
+    /** Minimum interval between sending {@link ConnectionCheckMessage}. */
+    public static final long CONNECTION_CHECK_MIN_INTERVAL_MS = 2000L;
 
     /** Session. */
     private final GridNioSession ses;
@@ -45,7 +45,11 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
     /** Logger. */
     private final IgniteLogger log;
 
-    private final boolean useHeartbeats;
+    /** Remote node may use connection check message. */
+    private final boolean enableConnectionCheckMessage;
+
+    /** Last time connection check message was sent. */
+    private volatile long lastConnectionCheck = U.currentTimeMillis();
 
     /**
      * @param connIdx Connection index.
@@ -56,7 +60,7 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
         int connIdx,
         GridNioSession ses,
         IgniteLogger log,
-        boolean useHeartbeats
+        boolean enableConnectionCheckMessage
     ) {
         super(connIdx);
 
@@ -65,7 +69,7 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
 
         this.ses = ses;
         this.log = log;
-        this.useHeartbeats = useHeartbeats;
+        this.enableConnectionCheckMessage = enableConnectionCheckMessage;
     }
 
     /**
@@ -157,22 +161,24 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
         return S.toString(GridTcpNioCommunicationClient.class, this, super.toString());
     }
 
-    public void sendHeartbeatsIfNeeded() {
-        if (!useHeartbeats)
+    /**
+     * Sends special {@link ConnectionCheckMessage} through the channel to check if connection still alive.
+     */
+    public void checkConnection() {
+        if (!enableConnectionCheckMessage)
             return;
 
-        long sinceLastHeartbeat = U.currentTimeMillis() - ses.lastHeartbeat();
+        long sinceLastConnectionCheck = U.currentTimeMillis() - lastConnectionCheck;
 
-        if (sinceLastHeartbeat > HEARTBEAT_FREQUENCY) {
-            HeartbeatMessage msg = new HeartbeatMessage();
+        if (sinceLastConnectionCheck > CONNECTION_CHECK_MIN_INTERVAL_MS) {
+            ConnectionCheckMessage msg = new ConnectionCheckMessage();
 
-            //if (log.isDebugEnabled())
-                log.info("Heartbeat message sent [rmtAddr=" + ses.remoteAddress() + "], sinceLastHeartbeat=" + sinceLastHeartbeat
-                        + " lastSent=" + ses.lastSendTime() + " lastReceived=" + ses.lastReceiveTime() + " scheduletTime=" + ses.lastSendScheduleTime());
-
-            ses.updateHeartbeat();
+            lastConnectionCheck = U.currentTimeMillis();
 
             ses.send(msg);
+
+            if (log.isDebugEnabled())
+                log.debug("Connection check message was sent [rmtAddr=" + ses.remoteAddress() + "]");
         }
     }
 }

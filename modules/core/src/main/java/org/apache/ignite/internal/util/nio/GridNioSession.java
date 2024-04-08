@@ -195,10 +195,4 @@ public interface GridNioSession {
      * @param msg System message to send.
      */
     public void systemMessage(Object msg);
-
-    /** Timestamp of last heartbeat sent through this session. */
-    long lastHeartbeat();
-
-    /** Update timestamp of last heartbeat sent through this session. */
-    void updateHeartbeat();
 }

@@ -168,14 +168,4 @@ public class MockNioSession extends GridMetadataAwareAdapter implements GridNioS
     @Override public void systemMessage(Object msg) {
         // No-op.
     }
-
-    /** {@inheritDoc} */
-    @Override public long lastHeartbeat() {
-        return 0;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void updateHeartbeat() {
-        // No-op
-    }
 }

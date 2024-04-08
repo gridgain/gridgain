@@ -188,7 +188,7 @@ public class ClusterStateProvider {
      * @param node
      * @return
      */
-    public boolean isTcpCommunicationHeartbeatSupported(ClusterNode node) {
+    public boolean isTcpCommunicationConnectionCheckSupported(ClusterNode node) {
         GridKernalContext ctx = (ignite instanceof IgniteEx) ? ((IgniteEx)ignite).context() : null;
 
         return IgniteFeatures.nodeSupports(ctx, node, TCP_COMMUNICATION_HEARTBEATS);
