@@ -19,8 +19,8 @@ package org.apache.ignite.internal.commandline.cache;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.AbstractCommand;
@@ -31,8 +31,8 @@ import org.apache.ignite.internal.processors.cache.ClearCachesTask;
 import org.apache.ignite.internal.processors.cache.ClearCachesTaskArg;
 import org.apache.ignite.internal.processors.cache.ClearCachesTaskResult;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.U;
 
+import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.CLEAR;
 
 /** Command that clears specified caches. */
@@ -54,15 +54,15 @@ public class CacheClear extends AbstractCommand<ClearCachesTaskArg> {
     private ClearCachesTaskArg arg;
 
     /** {@inheritDoc} */
-    @Override public Object execute(GridClientConfiguration clientCfg, IgniteLogger log) throws Exception {
+    @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
             ClearCachesTaskResult res = TaskExecutor.executeTask(client, ClearCachesTask.class, arg(), clientCfg);
 
             if (!F.isEmpty(res.clearedCaches()))
-                U.log(log, String.format(CLEAR_MSG, String.join(", ", res.clearedCaches())));
+                logger.info(String.format(CLEAR_MSG, String.join(", ", res.clearedCaches())));
 
             if (!F.isEmpty(res.nonExistentCaches()))
-                U.warn(log, String.format(SKIP_CLEAR_MSG, String.join(", ", res.nonExistentCaches())));
+                logger.warning(String.format(SKIP_CLEAR_MSG, String.join(", ", res.nonExistentCaches())));
         }
 
         return null;
@@ -79,7 +79,7 @@ public class CacheClear extends AbstractCommand<ClearCachesTaskArg> {
     }
 
     /** {@inheritDoc} */
-    @Override public void printUsage(IgniteLogger logger) {
+    @Override public void printUsage(Logger logger) {
         usageCache(
             logger,
             CacheSubcommands.CLEAR,
