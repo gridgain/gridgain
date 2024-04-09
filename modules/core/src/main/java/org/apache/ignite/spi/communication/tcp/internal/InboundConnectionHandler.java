@@ -615,7 +615,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                     ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
 
                     // We are sending ConectionCheckMessage through old session to validate if session is alive.
-                    ((GridTcpNioCommunicationClient) oldClient).checkConnection();
+                    ((GridTcpNioCommunicationClient) oldClient).checkConnectionIfEnabled();
 
                     closeStaleConnections(connKey);
 

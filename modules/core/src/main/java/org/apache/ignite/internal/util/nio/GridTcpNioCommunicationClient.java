@@ -36,9 +36,6 @@ import org.jetbrains.annotations.Nullable;
  * Grid client for NIO server.
  */
 public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClient {
-    /** Minimum interval between sending {@link ConnectionCheckMessage}. */
-    public static final long CONNECTION_CHECK_MIN_INTERVAL_MS = 2000L;
-
     /** Session. */
     private final GridNioSession ses;
 
@@ -47,9 +44,6 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
 
     /** Remote node may use connection check message. */
     private final boolean enableConnectionCheckMessage;
-
-    /** Last time connection check message was sent. */
-    private volatile long lastConnectionCheck = U.currentTimeMillis();
 
     /**
      * @param connIdx Connection index.
@@ -164,21 +158,16 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
     /**
      * Sends special {@link ConnectionCheckMessage} through the channel to check if connection still alive.
      */
-    public void checkConnection() {
+    public void checkConnectionIfEnabled() {
         if (!enableConnectionCheckMessage)
             return;
 
-        long sinceLastConnectionCheck = U.currentTimeMillis() - lastConnectionCheck;
+        ConnectionCheckMessage msg = new ConnectionCheckMessage();
 
-        if (sinceLastConnectionCheck > CONNECTION_CHECK_MIN_INTERVAL_MS) {
-            ConnectionCheckMessage msg = new ConnectionCheckMessage();
+        ses.send(msg);
 
-            lastConnectionCheck = U.currentTimeMillis();
-
-            ses.send(msg);
-
-            if (log.isDebugEnabled())
-                log.debug("Connection check message was sent [rmtAddr=" + ses.remoteAddress() + "]");
-        }
+        if (log.isDebugEnabled())
+            log.debug("Connection check message was sent [rmtAddr=" + ses.remoteAddress()
+                    + ", locAddr=" + ses.localAddress() + "]");
     }
 }
