@@ -54,11 +54,6 @@ public enum CacheCommandList {
     DESTROY("destroy", new CacheDestroy()),
 
     /**
-     * Clear caches.
-     */
-    CLEAR("clear", new CacheClear()),
-
-    /**
      * Validates indexes attempting to read each indexed entry.
      */
     VALIDATE_INDEXES("validate_indexes", new CacheValidateIndexes()),

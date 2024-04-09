@@ -107,12 +107,7 @@ public enum CacheSubcommands {
     /**
      * Destroy caches.
      */
-    DESTROY("destroy", null, new CacheDestroy()),
-
-    /**
-     * Clear caches.
-     */
-    CLEAR("clear", null, new CacheClear());
+    DESTROY("destroy", null, new CacheDestroy());
 
     /** Enumerated values. */
     private static final CacheSubcommands[] VALS = values();
