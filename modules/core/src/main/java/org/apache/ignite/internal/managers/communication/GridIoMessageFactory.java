@@ -185,7 +185,12 @@ import org.apache.ignite.plugin.extensions.communication.MessageFactoryProvider;
 import org.apache.ignite.spi.collision.jobstealing.JobStealingRequest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.internal.TcpInverseConnectionResponseMessage;
-import org.apache.ignite.spi.communication.tcp.messages.*;
+import org.apache.ignite.spi.communication.tcp.messages.ConnectionCheckMessage;
+import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
+import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
+import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
+import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
+import org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage;
 
 /**
  * Message factory implementation.
