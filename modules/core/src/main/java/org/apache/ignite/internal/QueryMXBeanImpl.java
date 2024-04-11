@@ -57,7 +57,7 @@ public class QueryMXBeanImpl implements QueryMXBean {
         A.notNullOrEmpty(routineId, "routineId");
 
         if (log.isInfoEnabled())
-            log.info("Killing continuous query[routineId=" + routineId + ",originNodeId=" + originNodeId + ']');
+            log.info("Killing continuous query[routineId=" + routineId + ", originNodeId=" + originNodeId + ']');
 
         cancelContinuous(UUID.fromString(originNodeId), UUID.fromString(routineId));
     }

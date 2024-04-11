@@ -31,7 +31,7 @@ import static org.apache.ignite.util.KillCommandsTests.doTestCancelContinuousQue
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelSQLQuery;
 
 /** Tests cancel of user created entities via control.sh. */
-public class KillCommandsCommandShTest extends GridCommandHandlerClusterByClassAbstractTest {
+public class KillCommandsControlShTest extends GridCommandHandlerClusterByClassAbstractTest {
     /**  */
     private static List<IgniteEx> srvs;
 

@@ -33,7 +33,7 @@ import org.apache.ignite.spi.systemview.view.ContinuousQueryView;
 public class SqlKillContinuousQueryCommand implements SqlCommand {
     /** KILL CONTINUOUS format message. */
     public static final String KILL_CQ_FORMAT = "Format of the query is " +
-        "KILL CONTINUOUS '6fa749ee-7cf8-4635-be10-36a1c75267a7_54321' '6fa749ee-7cf8-4635-be10-36a1c75267a7_12345'";
+        "KILL CONTINUOUS '6fa749ee-7cf8-4635-be10-36a1c75267a7' '123e4567-e89b-12d3-a456-426655440000'";
 
     /** Origin node id. */
     private UUID originNodeId;
