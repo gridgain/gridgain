@@ -13,7 +13,9 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Before;
 import org.junit.Test;
 
-
+/**
+ * Check that node will shut down automatically in maintenance mode once all maintenance tasks are fulfilled.
+ */
 public class MaintenanceAutoRecoveryTest extends GridCommonAbstractTest {
 
     String consistentId;
@@ -23,8 +25,8 @@ public class MaintenanceAutoRecoveryTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
-    @Override
-    protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
         cfg.setConsistentId(gridName);
@@ -43,6 +45,7 @@ public class MaintenanceAutoRecoveryTest extends GridCommonAbstractTest {
         return cfg;
     }
 
+    /** Node will auto shut down once all maintenance tasks are completed. */
     @Test
     @WithSystemProperty(key = "MM_AUTO_SHUTDOWN_AFTER_RECOVERY", value = "true")
     public void testAutoShutdown() throws Exception {
@@ -68,7 +71,5 @@ public class MaintenanceAutoRecoveryTest extends GridCommonAbstractTest {
                 () -> ign1.cluster().nodes().size() == 1,
                 10000
         );
-
-        System.out.println();
     }
 }
