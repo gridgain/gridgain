@@ -54,6 +54,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.QueryMXBeanImpl;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
@@ -99,6 +100,7 @@ import org.apache.ignite.internal.sql.command.SqlDropIndexCommand;
 import org.apache.ignite.internal.sql.command.SqlDropStatisticsCommand;
 import org.apache.ignite.internal.sql.command.SqlDropUserCommand;
 import org.apache.ignite.internal.sql.command.SqlIndexColumn;
+import org.apache.ignite.internal.sql.command.SqlKillContinuousQueryCommand;
 import org.apache.ignite.internal.sql.command.SqlKillQueryCommand;
 import org.apache.ignite.internal.sql.command.SqlRefreshStatitsicsCommand;
 import org.apache.ignite.internal.sql.command.SqlRollbackTransactionCommand;
@@ -423,6 +425,8 @@ public class CommandProcessor {
                 processSetStreamingCommand((SqlSetStreamingCommand)cmdNative, cliCtx);
             else if (cmdNative instanceof SqlKillQueryCommand)
                 processKillQueryCommand((SqlKillQueryCommand) cmdNative);
+            else if (cmdNative instanceof SqlKillContinuousQueryCommand)
+                processKillContinuousQueryCommand((SqlKillContinuousQueryCommand) cmdNative);
             else
                 processTxCommand(cmdNative, params);
         }
@@ -560,6 +564,15 @@ public class CommandProcessor {
             .toArray(StatisticsTarget[]::new);
 
         indexing.statsManager().dropStatistics(targets);
+    }
+
+    /**
+     * Process kill continuous query cmd.
+     *
+     * @param cmd Command.
+     */
+    private void processKillContinuousQueryCommand(SqlKillContinuousQueryCommand cmd) {
+        new QueryMXBeanImpl(ctx).cancelContinuous(cmd.getOriginNodeId(), cmd.getRoutineId());
     }
 
     /**

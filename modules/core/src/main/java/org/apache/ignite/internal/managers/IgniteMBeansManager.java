@@ -26,6 +26,7 @@ import org.apache.ignite.internal.ClusterLocalNodeMetricsMXBeanImpl;
 import org.apache.ignite.internal.ClusterMetricsMXBeanImpl;
 import org.apache.ignite.internal.GridKernalContextImpl;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.QueryMXBeanImpl;
 import org.apache.ignite.internal.TransactionMetricsMxBeanImpl;
 import org.apache.ignite.internal.TransactionsMXBeanImpl;
 import org.apache.ignite.internal.managers.encryption.EncryptionMXBeanImpl;
@@ -47,6 +48,7 @@ import org.apache.ignite.mxbean.FailureHandlingMxBean;
 import org.apache.ignite.mxbean.IgniteMXBean;
 import org.apache.ignite.mxbean.IoStatisticsMetricsMXBean;
 import org.apache.ignite.mxbean.MetricsMxBean;
+import org.apache.ignite.mxbean.QueryMXBean;
 import org.apache.ignite.mxbean.TransactionMetricsMxBean;
 import org.apache.ignite.mxbean.TransactionsMXBean;
 import org.apache.ignite.mxbean.WarmUpMXBean;
@@ -111,6 +113,10 @@ public class IgniteMBeansManager {
         // Transactions
         TransactionsMXBean txMXBean = new TransactionsMXBeanImpl(ctx);
         registerMBean("Transactions", txMXBean.getClass().getSimpleName(), txMXBean, TransactionsMXBean.class);
+
+        // Queries management
+        QueryMXBean qryMXBean = new QueryMXBeanImpl(ctx);
+        registerMBean("Query", qryMXBean.getClass().getSimpleName(), qryMXBean, QueryMXBean.class);
 
         // Data storage
         DataStorageMXBean dataStorageMXBean = new DataStorageMXBeanImpl(ctx);

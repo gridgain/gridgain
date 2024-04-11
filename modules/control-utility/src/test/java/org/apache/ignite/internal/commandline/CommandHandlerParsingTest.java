@@ -51,6 +51,7 @@ import org.junit.rules.TestRule;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
+import static org.apache.ignite.internal.QueryMXBeanImpl.EXPECTED_GLOBAL_QRY_ID_FORMAT;
 import static org.apache.ignite.internal.commandline.CommandList.CACHE;
 import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_ID;
 import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_TAG;
@@ -585,7 +586,34 @@ public class CommandHandlerParsingTest {
         assertEquals(asList("1", "2", "3"), arg.getConsistentIds());
     }
 
-    /** */
+    /**
+     * Test parsing kill arguments.
+     */
+    @Test
+    public void testKillArguments() {
+        assertParseArgsThrows("Expected type of resource to kill.", "--kill");
+
+        String uuid = UUID.randomUUID().toString();
+
+        // SQL command format errors.
+        assertParseArgsThrows("Expected SQL query id.", "--kill", "sql");
+
+        assertParseArgsThrows("Expected global query id. " + EXPECTED_GLOBAL_QRY_ID_FORMAT,
+            "--kill", "sql", "not_sql_id");
+
+        // Continuous command format errors.
+        assertParseArgsThrows("Expected query originating node id.", "--kill", "continuous");
+
+        assertParseArgsThrows("Expected continuous query id.", "--kill", "continuous", UUID.randomUUID().toString());
+
+        assertParseArgsThrows("Invalid UUID string: not_a_uuid", IllegalArgumentException.class,
+            "--kill", "continuous", "not_a_uuid");
+
+        assertParseArgsThrows("Invalid UUID string: not_a_uuid", IllegalArgumentException.class,
+            "--kill", "continuous", UUID.randomUUID().toString(), "not_a_uuid");
+    }
+
+    /**  */
     @Test
     public void testValidateIndexesNotAllowedForSystemCache() {
         GridTestUtils.assertThrows(
@@ -1124,6 +1152,17 @@ public class CommandHandlerParsingTest {
     }
 
     /**
+     * Checks that parse arguments fails with {@code exception} and {@code failMsg} message.
+     *
+     * @param failMsg Exception message (optional).
+     * @param cls Exception class.
+     * @param args Incoming arguments.
+     */
+    private void assertParseArgsThrows(@Nullable String failMsg, Class<? extends Exception> cls, String... args) {
+        assertThrows(null, () -> parseArgs(asList(args)), cls, failMsg);
+    }
+
+    /**
      * Return {@code True} if cmd there are required arguments.
      *
      * @return {@code True} if cmd there are required arguments.
@@ -1141,6 +1180,7 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.WARM_UP ||
             cmd == CommandList.PROPERTY ||
             cmd == CommandList.METRIC ||
-            cmd == CommandList.DEFRAGMENTATION;
+            cmd == CommandList.DEFRAGMENTATION ||
+            cmd == CommandList.KILL;
     }
 }
