@@ -2225,6 +2225,12 @@ public final class IgniteSystemProperties {
         defaults = "" + DFLT_IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START)
     public static final String IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START = "IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START";
 
+    /** Node in maintenance mode will automatically shut down after all active maintenance would be completed. */
+    @SystemProperty(value = "Node in maintenance mode will automatically shut down after all active maintenance " +
+            "would be completed",
+            defaults = "false")
+    public static final String MM_AUTO_SHUTDOWN_AFTER_RECOVERY = "MM_AUTO_SHUTDOWN_AFTER_RECOVERY";
+
     /**
      * Enforces singleton.
      */

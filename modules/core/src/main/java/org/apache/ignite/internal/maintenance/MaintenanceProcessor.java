@@ -21,20 +21,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteState;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.maintenance.MaintenanceAction;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.maintenance.MaintenanceTask;
 import org.apache.ignite.maintenance.MaintenanceWorkflowCallback;
+import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.IgniteSystemProperties.MM_AUTO_SHUTDOWN_AFTER_RECOVERY;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 
 /** */
 public class MaintenanceProcessor extends GridProcessorAdapter implements MaintenanceRegistry {
@@ -66,6 +75,9 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
 
     /** */
     private volatile boolean maintenanceMode;
+
+    /** Node in maintenance mode will shut down after all active tasks would be completed. */
+    private final boolean autoShutdown = getBoolean(MM_AUTO_SHUTDOWN_AFTER_RECOVERY);
 
     /**
      * @param ctx Kernal context.
@@ -231,6 +243,14 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
                     "Restart the node to get it back to normal operations.");
             }
         }
+
+        if (isMaintenanceMode() && autoShutdown) {
+            if (log.isInfoEnabled())
+                log.info("Starting thread which will check active maintenance tasks. " +
+                        "Node will shut down when all tasks are completed");
+
+            startShutdownThread();
+        }
     }
 
     /**
@@ -343,5 +363,25 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
     /** {@inheritDoc} */
     @Nullable @Override public MaintenanceTask requestedTask(String maintenanceTaskName) {
         return requestedTasks.get(maintenanceTaskName);
+    }
+
+    /** Starts a thread which will shut down the node when all maintenance tasks would be completed */
+    private void startShutdownThread() {
+        String igniteInstanceName = ctx.config().getIgniteInstanceName();
+
+        IgniteThread t = new IgniteThread(new GridWorker(igniteInstanceName, "maintenance-shutdown-thread", log) {
+            @Override protected void body() {
+                while (true) {
+                    if (activeTasks.isEmpty() && Ignition.state(igniteInstanceName) == IgniteState.STARTED) {
+                        G.stop(igniteInstanceName, false);
+                        return;
+                    }
+
+                    LockSupport.parkNanos(100_000_000);
+                }
+            }
+        });
+
+        t.start();
     }
 }
