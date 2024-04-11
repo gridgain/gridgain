@@ -21,16 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.CacheRebalanceWithRemovedWalSegment;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.SupplyPartitionHistoricallyWithReorderedUpdates;
-import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCacheEntriesExpirationTest;
-import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsConsistencyOnDelayedPartitionOwning;
-import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragmentationEncryptionTest;
-import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragmentationRandomLruEvictionTest;
-import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragmentationTest;
-import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsRecoveryAfterFileCorruptionTest;
-import org.apache.ignite.internal.processors.cache.persistence.MaintenanceClearCacheFolderTest;
-import org.apache.ignite.internal.processors.cache.persistence.MaintenancePersistenceTaskTest;
-import org.apache.ignite.internal.processors.cache.persistence.PagesPossibleCorruptionDiagnosticTest;
-import org.apache.ignite.internal.processors.cache.persistence.PendingTreeCorruptionTest;
+import org.apache.ignite.internal.processors.cache.persistence.*;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsPageReplacementDuringPartitionClearTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsTransactionsHangTest;
 import org.apache.ignite.internal.processors.cache.persistence.defragmentation.DefragmentationMXBeanTest;
@@ -98,6 +89,7 @@ public class IgnitePdsTestSuite8 {
         GridTestUtils.addTestIfNeeded(suite, PagesPossibleCorruptionDiagnosticTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, MaintenancePersistenceTaskTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, MaintenanceClearCacheFolderTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, MaintenanceAutoRecoveryTest.class, ignoredTests);
 
         return suite;
     }
