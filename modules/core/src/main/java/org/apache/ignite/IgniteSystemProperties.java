@@ -2229,7 +2229,7 @@ public final class IgniteSystemProperties {
     @SystemProperty(value = "Node in maintenance mode will automatically shut down after all active maintenance " +
             "would be completed",
             defaults = "false")
-    public static final String MM_AUTO_SHUTDOWN_AFTER_RECOVERY = "MM_AUTO_SHUTDOWN_AFTER_RECOVERY";
+    public static final String IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY = "IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY";
 
     /**
      * Enforces singleton.

@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -63,29 +64,57 @@ public class MaintenanceAutoRecoveryTest extends GridCommonAbstractTest {
 
     /** Node will auto shut down once all maintenance tasks are completed. */
     @Test
-    @WithSystemProperty(key = "MM_AUTO_SHUTDOWN_AFTER_RECOVERY", value = "true")
-    public void testAutoShutdown() throws Exception {
-        IgniteEx ign0 = startGrid(0);
-        IgniteEx ign1 = startGrid(1);
-
+    @WithSystemProperty(key = "IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY", value = "true")
+    public void testAutoShutdownEnabled() throws Exception {
+        IgniteEx ign = startGrid(0);
         String taskName = "test";
 
-        ign0.context().maintenanceRegistry().registerMaintenanceTask(
+        ign.context().maintenanceRegistry().registerMaintenanceTask(
                 new MaintenanceTask(taskName, "foo", null)
         );
         stopGrid(0);
 
-        ign0 = startGrid(0);
+        ign = startGrid(0);
 
-        MaintenanceRegistry maintenanceRegistry = ign0.context().maintenanceRegistry();
+        MaintenanceRegistry maintenanceRegistry = ign.context().maintenanceRegistry();
 
-        assert maintenanceRegistry.isMaintenanceMode();
+        assertTrue(maintenanceRegistry.isMaintenanceMode());
+
+        AtomicBoolean stopGuard = GridTestUtils.getFieldValue(ign, "stopGuard");
+
+        assertFalse(stopGuard.get());
 
         maintenanceRegistry.unregisterMaintenanceTask(taskName);
 
-        GridTestUtils.waitForCondition(
-                () -> ign1.cluster().nodes().size() == 1,
-                10000
+        GridTestUtils.waitForCondition(stopGuard::get, 5000);
+    }
+
+    /** Node won't auto shut down once all maintenance tasks are completed. */
+    @Test
+    @WithSystemProperty(key = "IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY", value = "false")
+    public void testAutoShutdownDisabled() throws Exception {
+        IgniteEx ign = startGrid(0);
+        String taskName = "test";
+
+        ign.context().maintenanceRegistry().registerMaintenanceTask(
+                new MaintenanceTask(taskName, "foo", null)
         );
+        stopGrid(0);
+
+        ign = startGrid(0);
+
+        MaintenanceRegistry maintenanceRegistry = ign.context().maintenanceRegistry();
+
+        assertTrue(maintenanceRegistry.isMaintenanceMode());
+
+        AtomicBoolean stopGuard = GridTestUtils.getFieldValue(ign, "stopGuard");
+
+        assertFalse(stopGuard.get());
+
+        maintenanceRegistry.unregisterMaintenanceTask(taskName);
+
+        Thread.sleep(5000);//we wait for some time to register that node remains active
+
+        assertFalse(stopGuard.get());
     }
 }
