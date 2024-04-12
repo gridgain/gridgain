@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.platform.client;
 
 import org.apache.ignite.binary.BinaryRawReader;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequest;
 
 /**
@@ -56,5 +57,22 @@ public class ClientRequest implements ClientListenerRequest {
      */
     public ClientResponse process(ClientConnectionContext ctx) {
         return new ClientResponse(reqId);
+    }
+
+    /**
+     * Processes the request asynchronously.
+     *
+     * @return Future for response.
+     */
+    public IgniteInternalFuture<ClientResponse> processAsync(ClientConnectionContext ctx) {
+        throw new IllegalStateException("Async operation is not implemented for request " + getClass().getName());
+    }
+
+    /**
+     * @param ctx Client connection context.
+     * @return {@code True} if request should be processed asynchronously.
+     */
+    public boolean isAsync(ClientConnectionContext ctx) {
+        return false;
     }
 }
