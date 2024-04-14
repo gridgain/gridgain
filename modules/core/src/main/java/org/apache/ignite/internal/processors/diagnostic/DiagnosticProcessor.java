@@ -149,6 +149,7 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
             }
         }
 
+        log.warning("IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION=" + IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION);
         if (IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION && corruptedDataStructureEx != null) {
             log.warning("Making dump files");
             dumpPersistenceFilesOnFailure(corruptedDataStructureEx);
