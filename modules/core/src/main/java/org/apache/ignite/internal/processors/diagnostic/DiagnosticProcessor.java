@@ -27,11 +27,13 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.CorruptedDataStructureException;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
+import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.SegmentRouter;
 import org.apache.ignite.internal.util.typedef.F;
@@ -41,6 +43,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_PAGE_SIZE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistenceEnabled;
 
@@ -52,8 +55,12 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
     public static final boolean DFLT_DUMP_PAGE_LOCK_ON_FAILURE = true;
 
     /** Value of the system property that enables page locks dumping on failure. */
-    private static final boolean IGNITE_DUMP_PAGE_LOCK_ON_FAILURE = IgniteSystemProperties.getBoolean(
+    private static final boolean IGNITE_DUMP_PAGE_LOCK_ON_FAILURE = getBoolean(
         IgniteSystemProperties.IGNITE_DUMP_PAGE_LOCK_ON_FAILURE, DFLT_DUMP_PAGE_LOCK_ON_FAILURE);
+
+    /** Dumps latest WAL segments and related index and partition files on data corruption error. */
+    private static final boolean IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION = getBoolean(
+            IgniteSystemProperties.IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION);
 
     /** Time formatter for dump file name. */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'_'HH-mm-ss_SSS");
@@ -141,6 +148,23 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
                 }
             }
         }
+
+        if (IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION && corruptedDataStructureEx != null) {
+            dumpPersistenceFilesOnFailure(corruptedDataStructureEx);
+        }
+    }
+
+    /** Dumps latest WAL segments and related index and partition files on data corruption error. */
+    private void dumpPersistenceFilesOnFailure(CorruptedDataStructureException ex) {
+        IgniteWriteAheadLogManager wal = ctx.cache().context().wal();
+
+        if (wal instanceof FileWriteAheadLogManager)
+            ((FileWriteAheadLogManager) wal).dumpWalFiles();
+
+        IgnitePageStoreManager storeManager = ctx.cache().context().pageStore();
+
+        if (storeManager instanceof FilePageStoreManager)
+            ((FilePageStoreManager) storeManager).dumpPartitionFiles(ex.groupId(), ex.pageIds());
     }
 
     /**

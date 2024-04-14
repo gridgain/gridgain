@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -91,6 +92,7 @@ import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.String.format;
 import static java.nio.file.Files.delete;
 import static java.nio.file.Files.newDirectoryStream;
 import static java.util.Objects.requireNonNull;
@@ -487,7 +489,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
             if (!CU.isReservedCacheName(grpDesc.cacheOrGroupName()) && grpsWithoutIdx.contains(grpId)) {
                 if (log.isInfoEnabled())
-                    log.info(String.format(
+                    log.info(format(
                         "'index.bin' was deleted for cache: [id=%s, name=%s]",
                         grpId,
                         grpDesc.cacheOrGroupName()
@@ -791,7 +793,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
      * @param partId Partition id.
      */
     @NotNull private Path getPartitionFilePath(File cacheWorkDir, int partId) {
-        return new File(cacheWorkDir, String.format(PART_FILE_TEMPLATE, partId)).toPath();
+        return new File(cacheWorkDir, format(PART_FILE_TEMPLATE, partId)).toPath();
     }
 
     /** {@inheritDoc} */
@@ -1166,7 +1168,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     }
 
     /**
-     * Return cache store holedr.
+     * Return cache store holder.
      *
      * @param grpId Cache group ID.
      * @return Cache store holder.
@@ -1259,6 +1261,36 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
      */
     public int pageSize() {
         return dsCfg.getPageSize();
+    }
+
+    /** Dumps related partition files and index file to diagnostic dir. */
+    public void dumpPartitionFiles(int grpId, long... pageIds) {
+        try {
+            String path = "db/dump/" + igniteCfg.getConsistentId() + "/" + grpId;
+            File dumpDir = U.resolveWorkDirectory(igniteCfg.getWorkDirectory(), path, false);
+
+            CacheStoreHolder pageStores = idxCacheStores.get(grpId);
+
+            FilePageStore idxStore = (FilePageStore) pageStores.idxStore;
+
+            U.copy(new File(idxStore.getFileAbsolutePath()), new File(dumpDir, INDEX_FILE_NAME), false);
+
+            Set<Integer> parts = new HashSet<>();
+            for (long pageId : pageIds) {
+                parts.add(PageIdUtils.partId(pageId));
+            }
+
+            for (Integer part : parts) {
+                if (part >= pageStores.partStores.length)//skip index parts
+                    continue;
+
+                FilePageStore partStore = (FilePageStore) pageStores.partStores[part];
+
+                U.copy(new File(partStore.getFileAbsolutePath()), new File(dumpDir, format(PART_FILE_TEMPLATE, part)), false);
+            }
+        } catch (Exception e) {
+            log.error("Dump partition files has failed", e);
+        }
     }
 
     /**
