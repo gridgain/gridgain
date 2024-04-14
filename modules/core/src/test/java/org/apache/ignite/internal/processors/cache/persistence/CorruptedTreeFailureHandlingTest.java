@@ -236,7 +236,7 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
 
         srv = startGrid(0);
 
-        cache  = srv.getOrCreateCache(DEFAULT_CACHE_NAME);
+        cache = srv.getOrCreateCache(DEFAULT_CACHE_NAME);
 
         try {
             for (int i = 0; i < CACHE_ENTRIES; i++)
