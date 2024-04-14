@@ -156,6 +156,7 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
 
     /** Dumps latest WAL segments and related index and partition files on data corruption error. */
     private void dumpPersistenceFilesOnFailure(CorruptedDataStructureException ex) {
+        log.info("dumpPersistenceFilesOnFailure");
         IgniteWriteAheadLogManager wal = ctx.cache().context().wal();
 
         if (wal instanceof FileWriteAheadLogManager)
@@ -165,6 +166,8 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
 
         if (storeManager instanceof FilePageStoreManager)
             ((FilePageStoreManager) storeManager).dumpPartitionFiles(ex.groupId(), ex.pageIds());
+
+        log.info("dumpPersistenceFilesOnFailure_end");
     }
 
     /**
