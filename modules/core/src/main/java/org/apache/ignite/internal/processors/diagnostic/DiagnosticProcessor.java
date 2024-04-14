@@ -149,16 +149,15 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
             }
         }
 
-        log.warning("IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION=" + IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION);
         if (IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION && corruptedDataStructureEx != null) {
-            log.warning("Making dump files");
+            log.warning("Copying persistence files to dump folder");
+
             dumpPersistenceFilesOnFailure(corruptedDataStructureEx);
         }
     }
 
     /** Dumps latest WAL segments and related index and partition files on data corruption error. */
     private void dumpPersistenceFilesOnFailure(CorruptedDataStructureException ex) {
-        log.info("dumpPersistenceFilesOnFailure");
         IgniteWriteAheadLogManager wal = ctx.cache().context().wal();
 
         if (wal instanceof FileWriteAheadLogManager)
@@ -168,8 +167,6 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
 
         if (storeManager instanceof FilePageStoreManager)
             ((FilePageStoreManager) storeManager).dumpPartitionFiles(ex.groupId(), ex.pageIds());
-
-        log.info("dumpPersistenceFilesOnFailure_end");
     }
 
     /**
