@@ -1440,11 +1440,14 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                     // If all threads are active and no task has completed since last time and there is
                     // at least one waiting request, then it is possible starvation.
                     if (exec.getPoolSize() == exec.getActiveCount() && completedCnt == lastCompletedCnt &&
-                        !exec.getQueue().isEmpty())
+                        !exec.getQueue().isEmpty()) {
                         LT.warn(
                             log,
                             "Possible thread pool starvation detected (no task completed in last " +
                                 interval + "ms, is " + pool + " thread pool size large enough?)");
+
+                        U.dumpThreads(log);
+                    }
 
                     return completedCnt;
                 }
