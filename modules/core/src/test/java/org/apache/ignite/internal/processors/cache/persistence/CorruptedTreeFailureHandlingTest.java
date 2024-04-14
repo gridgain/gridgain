@@ -262,7 +262,7 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
 
         String[] parts = partDir.list();
 
-        log.info(Arrays.asList(parts).toString());
+        log.info("TEST:" + Arrays.asList(parts).toString());
 
         assertTrue(Arrays.asList(parts).contains("index.bin"));
         assertTrue(Arrays.asList(parts).contains("part-" + PageIdUtils.partId(pageId) + ".bin"));
