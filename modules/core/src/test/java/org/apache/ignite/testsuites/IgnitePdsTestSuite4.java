@@ -74,34 +74,34 @@ public class IgnitePdsTestSuite4 {
 
         addRealPageStoreTestsNotForDirectIo(suite, ignoredTests);
 
-        GridTestUtils.addTestIfNeeded(suite, FileDownloaderTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, IgnitePdsTaskCancelingTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, IgniteClusterActivateDeactivateTestWithPersistenceAndMemoryReuse.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, IgnitePdsPartitionPreloadTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, ResetLostPartitionTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, ResetLostPartitionsFromClientTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, RebalanceAfterResettingLostPartitionTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, IgniteRebalanceOnCachesStoppingOrDestroyingTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, CachePageWriteLockUnlockTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, IgnitePdsCacheWalDisabledOnRebalancingTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, IgnitePdsStartWIthEmptyArchive.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, FileDownloaderTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, IgnitePdsTaskCancelingTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, IgniteClusterActivateDeactivateTestWithPersistenceAndMemoryReuse.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, IgnitePdsPartitionPreloadTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, ResetLostPartitionTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, ResetLostPartitionsFromClientTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, RebalanceAfterResettingLostPartitionTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, IgniteRebalanceOnCachesStoppingOrDestroyingTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, CachePageWriteLockUnlockTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, IgnitePdsCacheWalDisabledOnRebalancingTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, IgnitePdsStartWIthEmptyArchive.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CorruptedTreeFailureHandlingTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, RebalanceCancellationTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, NotOptimizedRebalanceTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, BreakRebalanceChainTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, WalRebalanceRestartTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, HistoricalReservationTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, CircledRebalanceTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, NoUnnecessaryRebalancesTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, IgniteDisableWalOnRebalanceTest.class, ignoredTests);
-
-        GridTestUtils.addTestIfNeeded(suite, IgnitePdsRestartAfterFailedToWriteMetaPageTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, IgnitePdsRemoveDuringRebalancingTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, IgnitePdsSpuriousRebalancingOnNodeJoinTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, RebalanceCompleteDuringExchangeTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, ReleaseSegmentOnHistoricalRebalanceTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, AutoReleaseSegmentSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, IgnitePdsCheckpointMapSnapshotTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, RebalanceCancellationTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, NotOptimizedRebalanceTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, BreakRebalanceChainTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, WalRebalanceRestartTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, HistoricalReservationTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, CircledRebalanceTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, NoUnnecessaryRebalancesTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, IgniteDisableWalOnRebalanceTest.class, ignoredTests);
+//
+//        GridTestUtils.addTestIfNeeded(suite, IgnitePdsRestartAfterFailedToWriteMetaPageTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, IgnitePdsRemoveDuringRebalancingTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, IgnitePdsSpuriousRebalancingOnNodeJoinTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, RebalanceCompleteDuringExchangeTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, ReleaseSegmentOnHistoricalRebalanceTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, AutoReleaseSegmentSelfTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, IgnitePdsCheckpointMapSnapshotTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, RandomLruPageEvictionTrackerTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, Random2LruPageEvictionTrackerTest.class, ignoredTests);
