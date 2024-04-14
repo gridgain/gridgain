@@ -238,6 +238,10 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
 
         cache = srv.getOrCreateCache(DEFAULT_CACHE_NAME);
 
+        int grpId = srv.context().cache().cacheGroups().stream().filter(
+                context -> context.cacheOrGroupName().equals(DEFAULT_CACHE_NAME)
+        ).findAny().orElseThrow(() -> new RuntimeException("Cache group not found")).groupId();
+
         try {
             for (int i = 0; i < CACHE_ENTRIES; i++)
                 cache.get(i);
@@ -248,9 +252,7 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
             assertTrue(X.hasCause(e, CorruptedTreeException.class));
         }
 
-        int grpId = srv.context().cache().cacheGroups().stream().filter(
-                context -> context.cacheOrGroupName().equals(DEFAULT_CACHE_NAME)
-        ).findAny().orElseThrow(() -> new RuntimeException("Cache group not found")).groupId();
+        assertTrue(GridTestUtils.waitForCondition(() -> G.allGrids().isEmpty(), 10_000L));
 
         File partDir = U.resolveWorkDirectory(
                 srv.configuration().getWorkDirectory(),
