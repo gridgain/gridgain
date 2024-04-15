@@ -58,10 +58,6 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
     private static final boolean IGNITE_DUMP_PAGE_LOCK_ON_FAILURE = getBoolean(
         IgniteSystemProperties.IGNITE_DUMP_PAGE_LOCK_ON_FAILURE, DFLT_DUMP_PAGE_LOCK_ON_FAILURE);
 
-    /** Dumps latest WAL segments and related index and partition files on data corruption error. */
-    private static final boolean IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION = getBoolean(
-            IgniteSystemProperties.IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION);
-
     /** Time formatter for dump file name. */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'_'HH-mm-ss_SSS");
 
@@ -76,6 +72,10 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
 
     /** File I/O factory. */
     @Nullable private final FileIOFactory fileIOFactory;
+
+    /** Dumps latest WAL segments and related index and partition files on data corruption error. */
+    private final boolean dumpPersistenceFilesOnDataCorruption = getBoolean(
+            IgniteSystemProperties.IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION);
 
     /**
      * Constructor.
@@ -149,9 +149,8 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
             }
         }
 
-        log.warning("IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION=" + IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION);
-        if (IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION && corruptedDataStructureEx != null) {
-            log.warning("Copying persistence files to dump folder");
+        if (dumpPersistenceFilesOnDataCorruption && corruptedDataStructureEx != null) {
+            log.warning("Copying persistence files to dump folder.");
 
             dumpPersistenceFilesOnFailure(corruptedDataStructureEx);
         }
