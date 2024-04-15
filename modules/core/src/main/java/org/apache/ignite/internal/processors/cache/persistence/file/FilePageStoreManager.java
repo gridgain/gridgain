@@ -1281,7 +1281,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
             }
 
             for (Integer part : parts) {
-                if (part >= pageStores.partStores.length)//skip index parts
+                if (part == PageIdAllocator.INDEX_PARTITION)
                     continue;
 
                 FilePageStore partStore = (FilePageStore) pageStores.partStores[part];

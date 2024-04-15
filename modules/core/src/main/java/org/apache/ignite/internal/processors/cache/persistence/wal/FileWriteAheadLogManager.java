@@ -3258,33 +3258,31 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             walFiles.addAll(Arrays.asList(walWorkDir.listFiles(WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER)));
 
-            if (archiver != null) {
-                for (File file : walFiles) {
-                    FileDescriptor desc = readFileDescriptor(file, ioFactory);
+            for (File file : walFiles) {
+                FileDescriptor desc = readFileDescriptor(file, ioFactory);
 
-                    if (desc == null)
-                        continue;
+                if (desc == null)
+                    continue;
 
-                    long idx = desc.idx;
+                long idx = desc.idx;
 
-                    if (idx >= lastCpIdx && idx <= currIdx) {
-                        int i = (int) (idx - lastCpIdx);
+                if (idx >= lastCpIdx && idx <= currIdx) {
+                    int i = (int) (idx - lastCpIdx);
 
-                        if (!copied[i]) {
-                            copied[i] = true;
+                    if (!copied[i]) {
+                        copied[i] = true;
 
-                            if (idx == currentHandle().getSegmentId())
-                                currentHandle().flushAll();
+                        if (idx == currentHandle().getSegmentId())
+                            currentHandle().flushAll();
 
-                            U.copy(file, new File(dumpDir, fileName(idx)), false);
-                        }
+                        U.copy(file, new File(dumpDir, fileName(idx)), false);
                     }
                 }
             }
+
         } catch (Exception e) {
             log.error("Failed to dump wal files", e);
         }
-
     }
 
     /**
