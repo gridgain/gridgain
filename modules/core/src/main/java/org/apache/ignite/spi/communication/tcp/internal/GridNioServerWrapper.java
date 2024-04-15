@@ -668,8 +668,10 @@ public class GridNioServerWrapper {
         else {
             GridNioSession ses = createNioSession(node, connIdx);
 
+            boolean enableConnectionCheck = cfg.enableConnectionCheck() && stateProvider.isTcpCommunicationConnectionCheckSupported(node);
+
             return ses == null ?
-                null : new GridTcpNioCommunicationClient(connIdx, ses, log);
+                null : new GridTcpNioCommunicationClient(connIdx, ses, log, enableConnectionCheck);
         }
     }
 

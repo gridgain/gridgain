@@ -176,6 +176,9 @@ public class TcpCommunicationConfiguration implements Serializable {
     /** */
     private boolean forceClientToSrvConnections;
 
+    /** Allows to send heartbeat messages for tcp communication connections. */
+    private boolean enableConnectionCheck = true;
+
     /** Address resolver. */
     public AddressResolver addrRslvr() {
         return addrRslvr;
@@ -624,5 +627,15 @@ public class TcpCommunicationConfiguration implements Serializable {
     /** */
     public void forceClientToServerConnections(boolean forceClientToSrvConnections) {
         this.forceClientToSrvConnections = forceClientToSrvConnections;
+    }
+
+    /** */
+    public boolean enableConnectionCheck() {
+        return enableConnectionCheck;
+    }
+
+    /** */
+    public void enableConnectionCheck(boolean enableConnectionCheck) {
+        this.enableConnectionCheck = enableConnectionCheck;
     }
 }

@@ -859,6 +859,13 @@ cfg.socketSendBuffer(sockSndBuf);
         return (TcpCommunicationSpi) this;
     }
 
+    @IgniteSpiConfiguration(optional = true)
+    public TcpCommunicationSpi setEnableConnectionCheck(boolean enableConnectionCheck) {
+        cfg.enableConnectionCheck(enableConnectionCheck);
+
+        return (TcpCommunicationSpi) this;
+    }
+
     /**
      * @return Bound TCP server port.
      */

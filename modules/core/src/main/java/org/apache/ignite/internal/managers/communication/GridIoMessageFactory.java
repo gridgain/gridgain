@@ -185,6 +185,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageFactoryProvider;
 import org.apache.ignite.spi.collision.jobstealing.JobStealingRequest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.internal.TcpInverseConnectionResponseMessage;
+import org.apache.ignite.spi.communication.tcp.messages.ConnectionCheckMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
@@ -209,6 +210,7 @@ public class GridIoMessageFactory implements MessageFactoryProvider {
         factory.register((short)-45, GridChangeGlobalStateMessageResponse::new);
         factory.register((short)-44, HandshakeMessage2::new);
         factory.register((short)-43, IgniteIoTestMessage::new);
+        factory.register(TcpCommunicationSpi.CONNECTION_CHECK_MSG_TYPE, ConnectionCheckMessage::new);
         factory.register((short)-36, GridDhtAtomicSingleUpdateRequest::new);
         factory.register((short)-27, GridDhtTxOnePhaseCommitAckRequest::new);
         factory.register((short)-26, TxLockList::new);
