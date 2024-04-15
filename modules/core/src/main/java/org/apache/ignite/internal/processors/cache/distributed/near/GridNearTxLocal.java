@@ -5156,7 +5156,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     @Override public String toString() {
         return S.toString(GridNearTxLocal.class, this,
             "thread", IgniteUtils.threadName(threadId),
-            "mappings", mappings,
             "super", super.toString());
     }
 }
