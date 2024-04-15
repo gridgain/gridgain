@@ -3237,6 +3237,55 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /**
+     * Dumps WAL segments since last known checkpoint.
+     */
+    public void dumpWalFiles() {
+        try {
+            long lastCpIdx = lastCheckpointPtr.index();
+
+            long currIdx = currentHandle().getSegmentId();
+
+            String path = "db/dump/" + igCfg.getConsistentId() + "/wal";
+            File dumpDir = U.resolveWorkDirectory(igCfg.getWorkDirectory(), path, false);
+
+            // bit set for tracking which file was copied to evade copying same segment twice from archive and work dir.
+            boolean[] copied = new boolean[(int) (currIdx - lastCpIdx + 1)];
+
+            List<File> walFiles = new ArrayList<>();
+
+            if (archiver != null)
+                walFiles.addAll(Arrays.asList(walArchiveDir.listFiles(WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER)));
+
+            walFiles.addAll(Arrays.asList(walWorkDir.listFiles(WAL_SEGMENT_COMPACTED_OR_RAW_FILE_FILTER)));
+
+            for (File file : walFiles) {
+                FileDescriptor desc = readFileDescriptor(file, ioFactory);
+
+                if (desc == null)
+                    continue;
+
+                long idx = desc.idx;
+
+                if (idx >= lastCpIdx && idx <= currIdx) {
+                    int i = (int) (idx - lastCpIdx);
+
+                    if (!copied[i]) {
+                        copied[i] = true;
+
+                        if (idx == currentHandle().getSegmentId())
+                            currentHandle().flushAll();
+
+                        U.copy(file, new File(dumpDir, fileName(idx)), false);
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to dump wal files", e);
+        }
+    }
+
+    /**
      * Worker for an asynchronous WAL archive cleanup that starts when the maximum size is exceeded.
      * {@link SegmentAware#awaitExceedMaxArchiveSize} is used to determine if the maximum is exceeded.
      */
