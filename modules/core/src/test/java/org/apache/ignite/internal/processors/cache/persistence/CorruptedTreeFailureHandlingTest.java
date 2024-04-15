@@ -22,11 +22,13 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import org.apache.commons.io.FileUtils;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
@@ -55,9 +57,11 @@ import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
@@ -156,32 +160,7 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
 
         ByteBuffer pageBuf = ByteBuffer.allocateDirect(pageSize);
 
-        OpenOption[] options = {StandardOpenOption.READ, StandardOpenOption.WRITE};
-        try (RandomAccessFileIO fileIO = new RandomAccessFileIO(fileRef.get(), options)) {
-            DataPageIO dataPageIO = DataPageIO.VERSIONS.latest();
-
-            long pageOff = pageSize + PageIdUtils.pageIndex(pageId) * pageSize;
-
-            // Read index page.
-            fileIO.position(pageOff);
-            fileIO.readFully(pageBuf);
-
-            long pageAddr = GridUnsafe.bufferAddress(pageBuf);
-
-            // Remove existing item from index page.
-            dataPageIO.removeRow(pageAddr, itemId, pageSize);
-
-            // Recalculate CRC.
-            PageIO.setCrc(pageAddr, 0);
-
-            pageBuf.rewind();
-            PageIO.setCrc(pageAddr, FastCrc.calcCrc(pageBuf, pageSize));
-
-            // Write it back.
-            pageBuf.rewind();
-            fileIO.position(pageOff);
-            fileIO.writeFully(pageBuf);
-        }
+        corruptPage(pageSize, pageId, itemId, pageBuf);
 
         LogListener logLsnr = LogListener.matches("CorruptedTreeException has occurred. " +
             "To diagnose it, make a backup of the following directories: ").build();
@@ -224,6 +203,107 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
         assertEquals(1, txtFiles.length);
 
         assertTrue(logLsnr.check());
+    }
+
+    /**
+     * Node should dump persistence files on data corruption exception.
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = "IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION", value = "true")
+    public void testDumpPersistenceFilesOnCorruptedPage() throws Exception {
+        IgniteEx srv = startGrid(0);
+
+        srv.cluster().state(ClusterState.ACTIVE);
+
+        IgniteCache<Integer, Integer> cache = srv.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        for (int i = 0; i < 10; i++)
+            cache.put(i, i);
+
+        int pageSize = srv.configuration().getDataStorageConfiguration().getPageSize();
+
+        stopGrid(0, false);
+
+        // Node is stopped, we're ready to corrupt partition data.
+        long link = linkRef.get();
+        long pageId = PageIdUtils.pageId(link);
+        int itemId = PageIdUtils.itemId(link);
+
+        ByteBuffer pageBuf = ByteBuffer.allocateDirect(pageSize);
+
+        corruptPage(pageSize, pageId, itemId, pageBuf);
+
+        srv = startGrid(0);
+
+        cache = srv.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        int grpId = srv.context().cache().cacheGroups().stream().filter(
+                context -> context.cacheOrGroupName().equals(DEFAULT_CACHE_NAME)
+        ).findAny().orElseThrow(() -> new RuntimeException("Cache group not found")).groupId();
+
+        try {
+            for (int i = 0; i < CACHE_ENTRIES; i++)
+                cache.get(i);
+
+            fail("Cache operations are expected to fail");
+        }
+        catch (Throwable e) {
+            assertTrue(X.hasCause(e, CorruptedTreeException.class));
+        }
+
+        assertTrue(GridTestUtils.waitForCondition(() -> G.allGrids().isEmpty(), 10_000L));
+
+        File partDir = U.resolveWorkDirectory(
+                srv.configuration().getWorkDirectory(),
+                "db/dump/" + srv.configuration().getConsistentId() + "/" + grpId,
+                false
+        );
+
+        String[] parts = partDir.list();
+
+        assertTrue(Arrays.asList(parts).contains("index.bin"));
+        assertTrue(Arrays.asList(parts).contains("part-" + PageIdUtils.partId(pageId) + ".bin"));
+
+        File walDir = U.resolveWorkDirectory(
+                srv.configuration().getWorkDirectory(),
+                "db/dump/" + srv.configuration().getConsistentId() + "/wal",
+                false
+        );
+
+        String[] walFiles = walDir.list();
+
+        assertTrue(Arrays.asList(walFiles).contains("0000000000000000.wal"));
+    }
+
+    /** */
+    private void corruptPage(int pageSize, long pageId, int itemId, ByteBuffer pageBuf) throws IOException, IgniteCheckedException {
+        OpenOption[] options = {StandardOpenOption.READ, StandardOpenOption.WRITE};
+        try (RandomAccessFileIO fileIO = new RandomAccessFileIO(fileRef.get(), options)) {
+            DataPageIO dataPageIO = DataPageIO.VERSIONS.latest();
+
+            long pageOff = pageSize + PageIdUtils.pageIndex(pageId) * pageSize;
+
+            // Read index page.
+            fileIO.position(pageOff);
+            fileIO.readFully(pageBuf);
+
+            long pageAddr = GridUnsafe.bufferAddress(pageBuf);
+
+            // Remove existing item from index page.
+            dataPageIO.removeRow(pageAddr, itemId, pageSize);
+
+            // Recalculate CRC.
+            PageIO.setCrc(pageAddr, 0);
+
+            pageBuf.rewind();
+            PageIO.setCrc(pageAddr, FastCrc.calcCrc(pageBuf, pageSize));
+
+            // Write it back.
+            pageBuf.rewind();
+            fileIO.position(pageOff);
+            fileIO.writeFully(pageBuf);
+        }
     }
 
     /** */

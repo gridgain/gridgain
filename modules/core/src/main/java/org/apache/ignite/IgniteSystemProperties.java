@@ -2231,6 +2231,11 @@ public final class IgniteSystemProperties {
             defaults = "false")
     public static final String IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY = "IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY";
 
+    /** Dumps latest WAL segments and related index and partition files on data corruption error. */
+    @SystemProperty(value = "Dumps latest WAL segments and related index and partition files on data corruption error",
+            defaults = "false")
+    public static final String IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION = "IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION";
+
     /**
      * Enforces singleton.
      */
