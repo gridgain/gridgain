@@ -2157,7 +2157,7 @@ public final class IgniteSystemProperties {
      */
     @SystemProperty(value = "If true, cache names will be validated not to contain characters " +
             "which cause issues when persistence is used ({@code \\}, {@code /}, {@code \\0}). " +
-            "Default is true.",
+            "Default is true",
             type = Boolean.class)
     public static final String IGNITE_VALIDATE_CACHE_NAMES = "IGNITE_VALIDATE_CACHE_NAMES";
 
