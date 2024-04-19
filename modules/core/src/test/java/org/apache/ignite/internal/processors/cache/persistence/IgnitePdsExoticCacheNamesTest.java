@@ -32,8 +32,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Tests for persistent caches with tricky names: with special characters, non-ASCII symbols, etc.
