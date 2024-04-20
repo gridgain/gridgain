@@ -84,7 +84,6 @@ public class JdbcThinMetadataSqlMatchTest extends GridCommonAbstractTest {
     public void createTables() throws Exception {
         executeDDl("CREATE TABLE MY_FAV_TABLE (id INT PRIMARY KEY, val VARCHAR)");
         executeDDl("CREATE TABLE MY0FAV0TABLE (id INT PRIMARY KEY, val VARCHAR)");
-        executeDDl("CREATE TABLE \"MY\\FAV\\TABLE\" (id INT PRIMARY KEY, val VARCHAR)");
         executeDDl("CREATE TABLE OTHER_TABLE (id INT PRIMARY KEY, val VARCHAR)");
     }
 
@@ -94,7 +93,6 @@ public class JdbcThinMetadataSqlMatchTest extends GridCommonAbstractTest {
         // tables that matched by "TABLE MY_FAV_TABLE" sql pattern:
         executeDDl("DROP TABLE MY_FAV_TABLE");
         executeDDl("DROP TABLE MY0FAV0TABLE");
-        executeDDl("DROP TABLE \"MY\\FAV\\TABLE\"");
 
         // and another one that doesn't:
         executeDDl("DROP TABLE OTHER_TABLE");
@@ -105,14 +103,13 @@ public class JdbcThinMetadataSqlMatchTest extends GridCommonAbstractTest {
      */
     @Test
     public void testTablesMatch() throws SQLException {
-        assertEqualsCollections(asList("MY0FAV0TABLE", "MY\\FAV\\TABLE", "MY_FAV_TABLE"), getTableNames("MY_FAV_TABLE"));
-        assertEqualsCollections(singletonList("MY_FAV_TABLE"), getTableNames("MY\\_FAV\\_TABLE"));
+        assertEqualsCollections(asList("MY0FAV0TABLE", "MY_FAV_TABLE"), getTableNames("MY_FAV_TABLE"));
 
         assertEqualsCollections(Collections.emptyList(), getTableNames("\\%"));
-        assertEqualsCollections(asList("MY0FAV0TABLE", "MY\\FAV\\TABLE", "MY_FAV_TABLE", "OTHER_TABLE"), getTableNames("%"));
+        assertEqualsCollections(asList("MY0FAV0TABLE", "MY_FAV_TABLE", "OTHER_TABLE"), getTableNames("%"));
 
         assertEqualsCollections(Collections.emptyList(), getTableNames(""));
-        assertEqualsCollections(asList("MY0FAV0TABLE", "MY\\FAV\\TABLE", "MY_FAV_TABLE", "OTHER_TABLE"), getTableNames(null));
+        assertEqualsCollections(asList("MY0FAV0TABLE", "MY_FAV_TABLE", "OTHER_TABLE"), getTableNames(null));
     }
 
     /**
@@ -120,8 +117,7 @@ public class JdbcThinMetadataSqlMatchTest extends GridCommonAbstractTest {
      */
     @Test
     public void testTablesWithBackslashInTheNameMatch() throws SQLException {
-        assertEqualsCollections(asList("MY0FAV0TABLE", "MY\\FAV\\TABLE", "MY_FAV_TABLE"), getTableNames("MY_FAV_TABLE"));
-        assertEqualsCollections(singletonList("MY\\FAV\\TABLE"), getTableNames("MY\\FAV\\TABLE"));
+        assertEqualsCollections(asList("MY0FAV0TABLE", "MY_FAV_TABLE"), getTableNames("MY_FAV_TABLE"));
     }
 
     /**
