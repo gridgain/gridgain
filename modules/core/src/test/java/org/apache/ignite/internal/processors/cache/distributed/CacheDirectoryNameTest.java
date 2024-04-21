@@ -97,11 +97,20 @@ public class CacheDirectoryNameTest extends GridCommonAbstractTest {
                 cfg.setName(name);
 
             if (persistenceEnabled) {
-                assertThrows(log, () -> srv.createCache(cfg), IllegalArgumentException.class,
-                    "Cache start failed. Cache or group name contains the characters that are not allowed in file names");
+                if (checkGroup)
+                    assertThrows(log, () -> srv.createCache(cfg), IllegalArgumentException.class,
+                        "Cache start failed. Cache or group name contains the characters that are not allowed in file names");
+                else
+                    assertThrows(log, () -> srv.createCache(cfg), IllegalArgumentException.class,
+                        "Ouch! Argument is invalid: Cache name cannot contain slashes (/), backslashes (\\), line separators (\\n), or null characters (\\0)");
             }
             else {
-                srv.createCache(cfg);
+                if (checkGroup)
+                    srv.createCache(cfg);
+                else
+                    assertThrows(log, () -> srv.createCache(cfg), IllegalArgumentException.class,
+                        "Ouch! Argument is invalid: Cache name cannot contain slashes (/), backslashes (\\), line separators (\\n), or null characters (\\0)");
+
                 srv.destroyCache(cfg.getName());
             }
         }
