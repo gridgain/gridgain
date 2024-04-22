@@ -32,7 +32,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 
 /**
  * Verify we are able to escape "_" character in the metadata request.
