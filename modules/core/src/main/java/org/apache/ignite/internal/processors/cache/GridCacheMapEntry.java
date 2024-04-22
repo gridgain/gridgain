@@ -2262,8 +2262,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 c.call(dataRow);
             }
-            else
+            else {
+                if (!needVal && !readFromStore && !(evt && cctx.events().isRecordable(EVT_CACHE_OBJECT_REMOVED))
+                    && op == DELETE && !cctx.queries().enabled())
+                    c.rowData(CacheDataRowAdapter.RowData.NO_KEY_WITH_VALUE_META_INFO);
+
                 cctx.offheap().invoke(cctx, key, localPartition(), c);
+            }
 
             GridCacheUpdateAtomicResult updateRes = c.updateRes;
 
@@ -2434,7 +2439,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (updateRes.success())
                 updateMetrics(c.op, metrics, transformOp || updateRes.transformed(), oldVal != null);
 
-            // Continuous query filter should be perform under lock.
+            // Continuous query filter should be performed under the lock.
             if (lsnrs != null) {
                 CacheObject evtVal = cctx.unwrapTemporary(updateVal);
                 CacheObject evtOldVal = cctx.unwrapTemporary(oldVal);
@@ -4501,6 +4506,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     protected void removeValue(GridCacheVersion clearVer) throws IgniteCheckedException {
         assert lock.isHeldByCurrentThread();
 
+        //U.dumpStack(log, ">>>>> removeValue [clearVer=" + clearVer + ", key=" + key +  ']');
+
         cctx.offheap().remove(cctx, key, partition(), localPartition());
     }
 
@@ -5824,6 +5831,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         if (!(row.expireTime() > 0 && row.expireTime() <= U.currentTimeMillis()))
             return false;
 
+        // TODO
         CacheObject expiredVal = row.value();
 
         if (isNear()) {
@@ -6197,6 +6205,19 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         /** {@inheritDoc} */
         @Override public IgniteTree.OperationType operationType() {
             return treeOp;
+        }
+
+        private CacheDataRowAdapter.RowData rowData1;
+
+        public void rowData(CacheDataRowAdapter.RowData rowData) {
+            rowData1 = rowData;
+        }
+
+        @Override public CacheDataRowAdapter.RowData rowData() {
+            if (rowData1 != null)
+                return rowData1;
+            else
+                return IgniteCacheOffheapManager.OffheapInvokeClosure.super.rowData();
         }
 
         /** {@inheritDoc} */
@@ -6732,8 +6753,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (treeOp != IgniteTree.OperationType.NOOP) {
                 GridDhtLocalPartition part = entry.localPartition();
 
-                newRow = part.dataStore().createRow(cctx, entry.key(), TombstoneCacheObject.INSTANCE, newVer,
-                    cctx.shared().ttl().tombstoneExpireTime(), oldRow);
+                if (rowData() == CacheDataRowAdapter.RowData.NO_KEY_WITH_VALUE_META_INFO) {
+                    newRow = part.dataStore().createRow2(cctx, entry.key(), TombstoneCacheObject.INSTANCE, newVer,
+                        cctx.shared().ttl().tombstoneExpireTime(), oldRow);
+                }
+                else {
+                    newRow = part.dataStore().createRow(cctx, entry.key(), TombstoneCacheObject.INSTANCE, newVer,
+                        cctx.shared().ttl().tombstoneExpireTime(), oldRow);
+                }
 
                 if (oldRow != null && oldRow.link() == newRow.link())
                     treeOp = IgniteTree.OperationType.IN_PLACE;

@@ -804,6 +804,14 @@ public interface IgniteCacheOffheapManager {
             long expireTime,
             @Nullable CacheDataRow oldRow) throws IgniteCheckedException;
 
+        public CacheDataRow createRow2(
+            GridCacheContext cctx,
+            KeyCacheObject key,
+            CacheObject val,
+            GridCacheVersion ver,
+            long expireTime,
+            @Nullable CacheDataRow oldRow) throws IgniteCheckedException;
+
         /**
          * Updates the old row with the new value of expiration time and returns the new row that represents the updated row.
          * It is assumed that link to the old row and a new one are the same.
