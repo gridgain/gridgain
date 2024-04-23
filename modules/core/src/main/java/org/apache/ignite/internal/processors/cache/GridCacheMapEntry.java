@@ -2264,7 +2264,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 !(evt && cctx.events().isRecordable(EVT_CACHE_OBJECT_REMOVED)) &&
                 op == DELETE &&
                 !cctx.queries().enabled() &&
-                cctx.config().getInterceptor() == null;
+                cctx.config().getInterceptor() == null &&
+                !conflictResolve;
 
             if (isNear()) {
                 CacheDataRow dataRow = val != null ? new CacheDataRowAdapter(key, val, ver, expireTimeExtras()) : null;
@@ -6916,8 +6917,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                         if (val == null)
                             cctx.store().remove(null, entry.key);
-                        else
+                        else {
+                            assert !(val instanceof CacheObjectShadow) : "Invalid value type [entry=" + this + ']';
                             cctx.store().put(null, entry.key, val, entry.ver);
+                        }
                     }
                     else {
                         if (log.isDebugEnabled())
