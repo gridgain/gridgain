@@ -2257,14 +2257,22 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 cctx.disableTriggeringCacheInterceptorOnConflict()
             );
 
+            boolean condition =
+                !needVal &&
+                !readFromStore &&
+                !transformOp &&
+                !(evt && cctx.events().isRecordable(EVT_CACHE_OBJECT_REMOVED)) &&
+                op == DELETE &&
+                !cctx.queries().enabled() &&
+                cctx.config().getInterceptor() == null;
+
             if (isNear()) {
                 CacheDataRow dataRow = val != null ? new CacheDataRowAdapter(key, val, ver, expireTimeExtras()) : null;
 
                 c.call(dataRow);
             }
             else {
-                if (!needVal && !readFromStore && !(evt && cctx.events().isRecordable(EVT_CACHE_OBJECT_REMOVED))
-                    && op == DELETE && !cctx.queries().enabled())
+                if (condition)
                     c.rowData(CacheDataRowAdapter.RowData.NO_KEY_WITH_VALUE_META_INFO);
 
                 cctx.offheap().invoke(cctx, key, localPartition(), c);
