@@ -18,8 +18,10 @@ package org.apache.ignite.sqltests;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.affinity.AffinityKeyMapped;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -77,21 +79,37 @@ public class CheckWarnJoinPartitionedTablesTest extends GridCommonAbstractTest {
         }
 
         void createCachesWithPlainKey() {
-            createCachesWithKeyType(PlainKey.class, () -> new PlainKey(0));
+            createCachesWithKeyType(PlainKey.class, () -> new PlainKey(0), cfg -> {
+                // Since PlainKey doesn't have fields marked with @AffinityKeyMapped
+                // we have to manually compose cache key configuration to preserve affinity collocation
+                // Basically we have to repeat what #setIndexTypes() method does when @AffinityKeyMapped is present
+                cfg.setKeyConfiguration(new CacheKeyConfiguration()
+                    .setTypeName(PlainKey.class.getName())
+                    .setAffinityKeyFieldName("id"));
+            });
         }
 
         void createCachesWithAffinityKey() {
-            createCachesWithKeyType(AffinityKey.class, () -> new AffinityKey(0));
+            createCachesWithKeyType(AffinityKey.class, () -> new AffinityKey(0), cfg -> {
+                // no-op since key affinity was set via @AffinityKeyMapped annotation in AffinityKey class
+            });
         }
 
-        <K> void createCachesWithKeyType(Class<K> keyCls, Supplier<K> keyProducer) {
-            CacheConfiguration<K, Foo> fooCfg = new CacheConfiguration<K, Foo>("foo")
-                .setIndexedTypes(keyCls, Foo.class);
+        <K> void createCachesWithKeyType(Class<K> keyCls,
+            Supplier<K> keyProducer,
+            Consumer<CacheConfiguration<K, ?>> cacheConfigTuning
+        ) {
+            CacheConfiguration<K, Foo> fooCfg = new CacheConfiguration<>("foo");
+            fooCfg.setIndexedTypes(keyCls, Foo.class);
+            cacheConfigTuning.accept(fooCfg);
+
             IgniteCache<K, Foo> fooCache = crd.getOrCreateCache(fooCfg);
             fooCache.put(keyProducer.get(), new Foo());
 
-            CacheConfiguration<K, Bar> barCfg = new CacheConfiguration<K, Bar>("bar")
-                .setIndexedTypes(keyCls, Bar.class);
+            CacheConfiguration<K, Bar> barCfg = new CacheConfiguration<>("bar");
+            barCfg.setIndexedTypes(keyCls, Bar.class);
+            cacheConfigTuning.accept(barCfg);
+
             IgniteCache<K, Bar> barCache = crd.getOrCreateCache(barCfg);
             barCache.put(keyProducer.get(), new Bar());
         }
