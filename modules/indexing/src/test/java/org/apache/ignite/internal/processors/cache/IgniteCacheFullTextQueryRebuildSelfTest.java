@@ -32,6 +32,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -45,6 +46,13 @@ import static org.hamcrest.Matchers.hasSize;
  * Tests text index rebuild.
  */
 public class IgniteCacheFullTextQueryRebuildSelfTest extends GridCommonAbstractTest {
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        U.resolveWorkDirectory(U.defaultWorkDirectory(), "db", true);
+    }
+
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
@@ -99,6 +107,8 @@ public class IgniteCacheFullTextQueryRebuildSelfTest extends GridCommonAbstractT
         crd.cluster().state(ClusterState.ACTIVE);
 
         IgniteCache<AffinityKey, IndexedEntity> cache = jcache(0, DEFAULT_CACHE_NAME);
+
+        assertEquals(0, cache.size());
 
         // Try to execute on empty cache first.
         QueryCursor<Cache.Entry<AffinityKey, IndexedEntity>> qry =

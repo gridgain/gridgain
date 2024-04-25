@@ -5499,11 +5499,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             Collection<CacheGroupContext> cacheGrps = cacheGroups();
 
             restorePartitionStates(cacheGrps, restoreState.partitionRecoveryStates());
-            restoreTextIndexes(cacheGroups());
 
             // Start warm-up only after restoring memory storage, but before starting GridDiscoveryManager.
             if (!cacheGrps.isEmpty())
                 startWarmUp();
+
+            restoreTextIndexes(cacheGroups());
         }
 
         /**
