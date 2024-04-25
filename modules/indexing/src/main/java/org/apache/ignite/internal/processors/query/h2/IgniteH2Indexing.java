@@ -2195,6 +2195,68 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
+    @Override public @Nullable IgniteInternalFuture<?> rebuildTextIndexes(GridCacheContext cctx) {
+        assert cctx != null;
+
+        if (ctx.clientNode())
+            return null;
+
+        IgnitePageStoreManager pageStore = cctx.shared().pageStore();
+
+        if (pageStore == null)
+            return null;
+
+        String cacheName = cctx.name();
+
+        Collection<H2TableDescriptor> descriptors = schemaMgr.tablesForCache(cacheName);
+
+        if (descriptors.stream().noneMatch(tblDesc -> nonNull(tblDesc.luceneIndex())))
+            return null;
+
+        GridFutureAdapter<Void> rebuildCacheIdxFut = new GridFutureAdapter<>();
+
+        // An internal future for the ability to cancel index rebuilding.
+        SchemaIndexCacheFuture intRebFut = new SchemaIndexCacheFuture(new SchemaIndexOperationCancellationToken());
+
+        // To avoid possible data race.
+        GridFutureAdapter<Void> outRebuildTextIdxFut = new GridFutureAdapter<>();
+
+        SchemaIndexCacheFuture prevIntRebFut = idxRebuildFuts.put(cctx.cacheId(), intRebFut);
+
+        // Check that the previous rebuild is completed.
+        assert prevIntRebFut == null;
+
+        // Rebuild text indexes for tables in cache.
+        SchemaIndexCacheVisitorClosure clo = new TextIndexRebuildClosure(ctx.query(), cctx, descriptors);
+
+        rebuildCacheIdxFut.listen(fut -> {
+            Throwable err = fut.error();
+
+            if (err == null) {
+                try {
+                    markIndexRebuild(cacheName, false);
+                }
+                catch (Throwable t) {
+                    err = t;
+                }
+            }
+
+            if (err != null)
+                U.error(log, "Failed to rebuild indexes for cache: " + cacheName, err);
+
+            idxRebuildFuts.remove(cctx.cacheId(), intRebFut);
+            intRebFut.onDone(err);
+
+            outRebuildTextIdxFut.onDone(err);
+        });
+
+        if (!rebuildCacheIdxFut.isDone())
+            rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut, intRebFut.cancelToken());
+
+        return outRebuildTextIdxFut;
+    }
+
+    /** {@inheritDoc} */
     @Override @Nullable public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx, boolean force) {
         assert cctx != null;
 
