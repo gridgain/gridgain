@@ -2195,7 +2195,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public @Nullable IgniteInternalFuture<?> rebuildTextIndexes(GridCacheContext cctx) {
+    @Override public @Nullable IgniteInternalFuture<?> rebuildInMemoryIndexes(GridCacheContext cctx) {
         assert cctx != null;
 
         if (ctx.clientNode())
@@ -2219,7 +2219,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         SchemaIndexCacheFuture intRebFut = new SchemaIndexCacheFuture(new SchemaIndexOperationCancellationToken());
 
         // To avoid possible data race.
-        GridFutureAdapter<Void> outRebuildTextIdxFut = new GridFutureAdapter<>();
+        GridFutureAdapter<Void> outRebuildIdxFut = new GridFutureAdapter<>();
 
         SchemaIndexCacheFuture prevIntRebFut = idxRebuildFuts.put(cctx.cacheId(), intRebFut);
 
@@ -2247,13 +2247,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             idxRebuildFuts.remove(cctx.cacheId(), intRebFut);
             intRebFut.onDone(err);
 
-            outRebuildTextIdxFut.onDone(err);
+            outRebuildIdxFut.onDone(err);
         });
 
         if (!rebuildCacheIdxFut.isDone())
             rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut, intRebFut.cancelToken());
 
-        return outRebuildTextIdxFut;
+        return outRebuildIdxFut;
     }
 
     /** {@inheritDoc} */

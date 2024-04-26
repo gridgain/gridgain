@@ -5504,16 +5504,16 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             if (!cacheGrps.isEmpty())
                 startWarmUp();
 
-            restoreTextIndexes(cacheGroups());
+            rebuildInMemoryIndexes(cacheGroups());
         }
 
         /**
-         * Restoring the text indexes for cache groups.
+         * Rebuild in-memory indexes for cache groups.
          *
          * @param forGroups Cache groups.
          * @throws IgniteCheckedException If failed.
          */
-        private void restoreTextIndexes(Collection<CacheGroupContext> forGroups) throws IgniteCheckedException {
+        private void rebuildInMemoryIndexes(Collection<CacheGroupContext> forGroups) throws IgniteCheckedException {
             if (!ctx.query().moduleEnabled())
                 return;
 
@@ -5524,16 +5524,16 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             long startRestorePart = U.currentTimeMillis();
 
             if (log.isInfoEnabled())
-                log.info("Restoring text indexes for local groups.");
+                log.info("Restoring in-memory indexes for local groups.");
 
             GridCompoundFuture allCacheIdxsCompoundFut = null;
 
             for (GridCacheContext cctx : contexts) {
-                IgniteInternalFuture<?> rebuildFut = ctx.query().getIndexing().rebuildTextIndexes(cctx);
+                IgniteInternalFuture<?> rebuildFut = ctx.query().getIndexing().rebuildInMemoryIndexes(cctx);
 
                 if (rebuildFut != null) {
                     if (log.isInfoEnabled())
-                        log.info("Started indexes rebuilding for cache: " + cctx.name());
+                        log.info("Started in-memory indexes rebuilding for cache: " + cctx.name());
 
                     if (allCacheIdxsCompoundFut == null)
                         allCacheIdxsCompoundFut = new GridCompoundFuture<>();
@@ -5546,7 +5546,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 if (allCacheIdxsCompoundFut != null) {
                     allCacheIdxsCompoundFut.listen(fut -> {
                         if (log.isInfoEnabled()) {
-                            log.info("Finished restoring text indexes for local groups [" +
+                            log.info("Finished restoring in-memory indexes for local groups [" +
                                 "groupsProcessed=" + contexts.size() +
                                 ", time=" + U.humanReadableDuration(U.currentTimeMillis() - startRestorePart) +
                                 "]");
