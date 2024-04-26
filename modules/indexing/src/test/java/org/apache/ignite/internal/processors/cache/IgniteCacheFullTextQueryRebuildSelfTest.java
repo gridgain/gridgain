@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,6 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -88,12 +87,6 @@ public class IgniteCacheFullTextQueryRebuildSelfTest extends GridCommonAbstractT
 
         cfg.setCacheConfiguration(cache);
 
-        TcpCommunicationSpi commSpi = new TcpCommunicationSpi();
-
-        commSpi.setSharedMemoryPort(-1);
-
-        cfg.setCommunicationSpi(commSpi);
-
         return cfg;
     }
 
@@ -106,7 +99,7 @@ public class IgniteCacheFullTextQueryRebuildSelfTest extends GridCommonAbstractT
 
         crd.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<AffinityKey, IndexedEntity> cache = jcache(0, DEFAULT_CACHE_NAME);
+        IgniteCache<AffinityKey, IndexedEntity> cache = crd.cache(DEFAULT_CACHE_NAME);
 
         assertEquals(0, cache.size());
 

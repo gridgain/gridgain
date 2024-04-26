@@ -2198,12 +2198,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     @Override public @Nullable IgniteInternalFuture<?> rebuildInMemoryIndexes(GridCacheContext cctx) {
         assert cctx != null;
 
+        // Skip rebuild for client nodes.
         if (ctx.clientNode())
             return null;
 
-        IgnitePageStoreManager pageStore = cctx.shared().pageStore();
-
-        if (pageStore == null)
+        // Skip rebuild if persistence is not enabled for cache.
+        if (cctx.shared().pageStore() == null)
             return null;
 
         String cacheName = cctx.name();

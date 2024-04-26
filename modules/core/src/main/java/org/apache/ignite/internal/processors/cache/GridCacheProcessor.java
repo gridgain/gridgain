@@ -5476,6 +5476,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         @Override public void afterBinaryMemoryRestore(
             IgniteCacheDatabaseSharedManager mgr,
             GridCacheDatabaseSharedManager.RestoreBinaryState restoreState) throws IgniteCheckedException {
+
             Object consistentId = ctx.pdsFolderResolver().resolveFolders().consistentId();
             DetachedClusterNode clusterNode = new DetachedClusterNode(consistentId, ctx.nodeAttributes());
 
