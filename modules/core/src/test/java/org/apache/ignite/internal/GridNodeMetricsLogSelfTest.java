@@ -192,10 +192,10 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
         assertTrue(msg, fullLog.matches("(?s).*CPU \\[CPUs=.*, curLoad=.*, avgLoad=.*, GC=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*Page memory \\[pages=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*Heap \\[used=.*, free=.*, comm=.*].*"));
-        assertTrue(msg, fullLog.matches("(?s).*Off-heap memory \\[used=.*, free=.*, allocated=.*].*"));
+        assertTrue(msg, fullLog.matches("(?s).*Off-heap memory \\[sizeUsedByData=.*, used=.*, free=.*, allocated=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).* region \\[type=internal, persistence=(true|false), lazyAlloc=(true|false).*"));
         assertTrue(msg, fullLog.matches("(?s).* region \\[type=default, persistence=(true|false), lazyAlloc=(true|false).*"));
-        assertTrue(msg, fullLog.matches("(?s).*... initCfg=.*, maxCfg=.*, usedRam=.*, freeRam=.*, allocRam=.*].*"));
+        assertTrue(msg, fullLog.matches("(?s).*... initCfg=.*, maxCfg=.*, sizeUsedByData=.*, usedRam=.*, freeRam=.*, allocRam=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*Outbound messages queue \\[size=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*Public thread pool \\[active=.*, idle=.*, qSize=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*System thread pool \\[active=.*, idle=.*, qSize=.*].*"));
@@ -214,7 +214,8 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
 
         Matcher matcher = Pattern.compile("(?m).{2,} {3}(?<name>.+) region \\[type=(default|internal|user), " +
                 "persistence=(?<persistent>true|false), lazyAlloc=(true|false),\\s*\\.\\.\\.\\s*" +
-                "initCfg=(?<init>[-\\d]+)MB, maxCfg=(?<max>[-\\d]+)MB, usedRam=(?<used>[-\\d]+).*MB, " +
+                "initCfg=(?<init>[-\\d]+)MB, maxCfg=(?<max>[-\\d]+)MB, " +
+                "sizeUsedByData=(?<data>[-\\d]+).*MB, usedRam=(?<used>[-\\d]+).*MB, " +
                 "freeRam=(?<free>[-.\\d]+)%, allocRam=(?<alloc>[-\\d]+)MB(, allocTotal=(?<total>[-\\d]+)MB)?]")
             .matcher(logOutput);
 
@@ -224,6 +225,7 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
             int init = Integer.parseInt(matcher.group("init"));
             int max = Integer.parseInt(matcher.group("max"));
             int used = Integer.parseInt(matcher.group("used"));
+            int data = Integer.parseInt(matcher.group("data"));
             double free = Double.parseDouble(matcher.group("free"));
             int alloc = Integer.parseInt(matcher.group("alloc"));
             boolean persistent = Boolean.parseBoolean(matcher.group("persistent"));
@@ -231,6 +233,7 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
             assertTrue(init + " should be non negative: " + subj, init >= 0);
             assertTrue(max + " is less then " + init + ": " + subj, max >= init);
             assertTrue(used + " should be non negative: " + subj, used >= 0);
+            assertTrue(data + " should be non negative: " + subj, data >= 0);
             assertTrue(alloc + " is less then " + used + ": " + subj, alloc >= used);
             assertTrue(free + " is not between 0 and 100: " + subj, 0 <= free && free <= 100);
 
@@ -262,21 +265,25 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
      */
     protected void checkOffHeapMetrics(String logOutput) {
         Matcher matcher = Pattern.compile("Off-heap memory " +
-                "\\[used=(?<used>[-.\\d]*).*, free=(?<free>[-.\\d]*).*, allocated=(?<comm>[-.\\d]*).*]")
+                "\\[sizeUsedByData=(?<data>[-.\\d]*).*, used=(?<used>[-.\\d]*).*, " +
+                "free=(?<free>[-.\\d]*).*, allocated=(?<comm>[-.\\d]*).*]")
             .matcher(logOutput);
 
         assertTrue("Off-heap metrics not found in the log.", matcher.find());
 
         String subj = logOutput.substring(matcher.start(), matcher.end());
 
+        assertFalse("\"data\" cannot be empty: " + subj, F.isEmpty(matcher.group("data")));
         assertFalse("\"used\" cannot be empty: " + subj, F.isEmpty(matcher.group("used")));
         assertFalse("\"free\" cannot be empty: " + subj, F.isEmpty(matcher.group("free")));
         assertFalse("\"comm\" cannot be empty: " + subj, F.isEmpty(matcher.group("comm")));
 
+        int data = Integer.parseInt(matcher.group("data"));
         int used = Integer.parseInt(matcher.group("used"));
         int comm = Integer.parseInt(matcher.group("comm"));
         double free = Double.parseDouble(matcher.group("free"));
 
+        assertTrue(data + " should be non negative: " + subj, data >= 0);
         assertTrue(used + " should be non negative: " + subj, used >= 0);
         assertTrue(comm + " is less then " + used + ": " + subj, comm >= used);
         assertTrue(free + " is not between 0 and 100: " + subj, 0 <= free && free <= 100);

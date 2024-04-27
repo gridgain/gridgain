@@ -2345,6 +2345,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         long offHeapUsedSummary = 0;
         long offHeapMaxSummary = 0;
         long offHeapCommSummary = 0;
+        long dataSizeSummary = 0;
         long pdsUsedSummary = 0;
 
         boolean persistenceEnabled = false;
@@ -2359,11 +2360,13 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 long offHeapInit = regCfg.getInitialSize();
                 long offHeapMax = regCfg.getMaxSize();
                 long offHeapComm = region.metrics().getOffHeapSize();
+                long dataSize = region.pageMemory().metrics().getSizeUsedByData();
 
                 long offHeapUsedInMBytes = offHeapUsed / MEGABYTE;
                 long offHeapMaxInMBytes = offHeapMax / MEGABYTE;
                 long offHeapCommInMBytes = offHeapComm / MEGABYTE;
                 long offHeapInitInMBytes = offHeapInit / MEGABYTE;
+                long dataSizeInMBytes = dataSize / MEGABYTE;
 
                 double freeOffHeapPct = offHeapMax > 0 ?
                     ((double)((offHeapMax - offHeapUsed) * 100)) / offHeapMax : -1;
@@ -2371,6 +2374,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 offHeapUsedSummary += offHeapUsed;
                 offHeapMaxSummary += offHeapMax;
                 offHeapCommSummary += offHeapComm;
+                dataSizeSummary += dataSize;
                 loadedPages += pagesCnt;
 
                 String type = "user";
@@ -2393,6 +2397,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                     .a("      ...  ")
                     .a("initCfg=").a(dblFmt.format(offHeapInitInMBytes))
                     .a("MB, maxCfg=").a(dblFmt.format(offHeapMaxInMBytes))
+                    .a("MB, sizeUsedByData=").a(dblFmt.format(dataSizeInMBytes))
                     .a("MB, usedRam=").a(dblFmt.format(offHeapUsedInMBytes))
                     .a("MB, freeRam=").a(dblFmt.format(freeOffHeapPct))
                     .a("%, allocRam=").a(dblFmt.format(offHeapCommInMBytes)).a("MB");
@@ -2417,11 +2422,13 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         if (includeMemoryStatistics) {
             long offHeapUsedInMBytes = offHeapUsedSummary / MEGABYTE;
             long offHeapCommInMBytes = offHeapCommSummary / MEGABYTE;
+            long dataSizeInMBytes = dataSizeSummary / MEGABYTE;
 
             double freeOffHeapPct = offHeapMaxSummary > 0 ?
                 ((double)((offHeapMaxSummary - offHeapUsedSummary) * 100)) / offHeapMaxSummary : -1;
 
-            info.a("    ^-- Off-heap memory [used=").a(dblFmt.format(offHeapUsedInMBytes))
+            info.a("    ^-- Off-heap memory [sizeUsedByData=").a(dblFmt.format(dataSizeInMBytes))
+                .a("MB, used=").a(dblFmt.format(offHeapUsedInMBytes))
                 .a("MB, free=").a(dblFmt.format(freeOffHeapPct))
                 .a("%, allocated=").a(dblFmt.format(offHeapCommInMBytes)).a("MB]").nl()
                 .a("    ^-- Page memory [pages=").a(loadedPages).a("]").nl();
