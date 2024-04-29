@@ -16,17 +16,25 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
+import com.sun.management.HotSpotDiagnosticMXBean;
+import com.sun.management.VMOption;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DUMP_THREADS_ON_FAILURE;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
@@ -37,6 +45,7 @@ import static org.apache.ignite.cache.CacheMode.LOCAL;
 @WithSystemProperty(key = "IGNITE_TTL_EXPIRE_BATCH_SIZE", value = "0") // Disable implicit clearing on cache op.
 @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "100000000") // Disable background cleanup.
 @WithSystemProperty(key = "IGNITE_UNWIND_THROTTLING_TIMEOUT", value = "0") // Disable unwind throttling.
+@WithSystemProperty(key = IGNITE_DUMP_THREADS_ON_FAILURE, value = "false")
 public class CacheIgniteOutOfMemoryExceptionTest extends AbstractCacheIgniteOutOfMemoryExceptionTest {
     /**
      * @throws Exception If failed.
@@ -241,5 +250,45 @@ public class CacheIgniteOutOfMemoryExceptionTest extends AbstractCacheIgniteOutO
         IgniteCache<Integer, Object> cache = grid(0).getOrCreateCache(ccfg);
 
         testContainsFromBackup0(cache, 1);
+    }
+
+    @Test
+    public void testAtomicRemove() throws Exception {
+        CacheConfiguration<Integer, Object> ccfg = cacheConfiguration(ATOMIC, HUGE_ATOMIC_CACHE_NAME, HUGE_DATA_REGION_NAME);
+
+        IgniteCache<Integer, Object> cache = grid(0).getOrCreateCache(ccfg);
+
+        Runtime.getRuntime().gc();
+
+        int blobSize = (int) (512 / 10 * U.MB);
+
+        for (int k = 0; k < 10; k++)
+            cache.put(k, new byte[blobSize]);
+
+        // Let's occupy all free memory.
+        List<Object> unused = new ArrayList<>();
+        IgniteBiTuple<HotSpotDiagnosticMXBean, VMOption> mbean = disableHeapDumpOnOutOfMemoryError();
+        try {
+            while (true) {
+                try {
+                    unused.add(new byte[(int) (50 * U.MB)]);
+                } catch (OutOfMemoryError e) {
+                    // We don't have enough space to allocate a new continous block.
+                    // Let's remove one blob in order to have enough memory to process the request.
+                    unused.remove(unused.size() - 1);
+                    break;
+                }
+            }
+        }
+        finally {
+            restoreHeapDumpOnOutOfMemoryError(mbean);
+        }
+
+        IntStream.range(0, 10)
+            .parallel()
+            .forEach(cache::remove);
+
+        // To avoid JIT effects (removing unused variabales).
+        assertFalse(unused.isEmpty());
     }
 }

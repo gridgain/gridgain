@@ -2257,24 +2257,27 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 cctx.disableTriggeringCacheInterceptorOnConflict()
             );
 
-            boolean condition =
-                !needVal &&
-                !readFromStore &&
-                !transformOp &&
-                !(evt && cctx.events().isRecordable(EVT_CACHE_OBJECT_REMOVED)) &&
-                op == DELETE &&
-                !cctx.queries().enabled() &&
-                cctx.config().getInterceptor() == null &&
-                !conflictResolve;
-
             if (isNear()) {
                 CacheDataRow dataRow = val != null ? new CacheDataRowAdapter(key, val, ver, expireTimeExtras()) : null;
 
                 c.call(dataRow);
             }
             else {
-                if (condition)
+                boolean condition =
+                    !needVal &&
+                    !readFromStore &&
+                    !transformOp &&
+                    !(evt && cctx.events().isRecordable(EVT_CACHE_OBJECT_REMOVED)) &&
+                    op == DELETE &&
+                    !cctx.queries().enabled() &&
+                    cctx.config().getInterceptor() == null &&
+                    !cctx.conflictNeedResolve();
+
+                if (condition) {
+                    // If we don't need to read previous value and don't need to notify about remove,
+                    // then we can optimize removing and do noad the value into heap.
                     c.rowData(CacheDataRowAdapter.RowData.NO_KEY_WITH_VALUE_META_INFO);
+                }
 
                 cctx.offheap().invoke(cctx, key, localPartition(), c);
             }
@@ -6216,17 +6219,20 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             return treeOp;
         }
 
-        private CacheDataRowAdapter.RowData rowData1;
+        /** Mode that is used to find and prepare the old row before this closure is executed. */
+        private CacheDataRowAdapter.RowData rowData;
 
+        /**
+         * Sets a mode that is used to find and prepare the old row before this closure is executed.
+         *
+         * @param rowData Row data.
+         */
         public void rowData(CacheDataRowAdapter.RowData rowData) {
-            rowData1 = rowData;
+            this.rowData = rowData;
         }
 
         @Override public CacheDataRowAdapter.RowData rowData() {
-            if (rowData1 != null)
-                return rowData1;
-            else
-                return IgniteCacheOffheapManager.OffheapInvokeClosure.super.rowData();
+            return rowData != null ? rowData : IgniteCacheOffheapManager.OffheapInvokeClosure.super.rowData();
         }
 
         /** {@inheritDoc} */
@@ -6762,14 +6768,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (treeOp != IgniteTree.OperationType.NOOP) {
                 GridDhtLocalPartition part = entry.localPartition();
 
-                if (rowData() == CacheDataRowAdapter.RowData.NO_KEY_WITH_VALUE_META_INFO) {
-                    newRow = part.dataStore().createRow2(cctx, entry.key(), TombstoneCacheObject.INSTANCE, newVer,
-                        cctx.shared().ttl().tombstoneExpireTime(), oldRow);
-                }
-                else {
-                    newRow = part.dataStore().createRow(cctx, entry.key(), TombstoneCacheObject.INSTANCE, newVer,
-                        cctx.shared().ttl().tombstoneExpireTime(), oldRow);
-                }
+                newRow = part.dataStore().createRow(
+                    cctx,
+                    entry.key(),
+                    TombstoneCacheObject.INSTANCE,
+                    newVer,
+                    cctx.shared().ttl().tombstoneExpireTime(),
+                    oldRow);
 
                 if (oldRow != null && oldRow.link() == newRow.link())
                     treeOp = IgniteTree.OperationType.IN_PLACE;
