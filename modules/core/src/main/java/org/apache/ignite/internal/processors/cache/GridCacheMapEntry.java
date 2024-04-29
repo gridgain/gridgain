@@ -2267,7 +2267,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     !needVal &&
                     !readFromStore &&
                     !transformOp &&
-                    !(evt && cctx.events().isRecordable(EVT_CACHE_OBJECT_REMOVED)) &&
+                    !(evt && (cctx.events().isRecordable(EVT_CACHE_OBJECT_REMOVED) || cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED))) &&
                     op == DELETE &&
                     !cctx.queries().enabled() &&
                     cctx.config().getInterceptor() == null &&
@@ -4518,8 +4518,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     protected void removeValue(GridCacheVersion clearVer) throws IgniteCheckedException {
         assert lock.isHeldByCurrentThread();
 
-        //U.dumpStack(log, ">>>>> removeValue [clearVer=" + clearVer + ", key=" + key +  ']');
-
         cctx.offheap().remove(cctx, key, partition(), localPartition());
     }
 
@@ -5843,7 +5841,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         if (!(row.expireTime() > 0 && row.expireTime() <= U.currentTimeMillis()))
             return false;
 
-        // TODO
         CacheObject expiredVal = row.value();
 
         if (isNear()) {

@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.IntStream;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import com.sun.management.HotSpotDiagnosticMXBean;
@@ -256,14 +255,18 @@ public class CacheIgniteOutOfMemoryExceptionTest extends AbstractCacheIgniteOutO
     public void testAtomicRemove() throws Exception {
         CacheConfiguration<Integer, Object> ccfg = cacheConfiguration(ATOMIC, HUGE_ATOMIC_CACHE_NAME, HUGE_DATA_REGION_NAME);
 
-        IgniteCache<Integer, Object> cache = grid(0).getOrCreateCache(ccfg);
-
-        Runtime.getRuntime().gc();
+        IgniteCache<Integer, Object> cache = grid(0)
+            .getOrCreateCache(ccfg)
+            .withExpiryPolicy(new CreatedExpiryPolicy(new Duration(TimeUnit.SECONDS, 10)));
 
         int blobSize = (int) (512 / 10 * U.MB);
 
-        for (int k = 0; k < 10; k++)
-            cache.put(k, new byte[blobSize]);
+        List<Integer> primaryKeys = primaryKeys(cache, 10, 0);
+
+        Runtime.getRuntime().gc();
+
+        for (Integer key : primaryKeys)
+            cache.put(key, new byte[blobSize]);
 
         // Let's occupy all free memory.
         List<Object> unused = new ArrayList<>();
@@ -284,7 +287,8 @@ public class CacheIgniteOutOfMemoryExceptionTest extends AbstractCacheIgniteOutO
             restoreHeapDumpOnOutOfMemoryError(mbean);
         }
 
-        IntStream.range(0, 10)
+        primaryKeys
+            .stream()
             .parallel()
             .forEach(cache::remove);
 
