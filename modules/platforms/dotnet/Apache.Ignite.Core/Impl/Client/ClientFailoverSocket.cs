@@ -49,7 +49,7 @@ namespace Apache.Ignite.Core.Impl.Client
         private ClientSocket _socket;
 
         /** Current global endpoint index for Round-robin. */
-        private static long _endPointIndex;
+        private static long _endPointIndex = IgniteUtils.ThreadLocalRandom.Next();
 
         /** Config. */
         private readonly IgniteClientConfiguration _config;
