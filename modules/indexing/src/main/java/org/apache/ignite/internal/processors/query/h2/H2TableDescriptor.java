@@ -42,6 +42,10 @@ import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.util.IgniteUtils.jdkVersion;
+import static org.apache.ignite.internal.util.IgniteUtils.majorJavaVersion;
 
 /**
  * Information about table in database.
@@ -243,24 +247,13 @@ public class H2TableDescriptor {
 
         if (type().valueClass() == String.class
             && !idx.distributedConfiguration().isDisableCreateLuceneIndexForStringValueType()) {
-            try {
-                luceneIdx = new GridLuceneIndex(idx.kernalContext(), tbl.cacheName(), type);
-            }
-            catch (IgniteCheckedException e1) {
-                throw new IgniteException(e1);
-            }
+            luceneIdx = createLuceneIndex(tbl.cacheName());
         }
 
         GridQueryIndexDescriptor textIdx = type.textIndex();
 
-        if (textIdx != null) {
-            try {
-                luceneIdx = new GridLuceneIndex(idx.kernalContext(), tbl.cacheName(), type);
-            }
-            catch (IgniteCheckedException e1) {
-                throw new IgniteException(e1);
-            }
-        }
+        if (textIdx != null)
+            luceneIdx = createLuceneIndex(tbl.cacheName());
 
         // Locate index where affinity column is first (if any).
         if (affCol != null) {
@@ -462,6 +455,27 @@ public class H2TableDescriptor {
         }
 
         return null;
+    }
+
+    /**
+     * Create Lucene index.
+     *
+     * @param cacheName Cache name.
+     * @return Index.
+     */
+    private GridLuceneIndex createLuceneIndex(@Nullable String cacheName) {
+        int javaVer = majorJavaVersion(jdkVersion());
+
+        if (javaVer < 11) {
+            throw new IgniteException("Failed to create text index. Use Java 11 or higher.");
+        }
+
+        try {
+            return new GridLuceneIndex(idx.kernalContext(), cacheName, type);
+        }
+        catch (IgniteCheckedException e1) {
+            throw new IgniteException(e1);
+        }
     }
 
     /**
