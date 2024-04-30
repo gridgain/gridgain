@@ -53,35 +53,35 @@ import org.apache.ignite.cache.affinity.AffinityKeyMapped;
 /**
  * Attempt to overcome affinity field problem by marking class field with annotation: not working
  */
-public class AffinityColumnAnnotatedAffinityTest extends AffinityColumnUnannotatedClassTest {
+public class AffinityColumnAnnotatedAffinityTest extends AbstractAffinityColumnPojoClassTest {
 
-    @Override protected Class<?> getKeysCls() {
-        return KeyC.class;
+    @Override protected Class<?> getKeyCls() {
+        return KeyB.class;
     }
 
     @Override protected Object genKey(long id) {
-        return KeyC.from(id);
+        return KeyB.from(id);
     }
 
     /**
      * Key with explicitly marked affinity key
      */
-    static class KeyC {
+    public static class KeyB {
 
-        long id;
+        long userId;
 
         @AffinityKeyMapped
         long groupId;
 
-        static KeyC from(long id) {
-            KeyC instance = new KeyC();
-            instance.id = id;
+        public static KeyB from(long id) {
+            KeyB instance = new KeyB();
+            instance.userId = id;
             instance.groupId = id % 100;
             return instance;
         }
 
         @Override public String toString() {
-            return "KeyC [" + "id=" + id + ", groupId=" + groupId + ']';
+            return "KeyC [" + "id=" + userId + ", groupId=" + groupId + ']';
         }
     }
 

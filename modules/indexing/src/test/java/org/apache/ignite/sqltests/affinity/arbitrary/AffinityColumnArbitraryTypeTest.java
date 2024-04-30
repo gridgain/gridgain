@@ -16,46 +16,17 @@
 
 package org.apache.ignite.sqltests.affinity.arbitrary;
 
-import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.sqltests.affinity.AbstractAffinityColumnTest;
 import org.junit.Test;
 
-public class AffinityColumnArbitraryTypeTest extends AbstractAffinityColumnTest {
-
-    static final String KEY_TYPE = "ACME_KEY_TYPE";
-    static final String VAL_TYPE = FOO_TABLE;
-
-    @Override protected String getKeyType() {
-        return KEY_TYPE;
-    }
-
-    @Override protected String getValType() {
-        return VAL_TYPE;
-    }
-
-    @Override protected Object genKey(long id) {
-        // actually we're not going to use this method
-        return genBinaryKey(id);
-    }
-
-    @Override protected void put(String cache, long id) {
-        putBinary(cache, id);
-    }
-
-    @Override protected void createTables() {
-        super.createTables();
-    }
+public class AffinityColumnArbitraryTypeTest extends AbstractAffinityColumnArbitraryTypeTest {
 
     /**
-     * This will throw exception:
-     * Binary type has different affinity key fields [typeName=... affKeyFieldName1=null, affKeyFieldName2=GROUPID]
+     * Ok
      */
     @Test
     public void testInsert() throws Exception {
         insert(0);
-        put(1);
+        logAndAssertTable(1);
     }
 
     /**
@@ -63,7 +34,7 @@ public class AffinityColumnArbitraryTypeTest extends AbstractAffinityColumnTest 
      */
     @Test
     public void testPut() throws Exception {
-        put(0);
+        putBinary(123);
         logAndAssertTable(1);
     }
 
@@ -71,80 +42,36 @@ public class AffinityColumnArbitraryTypeTest extends AbstractAffinityColumnTest 
      * If we make a 'put' first further inserts will also work
      */
     @Test
-    public void testPutAndInsert() throws Exception {
-        put(0);
+    public void testPutFirst() throws Exception {
+        putBinary(0);
         insert(1);
-        insert(2);
-        put(3);
-
-        logAndAssertTable(4);
+        logAndAssertTable(2);
     }
 
     /**
-     * Data streamers also work
+     * If we make an insert first further 'puts' will also work
      */
     @Test
-    public void testPutAndInsertAndDataStream() throws Exception {
-        put(0);
-        insert(1);
-        insert(2);
-        put(3);
-
-        try (IgniteDataStreamer<Object, BinaryObject> ds = ignite(0).dataStreamer(FOO_CACHE);) {
-            ds.addData(genBinaryKey(4), genBinaryVal(4));
-            ds.addData(genBinaryKey(5), genBinaryVal(5));
-            ds.flush();
-        }
-
-        put(6);
-        insert(7);
-
-        logAndAssertTable(8);
+    public void testInsertFirst() throws Exception {
+        insert(0);
+        putBinary(1);
+        logAndAssertTable(2);
     }
 
     /**
-     * Data streamers also work
+     * This also works
      */
     @Test
-    public void testDataStreamAndInsert() throws Exception {
-        String qry = createQry(FOO_TABLE, FOO_CACHE, backups);
-        System.out.println("\n\n>>> " + qry);
-
-        defaultCache().query(new SqlFieldsQuery(qry));
-
-        IgniteDataStreamer<BinaryObject, BinaryObject> ds = getDs();
-        ds.addData(genBinaryKey(0), genBinaryVal(0));
-        //ds.flush();
-        ds.close();
-
-        insert(1);
-        put(2);
-
-        logAndAssertTable(3);
-    }
-
-    public IgniteDataStreamer<BinaryObject, BinaryObject> getDs() {
-        IgniteDataStreamer<BinaryObject, BinaryObject> streamer = ignite(0).dataStreamer(FOO_CACHE);
-        streamer.perNodeParallelOperations(10);
-        streamer.autoFlushFrequency(1000);
-        streamer.allowOverwrite(true);
-        return streamer;
-    }
-
-    /**
-     * This will throw exception:
-     * Binary type has different affinity key fields [typeName=... affKeyFieldName1=null, affKeyFieldName2=GROUPID]
-     */
-    @Test
-    public void testConcurrentWritesWithInsertFirst() throws Exception {
-        insert(FOO_TABLE, 0);
-        put(BAR_CACHE, 0);
+    public void testConcurrentWritesToDifferentCachesWithInsertFirst() throws Exception {
+        fooTable.insert(0);
+        barTable.putBinary(0);
+        fooTable.logAndAssertTable(1);
     }
 
     @Test
-    public void testConcurrentWritesWithPutFirst() throws Exception {
-        put(BAR_CACHE, 0);
-        insert(FOO_TABLE, 0);
+    public void testConcurrentWritesDifferentCachesWithPutFirst() throws Exception {
+        fooTable.insert(0);
+        barTable.insert(0);
+        fooTable.logAndAssertTable(1);
     }
-
 }

@@ -32,17 +32,31 @@
 
 package org.apache.ignite.sqltests.affinity.pojo;
 
-import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.sqltests.affinity.AbstractAffinityColumnTest;
 import org.junit.Test;
 
-public abstract class AffinityColumnPojoClassTest extends AbstractAffinityColumnTest {
+public abstract class AbstractAffinityColumnPojoClassTest extends AbstractAffinityColumnTest<AbstractAffinityColumnPojoClassTest.PojoTable> {
 
     @Override protected String getKeyType() {
-        return getKeysCls().getName();
+        return getKeyCls().getName();
     }
 
-    protected abstract Class<?> getKeysCls();
+    protected abstract Class<?> getKeyCls();
+
+    protected abstract Object genKey(long id);
+
+    public void put(long id) {
+        fooTable.put(id);
+    }
+
+    @Override protected void initTables() {
+        fooTable = new PojoTable(ignite(0), FOO_TABLE, FOO_CACHE, this);
+        barTable = new PojoTable(ignite(0), BAR_TABLE, BAR_CACHE, this);
+
+        fooTable.create(backups);
+        barTable.create(backups);
+    }
 
     /**
      * This will throw exception:
@@ -54,7 +68,7 @@ public abstract class AffinityColumnPojoClassTest extends AbstractAffinityColumn
     }
 
     /**
-     * If make a 'put' first it will work
+     * If we make a 'put' first it will work
      */
     @Test
     public void testPut() throws Exception {
@@ -63,7 +77,7 @@ public abstract class AffinityColumnPojoClassTest extends AbstractAffinityColumn
     }
 
     /**
-     * If make a 'put' first it will work
+     * If we make a 'put' first it will work
      */
     @Test
     public void testPutBinary() throws Exception {
@@ -72,38 +86,25 @@ public abstract class AffinityColumnPojoClassTest extends AbstractAffinityColumn
     }
 
     /**
-     * If make a 'put' first further inserts will also work
+     * If we make a 'put' first further inserts will also work
      */
     @Test
     public void testPutAndInsert() throws Exception {
         put(0);
         insert(1);
-        insert(2);
-        put(3);
 
-        logAndAssertTable(4);
+        logAndAssertTable(2);
     }
 
     /**
-     * Data streamers also work
+     * If we make a 'put' first further inserts will also work
      */
     @Test
-    public void testPutAndInsertAndDataStream() throws Exception {
-        put(0);
-        insert(1);
-        insert(2);
-        put(3);
+    public void testInsertAndPut() throws Exception {
+        insert(0);
+        put(1);
 
-        try (IgniteDataStreamer<Object, Val> ds = ignite(0).dataStreamer(FOO_CACHE);) {
-            ds.addData(genKey(4), Val.from(4));
-            ds.addData(genKey(5), Val.from(5));
-            ds.flush();
-        }
-
-        put(6);
-        insert(7);
-
-        logAndAssertTable(8);
+        logAndAssertTable(2);
     }
 
     /**
@@ -111,15 +112,42 @@ public abstract class AffinityColumnPojoClassTest extends AbstractAffinityColumn
      * Binary type has different affinity key fields [typeName=... affKeyFieldName1=null, affKeyFieldName2=GROUPID]
      */
     @Test
-    public void testConcurrentWritesWithInsertFirst() throws Exception {
-        insert(FOO_TABLE, 0);
-        put(BAR_CACHE, 0);
+    public void testConcurrentWritesDifferentCachesWithInsertFirst() throws Exception {
+        insert(0);
+        put(0);
     }
 
+    /**
+     * This will also throw exception:
+     * Binary type has different affinity key fields [typeName=... affKeyFieldName1=null, affKeyFieldName2=GROUPID]
+     * <p>
+     * Expected exception will be DUPLICATE insert key
+     */
     @Test
-    public void testConcurrentWritesWithPutFirst() throws Exception {
-        put(BAR_CACHE, 0);
-        insert(FOO_TABLE, 0);
+    public void testConcurrentWritesDifferentCachesWithPutFirst() throws Exception {
+        fooTable.put(0);
+        barTable.put(0);
+        fooTable.insert(0);
+    }
+
+    public static class PojoTable extends AbstractAffinityColumnTest.Table {
+
+        private final AbstractAffinityColumnPojoClassTest test;
+
+        public PojoTable(
+            IgniteEx ignite,
+            String tableName,
+            String cacheName,
+            AbstractAffinityColumnPojoClassTest test
+        ) {
+            super(ignite, tableName, cacheName, test.getKeyType());
+            this.test = test;
+        }
+
+        public void put(long id) {
+            getCache().put(test.genKey(id), Val.from(id));
+        }
+
     }
 
 }

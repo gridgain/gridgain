@@ -22,19 +22,24 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
-public abstract class AbstractAffinityColumnTest extends GridCommonAbstractTest {
+public abstract class AbstractAffinityColumnTest<T extends AbstractAffinityColumnTest.Table> extends GridCommonAbstractTest {
 
     /** Whether node starts with persistence enabled. */
-    protected boolean persistenceEnabled = true;
+    protected boolean persistenceEnabled = false;
 
     protected int gridCnt;
     protected int backups;
+
+    protected T fooTable;
+    protected T barTable;
 
     public AbstractAffinityColumnTest() {
         super();
@@ -47,12 +52,15 @@ public abstract class AbstractAffinityColumnTest extends GridCommonAbstractTest 
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        cfg.setConnectorConfiguration(new ConnectorConfiguration()
+            .setPort(11211));
+
         cfg.setDataStorageConfiguration(new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setPersistenceEnabled(persistenceEnabled)));
 
-        //cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME)
-        //    .setBackups(1));
+        cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME)
+            .setBackups(1));
 
         return cfg;
     }
@@ -71,12 +79,7 @@ public abstract class AbstractAffinityColumnTest extends GridCommonAbstractTest 
 
         ignite(0).active(true);
 
-        createTables();
-    }
-
-    protected void createTables() {
-        ignite(0).getOrCreateCache(DEFAULT_CACHE_NAME);
-        //defaultCache().query(new SqlFieldsQuery(createQry(BAR_TABLE, BAR_CACHE, backups)));
+        initTables();
     }
 
     /** {@inheritDoc} */
@@ -88,136 +91,48 @@ public abstract class AbstractAffinityColumnTest extends GridCommonAbstractTest 
         cleanPersistenceDir();
     }
 
+    protected abstract void initTables();
+
+    protected IgniteCache<?, ?> defaultCache() {
+        return ignite(0).cache(DEFAULT_CACHE_NAME);
+    }
+
     protected static final String FOO_TABLE = "foo_table";
     protected static final String FOO_CACHE = "foo_cache";
 
     protected static final String BAR_TABLE = "bar_table";
     protected static final String BAR_CACHE = "bar_cache";
 
-    protected static final String ID_FIELD = "id";
+    protected static final String ID_FIELD = "userId";
     protected static final String GROUP_ID_FIELD = "groupId";
     protected static final String NAME_FIELD = "name";
     protected static final String FACTOR_FIELD = "factor";
 
-    protected String getAffinityField() {
-        return GROUP_ID_FIELD;
-    }
-
-    protected String createQry(String tableName, String tableCache, int backups) {
-        return "CREATE TABLE " + tableName + "(\n" +
-            "\t" + ID_FIELD + " BIGINT,\n" +
-            "\t" + GROUP_ID_FIELD + " BIGINT,\n" +
-            "\t" + NAME_FIELD + " VARCHAR,\n" +
-            "\t" + FACTOR_FIELD + " BIGINT,\n" +
-            "\tPRIMARY KEY (" + ID_FIELD + ", " + GROUP_ID_FIELD + ")\n" +
-            ") WITH \"\n" +
-            "\tcache_name=" + tableCache + ",\n" +
-            "\tbackups=" + backups + ",\n" +
-            "\tKEY_TYPE=" + getKeyType() + ",\n" +
-            "\tVALUE_TYPE=" + getValType() + ",\n" +
-            "\taffinity_key=" + getAffinityField() + ",\n" +
-            "\ttemplate=partitioned, PK_INLINE_SIZE=100, AFFINITY_INDEX_INLINE_SIZE=100\n" +
-            "\";";
-    }
-
-    protected static SqlFieldsQuery insertQry(String table, long id) {
-        //return new SqlFieldsQuery("INSERT INTO " + table + " (id, name, groupId, factor) VALUES (" + id + ", '" + ("val-" + id) + "', " + id % 100 + ", " + id + ")")
-        return new SqlFieldsQuery("INSERT INTO " + table + "(ID, GROuPID, name, factor) VALUES (?, ?, ?, ?);")
-            .setArgs(id, id % 100, "name-" + id, id)
-            ;
-    }
-
-    protected IgniteCache<Object, Object> defaultCache() {
-        return ignite(0).cache(DEFAULT_CACHE_NAME);
-    }
-
-    protected IgniteCache<Object, Object> tableCache(String cache) {
-        return ignite(0).cache(cache);
-    }
-
     protected abstract String getKeyType();
 
-    protected String getValType() {
-        return Val.class.getName();
-    }
-
-    protected abstract Object genKey(long id);
-
-    protected BinaryObject genBinaryKey(long id) {
-        return ignite(0).binary().builder(getKeyType())
-            .setField("id", id)
-            .setField("groupID", id % 100)
-            .build();
-    }
-
-    protected BinaryObject genBinaryVal(long id) {
-        return ignite(0).binary().builder(getValType())
-            .setField(NAME_FIELD, "val-" + id)
-            .setField(FACTOR_FIELD, id % Val.FACTOR)
-            .build();
-    }
-
-    // Data insertion
-
-    protected void put(String cache, long id) {
-        tableCache(cache).put(genKey(id), Val.from(id));
-    }
-
-    protected void putBinary(String cache, long id) {
-        tableCache(cache).withKeepBinary().put(genBinaryKey(id), genBinaryVal(id));
-    }
-
-    protected void insert(String table, long id) {
-        defaultCache().query(insertQry(table, id)).getAll();
-    }
-
-    protected void logAndAssertTable(String cache, int expectedCount) {
-        AtomicInteger counter = new AtomicInteger(0);
-
-        log("\n");
-        tableCache(cache).withKeepBinary().query(new ScanQuery()).getAll().forEach(l -> {
-            IgniteBiTuple<?, ?> tuple = (IgniteBiTuple<?, ?>)l;
-            log(">>> " + tuple.get1() + ",  " + tuple.get2());
-            counter.incrementAndGet();
-        });
-
-        assertEquals("Entries count doesn't match", expectedCount, counter.get());
-        counter.set(0);
-
-        log("\n");
-        tableCache(cache).withKeepBinary().query(new SqlFieldsQuery("SELECT * FROM " + FOO_TABLE + " ORDER BY id")).getAll().forEach(l -> {
-            log(">>> Row: " + l);
-            counter.incrementAndGet();
-        });
-
-        assertEquals("Rows count doesn't match", expectedCount, counter.get());
-    }
-
-    // Shortcuts
-
     protected void insert(long id) {
-        insert(FOO_TABLE, id);
-    }
-
-    protected void put(long id) {
-        put(FOO_CACHE, id);
+        fooTable.insert(id);
     }
 
     protected void putBinary(long id) {
-        putBinary(FOO_CACHE, id);
+        fooTable.putBinary(id);
     }
 
     protected void logAndAssertTable(int expectedCount) {
-        logAndAssertTable(FOO_CACHE, expectedCount);
+        fooTable.logAndAssertTable(expectedCount);
     }
 
     protected static void log(String msg) {
         System.out.println(msg);
     }
 
+    protected static long random(long ceiling) {
+        return (long)(Math.random() * ceiling);
+    }
+
     protected static class Val {
 
-        static final long FACTOR = 100;
+        static final long FACTOR = 1000;
 
         private String name;
         private long factor;
@@ -248,6 +163,168 @@ public abstract class AbstractAffinityColumnTest extends GridCommonAbstractTest 
         @Override public String toString() {
             return "Val [" + "name='" + name + '\'' + ", factor=" + factor + ']';
         }
+    }
+
+    public static class Table {
+
+        private final IgniteEx ignite;
+
+        private final String tableName;
+        private final String cacheName;
+
+        private final String idField;
+        private final String groupField;
+
+        private final String keyType;
+        private final String valType;
+
+        private final FieldValueGenerator fvGenerator;
+
+        public Table(IgniteEx ignite,
+            String tableName,
+            String cacheName,
+            String idField,
+            String groupField,
+            String keyType,
+            String valType,
+            FieldValueGenerator fvGenerator
+        ) {
+            this.ignite = ignite;
+            this.tableName = tableName;
+            this.cacheName = cacheName;
+            this.idField = idField;
+            this.groupField = groupField;
+            this.keyType = keyType;
+            this.valType = valType;
+            this.fvGenerator = fvGenerator;
+        }
+
+        public Table(IgniteEx ignite, String tableName, String cacheName, String keyType) {
+            this(ignite, tableName, cacheName, ID_FIELD, GROUP_ID_FIELD, keyType, Val.class.getName(), FieldValueGenerator.DEFAULT);
+        }
+
+        //public Table(IgniteEx ignite, String tableName, String cacheName, String keyType) {
+        //    this(ignite, tableName, cacheName, ID_FIELD, GROUP_ID_FIELD, keyType, Val.class.getName(), FieldValueGenerator.DEFAULT);
+        //}
+
+        public IgniteCache<Object, Object> getCache() {
+            return ignite.cache(cacheName);
+        }
+
+        public Table create(int backups) {
+            String qry = "CREATE TABLE IF NOT EXISTS " + tableName + " (\n" +
+                "\t" + idField + " BIGINT,\n" +
+                "\t" + groupField + " BIGINT,\n" +
+                "\t" + NAME_FIELD + " VARCHAR,\n" +
+                "\t" + FACTOR_FIELD + " BIGINT,\n" +
+                "\tPRIMARY KEY (" + idField + ", " + groupField + ")\n" +
+                ") WITH \"\n" +
+                "\tcache_name=" + cacheName + ",\n" +
+                "\tbackups=" + backups + ",\n" +
+                "\tkey_type=" + keyType + ",\n" +
+                "\tvalue_type=" + valType + ",\n" +
+                "\taffinity_key=" + groupField + ",\n" +
+                "\ttemplate=partitioned, PK_INLINE_SIZE=100, AFFINITY_INDEX_INLINE_SIZE=100\n" +
+                "\";";
+
+            log(qry);
+
+            ignite.cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(qry));
+
+            return this;
+        }
+
+        public SqlFieldsQuery insertQry(long id) {
+            return new SqlFieldsQuery("INSERT INTO " + tableName + " (" +
+                idField + ", " +
+                groupField + ", " +
+                NAME_FIELD + ", " +
+                FACTOR_FIELD + "" +
+                ") VALUES (?, ?, ? ,?)"
+            ).setArgs(genId(id), genGroupId(id), "name-" + id, id);
+        }
+
+        public void executeQuery(SqlFieldsQuery qry) {
+            //log(qry.toString());
+            getCache().query(qry).getAll();
+        }
+
+        public long genId(long id) {
+            return fvGenerator.gen(ID_FIELD, id);
+        }
+
+        public long genGroupId(long id) {
+            return fvGenerator.gen(GROUP_ID_FIELD, id);
+        }
+
+        public BinaryObject genBinaryVal(long id) {
+            return ignite.binary().builder(valType)
+                .setField(NAME_FIELD, "val-" + id)
+                .setField(FACTOR_FIELD, id % Val.FACTOR)
+                .build();
+        }
+
+        public BinaryObject genBinaryKey(long id) {
+            // use direct order vanilla field naming by default
+            return genBinaryKey(id, idField, groupField);
+        }
+
+        public BinaryObject genBinaryKey(long id, String firstField, String secondField) {
+            return ignite.binary().builder(keyType)
+                .setField(firstField, fvGenerator.gen(firstField, id))
+                .setField(secondField, fvGenerator.gen(secondField, id))
+                .build();
+        }
+
+        // Data manipulations
+
+        public void putBinary(long id, String firstField, String secondField) {
+            getCache().withKeepBinary().put(genBinaryKey(id, firstField, secondField), genBinaryVal(id));
+        }
+
+        public void putBinary(long id) {
+            getCache().withKeepBinary().put(genBinaryKey(id, ID_FIELD, GROUP_ID_FIELD), genBinaryVal(id));
+        }
+
+        public void insert(long id) {
+            executeQuery(insertQry(id));
+        }
+
+        public void logAndAssertTable(int expectedCount) {
+            AtomicInteger counter = new AtomicInteger(0);
+
+            log("\n");
+            getCache().withKeepBinary().query(new ScanQuery<BinaryObject, BinaryObject>()).getAll().forEach(l -> {
+                IgniteBiTuple<?, ?> tuple = (IgniteBiTuple<?, ?>)l;
+                log(">>> " + tuple.get1() + ",  " + tuple.get2());
+                counter.incrementAndGet();
+            });
+
+            assertEquals("Entries count doesn't match", expectedCount, counter.get());
+            counter.set(0);
+
+            log("");
+            getCache().withKeepBinary().query(new SqlFieldsQuery("SELECT * FROM " + tableName + " ORDER BY " + idField)).getAll().forEach(l -> {
+                log(">>> Row: " + l);
+                counter.incrementAndGet();
+            });
+
+            assertEquals("Rows count doesn't match", expectedCount, counter.get());
+        }
+
+        @Override public String toString() {
+            // For SQL queries
+            return tableName + " " + tableName.substring(0, 3);
+        }
+    }
+
+    @FunctionalInterface
+    public interface FieldValueGenerator {
+
+        FieldValueGenerator DEFAULT = (fieldName, id) -> ID_FIELD.equalsIgnoreCase(fieldName) ? id : id % 100;
+
+        long gen(String field, long id);
+
     }
 
 }

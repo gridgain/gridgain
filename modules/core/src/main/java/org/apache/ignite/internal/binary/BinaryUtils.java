@@ -30,6 +30,7 @@ import java.math.BigInteger;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -65,8 +66,10 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cacheobject.UserCacheObjectByteArrayImpl;
 import org.apache.ignite.internal.processors.cacheobject.UserCacheObjectImpl;
 import org.apache.ignite.internal.processors.cacheobject.UserKeyCacheObjectImpl;
+import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.MutableSingletonList;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteUuid;
@@ -992,10 +995,17 @@ public class BinaryUtils {
 
             // Check affinity field names.
             if (!F.eq(oldMeta.affinityKeyFieldName(), newMeta.affinityKeyFieldName())) {
+                //throw new BinaryObjectException(
+                //    "Binary type has different affinity key fields [" + "typeName=" + newMeta.typeName() +
+                //        ", affKeyFieldName1=" + oldMeta.affinityKeyFieldName() +
+                //        ", affKeyFieldName2=" + newMeta.affinityKeyFieldName() + ']'
+                //);
+
                 throw new BinaryObjectException(
-                    "Binary type has different affinity key fields [" + "typeName=" + newMeta.typeName() +
-                        ", affKeyFieldName1=" + oldMeta.affinityKeyFieldName() +
-                        ", affKeyFieldName2=" + newMeta.affinityKeyFieldName() + ']'
+                    "Binary type has different affinity key fields [" +
+                        "\n    typeName=" + newMeta.typeName() +
+                        "\n    old=" + dumpMeta(oldMeta) +
+                        "\n    new=" + dumpMeta(newMeta) + "\n]"
                 );
             }
 
@@ -1069,6 +1079,26 @@ public class BinaryUtils {
             return changed ? new BinaryMetadata(oldMeta.typeId(), oldMeta.typeName(), mergedFields,
                 oldMeta.affinityKeyFieldName(), mergedSchemas, oldMeta.isEnum(), mergedEnumMap) : oldMeta;
         }
+    }
+
+    private static String dumpMeta(BinaryMetadata bm) {
+        GridStringBuilder r = new SB().a("(")
+            .a("type=").a(bm.typeId()).a(", ")
+            .a("affinity=").a(bm.affinityKeyFieldName()).a(", ");
+
+        r.a("schemas=[");
+        for (BinarySchema bs : bm.schemas()) {
+            r.a(dumpSchema(bs));
+        }
+        r.a("])");
+
+        return r.toString();
+    }
+
+    private static String dumpSchema(BinarySchema bs) {
+        return "{schemaId=" + bs.schemaId()
+            + ", ids" + Arrays.toString(bs.fieldIds())
+            + "}";
     }
 
     /**

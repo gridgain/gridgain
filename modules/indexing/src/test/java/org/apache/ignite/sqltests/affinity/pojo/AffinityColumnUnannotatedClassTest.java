@@ -32,33 +32,33 @@
 
 package org.apache.ignite.sqltests.affinity.pojo;
 
-public class AffinityColumnUnannotatedClassTest extends AffinityColumnPojoClassTest {
+public class AffinityColumnUnannotatedClassTest extends AbstractAffinityColumnPojoClassTest {
 
     @Override protected Object genKey(long id) {
         return KeyA.from(id);
     }
 
-    @Override protected Class<?> getKeysCls() {
+    @Override protected Class<?> getKeyCls() {
         return KeyA.class;
     }
 
     /**
      * Key without explicitly marked affinity key
      */
-    static class KeyA {
+    public static class KeyA {
 
-        long id;
+        long userId;
         long groupId;
 
         static KeyA from(long id) {
             KeyA instance = new KeyA();
-            instance.id = id;
+            instance.userId = id;
             instance.groupId = id % 100;
             return instance;
         }
 
         @Override public String toString() {
-            return "KeyA [" + "id=" + id + ", groupId=" + groupId + ']';
+            return "KeyA [" + "id=" + userId + ", groupId=" + groupId + ']';
         }
 
     }

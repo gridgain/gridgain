@@ -55,34 +55,34 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
  * Attempt to overcome affinity field problem by marking class field with annotation
  * and setting explicit column name: still not working
  */
-public class AffinityColumnAnnotatedAffinityAndFieldsTest extends AffinityColumnUnannotatedClassTest {
+public class AffinityColumnAnnotatedAffinityAndFieldsTest extends AbstractAffinityColumnPojoClassTest {
 
-    @Override protected Class<?> getKeysCls() {
-        return KeyD.class;
+    @Override protected Class<?> getKeyCls() {
+        return KeyC.class;
     }
 
     @Override protected Object genKey(long id) {
-        return KeyD.from(id);
+        return KeyC.from(id);
     }
 
-    static class KeyD {
+    static class KeyC {
 
         @QuerySqlField(index = true)
-        long id;
+        long userId;
 
         @AffinityKeyMapped
-        @QuerySqlField(index = true, name = "GROUP_ID_IDX")
+        @QuerySqlField(index = true, name = "GROUPID")
         long groupId;
 
-        static KeyD from(long id) {
-            KeyD instance = new KeyD();
-            instance.id = id;
+        static KeyC from(long id) {
+            KeyC instance = new KeyC();
+            instance.userId = id;
             instance.groupId = id % 100;
             return instance;
         }
 
         @Override public String toString() {
-            return "KeyB [" + "id=" + id + ", groupId=" + groupId + ']';
+            return "KeyB [" + "id=" + userId + ", groupId=" + groupId + ']';
         }
 
     }
