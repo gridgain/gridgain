@@ -38,6 +38,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.Factory;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.pagemem.FullPageId;
@@ -94,7 +95,6 @@ import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccMinSearc
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccSnapshotSearchRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccTreeClosure;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.PartitionLogTree;
-import org.apache.ignite.internal.Factory;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLog;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogImpl;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogRow;
@@ -2008,8 +2008,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             CacheDataRow oldRow
         ) throws IgniteCheckedException {
             assert oldRow != null : "Old row is null for inplace ttl update [cache=" + cctx.name() + ']';
-            assert !cctx.queries().enabled() :
-                "In-place ttl update is not supported for caches with enabled SQL [cache=" + cctx.name() + ", row=" + oldRow + ']';
             assert !grp.mvccEnabled() :
                 "In-place ttl update is not supported for MVCC caches [cache=" + cctx.name() + ", row=" + oldRow + ']';
             assert cctx.cacheObjectContext().compressionStrategy() == null :
@@ -3104,6 +3102,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         ) throws IgniteCheckedException {
             boolean oldTombstone = oldRow != null && oldRow.tombstone();
             boolean oldVal = oldRow != null && !oldRow.tombstone();
+            boolean oldShadow = oldRow != null && oldRow.shadow();
 
             if (oldVal) {
                 clearPendingEntries(cctx, oldRow);
@@ -3113,7 +3112,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             GridCacheQueryManager qryMgr = cctx.queries();
 
-            if (qryMgr.enabled())
+            if (qryMgr.enabled() && !oldShadow)
                 qryMgr.remove(key, oldVal ? oldRow : null);
 
             if (oldTombstone) {
