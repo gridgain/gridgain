@@ -18,6 +18,7 @@ package org.apache.ignite.internal.visor.checker;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.verify.checker.tasks.PartitionReconciliationProcessorTask.ReconciliationSessionId;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
@@ -65,13 +66,7 @@ public class VisorPartitionReconciliationCancelTask extends VisorOneNodeTask<Voi
 
         /** {@inheritDoc} */
         @Override protected Void run(@Nullable Void arg) throws IgniteException {
-            ignite.compute()
-                .broadcastAsync(
-                    () -> ignite.context()
-                        .diagnostic()
-                        .reconciliationExecutionContext()
-                        .registerSession(STOP_SESSION_ID, 1))
-                .get();
+            ignite.compute().broadcastAsync(new ReconciliationSessionId(STOP_SESSION_ID, 1)).get();
 
             return null;
         }
