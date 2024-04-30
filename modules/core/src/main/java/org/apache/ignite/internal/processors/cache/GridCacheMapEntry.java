@@ -2264,14 +2264,15 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
             else {
                 boolean condition =
+                    op == DELETE &&
                     !needVal &&
                     !readFromStore &&
                     !transformOp &&
                     !(evt && (cctx.events().isRecordable(EVT_CACHE_OBJECT_REMOVED) || cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED))) &&
-                    op == DELETE &&
                     !cctx.queries().enabled() &&
                     cctx.config().getInterceptor() == null &&
-                    !cctx.conflictNeedResolve();
+                    !cctx.conflictNeedResolve() &&
+                    cctx.cacheObjectContext().compressionStrategy() == null;
 
                 if (condition) {
                     // If we don't need to read previous value and don't need to notify about remove,
