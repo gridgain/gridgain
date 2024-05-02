@@ -68,6 +68,13 @@ public interface CacheDataRow extends MvccUpdateVersionAware, CacheSearchRow, St
      */
     public boolean tombstone();
 
+    /**
+     * @return {@code true} if the row represents a shadow (a placeholder for a cache object and provides its type and size only).
+     */
+    public default boolean shadow() {
+        return false;
+    }
+
     /** {@inheritDoc} */
     @Override public default IOVersions<? extends AbstractDataPageIO> ioVersions() {
         return DataPageIO.VERSIONS;

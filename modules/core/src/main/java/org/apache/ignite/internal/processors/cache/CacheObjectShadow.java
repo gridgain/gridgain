@@ -22,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.util.IgniteUtils.EMPTY_BYTES;
 
 /**
- * This class represents a place holder for a cache object and provides its type only.
+ * This class represents a placeholder for a cache object and provides its type and size only.
  * The instances of this class should not be used in any other context except the reading from data tree when only the type is needed.
  */
 public class CacheObjectShadow extends CacheObjectAdapter {

@@ -946,6 +946,11 @@ public class CacheDataRowAdapter implements CacheDataRow {
     }
 
     /** {@inheritDoc} */
+    @Override public boolean shadow() {
+        return value() instanceof CacheObjectShadow;
+    }
+
+    /** {@inheritDoc} */
     @Override public int hash() {
         throw new UnsupportedOperationException();
     }
