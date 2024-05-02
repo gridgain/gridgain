@@ -830,6 +830,7 @@
                             <stylesheetfile>
                                 ${project.basedir}/${project.parent.relativePath}/../assembly/docfiles/css/stylesheet.css
                             </stylesheetfile>
+                            <source>1.8</source>
                         </configuration>
                     </execution>
                 </executions>
@@ -874,12 +875,12 @@
 
         <profile>
             <id>java-9+</id>
-            <activation>
-                <jdk>[1.9,15)</jdk>
-            </activation>
+<!--            <activation>-->
+<!--                <jdk>[1.9,15)</jdk>-->
+<!--            </activation>-->
             <properties>
                 <maven.compiler.source>1.8</maven.compiler.source>
-                <maven.compiler.target>11</maven.compiler.target>
+                <maven.compiler.target>1.8</maven.compiler.target>
             </properties>
             <dependencies/>
             <build>
