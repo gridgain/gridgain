@@ -294,5 +294,8 @@ public class CacheIgniteOutOfMemoryExceptionTest extends AbstractCacheIgniteOutO
 
         // To avoid JIT effects (removing unused variabales).
         assertFalse(unused.isEmpty());
+
+        assertEquals(0, cache.size());
+        assertFalse(cache.iterator().hasNext());
     }
 }

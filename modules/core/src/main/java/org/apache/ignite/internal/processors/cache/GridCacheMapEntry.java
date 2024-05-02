@@ -2276,7 +2276,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 if (condition) {
                     // If we don't need to read previous value and don't need to notify about remove,
-                    // then we can optimize removing and do noad the value into heap.
+                    // then we can optimize removing and do not load the value into heap.
                     c.rowData(CacheDataRowAdapter.RowData.NO_KEY_WITH_VALUE_META_INFO);
                 }
 
