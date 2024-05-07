@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.util.Arrays;
 import java.util.HashSet;
 import javax.cache.Cache;
 import org.apache.ignite.Ignite;
@@ -36,6 +35,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -72,17 +72,20 @@ public class IgniteCacheFullTextQueryRebuildSelfTest extends GridCommonAbstractT
         cache.setCacheMode(PARTITIONED);
         cache.setBackups(1);
 
-        cache.setQueryEntities(singleton(
+        cache.setQueryEntities(asList(
             new QueryEntity()
                 .setKeyType(AffinityKey.class.getName())
                 .setValueType(IndexedEntity.class.getName())
-                .setKeyFields(new HashSet<>(Arrays.asList("key", "affKey")))
+                .setKeyFields(new HashSet<>(asList("key", "affKey")))
                 .addQueryField("key", Integer.class.getName(), null)
                 .addQueryField("affKey", Integer.class.getName(), null)
                 .addQueryField("val", String.class.getName(), null)
                 .setIndexes(singleton(
                     new QueryIndex("val", QueryIndexType.FULLTEXT))
-                )
+                ),
+            new QueryEntity()
+                .setKeyType(Long.class.getName())
+                .setValueType(Integer.class.getName())
         ));
 
         cfg.setCacheConfiguration(cache);
