@@ -715,6 +715,11 @@ public class IgniteCacheProcessProxy<K, V> implements IgniteCache<K, V> {
         throw new UnsupportedOperationException("Method should be supported.");
     }
 
+    /** {@inheritDoc} */
+    @Override public IgniteFuture<Boolean> touchAsync(K key) {
+        throw new UnsupportedOperationException("Method should be supported.");
+    }
+
     /**
      *
      */

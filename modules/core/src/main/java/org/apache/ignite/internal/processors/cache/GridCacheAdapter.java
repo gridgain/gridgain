@@ -4724,6 +4724,16 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
     /** {@inheritDoc} */
     @Override public boolean touch(K key) {
+        try {
+            return touchAsync(key).get();
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteInternalFuture<Boolean> touchAsync(K key) {
         A.notNull(key, "key");
 
         // TODO https://ggsystems.atlassian.net/browse/GG-38173
@@ -4734,20 +4744,15 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                     " cache [name=" + name() + ']');
         }
 
-        try {
-            return ((IgniteInternalFuture<Boolean>)getAsync(
-                key,
-                /*skip tx*/false,
-                /*subj id*/null,
-                /*task name*/null,
-                /*deserialize binary*/false,
-                /*skip values*/true,
-                /*needVer*/ false,
-                /*touchTtl*/true)).get();
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
+        return ((IgniteInternalFuture<Boolean>)getAsync(
+            key,
+            /*skip tx*/false,
+            /*subj id*/null,
+            /*task name*/null,
+            /*deserialize binary*/false,
+            /*skip values*/true,
+            /*needVer*/ false,
+            /*touchTtl*/true));
     }
 
     /**
