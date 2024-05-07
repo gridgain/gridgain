@@ -222,6 +222,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MVCC_TX_SIZE_CACHING_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.TX_SIZE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.checkActive;
@@ -2208,9 +2209,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         String cacheName = cctx.name();
 
-        Collection<H2TableDescriptor> descriptors = schemaMgr.tablesForCache(cacheName);
+        Collection<H2TableDescriptor> descriptors = schemaMgr.tablesForCache(cacheName).stream()
+            .filter(descriptor -> nonNull(descriptor.luceneIndex()))
+            .collect(toList());
 
-        if (descriptors.stream().noneMatch(tblDesc -> nonNull(tblDesc.luceneIndex())))
+        if (descriptors.isEmpty())
             return null;
 
         GridFutureAdapter<Void> rebuildCacheIdxFut = new GridFutureAdapter<>();
