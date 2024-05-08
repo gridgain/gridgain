@@ -57,7 +57,6 @@ import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
@@ -1189,18 +1188,9 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
         for (final Integer key : keys) {
             log.info("Update duration on access, key: " + key);
 
-            if (async) {
-                IgniteFuture<Boolean> fut = cache.touchAsync(key);
+            boolean updated = async ? cache.touchAsync(key).get(10, SECONDS) : cache.touch(key);
 
-                assertTrue("touchAsync was not completed in 1 sec.", waitForCondition(() -> fut.isDone(), 1_000));
-
-                assertTrue("Time to live values was not updated.", fut.get());
-            }
-            else {
-                boolean updated = cache.touch(key);
-
-                assertTrue("Time to live values was not updated.", updated);
-            }
+            assertTrue("Time to live values was not updated.", updated);
 
             // Small delay is added in order to prevent race based on IGNITE-305.
             doSleep(500);
