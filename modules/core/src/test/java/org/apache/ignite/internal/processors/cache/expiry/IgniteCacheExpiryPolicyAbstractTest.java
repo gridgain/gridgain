@@ -58,7 +58,6 @@ import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.jetbrains.annotations.Nullable;
@@ -71,6 +70,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
@@ -260,7 +260,7 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
 
         cache.get(key); // Access using get.
 
-        GridTestUtils.waitForCondition(new GridAbsPredicate() {
+        waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
                 return !cache.iterator().hasNext();
             }
@@ -272,7 +272,7 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
 
         assertNotNull(cache.iterator().next()); // Access using iterator.
 
-        GridTestUtils.waitForCondition(new GridAbsPredicate() {
+        waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
                 return !cache.iterator().hasNext();
             }
@@ -1143,6 +1143,20 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
      */
     @Test
     public void testTouch() throws Exception {
+        testTouch0(false);
+    }
+
+    /**
+     * Tests IgniteCache.touchAsync(key) method.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testTouchAsync() throws Exception {
+        testTouch0(true);
+    }
+
+    public void testTouch0(boolean async) throws Exception {
         // TODO https://ggsystems.atlassian.net/browse/GG-38173
         if (atomicityMode() != ATOMIC || cacheMode() == LOCAL)
             return;
@@ -1174,9 +1188,9 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
         for (final Integer key : keys) {
             log.info("Update duration on access, key: " + key);
 
-            boolean updated = cache.touch(key);
+            boolean updated = async ? cache.touchAsync(key).get(10, SECONDS) : cache.touch(key);
 
-            assertTrue(updated);
+            assertTrue("Time to live values was not updated.", updated);
 
             // Small delay is added in order to prevent race based on IGNITE-305.
             doSleep(500);
@@ -1319,7 +1333,7 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
      * @throws Exception If failed.
      */
     private void waitExpired(final Collection<Integer> keys) throws Exception {
-        GridTestUtils.waitForCondition(new GridAbsPredicate() {
+        waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
                 for (int i = 0; i < gridCount(); i++) {
                     for (Integer key : keys) {
