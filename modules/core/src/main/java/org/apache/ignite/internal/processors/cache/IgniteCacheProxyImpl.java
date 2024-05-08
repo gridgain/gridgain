@@ -2232,6 +2232,13 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
     }
 
     /** {@inheritDoc} */
+    @Override public IgniteFuture<Boolean> touchAsync(K key) {
+        IgniteInternalCache<K, V> delegate = getDelegateSafe();
+
+        return createFuture(delegate.touchAsync(key));
+    }
+
+    /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         out.writeObject(ctx);
 

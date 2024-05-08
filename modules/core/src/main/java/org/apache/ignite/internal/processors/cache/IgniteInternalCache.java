@@ -1864,4 +1864,15 @@ public interface IgniteInternalCache<K, V> extends Iterable<Cache.Entry<K, V>> {
      * @see IgniteCache#withExpiryPolicy(ExpiryPolicy)
      */
     public boolean touch(K key);
+
+    /**
+     * Updates the time to live value for the given {@code key}.
+     *
+     * @param key The key whose associated ttl value is to be updated in accrordance with the specified {@link ExpiryPolicy}.
+     * @return A future representing a pending time to live update. The returned future is completed with {@code true}
+     *          if the ttl value was updated, {@code false} if the key is not present in the cache.
+     * @throws NullPointerException If key is {@code null}.
+     * @see IgniteCache#withExpiryPolicy(ExpiryPolicy)
+     */
+    public IgniteInternalFuture<Boolean> touchAsync(K key);
 }
