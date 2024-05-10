@@ -2230,7 +2230,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         assert prevIntRebFut == null;
 
         // Rebuild text indexes for tables in cache.
-        SchemaIndexCacheVisitorClosure clo = new TextIndexRebuildClosure(ctx.query(), cctx, descriptors);
+        SchemaIndexCacheVisitorClosure clo = new LuceneIndexRebuildClosure(ctx.query(), cctx, descriptors);
 
         rebuildCacheIdxFut.listen(fut -> {
             Throwable err = fut.error();

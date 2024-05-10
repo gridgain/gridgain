@@ -20,8 +20,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
@@ -34,7 +34,8 @@ import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneIndex;
+import org.apache.ignite.internal.processors.query.h2.opt.LuceneIndex;
+import org.apache.ignite.internal.processors.query.h2.opt.LuceneIndexFactory;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.index.Index;
@@ -42,6 +43,9 @@ import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import static java.util.Objects.nonNull;
 
 /**
  * Information about table in database.
@@ -75,7 +79,7 @@ public class H2TableDescriptor {
     private GridH2Table tbl;
 
     /** */
-    private GridLuceneIndex luceneIdx;
+    private LuceneIndex luceneIdx;
 
     /** */
     private H2PkHashIndex pkHashIdx;
@@ -190,7 +194,7 @@ public class H2TableDescriptor {
     /**
      * @return Lucene index.
      */
-    GridLuceneIndex luceneIndex() {
+    LuceneIndex luceneIndex() {
         return luceneIdx;
     }
 
@@ -204,9 +208,10 @@ public class H2TableDescriptor {
      * indexes. All indexes must be subtypes of {@link H2TreeIndexBase}.
      *
      * @param tbl Table to create indexes for.
+     * @param log Logger.
      * @return List of indexes.
      */
-    public ArrayList<Index> createSystemIndexes(GridH2Table tbl) {
+    public ArrayList<Index> createSystemIndexes(GridH2Table tbl, IgniteLogger log) {
         ArrayList<Index> idxs = new ArrayList<>();
 
         IndexColumn keyCol = tbl.indexColumn(QueryUtils.KEY_COL, SortOrder.ASCENDING);
@@ -243,24 +248,13 @@ public class H2TableDescriptor {
 
         if (type().valueClass() == String.class
             && !idx.distributedConfiguration().isDisableCreateLuceneIndexForStringValueType()) {
-            try {
-                luceneIdx = new GridLuceneIndex(idx.kernalContext(), tbl.cacheName(), type);
-            }
-            catch (IgniteCheckedException e1) {
-                throw new IgniteException(e1);
-            }
+            luceneIdx = createLuceneIndex(tbl.cacheName(), log);
         }
 
         GridQueryIndexDescriptor textIdx = type.textIndex();
 
-        if (textIdx != null) {
-            try {
-                luceneIdx = new GridLuceneIndex(idx.kernalContext(), tbl.cacheName(), type);
-            }
-            catch (IgniteCheckedException e1) {
-                throw new IgniteException(e1);
-            }
-        }
+        if (textIdx != null)
+            this.luceneIdx = createLuceneIndex(tbl.cacheName(), log);
 
         // Locate index where affinity column is first (if any).
         if (affCol != null) {
@@ -462,6 +456,29 @@ public class H2TableDescriptor {
         }
 
         return null;
+    }
+
+    /**
+     * Create Lucene index.
+     *
+     * @param cacheName Cache name.
+     * @param log Logger.
+     * @return Index.
+     */
+    private LuceneIndex createLuceneIndex(@Nullable String cacheName, IgniteLogger log) {
+        LuceneIndexFactory[] ext = idx.kernalContext().plugins().extensions(LuceneIndexFactory.class);
+
+        if (nonNull(ext)) {
+            if (ext.length > 1)
+                log.info("More than one LuceneIndexFactory extension is defined.");
+
+            LuceneIndexFactory factory = ext[0];
+
+            return factory.create(idx.kernalContext(), cacheName, type);
+        }
+
+        throw new IgniteException("Failed to create index because lucene module is disabled (consider adding module " +
+            "gridgain-lucene to classpath or moving it from 'optional' to 'libs' folder).");
     }
 
     /**
