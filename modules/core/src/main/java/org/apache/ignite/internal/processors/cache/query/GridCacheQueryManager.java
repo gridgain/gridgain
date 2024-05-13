@@ -142,6 +142,7 @@ import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryTy
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL_FIELDS;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.TEXT;
+import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.VECTOR;
 
 /**
  * Query and index manager.
@@ -627,6 +628,28 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                     }
 
                     iter = qryProc.queryText(cacheName, qry.clause(), qry.queryClassName(), filter(qry));
+
+                    break;
+
+                case VECTOR:
+                    if (cctx.events().isRecordable(EVT_CACHE_QUERY_EXECUTED)) {
+                        cctx.gridEvents().record(new CacheQueryExecutedEvent<>(
+                            cctx.localNode(),
+                            "Vector query executed.",
+                            EVT_CACHE_QUERY_EXECUTED,
+                            CacheQueryType.VECTOR.name(),
+                            cctx.name(),
+                            qry.queryClassName(),
+                            qry.clause(),
+                            null,
+                            null,
+                            null,
+                            subjId,
+                            taskName));
+                    }
+
+                    iter = qryProc.queryVector(cacheName, qry.fieldName(), qry.clause(), qry.queryVector(),
+                        qry.queryClassName(), filter(qry));
 
                     break;
 
@@ -2758,6 +2781,8 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
             null,
             null,
             null,
+            null,
+            null,
             false,
             keepBinary,
             null);
@@ -2848,7 +2873,38 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
         return new GridCacheQueryAdapter<>(cctx,
             TEXT,
             clsName,
+            null,
             search,
+            null,
+            null,
+            null,
+            false,
+            keepBinary,
+            null);
+    }
+
+
+    /**
+     * Creates user's vector query, queried class, and query clause. For more information refer to {@link CacheQuery}
+     * documentation.
+     *
+     * @param clsName Query class name.
+     * @param search Search clause.
+     * @param keepBinary Keep binary flag.
+     * @return Created query.
+     */
+    public CacheQuery<Map.Entry<K, V>> createVectorQuery(String clsName, String field, String search, float[] vector,
+        boolean keepBinary) {
+        A.notNull("clsName", clsName);
+        A.notNull("field", field);
+        A.notNull("search", search);
+
+        return new GridCacheQueryAdapter<>(cctx,
+            VECTOR,
+            clsName,
+            field,
+            search,
+            vector,
             null,
             null,
             false,

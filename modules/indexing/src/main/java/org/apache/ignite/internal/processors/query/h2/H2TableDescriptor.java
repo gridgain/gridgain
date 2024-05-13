@@ -251,9 +251,7 @@ public class H2TableDescriptor {
             luceneIdx = createLuceneIndex(tbl.cacheName(), log);
         }
 
-        GridQueryIndexDescriptor textIdx = type.textIndex();
-
-        if (textIdx != null)
+        if (type.textIndex() != null || type.vectorIndex() != null)
             this.luceneIdx = createLuceneIndex(tbl.cacheName(), log);
 
         // Locate index where affinity column is first (if any).
@@ -477,7 +475,7 @@ public class H2TableDescriptor {
             return factory.create(idx.kernalContext(), cacheName, type);
         }
 
-        throw new IgniteException("Failed to create index because lucene module is disabled (consider adding module " +
+        throw new IgniteException("Failed to create index because Lucene module is disabled (consider adding module " +
             "gridgain-lucene to classpath or moving it from 'optional' to 'libs' folder).");
     }
 

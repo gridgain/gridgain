@@ -97,6 +97,13 @@ public interface GridQueryTypeDescriptor {
     public GridQueryIndexDescriptor textIndex();
 
     /**
+     * Get vector index for this type (if any).
+     *
+     * @return Vector index or {@code null}.
+     */
+    public GridQueryIndexDescriptor vectorIndex();
+
+    /**
      * Gets value class.
      *
      * @return Value class.
@@ -210,12 +217,12 @@ public interface GridQueryTypeDescriptor {
      * @param keys Primary keys.
      */
     public void primaryKeyFields(Set<String> keys);
-    
+
     /**
      * @return {@code true} if absent PK parts should be filled with defaults, {@code false} otherwise.
      */
     public boolean fillAbsentPKsWithDefaults();
-    
+
     /**
      * Sets up fillAbsentPKsWithDefaults flag.
      *

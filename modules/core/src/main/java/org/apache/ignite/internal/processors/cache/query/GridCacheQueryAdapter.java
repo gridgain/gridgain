@@ -143,6 +143,12 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
     /** */
     private Boolean dataPageScanEnabled;
 
+    /** Field name in case of vector query. */
+    private final String fieldName;
+
+    /** Vector for query in case of vector query. */
+    private final float[] qryVector;
+
     /**
      * @param cctx Context.
      * @param type Query type.
@@ -180,6 +186,8 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         incMeta = false;
         clsName = null;
         clause = null;
+        fieldName = null;
+        qryVector = null;
     }
 
     /**
@@ -222,12 +230,15 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         incMeta = false;
         clsName = null;
         clause = null;
+        fieldName = null;
+        qryVector = null;
     }
 
     /**
      * @param cctx Context.
      * @param type Query type.
      * @param clsName Class name.
+     * @param fieldName Field name.
      * @param clause Clause.
      * @param filter Scan filter.
      * @param part Partition.
@@ -239,7 +250,9 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         GridCacheContext<?, ?> cctx,
         GridCacheQueryType type,
         @Nullable String clsName,
+        @Nullable String fieldName,
         @Nullable String clause,
+        @Nullable float[] qryVector,
         @Nullable IgniteBiPredicate<Object, Object> filter,
         @Nullable Integer part,
         boolean incMeta,
@@ -253,7 +266,9 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         this.cctx = cctx;
         this.type = type;
         this.clsName = clsName;
+        this.fieldName = fieldName;
         this.clause = clause;
+        this.qryVector = qryVector;
         this.filter = filter;
         this.part = part;
         this.incMeta = incMeta;
@@ -321,6 +336,23 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         this.taskHash = taskHash;
         this.mvccSnapshot = mvccSnapshot;
         this.dataPageScanEnabled = dataPageScanEnabled;
+
+        fieldName = null;
+        qryVector = null;
+    }
+
+    /**
+     * @return Field name in case of vector query.
+     */
+    public String fieldName() {
+        return fieldName;
+    }
+
+    /**
+     * @return Field name in case of vector query.
+     */
+    public float[] queryVector() {
+        return qryVector;
     }
 
     /**

@@ -200,7 +200,7 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
                 return cache.sizeAsync(new CachePeekMode[] {}).get() - 1;
             }
 
-            CacheQuery qry = new GridCacheQueryAdapter<>(ctx, SET, null, null,
+            CacheQuery qry = new GridCacheQueryAdapter<>(ctx, SET, null, null, null, null,
                 new GridSetQueryPredicate<>(id, collocated), collocated ? hdrPart : null,
                 false, false, null);
 
@@ -475,7 +475,7 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
      */
     @SuppressWarnings("unchecked")
     private WeakReferenceCloseableIterator<T> sharedCacheIterator(boolean keepBinary) throws IgniteCheckedException {
-        CacheQuery qry = new GridCacheQueryAdapter<>(ctx, SET, null, null,
+        CacheQuery qry = new GridCacheQueryAdapter<>(ctx, SET, null, null, null, null,
             new GridSetQueryPredicate<>(id, collocated), collocated ? hdrPart : null,
             false, keepBinary, null);
 

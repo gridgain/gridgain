@@ -2641,11 +2641,11 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             // Therefore, we additionally calculate typeId based on typeName from metadata.
             if (val instanceof BinaryObjectImpl) {
                 BinaryType metadata = ctx.cacheObjects().metadata(typeId);
-    
+
                 if (metadata != null)
                     typeId = ((BinaryObjectImpl) val).context().typeId(metadata.typeName());
             }
-            
+
             id = new QueryTypeIdKey(cacheName, typeId);
         }
         else {
@@ -3450,6 +3450,42 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                         String schemaName = idx.schema(cacheName);
 
                         return idx.queryLocalText(schemaName, cacheName, clause, typeName, filters);
+                    }
+                }, true);
+        }
+        finally {
+            busyLock.leaveBusy();
+        }
+    }
+
+    /**
+     * @param cacheName Cache name.
+     * @param field Field name.
+     * @param qry Clause.
+     * @param resType Result type.
+     * @param filters Key and value filters.
+     * @param <K> Key type.
+     * @param <V> Value type.
+     * @return Key/value rows.
+     * @throws IgniteCheckedException If failed.
+     */
+    public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryVector(String cacheName, String field, String qry,
+        float[] qryVector, String resType, IndexingQueryFilter filters) throws IgniteCheckedException {
+        checkEnabled();
+
+        if (!busyLock.enterBusy())
+            throw new IllegalStateException("Failed to execute query (grid is stopping).");
+
+        try {
+            final GridCacheContext<?, ?> cctx = ctx.cache().internalCache(cacheName).context();
+
+            return executeQuery(GridCacheQueryType.VECTOR, qry, cctx,
+                new IgniteOutClosureX<GridCloseableIterator<IgniteBiTuple<K, V>>>() {
+                    @Override public GridCloseableIterator<IgniteBiTuple<K, V>> applyx() throws IgniteCheckedException {
+                        String typeName = typeName(cacheName, resType);
+                        String schemaName = idx.schema(cacheName);
+
+                        return idx.queryLocalVector(schemaName, cacheName, field, qry, qryVector, typeName, filters);
                     }
                 }, true);
         }

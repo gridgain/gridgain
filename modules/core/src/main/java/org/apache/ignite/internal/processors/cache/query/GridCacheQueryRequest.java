@@ -146,6 +146,9 @@ public class GridCacheQueryRequest extends GridCacheIdMessage implements GridCac
     /** */
     private byte flags;
 
+    /** */
+    private String fieldName;
+
     /**
      * Required by {@link Externalizable}
      */
@@ -248,6 +251,7 @@ public class GridCacheQueryRequest extends GridCacheIdMessage implements GridCac
      * @param topVer Topology version.
      * @param mvccSnapshot Mvcc snapshot.
      * @param addDepInfo Deployment info flag.
+     * @param fieldName Field name.
      */
     public GridCacheQueryRequest(
         int cacheId,
@@ -271,7 +275,8 @@ public class GridCacheQueryRequest extends GridCacheIdMessage implements GridCac
         AffinityTopologyVersion topVer,
         MvccSnapshot mvccSnapshot,
         boolean addDepInfo,
-        Boolean dataPageScanEnabled
+        Boolean dataPageScanEnabled,
+        String fieldName
     ) {
         assert type != null || fields;
         assert clause != null || (type == SCAN || type == SET || type == SPI);
@@ -298,6 +303,7 @@ public class GridCacheQueryRequest extends GridCacheIdMessage implements GridCac
         this.topVer = topVer;
         this.mvccSnapshot = mvccSnapshot;
         this.addDepInfo = addDepInfo;
+        this.fieldName = fieldName;
 
         flags = setDataPageScanEnabled(flags, dataPageScanEnabled);
     }
@@ -545,6 +551,13 @@ public class GridCacheQueryRequest extends GridCacheIdMessage implements GridCac
     }
 
     /**
+     * @return Field name.
+     */
+    public String fieldName() {
+        return fieldName;
+    }
+
+    /**
      * @return partition.
      */
     @Override public int partition() {
@@ -698,6 +711,11 @@ public class GridCacheQueryRequest extends GridCacheIdMessage implements GridCac
 
                 writer.incrementState();
 
+            case 26:
+                if (!writer.writeString("fieldName", fieldName))
+                    return false;
+
+                writer.incrementState();
         }
 
         return true;
@@ -891,6 +909,14 @@ public class GridCacheQueryRequest extends GridCacheIdMessage implements GridCac
                     return false;
 
                 type = GridCacheQueryType.fromOrdinal(typeOrd);
+
+                reader.incrementState();
+
+            case 26:
+                clsName = reader.readString("fieldName");
+
+                if (!reader.isLastRead())
+                    return false;
 
                 reader.incrementState();
 

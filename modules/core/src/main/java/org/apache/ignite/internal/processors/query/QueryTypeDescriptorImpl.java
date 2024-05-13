@@ -94,6 +94,9 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     private QueryIndexDescriptorImpl fullTextIdx;
 
     /** */
+    private QueryIndexDescriptorImpl vectorIdx;
+
+    /** */
     private Class<?> keyCls;
 
     /** */
@@ -137,7 +140,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
 
     /** Primary key fields. */
     private Set<String> pkFields;
-    
+
     /** Whether absent PK parts should be filled with defaults or not. */
     private boolean fillAbsentPKsWithDefaults;
 
@@ -309,6 +312,11 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
         return fullTextIdx;
     }
 
+    /** {@inheritDoc} */
+    @Override public GridQueryIndexDescriptor vectorIndex() {
+        return vectorIdx;
+    }
+
     /**
      * Add index.
      *
@@ -354,6 +362,19 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
             fullTextIdx = new QueryIndexDescriptorImpl(this, null, QueryIndexType.FULLTEXT, 0);
 
         fullTextIdx.addField(field, 0, false);
+    }
+
+    /**
+     * Adds field to vector index.
+     *
+     * @param field Field name.
+     * @throws IgniteCheckedException If failed.
+     */
+    public void addFieldToVectorIndex(String field) throws IgniteCheckedException {
+        if (vectorIdx == null)
+            vectorIdx = new QueryIndexDescriptorImpl(this, null, QueryIndexType.VECTOR, 0);
+
+        vectorIdx.addField(field, 0, false);
     }
 
     /** {@inheritDoc} */
@@ -757,12 +778,12 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     @Override public void primaryKeyFields(Set<String> keys) {
         pkFields = keys;
     }
-    
+
     /** {@inheritDoc} */
     @Override public boolean fillAbsentPKsWithDefaults() {
         return fillAbsentPKsWithDefaults;
     }
-    
+
     /** {@inheritDoc} */
     @Override public void setFillAbsentPKsWithDefaults(boolean fillAbsentPKsWithDefaults) {
         this.fillAbsentPKsWithDefaults = fillAbsentPKsWithDefaults;

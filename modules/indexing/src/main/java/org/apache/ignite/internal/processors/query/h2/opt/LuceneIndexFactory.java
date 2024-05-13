@@ -35,6 +35,6 @@ public interface LuceneIndexFactory extends Extension {
      * @param type Type descriptor.
      * @throws IgniteCheckedException If failed.
      */
-    public LuceneIndex create(GridKernalContext ctx, @Nullable String cacheName, GridQueryTypeDescriptor type)
-        throws IgniteException;
+    public LuceneIndex create(GridKernalContext ctx, @Nullable String cacheName,
+        GridQueryTypeDescriptor type) throws IgniteException;
 }

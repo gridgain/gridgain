@@ -58,6 +58,10 @@ import org.jetbrains.annotations.Nullable;
  * Ignite supports full text queries based on Apache Lucene engine. Note that all fields that
  * are expected to show up in text query results must be annotated with {@link QueryTextField}
  * annotation.
+ * <h1 class="header">Vector Queries</h1>
+ * Ignite supports vector queries based on Apache Lucene engine. Note that all fields that
+ * are expected to show up in vector query results must be annotated with {@link QueryVectorField}
+ * annotation.
  * <h1 class="header">Scan Queries</h1>
  * Sometimes when it is known in advance that SQL query will cause a full data scan, or whenever data set
  * is relatively small, the full scan query may be used. This query will iterate over all cache

@@ -16,8 +16,6 @@
 
 package org.apache.ignite.cache;
 
-import java.util.LinkedHashSet;
-import javax.cache.CacheException;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -27,14 +25,17 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import javax.cache.CacheException;
 import org.apache.ignite.cache.query.annotations.QueryGroupIndex;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cache.query.annotations.QueryTextField;
+import org.apache.ignite.cache.query.annotations.QueryVectorField;
 import org.apache.ignite.internal.processors.cache.query.QueryEntityClassProperty;
 import org.apache.ignite.internal.processors.cache.query.QueryEntityTypeDescriptor;
 import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
@@ -100,7 +101,7 @@ public class QueryEntity implements Serializable {
 
     /** Scale for fields. */
     private Map<String, Integer> fieldsScale = new HashMap<>();
-    
+
     /**
      * Creates an empty query entity.
      */
@@ -692,14 +693,19 @@ public class QueryEntity implements Serializable {
             GridQueryIndexDescriptor idx = idxEntry.getValue();
 
             if (idx.type() == QueryIndexType.FULLTEXT) {
-                assert txtIdx == null;
-
                 txtIdx = new QueryIndex();
 
-                txtIdx.setIndexType(QueryIndexType.FULLTEXT);
+                txtIdx.setIndexType(idx.type());
 
                 txtIdx.setFieldNames(idx.fields(), true);
-                txtIdx.setName(idxEntry.getKey());
+            }
+            else if (idx.type() == QueryIndexType.VECTOR) {
+                QueryIndex vectIdx = new QueryIndex();
+
+                vectIdx.setIndexType(idx.type());
+                vectIdx.setFieldNames(idx.fields(), true);
+
+                idxs.add(vectIdx);
             }
             else {
                 QueryIndex sortedIdx = new QueryIndex();
@@ -816,6 +822,7 @@ public class QueryEntity implements Serializable {
             for (Field field : c.getDeclaredFields()) {
                 QuerySqlField sqlAnn = field.getAnnotation(QuerySqlField.class);
                 QueryTextField txtAnn = field.getAnnotation(QueryTextField.class);
+                QueryVectorField vecAnn = field.getAnnotation(QueryVectorField.class);
 
                 if (sqlAnn != null || txtAnn != null) {
                     QueryEntityClassProperty prop = new QueryEntityClassProperty(field);
@@ -828,7 +835,7 @@ public class QueryEntity implements Serializable {
                     // properties override will happen properly (first parent, then children).
                     type.addProperty(prop, sqlAnn, key, true);
 
-                    processAnnotation(key, sqlAnn, txtAnn, cls, c, field.getType(), prop, type);
+                    processAnnotation(key, sqlAnn, txtAnn, vecAnn, cls, c, field.getType(), prop, type);
                 }
             }
         }
@@ -846,7 +853,7 @@ public class QueryEntity implements Serializable {
      * @param prop Current property.
      * @param desc Class description.
      */
-    private static void processAnnotation(boolean key, QuerySqlField sqlAnn, QueryTextField txtAnn,
+    private static void processAnnotation(boolean key, QuerySqlField sqlAnn, QueryTextField txtAnn, QueryVectorField vecAnn,
         Class<?> cls, Class<?> curCls, Class<?> fldCls, QueryEntityClassProperty prop, QueryEntityTypeDescriptor desc) {
         if (sqlAnn != null) {
             processAnnotationsInClass(key, fldCls, desc, prop);
@@ -894,6 +901,9 @@ public class QueryEntity implements Serializable {
 
         if (txtAnn != null)
             desc.addFieldToTextIndex(prop.fullName());
+
+        if (vecAnn != null)
+            desc.addFieldToVectorIndex(prop.fullName());
     }
 
     /** {@inheritDoc} */
