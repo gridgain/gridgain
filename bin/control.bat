@@ -40,17 +40,12 @@ if exist "%JAVA_HOME%\bin\java.exe" goto checkJdkVersion
 goto error_finish
 
 :checkJdkVersion
-set cmd="%JAVA_HOME%\bin\java.exe"
-for /f "tokens=* USEBACKQ" %%f in (`%cmd% -version 2^>^&1`) do (
-    set var=%%f
-    goto :LoopEscape
+:: Determine Java version.
+for /f "tokens=3" %%i in ('"%JAVA_HOME%\bin\java.exe" -Xms1m -version 2^>^&1') do (
+    set JAVA_VER_STR=%%i
 )
-:LoopEscape
-
-for /f "tokens=1-3  delims= " %%a in ("%var%") do set JAVA_VER_STR=%%c
 set JAVA_VER_STR=%JAVA_VER_STR:"=%
-
-for /f "tokens=1,2 delims=." %%a in ("%JAVA_VER_STR%.x") do set MAJOR_JAVA_VER=%%a& set MINOR_JAVA_VER=%%b
+for /f "tokens=1-2 delims=." %%a in ("%JAVA_VER_STR%.x") do set MAJOR_JAVA_VER=%%a& set MINOR_JAVA_VER=%%b
 if %MAJOR_JAVA_VER% == 1 set MAJOR_JAVA_VER=%MINOR_JAVA_VER%
 
 if %MAJOR_JAVA_VER% LSS 8 (
@@ -60,6 +55,10 @@ if %MAJOR_JAVA_VER% LSS 8 (
     echo You can also download latest JDK at http://java.com/download.
     goto error_finish
 )
+
+:: Include JVM options handling script
+call "%SCRIPTS_HOME%\include\jvmdefaults.bat" %MAJOR_JAVA_VER% "%CONTROL_JVM_OPTS%" CONTROL_JVM_OPTS
+set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --illegal-access=warn
 
 :: Check IGNITE_HOME.
 :checkIgniteHome1
@@ -114,7 +113,7 @@ if "%OS%" == "Windows_NT" set PROG_NAME=%~nx0%
 :: Set IGNITE_LIBS
 ::
 call "%SCRIPTS_HOME%\include\setenv.bat"
-call "%SCRIPTS_HOME%\include\build-classpath.bat"
+
 set CP=%IGNITE_LIBS%;%IGNITE_HOME%\libs\optional\ignite-zookeeper\*
 
 ::
@@ -163,7 +162,7 @@ if %ERRORLEVEL% equ 0 (
 :: Assertions are disabled by default since version 3.5.
 :: If you want to enable them - set 'ENABLE_ASSERTIONS' flag to '1'.
 ::
-set ENABLE_ASSERTIONS=1
+set ENABLE_ASSERTIONS=0
 
 ::
 :: Set '-ea' options if assertions are enabled.
@@ -196,11 +195,11 @@ if defined JVM_OPTS (
 
 if "%INTERACTIVE%" == "1" (
     "%JAVA_HOME%\bin\java.exe" %CONTROL_JVM_OPTS% %QUIET% %RESTART_SUCCESS_OPT% ^
-    -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="%IGNITE_HOME%" -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
+     -DIGNITE_HOME="%IGNITE_HOME%" -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
     -cp "%CP%" %MAIN_CLASS% %*
 ) else (
     "%JAVA_HOME%\bin\java.exe" %CONTROL_JVM_OPTS% %QUIET% %RESTART_SUCCESS_OPT% ^
-    -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="%IGNITE_HOME%" -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
+     -DIGNITE_HOME="%IGNITE_HOME%" -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
     -cp "%CP%" %MAIN_CLASS% %*
 )
 

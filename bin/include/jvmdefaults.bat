@@ -1,5 +1,5 @@
 ::
-:: Copyright 2022 GridGain Systems, Inc. and Contributors.
+:: Copyright 2021 GridGain Systems, Inc. and Contributors.
 ::
 :: Licensed under the GridGain Community Edition License (the "License");
 :: you may not use this file except in compliance with the License.
@@ -42,26 +42,13 @@ if %java_version% GEQ 9 if %java_version% LSS 11 (
     %current_value%
 )
 
-if %java_version% GEQ 11 if %java_version% LSS 14 (
+if %java_version% GEQ 11 if %java_version% LSS 15 (
     set value= ^
     --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED ^
     --add-exports=java.base/sun.nio.ch=ALL-UNNAMED ^
     --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
     --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
     --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
-    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED ^
-    --illegal-access=permit ^
-    %current_value%
-)
-
-if %java_version% GEQ 14 if %java_version% LSS 15 (
-    set value= ^
-    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED ^
-    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED ^
-    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
-    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
-    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
-    --add-opens=java.base/jdk.internal.access=ALL-UNNAMED ^
     --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED ^
     --illegal-access=permit ^
     %current_value%
@@ -69,7 +56,6 @@ if %java_version% GEQ 14 if %java_version% LSS 15 (
 
 if %java_version% GEQ 15 (
     set value= ^
-    --add-opens=java.base/jdk.internal.access=ALL-UNNAMED ^
     --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED ^
     --add-opens=java.base/sun.nio.ch=ALL-UNNAMED ^
     --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
@@ -77,20 +63,9 @@ if %java_version% GEQ 15 (
     --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
     --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED ^
     --add-opens=java.base/java.io=ALL-UNNAMED ^
-    --add-opens=java.base/java.net=ALL-UNNAMED ^
     --add-opens=java.base/java.nio=ALL-UNNAMED ^
-    --add-opens=java.base/java.security.cert=ALL-UNNAMED ^
     --add-opens=java.base/java.util=ALL-UNNAMED ^
-    --add-opens=java.base/java.util.concurrent=ALL-UNNAMED ^
-    --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED ^
-    --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED ^
     --add-opens=java.base/java.lang=ALL-UNNAMED ^
-    --add-opens=java.base/java.lang.invoke=ALL-UNNAMED ^
-    --add-opens=java.base/java.math=ALL-UNNAMED ^
-    --add-opens=java.base/java.time=ALL-UNNAMED ^
-    --add-opens=java.base/sun.security.ssl=ALL-UNNAMED ^
-    --add-opens=java.base/sun.security.x509=ALL-UNNAMED ^
-    --add-opens=java.sql/java.sql=ALL-UNNAMED ^
     %current_value%
 )
 
