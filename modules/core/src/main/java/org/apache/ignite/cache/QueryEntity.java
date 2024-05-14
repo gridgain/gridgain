@@ -824,7 +824,7 @@ public class QueryEntity implements Serializable {
                 QueryTextField txtAnn = field.getAnnotation(QueryTextField.class);
                 QueryVectorField vecAnn = field.getAnnotation(QueryVectorField.class);
 
-                if (sqlAnn != null || txtAnn != null) {
+                if (sqlAnn != null || txtAnn != null || vecAnn != null) {
                     QueryEntityClassProperty prop = new QueryEntityClassProperty(field);
 
                     prop.parent(parent);

@@ -913,7 +913,7 @@ public class GridCacheQueryRequest extends GridCacheIdMessage implements GridCac
                 reader.incrementState();
 
             case 26:
-                clsName = reader.readString("fieldName");
+                fieldName = reader.readString("fieldName");
 
                 if (!reader.isLastRead())
                     return false;
