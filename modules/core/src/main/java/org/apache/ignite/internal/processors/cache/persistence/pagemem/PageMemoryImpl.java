@@ -39,7 +39,6 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.PageReplacementMode;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.events.PageReplacementStartEvent;
@@ -103,6 +102,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOADED_PAGES_BACKW
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.pagemem.FullPageId.NULL_PAGE;
 import static org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl.DATAREGION_METRICS_PREFIX;
+import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
 import static org.apache.ignite.internal.util.GridUnsafe.wrapPointer;
 
 /**
@@ -263,12 +263,16 @@ public class PageMemoryImpl implements PageMemoryEx {
     /** Memory metrics to track dirty pages count and page replace rate. */
     private final DataRegionMetricsImpl dataRegionMetrics;
 
+    /** Configuration of DataRegion this PageMemory is associated with. */
+    private final DataRegionConfiguration dataRegionCfg;
+
     /**
      * {@code False} if memory was not started or already stopped and is not supposed for any usage.
      */
     private volatile boolean started;
 
     /**
+     * @param dataRegionCfg Data region configuration.
      * @param directMemoryProvider Memory allocator to use.
      * @param sizes segments sizes, last is checkpoint pool size.
      * @param ctx Cache shared context.
@@ -282,6 +286,7 @@ public class PageMemoryImpl implements PageMemoryEx {
      * @param cpProgressProvider checkpoint progress, base for throttling. Null disables throttling.
      */
     public PageMemoryImpl(
+        DataRegionConfiguration dataRegionCfg,
         DirectMemoryProvider directMemoryProvider,
         long[] sizes,
         GridCacheSharedContext<?, ?> ctx,
@@ -297,10 +302,12 @@ public class PageMemoryImpl implements PageMemoryEx {
         assert ctx != null;
         assert pageSize > 0;
         assert dataRegionMetrics != null;
+        assert dataRegionCfg != null;
 
         log = ctx.logger(PageMemoryImpl.class);
 
         this.ctx = ctx;
+        this.dataRegionCfg = dataRegionCfg;
         this.directMemoryProvider = directMemoryProvider;
         this.sizes = sizes;
         this.flushDirtyPage = flushDirtyPage;
@@ -338,10 +345,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             new ArrayBlockingQueue<>(Runtime.getRuntime().availableProcessors()),
             new IgniteThreadFactory(ctx.igniteInstanceName(), "page-mem-op"));
 
-        DataRegionConfiguration memCfg = getDataRegionConfiguration();
-
-        PageReplacementMode pageReplacementMode = memCfg == null ? DataRegionConfiguration.DFLT_PAGE_REPLACEMENT_MODE :
-                memCfg.getPageReplacementMode();
+        PageReplacementMode pageReplacementMode = dataRegionCfg.getPageReplacementMode();
 
         switch (pageReplacementMode) {
             case RANDOM_LRU:
@@ -641,14 +645,15 @@ public class PageMemoryImpl implements PageMemoryEx {
             seg.loadedPages.put(grpId, PageIdUtils.effectivePageId(pageId), relPtr, seg.partGeneration(grpId, partId));
         }
         catch (IgniteOutOfMemoryException oom) {
-            DataRegionConfiguration dataRegionCfg = getDataRegionConfiguration();
+            boolean internalDataRegion = INTERNAL_DATA_REGION_NAMES.contains(dataRegionCfg.getName());
 
             IgniteOutOfMemoryException e = new IgniteOutOfMemoryException("Out of memory in data region [" +
                 "name=" + dataRegionCfg.getName() +
                 ", initSize=" + U.readableSize(dataRegionCfg.getInitialSize(), false) +
                 ", maxSize=" + U.readableSize(dataRegionCfg.getMaxSize(), false) +
                 ", persistenceEnabled=" + dataRegionCfg.isPersistenceEnabled() + "] Try the following:" + U.nl() +
-                "  ^-- Increase maximum off-heap memory size (DataRegionConfiguration.maxSize)" + U.nl() +
+                "  ^-- Increase maximum off-heap memory size " +
+                (internalDataRegion ? "(DataStorageConfiguration.sysRegionMaxSize)" : "(DataRegionConfiguration.maxSize)") + U.nl() +
                 "  ^-- Enable eviction or expiration policies"
             );
 
@@ -668,31 +673,6 @@ public class PageMemoryImpl implements PageMemoryEx {
 
         //we have allocated 'tracking' page, we need to allocate regular one
         return isTrackingPage ? allocatePage(grpId, partId, flags) : pageId;
-    }
-
-    /**
-     * @return Data region configuration.
-     */
-    private DataRegionConfiguration getDataRegionConfiguration() {
-        DataStorageConfiguration memCfg = ctx.kernalContext().config().getDataStorageConfiguration();
-
-        assert memCfg != null;
-
-        String dataRegionName = dataRegionMetrics.getName();
-
-        if (memCfg.getDefaultDataRegionConfiguration().getName().equals(dataRegionName))
-            return memCfg.getDefaultDataRegionConfiguration();
-
-        DataRegionConfiguration[] dataRegions = memCfg.getDataRegionConfigurations();
-
-        if (dataRegions != null) {
-            for (DataRegionConfiguration reg : dataRegions) {
-                if (reg != null && reg.getName().equals(dataRegionName))
-                    return reg;
-            }
-        }
-
-        return null;
     }
 
     /** {@inheritDoc} */
@@ -2366,7 +2346,7 @@ public class PageMemoryImpl implements PageMemoryEx {
          * @param reason Reason.
          */
         public IgniteOutOfMemoryException oomException(String reason) {
-            DataRegionConfiguration dataRegionCfg = getDataRegionConfiguration();
+            boolean internalDataRegion = INTERNAL_DATA_REGION_NAMES.contains(dataRegionCfg.getName());
 
             return new IgniteOutOfMemoryException("Failed to find a page for eviction (" + reason + ") [" +
                 "segmentCapacity=" + loadedPages.capacity() +
@@ -2380,7 +2360,8 @@ public class PageMemoryImpl implements PageMemoryEx {
                 ", initSize=" + U.readableSize(dataRegionCfg.getInitialSize(), false) +
                 ", maxSize=" + U.readableSize(dataRegionCfg.getMaxSize(), false) +
                 ", persistenceEnabled=" + dataRegionCfg.isPersistenceEnabled() + "] Try the following:" + U.nl() +
-                "  ^-- Increase maximum off-heap memory size (DataRegionConfiguration.maxSize)" + U.nl() +
+                "  ^-- Increase maximum off-heap memory size " +
+                (internalDataRegion ? "(DataStorageConfiguration.sysRegionMaxSize)" : "(DataRegionConfiguration.maxSize)") + U.nl() +
                 "  ^-- Enable eviction or expiration policies"
             );
         }

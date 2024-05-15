@@ -1239,6 +1239,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             changeTracker = null;
 
         PageMemoryImpl pageMem = new PageMemoryImpl(
+            plcCfg,
             wrapMetricsPersistentMemoryProvider(memProvider, memMetrics),
             calculateFragmentSizes(
                 plcCfg.getName(),
