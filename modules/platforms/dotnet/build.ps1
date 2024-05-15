@@ -101,15 +101,6 @@ function Exec([string]$command) {
     }
 }
 
-function Copy-If-Exists([string]$src, [string]$dst) {
-    if ([IO.Directory]::Exists($src)) {
-        echo "Copying files from '$src' to '$dst'..."
-
-        $srcAll = [IO.Path]::Combine($src, "*")
-        Copy-Item -Force -Recurse $srcAll $dst
-    }
-}
-
 function Build-Solution([string]$targetSolution, [string]$targetDir) {
     if ($clean) {
         $cleanCommand = "dotnet clean $targetSolution -c $configuration"
@@ -188,7 +179,9 @@ if (!$skipDotNet) {
 if(!$skipDotNetCore) {
     Build-Solution ".\Apache.Ignite.DotNetCore.sln" "bin\net6.0"
 
-    # Build executable for .NET 8 too.
+    # Build executable for .NET 8 too. Copy all libraries, then build the binaries.
+    Make-Dir("bin\net8.0")
+    Copy-Item -Force -Recurse "bin\net6.0\*" "bin\net8.0"
     dotnet publish .\Apache.Ignite\Apache.Ignite.DotNetCore.csproj -c $configuration -o bin\net8.0
 }
 
