@@ -186,7 +186,7 @@ if (!$skipDotNet) {
 }
 
 if(!$skipDotNetCore) {
-    Build-Solution ".\Apache.Ignite.DotNetCore.sln" "bin\net6.0"
+    Build-Solution ".\Apache.Ignite.DotNetCore.sln" "bin"
 }
 
 
