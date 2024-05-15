@@ -182,7 +182,7 @@ if(!$skipDotNetCore) {
     # Build executable for .NET 8 too. Copy all libraries, then build the binaries.
     Make-Dir("bin\net8.0")
     Copy-Item -Force -Recurse "bin\net6.0\*" "bin\net8.0"
-    dotnet publish .\Apache.Ignite\Apache.Ignite.DotNetCore.csproj -c $configuration -o bin\net8.0
+    dotnet publish .\Apache.Ignite\Apache.Ignite.DotNetCore.csproj -c $configuration -f net8.0 -o bin\net8.0
 }
 
 
