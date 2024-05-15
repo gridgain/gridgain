@@ -110,7 +110,7 @@ function Copy-If-Exists([string]$src, [string]$dst) {
     }
 }
 
-function Build-Solution([string]$targetSolution, [string]$targetDir, [string]$framework) {
+function Build-Solution([string]$targetSolution, [string]$targetDir) {
     if ($clean) {
         $cleanCommand = "dotnet clean $targetSolution -c $configuration"
         echo "Starting dotnet clean: '$cleanCommand'"
@@ -118,11 +118,6 @@ function Build-Solution([string]$targetSolution, [string]$targetDir, [string]$fr
     }
 
     $buildCommand = "dotnet publish $targetSolution -c $configuration -o $targetDir"
-
-    if ($framework) {
-        $buildCommand += " -f $framework"
-    }
-
     echo "Starting dotnet build: '$buildCommand'"
     Exec $buildCommand
 }
@@ -191,8 +186,10 @@ if (!$skipDotNet) {
 }
 
 if(!$skipDotNetCore) {
-    Build-Solution ".\Apache.Ignite.DotNetCore.sln" "bin\net6.0" "net6.0"
-    Build-Solution ".\Apache.Ignite.DotNetCore.sln" "bin\net8.0" "net8.0"
+    Build-Solution ".\Apache.Ignite.DotNetCore.sln" "bin\net6.0"
+
+    # Build executable for .NET 8 too.
+    dotnet publish .\Apache.Ignite\Apache.Ignite.DotNetCore.csproj -c $configuration -o bin\net8.0
 }
 
 
