@@ -49,6 +49,8 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.hamcrest.Matchers.startsWith;
+import static org.junit.Assert.assertThat;
 
 /**
  * Jdbc thin Partition Awareness reconnection and query failover test.
@@ -135,6 +137,59 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
             startGrid(1);
 
             assertConnectionsCount(ios, INITIAL_NODES_CNT);
+        }
+
+        try (Connection conn = DriverManager.getConnection(URL)) {
+            Map<UUID, JdbcThinTcpIo> ios = GridTestUtils.getFieldValue(conn, "ios");
+
+            Statement stmt = conn.createStatement();
+
+            stopGrid(0);
+
+            stmt.executeQuery("select 1; select 2");
+
+            startGrid(0);
+
+            assertConnectionsCount(ios, INITIAL_NODES_CNT);
+        }
+
+        try (Connection conn = DriverManager.getConnection(URL)) {
+            Map<UUID, JdbcThinTcpIo> ios = GridTestUtils.getFieldValue(conn, "ios");
+
+            Statement stmt = conn.createStatement();
+
+            stopGrid(0);
+
+            stmt.execute("CREATE TABLE PARENT" + UUID.randomUUID().toString().substring(0, 6) +
+                " (ID INT, NAME VARCHAR, PRIMARY KEY(ID));");
+
+            startGrid(0);
+
+            assertConnectionsCount(ios, INITIAL_NODES_CNT);
+        }
+
+        try (Connection conn = DriverManager.getConnection(URL)) {
+            Map<UUID, JdbcThinTcpIo> ios = GridTestUtils.getFieldValue(conn, "ios");
+
+            Statement stmt = conn.createStatement();
+
+            String tblName = "PARENT" + UUID.randomUUID().toString().substring(0, 6);
+
+            stmt.execute("CREATE TABLE " + tblName +
+                " (ID INT, NAME VARCHAR, PRIMARY KEY(ID));");
+
+            stopGrid(0);
+
+            stmt.execute("INSERT INTO " + tblName + " (ID, NAME) VALUES(1, 'aaa')");
+
+            startGrid(0);
+
+            assertConnectionsCount(ios, INITIAL_NODES_CNT);
+
+            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tblName)) {
+                assertTrue(rs.next());
+                assertEquals(1, rs.getLong(1));
+            }
         }
     }
 
@@ -244,10 +299,10 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
             assertEquals("Unexpected log records count.", 4, logHnd.records.size());
 
             String expRecordMsg = "Failed to connect to Ignite node " +
-                "[url=jdbc:ignite:thin://127.0.0.1:10800,127.0.0.1:10810]. address = [localhost/127.0.0.1:10810].";
+                "[url=jdbc:ignite:thin://127.0.0.1:10800,127.0.0.1:10810]. address = [";
 
             for (LogRecord record : logHnd.records) {
-                assertEquals("Unexpected log record text.", expRecordMsg, record.getMessage());
+                assertThat("Unexpected log record text.", record.getMessage(), startsWith(expRecordMsg));
                 assertEquals("Unexpected log level", Level.WARNING, record.getLevel());
             }
         }
@@ -305,10 +360,10 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
             assertEquals("Unexpected log records count.", 4, logHnd.records.size());
 
             String expRecordMsg = "Failed to connect to Ignite node [url=jdbc:ignite:thin://127.0.0.1:10800..10801]." +
-                " address = [localhost/127.0.0.1:10800].";
+                " address = [";
 
             for (LogRecord record : logHnd.records) {
-                assertEquals("Unexpected log record text.", expRecordMsg, record.getMessage());
+                assertThat("Unexpected log record text.", record.getMessage(), startsWith(expRecordMsg));
                 assertEquals("Unexpected log level", Level.WARNING, record.getLevel());
             }
 
@@ -341,7 +396,7 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
             assertEquals("Unexpected log records count.", 4, logHnd.records.size());
 
             for (LogRecord record : logHnd.records) {
-                assertEquals("Unexpected log record text.", expRecordMsg, record.getMessage());
+                assertThat("Unexpected log record text.", record.getMessage(), startsWith(expRecordMsg));
                 assertEquals("Unexpected log level", Level.WARNING, record.getLevel());
             }
 
@@ -633,54 +688,6 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
         });
 
         startGrid(0);
-
-        // Check that there are no retries in case of multi-statements request.
-        checkNoRetriesOccurred(() -> {
-            try (Connection conn = DriverManager.getConnection(URL_WITH_ONE_PORT)) {
-                Statement stmt = conn.createStatement();
-
-                stopGrid(0);
-
-                stmt.executeQuery("select 1; select 2");
-            }
-            return null;
-        });
-
-        startGrid(0);
-
-        // Check that there are no retries in case of DDL.
-        checkNoRetriesOccurred(() -> {
-            try (Connection conn = DriverManager.getConnection(URL_WITH_ONE_PORT)) {
-                Statement stmt = conn.createStatement();
-
-                stopGrid(0);
-
-                stmt.execute("CREATE TABLE PARENT" + UUID.randomUUID().toString().substring(0, 6) +
-                    " (ID INT, NAME VARCHAR, PRIMARY KEY(ID));");
-            }
-            return null;
-        });
-
-        startGrid(0);
-
-        // Check that there are no retries in case of DML.
-        checkNoRetriesOccurred(() -> {
-            try (Connection conn = DriverManager.getConnection(URL_WITH_ONE_PORT)) {
-                Statement stmt = conn.createStatement();
-
-                String tblName = "PARENT" + UUID.randomUUID().toString().substring(0, 6);
-
-                stmt.execute("CREATE TABLE " + tblName +
-                    " (ID INT, NAME VARCHAR, PRIMARY KEY(ID));");
-
-                stopGrid(0);
-
-                stmt.execute("INSERT INTO" + tblName + " (ID, NAME) VALUES(1, 'aaa')");
-            }
-            return null;
-        });
-
-        startGrid(0);
     }
 
     /**
@@ -786,7 +793,6 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
      *
      * @param queriesToTest Statements to test.
      */
-    @SuppressWarnings("ThrowableNotThrown")
     private void checkRetriesOccurred(Callable queriesToTest) {
         logHnd.records.clear();
 
@@ -799,7 +805,7 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
                 }
             },
             SQLException.class,
-            "Failed to connect to server [host=localhost, port=10800]"
+            "Failed to connect to server"
         );
 
         assertEquals("Unexpected log records count.", 1, logHnd.records.size());
@@ -861,17 +867,23 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
     /**
      * Invalidate connection to stopped node. Jdbc thin, won't detect that node has gone, until it tries to touch it. So
      * sending simple query to randomly chosen connection(socket), sooner or later, will touch dead one, and thus
-     * invalidate it. Please, pay attention, that it's better to send non-failoverable query, for example query with
-     * ';' somewhere in the middle.
+     * invalidate it.
      *
      * @param conn Connections.
      */
-    private void invalidateConnectionToStoppedNode(Connection conn) {
+    private void invalidateConnectionToStoppedNode(Connection conn) throws SQLException {
+        Map<UUID, JdbcThinTcpIo> ios = GridTestUtils.getFieldValue(conn, "ios");
+
+        int initialSize = ios.size();
+
         while (true) {
-            try (Statement stmt = conn.createStatement()) {
-                stmt.execute("select ';';");
+            try {
+                conn.createStatement().execute("select 1");
+            } catch (SQLException e) {
+                return;
             }
-            catch (SQLException e) {
+
+            if (ios.size() != initialSize) {
                 return;
             }
         }

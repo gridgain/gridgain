@@ -67,7 +67,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObjectException;
@@ -132,8 +131,8 @@ import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CLIENT_CONNECTION_FAILED;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CONNECTION_CLOSED;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CONNECTION_FAILURE;
-import static org.apache.ignite.internal.processors.odbc.SqlStateCode.INTERNAL_ERROR;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.DATA_EXCEPTION;
+import static org.apache.ignite.internal.processors.odbc.SqlStateCode.INTERNAL_ERROR;
 import static org.apache.ignite.marshaller.MarshallerUtils.processSystemClasses;
 
 /**
@@ -283,16 +282,22 @@ public class JdbcThinConnection implements Connection {
 
         partitionAwareness = connProps.isPartitionAwareness();
 
-        if (partitionAwareness) {
-            baseEndpointVer = connectInBestEffortAffinityMode(null);
+        try {
+            if (partitionAwareness) {
+                baseEndpointVer = connectInBestEffortAffinityMode(null);
 
-            connectionsHndScheduledFut = maintenanceExecutor.scheduleWithFixedDelay(new ConnectionHandlerTask(),
-                0, RECONNECTION_DELAY, TimeUnit.MILLISECONDS);
-        }
-        else {
-            connectInCommonMode();
+                connectionsHndScheduledFut = maintenanceExecutor.scheduleWithFixedDelay(new ConnectionHandlerTask(),
+                    0, RECONNECTION_DELAY, TimeUnit.MILLISECONDS);
+            }
+            else {
+                connectInCommonMode();
 
-            baseEndpointVer = null;
+                baseEndpointVer = null;
+            }
+        } catch (SQLException ex) {
+            close();
+
+            throw ex;
         }
     }
 
@@ -1643,11 +1648,11 @@ public class JdbcThinConnection implements Connection {
      * @return Ignite endpoint to use for request/response transferring.
      */
     private JdbcThinTcpIo cliIo(List<UUID> nodeIds) {
-        if (!partitionAwareness)
-            return singleIo;
-
         if (txIo != null)
             return txIo;
+
+        if (!partitionAwareness)
+            return singleIo;
 
         if (nodeIds == null || nodeIds.isEmpty())
             return randomIo();
@@ -1796,8 +1801,6 @@ public class JdbcThinConnection implements Connection {
      */
     private void handleConnectExceptions(List<Exception> exceptions) throws SQLException {
         if (connCnt.get() == 0 && exceptions != null) {
-            close();
-
             if (exceptions.size() == 1) {
                 Exception ex = exceptions.get(0);
 
@@ -1949,11 +1952,11 @@ public class JdbcThinConnection implements Connection {
      * @param req Jdbc request.
      * @return retries count.
      */
-    private int calculateRetryAttemptsCount(JdbcThinTcpIo stickyIo, JdbcRequest req) {
-        if (!partitionAwareness)
+    private int calculateRetryAttemptsCount(JdbcThinTcpIo stickyIo, JdbcRequest req) throws SQLException {
+        if (stickyIo != null)
             return NO_RETRIES;
 
-        if (stickyIo != null)
+        if (txIo != null)
             return NO_RETRIES;
 
         if (req.type() == JdbcRequest.META_TABLES ||
@@ -1962,22 +1965,9 @@ public class JdbcThinConnection implements Connection {
             req.type() == JdbcRequest.META_PARAMS ||
             req.type() == JdbcRequest.META_PRIMARY_KEYS ||
             req.type() == JdbcRequest.META_SCHEMAS ||
-            req.type() == JdbcRequest.CACHE_PARTITIONS)
+            req.type() == JdbcRequest.CACHE_PARTITIONS ||
+            req.type() == JdbcRequest.QRY_EXEC)
             return DFLT_RETRIES_CNT;
-
-        if (req.type() == JdbcRequest.QRY_EXEC) {
-            JdbcQueryExecuteRequest qryExecReq = (JdbcQueryExecuteRequest)req;
-
-            String trimmedQry = qryExecReq.sqlQuery().trim();
-
-            // Last symbol is ignored.
-            for (int i = 0; i < trimmedQry.length() - 1; i++) {
-                if (trimmedQry.charAt(i) == ';')
-                    return NO_RETRIES;
-            }
-
-            return trimmedQry.toUpperCase().startsWith("SELECT") ? DFLT_RETRIES_CNT : NO_RETRIES;
-        }
 
         return NO_RETRIES;
     }

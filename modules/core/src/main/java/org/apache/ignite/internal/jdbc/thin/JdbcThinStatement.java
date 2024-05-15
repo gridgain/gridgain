@@ -76,6 +76,8 @@ public class JdbcThinStatement implements Statement {
     /** Closed flag. */
     private volatile boolean closed;
 
+    private volatile boolean closedOnDisconnect;
+
     /** Rows limit. */
     private int maxRows;
 
@@ -450,9 +452,9 @@ public class JdbcThinStatement implements Statement {
                 rs.closeOnDisconnect();
 
             resultSets = null;
-        }
 
-        closed = true;
+            closedOnDisconnect = true;
+        }
     }
 
     /** {@inheritDoc} */
@@ -866,7 +868,7 @@ public class JdbcThinStatement implements Statement {
 
     /** {@inheritDoc} */
     @Override public boolean isClosed() throws SQLException {
-        return conn.isClosed() || closed;
+        return conn.isClosed() || closed || closedOnDisconnect;
     }
 
     /** {@inheritDoc} */
@@ -946,8 +948,13 @@ public class JdbcThinStatement implements Statement {
      * @throws SQLException If statement is closed.
      */
     void ensureNotClosed() throws SQLException {
-        if (isClosed())
+        if (isClosed()) {
+            if (closedOnDisconnect) {
+                throw new SQLException("Statement was closed due to a disconnection from the server.");
+            }
+
             throw new SQLException("Statement is closed.");
+        }
     }
 
     /**
