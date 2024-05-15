@@ -117,7 +117,12 @@ function Build-Solution([string]$targetSolution, [string]$targetDir, [string]$fr
         Exec $cleanCommand
     }
 
-    $buildCommand = "dotnet publish $targetSolution -c $configuration -o $targetDir -f $framework"
+    $buildCommand = "dotnet publish $targetSolution -c $configuration -o $targetDir"
+
+    if ($framework) {
+        $buildCommand += " -f $framework"
+    }
+
     echo "Starting dotnet build: '$buildCommand'"
     Exec $buildCommand
 }
@@ -179,7 +184,7 @@ cd $PSScriptRoot
 
 # 2) Build .NET
 if (!$skipDotNet) {
-    Build-Solution ".\Apache.Ignite.sln" "bin\net461" "net461"
+    Build-Solution ".\Apache.Ignite.sln" "bin\net461"
     
     # Overwrite dlls to ensure that net461 versions are used instead of netstandard2. 
     Copy-Item -Force -Recurse ".\Apache.Ignite\bin\$configuration\net461\*" "bin\net461"
