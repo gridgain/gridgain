@@ -251,6 +251,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** @see IgniteSystemProperties#IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE */
     public static final int DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE = 60;
 
+    /** @see IgniteSystemProperties#IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE */
+    public static final boolean DFLT_IGNITE_VALIDATE_CACHE_NAMES = true;
+
     /**
      * Threshold value to use history or full rebalance for local partition.
      * Master value contained in {@link #historicalRebalanceThreshold}.

@@ -2158,7 +2158,7 @@ public final class IgniteSystemProperties {
      */
     @SystemProperty(value = "If true, cache names will be validated not to contain characters " +
         "which cause issues when persistence is used ({@code \\}, {@code /}, {@code \\0})",
-        defaults = "true")
+        defaults = "" + DFLT_IGNITE_VALIDATE_CACHE_NAMES)
     public static final String IGNITE_VALIDATE_CACHE_NAMES = "IGNITE_VALIDATE_CACHE_NAMES";
 
     /**
