@@ -444,17 +444,26 @@ public class JdbcThinStatement implements Statement {
     }
 
     /**
-     *
+     * @return Returns true if statement was closed, false otherwise.
      */
-    void closeOnDisconnect() {
+    boolean closeOnDisconnect(boolean enforce) {
+        if (!enforce && (resultSets == null && batchSize == 0)) {
+            // Statement can be re-used.
+            return false;
+        }
+
         if (resultSets != null) {
             for (JdbcThinResultSet rs : resultSets)
                 rs.closeOnDisconnect();
 
             resultSets = null;
-
-            closedOnDisconnect = true;
         }
+
+        clearBatch0();
+
+        closedOnDisconnect = true;
+
+        return true;
     }
 
     /** {@inheritDoc} */
@@ -698,6 +707,10 @@ public class JdbcThinStatement implements Statement {
     @Override public void clearBatch() throws SQLException {
         ensureNotClosed();
 
+        clearBatch0();
+    }
+
+    private void clearBatch0() {
         batchSize = 0;
 
         batch = null;
@@ -948,13 +961,14 @@ public class JdbcThinStatement implements Statement {
      * @throws SQLException If statement is closed.
      */
     void ensureNotClosed() throws SQLException {
-        if (isClosed()) {
-            if (closedOnDisconnect) {
-                throw new SQLException("Statement was closed due to a disconnection from the server.");
-            }
+        if (!isClosed())
+            return;
 
-            throw new SQLException("Statement is closed.");
+        if (closedOnDisconnect) {
+            throw new SQLException("Statement was closed due to a disconnection from the server.");
         }
+
+        throw new SQLException("Statement is closed.");
     }
 
     /**

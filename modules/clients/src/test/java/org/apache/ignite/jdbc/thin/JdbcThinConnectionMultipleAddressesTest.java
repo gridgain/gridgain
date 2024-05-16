@@ -364,23 +364,15 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             stop(conn, allNodes);
 
             if (allNodes) {
-                GridTestUtils.assertThrows(log, new Callable<Object>() {
-                    @Override public Object call() throws Exception {
-                        meta.getTables(null, null, null, null);
+                GridTestUtils.assertThrows(log,
+                    () -> meta.getTables(null, null, null, null),
+                    SQLException.class, "Failed to connect to server");
 
-                        return null;
-                    }
-                    //Failed to communicate with Ignite cluster
-                }, SQLException.class, "Failed to connect to server");
-
-                GridTestUtils.assertThrows(log, new Callable<Object>() {
-                    @Override public Object call() throws Exception {
-                        meta.getTables(null, null, null, null);
-
-                        return null;
-                    }
-                }, SQLException.class, "Failed to connect to server");
+                GridTestUtils.assertThrows(log,
+                    () -> meta.getTables(null, null, null, null),
+                    SQLException.class, "Failed to connect to server");
             } else {
+                // Connection should be transparently re-established to another node.
                 rs0 = meta.getTables(null, null, null, types);
 
                 assertFalse(rs0.next());
@@ -420,7 +412,6 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
 
             GridTestUtils.assertThrows(log, new Callable<Object>() {
                 @Override public Object call() throws Exception {
-                    // This statement cannot be re-used.
                     stmt0.execute("SELECT 1");
 
                     return null;

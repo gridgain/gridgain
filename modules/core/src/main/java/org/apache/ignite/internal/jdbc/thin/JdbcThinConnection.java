@@ -555,8 +555,14 @@ public class JdbcThinConnection implements Connection {
 
         maintenanceExecutor.shutdown();
 
+        SQLException err = null;
+
         if (streamState != null) {
-            streamState.close();
+            try {
+                streamState.close();
+            } catch (SQLException e) {
+                err = e;
+            }
 
             streamState = null;
         }
@@ -564,8 +570,6 @@ public class JdbcThinConnection implements Connection {
         synchronized (stmtsMux) {
             stmts.clear();
         }
-
-        SQLException err = null;
 
         if (partitionAwareness) {
             for (JdbcThinTcpIo clioIo : ios.values())
@@ -1362,7 +1366,7 @@ public class JdbcThinConnection implements Connection {
     /**
      * Called on IO disconnect: close the client IO and opened statements.
      */
-    private void onDisconnect(JdbcThinTcpIo cliIo) {
+    private void onDisconnect(JdbcThinTcpIo cliIo) throws SQLException {
         assert connCnt.get() > 0;
 
         if (partitionAwareness) {
@@ -1384,10 +1388,16 @@ public class JdbcThinConnection implements Connection {
         }
 
         synchronized (stmtsMux) {
-            for (JdbcThinStatement s : stmts)
-                s.closeOnDisconnect();
+            boolean force = txIo != null;
 
-            stmts.clear();
+            stmts.removeIf(stmt -> stmt.closeOnDisconnect(force));
+        }
+
+        // If a transaction context exists, this connection cannot be re-used.
+        if (txIo != null) {
+            close();
+
+            return;
         }
 
         // Clear local metadata cache on disconnect.
@@ -1801,6 +1811,11 @@ public class JdbcThinConnection implements Connection {
      */
     private void handleConnectExceptions(List<Exception> exceptions) throws SQLException {
         if (connCnt.get() == 0 && exceptions != null) {
+            if (txIo != null) {
+                // We cannot recover connection when transactional context exists.
+                close();
+            }
+
             if (exceptions.size() == 1) {
                 Exception ex = exceptions.get(0);
 
