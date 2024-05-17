@@ -46,6 +46,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.TestOnly;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_OFFHEAP_LOCK_CONCURRENCY_LEVEL;
+import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
 import static org.apache.ignite.internal.util.GridUnsafe.wrapPointer;
 
 /**
@@ -127,7 +128,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     /** Direct memory allocator. */
     private final DirectMemoryProvider directMemoryProvider;
 
-    /** Name of DataRegion this PageMemory is associated with. */
+    /** Configuration of DataRegion this PageMemory is associated with. */
     private final DataRegionConfiguration dataRegionCfg;
 
     /** */
@@ -334,16 +335,19 @@ public class PageMemoryNoStoreImpl implements PageMemory {
                     allocSeg = addSegment(seg0);
             }
 
-            if (relPtr == INVALID_REL_PTR)
+            if (relPtr == INVALID_REL_PTR) {
+                boolean internalDataRegion = INTERNAL_DATA_REGION_NAMES.contains(dataRegionCfg.getName());
+
                 throw new IgniteOutOfMemoryException("Out of memory in data region [" +
                     "name=" + dataRegionCfg.getName() +
                     ", initSize=" + U.readableSize(dataRegionCfg.getInitialSize(), false) +
                     ", maxSize=" + U.readableSize(dataRegionCfg.getMaxSize(), false) +
                     ", persistenceEnabled=" + dataRegionCfg.isPersistenceEnabled() + "] Try the following:" + U.nl() +
-                    "  ^-- Increase maximum off-heap memory size (DataRegionConfiguration.maxSize)" + U.nl() +
+                    "  ^-- Increase maximum off-heap memory size " +
+                    (internalDataRegion ? "(DataStorageConfiguration.sysRegionMaxSize)" : "(DataRegionConfiguration.maxSize)") + U.nl() +
                     "  ^-- Enable Ignite persistence (DataRegionConfiguration.persistenceEnabled)" + U.nl() +
-                    "  ^-- Enable eviction or expiration policies"
-                );
+                    "  ^-- Enable eviction or expiration policies");
+            }
         }
 
         assert (relPtr & ~PageIdUtils.PAGE_IDX_MASK) == 0 : U.hexLong(relPtr & ~PageIdUtils.PAGE_IDX_MASK);
