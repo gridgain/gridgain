@@ -115,6 +115,7 @@ public class IndexStoragePageMemoryImplTest extends IndexStorageSelfTest {
         IgniteOutClosure<CheckpointProgress> clo = () -> Mockito.mock(CheckpointProgressImpl.class);
 
         return new PageMemoryImpl(
+            cfg.getDataStorageConfiguration().getDefaultDataRegionConfiguration(),
             provider, sizes,
             sharedCtx,
             sharedCtx.pageStore(),

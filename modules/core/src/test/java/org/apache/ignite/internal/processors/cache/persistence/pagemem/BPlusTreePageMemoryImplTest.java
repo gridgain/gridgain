@@ -104,6 +104,7 @@ public class BPlusTreePageMemoryImplTest extends BPlusTreeSelfTest {
         };
 
         PageMemory mem = new PageMemoryImpl(
+            cfg.getDataStorageConfiguration().getDefaultDataRegionConfiguration(),
             provider, sizes,
             sharedCtx,
             sharedCtx.pageStore(),
