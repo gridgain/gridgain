@@ -294,10 +294,10 @@ public class JdbcThinConnection implements Connection {
 
                 baseEndpointVer = null;
             }
-        } catch (SQLException ex) {
+        } catch (SQLException e) {
             close();
 
-            throw ex;
+            throw e;
         }
     }
 
