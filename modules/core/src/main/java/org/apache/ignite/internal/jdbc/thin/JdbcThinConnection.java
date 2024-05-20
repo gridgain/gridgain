@@ -282,22 +282,16 @@ public class JdbcThinConnection implements Connection {
 
         partitionAwareness = connProps.isPartitionAwareness();
 
-        try {
-            if (partitionAwareness) {
-                baseEndpointVer = connectInBestEffortAffinityMode(null);
+        if (partitionAwareness) {
+            baseEndpointVer = connectInBestEffortAffinityMode(null);
 
-                connectionsHndScheduledFut = maintenanceExecutor.scheduleWithFixedDelay(new ConnectionHandlerTask(),
-                    0, RECONNECTION_DELAY, TimeUnit.MILLISECONDS);
-            }
-            else {
-                connectInCommonMode();
+            connectionsHndScheduledFut = maintenanceExecutor.scheduleWithFixedDelay(new ConnectionHandlerTask(),
+                0, RECONNECTION_DELAY, TimeUnit.MILLISECONDS);
+        }
+        else {
+            connectInCommonMode();
 
-                baseEndpointVer = null;
-            }
-        } catch (SQLException e) {
-            close();
-
-            throw e;
+            baseEndpointVer = null;
         }
     }
 
@@ -1065,7 +1059,7 @@ public class JdbcThinConnection implements Connection {
                     else {
                         if (lastE == null) {
                             retryAttemptsLeft = calculateRetryAttemptsCount(stickyIo, req);
-                            lastE = e;
+                            lastE = new ServerDisconnectException(e);
                         }
                         else
                             retryAttemptsLeft--;
@@ -1800,34 +1794,44 @@ public class JdbcThinConnection implements Connection {
             }
         }
 
-        handleConnectExceptions(exceptions);
+        handleConnectExceptions(exceptions, singleIo != null);
     }
 
     /**
      * Prepare and throw general {@code SQLException} with all specified exceptions as suppressed items.
      *
      * @param exceptions Exceptions list.
+     * @param disconnected Flag indicating that a disconnection from the server has occurred.
      * @throws SQLException Umbrella exception.
      */
-    private void handleConnectExceptions(List<Exception> exceptions) throws SQLException {
+    private void handleConnectExceptions(List<Exception> exceptions, boolean disconnected) throws SQLException {
         if (connCnt.get() == 0 && exceptions != null) {
-            if (txIo != null) {
-                // We cannot recover connection when transactional context exists.
+            if (!disconnected || txIo != null) {
+                // We need to implicitly release all resources if the initial connection attempt fails or
+                // if the transaction context exists, because in this case we cannot reestablish the connection.
                 close();
             }
 
             if (exceptions.size() == 1) {
                 Exception ex = exceptions.get(0);
 
-                if (ex instanceof SQLException)
+                if (ex instanceof SQLException) {
+                    if (disconnected) {
+                        throw new SQLException(
+                            ex.getMessage(), ((SQLException)ex).getSQLState(), new ServerDisconnectException(ex));
+                    }
+
                     throw (SQLException)ex;
-                else if (ex instanceof IOException)
+                }
+                else if (ex instanceof IOException) {
                     throw new SQLException("Failed to connect to Ignite cluster [url=" + connProps.getUrl() + ']',
-                        CLIENT_CONNECTION_FAILED, ex);
+                        CLIENT_CONNECTION_FAILED,
+                        disconnected ? new ServerDisconnectException(ex) : ex);
+                }
             }
 
             SQLException e = new SQLException("Failed to connect to server [url=" + connProps.getUrl() + ']',
-                CLIENT_CONNECTION_FAILED);
+                CLIENT_CONNECTION_FAILED, disconnected ? new ServerDisconnectException(null) : null);
 
             for (Exception ex : exceptions)
                 e.addSuppressed(ex);
@@ -1914,7 +1918,7 @@ public class JdbcThinConnection implements Connection {
             }
         }
 
-        handleConnectExceptions(exceptions);
+        handleConnectExceptions(exceptions, baseEndpointVer != null);
 
         return null;
     }

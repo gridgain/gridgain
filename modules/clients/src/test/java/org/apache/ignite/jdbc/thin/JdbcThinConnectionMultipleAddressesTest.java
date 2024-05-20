@@ -35,6 +35,7 @@ import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.jdbc.thin.JdbcThinConnection;
+import org.apache.ignite.internal.jdbc.thin.ServerDisconnectException;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -139,6 +140,15 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
                 assertEquals(1, rs.getInt(1));
             }
         }
+    }
+
+    @Test
+    public void testConnectionFailure() {
+        assertThrowsSql(
+            () -> DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:12345"),
+            "Failed to connect to server",
+            false
+        );
     }
 
     /**
@@ -267,13 +277,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
 
             serverMxBean.dropAllConnections();
 
-            GridTestUtils.assertThrows(log, new Callable<Object>() {
-                @Override public Object call() throws Exception {
-                    stmt0.execute("SELECT 1");
-
-                    return null;
-                }
-            }, SQLException.class, "Failed to communicate with Ignite cluster");
+            assertThrowsSql(() -> stmt0.execute("SELECT 1"), "Failed to communicate with Ignite cluster", true);
 
             assertTrue(rs0.isClosed());
             assertTrue(stmt0.isClosed());
@@ -334,13 +338,37 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
                 Statement stmt = conn.createStatement();
 
                 // We cannot automatically retry DML query, because it's possible to duplicate it.
-                assertThrowsSql(() -> stmt.executeUpdate("INSERT INTO TEST VALUES (1, 1)"), "Failed to communicate with Ignite cluster");
+                assertThrowsSql(() -> stmt.executeUpdate("INSERT INTO TEST VALUES (1, 1)"),
+                    "Failed to communicate with Ignite cluster",
+                    true);
 
                 // But the second attempt recover connectoin.
                 stmt.executeUpdate("INSERT INTO TEST VALUES (1, 1)");
             }
 
-            assertThrowsSql(() -> stmt1.execute("SELECT 1"), "Statement was closed due to a disconnection from the server");
+            assertThrowsSql(() -> stmt1.execute("SELECT 1"),
+                "Statement was closed due to a disconnection from the server",
+                false);
+        }
+    }
+
+    @Test
+    public void testSingleAddressReconnectDuringRestart() throws Exception {
+        try (Connection conn = DriverManager.getConnection(URL_SINGLE_PORT)) {
+            // Simple select.
+            {
+                stopGrid(0);
+                Statement stmt = conn.createStatement();
+
+                assertThrowsSql(() -> stmt.execute("SELECT 1"), "Failed to connect to server", true);
+                assertTrue(stmt.isClosed());
+
+                startGrid(0);
+
+                Statement stmt2 = conn.createStatement();
+
+                stmt2.execute("SELECT 1");
+            }
         }
     }
 
@@ -368,12 +396,12 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             stopGrid(0);
             startGrid(0);
 
-            assertThrowsSql(() -> stmt1.execute("SELECT 1"), "Failed to communicate with Ignite cluster");
-            assertThrowsSql(() -> stmt1.execute("SELECT 1"), STATEMENT_CLOSED_ON_DISCONNECT_MESSAGE);
+            assertThrowsSql(() -> stmt1.execute("SELECT 1"), "Failed to communicate with Ignite cluster", true);
+            assertThrowsSql(() -> stmt1.execute("SELECT 1"), STATEMENT_CLOSED_ON_DISCONNECT_MESSAGE, false);
 
             assertTrue(conn.isClosed());
 
-            assertThrowsSql(conn::createStatement, "Connection is closed");
+            assertThrowsSql(conn::createStatement, "Connection is closed", false);
         }
     }
 
@@ -439,13 +467,11 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             stop(conn, allNodes);
 
             if (allNodes) {
-                GridTestUtils.assertThrows(log,
-                    () -> meta.getTables(null, null, null, null),
-                    SQLException.class, "Failed to connect to server");
+                assertThrowsSql(() -> meta.getTables(null, null, null, null),
+                    "Failed to connect to server", true);
 
-                GridTestUtils.assertThrows(log,
-                    () -> meta.getTables(null, null, null, null),
-                    SQLException.class, "Failed to connect to server");
+                assertThrowsSql(() -> meta.getTables(null, null, null, null),
+                    "Failed to connect to server", true);
             } else {
                 // Connection should be transparently re-established to another node.
                 rs0 = meta.getTables(null, null, null, types);
@@ -482,13 +508,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             stop(conn, allNodes);
             restart(allNodes);
 
-            GridTestUtils.assertThrows(log, new Callable<Object>() {
-                @Override public Object call() throws Exception {
-                    stmt0.execute("SELECT 1");
-
-                    return null;
-                }
-            }, SQLException.class, "Failed to communicate with Ignite cluster");
+            assertThrowsSql(() -> stmt0.execute("SELECT 1"), "Failed to communicate with Ignite cluster", true);
 
             assertTrue(rs0.isClosed());
             assertTrue(stmt0.isClosed());
@@ -526,13 +546,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
 
             stop(conn, allNodes);
 
-            GridTestUtils.assertThrows(log, new Callable<Object>() {
-                @Override public Object call() throws Exception {
-                    rs0.close();
-
-                    return null;
-                }
-            }, SQLException.class, "Failed to communicate with Ignite cluster");
+            assertThrowsSql(rs0::close, "Failed to communicate with Ignite cluster", true);
 
             assertTrue(rs0.isClosed());
             assertTrue(stmt0.isClosed());
@@ -638,12 +652,14 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             startGrids(NODES_CNT);
     }
 
-    private static void assertThrowsSql(GridTestUtils.RunnableX run, String message) {
-        GridTestUtils.assertThrows(log, () -> {
+    private static void assertThrowsSql(GridTestUtils.RunnableX run, String message, boolean disconnected) {
+        SQLException ex = GridTestUtils.assertThrows(log, () -> {
             run.runx();
 
             return null;
         }, SQLException.class, message);
+
+        assertEquals(String.valueOf(ex), disconnected, ex.getCause() instanceof ServerDisconnectException);
     }
 
     private static Statement createTestTable(Connection conn) throws SQLException {
