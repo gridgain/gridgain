@@ -550,6 +550,13 @@ public class GridMapQueryExecutor {
             else
                 releaseReservations(qctx);
 
+            // Log the error along with the SQL query and parameters.
+            if (qry != null) {
+                U.error(log, "Failed to execute local query: " + qry.query() + " with parameters: " + Arrays.toString(qry.parameters(params)), e);
+            } else {
+                U.error(log, "Failed to execute local query and query details are not available", e);
+            }
+
             if (e instanceof QueryCancelledException)
                 sendError(node, reqId, e);
             else {
