@@ -50,7 +50,6 @@ import org.apache.ignite.jdbc.thin.JdbcThinComplexDmlDdlSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinComplexDmlDdlSkipReducerOnUpdateSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinComplexQuerySelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinConnectionAdditionalSecurityTest;
-import org.apache.ignite.jdbc.thin.JdbcThinConnectionFailoverTest;
 import org.apache.ignite.jdbc.thin.JdbcThinConnectionMultipleAddressesTest;
 import org.apache.ignite.jdbc.thin.JdbcThinConnectionMvccEnabledSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinConnectionPropertiesTest;
@@ -186,7 +185,6 @@ import org.junit.runners.Suite;
     JdbcThinConnectionSelfTest.class,
     JdbcThinConnectionMvccEnabledSelfTest.class,
     JdbcThinConnectionMultipleAddressesTest.class,
-    JdbcThinConnectionFailoverTest.class,
     JdbcThinTcpIoTest.class,
     JdbcThinConnectionAdditionalSecurityTest.class,
     JdbcThinConnectionSSLTest.class,

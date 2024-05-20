@@ -138,59 +138,6 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
 
             assertConnectionsCount(ios, INITIAL_NODES_CNT);
         }
-
-        try (Connection conn = DriverManager.getConnection(URL)) {
-            Map<UUID, JdbcThinTcpIo> ios = GridTestUtils.getFieldValue(conn, "ios");
-
-            Statement stmt = conn.createStatement();
-
-            stopGrid(0);
-
-            stmt.executeQuery("select 1; select 2");
-
-            startGrid(0);
-
-            assertConnectionsCount(ios, INITIAL_NODES_CNT);
-        }
-
-        try (Connection conn = DriverManager.getConnection(URL)) {
-            Map<UUID, JdbcThinTcpIo> ios = GridTestUtils.getFieldValue(conn, "ios");
-
-            Statement stmt = conn.createStatement();
-
-            stopGrid(0);
-
-            stmt.execute("CREATE TABLE PARENT" + UUID.randomUUID().toString().substring(0, 6) +
-                " (ID INT, NAME VARCHAR, PRIMARY KEY(ID));");
-
-            startGrid(0);
-
-            assertConnectionsCount(ios, INITIAL_NODES_CNT);
-        }
-
-        try (Connection conn = DriverManager.getConnection(URL)) {
-            Map<UUID, JdbcThinTcpIo> ios = GridTestUtils.getFieldValue(conn, "ios");
-
-            Statement stmt = conn.createStatement();
-
-            String tblName = "PARENT" + UUID.randomUUID().toString().substring(0, 6);
-
-            stmt.execute("CREATE TABLE " + tblName +
-                " (ID INT, NAME VARCHAR, PRIMARY KEY(ID));");
-
-            stopGrid(0);
-
-            stmt.execute("INSERT INTO " + tblName + " (ID, NAME) VALUES(1, 'aaa')");
-
-            startGrid(0);
-
-            assertConnectionsCount(ios, INITIAL_NODES_CNT);
-
-            try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tblName)) {
-                assertTrue(rs.next());
-                assertEquals(1, rs.getLong(1));
-            }
-        }
     }
 
     /**
@@ -688,6 +635,54 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
         });
 
         startGrid(0);
+
+        // Check that there are no retries in case of multi-statements request.
+        checkNoRetriesOccurred(() -> {
+            try (Connection conn = DriverManager.getConnection(URL_WITH_ONE_PORT)) {
+                Statement stmt = conn.createStatement();
+
+                stopGrid(0);
+
+                stmt.executeQuery("select 1; select 2");
+            }
+            return null;
+        });
+
+        startGrid(0);
+
+        // Check that there are no retries in case of DDL.
+        checkNoRetriesOccurred(() -> {
+            try (Connection conn = DriverManager.getConnection(URL_WITH_ONE_PORT)) {
+                Statement stmt = conn.createStatement();
+
+                stopGrid(0);
+
+                stmt.execute("CREATE TABLE PARENT" + UUID.randomUUID().toString().substring(0, 6) +
+                    " (ID INT, NAME VARCHAR, PRIMARY KEY(ID));");
+            }
+            return null;
+        });
+
+        startGrid(0);
+
+        // Check that there are no retries in case of DML.
+        checkNoRetriesOccurred(() -> {
+            try (Connection conn = DriverManager.getConnection(URL_WITH_ONE_PORT)) {
+                Statement stmt = conn.createStatement();
+
+                String tblName = "PARENT" + UUID.randomUUID().toString().substring(0, 6);
+
+                stmt.execute("CREATE TABLE " + tblName +
+                    " (ID INT, NAME VARCHAR, PRIMARY KEY(ID));");
+
+                stopGrid(0);
+
+                stmt.execute("INSERT INTO" + tblName + " (ID, NAME) VALUES(1, 'aaa')");
+            }
+            return null;
+        });
+
+        startGrid(0);
     }
 
     /**
@@ -867,23 +862,17 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
     /**
      * Invalidate connection to stopped node. Jdbc thin, won't detect that node has gone, until it tries to touch it. So
      * sending simple query to randomly chosen connection(socket), sooner or later, will touch dead one, and thus
-     * invalidate it.
+     * invalidate it. Please, pay attention, that it's better to send non-failoverable query, for example query with
+     * ';' somewhere in the middle.
      *
      * @param conn Connections.
      */
-    private void invalidateConnectionToStoppedNode(Connection conn) throws SQLException {
-        Map<UUID, JdbcThinTcpIo> ios = GridTestUtils.getFieldValue(conn, "ios");
-
-        int initialSize = ios.size();
-
+    private void invalidateConnectionToStoppedNode(Connection conn) {
         while (true) {
-            try {
-                conn.createStatement().execute("select 1");
-            } catch (SQLException e) {
-                return;
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("select ';';");
             }
-
-            if (ios.size() != initialSize) {
+            catch (SQLException e) {
                 return;
             }
         }

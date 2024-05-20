@@ -54,6 +54,14 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
     private static final String URL_PORT_RANGE = "jdbc:ignite:thin://127.0.0.1:"
         + ClientConnectorConfiguration.DFLT_PORT + ".." + (ClientConnectorConfiguration.DFLT_PORT + 10);
 
+    /** */
+    private static final String URL_SINGLE_PORT = "jdbc:ignite:thin://127.0.0.1:"
+        + ClientConnectorConfiguration.DFLT_PORT;
+
+    /** */
+    private static final String STATEMENT_CLOSED_ON_DISCONNECT_MESSAGE =
+        "Statement was closed due to a disconnection from the server";
+
     /** Jdbc ports. */
     private static final ArrayList<Integer> jdbcPorts = new ArrayList<>();
 
@@ -302,6 +310,73 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
         assertTrue(allClosed);
     }
 
+    @Test
+    public void testSingleAddressReconnectAfterRestart() throws Exception {
+        try (Connection conn = DriverManager.getConnection(URL_SINGLE_PORT)) {
+            Statement stmt1 = createTestTable(conn);
+
+            // Simple select.
+            {
+                stopGrid(0);
+                startGrid(0);
+
+                Statement stmt = conn.createStatement();
+
+                stmt.execute("SELECT 1");
+                stmt.execute("SELECT 1");
+            }
+
+            // DML query.
+            {
+                stopGrid(0);
+                startGrid(0);
+
+                Statement stmt = conn.createStatement();
+
+                // We cannot automatically retry DML query, because it's possible to duplicate it.
+                assertThrowsSql(() -> stmt.executeUpdate("INSERT INTO TEST VALUES (1, 1)"), "Failed to communicate with Ignite cluster");
+
+                // But the second attempt recover connectoin.
+                stmt.executeUpdate("INSERT INTO TEST VALUES (1, 1)");
+            }
+
+            assertThrowsSql(() -> stmt1.execute("SELECT 1"), "Statement was closed due to a disconnection from the server");
+        }
+    }
+
+    @Test
+    public void testReconnectWithTxContextIsNotAllowed() throws Exception {
+        try (Connection conn = DriverManager.getConnection(URL_SINGLE_PORT)) {
+            conn.setAutoCommit(false);
+
+            Statement stmt1 = createTestTable(conn);
+
+            stmt1.execute("CREATE TABLE TEST_MVCC (ID INT, NAME VARCHAR, PRIMARY KEY(ID))" +
+                " WITH \"cache_name=TEST_MVCC,template=replicated,atomicity=transactional_snapshot\"");
+
+            stmt1.executeUpdate("INSERT INTO TEST VALUES (1, 1)");
+
+            stopGrid(0);
+            startGrid(0);
+
+            // Transaction context does not exist - reconnection must be performed.
+            stmt1.execute("SELECT 1");
+
+            // Create transaction context.
+            stmt1.executeUpdate("INSERT INTO TEST_MVCC VALUES (1, 1)");
+
+            stopGrid(0);
+            startGrid(0);
+
+            assertThrowsSql(() -> stmt1.execute("SELECT 1"), "Failed to communicate with Ignite cluster");
+            assertThrowsSql(() -> stmt1.execute("SELECT 1"), STATEMENT_CLOSED_ON_DISCONNECT_MESSAGE);
+
+            assertTrue(conn.isClosed());
+
+            assertThrowsSql(conn::createStatement, "Connection is closed");
+        }
+    }
+
     /**
      * Return active client list.
      *
@@ -405,10 +480,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             assertFalse(rs0.isClosed());
 
             stop(conn, allNodes);
-
-            if (allNodes) {
-                restart(allNodes);
-            }
+            restart(allNodes);
 
             GridTestUtils.assertThrows(log, new Callable<Object>() {
                 @Override public Object call() throws Exception {
@@ -564,5 +636,22 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
     private void restart(boolean all) throws Exception {
         if (all)
             startGrids(NODES_CNT);
+    }
+
+    private static void assertThrowsSql(GridTestUtils.RunnableX run, String message) {
+        GridTestUtils.assertThrows(log, () -> {
+            run.runx();
+
+            return null;
+        }, SQLException.class, message);
+    }
+
+    private static Statement createTestTable(Connection conn) throws SQLException {
+        Statement stmt = conn.createStatement();
+
+        stmt.execute("CREATE TABLE TEST (ID INT, NAME VARCHAR, PRIMARY KEY(ID))" +
+            " WITH \"cache_name=TEST,template=replicated\"");
+
+        return stmt;
     }
 }

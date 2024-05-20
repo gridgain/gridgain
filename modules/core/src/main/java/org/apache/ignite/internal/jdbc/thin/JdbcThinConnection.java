@@ -1980,9 +1980,22 @@ public class JdbcThinConnection implements Connection {
             req.type() == JdbcRequest.META_PARAMS ||
             req.type() == JdbcRequest.META_PRIMARY_KEYS ||
             req.type() == JdbcRequest.META_SCHEMAS ||
-            req.type() == JdbcRequest.CACHE_PARTITIONS ||
-            req.type() == JdbcRequest.QRY_EXEC)
+            req.type() == JdbcRequest.CACHE_PARTITIONS)
             return DFLT_RETRIES_CNT;
+
+        if (req.type() == JdbcRequest.QRY_EXEC) {
+            JdbcQueryExecuteRequest qryExecReq = (JdbcQueryExecuteRequest)req;
+
+            String trimmedQry = qryExecReq.sqlQuery().trim();
+
+            // Last symbol is ignored.
+            for (int i = 0; i < trimmedQry.length() - 1; i++) {
+                if (trimmedQry.charAt(i) == ';')
+                    return NO_RETRIES;
+            }
+
+            return trimmedQry.toUpperCase().startsWith("SELECT") ? DFLT_RETRIES_CNT : NO_RETRIES;
+        }
 
         return NO_RETRIES;
     }
