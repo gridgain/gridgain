@@ -443,15 +443,7 @@ public class JdbcThinStatement implements Statement {
         return cancelled;
     }
 
-    /**
-     * @return Returns true if statement was closed, false otherwise.
-     */
-    boolean closeOnDisconnect(boolean enforce) {
-        if (!enforce && (resultSets == null && batchSize == 0)) {
-            // Statement can be re-used.
-            return false;
-        }
-
+    void closeOnDisconnect() {
         if (resultSets != null) {
             for (JdbcThinResultSet rs : resultSets)
                 rs.closeOnDisconnect();
@@ -462,8 +454,6 @@ public class JdbcThinStatement implements Statement {
         clearBatch0();
 
         closedOnDisconnect = true;
-
-        return true;
     }
 
     /** {@inheritDoc} */

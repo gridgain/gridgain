@@ -342,8 +342,10 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
                     "Failed to communicate with Ignite cluster",
                     true);
 
+                assertTrue(stmt.isClosed());
+
                 // But the second attempt recover connectoin.
-                stmt.executeUpdate("INSERT INTO TEST VALUES (1, 1)");
+                conn.createStatement().executeUpdate("INSERT INTO TEST VALUES (1, 1)");
             }
 
             assertThrowsSql(() -> stmt1.execute("SELECT 1"),
