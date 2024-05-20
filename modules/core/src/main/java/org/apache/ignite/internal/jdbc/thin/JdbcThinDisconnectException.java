@@ -17,9 +17,9 @@
 package org.apache.ignite.internal.jdbc.thin;
 
 /**
- * An exception is added as the cause of an IO-error if there was a disconnection from the server.
+ * An exception indicating that JDBC internal {@link JdbcThinTcpIo IO} was disconnected from the server.
  */
-public class ServerDisconnectException extends Exception {
+public class JdbcThinDisconnectException extends Exception {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -28,7 +28,7 @@ public class ServerDisconnectException extends Exception {
      *
      * @param cause Exception cause.
      */
-    public ServerDisconnectException(Throwable cause) {
-        super("Client was disconnected from server", cause);
+    public JdbcThinDisconnectException(Throwable cause) {
+        super("The connection to the server was interrupted.", cause);
     }
 }

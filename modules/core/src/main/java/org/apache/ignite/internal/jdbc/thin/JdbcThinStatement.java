@@ -443,6 +443,9 @@ public class JdbcThinStatement implements Statement {
         return cancelled;
     }
 
+    /**
+     *
+     */
     void closeOnDisconnect() {
         if (resultSets != null) {
             for (JdbcThinResultSet rs : resultSets)

@@ -35,7 +35,7 @@ import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.jdbc.thin.JdbcThinConnection;
-import org.apache.ignite.internal.jdbc.thin.ServerDisconnectException;
+import org.apache.ignite.internal.jdbc.thin.JdbcThinDisconnectException;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -62,6 +62,10 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
     /** */
     private static final String STATEMENT_CLOSED_ON_DISCONNECT_MESSAGE =
         "Statement was closed due to a disconnection from the server";
+
+    /** */
+    private static final String FAILED_CONNECT_TO_CLUSTER_MESSAGE =
+        "Failed to communicate with Ignite cluster";
 
     /** Jdbc ports. */
     private static final ArrayList<Integer> jdbcPorts = new ArrayList<>();
@@ -140,15 +144,6 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
                 assertEquals(1, rs.getInt(1));
             }
         }
-    }
-
-    @Test
-    public void testConnectionFailure() {
-        assertThrowsSql(
-            () -> DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:12345"),
-            "Failed to connect to server",
-            false
-        );
     }
 
     /**
@@ -277,7 +272,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
 
             serverMxBean.dropAllConnections();
 
-            assertThrowsSql(() -> stmt0.execute("SELECT 1"), "Failed to communicate with Ignite cluster", true);
+            assertThrowsSql(() -> stmt0.execute("SELECT 1"), FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
 
             assertTrue(rs0.isClosed());
             assertTrue(stmt0.isClosed());
@@ -314,6 +309,22 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
         assertTrue(allClosed);
     }
 
+    /** Ensures that {@link JdbcThinDisconnectException} doesn't throw on the initial connection. */
+    @Test
+    public void testConnectionFailure() {
+        assertThrowsSql(
+            () -> DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:12345"),
+            "Failed to connect to server",
+            false
+        );
+
+        assertThrowsSql(
+            () -> DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:12345?PartitionAwareness=true"),
+            "Failed to connect to server",
+            false
+        );
+    }
+
     @Test
     public void testSingleAddressReconnectAfterRestart() throws Exception {
         try (Connection conn = DriverManager.getConnection(URL_SINGLE_PORT)) {
@@ -321,13 +332,48 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
 
             // Simple select.
             {
+                // Statement is empty when disconnect detected.
+                try (Statement stmt = conn.createStatement()) {
+                    stopGrid(0);
+                    startGrid(0);
+
+                    stmt.execute("SELECT 1");
+                    stmt.execute("SELECT 1");
+                }
+
+                // Statement has closed resultset when disconnect detected.
+                try (Statement stmt = conn.createStatement()) {
+                    try (ResultSet rs = stmt.executeQuery("SELECT 1")) {
+                        assertTrue(rs.next());
+                    }
+
+                    stopGrid(0);
+                    startGrid(0);
+
+                    stmt.execute("SELECT 1");
+                    stmt.execute("SELECT 1");
+                }
+
+                // Statement has opened resultset when disconnect detected.
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.execute("SELECT 1");
+
+                    stopGrid(0);
+                    startGrid(0);
+
+                    // Exception when sending JdbcQueryCloseRequest.
+                    assertThrowsSql(() -> stmt.execute("SELECT 1"), FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
+                    assertTrue(stmt.isClosed());
+                }
+
+                // Statement created after restart.
                 stopGrid(0);
                 startGrid(0);
 
-                Statement stmt = conn.createStatement();
-
-                stmt.execute("SELECT 1");
-                stmt.execute("SELECT 1");
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.execute("SELECT 1");
+                    stmt.execute("SELECT 1; SELECT 1");
+                }
             }
 
             // DML query.
@@ -335,45 +381,49 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
                 stopGrid(0);
                 startGrid(0);
 
-                Statement stmt = conn.createStatement();
+                try (Statement stmt = conn.createStatement()) {
+                    // We cannot automatically retry DML query, because it's possible to duplicate it.
+                    assertThrowsSql(() -> stmt.executeUpdate("INSERT INTO TEST VALUES (1, 1)"),
+                        FAILED_CONNECT_TO_CLUSTER_MESSAGE,
+                        true);
 
-                // We cannot automatically retry DML query, because it's possible to duplicate it.
-                assertThrowsSql(() -> stmt.executeUpdate("INSERT INTO TEST VALUES (1, 1)"),
-                    "Failed to communicate with Ignite cluster",
-                    true);
+                    assertTrue(stmt.isClosed());
+                    assertThrowsSql(() -> stmt.execute("SELECT 1"),
+                        STATEMENT_CLOSED_ON_DISCONNECT_MESSAGE,
+                        false);
+                }
 
-                assertTrue(stmt.isClosed());
+                try (Statement stmt = conn.createStatement()) {
+                    // But the second attempt recover connection.
+                    assertEquals(1, stmt.executeUpdate("INSERT INTO TEST VALUES (1, 1)"));
 
-                // But the second attempt recover connectoin.
-                conn.createStatement().executeUpdate("INSERT INTO TEST VALUES (1, 1)");
+                    assertFalse(stmt.isClosed());
+                }
             }
 
-            assertThrowsSql(() -> stmt1.execute("SELECT 1"),
-                "Statement was closed due to a disconnection from the server",
-                false);
+            assertTrue(stmt1.isClosed());
         }
     }
 
     @Test
     public void testSingleAddressReconnectDuringRestart() throws Exception {
         try (Connection conn = DriverManager.getConnection(URL_SINGLE_PORT)) {
-            // Simple select.
-            {
-                stopGrid(0);
-                Statement stmt = conn.createStatement();
+            stopGrid(0);
 
+            try (Statement stmt = conn.createStatement()) {
                 assertThrowsSql(() -> stmt.execute("SELECT 1"), "Failed to connect to server", true);
                 assertTrue(stmt.isClosed());
+            }
 
-                startGrid(0);
+            startGrid(0);
 
-                Statement stmt2 = conn.createStatement();
-
-                stmt2.execute("SELECT 1");
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("SELECT 1");
             }
         }
     }
 
+    /** Ensures that if a transaction context exists, the connection is closed when a disconnect is detected. */
     @Test
     public void testReconnectWithTxContextIsNotAllowed() throws Exception {
         try (Connection conn = DriverManager.getConnection(URL_SINGLE_PORT)) {
@@ -390,17 +440,20 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             startGrid(0);
 
             // Transaction context does not exist - reconnection must be performed.
-            stmt1.execute("SELECT 1");
+            stmt1.execute("SELECT * FROM TEST");
 
             // Create transaction context.
-            stmt1.executeUpdate("INSERT INTO TEST_MVCC VALUES (1, 1)");
+            stmt1.execute("SELECT * FROM TEST_MVCC");
 
             stopGrid(0);
             startGrid(0);
 
-            assertThrowsSql(() -> stmt1.execute("SELECT 1"), "Failed to communicate with Ignite cluster", true);
-            assertThrowsSql(() -> stmt1.execute("SELECT 1"), STATEMENT_CLOSED_ON_DISCONNECT_MESSAGE, false);
+            try (Statement stmt = conn.createStatement()) {
+                assertThrowsSql(() -> stmt.execute("SELECT 1"), FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
+                assertThrowsSql(() -> stmt.execute("SELECT 1"), STATEMENT_CLOSED_ON_DISCONNECT_MESSAGE, false);
+            }
 
+            assertTrue(stmt1.isClosed());
             assertTrue(conn.isClosed());
 
             assertThrowsSql(conn::createStatement, "Connection is closed", false);
@@ -510,7 +563,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             stop(conn, allNodes);
             restart(allNodes);
 
-            assertThrowsSql(() -> stmt0.execute("SELECT 1"), "Failed to communicate with Ignite cluster", true);
+            assertThrowsSql(() -> stmt0.execute("SELECT 1"), FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
 
             assertTrue(rs0.isClosed());
             assertTrue(stmt0.isClosed());
@@ -548,7 +601,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
 
             stop(conn, allNodes);
 
-            assertThrowsSql(rs0::close, "Failed to communicate with Ignite cluster", true);
+            assertThrowsSql(rs0::close, FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
 
             assertTrue(rs0.isClosed());
             assertTrue(stmt0.isClosed());
@@ -661,7 +714,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             return null;
         }, SQLException.class, message);
 
-        assertEquals(String.valueOf(ex), disconnected, ex.getCause() instanceof ServerDisconnectException);
+        assertEquals(String.valueOf(ex), disconnected, ex.getCause() instanceof JdbcThinDisconnectException);
     }
 
     private static Statement createTestTable(Connection conn) throws SQLException {

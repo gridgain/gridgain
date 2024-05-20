@@ -1058,8 +1058,11 @@ public class JdbcThinConnection implements Connection {
                         throw new SQLException("Connection timed out.", CONNECTION_FAILURE, e);
                     else {
                         if (lastE == null) {
+                            // Note that retry attempts are counted only if several connections have already been
+                            // established (for example, in partition awareness mode), in other case, only
+                            // one retry attempt is made to connect to provided enpoint(s).
                             retryAttemptsLeft = calculateRetryAttemptsCount(stickyIo, req);
-                            lastE = new ServerDisconnectException(e);
+                            lastE = new JdbcThinDisconnectException(e);
                         }
                         else
                             retryAttemptsLeft--;
@@ -1836,7 +1839,7 @@ public class JdbcThinConnection implements Connection {
                 if (ex instanceof SQLException) {
                     if (disconnected) {
                         throw new SQLException(
-                            ex.getMessage(), ((SQLException)ex).getSQLState(), new ServerDisconnectException(ex));
+                            ex.getMessage(), ((SQLException)ex).getSQLState(), new JdbcThinDisconnectException(ex));
                     }
 
                     throw (SQLException)ex;
@@ -1844,12 +1847,12 @@ public class JdbcThinConnection implements Connection {
                 else if (ex instanceof IOException) {
                     throw new SQLException("Failed to connect to Ignite cluster [url=" + connProps.getUrl() + ']',
                         CLIENT_CONNECTION_FAILED,
-                        disconnected ? new ServerDisconnectException(ex) : ex);
+                        disconnected ? new JdbcThinDisconnectException(ex) : ex);
                 }
             }
 
             SQLException e = new SQLException("Failed to connect to server [url=" + connProps.getUrl() + ']',
-                CLIENT_CONNECTION_FAILED, disconnected ? new ServerDisconnectException(null) : null);
+                CLIENT_CONNECTION_FAILED, disconnected ? new JdbcThinDisconnectException(null) : null);
 
             for (Exception ex : exceptions)
                 e.addSuppressed(ex);
@@ -1989,7 +1992,7 @@ public class JdbcThinConnection implements Connection {
      * @param req Jdbc request.
      * @return retries count.
      */
-    private int calculateRetryAttemptsCount(JdbcThinTcpIo stickyIo, JdbcRequest req) throws SQLException {
+    private int calculateRetryAttemptsCount(JdbcThinTcpIo stickyIo, JdbcRequest req) {
         if (stickyIo != null)
             return NO_RETRIES;
 
