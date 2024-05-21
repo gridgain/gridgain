@@ -1,0 +1,30 @@
+name: Update Nightly Branch
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git User
+        run: |
+          git config user.name "GG Integration User"
+          git config user.email "ggintegration@gridgain.com"
+
+      - name: Update Nightly Branch
+        run: |
+          set -x
+          git checkout master
+          git fetch origin
+          git checkout nightly-master
+          git pull
+          git rebase origin/master
+          git push origin nightly-master
