@@ -20,6 +20,7 @@ import java.lang.management.ManagementFactory;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -43,6 +44,8 @@ import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
+
+import static org.junit.Assert.assertArrayEquals;
 
 /**
  * JDBC driver reconnect test with multiple addresses.
@@ -398,6 +401,73 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
                     assertEquals(1, stmt.executeUpdate("INSERT INTO TEST VALUES (1, 1)"));
 
                     assertFalse(stmt.isClosed());
+                }
+            }
+
+            // Prepared statement.
+            {
+                stopGrid(0);
+                startGrid(0);
+
+                try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO TEST VALUES (?, ?)")) {
+                    stmt.setInt(1, 2);
+                    stmt.setInt(2, 2);
+
+                    // We cannot automatically retry DML query, because it's possible to duplicate it.
+                    assertThrowsSql(stmt::executeUpdate, FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
+
+                    assertTrue(stmt.isClosed());
+                }
+
+                try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO TEST VALUES (?, ?)")) {
+                    stmt.setInt(1, 2);
+                    stmt.setInt(2, 2);
+                    // But the second attempt recover connection.
+                    assertEquals(1, stmt.executeUpdate());
+
+                    assertFalse(stmt.isClosed());
+                }
+            }
+
+            // Prepared statement batch.
+            {
+                stopGrid(0);
+                startGrid(0);
+
+                try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO TEST VALUES (?, ?)")) {
+                    stmt.setInt(1, 3);
+                    stmt.setInt(2, 3);
+                    stmt.addBatch();
+
+                    stmt.setInt(1, 4);
+                    stmt.setInt(2, 4);
+                    stmt.addBatch();
+
+                    assertThrowsSql(stmt::executeBatch, FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
+
+                    assertTrue(stmt.isClosed());
+                }
+
+                try (PreparedStatement stmt = conn.prepareStatement("INSERT INTO TEST VALUES (?, ?)")) {
+                    stmt.setInt(1, 3);
+                    stmt.setInt(2, 3);
+                    stmt.addBatch();
+
+                    stmt.setInt(1, 4);
+                    stmt.setInt(2, 4);
+                    stmt.addBatch();
+                    // But the second attempt recover connection.
+                    assertArrayEquals(new int[] {1, 1}, stmt.executeBatch());
+
+                    assertFalse(stmt.isClosed());
+                }
+
+                try (Statement stmt = conn.createStatement()) {
+                    try (ResultSet rs = stmt.executeQuery("SELECT COUNT(1) FROM TEST")) {
+                        assertTrue(rs.next());
+
+                        assertEquals(4, rs.getLong(1));
+                    }
                 }
             }
 
