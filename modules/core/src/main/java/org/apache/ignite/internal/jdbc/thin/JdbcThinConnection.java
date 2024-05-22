@@ -1054,6 +1054,13 @@ public class JdbcThinConnection implements Connection {
                     if (cliIo != null && cliIo.connected())
                         onDisconnect(cliIo, stmt);
 
+                    if (!closed && stickyIo != null && req.type() == JdbcRequest.QRY_CLOSE) {
+                        // When disconnected, the server's request handler must close open cursors,
+                        // and the client has no way to handle the exception that occurs in this situation.
+                        // Therefore, it seems more correct to simply ignore it.
+                        return null;
+                    }
+
                     if (e instanceof SocketTimeoutException)
                         throw new SQLException("Connection timed out.", CONNECTION_FAILURE, e);
                     else {

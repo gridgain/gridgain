@@ -275,18 +275,25 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
 
             serverMxBean.dropAllConnections();
 
-            assertThrowsSql(() -> stmt0.execute("SELECT 1"), FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
-
+            // Simple select should silently close opened result set and re-establish connection trnsparently.
+            stmt0.execute("SELECT 1");
             assertTrue(rs0.isClosed());
-            assertTrue(stmt0.isClosed());
+
+            serverMxBean.dropAllConnections();
+
+            Statement stmt1 = conn.createStatement();
+
+            // Multistatement query cannot re-establish connection transparently.
+            assertThrowsSql(() -> stmt1.execute("SELECT 1; SELECT 1"), FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
+            assertTrue(stmt1.isClosed());
 
             assertTrue(getActiveClients().isEmpty());
 
-            final Statement stmt1 = conn.createStatement();
+            final Statement stmt2 = conn.createStatement();
 
-            stmt1.execute("SELECT 1");
+            stmt2.execute("SELECT 1");
 
-            ResultSet rs1 = stmt1.getResultSet();
+            ResultSet rs1 = stmt2.getResultSet();
 
             // Check active clients.
             List<String> activeClients = getActiveClients();
@@ -297,7 +304,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             assertEquals(1, rs1.getInt(1));
 
             rs1.close();
-            stmt1.close();
+            stmt2.close();
         }
         finally {
             conn.close();
@@ -358,15 +365,29 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
                 }
 
                 // Statement has opened resultset when disconnect detected.
+                {
+                    Statement stmt = conn.createStatement();
+
+                    stmt.execute("SELECT 1");
+
+                    stopGrid(0);
+                    startGrid(0);
+
+                    // The exception when closing an open result set should be ignored
+                    // since the client cannot do anything with it.
+                    stmt.close();
+                    assertTrue(stmt.isClosed());
+                }
+
+                // The same case, but with transparent re-connection.
                 try (Statement stmt = conn.createStatement()) {
                     stmt.execute("SELECT 1");
 
                     stopGrid(0);
                     startGrid(0);
 
-                    // Exception when sending JdbcQueryCloseRequest.
-                    assertThrowsSql(() -> stmt.execute("SELECT 1"), FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
-                    assertTrue(stmt.isClosed());
+                    stmt.execute("SELECT 1");
+                    stmt.execute("SELECT 1");
                 }
 
                 // Statement created after restart.
@@ -633,17 +654,9 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             stop(conn, allNodes);
             restart(allNodes);
 
-            assertThrowsSql(() -> stmt0.execute("SELECT 1"), FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
-
-            assertTrue(rs0.isClosed());
-            assertTrue(stmt0.isClosed());
-
-            // Connection must be re-established transparently for the new statement.
-            final Statement stmt1 = conn.createStatement();
-
-            stmt1.execute("SELECT 1");
-
-            ResultSet rs1 = stmt1.getResultSet();
+            // Connection must be re-established transparently.
+            stmt0.execute("SELECT 1");
+            ResultSet rs1 = stmt0.getResultSet();
 
             assertTrue(rs1.next());
             assertEquals(1, rs1.getInt(1));
@@ -671,10 +684,8 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
 
             stop(conn, allNodes);
 
-            assertThrowsSql(rs0::close, FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
-
-            assertTrue(rs0.isClosed());
-            assertTrue(stmt0.isClosed());
+            // Exception raised on sending close request is ignored, because client cannot do anything with it
+            rs0.close();
 
             restart(allNodes);
 
