@@ -317,6 +317,7 @@ public class GridNioRecoveryDescriptor {
      * @throws InterruptedException If interrupted.
      */
     public boolean reserve() throws InterruptedException {
+        if (log.isDebugEnabled()) log.debug("RD :: Access descriptor monitor for node=" + this.node);
         synchronized (this) {
             long t0 = System.nanoTime();
 
@@ -333,11 +334,13 @@ public class GridNioRecoveryDescriptor {
             }
 
             if (!connected) {
+                if (log.isDebugEnabled()) log.debug("RD :: Set reserved=true for node=" + this.node);
                 reserved = true;
 
                 reserveCnt++;
             }
 
+            if (log.isDebugEnabled()) log.debug("RD :: Return !connected=" + (!connected) + " for node=" + this.node);
             return !connected;
         }
     }
@@ -392,6 +395,7 @@ public class GridNioRecoveryDescriptor {
     public void release() {
         SessionWriteRequest[] futs = null;
 
+        if (log.isDebugEnabled()) log.debug("RD :: release for node=" + node.id());
         synchronized (this) {
             ses = null;
 
@@ -416,13 +420,19 @@ public class GridNioRecoveryDescriptor {
      * @return {@code True} if reserved.
      */
     public boolean tryReserve() {
+        if (log.isDebugEnabled()) log.debug("RD :: try reserve wait on minitor for node=" + node.id());
         synchronized (this) {
-            if (connected || reserved)
+            if (connected || reserved) {
+                if (log.isDebugEnabled())
+                    log.debug("RD :: try reserve return <false> for node=" + node.id());
                 return false;
-            else {
+            } else {
                 reserved = true;
 
                 reserveCnt++;
+
+                if (log.isDebugEnabled())
+                    log.debug("RD :: try reserve return <true> for node=" + node.id());
 
                 return true;
             }

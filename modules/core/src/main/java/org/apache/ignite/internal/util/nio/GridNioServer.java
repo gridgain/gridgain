@@ -46,6 +46,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
@@ -1996,14 +1997,25 @@ public class GridNioServer<T> {
             }
         }
 
+        private final AtomicInteger dumpThread = new AtomicInteger(0);
+
         /**
          * Adds socket channel to the registration queue and wakes up reading thread.
          *
          * @param req Change request.
          */
         @Override public void offer(SessionChangeRequest req) {
-            if (log.isDebugEnabled())
-                log.debug("The session change request was offered [req=" + req + "]");
+            if (log.isDebugEnabled()) {
+                if (dumpThread.getAndIncrement() < 3) {
+                    try {
+                        throw new RuntimeException("debug");
+                    } catch (Exception e) {
+                        log.error("The session change request was offered [req=" + req + "]", e);
+                    }
+                } else {
+                    log.debug("The session change request was offered [req=" + req + "]");
+                }
+            }
 
             changeReqs.offer(req);
 

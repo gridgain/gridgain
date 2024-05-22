@@ -347,6 +347,8 @@ public class GridNioServerWrapper {
         int skippedAddrs = 0;
 
         for (InetSocketAddress addr : addrs) {
+            if (log.isDebugEnabled()) log.debug("Session :: try addr " + addr + " for node " + node.id());
+
             if (addr.isUnresolved()) {
                 failedAddrs.computeIfAbsent(addr, k -> new ArrayList<>()).add("Unresolved addr");
 
@@ -413,6 +415,7 @@ public class GridNioServerWrapper {
                                 sesFromRecovery.close();
                         }
 
+                        if (log.isDebugEnabled()) log.debug("Session :: return null client for node " + node.id());
                         return null;
                     }
 
@@ -630,6 +633,7 @@ public class GridNioServerWrapper {
             processSessionCreationError(node, addrs, errs == null ? new IgniteCheckedException("No session found") : errs);
         }
 
+        if (log.isDebugEnabled()) log.debug("Session :: return non-null session for " + node.id());
         return ses;
     }
 

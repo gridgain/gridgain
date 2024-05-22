@@ -193,6 +193,50 @@ public class ConnectionClientPool {
         handshakeTimeoutExecutorService.shutdown();
     }
 
+    private static class DebugConnectFuture extends ConnectFuture {
+
+        private final IgniteLogger log;
+        private final String nodeId;
+        private final int connIdx;
+
+        public DebugConnectFuture(IgniteLogger log, String id, int idx) {
+            super();
+            this.log = log;
+            this.nodeId = id;
+            this.connIdx = idx;
+        }
+
+        private void debug(String msg) {
+            if (log.isDebugEnabled()) log.debug("Connect Future [node=" + nodeId + ", idx=" + connIdx + "] :: " + msg);
+        }
+
+        @Override public boolean cancel() throws IgniteCheckedException {
+            debug("cancel");
+            return super.cancel();
+        }
+
+        @Override public boolean onDone(@Nullable GridCommunicationClient res, @Nullable Throwable err) {
+            debug("onDone I, res=" + res);
+            return super.onDone(res, err);
+        }
+
+        @Override protected boolean onDone(@Nullable GridCommunicationClient res, @Nullable Throwable err,
+            boolean cancel) {
+            debug("onDone II, res=" + res);
+            return super.onDone(res, err, cancel);
+        }
+
+        @Override public void reset() {
+            debug("reset");
+            super.reset();
+        }
+
+        @Override public boolean onCancelled() {
+            debug("onCancelled");
+            return super.onCancelled();
+        }
+    }
+
     /**
      * Returns existing or just created client to node.
      *
@@ -228,10 +272,11 @@ public class ConnectionClientPool {
                     throw new IgniteSpiException("Node is stopping.");
 
                 // Do not allow concurrent connects.
-                GridFutureAdapter<GridCommunicationClient> fut = new ConnectFuture();
+                GridFutureAdapter<GridCommunicationClient> fut = new DebugConnectFuture(log, U.id8(node.id()), connIdx);
 
                 ConnectionKey connKey = new ConnectionKey(nodeId, connIdx, -1);
 
+                if (log.isDebugEnabled()) log.debug("Reserve :: try to put future");
                 GridFutureAdapter<GridCommunicationClient> oldFut = clientFuts.putIfAbsent(connKey, fut);
 
                 if (oldFut == null) {
@@ -269,24 +314,29 @@ public class ConnectionClientPool {
                             }
                         }
 
+                        if (log.isDebugEnabled()) log.debug("Reserve :: complete future with client for node=" + node.id());
                         fut.onDone(client0);
                     }
                     catch (NodeUnreachableException e) {
                         log.warning(e.getMessage());
 
+                        if (log.isDebugEnabled()) log.debug("Reserve :: unreachable exception");
                         fut = handleUnreachableNodeException(node, connIdx, fut, e);
                     }
                     catch (Throwable e) {
                         if (e instanceof IgniteTooManyOpenFilesException) {
+                            if (log.isDebugEnabled()) log.debug("Reserve :: complete future with too_many_open_files node=" + node.id());
                             fut.onDone(e);
                             throw e;
                         }
 
                         if (e instanceof Error) {
+                            if (log.isDebugEnabled()) log.debug("Reserve :: complete future with error for node=" + node.id());
                             fut.onDone(e);
                             throw (Error)e;
                         }
 
+                        if (log.isDebugEnabled()) log.debug("Reserve :: throwable " + e);
                         ConnectFuture conFut = (ConnectFuture) (fut);
 
                         if (conFut.incomingConnectionAttempts() > INCOMING_CONNECTION_ATTEMPTS_THRESHOLD) {
@@ -297,8 +347,10 @@ public class ConnectionClientPool {
                                 conFut.resetIncomingConnectionAttempts();
                             }
                         }
-                        else
+                        else {
+                            if (log.isDebugEnabled()) log.debug("Reserve :: complete future with throwable for node=" + node.id());
                             fut.onDone(e);
+                        }
                     }
                     finally {
                         clientFuts.remove(connKey, fut);
@@ -315,7 +367,9 @@ public class ConnectionClientPool {
                 // This cycle will eventually quit when future is completed by concurrent thread reserving client.
                 while (true) {
                     try {
+                        if (log.isDebugEnabled()) log.debug("Reserve :: wait on future for node=" + node.id());
                         client = fut.get(clientReserveWaitTimeout, TimeUnit.MILLISECONDS);
+                        if (log.isDebugEnabled()) log.debug("Reserve :: finish waiting on future for node=" + node.id() + " client=" + client);
 
                         break;
                     }
@@ -347,6 +401,10 @@ public class ConnectionClientPool {
 
                     throw new IgniteSpiException("Destination node is not in topology: " + node.id());
                 }
+            }
+
+            if (log.isDebugEnabled()) {
+                log.debug("Reserve :: client found for node=" + node.id() + " client=" + client);
             }
 
             assert connIdx == client.connectionIndex() : client;
