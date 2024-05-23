@@ -711,19 +711,25 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                     ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
                 }
                 else {
-                    // The code below causes a race condition between shmem and TCP (see IGNITE-1294)
-                    boolean reserved = recoveryDesc.tryReserve();
+                    try {
+                        // The code below causes a race condition between shmem and TCP (see IGNITE-1294)
+                        boolean reserved = recoveryDesc.tryReserve();
 
-                    if (reserved) {
-                        GridTcpNioCommunicationClient client =
-                            connected(recoveryDesc, ses, rmtNode, msg0.received(), true, !hasShmemClient);
+                        if (reserved) {
+                            GridTcpNioCommunicationClient client =
+                                connected(recoveryDesc, ses, rmtNode, msg0.received(), true, !hasShmemClient);
 
-                        oldFut.onDone(client);
+                            oldFut.onDone(client);
+                        }
+                        else {
+                            ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
 
+                            oldFut.onDone();
+                        }
+                    }
+                    finally {
                         clientPool.removeFut(connKey, oldFut);
                     }
-                    else
-                        ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
                 }
             }
         }
