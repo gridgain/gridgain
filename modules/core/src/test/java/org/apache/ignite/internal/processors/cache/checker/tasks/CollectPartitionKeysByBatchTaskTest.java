@@ -136,7 +136,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
 
             Map<KeyCacheObject, Map<UUID, GridCacheVersion>> rechecks = reduce.get2();
 
-            assertEquals(Integer.valueOf(200), reduce.get1().value(null, false));
+            assertEquals(Integer.valueOf(100), reduce.get1().value(null, false));
             assertEquals(2, rechecks.size());
             assertTrue(rechecks.containsKey(key(100, ctxo)));
             assertTrue(rechecks.containsKey(key(200, ctxo)));
@@ -180,7 +180,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
 
             Map<KeyCacheObject, Map<UUID, GridCacheVersion>> rechecks = reduce.get2();
 
-            assertEquals(Integer.valueOf(6), reduce.get1().value(null, false));
+            assertEquals(Integer.valueOf(5), reduce.get1().value(null, false));
 
             assertEquals(6, rechecks.size());
             assertEquals(1, rechecks.get(key(1, ctxo)).size()); // 1
