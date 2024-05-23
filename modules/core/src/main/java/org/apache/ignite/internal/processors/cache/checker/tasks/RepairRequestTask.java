@@ -59,14 +59,10 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  */
 @GridInternal
 public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, ExecutionResult<RepairResult>> {
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 0L;
 
-    /**
-     *
-     */
+    /** */
     public static final int MAX_REPAIR_ATTEMPTS = 3;
 
     /** Injected logger. */
@@ -83,8 +79,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
     private RepairRequest repairReq;
 
     /** {@inheritDoc} */
-    @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, RepairRequest arg)
-        throws IgniteException {
+    @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, RepairRequest arg) throws IgniteException {
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
         repairReq = arg;
@@ -107,12 +102,12 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
 
             int part = ctx.affinity().partition(keyCacheObj);
 
-            UUID primaryNodeId = ctx.affinity().nodesByPartition(
-                part, AffinityTopologyVersion.NONE).get(0).id();
+            UUID primaryNodeId = ctx.affinity().nodesByPartition(part, AffinityTopologyVersion.NONE).get(0).id();
 
-            targetNodesToData.putIfAbsent(primaryNodeId, new HashMap<>());
+            Map<KeyCacheObject, Map<UUID, VersionedValue>> primaryKeyValuesMapping =
+                targetNodesToData.computeIfAbsent(primaryNodeId, nodeId -> new HashMap<>());
 
-            targetNodesToData.get(primaryNodeId).put(keyCacheObj, dataEntry.getValue());
+            primaryKeyValuesMapping.put(keyCacheObj, dataEntry.getValue());
         }
 
         for (ClusterNode node : subgrid) {
@@ -169,8 +164,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
     }
 
     /** {@inheritDoc} */
-    @Override public ExecutionResult<RepairResult> reduce(
-        List<ComputeJobResult> results) throws IgniteException {
+    @Override public ExecutionResult<RepairResult> reduce( List<ComputeJobResult> results) throws IgniteException {
         RepairResult aggregatedRepairRes = new RepairResult();
 
         for (ComputeJobResult result : results) {
@@ -195,9 +189,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
      * Repair job.
      */
     protected static class RepairJob extends ComputeJobAdapter {
-        /**
-         *
-         */
+        /** */
         private static final long serialVersionUID = 0L;
 
         /** Ignite instance. */
@@ -239,8 +231,14 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
          * @param partId Partition Id.
          */
         @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-        public RepairJob(Map<VersionedKey, Map<UUID, VersionedValue>> data, String cacheName,
-            RepairAlgorithm repairAlg, int repairAttempt, AffinityTopologyVersion startTopVer, int partId) {
+        public RepairJob(
+            Map<VersionedKey, Map<UUID, VersionedValue>> data,
+             String cacheName,
+            RepairAlgorithm repairAlg,
+            int repairAttempt,
+            AffinityTopologyVersion startTopVer,
+            int partId
+        ) {
             this.data = data;
             this.cacheName = cacheName;
             this.repairAlg = repairAlg;
@@ -260,8 +258,6 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
             GridCacheContext ctx = ignite.cachex(cacheName).context();
             CacheObjectContext cacheObjCtx = ctx.cacheObjectContext();
 
-            // TODO: 02.12.19
-            final int rmvQueueMaxSize = 32;
             final int ownersNodesSize = owners(ctx);
 
             for (Map.Entry<VersionedKey, Map<UUID, VersionedValue>> dataEntry : data.entrySet()) {
@@ -295,7 +291,6 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                     new RepairEntryProcessor(
                                         valToFixWith,
                                         nodeToVersionedValues,
-                                        rmvQueueMaxSize,
                                         false,
                                         startTopVer));
 
@@ -320,7 +315,6 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                     new RepairEntryProcessor(
                                         valToFixWith,
                                         nodeToVersionedValues,
-                                        rmvQueueMaxSize,
                                         true,
                                         startTopVer));
 
@@ -344,7 +338,6 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                     new RepairEntryProcessor(
                                         valToFixWith,
                                         nodeToVersionedValues,
-                                        rmvQueueMaxSize,
                                         false,
                                         startTopVer));
 

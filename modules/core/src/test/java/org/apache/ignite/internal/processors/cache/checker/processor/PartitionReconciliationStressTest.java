@@ -40,6 +40,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+
 /**
  * Tests the utility under loading.
  */
@@ -74,6 +76,10 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
     @Parameterized.Parameter(4)
     public int parallelism;
 
+    /** Batch size. */
+    @Parameterized.Parameter(5)
+    public int batchSize;
+
     /** Crd server node. */
     protected IgniteEx ig;
 
@@ -90,22 +96,15 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
                 .setMaxSize(300L * 1024 * 1024))
         );
 
-        CacheConfiguration ccfg = new CacheConfiguration();
-
-        ccfg.setName(DEFAULT_CACHE_NAME);
-        ccfg.setAtomicityMode(cacheAtomicityMode);
-        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, parts));
-        ccfg.setBackups(NODES_CNT - 1);
-
-        cfg.setCacheConfiguration(ccfg);
         cfg.setConsistentId(name);
 
         return cfg;
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -114,21 +113,46 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
 
         client = startClientGrid(NODES_CNT);
 
-        ig.cluster().active(true);
+        ig.cluster().state(ACTIVE);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        CacheConfiguration ccfg = new CacheConfiguration();
+
+        ccfg.setName(DEFAULT_CACHE_NAME);
+        ccfg.setAtomicityMode(cacheAtomicityMode);
+        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, parts));
+        ccfg.setBackups(NODES_CNT - 1);
+
+        ig = grid(0);
+        client = grid(NODES_CNT);
+
+        ig.getOrCreateCache(ccfg);
+
+        awaitPartitionMapExchange();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        stopAllGrids();
-
-        cleanPersistenceDir();
+        grid(0).destroyCache(DEFAULT_CACHE_NAME);
     }
 
     /**
      * Makes different variations of input params.
      */
     @Parameterized.Parameters(
-        name = "atomicity = {0}, partitions = {1}, fixModeEnabled = {2}, repairAlgorithm = {3}, parallelism = {4}")
+        name = "atomicity = {0}, partitions = {1}, fixModeEnabled = {2}, repairAlgorithm = {3}, parallelism = {4}, batchSize = {5}")
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
@@ -139,11 +163,13 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
 
         for (CacheAtomicityMode atomicityMode : atomicityModes) {
             for (int parts : partitions)
-                params.add(new Object[] {atomicityMode, parts, false, null, 4});
+                params.add(new Object[] {atomicityMode, parts, false, null, 4, 1000});
+
+            params.add(new Object[] {atomicityMode, partitions[1], false, null, 4, 10});
         }
 
-        params.add(new Object[] {CacheAtomicityMode.ATOMIC, 1, false, null, 1});
-        params.add(new Object[] {CacheAtomicityMode.TRANSACTIONAL, 32, false, null, 1});
+        params.add(new Object[] {CacheAtomicityMode.ATOMIC, 1, false, null, 1, 1000});
+        params.add(new Object[] {CacheAtomicityMode.TRANSACTIONAL, 32, false, null, 1, 1000});
 
         return params;
     }
@@ -203,7 +229,7 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
             }
         }, 4, "rand-loader");
 
-        ReconciliationResult res = partitionReconciliation(ig, fixMode, repairAlgorithm, parallelism, DEFAULT_CACHE_NAME);
+        ReconciliationResult res = partitionReconciliation(ig, fixMode, repairAlgorithm, parallelism, batchSize, DEFAULT_CACHE_NAME);
 
         log.info(">>>> Partition reconciliation finished");
 
