@@ -1069,7 +1069,7 @@ public class JdbcThinConnection implements Connection {
                             // established (for example, in partition awareness mode), in other case, only
                             // one retry attempt is made to connect to provided enpoint(s).
                             retryAttemptsLeft = calculateRetryAttemptsCount(stickyIo, req);
-                            lastE = new JdbcThinDisconnectException(e);
+                            lastE = e;
                         }
                         else
                             retryAttemptsLeft--;
@@ -1844,22 +1844,20 @@ public class JdbcThinConnection implements Connection {
                 Exception ex = exceptions.get(0);
 
                 if (ex instanceof SQLException) {
-                    if (disconnected) {
-                        throw new SQLException(
-                            ex.getMessage(), ((SQLException)ex).getSQLState(), new JdbcThinDisconnectException(ex));
+                    SQLException sqlEx = (SQLException)ex;
+
+                    if (disconnected && !CONNECTION_FAILURE.equals(sqlEx.getSQLState())) {
+                        throw new SQLException(sqlEx.getMessage(), CONNECTION_FAILURE, ex);
                     }
 
-                    throw (SQLException)ex;
-                }
-                else if (ex instanceof IOException) {
+                    throw sqlEx;
+                } else if (ex instanceof IOException)
                     throw new SQLException("Failed to connect to Ignite cluster [url=" + connProps.getUrl() + ']',
-                        CLIENT_CONNECTION_FAILED,
-                        disconnected ? new JdbcThinDisconnectException(ex) : ex);
-                }
+                        disconnected ? CONNECTION_FAILURE : CLIENT_CONNECTION_FAILED, ex);
             }
 
             SQLException e = new SQLException("Failed to connect to server [url=" + connProps.getUrl() + ']',
-                CLIENT_CONNECTION_FAILED, disconnected ? new JdbcThinDisconnectException(null) : null);
+                disconnected ? CONNECTION_FAILURE : CLIENT_CONNECTION_FAILED);
 
             for (Exception ex : exceptions)
                 e.addSuppressed(ex);

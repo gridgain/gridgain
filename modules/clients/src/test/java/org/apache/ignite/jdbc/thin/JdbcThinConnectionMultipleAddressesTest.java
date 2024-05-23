@@ -36,8 +36,8 @@ import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.jdbc.thin.JdbcThinConnection;
-import org.apache.ignite.internal.jdbc.thin.JdbcThinDisconnectException;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
+import org.apache.ignite.internal.processors.odbc.SqlStateCode;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
@@ -284,7 +284,11 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             Statement stmt1 = conn.createStatement();
 
             // Multistatement query cannot re-establish connection transparently.
-            assertThrowsSql(() -> stmt1.execute("SELECT 1; SELECT 1"), FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
+            assertThrowsSql(
+                () -> stmt1.execute("SELECT 1; SELECT 1"),
+                FAILED_CONNECT_TO_CLUSTER_MESSAGE,
+                SqlStateCode.CONNECTION_FAILURE
+            );
             assertTrue(stmt1.isClosed());
 
             assertTrue(getActiveClients().isEmpty());
@@ -319,19 +323,19 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
         assertTrue(allClosed);
     }
 
-    /** Ensures that {@link JdbcThinDisconnectException} doesn't throw on the initial connection. */
+    /** Checks the SQL error state for the initial connection. */
     @Test
     public void testConnectionFailure() {
         assertThrowsSql(
             () -> DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:12345"),
             "Failed to connect to server",
-            false
+            SqlStateCode.CLIENT_CONNECTION_FAILED
         );
 
         assertThrowsSql(
             () -> DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:12345?PartitionAwareness=true"),
             "Failed to connect to server",
-            false
+            SqlStateCode.CLIENT_CONNECTION_FAILED
         );
     }
 
@@ -409,12 +413,12 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
                     // We cannot automatically retry DML query, because it's possible to duplicate it.
                     assertThrowsSql(() -> stmt.executeUpdate("INSERT INTO TEST VALUES (1, 1)"),
                         FAILED_CONNECT_TO_CLUSTER_MESSAGE,
-                        true);
+                        SqlStateCode.CONNECTION_FAILURE);
 
                     assertTrue(stmt.isClosed());
                     assertThrowsSql(() -> stmt.execute("SELECT 1"),
                         STATEMENT_CLOSED_ON_DISCONNECT_MESSAGE,
-                        false);
+                        null);
                 }
 
                 try (Statement stmt = conn.createStatement()) {
@@ -435,7 +439,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
                     stmt.setInt(2, 2);
 
                     // We cannot automatically retry DML query, because it's possible to duplicate it.
-                    assertThrowsSql(stmt::executeUpdate, FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
+                    assertThrowsSql(stmt::executeUpdate, FAILED_CONNECT_TO_CLUSTER_MESSAGE, SqlStateCode.CONNECTION_FAILURE);
 
                     assertTrue(stmt.isClosed());
                 }
@@ -464,7 +468,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
                     stmt.setInt(2, 4);
                     stmt.addBatch();
 
-                    assertThrowsSql(stmt::executeBatch, FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
+                    assertThrowsSql(stmt::executeBatch, FAILED_CONNECT_TO_CLUSTER_MESSAGE, SqlStateCode.CONNECTION_FAILURE);
 
                     assertTrue(stmt.isClosed());
                 }
@@ -502,7 +506,7 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             stopGrid(0);
 
             try (Statement stmt = conn.createStatement()) {
-                assertThrowsSql(() -> stmt.execute("SELECT 1"), "Failed to connect to server", true);
+                assertThrowsSql(() -> stmt.execute("SELECT 1"), "Failed to connect to server", SqlStateCode.CONNECTION_FAILURE);
                 assertTrue(stmt.isClosed());
             }
 
@@ -540,14 +544,14 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             startGrid(0);
 
             try (Statement stmt = conn.createStatement()) {
-                assertThrowsSql(() -> stmt.execute("SELECT 1"), FAILED_CONNECT_TO_CLUSTER_MESSAGE, true);
-                assertThrowsSql(() -> stmt.execute("SELECT 1"), STATEMENT_CLOSED_ON_DISCONNECT_MESSAGE, false);
+                assertThrowsSql(() -> stmt.execute("SELECT 1"), FAILED_CONNECT_TO_CLUSTER_MESSAGE, SqlStateCode.CONNECTION_FAILURE);
+                assertThrowsSql(() -> stmt.execute("SELECT 1"), STATEMENT_CLOSED_ON_DISCONNECT_MESSAGE, null);
             }
 
             assertTrue(stmt1.isClosed());
             assertTrue(conn.isClosed());
 
-            assertThrowsSql(conn::createStatement, "Connection is closed", false);
+            assertThrowsSql(conn::createStatement, "Connection is closed", SqlStateCode.CONNECTION_CLOSED);
         }
     }
 
@@ -614,10 +618,10 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
 
             if (allNodes) {
                 assertThrowsSql(() -> meta.getTables(null, null, null, null),
-                    "Failed to connect to server", true);
+                    "Failed to connect to server", SqlStateCode.CONNECTION_FAILURE);
 
                 assertThrowsSql(() -> meta.getTables(null, null, null, null),
-                    "Failed to connect to server", true);
+                    "Failed to connect to server", SqlStateCode.CONNECTION_FAILURE);
             } else {
                 // Connection should be transparently re-established to another node.
                 rs0 = meta.getTables(null, null, null, types);
@@ -788,14 +792,14 @@ public class JdbcThinConnectionMultipleAddressesTest extends JdbcThinAbstractSel
             startGrids(NODES_CNT);
     }
 
-    private static void assertThrowsSql(GridTestUtils.RunnableX run, String message, boolean disconnected) {
+    private static void assertThrowsSql(GridTestUtils.RunnableX run, String message, String sqlState) {
         SQLException ex = GridTestUtils.assertThrows(log, () -> {
             run.runx();
 
             return null;
         }, SQLException.class, message);
 
-        assertEquals(String.valueOf(ex), disconnected, ex.getCause() instanceof JdbcThinDisconnectException);
+        assertEquals(String.valueOf(ex), sqlState, ex.getSQLState());
     }
 
     private static Statement createTestTable(Connection conn) throws SQLException {
