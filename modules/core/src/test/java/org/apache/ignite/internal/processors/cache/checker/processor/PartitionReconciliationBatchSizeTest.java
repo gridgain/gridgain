@@ -57,8 +57,8 @@ public class PartitionReconciliationBatchSizeTest extends PartitionReconciliatio
         return cfg;
     }
 
-    @Override
-    protected void beforeTestsStarted() throws Exception {
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
         stopAllGrids();
@@ -76,15 +76,15 @@ public class PartitionReconciliationBatchSizeTest extends PartitionReconciliatio
         ccfg.setAtomicityMode(ATOMIC);
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setAffinity(new RendezvousAffinityFunction(false, 1));
-        ccfg.setBackups(NODES_CNT -1);
+        ccfg.setBackups(NODES_CNT - 1);
 
         grid(0).getOrCreateCache(ccfg);
 
         awaitPartitionMapExchange();
     }
 
-    @Override
-    protected void afterTestsStopped() throws Exception {
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
 
         stopAllGrids();
