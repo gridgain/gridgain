@@ -161,7 +161,7 @@ public interface ReconciliationResultCollector {
 
         /**
          * Keys that were detected as inconsistent during the reconciliation process.
-         * Cache name -> {Partition identifier -> set of inconsistent kyes. }
+         * Cache name -> {Partition identifier -> set of inconsistent keys. }
          */
         protected final Map<String, Map<Integer, TreeSet<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
 
