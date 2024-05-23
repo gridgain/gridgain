@@ -27,6 +27,7 @@ import org.apache.ignite.internal.client.thin.ComputeTaskTest;
 import org.apache.ignite.internal.client.thin.ConnectionLimitTest;
 import org.apache.ignite.internal.client.thin.FunctionalTest;
 import org.apache.ignite.internal.client.thin.IgniteSetTest;
+import org.apache.ignite.internal.client.thin.InvokeTest;
 import org.apache.ignite.internal.client.thin.OptimizedMarshallerClassesCachedTest;
 import org.apache.ignite.internal.client.thin.ReliableChannelTest;
 import org.apache.ignite.internal.client.thin.ServicesTest;
@@ -85,7 +86,8 @@ import org.junit.runners.Suite;
     IgniteClientRequestEventListenerTest.class,
     BlockingTxOpsTest.class,
     ClientQueryPartitionLossTest.class,
-    AtomicSequenceTest.class
+    AtomicSequenceTest.class,
+    InvokeTest.class,
 })
 public class ClientTestSuite {
     // No-op.
