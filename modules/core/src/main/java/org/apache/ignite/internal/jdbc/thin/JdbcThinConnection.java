@@ -1846,7 +1846,7 @@ public class JdbcThinConnection implements Connection {
                 if (ex instanceof SQLException) {
                     SQLException sqlEx = (SQLException)ex;
 
-                    if (disconnected && !CONNECTION_FAILURE.equals(sqlEx.getSQLState())) {
+                    if (disconnected && CLIENT_CONNECTION_FAILED.equals(sqlEx.getSQLState())) {
                         throw new SQLException(sqlEx.getMessage(), CONNECTION_FAILURE, ex);
                     }
 
