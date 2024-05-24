@@ -18,6 +18,7 @@ package org.apache.ignite.internal.util.nio.ssl;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.locks.ReentrantLock;
@@ -345,8 +346,11 @@ public class GridNioSslHandler extends ReentrantLock {
         if (!handshakeFinished)
             handshake();
 
-        if (inNetBuf.hasRemaining())
-            unwrapData(-1);
+        if (inNetBuf.hasRemaining()) {
+            long startTs = U.currentTimeMillis();
+
+            unwrapData(startTs);
+        }
 
         if (isInboundDone()) {
             int newPosition = buf.position() - inNetBuf.position();
@@ -633,7 +637,17 @@ public class GridNioSslHandler extends ReentrantLock {
                 long elapsed = U.currentTimeMillis() - startTs;
 
                 if (elapsed > HANDSHAKE_TIMEOUT_MS) {
-                    throw new SSLException("SSL handshake timeout: [millis=" + elapsed +
+                    int limit = inNetBuf.limit();
+
+                    byte[] inNetBufVal = new byte[limit];
+
+                    for (int i = 0; i < limit; i++)
+                        inNetBufVal[i] = inNetBuf.get(i);
+
+                    log.warning("SSL unwrap timeout: [millis=" + elapsed + ", res=" + res + ", ses=" + ses +
+                            ", inNetBuf=" + inNetBuf + ", inNetBufVal=" + Arrays.toString(inNetBufVal) + ']');
+
+                    throw new SSLException("SSL unwrap timeout: [millis=" + elapsed +
                             ", handshakeStatus=" + res.getHandshakeStatus() + ", ses=" + ses + ']');
                 }
             }
