@@ -37,7 +37,8 @@ public class RepairEntryProcessor implements EntryProcessor {
     /** Map of nodes to corresponding versioned values */
     private Map<UUID, VersionedValue> data;
 
-    /** deferred delete queue max size. */
+    /** This field is not used anymore. */
+    @Deprecated
     private long rmvQueueMaxSize;
 
     /** Force repair flag. */
@@ -69,7 +70,6 @@ public class RepairEntryProcessor implements EntryProcessor {
     /**
      * @param val Value.
      * @param data Data.
-     * @param rmvQueueMaxSize Remove queue max size.
      * @param forceRepair Force repair.
      * @param startTopVer Start topology version.
      */
@@ -77,12 +77,11 @@ public class RepairEntryProcessor implements EntryProcessor {
     public RepairEntryProcessor(
         Object val,
         Map<UUID, VersionedValue> data,
-        long rmvQueueMaxSize,
         boolean forceRepair,
-        AffinityTopologyVersion startTopVer) {
+        AffinityTopologyVersion startTopVer
+    ) {
         this.val = val;
         this.data = data;
-        this.rmvQueueMaxSize = rmvQueueMaxSize;
         this.forceRepair = forceRepair;
         this.startTopVer = startTopVer;
     }
@@ -147,14 +146,14 @@ public class RepairEntryProcessor implements EntryProcessor {
     }
 
     /**
-     *
+     * @return an instance of {@link GridCacheContext} from entry.
      */
     protected GridCacheContext cacheContext(MutableEntry entry) {
         return (GridCacheContext)entry.unwrap(GridCacheContext.class);
     }
 
     /**
-     *
+     * @return {@code true} when affinity topology was changed and does not equal to expected.
      */
     protected boolean topologyChanged(GridCacheContext cctx, AffinityTopologyVersion expTop) {
         AffinityTopologyVersion currTopVer = cctx.affinity().affinityTopologyVersion();
