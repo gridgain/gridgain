@@ -59,14 +59,10 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  */
 @GridInternal
 public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<PartitionBatchRequest, ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>>> {
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 0L;
 
-    /**
-     *
-     */
+    /** */
     private static final KeyComparator KEY_COMPARATOR = new KeyComparator();
 
     /** Injected logger. */
@@ -81,8 +77,10 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
     private volatile PartitionBatchRequest partBatch;
 
     /** {@inheritDoc} */
-    @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
-        PartitionBatchRequest partBatch) throws IgniteException {
+    @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(
+        List<ClusterNode> subgrid,
+        PartitionBatchRequest partBatch
+    ) throws IgniteException {
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
         this.partBatch = partBatch;
@@ -110,7 +108,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
     /** {@inheritDoc} */
     @Override public @Nullable ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> reduce(
-        List<ComputeJobResult> results) throws IgniteException {
+        List<ComputeJobResult> results
+    ) throws IgniteException {
         assert partBatch != null;
 
         GridCacheContext<Object, Object> ctx = ignite.context().cache().cache(partBatch.cacheName()).context();
@@ -130,12 +129,14 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             if (nodeRes.errorMessage() != null)
                 return new ExecutionResult<>(nodeRes.errorMessage());
 
+            // This variable is used to store the last key observed key for results.get(i).getNode().
+            KeyCacheObject lastNodeKey = null;
             for (VersionedKey partKeyVer : nodeRes.result()) {
                 try {
                     KeyCacheObject key = unmarshalKey(partKeyVer.key(), ctx);
 
-                    if (lastKey == null || KEY_COMPARATOR.compare(lastKey, key) < 0)
-                        lastKey = key;
+                    if (lastNodeKey == null || KEY_COMPARATOR.compare(lastNodeKey, key) < 0)
+                        lastNodeKey = key;
 
                     Map<UUID, GridCacheVersion> map = totalRes.computeIfAbsent(key, k -> new HashMap<>());
                     map.put(partKeyVer.nodeId(), partKeyVer.ver());
@@ -149,13 +150,25 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     return new ExecutionResult<>(e.getMessage());
                 }
             }
+
+            // Choose the minimum key of all last observed keys from all nodes.
+            // This allows to fix the issue with non-processed keys under certian conditions.
+            // For example,
+            // the primary partition contains all keys [1, ..., 200] and the backup only has half of the keys [100, ..., 200],
+            // and the batch size is 50. In this case, the primary node will return [1, ..., 50] and backup will return [100, ..., 150].
+            // The range of keys to re-check is [1, ..., 50, 100, ..., 150] and the next batch should start from 150
+            // because 150 is the last observed key. It means that the range [51, ..., 99] will be skipped.
+            // So, the lastKey should be the minimum key of all last observed keys. This may lead to re-checking the same keys several times,
+            // but it is better than skipping keys.
+            if (lastKey == null || (lastNodeKey != null && KEY_COMPARATOR.compare(lastNodeKey, lastKey) < 0))
+                lastKey = lastNodeKey;
         }
 
         return new ExecutionResult<>(new T2<>(lastKey, totalRes));
     }
 
     /**
-     *
+     * Returns {@code true} if there are conflicting versions.
      */
     private boolean hasConflict(Collection<GridCacheVersion> keyVersions) {
         assert !keyVersions.isEmpty();
@@ -175,9 +188,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
      *
      */
     public static class CollectPartitionKeysByBatchJob extends ReconciliationResourceLimitedJob {
-        /**
-         *
-         */
+        /** */
         private static final long serialVersionUID = 0L;
 
         /** Partition key. */

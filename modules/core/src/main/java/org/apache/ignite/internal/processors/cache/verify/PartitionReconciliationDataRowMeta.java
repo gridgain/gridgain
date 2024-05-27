@@ -65,7 +65,8 @@ public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject
      */
     public PartitionReconciliationDataRowMeta(
         PartitionReconciliationKeyMeta keyMeta,
-        Map<UUID, PartitionReconciliationValueMeta> valMeta) {
+        Map<UUID, PartitionReconciliationValueMeta> valMeta
+    ) {
         this.keyMeta = keyMeta;
         this.valMeta = valMeta;
     }
@@ -85,7 +86,8 @@ public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject
     public PartitionReconciliationDataRowMeta(
         PartitionReconciliationKeyMeta keyMeta,
         Map<UUID, PartitionReconciliationValueMeta> valMeta,
-        PartitionReconciliationRepairMeta repairMeta) {
+        PartitionReconciliationRepairMeta repairMeta
+    ) {
         this.keyMeta = keyMeta;
         this.valMeta = valMeta;
         this.repairMeta = repairMeta;
@@ -99,8 +101,7 @@ public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject
     }
 
     /** {@inheritDoc} */
-    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException,
-        ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         keyMeta = (PartitionReconciliationKeyMeta)in.readObject();
         valMeta = U.readMap(in);
         repairMeta = (PartitionReconciliationRepairMeta)in.readObject();
@@ -131,6 +132,11 @@ public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(PartitionReconciliationDataRowMeta.class, this);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return Objects.hash(keyMeta, valMeta, repairMeta);
     }
 
     /** {@inheritDoc} */

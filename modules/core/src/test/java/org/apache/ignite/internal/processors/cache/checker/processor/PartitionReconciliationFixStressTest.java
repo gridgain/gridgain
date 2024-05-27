@@ -35,7 +35,7 @@ public class PartitionReconciliationFixStressTest extends PartitionReconciliatio
      * Makes different variations of input params.
      */
     @Parameterized.Parameters(
-        name = "atomicity = {0}, partitions = {1}, fixModeEnabled = {2}, repairAlgorithm = {3}, parallelism = {4}")
+        name = "atomicity = {0}, partitions = {1}, fixModeEnabled = {2}, repairAlgorithm = {3}, parallelism = {4}, batchSize = {5}")
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
@@ -48,11 +48,13 @@ public class PartitionReconciliationFixStressTest extends PartitionReconciliatio
         for (CacheAtomicityMode atomicityMode : atomicityModes) {
             for (int parts : partitions)
                 for (RepairAlgorithm repairAlgorithm : repairAlgorithms)
-                    params.add(new Object[] {atomicityMode, parts, true, repairAlgorithm, 4});
+                    params.add(new Object[] {atomicityMode, parts, true, repairAlgorithm, 4, 1000});
+
+            params.add(new Object[] {atomicityMode, partitions[1], true, repairAlgorithms[0], 4, 10});
         }
 
-        params.add(new Object[] {CacheAtomicityMode.ATOMIC, 1, true, LATEST, 1});
-        params.add(new Object[] {CacheAtomicityMode.TRANSACTIONAL, 32, true, PRIMARY, 1});
+        params.add(new Object[] {CacheAtomicityMode.ATOMIC, 1, true, LATEST, 1, 1000});
+        params.add(new Object[] {CacheAtomicityMode.TRANSACTIONAL, 32, true, PRIMARY, 1, 1000});
 
         return params;
     }
