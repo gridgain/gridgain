@@ -20,8 +20,10 @@ import java.net.BindException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -54,6 +56,8 @@ import org.apache.ignite.testframework.junits.spi.GridSpiAbstractTest;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
@@ -61,9 +65,17 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
  * Tests that make sure that at most one physical connection is created when establishing a logical
  * connection between the same nodes and with the same connection index.
  */
+@RunWith(Parameterized.class)
 public class GridTcpCommunicationConnectionExclusivenessTest extends GridSpiAbstractTest<CommunicationSpi<Message>> {
     /** */
     private static final int SPI_CNT = 2;
+
+    /**
+     * Whether the order of the preceding node (A) is lower than the order of next node (B) (this influences whether
+     * the incoming connection can even try to be established, or it will be rejected early).
+     */
+    @Parameterized.Parameter
+    public boolean ascendingOrder;
 
     /** */
     private final Collection<IgniteTestResources> spiRsrcs = new ArrayList<>();
@@ -106,27 +118,16 @@ public class GridTcpCommunicationConnectionExclusivenessTest extends GridSpiAbst
     }
 
     /**
-     * Tests a scenario of ensureNoDuplicatesWhenInboundCompetesWithOutbounds(boolean) where
-     * the order of B is higher than the order of A.
-     *
-     * @throws Exception If failed.
-     * @see #ensureNoDuplicatesWhenInboundCompetesWithOutbounds(boolean)
+     * @return Test parameters.
      */
-    @Test
-    public void noDuplicatesWhenInboundFromHigherNodeCompetesWithOutbounds() throws Exception {
-        ensureNoDuplicatesWhenInboundCompetesWithOutbounds(true);
-    }
+    @Parameterized.Parameters(name = "ascendingOrder={0}")
+    public static Collection<Object[]> parameters() {
+        Set<Object[]> paramsSet = new LinkedHashSet<>();
 
-    /**
-     * Tests a scenario of ensureNoDuplicatesWhenInboundCompetesWithOutbounds(boolean) where
-     * the order of B is lower than the order of A.
-     *
-     * @throws Exception If failed.
-     * @see #ensureNoDuplicatesWhenInboundCompetesWithOutbounds(boolean)
-     */
-    @Test
-    public void noDuplicatesWhenInboundFromLowerNodeCompetesWithOutbounds() throws Exception {
-        ensureNoDuplicatesWhenInboundCompetesWithOutbounds(false);
+        paramsSet.add(new Object[]{false});
+        paramsSet.add(new Object[]{true});
+
+        return paramsSet;
     }
 
     /**
@@ -143,11 +144,10 @@ public class GridTcpCommunicationConnectionExclusivenessTest extends GridSpiAbst
      *     T1/T2 connection establishment future (as it happened due to a bug in InboundConnectionHandler)</li>
      * </ul>
      *
-     * @param ascendingOrder Whether the order of A is lower than the order of B (this influences whether
-     *     the incoming connection can even try to be established, or it will be rejected early).
      * @throws Exception If something goes wrong.
      */
-    private void ensureNoDuplicatesWhenInboundCompetesWithOutbounds(boolean ascendingOrder) throws Exception {
+    @Test
+    public void ensureNoDuplicatesWhenInboundCompetesWithOutbounds() throws Exception {
         prepareLogger(AsymmetricSlowlyConnectingCommunicationSpi.class);
 
         final int competingOutboundSenders = 2;
