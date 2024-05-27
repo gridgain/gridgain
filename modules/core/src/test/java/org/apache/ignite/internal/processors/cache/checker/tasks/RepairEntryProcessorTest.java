@@ -44,27 +44,19 @@ import static org.mockito.Mockito.when;
  * Isolated unit test for {@link RepairEntryProcessor}.
  */
 public class RepairEntryProcessorTest {
-    /**
-     *
-     */
+    /** */
     private static final String OLD_VALUE = "old_value";
 
     /** Old cache value. */
     private static final CacheObject OLD_CACHE_VALUE = new CacheObjectImpl(OLD_VALUE, OLD_VALUE.getBytes());
 
-    /**
-     *
-     */
+    /** */
     private static final String NEW_VALUE = "new_value";
 
-    /**
-     * Value at the recheck phase. It uses to check parallel updates.
-     */
+    /** Value at the recheck phase. It uses to check parallel updates. */
     private static final String RECHECK_VALUE = "updated_value";
 
-    /**
-     *
-     */
+    /** */
     private static final CacheObject RECHECK_CACHE_VALUE = new CacheObjectImpl(RECHECK_VALUE, RECHECK_VALUE.getBytes());
 
     /** Local node id. */
@@ -73,17 +65,10 @@ public class RepairEntryProcessorTest {
     /** Other node id. */
     private static final UUID OTHRER_NODE_ID = UUID.randomUUID();
 
-    /** Remove queue max size. */
-    private static final int RMV_QUEUE_MAX_SIZE = 12;
-
-    /**
-     *
-     */
+    /** */
     private GridCacheContext cctx;
 
-    /**
-     *
-     */
+    /** */
     @Before
     public void setUp() throws Exception {
         cctx = mock(GridCacheContext.class);
@@ -95,9 +80,7 @@ public class RepairEntryProcessorTest {
         System.setProperty(IGNITE_CACHE_REMOVED_ENTRIES_TTL, "10000");
     }
 
-    /**
-     *
-     */
+    /** */
     @After
     public void tearDown() {
         System.clearProperty(IGNITE_CACHE_REMOVED_ENTRIES_TTL);
@@ -121,7 +104,6 @@ public class RepairEntryProcessorTest {
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             null,
             data,
-            RMV_QUEUE_MAX_SIZE,
             forceRepair,
             new AffinityTopologyVersion(1)
         ).setKeyVersion(new GridCacheVersion(0, 0, 0));
@@ -151,7 +133,6 @@ public class RepairEntryProcessorTest {
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             NEW_VALUE,
             data,
-            RMV_QUEUE_MAX_SIZE,
             forceRepair,
             new AffinityTopologyVersion(1)
         ).setKeyVersion(new GridCacheVersion(0, 0, 0));
@@ -179,7 +160,6 @@ public class RepairEntryProcessorTest {
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             NEW_VALUE,
             data,
-            RMV_QUEUE_MAX_SIZE,
             false,
             new AffinityTopologyVersion(1)
         ).setKeyVersion(new GridCacheVersion(1, 1, 1));
@@ -208,7 +188,6 @@ public class RepairEntryProcessorTest {
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             null,
             data,
-            RMV_QUEUE_MAX_SIZE,
             false,
             new AffinityTopologyVersion(1)
         ).setKeyVersion(new GridCacheVersion(1, 1, 1));
@@ -237,7 +216,6 @@ public class RepairEntryProcessorTest {
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             NEW_VALUE,
             data,
-            RMV_QUEUE_MAX_SIZE,
             false,
             new AffinityTopologyVersion(1)
         ).setKeyVersion(new GridCacheVersion(2, 2, 2));
@@ -249,14 +227,13 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     * It mean that a partition under load.
+     * It means that a partition under load.
      */
     @Test
     public void testRecheckVersionNullCurrentValueExist() {
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             NEW_VALUE,
             new HashMap<>(),
-            RMV_QUEUE_MAX_SIZE,
             false,
             new AffinityTopologyVersion(1)
         ).setKeyVersion(new GridCacheVersion(1, 1, 1));
@@ -284,7 +261,6 @@ public class RepairEntryProcessorTest {
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             null,
             data,
-            RMV_QUEUE_MAX_SIZE,
             false,
             new AffinityTopologyVersion(1)
         ).setKeyVersion(new GridCacheVersion(0, 0, 0));
@@ -314,7 +290,6 @@ public class RepairEntryProcessorTest {
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             RECHECK_VALUE,
             data,
-            RMV_QUEUE_MAX_SIZE,
             false,
             new AffinityTopologyVersion(1)
         ).setKeyVersion(new GridCacheVersion(0, 0, 0));
@@ -327,7 +302,7 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     * If current value other then old, it detects {@link RepairEntryProcessor.RepairStatus.CONCURRENT_MODIFICATION}.
+     * If current value other than old, it detects {@link RepairEntryProcessor.RepairStatus#CONCURRENT_MODIFICATION}.
      */
     @Test
     public void testEntryWasChangedDuringRepairAtOtherValue() {
@@ -342,7 +317,6 @@ public class RepairEntryProcessorTest {
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             null,
             data,
-            RMV_QUEUE_MAX_SIZE,
             false,
             new AffinityTopologyVersion(1)
         ).setKeyVersion(new GridCacheVersion(0, 0, 0));
@@ -354,7 +328,7 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     * If current value other then old, it detects {@link RepairEntryProcessor.RepairStatus.CONCURRENT_MODIFICATION}.
+     * If current value other than old, it detects {@link RepairEntryProcessor.RepairStatus#CONCURRENT_MODIFICATION}.
      */
     @Test
     public void testEntryWasChangedDuringRepairAtNull() {
@@ -369,7 +343,6 @@ public class RepairEntryProcessorTest {
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             null,
             data,
-            RMV_QUEUE_MAX_SIZE,
             false,
             new AffinityTopologyVersion(1)
         ).setKeyVersion(new GridCacheVersion(0, 0, 0));
@@ -381,7 +354,7 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     * If current value other then old, it detects {@link RepairEntryProcessor.RepairStatus.CONCURRENT_MODIFICATION}.
+     * If current value other than old, it detects {@link RepairEntryProcessor.RepairStatus#CONCURRENT_MODIFICATION}.
      */
     @Test
     public void testEntryWasChangedDuringRepairFromNullToValue() {
@@ -396,7 +369,6 @@ public class RepairEntryProcessorTest {
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             null,
             data,
-            RMV_QUEUE_MAX_SIZE,
             false,
             new AffinityTopologyVersion(1)
         ).setKeyVersion(new GridCacheVersion(1, 1, 1));
@@ -409,7 +381,7 @@ public class RepairEntryProcessorTest {
 
     /**
      * If ttl expired for old null value, it can't solve ABA problem and should return {@link
-     * RepairEntryProcessor.RepairStatus.FAIL}.
+     * RepairEntryProcessor.RepairStatus#FAIL}.
      */
     @Test
     public void testRecheckVersionNullAndTtlEntryExpired() {
@@ -424,7 +396,6 @@ public class RepairEntryProcessorTest {
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             null,
             data,
-            RMV_QUEUE_MAX_SIZE,
             false,
             new AffinityTopologyVersion(1)
         ).setKeyVersion(new GridCacheVersion(0, 0, 0));
@@ -436,7 +407,7 @@ public class RepairEntryProcessorTest {
 
     /**
      * If Deleted queue expired for old null value, it can't solve ABA problem and should return {@link
-     * RepairEntryProcessor.RepairStatus.FAIL}.
+     * RepairEntryProcessor.RepairStatus#FAIL}.
      */
     @Test
     public void testRecheckVersionNullAndDefDelQueueExpired() {
@@ -451,7 +422,6 @@ public class RepairEntryProcessorTest {
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             null,
             data,
-            RMV_QUEUE_MAX_SIZE,
             false,
             new AffinityTopologyVersion(1)
         )
@@ -467,41 +437,31 @@ public class RepairEntryProcessorTest {
      * Stub for testing approach, mocks methods.
      */
     private class RepairEntryProcessorStub extends RepairEntryProcessor {
-        /**
-         *
-         */
+        /** */
         private GridCacheContext ctx = cctx;
 
-        /**
-         *
-         */
+        /** */
         private boolean topChanged = false;
 
-        /**
-         *
-         */
+        /** */
         private GridCacheVersion keyVer;
 
-        /**
-         *
-         */
+        /** */
         private long updateCntr = 1;
 
         /**
          * @param val Value.
          * @param data Data.
-         * @param rmvQueueMaxSize Remove queue max size.
          * @param forceRepair Force repair.
          * @param startTopVer Start topology version.
          */
         public RepairEntryProcessorStub(
             Object val,
             Map<UUID, VersionedValue> data,
-            long rmvQueueMaxSize,
             boolean forceRepair,
             AffinityTopologyVersion startTopVer
         ) {
-            super(val, data, rmvQueueMaxSize, forceRepair, startTopVer);
+            super(val, data, forceRepair, startTopVer);
         }
 
         /**

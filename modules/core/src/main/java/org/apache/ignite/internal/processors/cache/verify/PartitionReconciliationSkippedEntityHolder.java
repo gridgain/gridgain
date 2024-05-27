@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.verify;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Objects;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
@@ -46,8 +47,10 @@ public class PartitionReconciliationSkippedEntityHolder<T> extends IgniteDataTra
      * @param skippedEntity Skipped entity.
      * @param skippingReason Skipping reason.
      */
-    public PartitionReconciliationSkippedEntityHolder(T skippedEntity,
-        SkippingReason skippingReason) {
+    public PartitionReconciliationSkippedEntityHolder(
+        T skippedEntity,
+        SkippingReason skippingReason
+    ) {
         this.skippedEntity = skippedEntity;
         this.skippingReason = skippingReason;
     }
@@ -92,6 +95,25 @@ public class PartitionReconciliationSkippedEntityHolder<T> extends IgniteDataTra
      */
     public void skippingReason(SkippingReason skippingReason) {
         this.skippingReason = skippingReason;
+    }
+
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        PartitionReconciliationSkippedEntityHolder<?> that = (PartitionReconciliationSkippedEntityHolder<?>) o;
+
+        return Objects.equals(skippedEntity, that.skippedEntity) && skippingReason == that.skippingReason;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return Objects.hash(skippedEntity, skippingReason);
     }
 
     /**
