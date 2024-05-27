@@ -34,6 +34,8 @@ package org.apache.ignite.spi.communication.tcp.internal;
 
 import java.io.Serializable;
 import java.net.InetAddress;
+import java.util.Collection;
+import java.util.List;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.SystemProperty;
 import org.apache.ignite.configuration.AddressResolver;
@@ -203,6 +205,15 @@ public class TcpCommunicationConfiguration implements Serializable {
      */
     public void localAddress(String locAddr) {
         this.locAddr = locAddr;
+    }
+
+    /** Expiremental api*/
+    private Collection<String> blackListInterfaces;
+    public void networkInterfacesBlacklist(Collection<String> interfaces) {
+        blackListInterfaces = interfaces;
+    }
+    public Collection<String> networkInterfacesBlacklist() {
+        return blackListInterfaces;
     }
 
     /**

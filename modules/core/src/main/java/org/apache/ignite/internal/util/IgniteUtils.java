@@ -2292,8 +2292,29 @@ public abstract class IgniteUtils {
      * @return Resolved available addresses and host names of given local address.
      * @throws IOException If failed.
      */
-    public static IgniteBiTuple<Collection<String>, Collection<String>> resolveLocalAddresses(InetAddress locAddr,
-        boolean allHostNames) throws IOException {
+    public static IgniteBiTuple<Collection<String>, Collection<String>> resolveLocalAddresses(
+        InetAddress locAddr,
+        boolean allHostNames
+    ) throws IOException {
+        return resolveLocalAddresses(locAddr, allHostNames, null);
+    }
+
+    /**
+     * Returns host names consistent with {@link #resolveLocalHost(String)}. So when it returns
+     * a common address this method returns single host name, and when a wildcard address passed
+     * this method tries to collect addresses of all available interfaces.
+     *
+     * @param locAddr Local address to resolve.
+     * @param allHostNames If {@code true} then include host names for all addresses.
+     * @param filter Optinal filter that allows to filter network interfaces when {@code locAddr} is wildcard.
+     * @return Resolved available addresses and host names of given local address.
+     * @throws IOException If failed.
+     */
+    public static IgniteBiTuple<Collection<String>, Collection<String>> resolveLocalAddresses(
+        InetAddress locAddr,
+        boolean allHostNames,
+        @Nullable IgnitePredicate<InetAddress> filter
+    ) throws IOException {
         assert locAddr != null;
 
         Collection<String> addrs = new ArrayList<>();
@@ -2328,8 +2349,10 @@ public abstract class IgniteUtils {
 
                 locAddrs = filterReachable(locAddrs);
 
-                for (InetAddress addr : locAddrs)
-                    addresses(addr, addrs, hostNames, allHostNames);
+                for (InetAddress addr : locAddrs) {
+                    if (filter == null || filter.apply(addr))
+                        addresses(addr, addrs, hostNames, allHostNames);
+                }
 
                 if (F.isEmpty(addrs))
                     return F.t(Collections.emptyList(), Collections.emptyList());
