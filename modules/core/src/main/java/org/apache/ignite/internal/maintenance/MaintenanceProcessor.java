@@ -84,7 +84,7 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
     /** Node in maintenance mode will shut down after all active tasks would be completed. */
     private final boolean autoShutdown = getBoolean(IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY);
 
-    /** Defragmentation regions size percentage of configured ones. */
+    /** Node in maintenance mode will automatically shut down with specified exit code. */
     private final int mntcModeExitCode = getInteger(IGNITE_MAINTENANCE_MODE_EXIT_CODE, DFLT_MAINTENANCE_MODE_EXIT_CODE);
 
     /**
