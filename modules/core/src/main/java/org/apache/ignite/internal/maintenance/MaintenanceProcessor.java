@@ -42,8 +42,7 @@ import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY;
-import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.IgniteSystemProperties.*;
 
 /** */
 public class MaintenanceProcessor extends GridProcessorAdapter implements MaintenanceRegistry {
@@ -52,6 +51,9 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
 
     /** */
     private static final Pattern ALPHANUMERIC_UNDERSCORE = Pattern.compile("^[a-zA-Z_0-9]+$");
+
+    /** @see IgniteSystemProperties#IGNITE_MAINTENANCE_MODE_EXIT_CODE */
+    public static final int DFLT_MAINTENANCE_MODE_EXIT_CODE = 0;
 
     /**
      * Active {@link MaintenanceTask}s are the ones that were read from disk when node entered Maintenance Mode.
@@ -78,6 +80,9 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
 
     /** Node in maintenance mode will shut down after all active tasks would be completed. */
     private final boolean autoShutdown = getBoolean(IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY);
+
+    /** Defragmentation regions size percentage of configured ones. */
+    private final int mntcModeExitCode = getInteger(IGNITE_MAINTENANCE_MODE_EXIT_CODE, DFLT_MAINTENANCE_MODE_EXIT_CODE);
 
     /**
      * @param ctx Kernal context.
@@ -376,6 +381,10 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
                 while (true) {
                     if (activeTasks.isEmpty() && Ignition.state(igniteInstanceName) == IgniteState.STARTED) {
                         G.stop(igniteInstanceName, false);
+
+                        if (mntcModeExitCode != 0)
+                            System.exit(mntcModeExitCode);
+
                         return;
                     }
 
