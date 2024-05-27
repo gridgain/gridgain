@@ -42,7 +42,10 @@ import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.*;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAINTENANCE_MODE_EXIT_CODE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY;
+import static org.apache.ignite.IgniteSystemProperties.getInteger;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 
 /** */
 public class MaintenanceProcessor extends GridProcessorAdapter implements MaintenanceRegistry {
@@ -52,7 +55,7 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
     /** */
     private static final Pattern ALPHANUMERIC_UNDERSCORE = Pattern.compile("^[a-zA-Z_0-9]+$");
 
-    /** @see IgniteSystemProperties#IGNITE_MAINTENANCE_MODE_EXIT_CODE */
+    /** @see org.apache.ignite.IgniteSystemProperties#IGNITE_MAINTENANCE_MODE_EXIT_CODE */
     public static final int DFLT_MAINTENANCE_MODE_EXIT_CODE = 0;
 
     /**
