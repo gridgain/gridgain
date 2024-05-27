@@ -1,0 +1,39 @@
+#
+# Copyright (C) GridGain Systems. All Rights Reserved.
+#  _________        _____ __________________        _____
+#  __  ____/___________(_)______  /__  ____/______ ____(_)_______
+#  _  / __  __  ___/__  / _  __  / _  / __  _  __ `/__  / __  __ \
+#  / /_/ /  _  /    _  /  / /_/ /  / /_/ /  / /_/ / _  /  _  / / /
+#  \____/   /_/     /_/   \_,__/   \____/   \__,_/  /_/   /_/ /_/
+#
+
+name: Update Nightly Branch
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git User
+        run: |
+          git config user.name "GG Integration User"
+          git config user.email "ggintegration@gridgain.com"
+
+      - name: Update Nightly Branch
+        run: |
+          set -x
+          git checkout master
+          git fetch origin
+          git checkout nightly-master
+          git pull
+          git rebase origin/master
+          git push origin nightly-master

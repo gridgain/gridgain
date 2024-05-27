@@ -403,6 +403,9 @@ public class GridNioServerWrapper {
                         "Recovery descriptor not found [connKey=" + connKey + ", rmtNode=" + node.id() + ']';
 
                     if (!recoveryDesc.reserve()) {
+                        if (log.isDebugEnabled())
+                            log.debug("Was not able to reserve recovery descriptor [connKey=" + connKey + "]");
+
                         U.closeQuiet(ch);
 
                         // Ensure the session is closed.
@@ -415,6 +418,9 @@ public class GridNioServerWrapper {
 
                         return null;
                     }
+
+                    if (log.isDebugEnabled())
+                        log.debug("Reserved recovery descriptor for outbound connection [connKey=" + connKey + "]");
 
                     long rcvCnt;
 

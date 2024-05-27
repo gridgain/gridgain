@@ -103,6 +103,7 @@ public class BPlusTreeReuseListPageMemoryImplTest extends BPlusTreeReuseSelfTest
         };
 
         PageMemory mem = new PageMemoryImpl(
+            cfg.getDataStorageConfiguration().getDefaultDataRegionConfiguration(),
             provider, sizes,
             sharedCtx,
             sharedCtx.pageStore(),

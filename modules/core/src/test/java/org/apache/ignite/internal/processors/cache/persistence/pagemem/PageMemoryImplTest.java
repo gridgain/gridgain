@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.NoOpFailureHandler;
@@ -76,6 +77,7 @@ import org.mockito.Mockito;
 
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
+import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.SYSTEM_DATA_REGION_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.CHECKPOINT_POOL_OVERFLOW_ERROR_MSG;
 
 /**
@@ -92,11 +94,33 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
     private static final int MAX_SIZE = 128;
 
     /**
-     * @throws Exception if failed.
+     * Tests that allocation of huge number of pages leads to OOM exception using the default data region.
+     *
+     * @throws Exception
      */
     @Test
     public void testThatAllocationTooMuchPagesCauseToOOMException() throws Exception {
-        PageMemoryImpl memory = createPageMemory(PageMemoryImpl.ThrottlingPolicy.DISABLED, null);
+        testThatAllocationTooMuchPagesCauseToOOMException0(false);
+    }
+
+    /**
+     * Tests that allocation of huge number of pages leads to OOM exception using the system data region.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testThatAllocationTooMuchPagesCauseToOOMExceptionOnSystemRegion() throws Exception {
+        testThatAllocationTooMuchPagesCauseToOOMException0(true);
+    }
+
+    /**
+     * Tests that allocation of huge number of pages leads to OOM exception.
+     *
+     * @param useSystemDataRegion Use system data region.
+     * @throws Exception
+     */
+    private void testThatAllocationTooMuchPagesCauseToOOMException0(boolean useSystemDataRegion) throws Exception {
+        PageMemoryImpl memory = createPageMemory(PageMemoryImpl.ThrottlingPolicy.DISABLED, null, useSystemDataRegion);
 
         try {
             while (!Thread.currentThread().isInterrupted())
@@ -114,7 +138,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
      */
     @Test
     public void testCheckpointBufferOverusageDontCauseWriteLockLeak() throws Exception {
-        PageMemoryImpl memory = createPageMemory(PageMemoryImpl.ThrottlingPolicy.DISABLED, null);
+        PageMemoryImpl memory = createPageMemory(PageMemoryImpl.ThrottlingPolicy.DISABLED, null, false);
 
         List<FullPageId> pages = new ArrayList<>();
 
@@ -450,7 +474,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void testCheckpointBufferCantOverflowWithThrottlingMixedLoad(PageMemoryImpl.ThrottlingPolicy plc) throws Exception {
-        PageMemoryImpl memory = createPageMemory(plc, null);
+        PageMemoryImpl memory = createPageMemory(plc, null, false);
 
         List<FullPageId> pages = new ArrayList<>();
 
@@ -553,7 +577,9 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
      */
     private PageMemoryImpl createPageMemory(
         PageMemoryImpl.ThrottlingPolicy throttlingPlc,
-        @Nullable IgniteInClosure<FullPageId> cpBufChecker) throws Exception {
+        @Nullable IgniteInClosure<FullPageId> cpBufChecker,
+        boolean useSystemDataRegion
+    ) throws Exception {
         return createPageMemory(
             MAX_SIZE,
             throttlingPlc,
@@ -561,7 +587,18 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             (fullPageId, byteBuf, tag) -> {
                 assert false : "No page replacement (rotation with disk) should happen during the test";
             },
-            cpBufChecker);
+            cpBufChecker,
+            useSystemDataRegion);
+    }
+
+    private PageMemoryImpl createPageMemory(
+        int maxSize,
+        PageMemoryImpl.ThrottlingPolicy throttlingPlc,
+        IgnitePageStoreManager mgr,
+        PageStoreWriter replaceWriter,
+        @Nullable IgniteInClosure<FullPageId> cpBufChecker
+    ) throws Exception {
+        return createPageMemory(maxSize, throttlingPlc, mgr, replaceWriter, cpBufChecker, false);
     }
 
     /**
@@ -573,7 +610,8 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         PageMemoryImpl.ThrottlingPolicy throttlingPlc,
         IgnitePageStoreManager mgr,
         PageStoreWriter replaceWriter,
-        @Nullable IgniteInClosure<FullPageId> cpBufChecker
+        @Nullable IgniteInClosure<FullPageId> cpBufChecker,
+        boolean useSystemDataRegion
     ) throws Exception {
         long[] sizes = new long[5];
 
@@ -640,8 +678,30 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         Mockito.when(cl0.syncedPagesCounter()).thenReturn(new AtomicInteger(1_000_000));
         Mockito.when(cl0.writtenPagesCounter()).thenReturn(new AtomicInteger(1_000_000));
 
+        DataRegionMetricsImpl dataRegionMetrics;
+        DataRegionConfiguration dataRegionCfg;
+        if (useSystemDataRegion) {
+            dataRegionCfg = new DataRegionConfiguration();
+
+            dataRegionCfg.setName(SYSTEM_DATA_REGION_NAME);
+            dataRegionCfg.setInitialSize(igniteCfg.getDataStorageConfiguration().getSystemRegionInitialSize());
+            dataRegionCfg.setMaxSize(igniteCfg.getDataStorageConfiguration().getSystemRegionMaxSize());
+            dataRegionCfg.setPersistenceEnabled(false);
+            dataRegionCfg.setLazyMemoryAllocation(false);
+
+            dataRegionMetrics = new DataRegionMetricsImpl(dataRegionCfg, kernalCtx);
+        }
+        else {
+            dataRegionCfg = igniteCfg.getDataStorageConfiguration().getDefaultDataRegionConfiguration();
+
+            dataRegionMetrics = new DataRegionMetricsImpl(
+                igniteCfg.getDataStorageConfiguration().getDefaultDataRegionConfiguration(),
+                kernalCtx);
+        }
+
         PageMemoryImpl mem = cpBufChecker == null ?
             new PageMemoryImpl(
+                dataRegionCfg,
                 provider,
                 sizes,
                 sharedCtx,
@@ -653,11 +713,12 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
                     }
                 },
                 () -> true,
-                new DataRegionMetricsImpl(igniteCfg.getDataStorageConfiguration().getDefaultDataRegionConfiguration(), kernalCtx),
+                dataRegionMetrics,
                 throttlingPlc,
                 noThrottle
             ) :
             new PageMemoryImpl(
+                dataRegionCfg,
                 provider,
                 sizes,
                 sharedCtx,
@@ -669,7 +730,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
                     }
                 },
                 () -> true,
-                new DataRegionMetricsImpl(igniteCfg.getDataStorageConfiguration().getDefaultDataRegionConfiguration(), kernalCtx),
+                dataRegionMetrics,
                 throttlingPlc,
                 noThrottle
             ) {
