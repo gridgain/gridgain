@@ -54,9 +54,9 @@ public class IPv4Matcher extends NetworkInterfaceMatcher {
     public IPv4Matcher(String interfacePattern) {
         super(interfacePattern);
 
-        String[] segments = networkInterface().split("\\.");
+        String[] segments = networkInterfacePattern().split("\\.");
         if (segments.length != 4)
-            throw new IllegalArgumentException(INVALID_IPv4_PATTERN_ERR_MSG + networkInterface());
+            throw new IllegalArgumentException(INVALID_IPv4_PATTERN_ERR_MSG + networkInterfacePattern());
 
         try {
             for (int s = 0; s < segments.length; ++s) {
@@ -65,19 +65,19 @@ public class IPv4Matcher extends NetworkInterfaceMatcher {
                 if (OCTET_PATTERN.matcher(segment).matches()) {
                     int seg = Integer.parseInt(segment);
                     if (seg < 0 || seg > IPV4_MAX_OCTET_VALUE)
-                        throw new IllegalArgumentException(INVALID_IPv4_PATTERN_ERR_MSG + networkInterface());
+                        throw new IllegalArgumentException(INVALID_IPv4_PATTERN_ERR_MSG + networkInterfacePattern());
 
                     segmentPred[s] = segmentToCheck -> segment.equals(segmentToCheck);
                 }
                 else if (RANGE_PATTERN.matcher(segment).matches()) {
                     final String[] range = segment.split("-");
                     if (range.length != 2)
-                        throw new IllegalArgumentException(INVALID_IPv4_PATTERN_ERR_MSG + networkInterface());
+                        throw new IllegalArgumentException(INVALID_IPv4_PATTERN_ERR_MSG + networkInterfacePattern());
 
                     final int min = Integer.parseInt(range[0].trim());
                     final int max = Integer.parseInt(range[1].trim());
                     if (min > max)
-                        throw new IllegalArgumentException(INVALID_IPv4_PATTERN_ERR_MSG + networkInterface());
+                        throw new IllegalArgumentException(INVALID_IPv4_PATTERN_ERR_MSG + networkInterfacePattern());
 
                     segmentPred[s] = segmentToCheck -> {
                         try {
@@ -91,11 +91,11 @@ public class IPv4Matcher extends NetworkInterfaceMatcher {
                 else if (WILDCARD_PATTERN.equals(segments[s]))
                     segmentPred[s] = ALWAYS_TRUE;
                 else
-                    throw new IllegalArgumentException(INVALID_IPv4_PATTERN_ERR_MSG + networkInterface());
+                    throw new IllegalArgumentException(INVALID_IPv4_PATTERN_ERR_MSG + networkInterfacePattern());
             }
         }
         catch (NumberFormatException e) {
-            throw new IllegalArgumentException(INVALID_IPv4_PATTERN_ERR_MSG + networkInterface(), e);
+            throw new IllegalArgumentException(INVALID_IPv4_PATTERN_ERR_MSG + networkInterfacePattern(), e);
         }
     }
 

@@ -43,7 +43,7 @@ public abstract class NetworkInterfaceMatcher {
      * Gets the pattern of network interface.
      * @return Pattern of network interface.
      */
-    public String networkInterface() {
+    public String networkInterfacePattern() {
         return netInterfacePattern;
     }
 
