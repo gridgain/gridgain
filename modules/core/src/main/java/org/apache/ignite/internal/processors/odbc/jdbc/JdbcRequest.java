@@ -37,7 +37,7 @@ public class JdbcRequest extends ClientListenerRequestNoId implements JdbcRawBin
     static final byte QRY_FETCH = 3;
 
     /** Close query request. */
-    static final byte QRY_CLOSE = 4;
+    public static final byte QRY_CLOSE = 4;
 
     /** Get query columns metadata request. */
     public static final byte QRY_META = 5;

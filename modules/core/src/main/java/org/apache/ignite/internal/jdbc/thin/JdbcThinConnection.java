@@ -67,7 +67,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObjectException;
@@ -132,8 +131,8 @@ import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CLIENT_CONNECTION_FAILED;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CONNECTION_CLOSED;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CONNECTION_FAILURE;
-import static org.apache.ignite.internal.processors.odbc.SqlStateCode.INTERNAL_ERROR;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.DATA_EXCEPTION;
+import static org.apache.ignite.internal.processors.odbc.SqlStateCode.INTERNAL_ERROR;
 import static org.apache.ignite.marshaller.MarshallerUtils.processSystemClasses;
 
 /**
@@ -550,8 +549,14 @@ public class JdbcThinConnection implements Connection {
 
         maintenanceExecutor.shutdown();
 
+        SQLException err = null;
+
         if (streamState != null) {
-            streamState.close();
+            try {
+                streamState.close();
+            } catch (SQLException e) {
+                err = e;
+            }
 
             streamState = null;
         }
@@ -559,8 +564,6 @@ public class JdbcThinConnection implements Connection {
         synchronized (stmtsMux) {
             stmts.clear();
         }
-
-        SQLException err = null;
 
         if (partitionAwareness) {
             for (JdbcThinTcpIo clioIo : ios.values())
@@ -1049,12 +1052,22 @@ public class JdbcThinConnection implements Connection {
                     // so if any error occurred during synchronization, we close the underlying IO when handling problem
                     // for the first time and should skip it during next processing
                     if (cliIo != null && cliIo.connected())
-                        onDisconnect(cliIo);
+                        onDisconnect(cliIo, stmt);
+
+                    if (!closed && stickyIo != null && req.type() == JdbcRequest.QRY_CLOSE) {
+                        // When disconnected, the server's request handler must close open cursors,
+                        // and the client has no way to handle the exception that occurs in this situation.
+                        // Therefore, it seems more correct to simply ignore it.
+                        return null;
+                    }
 
                     if (e instanceof SocketTimeoutException)
                         throw new SQLException("Connection timed out.", CONNECTION_FAILURE, e);
                     else {
                         if (lastE == null) {
+                            // Note that retry attempts are counted only if several connections have already been
+                            // established (for example, in partition awareness mode), in other case, only
+                            // one retry attempt is made to connect to provided enpoint(s).
                             retryAttemptsLeft = calculateRetryAttemptsCount(stickyIo, req);
                             lastE = e;
                         }
@@ -1063,6 +1076,8 @@ public class JdbcThinConnection implements Connection {
                     }
                 }
             }
+
+            closeStatementsOnDisconnect(null);
 
             throw new SQLException("Failed to communicate with Ignite cluster.", CONNECTION_FAILURE, lastE);
         }
@@ -1271,7 +1286,7 @@ public class JdbcThinConnection implements Connection {
             throw e;
         }
         catch (Exception e) {
-            onDisconnect(stickyIO);
+            onDisconnect(stickyIO, null);
 
             if (e instanceof SocketTimeoutException)
                 throw new SQLException("Connection timed out.", CONNECTION_FAILURE, e);
@@ -1357,7 +1372,7 @@ public class JdbcThinConnection implements Connection {
     /**
      * Called on IO disconnect: close the client IO and opened statements.
      */
-    private void onDisconnect(JdbcThinTcpIo cliIo) {
+    private void onDisconnect(JdbcThinTcpIo cliIo, @Nullable JdbcThinStatement activeStatement) throws SQLException {
         assert connCnt.get() > 0;
 
         if (partitionAwareness) {
@@ -1378,11 +1393,15 @@ public class JdbcThinConnection implements Connection {
             streamState = null;
         }
 
-        synchronized (stmtsMux) {
-            for (JdbcThinStatement s : stmts)
-                s.closeOnDisconnect();
+        boolean closeConnection = txIo != null;
 
-            stmts.clear();
+        closeStatementsOnDisconnect(closeConnection ? null : activeStatement);
+
+        // If a transaction context exists, this connection cannot be re-used.
+        if (closeConnection) {
+            close();
+
+            return;
         }
 
         // Clear local metadata cache on disconnect.
@@ -1396,6 +1415,20 @@ public class JdbcThinConnection implements Connection {
     void closeStatement(JdbcThinStatement stmt) {
         synchronized (stmtsMux) {
             stmts.remove(stmt);
+        }
+    }
+
+    private void closeStatementsOnDisconnect(@Nullable JdbcThinStatement ignoredStatement) {
+        synchronized (stmtsMux) {
+            // Close all statements except current to be able to perform retry.
+            stmts.removeIf(stmt -> {
+                if (stmt == ignoredStatement)
+                    return false;
+
+                stmt.closeOnDisconnect();
+
+                return true;
+            });
         }
     }
 
@@ -1537,7 +1570,7 @@ public class JdbcThinConnection implements Connection {
                 if (err0 instanceof SQLException)
                     throw (SQLException)err0;
                 else {
-                    onDisconnect(streamingStickyIo);
+                    onDisconnect(streamingStickyIo, null);
 
                     if (err0 instanceof SocketTimeoutException)
                         throw new SQLException("Connection timed out.", CONNECTION_FAILURE, err0);
@@ -1643,11 +1676,11 @@ public class JdbcThinConnection implements Connection {
      * @return Ignite endpoint to use for request/response transferring.
      */
     private JdbcThinTcpIo cliIo(List<UUID> nodeIds) {
-        if (!partitionAwareness)
-            return singleIo;
-
         if (txIo != null)
             return txIo;
+
+        if (!partitionAwareness)
+            return singleIo;
 
         if (nodeIds == null || nodeIds.isEmpty())
             return randomIo();
@@ -1785,31 +1818,46 @@ public class JdbcThinConnection implements Connection {
             }
         }
 
-        handleConnectExceptions(exceptions);
+        handleConnectExceptions(exceptions, singleIo != null);
     }
 
     /**
      * Prepare and throw general {@code SQLException} with all specified exceptions as suppressed items.
      *
      * @param exceptions Exceptions list.
+     * @param disconnected Flag indicating that a disconnection from the server has occurred.
      * @throws SQLException Umbrella exception.
      */
-    private void handleConnectExceptions(List<Exception> exceptions) throws SQLException {
+    private void handleConnectExceptions(List<Exception> exceptions, boolean disconnected) throws SQLException {
         if (connCnt.get() == 0 && exceptions != null) {
-            close();
+            if (disconnected) {
+                closeStatementsOnDisconnect(null);
+            }
+
+            if (!disconnected || txIo != null) {
+                // We need to implicitly release all resources if the initial connection attempt fails or
+                // if the transaction context exists, because in this case we cannot reestablish the connection.
+                close();
+            }
 
             if (exceptions.size() == 1) {
                 Exception ex = exceptions.get(0);
 
-                if (ex instanceof SQLException)
-                    throw (SQLException)ex;
-                else if (ex instanceof IOException)
+                if (ex instanceof SQLException) {
+                    SQLException sqlEx = (SQLException)ex;
+
+                    if (disconnected && CLIENT_CONNECTION_FAILED.equals(sqlEx.getSQLState())) {
+                        throw new SQLException(sqlEx.getMessage(), CONNECTION_FAILURE, ex);
+                    }
+
+                    throw sqlEx;
+                } else if (ex instanceof IOException)
                     throw new SQLException("Failed to connect to Ignite cluster [url=" + connProps.getUrl() + ']',
-                        CLIENT_CONNECTION_FAILED, ex);
+                        disconnected ? CONNECTION_FAILURE : CLIENT_CONNECTION_FAILED, ex);
             }
 
             SQLException e = new SQLException("Failed to connect to server [url=" + connProps.getUrl() + ']',
-                CLIENT_CONNECTION_FAILED);
+                disconnected ? CONNECTION_FAILURE : CLIENT_CONNECTION_FAILED);
 
             for (Exception ex : exceptions)
                 e.addSuppressed(ex);
@@ -1896,7 +1944,7 @@ public class JdbcThinConnection implements Connection {
             }
         }
 
-        handleConnectExceptions(exceptions);
+        handleConnectExceptions(exceptions, baseEndpointVer != null);
 
         return null;
     }
@@ -1950,10 +1998,10 @@ public class JdbcThinConnection implements Connection {
      * @return retries count.
      */
     private int calculateRetryAttemptsCount(JdbcThinTcpIo stickyIo, JdbcRequest req) {
-        if (!partitionAwareness)
+        if (stickyIo != null)
             return NO_RETRIES;
 
-        if (stickyIo != null)
+        if (txIo != null)
             return NO_RETRIES;
 
         if (req.type() == JdbcRequest.META_TABLES ||

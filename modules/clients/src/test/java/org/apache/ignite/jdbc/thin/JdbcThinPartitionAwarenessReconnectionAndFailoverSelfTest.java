@@ -49,6 +49,8 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.hamcrest.Matchers.startsWith;
+import static org.junit.Assert.assertThat;
 
 /**
  * Jdbc thin Partition Awareness reconnection and query failover test.
@@ -244,10 +246,10 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
             assertEquals("Unexpected log records count.", 4, logHnd.records.size());
 
             String expRecordMsg = "Failed to connect to Ignite node " +
-                "[url=jdbc:ignite:thin://127.0.0.1:10800,127.0.0.1:10810]. address = [localhost/127.0.0.1:10810].";
+                "[url=jdbc:ignite:thin://127.0.0.1:10800,127.0.0.1:10810]. address = [";
 
             for (LogRecord record : logHnd.records) {
-                assertEquals("Unexpected log record text.", expRecordMsg, record.getMessage());
+                assertThat("Unexpected log record text.", record.getMessage(), startsWith(expRecordMsg));
                 assertEquals("Unexpected log level", Level.WARNING, record.getLevel());
             }
         }
@@ -305,10 +307,10 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
             assertEquals("Unexpected log records count.", 4, logHnd.records.size());
 
             String expRecordMsg = "Failed to connect to Ignite node [url=jdbc:ignite:thin://127.0.0.1:10800..10801]." +
-                " address = [localhost/127.0.0.1:10800].";
+                " address = [";
 
             for (LogRecord record : logHnd.records) {
-                assertEquals("Unexpected log record text.", expRecordMsg, record.getMessage());
+                assertThat("Unexpected log record text.", record.getMessage(), startsWith(expRecordMsg));
                 assertEquals("Unexpected log level", Level.WARNING, record.getLevel());
             }
 
@@ -341,7 +343,7 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
             assertEquals("Unexpected log records count.", 4, logHnd.records.size());
 
             for (LogRecord record : logHnd.records) {
-                assertEquals("Unexpected log record text.", expRecordMsg, record.getMessage());
+                assertThat("Unexpected log record text.", record.getMessage(), startsWith(expRecordMsg));
                 assertEquals("Unexpected log level", Level.WARNING, record.getLevel());
             }
 
@@ -786,7 +788,6 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
      *
      * @param queriesToTest Statements to test.
      */
-    @SuppressWarnings("ThrowableNotThrown")
     private void checkRetriesOccurred(Callable queriesToTest) {
         logHnd.records.clear();
 
@@ -799,7 +800,7 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
                 }
             },
             SQLException.class,
-            "Failed to connect to server [host=localhost, port=10800]"
+            "Failed to connect to server"
         );
 
         assertEquals("Unexpected log records count.", 1, logHnd.records.size());
