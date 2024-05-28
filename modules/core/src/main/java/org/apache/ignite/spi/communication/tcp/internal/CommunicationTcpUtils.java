@@ -247,8 +247,13 @@ public class CommunicationTcpUtils {
      * Matcher for IPv4 addresses.
      */
     public static class IPv4Matcher extends NetworkInterfaceMatcher {
+        /** Pattern for matching a single octet. */
         private static final Pattern DIGIT_PATTERN = Pattern.compile("\\d{1,3}");
+
+        /** Pattern for matching a range. */
         private static final Pattern RANGE_PATTERN = Pattern.compile("\\d{1,3}\\s*-\\s*\\d{1,3}");
+
+        /** Pattern for matching a wildcard. */
         private static final String WILDCARD_PATTERN = "*";
 
         /** Maximum allowed value of IPv4 octet. */
