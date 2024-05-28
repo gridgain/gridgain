@@ -2236,6 +2236,11 @@ public final class IgniteSystemProperties {
             defaults = "false")
     public static final String IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION = "IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION";
 
+    /** Node in maintenance mode will shut down with specified JVM exit code. */
+    @SystemProperty(value = "Node in maintenance mode will shut down with specified JVM exit code",
+            defaults = "0")
+    public static final String IGNITE_MAINTENANCE_MODE_EXIT_CODE = "IGNITE_MAINTENANCE_MODE_EXIT_CODE";
+
     /**
      * Enforces singleton.
      */
