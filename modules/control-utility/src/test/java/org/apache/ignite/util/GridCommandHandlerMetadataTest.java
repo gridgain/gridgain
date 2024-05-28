@@ -24,7 +24,6 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.Collection;
@@ -394,7 +393,7 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
      * - executes: CREATE TABLE test(id INT PRIMARY KEY, objVal OTHER).
      * - inserts the instance of the 'TestValue' class to the table.
      * - removes the type 'TestValue' by cmd line.
-     * - executes any command on JDBC driver to detect disconnect.
+     * - executes any command on JDBC driver to refresh metadata.
      * - checks metadata on client side. It must be empty.
      */
     @Test
@@ -423,15 +422,10 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
                 "--typeName", TestValue.class.getName(),
                 "--out", typeFile.toString()));
 
-            // Executes any command to check disconnect.
-            GridTestUtils.assertThrows(log, () -> {
-                    try (Statement stmt = conn.createStatement()) {
-                        stmt.execute("SELECT * FROM test");
-                    }
-
-                    return null;
-                },
-                SQLException.class, "Failed to communicate with Ignite cluster");
+            // Executes any command to refresh metadata.
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("SELECT * FROM test");
+            }
 
             HashMap<Integer, BinaryType> metas = GridTestUtils.getFieldValue(conn, "metaHnd", "cache", "metas");
 
