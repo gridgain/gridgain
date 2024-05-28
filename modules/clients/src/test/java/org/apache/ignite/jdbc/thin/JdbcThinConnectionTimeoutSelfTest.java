@@ -23,7 +23,6 @@ import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -202,12 +201,10 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
             },
             SQLException.class, "Connection timed out.");
 
-        GridTestUtils.assertThrows(log,
-            () -> {
-                stmt.execute("select 1");
-                return null;
-            },
-            SQLException.class, "Statement is closed.");
+        // Connection must be re-established transparently.
+        // Statement can be re-used.
+        stmt.execute("select 1");
+        stmt.execute("select 1");
     }
 
     /**
@@ -227,13 +224,10 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
                     },
                     SQLException.class, "Connection timed out.");
 
-                GridTestUtils.assertThrows(log,
-                    () -> {
-                        stmt.execute("select 1");
-
-                        return null;
-                    },
-                    SQLException.class, "Statement is closed.");
+                // Connection must be re-established transparently.
+                // Statement can be re-used.
+                stmt.execute("select 1");
+                stmt.execute("select 1");
             }
         }
     }
