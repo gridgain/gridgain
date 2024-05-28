@@ -310,8 +310,6 @@ public class ThinClientAffinityAwarenessStableTopologyTest extends ThinClientAbs
 
         TestTcpClientChannel opCh = affinityChannel(keyFactory.apply(0), igniteCache);
 
-        // Default channel is the first who detects topology change, so next partition request will go through
-        // the default channel.
         assertOpOnChannel(null, ClientOperation.CACHE_PARTITIONS);
         assertOpOnChannel(opCh, ClientOperation.CACHE_PUT);
 
