@@ -217,7 +217,7 @@ public class TimeoutTest extends AbstractThinClientTest {
                                 try {
                                     cache.putAsync(0, 0).get();
                                 } catch (InterruptedException | ExecutionException e) {
-                                    throw new RuntimeException(e);
+                                    throw new ClientException(e);
                                 }
                             } else {
                                 cache.put(0, 0);
