@@ -155,7 +155,7 @@ public class ClientCacheIndexQueryRequest extends ClientCacheRequest {
      * {@inheritDoc}
      */
     @Override public ClientResponse process(ClientConnectionContext ctx) {
-        IgniteCache cache = !isKeepBinary() ? rawCache(ctx) : cache(ctx);
+        IgniteCache<Object, Object> cache = !isKeepBinary() ? rawCache(ctx) : cache(ctx);
 
         ctx.incrementCursors();
 
