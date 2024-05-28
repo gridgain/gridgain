@@ -19,8 +19,6 @@ package org.apache.ignite.spi.communication.tcp.internal;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.BlacklistFilter;
-import org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.IPv4Matcher;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -29,7 +27,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 /**
  * Tests for {@link CommunicationTcpUtils}.
  */
-public class CommunicationTcpUtilsTest extends GridCommonAbstractTest {
+public class NetworkInterfaceMatcherTest extends GridCommonAbstractTest {
     @Test
     public void testExactIPv4Matcher() throws Exception {
         String netInterface = "127.127.127.127";
@@ -46,10 +44,14 @@ public class CommunicationTcpUtilsTest extends GridCommonAbstractTest {
         String w1 = "127.127.127.300";
         String w2 = "127.127.127.-1";
         String w3 = "a.b.c.d";
+        String w8 = "127.127.15-5.127";
 
-        assertThrows(log, () -> new IPv4Matcher(w1), IllegalArgumentException.class, "Invalid IPv4 address: " + w1);
-        assertThrows(log, () -> new IPv4Matcher(w2), IllegalArgumentException.class, "Invalid IPv4 address: " + w2);
-        assertThrows(log, () -> new IPv4Matcher(w3), IllegalArgumentException.class, "Invalid IPv4 address: " + w3);
+        String errMsgPrefix = "Invalid IPv4 address pattern: ";
+
+        assertThrows(log, () -> new IPv4Matcher(w1), IllegalArgumentException.class, errMsgPrefix + w1);
+        assertThrows(log, () -> new IPv4Matcher(w2), IllegalArgumentException.class, errMsgPrefix + w2);
+        assertThrows(log, () -> new IPv4Matcher(w3), IllegalArgumentException.class, errMsgPrefix + w3);
+        assertThrows(log, () -> new IPv4Matcher(w8), IllegalArgumentException.class, errMsgPrefix + w8);
 
         // Wrong number of segments.
         String w4 = "127.127.127";
@@ -57,10 +59,10 @@ public class CommunicationTcpUtilsTest extends GridCommonAbstractTest {
         String w6 = "";
         String w7 = "2001:db8:85a3:8d3:1319:8a2e:370:7348";
 
-        assertThrows(log, () -> new IPv4Matcher(w4), IllegalArgumentException.class, "Invalid IPv4 address: " + w4);
-        assertThrows(log, () -> new IPv4Matcher(w5), IllegalArgumentException.class, "Invalid IPv4 address: " + w5);
-        assertThrows(log, () -> new IPv4Matcher(w6), IllegalArgumentException.class, "Invalid IPv4 address: " + w6);
-        assertThrows(log, () -> new IPv4Matcher(w7), IllegalArgumentException.class, "Invalid IPv4 address: " + w7);
+        assertThrows(log, () -> new IPv4Matcher(w4), IllegalArgumentException.class, errMsgPrefix + w4);
+        assertThrows(log, () -> new IPv4Matcher(w5), IllegalArgumentException.class, errMsgPrefix + w5);
+        assertThrows(log, () -> new IPv4Matcher(w6), IllegalArgumentException.class, errMsgPrefix + w6);
+        assertThrows(log, () -> new IPv4Matcher(w7), IllegalArgumentException.class, errMsgPrefix + w7);
     }
 
     @Test

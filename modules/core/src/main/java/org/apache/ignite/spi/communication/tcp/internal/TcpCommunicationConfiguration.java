@@ -212,7 +212,8 @@ public class TcpCommunicationConfiguration implements Serializable {
 
 
     /**
-     * Allows specifying network interfaces that should not be used by Ignite when local address represents a wildcard.
+     * Allows specifying network interfaces that should not be used as a connection target by other nodes
+     * when local address represents a wildcard.
      *
      * It is possible to use ranges and wildcards in the list of interfaces. Wildcard symbol {@code *} represents a range of values between
      * {@code 0} and {@code 255}. For example, {@code 12.12.12.*} refers to addresses from {@code 12.12.12.0} to {@code 12.12.12.255}.

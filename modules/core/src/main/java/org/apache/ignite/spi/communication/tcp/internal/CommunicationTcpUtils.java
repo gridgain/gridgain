@@ -26,18 +26,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.util.lang.gridfunc.AlwaysTruePredicate;
 import org.apache.ignite.internal.util.nio.GridNioException;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.spi.IgniteSpiContext;
 import org.apache.ignite.spi.IgniteSpiOperationTimeoutException;
@@ -204,167 +200,5 @@ public class CommunicationTcpUtils {
             "rmtNode=" + nodeToFail +
             ", err=" + err +
             ", connectErrs=" + X.getSuppressedList(err) + ']');
-    }
-
-    /**
-     * Base class for network interface matchers.
-     */
-    public abstract static class NetworkInterfaceMatcher {
-        /** Pattern of network interface. */
-        private final String iface;
-
-        /**
-         * Creates a new instance of network interface matcher.
-         * @param iface Pattern of network interface.
-         */
-        public NetworkInterfaceMatcher(String iface) {
-            this.iface = iface;
-        }
-
-        /**
-         * Gets the pattern of network interface.
-         * @return Pattern of network interface.
-         */
-        public String networkInterface() {
-            return iface;
-        }
-
-        /**
-         * Matches the given address against the pattern.
-         *
-         * @param addr Address to match.
-         * @return {@code true} if the address matches the pattern, {@code false} otherwise.
-         */
-        abstract boolean matches(InetAddress addr);
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return S.toString(NetworkInterfaceMatcher.class, this);
-        }
-    }
-
-    /**
-     * Matcher for IPv4 addresses.
-     */
-    public static class IPv4Matcher extends NetworkInterfaceMatcher {
-        /** Pattern for matching a single octet. */
-        private static final Pattern DIGIT_PATTERN = Pattern.compile("\\d{1,3}");
-
-        /** Pattern for matching a range. */
-        private static final Pattern RANGE_PATTERN = Pattern.compile("\\d{1,3}\\s*-\\s*\\d{1,3}");
-
-        /** Pattern for matching a wildcard. */
-        private static final String WILDCARD_PATTERN = "*";
-
-        /** Maximum allowed value of IPv4 octet. */
-        private static final int IPV4_MAX_OCTET_VALUE = 255;
-
-        /** Shared predicate that always returns {@code true}. */
-        private static final IgnitePredicate<String> ALWAYS_TRUE = new AlwaysTruePredicate<>();
-
-        /** List of predicates for each segment. */
-        private final IgnitePredicate<String>[] segmentPred = new IgnitePredicate[4];
-
-        /**
-         * Creates a new instance of IPv4 address matcher.
-         * @param interfacePattern Pattern of network interface.
-         */
-        public IPv4Matcher(String interfacePattern) {
-            super(interfacePattern);
-
-            String[] segments = networkInterface().split("\\.");
-            if (segments.length != 4)
-                throw new IllegalArgumentException("Invalid IPv4 address: " + networkInterface());
-
-            try {
-                for (int s = 0; s < segments.length; ++s) {
-                    String segment = segments[s];
-
-                    if (DIGIT_PATTERN.matcher(segment).matches()) {
-                        int seg = Integer.parseInt(segment);
-                        if (seg < 0 || seg > IPV4_MAX_OCTET_VALUE)
-                            throw new IllegalArgumentException("Invalid IPv4 address: " + networkInterface());
-
-                        segmentPred[s] = addr -> segment.equals(addr);
-                    }
-                    else if (RANGE_PATTERN.matcher(segment).matches()) {
-                        final String[] range = segment.split("-");
-                        if (range.length != 2)
-                            throw new IllegalArgumentException("Invalid IPv4 address: " + networkInterface());
-
-                        final int min = Integer.parseInt(range[0].trim());
-                        final int max = Integer.parseInt(range[1].trim());
-
-                        segmentPred[s] = addr -> {
-                            try {
-                                int seg = Integer.parseInt(addr);
-                                return seg >= min && seg <= max;
-                            } catch (NumberFormatException e) {
-                                return false;
-                            }
-                        };
-                    }
-                    else if (WILDCARD_PATTERN.equals(segments[s]))
-                        segmentPred[s] = ALWAYS_TRUE;
-                    else
-                        throw new IllegalArgumentException("Invalid IPv4 address: " + networkInterface());
-                }
-            }
-            catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid IPv4 address: " + networkInterface(), e);
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override boolean matches(InetAddress addr) {
-            String[] segments = addr.getHostAddress().split("\\.");
-
-            if (segments.length != 4)
-                return false;
-
-            for (int s = 0; s < segments.length; ++s) {
-                if (!segmentPred[s].apply(segments[s]))
-                    return false;
-            }
-
-            return true;
-        }
-    }
-
-    /**
-     * Represents a filter basen on blacklist of network interfaces.
-     */
-    public static class BlacklistFilter implements IgnitePredicate<InetAddress> {
-        /** Serial version UID. */
-        private static final long serialVersionUID = 0L;
-
-        /** List of matchers. */
-        private final List<NetworkInterfaceMatcher> matchers;
-
-        /**
-         * Creates a new instance of network interface filter.
-         *
-         * @param blacklist List of network interface patterns.
-         */
-        public BlacklistFilter(Collection<String> blacklist) {
-            matchers = new ArrayList<>(blacklist.size());
-
-            for (String pattern : blacklist)
-                matchers.add(new IPv4Matcher(pattern));
-        }
-
-        /**
-         * Returns {@code true} if the given address is not in the blacklist and {@code false} otherwise.
-         *
-         * @param inetAddress Addres to be checked
-         * @return {@code true} if the given address is not in the blacklist and {@code false} otherwise.
-         */
-        @Override public boolean apply(InetAddress inetAddress) {
-            for (NetworkInterfaceMatcher m : matchers)
-                if (m.matches(inetAddress))
-                    return false;
-
-            return true;
-        }
     }
 }
