@@ -36,13 +36,10 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.AddressResolver;
@@ -51,10 +48,8 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.tracing.NoopTracing;
 import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.util.ipc.shmem.IpcSharedMemoryServerEndpoint;
-import org.apache.ignite.internal.util.lang.gridfunc.AlwaysTruePredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteExperimental;
@@ -68,6 +63,7 @@ import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.AttributeNames;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.BlacklistFilter;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
@@ -163,6 +159,18 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
         return (TcpCommunicationSpi) this;
     }
 
+    /**
+     * Allows specifying network interfaces that should not be used by Ignite when local address represents a wildcard.
+     *
+     * It is possible to use ranges and wildcards in the list of interfaces. Wildcard symbol {@code *} represents a range of values between
+     * {@code 0} and {@code 255}. For example, {@code 12.12.12.*} refers to addresses from {@code 12.12.12.0} to {@code 12.12.12.255}.
+     * Range symbol {@code -} represents a range of values. For example, {@code 12.12.12.12-24} refers to addresses from
+     * {@code 12.12.12.12} to {@code 12.12.12.24}.
+     *
+     * @param interfaces Collection of network interfaces that should not be used by Ignite.
+     * @return {@code this} for chaining.
+     * @see #setLocalAddress(String)
+     */
     @IgniteExperimental
     @IgniteSpiConfiguration(optional = true)
     public TcpCommunicationSpi setNetworkInterfacesBlacklist(Collection<String> interfaces) {
@@ -173,6 +181,11 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
         return (TcpCommunicationSpi) this;
     }
 
+    /**
+     * Gets network interfaces that should not be used by Ignite when local address represents a wildcard.
+     *
+     * @return Collection of network interfaces that should not be used by Ignite.
+     */
     @IgniteExperimental
     @IgniteSpiConfiguration(optional = true)
     public Collection<String> getNetworkInterfacesBlacklist() {
@@ -1035,154 +1048,5 @@ cfg.socketSendBuffer(sockSndBuf);
         // If free port wasn't found.
         throw new IgniteCheckedException("Failed to bind shared memory communication to any port within range [startPort=" +
             cfg.localPort() + ", portRange=" + cfg.localPortRange() + ", locHost=" + cfg.localHost() + ']', lastEx);
-    }
-
-    /**
-     * Base class for network interface matchers.
-     */
-    public abstract static class NetworkInterfaceMatcher {
-        /** Pattern of network interface. */
-        private final String iface;
-
-        /**
-         * Creates a new instance of network interface matcher.
-         * @param iface Pattern of network interface.
-         */
-        public NetworkInterfaceMatcher(String iface) {
-            this.iface = iface;
-        }
-
-        /**
-         * Gets the pattern of network interface.
-         * @return Pattern of network interface.
-         */
-        public String networkInterface() {
-            return iface;
-        }
-
-        /**
-         * Matches the given address against the pattern.
-         *
-         * @param addr Address to match.
-         * @return {@code true} if the address matches the pattern, {@code false} otherwise.
-         */
-        abstract boolean match(InetAddress addr);
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return S.toString(NetworkInterfaceMatcher.class, this);
-        }
-    }
-
-    /**
-     * Matcher for IPv4 addresses.
-     */
-    public static class IPv4Matcher extends NetworkInterfaceMatcher {
-        private static final Pattern DIGIT_PATTERN = Pattern.compile("\\d{1,3}");
-        private static final Pattern RANGE_PATTERN = Pattern.compile("\\d{1,3}\\s*-\\s*\\d{1,3}");
-        private static final String WILDCARD_PATTERN = "*";
-
-        /** Maximum allowed value of IPv4 octet. */
-        private static final int IPV4_MAX_OCTET_VALUE = 255;
-
-        /** Shared predicate that always returns {@code true}. */
-        private static final IgnitePredicate<String> ALWAYS_TRUE = new AlwaysTruePredicate<>();
-
-        /** List of predicates for each segment. */
-        private final IgnitePredicate<String>[] segmentPred = new IgnitePredicate[4];
-
-        /**
-         * Creates a new instance of IPv4 address matcher.
-         * @param interfacePattern Pattern of network interface.
-         */
-        public IPv4Matcher(String interfacePattern) {
-            super(interfacePattern);
-
-            String[] segments = networkInterface().split("\\.");
-            if (segments.length != 4)
-                throw new IllegalArgumentException("Invalid IPv4 address: " + networkInterface());
-
-            try {
-                for (int s = 0; s < segments.length; ++s) {
-                    String segment = segments[s];
-
-                    if (DIGIT_PATTERN.matcher(segment).matches()) {
-                        int seg = Integer.parseInt(segment);
-                        if (seg < 0 || seg > IPV4_MAX_OCTET_VALUE)
-                            throw new IllegalArgumentException("Invalid IPv4 address: " + networkInterface());
-
-                        segmentPred[s] = addr -> segment.equals(addr);
-                    }
-                    else if (RANGE_PATTERN.matcher(segment).matches()) {
-                        final String[] range = segment.split("-");
-                        if (range.length != 2)
-                            throw new IllegalArgumentException("Invalid IPv4 address: " + networkInterface());
-
-                        final int min = Integer.parseInt(range[0].trim());
-                        final int max = Integer.parseInt(range[1].trim());
-
-                        segmentPred[s] = addr -> {
-                            try {
-                                int seg = Integer.parseInt(addr);
-                                return seg >= min && seg <= max;
-                            } catch (NumberFormatException e) {
-                                return false;
-                            }
-                        };
-                    }
-                    else if (WILDCARD_PATTERN.equals(segments[s]))
-                        segmentPred[s] = ALWAYS_TRUE;
-                    else
-                        throw new IllegalArgumentException("Invalid IPv4 address: " + networkInterface());
-                }
-            }
-            catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid IPv4 address: " + networkInterface(), e);
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override boolean match(InetAddress addr) {
-            String[] segments = addr.getHostAddress().split("\\.");
-
-            if (segments.length != 4)
-                return false;
-
-            for (int s = 0; s < segments.length; ++s) {
-                if (!segmentPred[s].apply(segments[s]))
-                    return false;
-            }
-
-            return true;
-        }
-    }
-
-    /**
-     * Represents a filter basen on blacklist of network interfaces.
-     */
-    public static class BlacklistFilter implements IgnitePredicate<InetAddress> {
-        /** List of matchers. */
-        private final List<NetworkInterfaceMatcher> matchers;
-
-        /**
-         * Creates a new instance of network interface filter.
-         *
-         * @param blacklist List of network interface patterns.
-         */
-        public BlacklistFilter(Collection<String> blacklist) {
-            matchers = new ArrayList<>(blacklist.size());
-
-            for (String pattern : blacklist)
-                matchers.add(new IPv4Matcher(pattern));
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean apply(InetAddress inetAddress) {
-            for (NetworkInterfaceMatcher m : matchers)
-                if (m.match(inetAddress))
-                    return false;
-
-            return true;
-        }
     }
 }

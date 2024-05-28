@@ -35,11 +35,11 @@ package org.apache.ignite.spi.communication.tcp.internal;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.Collection;
-import java.util.List;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.SystemProperty;
 import org.apache.ignite.configuration.AddressResolver;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 
@@ -181,6 +181,9 @@ public class TcpCommunicationConfiguration implements Serializable {
     /** Allows to send heartbeat messages for tcp communication connections. */
     private boolean enableConnectionCheck = true;
 
+    /** Collection of network interfaces that should not be used by Ignite when local address is wildcard. */
+    private Collection<String> blacklist;
+
     /** Address resolver. */
     public AddressResolver addrRslvr() {
         return addrRslvr;
@@ -207,13 +210,31 @@ public class TcpCommunicationConfiguration implements Serializable {
         this.locAddr = locAddr;
     }
 
-    /** Expiremental api*/
-    private Collection<String> blackListInterfaces;
+
+    /**
+     * Allows specifying network interfaces that should not be used by Ignite when local address represents a wildcard.
+     *
+     * It is possible to use ranges and wildcards in the list of interfaces. Wildcard symbol {@code *} represents a range of values between
+     * {@code 0} and {@code 255}. For example, {@code 12.12.12.*} refers to addresses from {@code 12.12.12.0} to {@code 12.12.12.255}.
+     * Range symbol {@code -} represents a range of values. For example, {@code 12.12.12.12-24} refers to addresses from
+     * {@code 12.12.12.12} to {@code 12.12.12.24}.
+     *
+     * @param interfaces Collection of network interfaces that should not be used by Ignite.
+     * @see #localAddress(String)
+     */
+    @IgniteExperimental
     public void networkInterfacesBlacklist(Collection<String> interfaces) {
-        blackListInterfaces = interfaces;
+        blacklist = interfaces;
     }
+
+    /**
+     * Gets network interfaces that should not be used by Ignite when local address represents a wildcard.
+     *
+     * @return Collection of network interfaces that should not be used by Ignite.
+     */
+    @IgniteExperimental
     public Collection<String> networkInterfacesBlacklist() {
-        return blackListInterfaces;
+        return blacklist;
     }
 
     /**
