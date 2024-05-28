@@ -57,6 +57,7 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiNodeLeftLoggin
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiSkipMessageSendTest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationStatisticsTest;
 import org.apache.ignite.spi.communication.tcp.TooManyOpenFilesTcpCommunicationSpiTest;
+import org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtilsTest;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFutureSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -129,7 +130,9 @@ import org.junit.runners.Suite;
 
     TcpCommunicationConnectionCheckFutureSelfTest.class,
 
-    CommunicationMessageAcknowledgeTest.class
+    CommunicationMessageAcknowledgeTest.class,
+
+    CommunicationTcpUtilsTest.class
 })
 public class IgniteSpiCommunicationSelfTestSuite {
 }

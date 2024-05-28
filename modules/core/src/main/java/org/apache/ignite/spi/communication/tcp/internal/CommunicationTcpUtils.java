@@ -235,7 +235,7 @@ public class CommunicationTcpUtils {
          * @param addr Address to match.
          * @return {@code true} if the address matches the pattern, {@code false} otherwise.
          */
-        abstract boolean match(InetAddress addr);
+        abstract boolean matches(InetAddress addr);
 
         /** {@inheritDoc} */
         @Override public String toString() {
@@ -311,7 +311,7 @@ public class CommunicationTcpUtils {
         }
 
         /** {@inheritDoc} */
-        @Override boolean match(InetAddress addr) {
+        @Override boolean matches(InetAddress addr) {
             String[] segments = addr.getHostAddress().split("\\.");
 
             if (segments.length != 4)
@@ -345,10 +345,15 @@ public class CommunicationTcpUtils {
                 matchers.add(new IPv4Matcher(pattern));
         }
 
-        /** {@inheritDoc} */
+        /**
+         * Returns {@code true} if the given address is not in the blacklist and {@code false} otherwise.
+         *
+         * @param inetAddress Addres to be checked
+         * @return {@code true} if the given address is not in the blacklist and {@code false} otherwise.
+         */
         @Override public boolean apply(InetAddress inetAddress) {
             for (NetworkInterfaceMatcher m : matchers)
-                if (m.match(inetAddress))
+                if (m.matches(inetAddress))
                     return false;
 
             return true;
