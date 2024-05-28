@@ -23,6 +23,7 @@ import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -52,7 +53,7 @@ public class BlacklistNetwokInterfacesTest extends GridCommonAbstractTest {
         TcpCommunicationSpi communicationSpi = new TcpCommunicationSpi();
 
         // These settings enable wildcared local address and blacklist all IPv4 network interfaces.
-        // It will dissalow a node to start ue to all IPv4 addresses being blacklisted.
+        // It will dissalow a node to start due to all IPv4 addresses being blacklisted.
         // If IPv6 network interfaces are present, the node will start successfully
         // but communication attributes will not contain any IPv4 addresses.
         communicationSpi.setLocalAddress("0.0.0.0");
@@ -66,6 +67,8 @@ public class BlacklistNetwokInterfacesTest extends GridCommonAbstractTest {
     @Test
     public void testBlacklistFilter() throws Exception {
         try {
+            IgniteUtils.resetCachedLocalAddressAndHostNames();
+
             IgniteEx srv = startGrid(0);
 
             Map<String, Object> attributes = srv.cluster().localNode().attributes();
@@ -79,8 +82,11 @@ public class BlacklistNetwokInterfacesTest extends GridCommonAbstractTest {
                 }
             }
         }
-        catch (IgniteCheckedException e) {
+        catch (IgniteCheckedException ignored) {
             // There are no IPv4 & IPv6 network interfaces.
+        }
+        finally {
+            IgniteUtils.resetCachedLocalAddressAndHostNames();
         }
     }
 }

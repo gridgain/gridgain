@@ -292,6 +292,7 @@ import org.apache.ignite.transactions.TransactionSerializationException;
 import org.apache.ignite.transactions.TransactionTimeoutException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 import sun.misc.Unsafe;
 
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME;
@@ -12987,5 +12988,14 @@ public abstract class IgniteUtils {
         catch (ClassNotFoundException e) {
             return true;
         }
+    }
+
+    /**
+     * Resets cached local addresses and host names.
+     */
+    @TestOnly
+    public static void resetCachedLocalAddressAndHostNames() {
+        cachedLocalAddr = null;
+        cachedLocalAddrAllHostNames = null;
     }
 }
