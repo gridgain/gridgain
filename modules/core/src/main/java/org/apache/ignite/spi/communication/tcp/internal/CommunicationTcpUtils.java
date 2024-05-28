@@ -330,6 +330,9 @@ public class CommunicationTcpUtils {
      * Represents a filter basen on blacklist of network interfaces.
      */
     public static class BlacklistFilter implements IgnitePredicate<InetAddress> {
+        /** Serial version UID. */
+        private static final long serialVersionUID = 0L;
+
         /** List of matchers. */
         private final List<NetworkInterfaceMatcher> matchers;
 
