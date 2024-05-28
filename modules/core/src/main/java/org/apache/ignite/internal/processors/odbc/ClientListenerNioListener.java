@@ -258,21 +258,25 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
 
             try (OperationSecurityContext ignored = ctx.security().withContext(connCtx.securityContext())) {
                 resp = handler.handle(req);
-            }
 
-            if (resp != null) {
-                if (resp instanceof ClientListenerAsyncResponse) {
-                    ((ClientListenerAsyncResponse)resp).future().listen(fut -> {
-                        try {
-                            handleResponse(req, fut.get(), startTime, ses, parser);
-                        }
-                        catch (Throwable e) {
-                            handleError(req, e, ses, parser, handler);
-                        }
-                    });
+                if (resp != null) {
+                    if (resp instanceof ClientListenerAsyncResponse) {
+                        ((ClientListenerAsyncResponse)resp).future().listen(fut -> {
+                            try {
+                                handleResponse(req, fut.get(), startTime, ses, parser);
+                            }
+                            catch (Throwable e) {
+                                handleError(req, e, ses, parser, handler);
+                            }
+                        });
+                    }
+                    else
+                        handleResponse(req, resp, startTime, ses, parser);
                 }
-                else
-                    handleResponse(req, resp, startTime, ses, parser);
+            }
+            finally {
+                if (authCtx != null)
+                    AuthorizationContext.clear();
             }
         }
         catch (Throwable e) {
