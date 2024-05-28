@@ -33,6 +33,7 @@
 package org.apache.ignite.spi.communication.tcp.internal;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -52,6 +53,7 @@ import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteExperimental;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.IgniteSpiAdapter;
@@ -154,6 +156,40 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
             cfg.localAddress(locAddr);
 
         return (TcpCommunicationSpi) this;
+    }
+
+    /**
+     * Allows specifying network interfaces that should not be used as a connection target by other nodes
+     * when local address represents a wildcard.
+     *
+     * It is possible to use ranges and wildcards in the list of interfaces. Wildcard symbol {@code *} represents a range of values between
+     * {@code 0} and {@code 255}. For example, {@code 12.12.12.*} refers to addresses from {@code 12.12.12.0} to {@code 12.12.12.255}.
+     * Range symbol {@code -} represents a range of values. For example, {@code 12.12.12.12-24} refers to addresses from
+     * {@code 12.12.12.12} to {@code 12.12.12.24}.
+     *
+     * @param interfaces Collection of network interfaces that should not be used by Ignite.
+     * @return {@code this} for chaining.
+     * @see #setLocalAddress(String)
+     */
+    @IgniteExperimental
+    @IgniteSpiConfiguration(optional = true)
+    public TcpCommunicationSpi setNetworkInterfacesBlacklist(Collection<String> interfaces) {
+        // Injection should not override value already set by Spring or user.
+        if (cfg.networkInterfacesBlacklist() == null)
+            cfg.networkInterfacesBlacklist(interfaces);
+
+        return (TcpCommunicationSpi) this;
+    }
+
+    /**
+     * Gets network interfaces that should not be used by Ignite when local address represents a wildcard.
+     *
+     * @return Collection of network interfaces that should not be used by Ignite.
+     */
+    @IgniteExperimental
+    @IgniteSpiConfiguration(optional = true)
+    public Collection<String> getNetworkInterfacesBlacklist() {
+        return cfg.networkInterfacesBlacklist();
     }
 
     /**
@@ -690,7 +726,7 @@ public abstract class TcpCommunicationConfigInitializer extends IgniteSpiAdapter
      * Setting this option to {@code true} enables filter for reachable
      * addresses on creating tcp client.
      * <p>
-     * Usually its advised to set this value to {@code false}.
+     * Usually it's advised to set this value to {@code false}.
      * <p>
      * If not provided, default value is {@link TcpCommunicationSpi#DFLT_FILTER_REACHABLE_ADDRESSES}.
      *
@@ -922,7 +958,11 @@ cfg.socketSendBuffer(sockSndBuf);
 
         // Set local node attributes.
         try {
-            IgniteBiTuple<Collection<String>, Collection<String>> addrs = U.resolveLocalAddresses(cfg.localHost());
+            IgnitePredicate<InetAddress> networkInterfaceFilter = null;
+            if (!F.isEmpty(cfg.networkInterfacesBlacklist()))
+                networkInterfaceFilter = new BlacklistFilter(cfg.networkInterfacesBlacklist());
+
+            IgniteBiTuple<Collection<String>, Collection<String>> addrs = U.resolveLocalAddresses(cfg.localHost(), false, networkInterfaceFilter);
 
             if (cfg.localPort() != -1 && addrs.get1().isEmpty() && addrs.get2().isEmpty())
                 throw new IgniteCheckedException("No network addresses found (is networking enabled?).");
