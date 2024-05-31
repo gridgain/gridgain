@@ -37,8 +37,9 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     /** Tracker is not closed and not in the middle of the closing process. */
     private static final int STATE_INITIAL = 0;
 
-    /** Tracker is closed or in the middle of the closing process. */
+    /** Tracker is closed. */
     private static final int STATE_CLOSED = 1;
+
 
     /** Parent tracker. */
     @GridToStringExclude
@@ -270,13 +271,15 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
     /** {@inheritDoc} */
     @Override public synchronized void close() {
-        // It is not expected to be called concurrently with reserve\release.
-        // But query can be cancelled concurrently on query finish.
-        if (!STATE_UPDATER.compareAndSet(this, STATE_INITIAL, STATE_CLOSED))
+        if (closed())
             return;
 
-        for (H2MemoryTracker child : children)
+        H2MemoryTracker[] children0 = children.toArray(new H2MemoryTracker[0]);
+
+        for (H2MemoryTracker child : children0)
             child.close();
+
+        STATE_UPDATER.compareAndSet(this, STATE_INITIAL, STATE_CLOSED);
 
         children.clear();
 

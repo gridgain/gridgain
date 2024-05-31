@@ -75,7 +75,7 @@ public class JdbcQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTest {
                 ));
             }
 
-            SQLException ex = (SQLException)GridTestUtils.assertThrows(GridAbstractTest.log, () -> {
+            SQLException ex = GridTestUtils.assertThrows(GridAbstractTest.log, () -> {
                 SQLException sqlEx = null;
 
                 for (IgniteInternalFuture f : futs) {
