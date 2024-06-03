@@ -126,6 +126,7 @@ public class FunctionalQueryTest {
             .setLazy(lazy);
 
         try (FieldsQueryCursor<List<?>> cur = cache.query(qry)) {
+            // Columns are available before we iterate - same as embedded mode.
             assertEquals(2, cur.getColumnsCount());
             assertEquals("ID", cur.getFieldName(0));
             assertEquals("NAME", cur.getFieldName(1));
