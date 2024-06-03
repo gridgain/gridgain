@@ -17,6 +17,7 @@
 package org.apache.ignite.spi.communication.tcp.internal;
 
 import java.net.InetAddress;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -92,7 +93,7 @@ public class BlacklistNetwokInterfacesTest extends GridCommonAbstractTest {
 
     @Test
     public void testEmptyNetworkInterfacePattern() throws Exception {
-        BlacklistFilter filter = new BlacklistFilter(Collections.singletonList(""));
+        BlacklistFilter filter = new BlacklistFilter(Arrays.asList("", "   "));
 
         assertTrue(filter.apply(InetAddress.getByName("127.0.0.1")));
     }
