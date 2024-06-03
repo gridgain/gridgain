@@ -62,9 +62,10 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
         this.qryOp = qryOp;
         this.pageQryOp = pageQryOp;
         this.qryWriter = qryWriter;
+    }
 
-        // Load first page eagerly to populate cursorId and additional information (e.g. field names).
-        loadFirstPage();
+    public void loadFirstPage() {
+        firstPage = ch.service(qryOp, qryWriter, (PayloadInputChannel payloadCh) -> readResult(payloadCh, true));
     }
 
     /** {@inheritDoc} */
@@ -72,9 +73,9 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
         if (!hasNext)
             throw new IllegalStateException("No more query results");
 
-        if (firstPage != null) {
+        if (cursorId == null) {
+            loadFirstPage();
             Collection<T> res = firstPage;
-
             firstPage = null;
 
             return res;
@@ -101,6 +102,11 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
     }
 
     /** {@inheritDoc} */
+    @Override public boolean hasFirstPage() {
+        return cursorId != null;
+    }
+
+    /** {@inheritDoc} */
     @Override public void reset() {
         hasNext = true;
 
@@ -108,7 +114,7 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
 
         clientCh = null;
 
-        loadFirstPage();
+        firstPage = null;
     }
 
     /**
@@ -148,9 +154,5 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
                 pageQryOp,
                 req -> req.out().writeLong(cursorId),
                 (PayloadInputChannel payloadCh) -> readResult(payloadCh, false));
-    }
-
-    private void loadFirstPage() {
-        firstPage = ch.service(qryOp, qryWriter, (PayloadInputChannel payloadCh) -> readResult(payloadCh, true));
     }
 }
