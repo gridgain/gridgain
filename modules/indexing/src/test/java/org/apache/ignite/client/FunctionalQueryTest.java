@@ -28,11 +28,7 @@ import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.binary.BinaryTypeConfiguration;
-import org.apache.ignite.cache.query.Query;
-import org.apache.ignite.cache.query.QueryCursor;
-import org.apache.ignite.cache.query.ScanQuery;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.SqlQuery;
+import org.apache.ignite.cache.query.*;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -129,7 +125,11 @@ public class FunctionalQueryTest {
             .setPageSize(pageSize)
             .setLazy(lazy);
 
-        try (QueryCursor<List<?>> cur = cache.query(qry)) {
+        try (FieldsQueryCursor<List<?>> cur = cache.query(qry)) {
+            assertEquals(2, cur.getColumnsCount());
+            assertEquals("id", cur.getFieldName(0));
+            assertEquals("name", cur.getFieldName(1));
+
             List<List<?>> res = cur.getAll();
 
             assertEquals(expSize, res.size());
