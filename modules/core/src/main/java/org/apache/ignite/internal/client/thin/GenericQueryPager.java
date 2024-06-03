@@ -109,7 +109,7 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
 
     /** {@inheritDoc} */
     @Override public boolean hasNext() {
-        return firstPage != null || hasNext;
+        return (firstPage != null && !firstPage.isEmpty()) || hasNext;
     }
 
     /** {@inheritDoc} */
