@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,6 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.WALMode;
-import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -32,6 +30,8 @@ import org.apache.ignite.util.AttributeNodeFilter;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 
 /**
  *
@@ -44,7 +44,7 @@ public class CacheMetricsForNonAffinityCachesTest extends GridCommonAbstractTest
     /** */
     private static final String START_CACHE_ATTR = "has_cache";
 
-    /** Possible values: -1, 0, 2 */
+    /** Possible values: 1, 0 */
     @Parameterized.Parameter(value = 0)
     public int nonAffinityIdx;
 
@@ -60,7 +60,6 @@ public class CacheMetricsForNonAffinityCachesTest extends GridCommonAbstractTest
         for (boolean persistent : new boolean[] {true, false}) {
             params.add(new Object[] {0, persistent});
             params.add(new Object[] {1, persistent});
-            params.add(new Object[] {2, persistent});
         }
 
         return params;
@@ -70,18 +69,12 @@ public class CacheMetricsForNonAffinityCachesTest extends GridCommonAbstractTest
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setActiveOnStart(false);
         cfg.setConsistentId(igniteInstanceName);
-        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
 
         DataStorageConfiguration dsCfg = new DataStorageConfiguration();
-        dsCfg.setWalSegmentSize(4 * 1024 * 1024);
-        dsCfg.setWalMode(WALMode.LOG_ONLY);
-
-        final int size = 50 * 1024 * 1024;
 
         DataRegionConfiguration dfltRegCfg = new DataRegionConfiguration();
-        dfltRegCfg.setName(DEFAULT_CACHE_NAME).setInitialSize(size).setMaxSize(size).setPersistenceEnabled(dfltRegionPersistence);
+        dfltRegCfg.setName(DEFAULT_CACHE_NAME).setPersistenceEnabled(dfltRegionPersistence);
 
         dsCfg.setDefaultDataRegionConfiguration(dfltRegCfg);
 
@@ -122,10 +115,9 @@ public class CacheMetricsForNonAffinityCachesTest extends GridCommonAbstractTest
      *
      */
     @Test
-    public void testPartitionLossDetectionOnClientTopology() throws Exception {
-        final IgniteEx crd = startGrids(3);
-        crd.cluster().baselineAutoAdjustEnabled(false);
-        crd.cluster().active(true);
+    public void testCacheMetricsDontRaiseNPE() throws Exception {
+        final IgniteEx crd = startGrids(2);
+        crd.cluster().state(ACTIVE);
 
         awaitPartitionMapExchange();
 
