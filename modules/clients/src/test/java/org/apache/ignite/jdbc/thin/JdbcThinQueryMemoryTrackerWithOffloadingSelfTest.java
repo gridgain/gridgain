@@ -101,8 +101,7 @@ public class JdbcThinQueryMemoryTrackerWithOffloadingSelfTest extends AbstractQu
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected boolean isLocal() {
+    @Override protected boolean isLocal() {
         return false;
     }
 
