@@ -127,8 +127,8 @@ public class FunctionalQueryTest {
 
         try (FieldsQueryCursor<List<?>> cur = cache.query(qry)) {
             assertEquals(2, cur.getColumnsCount());
-            assertEquals("id", cur.getFieldName(0));
-            assertEquals("name", cur.getFieldName(1));
+            assertEquals("ID", cur.getFieldName(0));
+            assertEquals("NAME", cur.getFieldName(1));
 
             List<List<?>> res = cur.getAll();
 
