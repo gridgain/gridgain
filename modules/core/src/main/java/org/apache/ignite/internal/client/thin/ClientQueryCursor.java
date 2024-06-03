@@ -68,7 +68,7 @@ class ClientQueryCursor<T> implements QueryCursor<T> {
     /** {@inheritDoc} */
     @NotNull @Override public Iterator<T> iterator() {
         return new Iterator<T>() {
-            private Iterator<T> currPageIt;
+            private Iterator<T> currPageIt = null;
 
             @Override public boolean hasNext() {
                 if (!pager.hasFirstPage())
