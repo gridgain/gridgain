@@ -74,15 +74,15 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
 
     /** {@inheritDoc} */
     @Override public Collection<T> next() throws ClientException {
-        if (!hasNext)
-            throw new IllegalStateException("No more query results");
-
         if (firstPage != null) {
             Collection<T> res = firstPage;
             firstPage = null;
 
             return res;
         }
+
+        if (!hasNext)
+            throw new IllegalStateException("No more query results");
 
         if (cursorId == null) {
             loadFirstPage();
@@ -109,7 +109,7 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
 
     /** {@inheritDoc} */
     @Override public boolean hasNext() {
-        return hasNext;
+        return firstPage != null || hasNext;
     }
 
     /** {@inheritDoc} */
