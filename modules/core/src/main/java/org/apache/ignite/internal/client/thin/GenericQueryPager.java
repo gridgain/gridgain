@@ -64,7 +64,11 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
         this.qryWriter = qryWriter;
     }
 
-    public void loadFirstPage() {
+    /** {@inheritDoc} */
+    @Override public void loadFirstPage() {
+        assert cursorId == null : "Cursor already loaded";
+        assert firstPage == null : "First page already loaded";
+
         firstPage = ch.service(qryOp, qryWriter, (PayloadInputChannel payloadCh) -> readResult(payloadCh, true));
     }
 
@@ -72,6 +76,13 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
     @Override public Collection<T> next() throws ClientException {
         if (!hasNext)
             throw new IllegalStateException("No more query results");
+
+        if (firstPage != null) {
+            Collection<T> res = firstPage;
+            firstPage = null;
+
+            return res;
+        }
 
         if (cursorId == null) {
             loadFirstPage();
