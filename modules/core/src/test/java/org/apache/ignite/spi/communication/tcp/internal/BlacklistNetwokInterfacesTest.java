@@ -89,4 +89,18 @@ public class BlacklistNetwokInterfacesTest extends GridCommonAbstractTest {
             IgniteUtils.resetCachedLocalAddressAndHostNames();
         }
     }
+
+    @Test
+    public void testEmptyNetworkInterfacePattern() throws Exception {
+        BlacklistFilter filter = new BlacklistFilter(Collections.singletonList(""));
+
+        assertTrue(filter.apply(InetAddress.getByName("127.0.0.1")));
+    }
+
+    @Test
+    public void testNullNetworkInterfacePattern() throws Exception {
+        BlacklistFilter filter = new BlacklistFilter(Collections.singletonList(null));
+
+        assertTrue(filter.apply(InetAddress.getByName("127.0.0.1")));
+    }
 }
