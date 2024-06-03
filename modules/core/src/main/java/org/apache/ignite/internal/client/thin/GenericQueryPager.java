@@ -24,7 +24,7 @@ import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.ClientReconnectedException;
 
 /**
- * Generic query pager. Override {@link this#readResult(PayloadInputChannel)} to make it specific.
+ * Generic query pager.
  */
 abstract class GenericQueryPager<T> implements QueryPager<T> {
     /** Query op. */
@@ -42,8 +42,8 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
     /** Has next. */
     private boolean hasNext = true;
 
-    /** Indicates if initial query response was received. */
-    private boolean hasFirstPage = false;
+    /** Initial query response. */
+    private Collection<T> firstPage;
 
     /** Cursor id. */
     private Long cursorId = null;
@@ -62,6 +62,9 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
         this.qryOp = qryOp;
         this.pageQryOp = pageQryOp;
         this.qryWriter = qryWriter;
+
+        // Load first page eagerly to populate cursorId and additional information (e.g. field names).
+        loadFirstPage();
     }
 
     /** {@inheritDoc} */
@@ -69,7 +72,15 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
         if (!hasNext)
             throw new IllegalStateException("No more query results");
 
-        return hasFirstPage ? queryPage() : ch.service(qryOp, qryWriter, this::readResult);
+        if (firstPage != null) {
+            Collection<T> res = firstPage;
+
+            firstPage = null;
+
+            return res;
+        }
+
+        return queryPage();
     }
 
     /** {@inheritDoc} */
@@ -90,31 +101,25 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean hasFirstPage() {
-        return hasFirstPage;
-    }
-
-    /** {@inheritDoc} */
     @Override public void reset() {
-        hasFirstPage = false;
-
         hasNext = true;
 
         cursorId = null;
 
         clientCh = null;
+
+        loadFirstPage();
     }
 
     /**
      * Override this method to read entries from the input stream. "Entries" means response data excluding heading
      * cursor ID and trailing "has next page" flag.
-     * Use {@link this#hasFirstPage} flag to differentiate between the initial query and page query responses.
      */
-    abstract Collection<T> readEntries(PayloadInputChannel in);
+    abstract Collection<T> readEntries(PayloadInputChannel in, boolean firstPage);
 
     /** */
-    private Collection<T> readResult(PayloadInputChannel payloadCh) {
-        if (!hasFirstPage) {
+    private Collection<T> readResult(PayloadInputChannel payloadCh, boolean firstPage) {
+        if (firstPage) {
             long resCursorId = payloadCh.in().readLong();
 
             if (cursorId != null) {
@@ -130,17 +135,22 @@ abstract class GenericQueryPager<T> implements QueryPager<T> {
             }
         }
 
-        Collection<T> res = readEntries(payloadCh);
+        Collection<T> res = readEntries(payloadCh, firstPage);
 
         hasNext = payloadCh.in().readBoolean();
-
-        hasFirstPage = true;
 
         return res;
     }
 
     /** Get page. */
     private Collection<T> queryPage() throws ClientException {
-        return clientCh.service(pageQryOp, req -> req.out().writeLong(cursorId), this::readResult);
+        return clientCh.service(
+                pageQryOp,
+                req -> req.out().writeLong(cursorId),
+                (PayloadInputChannel payloadCh) -> readResult(payloadCh, false));
+    }
+
+    private void loadFirstPage() {
+        firstPage = ch.service(qryOp, qryWriter, (PayloadInputChannel payloadCh) -> readResult(payloadCh, true));
     }
 }
