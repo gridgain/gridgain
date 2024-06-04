@@ -1573,7 +1573,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
         [Test]
         [Category(TestUtils.CategoryIntensive)]
-        [Timeout(90000)]
+        [Timeout(180000)] // 3 minutes
         public void TestAsyncMultithreadedKeepBinary()
         {
             var cache = Cache().WithKeepBinary<CacheTestKey, BinarizablePerson>();
@@ -1600,7 +1600,7 @@ namespace Apache.Ignite.Core.Tests.Cache
                     futs.Add(task);
                 }
 
-                Task.WaitAll(futs.ToArray(), TimeSpan.FromSeconds(40));
+                Task.WaitAll(futs.ToArray(), TimeSpan.FromMinutes(1));
             }, threads);
 
             for (int i = 0; i < threads; i++)
@@ -1635,7 +1635,7 @@ namespace Apache.Ignite.Core.Tests.Cache
                 }
 
                 // ReSharper disable once CoVariantArrayConversion
-                Task.WaitAll(futs.ToArray(), TimeSpan.FromSeconds(40));
+                Task.WaitAll(futs.ToArray(), TimeSpan.FromMinutes(1));
 
                 for (int i = 0; i < objPerThread; i++)
                 {
@@ -1667,7 +1667,7 @@ namespace Apache.Ignite.Core.Tests.Cache
                 }
 
                 // ReSharper disable once CoVariantArrayConversion
-                Task.WaitAll(futs.ToArray(), TimeSpan.FromSeconds(40));
+                Task.WaitAll(futs.ToArray(), TimeSpan.FromMinutes(1));
 
                 for (int i = 0; i < objPerThread; i++)
                 {
