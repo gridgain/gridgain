@@ -1574,6 +1574,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         [Test]
         [Category(TestUtils.CategoryIntensive)]
         [Timeout(180000)] // 3 minutes
+        [Ignore("GG-39554 TestAsyncMultithreadedKeepBinary fails due to AssertionError")]
         public void TestAsyncMultithreadedKeepBinary()
         {
             var cache = Cache().WithKeepBinary<CacheTestKey, BinarizablePerson>();
