@@ -52,10 +52,10 @@ class ClientFieldsQueryPager extends GenericQueryPager<List<?>> implements Field
     }
 
     /** {@inheritDoc} */
-    @Override Collection<List<?>> readEntries(PayloadInputChannel payloadCh) {
+    @Override Collection<List<?>> readEntries(PayloadInputChannel payloadCh, boolean firstPage) {
         BinaryInputStream in = payloadCh.in();
 
-        if (!hasFirstPage())
+        if (firstPage)
             fieldNames = new ArrayList<>(ClientUtils.collection(in, ignored -> (String)serDes.readObject(in, keepBinary)));
 
         int rowCnt = in.readInt();

@@ -48,7 +48,7 @@ class ClientQueryPager<K, V> extends GenericQueryPager<Cache.Entry<K, V>> {
     }
 
     /** {@inheritDoc} */
-    @Override Collection<Cache.Entry<K, V>> readEntries(PayloadInputChannel paloadCh) {
+    @Override Collection<Cache.Entry<K, V>> readEntries(PayloadInputChannel paloadCh, boolean firstPage) {
         BinaryInputStream in = paloadCh.in();
 
         return ClientUtils.collection(
