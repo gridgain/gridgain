@@ -17,8 +17,6 @@
 package org.apache.ignite.spi.communication.tcp.internal;
 
 import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -46,12 +44,12 @@ public class NetworkInterfaceMatcherTest extends GridCommonAbstractTest {
         String w3 = "a.b.c.d";
         String w8 = "127.127.15-5.127";
 
-        String errMsgPrefix = "Invalid IPv4 address pattern: ";
+        String errMsgPrefix = "Invalid IPv4 address pattern: '";
 
-        assertThrows(log, () -> new IPv4Matcher(w1), IllegalArgumentException.class, errMsgPrefix + w1);
-        assertThrows(log, () -> new IPv4Matcher(w2), IllegalArgumentException.class, errMsgPrefix + w2);
-        assertThrows(log, () -> new IPv4Matcher(w3), IllegalArgumentException.class, errMsgPrefix + w3);
-        assertThrows(log, () -> new IPv4Matcher(w8), IllegalArgumentException.class, errMsgPrefix + w8);
+        assertThrows(log, () -> new IPv4Matcher(w1), IllegalArgumentException.class, errMsgPrefix + w1 + '\'');
+        assertThrows(log, () -> new IPv4Matcher(w2), IllegalArgumentException.class, errMsgPrefix + w2 + '\'');
+        assertThrows(log, () -> new IPv4Matcher(w3), IllegalArgumentException.class, errMsgPrefix + w3 + '\'');
+        assertThrows(log, () -> new IPv4Matcher(w8), IllegalArgumentException.class, errMsgPrefix + w8 + '\'');
 
         // Wrong number of segments.
         String w4 = "127.127.127";
@@ -59,10 +57,10 @@ public class NetworkInterfaceMatcherTest extends GridCommonAbstractTest {
         String w6 = "";
         String w7 = "2001:db8:85a3:8d3:1319:8a2e:370:7348";
 
-        assertThrows(log, () -> new IPv4Matcher(w4), IllegalArgumentException.class, errMsgPrefix + w4);
-        assertThrows(log, () -> new IPv4Matcher(w5), IllegalArgumentException.class, errMsgPrefix + w5);
-        assertThrows(log, () -> new IPv4Matcher(w6), IllegalArgumentException.class, errMsgPrefix + w6);
-        assertThrows(log, () -> new IPv4Matcher(w7), IllegalArgumentException.class, errMsgPrefix + w7);
+        assertThrows(log, () -> new IPv4Matcher(w4), IllegalArgumentException.class, errMsgPrefix + w4 + '\'');
+        assertThrows(log, () -> new IPv4Matcher(w5), IllegalArgumentException.class, errMsgPrefix + w5 + '\'');
+        assertThrows(log, () -> new IPv4Matcher(w6), IllegalArgumentException.class, errMsgPrefix + w6 + '\'');
+        assertThrows(log, () -> new IPv4Matcher(w7), IllegalArgumentException.class, errMsgPrefix + w7 + '\'');
     }
 
     @Test
@@ -90,28 +88,5 @@ public class NetworkInterfaceMatcherTest extends GridCommonAbstractTest {
 
         assertFalse(matcher.matches(InetAddress.getByName("127.127.11.127")));
         assertFalse(matcher.matches(InetAddress.getByName("127.127.128.127")));
-    }
-
-    @Test
-    public void testBlacklistFilter() throws Exception {
-        List<String> blacklist = new ArrayList<>();
-        blacklist.add("127.127.127.127");
-        blacklist.add("127.127.255.*");
-        blacklist.add("127.255.127.127-250");
-
-        // BlacklistFilter returns {@code true} if the given address is not in the blacklist and {@code false} otherwise.
-        BlacklistFilter filter = new BlacklistFilter(blacklist);
-
-        assertFalse(filter.apply(InetAddress.getByName("127.127.127.127")));
-
-        assertFalse(filter.apply(InetAddress.getByName("127.127.255.0")));
-        assertFalse(filter.apply(InetAddress.getByName("127.127.255.255")));
-        assertFalse(filter.apply(InetAddress.getByName("127.127.255.99")));
-
-        assertFalse(filter.apply(InetAddress.getByName("127.255.127.200")));
-        assertTrue(filter.apply(InetAddress.getByName("127.255.127.126")));
-        assertTrue(filter.apply(InetAddress.getByName("127.255.127.251")));
-
-        assertTrue(filter.apply(InetAddress.getByName("100.127.127.127")));
     }
 }

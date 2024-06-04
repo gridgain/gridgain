@@ -42,8 +42,12 @@ public class BlacklistFilter implements IgnitePredicate<InetAddress> {
     public BlacklistFilter(Collection<String> blacklist) {
         matchers = new ArrayList<>(blacklist.size());
 
-        for (String pattern : blacklist)
+        for (String pattern : blacklist) {
+            if (pattern == null || pattern.trim().isEmpty())
+                continue;
+
             matchers.add(new IPv4Matcher(pattern));
+        }
     }
 
     /**

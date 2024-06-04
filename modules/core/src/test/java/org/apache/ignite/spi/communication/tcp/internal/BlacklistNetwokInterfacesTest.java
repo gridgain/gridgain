@@ -17,6 +17,8 @@
 package org.apache.ignite.spi.communication.tcp.internal;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -65,7 +67,7 @@ public class BlacklistNetwokInterfacesTest extends GridCommonAbstractTest {
     }
 
     @Test
-    public void testBlacklistFilter() throws Exception {
+    public void testNodeStartWithBlacklist() throws Exception {
         try {
             IgniteUtils.resetCachedLocalAddressAndHostNames();
 
@@ -88,5 +90,42 @@ public class BlacklistNetwokInterfacesTest extends GridCommonAbstractTest {
         finally {
             IgniteUtils.resetCachedLocalAddressAndHostNames();
         }
+    }
+
+    @Test
+    public void testBlacklistFilter() throws Exception {
+        List<String> blacklist = new ArrayList<>();
+        blacklist.add("127.127.127.127");
+        blacklist.add("127.127.255.*");
+        blacklist.add("127.255.127.127-250");
+
+        // BlacklistFilter returns {@code true} if the given address is not in the blacklist and {@code false} otherwise.
+        BlacklistFilter filter = new BlacklistFilter(blacklist);
+
+        assertFalse(filter.apply(InetAddress.getByName("127.127.127.127")));
+
+        assertFalse(filter.apply(InetAddress.getByName("127.127.255.0")));
+        assertFalse(filter.apply(InetAddress.getByName("127.127.255.255")));
+        assertFalse(filter.apply(InetAddress.getByName("127.127.255.99")));
+
+        assertFalse(filter.apply(InetAddress.getByName("127.255.127.200")));
+        assertTrue(filter.apply(InetAddress.getByName("127.255.127.126")));
+        assertTrue(filter.apply(InetAddress.getByName("127.255.127.251")));
+
+        assertTrue(filter.apply(InetAddress.getByName("100.127.127.127")));
+    }
+
+    @Test
+    public void testEmptyNetworkInterfacePattern() throws Exception {
+        BlacklistFilter filter = new BlacklistFilter(Arrays.asList("", "   "));
+
+        assertTrue(filter.apply(InetAddress.getByName("127.0.0.1")));
+    }
+
+    @Test
+    public void testNullNetworkInterfacePattern() throws Exception {
+        BlacklistFilter filter = new BlacklistFilter(Collections.singletonList(null));
+
+        assertTrue(filter.apply(InetAddress.getByName("127.0.0.1")));
     }
 }
