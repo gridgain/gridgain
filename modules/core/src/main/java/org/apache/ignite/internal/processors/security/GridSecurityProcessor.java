@@ -48,7 +48,7 @@ public interface GridSecurityProcessor extends GridProcessor {
      *
      * @param node Node id to authenticate.
      * @param cred Security credentials.
-     * @return {@code True} if succeeded, {@code false} otherwise.
+     * @return Security context if succeeded, null otherwise.
      * @throws IgniteCheckedException If error occurred.
      */
     public SecurityContext authenticateNode(ClusterNode node, SecurityCredentials cred) throws IgniteCheckedException;
@@ -64,7 +64,7 @@ public interface GridSecurityProcessor extends GridProcessor {
      * Authenticates subject via underlying Authenticator.
      *
      * @param ctx Authentication context.
-     * @return {@code True} if succeeded, {@code false} otherwise.
+     * @return Security context if succeeded, null otherwise.
      * @throws IgniteCheckedException If error occurred.
      */
     public SecurityContext authenticate(AuthenticationContext ctx) throws IgniteCheckedException;
