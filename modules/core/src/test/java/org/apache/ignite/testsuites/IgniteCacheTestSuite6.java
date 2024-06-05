@@ -34,6 +34,7 @@ import org.apache.ignite.internal.processors.cache.ReplicatedTransactionalPessim
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteExchangeLatchManagerCoordinatorFailTest;
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteExchangeLatchManagerDiscoHistoryTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheExchangeMergeTest;
+import org.apache.ignite.internal.processors.cache.distributed.CacheMetricsForNonAffinityCachesTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheParallelStartTest;
 import org.apache.ignite.internal.processors.cache.distributed.CachePartitionLossWithRestartsTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheTryLockMultithreadedTest;
@@ -164,6 +165,8 @@ public class IgniteCacheTestSuite6 {
         GridTestUtils.addTestIfNeeded(suite, StartImplicitlyTxOnStopCacheTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, TxRollbackDuringPreparingTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, CacheMetricsForNonAffinityCachesTest.class, ignoredTests);
 
         return suite;
     }
