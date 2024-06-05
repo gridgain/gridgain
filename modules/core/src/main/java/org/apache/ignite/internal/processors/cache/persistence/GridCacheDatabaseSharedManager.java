@@ -985,7 +985,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 long freeSpace = 0L;
 
                 for (CacheGroupContext grpCtx : cctx.cache().cacheGroups()) {
-                    if (!grpCtx.dataRegion().config().getName().equals(dataRegName))
+                    if (grpCtx.dataRegion() == null || !grpCtx.dataRegion().config().getName().equals(dataRegName))
                         continue;
 
                     assert grpCtx.offheap() instanceof GridCacheOffheapManager;
@@ -1000,7 +1000,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 long emptyDataPages = 0L;
 
                 for (CacheGroupContext grpCtx : cctx.cache().cacheGroups()) {
-                    if (!grpCtx.dataRegion().config().getName().equals(dataRegName))
+                    if (grpCtx.dataRegion() == null || !grpCtx.dataRegion().config().getName().equals(dataRegName))
                         continue;
 
                     assert grpCtx.offheap() instanceof GridCacheOffheapManager;
