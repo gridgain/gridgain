@@ -47,7 +47,7 @@ public class TrackableFileIoFactory {
     /**
      * Creates trackable file IO.
      * @param file File.
-     * @param tracker Memory tracker..
+     * @param tracker Memory tracker.
      * @param modes Modes.
      * @return Trackable file IO.
      * @throws IOException If failed.

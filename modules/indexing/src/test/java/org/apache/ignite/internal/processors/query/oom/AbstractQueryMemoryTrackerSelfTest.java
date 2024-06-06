@@ -74,6 +74,15 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     protected boolean useJdbcV2GlobalQuotaCfg;
 
     /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+                .setClientMode(client)
+                .setSqlConfiguration(new SqlConfiguration()
+                        .setSqlOffloadingEnabled(false)
+                        .setSqlGlobalMemoryQuota(Long.toString(globalQuotaSize())));
+    }
+
+    /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
@@ -173,15 +182,6 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         IgniteH2Indexing h2 = (IgniteH2Indexing)node.context().query().getIndexing();
 
         return h2.memoryManager();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName)
-            .setClientMode(client)
-            .setSqlConfiguration(new SqlConfiguration()
-                .setSqlOffloadingEnabled(false)
-                .setSqlGlobalMemoryQuota(Long.toString(globalQuotaSize())));
     }
 
     /** */

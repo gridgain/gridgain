@@ -169,8 +169,6 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         if (size == 0)
             return; // Nothing to do.
 
-        assert size > 0;
-
         reserved.accumulateAndGet(size, RELEASE_OP);
     }
 
