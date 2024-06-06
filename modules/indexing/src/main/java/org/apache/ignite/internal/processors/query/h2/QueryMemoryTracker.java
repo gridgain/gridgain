@@ -37,9 +37,8 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     /** Tracker is not closed and not in the middle of the closing process. */
     private static final int STATE_INITIAL = 0;
 
-    /** Tracker is closed. */
+    /** Tracker is closed or in the middle of the closing process. */
     private static final int STATE_CLOSED = 1;
-
 
     /** Parent tracker. */
     @GridToStringExclude
@@ -82,7 +81,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     private volatile int state;
 
     /** Children. */
-    private final List<H2MemoryTracker> children = new ArrayList<>();
+    private final List<ChildMemoryTracker> children = new ArrayList<>();
 
     /** The number of files created by the query. */
     private volatile int filesCreated;
@@ -271,22 +270,22 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
     /** {@inheritDoc} */
     @Override public synchronized void close() {
-        if (closed())
+        // It is not expected to be called concurrently with reserve\release.
+        // But query can be cancelled concurrently on query finish.
+        if (!STATE_UPDATER.compareAndSet(this, STATE_INITIAL, STATE_CLOSED))
             return;
 
-        H2MemoryTracker[] children0 = children.toArray(new H2MemoryTracker[0]);
-
-        for (H2MemoryTracker child : children0)
-            child.close();
-
-        STATE_UPDATER.compareAndSet(this, STATE_INITIAL, STATE_CLOSED);
+        for (ChildMemoryTracker child : children)
+            child.closeSilently();
 
         children.clear();
 
         reserved = 0;
 
-        if (parent != null)
+        if (parent != null) {
             parent.release(reservedFromParent);
+            parent.unspill(writtenOnDisk);
+        }
     }
 
     /** {@inheritDoc} */
@@ -301,7 +300,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     @Override public synchronized H2MemoryTracker createChildTracker() {
         checkClosed();
 
-        H2MemoryTracker child = new ChildMemoryTracker(this);
+        ChildMemoryTracker child = new ChildMemoryTracker(this);
 
         children.add(child);
 
@@ -442,6 +441,15 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
             writtenOnDisk = 0;
 
             parent.onChildClosed(this);
+        }
+
+        /** Lightweight close. */
+        void closeSilently() {
+            if (!STATE_UPDATER.compareAndSet(this, STATE_INITIAL, STATE_CLOSED))
+                return;
+
+            reserved = 0;
+            writtenOnDisk = 0;
         }
 
         /** */
