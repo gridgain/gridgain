@@ -85,6 +85,7 @@ import org.apache.ignite.jdbc.thin.JdbcThinNoDefaultSchemaTest;
 import org.apache.ignite.jdbc.thin.JdbcThinPreparedStatementLeakTest;
 import org.apache.ignite.jdbc.thin.JdbcThinPreparedStatementSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinQueryMemoryTrackerSelfTest;
+import org.apache.ignite.jdbc.thin.JdbcThinQueryMemoryTrackerWithOffloadingSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinResultSetSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinSchemaCaseSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinSelectAfterAlterTable;
@@ -264,6 +265,7 @@ import org.junit.runners.Suite;
     JdbcThinTransactionsLeaksMvccTest.class,
 
     JdbcThinQueryMemoryTrackerSelfTest.class,
+    JdbcThinQueryMemoryTrackerWithOffloadingSelfTest.class,
     JdbcThinDiskSpillingClientsTest.class,
     JdbcDiskSpillingClientsTest.class,
 
