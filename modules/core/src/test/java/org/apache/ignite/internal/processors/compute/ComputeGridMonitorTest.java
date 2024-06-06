@@ -175,7 +175,7 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
      */
     @Test
     public void changeAttributesTest() throws Exception {
-        ComputeFullWithWaitTask task = new ComputeFullWithWaitTask(getTestTimeout());
+        ComputeFullWithWaitTask task = new ComputeFullWithWaitTask();
 
         ComputeTaskFuture<Void> taskFut = CRD.compute().executeAsync(task, null);
 
@@ -207,7 +207,7 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
      */
     @Test
     public void snapshotsTest() throws Exception {
-        ComputeFullWithWaitTask task = new ComputeFullWithWaitTask(getTestTimeout());
+        ComputeFullWithWaitTask task = new ComputeFullWithWaitTask();
 
         ComputeTaskFuture<Void> taskFut = CRD.compute().executeAsync(task, null);
 
@@ -259,7 +259,7 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
      */
     @Test
     public void snapshotsClientNodeTest() throws Exception {
-        ComputeFullWithWaitTask task = new ComputeFullWithWaitTask(getTestTimeout());
+        ComputeFullWithWaitTask task = new ComputeFullWithWaitTask();
 
         ComputeTaskFuture<Void> taskFut = CLIENT_NODE.compute().executeAsync(task, null);
 
@@ -403,14 +403,6 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
     private static class ComputeFullWithWaitTask extends ComputeTaskAdapter<Void, Void> {
         /** */
         final GridFutureAdapter<Void> doneOnMapFut = new GridFutureAdapter<>();
-
-        /** */
-        final long timeout;
-
-        /** */
-        public ComputeFullWithWaitTask(long timeout) {
-            this.timeout = timeout;
-        }
 
         /** {@inheritDoc} */
         @Override public Map<? extends ComputeJob, ClusterNode> map(
