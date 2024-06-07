@@ -143,8 +143,8 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
         try {
             IgniteInternalFuture<?> listenFut = GridTestUtils.runAsync(() -> CRD.context().task().listenStatusUpdates(monitor));
 
-            taskFut.get(100, SECONDS);
-            listenFut.get(100, SECONDS);
+            taskFut.get(10, SECONDS);
+            listenFut.get(10, SECONDS);
         }
         finally {
             CRD.context().task().stopListenStatusUpdates(monitor);
