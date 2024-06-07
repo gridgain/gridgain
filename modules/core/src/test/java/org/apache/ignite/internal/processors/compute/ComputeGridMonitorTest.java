@@ -17,15 +17,19 @@
 package org.apache.ignite.internal.processors.compute;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
+import org.apache.ignite.compute.ComputeJobAdapter;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.compute.ComputeTaskFuture;
@@ -35,15 +39,20 @@ import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.GridTaskSessionImpl;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.processors.task.monitor.ComputeGridMonitor;
 import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusEnum;
 import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusSnapshot;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.resources.IgniteInstanceResource;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
@@ -119,6 +128,27 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected FailureHandler getFailureHandler(String igniteInstanceName) {
         return new StopNodeFailureHandler();
+    }
+
+    @Test
+    public void testSubscriptionDuringInternalTaskExecution() throws Exception {
+        InternalLongRunningTask task = new InternalLongRunningTask();
+
+        IgniteInternalFuture<?> taskFut = GridTestUtils.runAsync(() -> CRD.compute().execute(task, null));
+
+        assertTrue(task.jobExecLatch.await(10, SECONDS));
+
+        ComputeGridMonitorImpl monitor = new ComputeGridMonitorImpl();
+
+        try {
+            IgniteInternalFuture<?> listenFut = GridTestUtils.runAsync(() -> CRD.context().task().listenStatusUpdates(monitor));
+
+            taskFut.get(100, SECONDS);
+            listenFut.get(100, SECONDS);
+        }
+        finally {
+            CRD.context().task().stopListenStatusUpdates(monitor);
+        }
     }
 
     /**
@@ -428,6 +458,58 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
 
         /** {@inheritDoc} */
         @Override public Void reduce(List<ComputeJobResult> results) throws IgniteException {
+            return null;
+        }
+    }
+
+    /**
+     * Representa a long-running task that spawns another task.
+     */
+    @GridInternal
+    private static class InternalLongRunningTask extends ComputeTaskAdapter<Void, Void> {
+        /** Latch to indicate that job is started. */
+        final CountDownLatch jobExecLatch = new CountDownLatch(1);
+
+        /** {@inheritDoc} */
+        @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, Void arg) throws IgniteException {
+            Map<LongRunningJob, ClusterNode> jobs = new HashMap<>(subgrid.size());
+
+            jobs.put(new LongRunningJob(jobExecLatch), CRD.localNode());
+
+            return jobs;
+        }
+
+        /** {@inheritDoc} */
+        @Override public Void reduce(List<ComputeJobResult> results) throws IgniteException {
+            return null;
+        }
+    }
+
+    /**
+     * Represents a long-running job that spawns another task.
+     */
+    private static class LongRunningJob extends ComputeJobAdapter {
+        @IgniteInstanceResource
+        private Ignite ignite;
+
+        /** Latch to indicate that job is started. */
+        private final CountDownLatch jobExecLatch;
+
+        /**
+         * Creates a long-running job that spawns another task.
+         *
+         * @param jobExecLatch Latch to indicate that job is started.
+         */
+        LongRunningJob(CountDownLatch jobExecLatch) {
+            this.jobExecLatch = jobExecLatch;
+        }
+
+        /** {@inheritDoc} */
+        @Override public Object execute() throws IgniteException {
+            jobExecLatch.countDown();
+
+            ignite.compute().execute(new ComputeFullWithWaitTask(), null);
+
             return null;
         }
     }
