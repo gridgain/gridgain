@@ -129,7 +129,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             if (nodeRes.errorMessage() != null)
                 return new ExecutionResult<>(nodeRes.errorMessage());
 
-            // This variable is used to store the last key observed key for results.get(i).getNode().
+            // This variable is used to store the last observed key for results.get(i).getNode().
             KeyCacheObject lastNodeKey = null;
             for (VersionedKey partKeyVer : nodeRes.result()) {
                 try {
