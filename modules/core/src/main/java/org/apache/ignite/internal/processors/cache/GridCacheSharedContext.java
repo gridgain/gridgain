@@ -62,6 +62,7 @@ import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupp
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
+import org.apache.ignite.internal.util.future.GridEmbeddedFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -1047,7 +1048,7 @@ public class GridCacheSharedContext<K, V> {
         boolean clearThreadMap = txMgr.threadLocalTx(null) == tx;
 
         if (clearThreadMap)
-            tx.txState().awaitLastFuture(this);
+            tx.txState().awaitLastFuture();
         else
             tx.state(MARKED_ROLLBACK);
 
@@ -1058,17 +1059,38 @@ public class GridCacheSharedContext<K, V> {
      * @param tx Transaction to commit.
      * @return Commit future.
      */
-    @SuppressWarnings("unchecked")
     public IgniteInternalFuture<IgniteInternalTx> commitTxAsync(GridNearTxLocal tx) {
-        GridCacheContext ctx = tx.txState().singleCacheContext(this);
+        GridCacheAdapter.FutureHolder holder = tx.txState().lastAsyncFuture();
 
-        if (ctx == null) {
-            tx.txState().awaitLastFuture(this);
+        holder.lock();
 
-            return tx.commitNearTxLocalAsync();
+        try {
+            IgniteInternalFuture<?> fut = holder.future();
+
+            if (fut != null && !fut.isDone()) {
+                if (tx.optimistic())
+                    holder.await();
+                else {
+                    IgniteInternalFuture<IgniteInternalTx> f = new GridEmbeddedFuture<>(fut,
+                        (o, e) -> tx.commitNearTxLocalAsync());
+
+                    holder.saveFuture(f);
+
+                    return f;
+                }
+            }
+
+            IgniteInternalFuture<IgniteInternalTx> f = tx.commitNearTxLocalAsync();
+
+            holder.saveFuture(f);
+
+            txMgr.resetContext();
+
+            return f;
         }
-        else
-            return ctx.cache().commitTxAsync(tx);
+        finally {
+            holder.unlock();
+        }
     }
 
     /**
@@ -1079,7 +1101,7 @@ public class GridCacheSharedContext<K, V> {
         boolean clearThreadMap = txMgr.threadLocalTx(null) == tx;
 
         if (clearThreadMap)
-            tx.txState().awaitLastFuture(this);
+            tx.txState().awaitLastFuture();
         else
             tx.state(MARKED_ROLLBACK);
 
@@ -1093,7 +1115,7 @@ public class GridCacheSharedContext<K, V> {
      * @throws IgniteCheckedException If suspension failed.
      */
     public void suspendTx(GridNearTxLocal tx) throws IgniteCheckedException {
-        tx.txState().awaitLastFuture(this);
+        tx.txState().awaitLastFuture();
 
         tx.suspend();
     }
@@ -1105,7 +1127,7 @@ public class GridCacheSharedContext<K, V> {
      * @throws IgniteCheckedException If resume failed.
      */
     public void resumeTx(GridNearTxLocal tx) throws IgniteCheckedException {
-        tx.txState().awaitLastFuture(this);
+        tx.txState().awaitLastFuture();
 
         tx.resume();
     }
