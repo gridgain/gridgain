@@ -29,6 +29,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
@@ -171,16 +173,19 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
     /**
      * Task statuses update monitors.
-     * Guarded by {@link #lock}.
+     * Guarded by {@link #taskStatusLock}.
      */
     private final Collection<ComputeGridMonitor> taskStatusMonitors = ConcurrentHashMap.newKeySet();
 
     /**
      * Snapshots of task statuses.
      * Mapping: {@link ComputeTaskSession#getId} -> task status.
-     * Guarded by {@link #lock}.
+     * Guarded by {@link #taskStatusLock}.
      */
     private final ConcurrentMap<IgniteUuid, ComputeTaskStatusSnapshot> taskStatusSnapshots = new ConcurrentHashMap<>();
+
+    /** ReadWrite lock to update task monitors and statuses. */
+    private final ReadWriteLock taskStatusLock = new ReentrantReadWriteLock();
 
     /**
      * @param ctx Kernal context.
@@ -1618,23 +1623,28 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
      * @throws NodeStoppingException If the node is stopped.
      */
     public void listenStatusUpdates(ComputeGridMonitor monitor) throws NodeStoppingException {
-        lock.writeLock();
+        lock.readLock();
 
         try {
             if (stopping)
                 throw new NodeStoppingException("Failed to add monitor due to grid shutdown: " + monitor);
 
-            taskStatusMonitors.add(monitor);
-
+            taskStatusLock.writeLock().lock();
             try {
-                monitor.processStatusSnapshots(taskStatusSnapshots.values());
+                taskStatusMonitors.add(monitor);
+
+                try {
+                    monitor.processStatusSnapshots(taskStatusSnapshots.values());
+                } catch (Throwable t) {
+                    log.error("Error processing snapshots of task statuses: " + monitor, t);
+                }
             }
-            catch (Throwable t) {
-                log.error("Error processing snapshots of task statuses: " + monitor, t);
+            finally {
+                taskStatusLock.writeLock().unlock();
             }
         }
         finally {
-            lock.writeUnlock();
+            lock.readUnlock();
         }
     }
 
@@ -1644,13 +1654,19 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
      * @param monitor Task status update monitor.
      */
     public void stopListenStatusUpdates(ComputeGridMonitor monitor) {
-        lock.writeLock();
+        lock.readLock();
 
         try {
-            taskStatusMonitors.remove(monitor);
+            taskStatusLock.writeLock().lock();
+            try {
+                taskStatusMonitors.remove(monitor);
+            }
+            finally {
+                taskStatusLock.writeLock().unlock();
+            }
         }
         finally {
-            lock.writeUnlock();
+            lock.readUnlock();
         }
     }
 
@@ -1666,18 +1682,23 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         lock.readLock();
 
         try {
-            if (remove)
-                taskStatusSnapshots.remove(snapshotChanges.sessionId());
-            else
-                taskStatusSnapshots.put(snapshotChanges.sessionId(), snapshotChanges);
+            taskStatusLock.readLock().lock();
+            try {
+                if (remove)
+                    taskStatusSnapshots.remove(snapshotChanges.sessionId());
+                else
+                    taskStatusSnapshots.put(snapshotChanges.sessionId(), snapshotChanges);
 
-            for (ComputeGridMonitor monitor : taskStatusMonitors) {
-                try {
-                    monitor.processStatusChange(snapshotChanges);
+                for (ComputeGridMonitor monitor : taskStatusMonitors) {
+                    try {
+                        monitor.processStatusChange(snapshotChanges);
+                    } catch (Throwable t) {
+                        log.error("Error processing task status diff: " + monitor, t);
+                    }
                 }
-                catch (Throwable t) {
-                    log.error("Error processing task status diff: " + monitor, t);
-                }
+            }
+            finally {
+                taskStatusLock.readLock().unlock();
             }
         }
         finally {
