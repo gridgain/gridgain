@@ -162,3 +162,4 @@ case $osname in
          -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} "$@"
     ;;
 esac
+echo "" >> bin/control.sh

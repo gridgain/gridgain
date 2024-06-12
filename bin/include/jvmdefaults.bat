@@ -95,3 +95,4 @@ if %java_version% GEQ 15 (
 )
 
 set "%~3=%value%"
+echo "" >> bin/include/jvmdefaults.bat

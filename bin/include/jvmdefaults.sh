@@ -103,3 +103,4 @@ getJavaSpecificOpts() {
 
   echo $value
 }
+echo "" >> bin/include/jvmdefaults.sh

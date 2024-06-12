@@ -224,3 +224,5 @@ del %RESTART_SUCCESS_FILE%
 if not "%NO_PAUSE%" == "1" pause
 
 goto :eof
+
+echo "" >> bin/control.bat
