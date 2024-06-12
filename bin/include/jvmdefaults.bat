@@ -1,8 +1,9 @@
+@echo off
 ::
 :: Copyright 2022 GridGain Systems, Inc. and Contributors.
 ::
 :: Licensed under the GridGain Community Edition License (the "License");
-:: you may not use this file except in compliance with the License.
+:: You may not use this file except in compliance with the License.
 :: You may obtain a copy of the License at
 ::
 ::     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
@@ -13,85 +14,40 @@
 :: See the License for the specific language governing permissions and
 :: limitations under the License.
 ::
-@echo off
-
-set java_version=%~1
-set current_value=%~2
-set value=""
 
 :: Gets java specific options like add-exports and add-opens
 :: First argument is the version of the java
 :: Second argument is the current value of the jvm options
 :: Third value is the name of the environment variable that jvm options should be set to
-if %java_version% == 8 (
-    set value= ^
-    -XX:+AggressiveOpts ^
-    %current_value%
+
+setlocal
+set java_version=%1
+set current_value=%2
+set value=
+
+if %java_version% LSS 9 (
+    :: Java 8 does not support --add-exports or --add-opens
+    set value=%current_value%
+) else if %java_version% LSS 11 (
+    :: Java 9 and 10 require additional modules due to removed Java EE modules
+    set value=--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED --illegal-access=permit --add-modules=java.xml.bind %current_value%
+) else (
+    :: From Java 11 onwards, reduce the use of aggressive exports and opens, focusing on necessary access only
+    set value=--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED %current_value%
 )
 
-if %java_version% GEQ 9 if %java_version% LSS 11 (
-    set value= ^
-    -XX:+AggressiveOpts ^
-    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED ^
-    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED ^
-    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
-    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
-    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
-    --illegal-access=permit ^
-    --add-modules=java.xml.bind ^
-    %current_value%
-)
+endlocal & set "%~3=%value%"
 
-if %java_version% GEQ 11 if %java_version% LSS 14 (
-    set value= ^
-    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED ^
-    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED ^
-    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
-    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
-    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
-    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED ^
-    --illegal-access=permit ^
-    %current_value%
-)
+:: Export the function
+@echo off
+set java_version=%1
+set current_value=%2
+set value=
 
-if %java_version% GEQ 14 if %java_version% LSS 15 (
-    set value= ^
-    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED ^
-    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED ^
-    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
-    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
-    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
-    --add-opens=java.base/jdk.internal.access=ALL-UNNAMED ^
-    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED ^
-    --illegal-access=permit ^
-    %current_value%
-)
+:: Gets java specific options like add-exports and add-opens
+:: First argument is the version of the java
+:: Second argument is the current value of the jvm options
+:: Third value is the name of the environment variable that jvm options should be set to
 
-if %java_version% GEQ 15 (
-    set value= ^
-    --add-opens=java.base/jdk.internal.access=ALL-UNNAMED ^
-    --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED ^
-    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED ^
-    --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
-    --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
-    --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
-    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED ^
-    --add-opens=java.base/java.io=ALL-UNNAMED ^
-    --add-opens=java.base/java.net=ALL-UNNAMED ^
-    --add-opens=java.base/java.nio=ALL-UNNAMED ^
-    --add-opens=java.base/java.security.cert=ALL-UNNAMED ^
-    --add-opens=java.base/java.util=ALL-UNNAMED ^
-    --add-opens=java.base/java.util.concurrent=ALL-UNNAMED ^
-    --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED ^
-    --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED ^
-    --add-opens=java.base/java.lang=ALL-UNNAMED ^
-    --add-opens=java.base/java.lang.invoke=ALL-UNNAMED ^
-    --add-opens=java.base/java.math=ALL-UNNAMED ^
-    --add-opens=java.base/java.time=ALL-UNNAMED ^
-    --add-opens=java.base/sun.security.ssl=ALL-UNNAMED ^
-    --add-opens=java.base/sun.security.x509=ALL-UNNAMED ^
-    --add-opens=java.sql/java.sql=ALL-UNNAMED ^
-    %current_value%
-)
-
-set "%~3=%value%"
+if %java_version% LSS 9 (
+    :: Java 8 does
