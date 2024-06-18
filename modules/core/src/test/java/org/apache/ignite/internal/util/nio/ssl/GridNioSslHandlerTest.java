@@ -99,8 +99,6 @@ public class GridNioSslHandlerTest extends GridCommonAbstractTest {
 
             fail();
         } catch (SSLException ex) {
-            System.out.println(ex.getMessage());
-
             assertTrue(ex.getMessage() != null && ex.getMessage().startsWith(errMsg));
         }
     }
