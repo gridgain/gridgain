@@ -37,6 +37,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteEncryption;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.WALMode;
@@ -327,7 +328,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         performMKChangeProc = new DistributedProcess<>(ctx, MASTER_KEY_CHANGE_FINISH, this::performMasterKeyChange,
             this::finishPerformMasterKeyChange);
 
-        grpKeys = new CacheGroupEncryptionKeys(getSpi());
+        grpKeys = new CacheGroupEncryptionKeys(getSpi(), log);
         pageScanner = new CacheGroupPageScanner(ctx);
         grpKeyChangeProc = new GroupKeyChangeProcess(ctx, grpKeys);
     }
@@ -998,7 +999,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
 
                 if (masterKeyName != null) {
                     if (log.isInfoEnabled())
-                        log.info("Master key name loaded from metastrore [masterKeyName=" + masterKeyName + ']');
+                        log.info("Master key name loaded from metastore [masterKeyName=" + masterKeyName + ']');
 
                     getSpi().setMasterKeyName(masterKeyName);
                 }

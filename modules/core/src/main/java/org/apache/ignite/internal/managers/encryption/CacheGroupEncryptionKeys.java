@@ -30,6 +30,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
@@ -51,11 +53,14 @@ class CacheGroupEncryptionKeys {
     /** Encryption spi. */
     private final EncryptionSpi encSpi;
 
+    private final IgniteLogger log;
+
     /**
      * @param encSpi Encryption spi.
      */
-    CacheGroupEncryptionKeys(EncryptionSpi encSpi) {
+    CacheGroupEncryptionKeys(EncryptionSpi encSpi, IgniteLogger log) {
         this.encSpi = encSpi;
+        this.log = log;
     }
 
     /**
@@ -70,7 +75,14 @@ class CacheGroupEncryptionKeys {
         if (F.isEmpty(keys))
             return null;
 
-        return keys.get(0);
+        GroupKey key = keys.get(0);
+
+        if (key == null) {
+            if (log.isDebugEnabled())
+                log.debug("First key is empty falling back to null [grpId=" + grpId + ", keySetSize=" + keys.size() + ']');
+        }
+
+        return key;
     }
 
     /**
@@ -90,6 +102,9 @@ class CacheGroupEncryptionKeys {
             if (groupKey.unsignedId() == keyId)
                 return groupKey;
         }
+
+        if (log.isDebugEnabled())
+            log.debug("No keys matching specified keyId=" + keyId + " was found");
 
         return null;
     }
@@ -167,6 +182,9 @@ class CacheGroupEncryptionKeys {
      * @return Previous encryption key used for writing.
      */
     GroupKey changeActiveKey(int grpId, int keyId) {
+        if (log.isDebugEnabled())
+            log.debug("Change Active Key for [grpId=" + grpId + ", keyId=" + keyId + ']');
+
         List<GroupKey> keys = grpKeys.get(grpId);
 
         assert !F.isEmpty(keys) : "grpId=" + grpId;
@@ -206,6 +224,9 @@ class CacheGroupEncryptionKeys {
      * @return {@code True} If a key has been added, {@code False} if the specified key is already present.
      */
     boolean addKey(int grpId, GroupKeyEncrypted newEncKey) {
+        if (log.isDebugEnabled())
+            log.debug("Add new key for [grpId=" + grpId + ", keyId=" + newEncKey.id() + ']');
+
         List<GroupKey> keys = grpKeys.computeIfAbsent(grpId, v -> new CopyOnWriteArrayList<>());
 
         GroupKey grpKey = new GroupKey(newEncKey.id(), encSpi.decryptKey(newEncKey.key()));
@@ -221,6 +242,10 @@ class CacheGroupEncryptionKeys {
      * @param encryptedKeys Encrypted keys.
      */
     void setGroupKeys(int grpId, List<GroupKeyEncrypted> encryptedKeys) {
+        if (log.isDebugEnabled())
+            log.debug("Add new key for [grpId=" + grpId +
+                ", keys=" + encryptedKeys.stream().map(GroupKeyEncrypted::id).collect(Collectors.toList()) + ']');
+
         List<GroupKey> keys = new CopyOnWriteArrayList<>();
 
         for (GroupKeyEncrypted grpKey : encryptedKeys)
@@ -230,12 +255,15 @@ class CacheGroupEncryptionKeys {
     }
 
     /**
-     * Remove encrytion keys associated with the specified cache group.
+     * Remove encryption keys associated with the specified cache group.
      *
      * @param grpId Cache group ID.
      * @return List of encryption keys of the removed cache group.
      */
     List<GroupKey> remove(int grpId) {
+        if (log.isDebugEnabled())
+            log.debug("Remove keys for [grpId=" + grpId + ']');
+
         return grpKeys.remove(grpId);
     }
 
@@ -247,8 +275,15 @@ class CacheGroupEncryptionKeys {
     boolean removeKeysById(int grpId, Set<Integer> ids) {
         List<GroupKey> keys = grpKeys.get(grpId);
 
-        if (F.isEmpty(keys))
+        if (F.isEmpty(keys)) {
+            if (log.isDebugEnabled())
+                log.debug("Remove keys by Id for [grpId=" + grpId + ", ids=" + ids + ", no keys left]");
+
             return false;
+        }
+
+        if (log.isDebugEnabled())
+            log.debug("Remove keys by Id for [grpId=" + grpId + ", ids=" + ids + "]");
 
         return keys.subList(1, keys.size()).removeIf(key -> ids.contains(key.unsignedId()));
     }
@@ -272,8 +307,15 @@ class CacheGroupEncryptionKeys {
             rmvKeyIds.remove(segment.keyId);
         }
 
-        if (keys.removeIf(key -> rmvKeyIds.contains(key.unsignedId())))
+        if (keys.removeIf(key -> rmvKeyIds.contains(key.unsignedId()))) {
+            if (log.isDebugEnabled())
+                log.debug("Remove unused keys for [grpId=" + grpId + ", removed=" + rmvKeyIds + "]");
+
             return rmvKeyIds;
+        }
+
+        if (log.isDebugEnabled())
+            log.debug("Remove unused keys for [grpId=" + grpId + ", removed=[]]");
 
         return Collections.emptySet();
     }
@@ -289,6 +331,11 @@ class CacheGroupEncryptionKeys {
      * @param segments WAL segments, mapped to cache group encryption key IDs.
      */
     void trackedWalSegments(Collection<TrackedWalSegment> segments) {
+        if (log.isDebugEnabled())
+            log.debug("Reserve WAL keys, segments=[" + segments.stream()
+                .map(s -> "[grpId=" + s.grpId + ", keyId=" + s.keyId + ", walIdx=" + s.idx + "]")
+                .collect(Collectors.joining(", ")) + "]"
+            );
         trackedWalSegments.addAll(segments);
     }
 
@@ -301,13 +348,15 @@ class CacheGroupEncryptionKeys {
      * @param walIdx WAL segment index.
      */
     void reserveWalKey(int grpId, int keyId, long walIdx) {
+        if (log.isDebugEnabled())
+            log.debug("Reserve WAL key [grpId=" + grpId + ", keyId=" + keyId + ", walIdx=" + walIdx + "]");
         trackedWalSegments.add(new TrackedWalSegment(walIdx, grpId, keyId));
     }
 
     /**
      * @param grpId Cache group ID.
      * @param keyId Encryption key ID.
-     * @return Wal segment index or null if there no segment associated with the specified cache group ID and key ID.
+     * @return Wal segment index or null if there is no segment associated with the specified cache group ID and key ID.
      */
     @Nullable Long reservedSegment(int grpId, int keyId) {
         for (TrackedWalSegment segment : trackedWalSegments) {
@@ -331,7 +380,7 @@ class CacheGroupEncryptionKeys {
     }
 
     /**
-     * Remove all of the segments that are not greater than the specified index.
+     * Remove all segments that are not greater than the specified index.
      *
      * @param walIdx WAL segment index.
      * @return Map of group IDs with key IDs that were associated with removed WAL segments.
