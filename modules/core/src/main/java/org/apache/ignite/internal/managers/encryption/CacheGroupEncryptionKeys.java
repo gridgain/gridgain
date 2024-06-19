@@ -57,6 +57,7 @@ class CacheGroupEncryptionKeys {
 
     /**
      * @param encSpi Encryption spi.
+     * @param log Ignite logger.
      */
     CacheGroupEncryptionKeys(EncryptionSpi encSpi, IgniteLogger log) {
         this.encSpi = encSpi;
@@ -79,7 +80,7 @@ class CacheGroupEncryptionKeys {
 
         if (key == null) {
             if (log.isDebugEnabled())
-                log.debug("First key is empty falling back to null [grpId=" + grpId + ", keySetSize=" + keys.size() + ']');
+                log.debug("First key is empty, falling back to null [grpId=" + grpId + ", keySetSize=" + keys.size() + ']');
         }
 
         return key;
