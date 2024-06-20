@@ -350,7 +350,7 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
      * Calculates the number of bytes, occupied by data. Unlike {@link #getTotalUsedSize} it also takes into account the
      * empty space in non-empty pages.
      */
-    private long getSizeUsedByData() {
+    public long getSizeUsedByData() {
         // Total amount of bytes occupied by all pages.
         long totalSpace = getTotalAllocatedSize();
 

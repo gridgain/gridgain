@@ -87,6 +87,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.preloa
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition.DFLT_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.DFLT_MVCC_TX_SIZE_CACHING_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.DFLT_IGNITE_VALIDATE_CACHE_NAMES;
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.DFLT_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory.DFLT_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE;
 import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage.DFLT_IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD;
@@ -2152,6 +2153,15 @@ public final class IgniteSystemProperties {
         "IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE";
 
     /**
+     * If {@code true}, cache names will be validated not to contain characters which cause issues when persistence is used
+     * ({@code \}, {@code /}, {@code \0}). Default is {@code true}.
+     */
+    @SystemProperty(value = "If true, cache names will be validated not to contain characters " +
+        "which cause issues when persistence is used ({@code \\}, {@code /}, {@code \\0})",
+        defaults = "" + DFLT_IGNITE_VALIDATE_CACHE_NAMES)
+    public static final String IGNITE_VALIDATE_CACHE_NAMES = "IGNITE_VALIDATE_CACHE_NAMES";
+
+    /**
      * There can be background tasks that can be interrupted due to node stop, node fail, or cluster deactivation,
      * but need to be completed, so they start after node start or cluster activation. If this option is set to
      * {@code false}, then tasks will not be started.
@@ -2235,6 +2245,11 @@ public final class IgniteSystemProperties {
     @SystemProperty(value = "Dumps latest WAL segments and related index and partition files on data corruption error",
             defaults = "false")
     public static final String IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION = "IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION";
+
+    /** Node in maintenance mode will shut down with specified JVM exit code. */
+    @SystemProperty(value = "Node in maintenance mode will shut down with specified JVM exit code",
+            defaults = "0")
+    public static final String IGNITE_MAINTENANCE_MODE_EXIT_CODE = "IGNITE_MAINTENANCE_MODE_EXIT_CODE";
 
     /**
      * Enforces singleton.

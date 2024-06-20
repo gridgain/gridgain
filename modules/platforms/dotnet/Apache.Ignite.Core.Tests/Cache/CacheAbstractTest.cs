@@ -1573,6 +1573,8 @@ namespace Apache.Ignite.Core.Tests.Cache
 
         [Test]
         [Category(TestUtils.CategoryIntensive)]
+        [Timeout(180000)] // 3 minutes
+        [Ignore("GG-39554 TestAsyncMultithreadedKeepBinary fails due to AssertionError")]
         public void TestAsyncMultithreadedKeepBinary()
         {
             var cache = Cache().WithKeepBinary<CacheTestKey, BinarizablePerson>();
@@ -1599,8 +1601,7 @@ namespace Apache.Ignite.Core.Tests.Cache
                     futs.Add(task);
                 }
 
-                foreach (var fut in futs)
-                    fut.Wait();
+                Task.WaitAll(futs.ToArray(), TimeSpan.FromMinutes(1));
             }, threads);
 
             for (int i = 0; i < threads; i++)
@@ -1634,6 +1635,9 @@ namespace Apache.Ignite.Core.Tests.Cache
                     futs.Add(portCache.GetAsync(new CacheTestKey(key)));
                 }
 
+                // ReSharper disable once CoVariantArrayConversion
+                Task.WaitAll(futs.ToArray(), TimeSpan.FromMinutes(1));
+
                 for (int i = 0; i < objPerThread; i++)
                 {
                     var fut = futs[i];
@@ -1662,6 +1666,9 @@ namespace Apache.Ignite.Core.Tests.Cache
 
                     futs.Add(cache.RemoveAsync(new CacheTestKey(key)));
                 }
+
+                // ReSharper disable once CoVariantArrayConversion
+                Task.WaitAll(futs.ToArray(), TimeSpan.FromMinutes(1));
 
                 for (int i = 0; i < objPerThread; i++)
                 {

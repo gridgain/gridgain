@@ -5504,6 +5504,61 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             // Start warm-up only after restoring memory storage, but before starting GridDiscoveryManager.
             if (!cacheGrps.isEmpty())
                 startWarmUp();
+
+            rebuildInMemoryIndexes(cacheGroups());
+        }
+
+        /**
+         * Rebuild in-memory indexes for cache groups.
+         *
+         * @param forGroups Cache groups.
+         * @throws IgniteCheckedException If failed.
+         */
+        private void rebuildInMemoryIndexes(Collection<CacheGroupContext> forGroups) throws IgniteCheckedException {
+            if (!ctx.query().moduleEnabled())
+                return;
+
+            List<GridCacheContext> contexts = forGroups.stream()
+                .flatMap(grp -> grp.caches().stream())
+                .collect(toList());
+
+            long startRestorePart = U.currentTimeMillis();
+
+            if (log.isInfoEnabled())
+                log.info("Restoring in-memory indexes for local groups.");
+
+            GridCompoundFuture allCacheIdxsCompoundFut = null;
+
+            for (GridCacheContext cctx : contexts) {
+                IgniteInternalFuture<?> rebuildFut = ctx.query().getIndexing().rebuildInMemoryIndexes(cctx);
+
+                if (rebuildFut != null) {
+                    if (log.isInfoEnabled())
+                        log.info("Started in-memory indexes rebuilding for cache: " + cctx.name());
+
+                    if (allCacheIdxsCompoundFut == null)
+                        allCacheIdxsCompoundFut = new GridCompoundFuture<>();
+
+                    allCacheIdxsCompoundFut.add(rebuildFut);
+                }
+            }
+
+            if (log.isInfoEnabled()) {
+                if (allCacheIdxsCompoundFut != null) {
+                    allCacheIdxsCompoundFut.listen(fut -> {
+                        if (log.isInfoEnabled()) {
+                            log.info("Finished restoring in-memory indexes for local groups [" +
+                                "groupsProcessed=" + contexts.size() +
+                                ", time=" + U.humanReadableDuration(U.currentTimeMillis() - startRestorePart) +
+                                "]");
+                        }
+                    });
+
+                    allCacheIdxsCompoundFut.markInitialized();
+
+                    allCacheIdxsCompoundFut.get();
+                }
+            }
         }
 
         /**

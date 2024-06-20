@@ -62,14 +62,14 @@
         <awaitility.version>3.1.6</awaitility.version>
         <aws.encryption.sdk.version>2.4.0</aws.encryption.sdk.version>
         <aws.sdk.version>1.12.651</aws.sdk.version>
-        <bouncycastle.version>1.75</bouncycastle.version>
+        <bouncycastle.version>1.78</bouncycastle.version>
         <camel.version>2.22.3</camel.version>
         <checkstyle.puppycrawl.version>8.29</checkstyle.puppycrawl.version>
         <commons.beanutils.bundle.version>1.9.2_1</commons.beanutils.bundle.version>
         <commons.beanutils.version>1.9.4</commons.beanutils.version>
         <commons.codec.version>1.15</commons.codec.version>
         <commons.collections.version>3.2.2</commons.collections.version>
-        <commons.compress.version>1.20</commons.compress.version>
+        <commons.compress.version>1.26.1</commons.compress.version>
         <commons.dbcp.version>1.4</commons.dbcp.version>
         <commons.io.version>2.6</commons.io.version>
         <commons.lang3.version>3.12.0</commons.lang3.version>

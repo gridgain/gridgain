@@ -27,12 +27,14 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -91,6 +93,7 @@ public interface ReconciliationResultCollector {
 
     /**
      * Appends conflicted entries.
+     * When this result collector has a registered conflict for a key, the existing one is updated with a new value.
      *
      * @param cacheName Cache name.
      * @param partId Partition id.
@@ -142,6 +145,8 @@ public interface ReconciliationResultCollector {
      * Represents a collector of inconsistent and repaired entries.
      */
     public static class Simple implements ReconciliationResultCollector {
+        public static final RowMetaComparator ROW_META_COMPARATOR = new RowMetaComparator();
+
         /** Ignite instance. */
         protected final IgniteEx ignite;
 
@@ -154,11 +159,22 @@ public interface ReconciliationResultCollector {
         /** Root folder. */
         protected final File reconciliationDir;
 
-        /** Keys that were detected as inconsistent during the reconciliation process. */
-        protected final Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
+        /**
+         * Keys that were detected as inconsistent during the reconciliation process.
+         * Cache name -> {Partition identifier -> set of inconsistent keys. }
+         */
+        protected final Map<String, Map<Integer, TreeSet<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
 
         /** Entries that were detected as inconsistent but weren't repaired due to some reason. */
         protected final Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries = new HashMap<>();
+
+        /** Custom comparator for {@link PartitionReconciliationDataRowMeta}. It only compares binary representation of keys. */
+        public static class RowMetaComparator implements Comparator<PartitionReconciliationDataRowMeta> {
+            /** {@inheritDoc} */
+            @Override public int compare(PartitionReconciliationDataRowMeta o1, PartitionReconciliationDataRowMeta o2) {
+                return U.compareByteArrays(o1.keyMeta().binaryView(), o2.keyMeta().binaryView());
+            }
+        }
 
         /**
          * Creates a new SimpleCollector.
@@ -250,7 +266,7 @@ public interface ReconciliationResultCollector {
             synchronized (inconsistentKeys) {
                 try {
                     inconsistentKeys.computeIfAbsent(cacheName, k -> new HashMap<>())
-                        .computeIfAbsent(partId, k -> new ArrayList<>())
+                        .computeIfAbsent(partId, k -> new TreeSet<>(ROW_META_COMPARATOR))
                         .addAll(mapPartitionReconciliation(conflicts, actualKeys, ctx));
                 }
                 catch (IgniteCheckedException e) {
@@ -315,7 +331,7 @@ public interface ReconciliationResultCollector {
                     }
 
                     inconsistentKeys.computeIfAbsent(cacheName, k -> new HashMap<>())
-                        .computeIfAbsent(partId, k -> new ArrayList<>())
+                        .computeIfAbsent(partId, k -> new TreeSet<>(ROW_META_COMPARATOR))
                         .addAll(res);
                 }
                 catch (IgniteCheckedException e) {
@@ -333,9 +349,21 @@ public interface ReconciliationResultCollector {
         @Override public ReconciliationAffectedEntries result() {
             synchronized (inconsistentKeys) {
                 synchronized (skippedEntries) {
+                    // This copy is need to avoid RU incompatible changes.
+                    Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> copy = new HashMap<>(inconsistentKeys.size());
+
+                    for (Map.Entry<String, Map<Integer, TreeSet<PartitionReconciliationDataRowMeta>>> e : inconsistentKeys.entrySet()) {
+                        Map<Integer, List<PartitionReconciliationDataRowMeta>> c = new HashMap<>(e.getValue().size());
+
+                        for (Map.Entry<Integer, TreeSet<PartitionReconciliationDataRowMeta>> e0 : e.getValue().entrySet())
+                            c.put(e0.getKey(), new ArrayList<>(e0.getValue()));
+
+                        copy.put(e.getKey(), c);
+                    }
+
                     return new ReconciliationAffectedEntries(
                         collectNodeIdToConsistentIdMapping(ignite),
-                        inconsistentKeys,
+                        copy,
                         skippedEntries
                     );
                 }
@@ -421,11 +449,11 @@ public interface ReconciliationResultCollector {
             if (log.isDebugEnabled())
                 log.debug("Partition has been processed [cacheName=" + cacheName + ", partId=" + partId + ']');
 
-            List<PartitionReconciliationDataRowMeta> meta = null;
+            TreeSet<PartitionReconciliationDataRowMeta> meta = null;
             Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>> skipped = null;
 
             synchronized (inconsistentKeys) {
-                Map<Integer, List<PartitionReconciliationDataRowMeta>> c = inconsistentKeys.get(cacheName);
+                Map<Integer, TreeSet<PartitionReconciliationDataRowMeta>> c = inconsistentKeys.get(cacheName);
                 if (c != null)
                     meta = c.remove(partId);
             }
@@ -528,7 +556,7 @@ public interface ReconciliationResultCollector {
         private void storePartition(
             String cacheName,
             int partId,
-            List<PartitionReconciliationDataRowMeta> meta,
+            TreeSet<PartitionReconciliationDataRowMeta> meta,
             Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>> skipped
         ) {
             String maskId = U.maskForFileName(ignite.context().discovery().localNode().consistentId().toString());

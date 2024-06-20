@@ -40,4 +40,9 @@ interface QueryPager<T> extends AutoCloseable {
      * Reset query pager.
      */
     public void reset();
+
+    /**
+     * Load first page.
+     */
+    public void loadFirstPage();
 }

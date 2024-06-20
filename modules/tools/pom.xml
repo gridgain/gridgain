@@ -129,6 +129,12 @@
             <groupId>org.apache.rat</groupId>
             <artifactId>apache-rat-core</artifactId>
             <version>0.14</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.commons</groupId>
+                    <artifactId>commons-compress</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

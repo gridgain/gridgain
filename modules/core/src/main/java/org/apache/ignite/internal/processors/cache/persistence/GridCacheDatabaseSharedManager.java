@@ -251,6 +251,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** @see IgniteSystemProperties#IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE */
     public static final int DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE = 60;
 
+    /** @see IgniteSystemProperties#IGNITE_VALIDATE_CACHE_NAMES */
+    public static final boolean DFLT_IGNITE_VALIDATE_CACHE_NAMES = true;
+
     /**
      * Threshold value to use history or full rebalance for local partition.
      * Master value contained in {@link #historicalRebalanceThreshold}.
@@ -982,7 +985,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 long freeSpace = 0L;
 
                 for (CacheGroupContext grpCtx : cctx.cache().cacheGroups()) {
-                    if (!grpCtx.dataRegion().config().getName().equals(dataRegName))
+                    if (grpCtx.dataRegion() == null || !grpCtx.dataRegion().config().getName().equals(dataRegName))
                         continue;
 
                     assert grpCtx.offheap() instanceof GridCacheOffheapManager;
@@ -997,7 +1000,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 long emptyDataPages = 0L;
 
                 for (CacheGroupContext grpCtx : cctx.cache().cacheGroups()) {
-                    if (!grpCtx.dataRegion().config().getName().equals(dataRegName))
+                    if (grpCtx.dataRegion() == null || !grpCtx.dataRegion().config().getName().equals(dataRegName))
                         continue;
 
                     assert grpCtx.offheap() instanceof GridCacheOffheapManager;
@@ -1239,6 +1242,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             changeTracker = null;
 
         PageMemoryImpl pageMem = new PageMemoryImpl(
+            plcCfg,
             wrapMetricsPersistentMemoryProvider(memProvider, memMetrics),
             calculateFragmentSizes(
                 plcCfg.getName(),

@@ -14,7 +14,7 @@ Windows, Linux, and macOS are supported.
 # Download Examples
 
 * NuGet: 
-  * `dotnet new --install GridGain.Ignite.Examples`
+  * `dotnet new install GridGain.Ignite.Examples`
   * `dotnet new gridgain-examples`  
 * GridGain website: https://www.gridgain.com/products/software
 * git: `git clone https://github.com/gridgain/gridgain --depth=1`, `cd ignite/modules/platforms/dotnet/examples`

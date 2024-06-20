@@ -19,6 +19,7 @@ package org.apache.ignite.testsuites;
 import org.apache.ignite.internal.CommunicationMessageAcknowledgeTest;
 import org.apache.ignite.spi.communication.tcp.ClientExceptionsUtilsTest;
 import org.apache.ignite.spi.communication.tcp.GridSandboxedClientWithoutNetworkTest;
+import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationConnectionExclusivenessTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationInverseConnectionEstablishingTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiConcurrentConnectSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiConcurrentConnectSslSelfTest;
@@ -57,6 +58,8 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiNodeLeftLoggin
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiSkipMessageSendTest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationStatisticsTest;
 import org.apache.ignite.spi.communication.tcp.TooManyOpenFilesTcpCommunicationSpiTest;
+import org.apache.ignite.spi.communication.tcp.internal.BlacklistNetwokInterfacesTest;
+import org.apache.ignite.spi.communication.tcp.internal.NetworkInterfaceMatcherTest;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFutureSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -114,6 +117,7 @@ import org.junit.runners.Suite;
     TooManyOpenFilesTcpCommunicationSpiTest.class,
 
     GridTcpCommunicationInverseConnectionEstablishingTest.class,
+    GridTcpCommunicationConnectionExclusivenessTest.class,
 
     GridTcpCommunicationSpiLogTest.class,
 
@@ -129,7 +133,10 @@ import org.junit.runners.Suite;
 
     TcpCommunicationConnectionCheckFutureSelfTest.class,
 
-    CommunicationMessageAcknowledgeTest.class
+    CommunicationMessageAcknowledgeTest.class,
+
+    NetworkInterfaceMatcherTest.class,
+    BlacklistNetwokInterfacesTest.class
 })
 public class IgniteSpiCommunicationSelfTestSuite {
 }

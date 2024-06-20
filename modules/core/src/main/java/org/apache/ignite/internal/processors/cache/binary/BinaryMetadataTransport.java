@@ -390,10 +390,10 @@ final class BinaryMetadataTransport {
      * @param res result to cancel futures with.
      */
     private void cancelFutures(MetadataUpdateResult res) {
-        for (MetadataUpdateResultFuture fut : unlabeledFutures)
-            fut.onDone(res);
-
-        unlabeledFutures.clear();
+        MetadataUpdateResultFuture fut0;
+        while ((fut0 = unlabeledFutures.poll()) != null) {
+            fut0.onDone(res);
+        }
 
         for (MetadataUpdateResultFuture fut : syncMap.values())
             fut.onDone(res);

@@ -1551,6 +1551,18 @@ public class GatewayProtectedCacheProxy<K, V> extends AsyncSupportAdapter<Ignite
         }
     }
 
+    /** {@inheritDoc} */
+    @Override public IgniteFuture<Boolean> touchAsync(K key) {
+        CacheOperationGate opGate = onEnter();
+
+        try {
+            return delegate.touchAsync(key);
+        }
+        finally {
+            onLeave(opGate);
+        }
+    }
+
     /**
      * Safely get CacheGateway.
      *

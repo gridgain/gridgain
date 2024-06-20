@@ -222,6 +222,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MVCC_TX_SIZE_CACHING_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.TX_SIZE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.checkActive;
@@ -2192,6 +2193,70 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         assert cctx.group().persistenceEnabled() : cctx;
 
         markIndexRebuild(cctx.name(), true);
+    }
+
+    /** {@inheritDoc} */
+    @Override public @Nullable IgniteInternalFuture<?> rebuildInMemoryIndexes(GridCacheContext cctx) {
+        assert cctx != null;
+
+        // Skip rebuild for client nodes.
+        if (ctx.clientNode())
+            return null;
+
+        // Skip rebuild if persistence is not enabled for cache.
+        if (cctx.shared().pageStore() == null)
+            return null;
+
+        String cacheName = cctx.name();
+
+        Collection<H2TableDescriptor> descriptors = schemaMgr.tablesForCache(cacheName).stream()
+            .filter(descriptor -> nonNull(descriptor.luceneIndex()))
+            .collect(toList());
+
+        if (descriptors.isEmpty())
+            return null;
+
+        GridFutureAdapter<Void> rebuildCacheIdxFut = new GridFutureAdapter<>();
+
+        // An internal future for the ability to cancel index rebuilding.
+        SchemaIndexCacheFuture intRebFut = new SchemaIndexCacheFuture(new SchemaIndexOperationCancellationToken());
+
+        // To avoid possible data race.
+        GridFutureAdapter<Void> outRebuildIdxFut = new GridFutureAdapter<>();
+
+        SchemaIndexCacheFuture prevIntRebFut = idxRebuildFuts.put(cctx.cacheId(), intRebFut);
+
+        // Check that the previous rebuild is completed.
+        assert prevIntRebFut == null;
+
+        // Rebuild text indexes for tables in cache.
+        SchemaIndexCacheVisitorClosure clo = new TextIndexRebuildClosure(ctx.query(), cctx, descriptors);
+
+        rebuildCacheIdxFut.listen(fut -> {
+            Throwable err = fut.error();
+
+            if (err == null) {
+                try {
+                    markIndexRebuild(cacheName, false);
+                }
+                catch (Throwable t) {
+                    err = t;
+                }
+            }
+
+            if (err != null)
+                U.error(log, "Failed to rebuild indexes for cache: " + cacheName, err);
+
+            idxRebuildFuts.remove(cctx.cacheId(), intRebFut);
+            intRebFut.onDone(err);
+
+            outRebuildIdxFut.onDone(err);
+        });
+
+        if (!rebuildCacheIdxFut.isDone())
+            rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut, intRebFut.cancelToken());
+
+        return outRebuildIdxFut;
     }
 
     /** {@inheritDoc} */

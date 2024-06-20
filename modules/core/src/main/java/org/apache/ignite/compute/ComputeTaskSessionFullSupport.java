@@ -29,7 +29,7 @@ import java.util.Map;
  * Use this annotation when planning to use checkpoints or task session attributes API to
  * distribute session attributes between jobs.
  * <p>
- * By default attributes and checkpoints are disabled for performance reasons.
+ * By default, attributes and checkpoints are disabled for performance reasons.
  * @see ComputeTaskSession
  * @see ComputeTaskSession#setAttribute(Object, Object)
  * @see ComputeTaskSession#setAttributes(Map)

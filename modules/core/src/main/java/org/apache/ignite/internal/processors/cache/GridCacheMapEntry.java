@@ -2262,8 +2262,26 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 c.call(dataRow);
             }
-            else
+            else {
+                boolean condition =
+                    op == DELETE &&
+                    !needVal &&
+                    !readFromStore &&
+                    !transformOp &&
+                    !(evt && (cctx.events().isRecordable(EVT_CACHE_OBJECT_REMOVED) || cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED))) &&
+                    !cctx.queries().enabled() &&
+                    cctx.config().getInterceptor() == null &&
+                    !cctx.conflictNeedResolve() &&
+                    cctx.cacheObjectContext().compressionStrategy() == null;
+
+                if (condition) {
+                    // If we don't need to read previous value and don't need to notify about remove,
+                    // then we can optimize removing and do not load the value into heap.
+                    c.rowData(CacheDataRowAdapter.RowData.NO_KEY_WITH_VALUE_META_INFO);
+                }
+
                 cctx.offheap().invoke(cctx, key, localPartition(), c);
+            }
 
             GridCacheUpdateAtomicResult updateRes = c.updateRes;
 
@@ -2434,7 +2452,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (updateRes.success())
                 updateMetrics(c.op, metrics, transformOp || updateRes.transformed(), oldVal != null);
 
-            // Continuous query filter should be perform under lock.
+            // Continuous query filter should be performed under the lock.
             if (lsnrs != null) {
                 CacheObject evtVal = cctx.unwrapTemporary(updateVal);
                 CacheObject evtOldVal = cctx.unwrapTemporary(oldVal);
@@ -6199,6 +6217,22 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             return treeOp;
         }
 
+        /** Mode that is used to find and prepare the old row before this closure is executed. */
+        private CacheDataRowAdapter.RowData rowData;
+
+        /**
+         * Sets a mode that is used to find and prepare the old row before this closure is executed.
+         *
+         * @param rowData Row data.
+         */
+        public void rowData(CacheDataRowAdapter.RowData rowData) {
+            this.rowData = rowData;
+        }
+
+        @Override public CacheDataRowAdapter.RowData rowData() {
+            return rowData != null ? rowData : IgniteCacheOffheapManager.OffheapInvokeClosure.super.rowData();
+        }
+
         /** {@inheritDoc} */
         @Override public void call(@Nullable CacheDataRow oldRow) throws IgniteCheckedException {
             assert entry.isNear() || oldRow == null || oldRow.link() != 0 : oldRow;
@@ -6732,8 +6766,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (treeOp != IgniteTree.OperationType.NOOP) {
                 GridDhtLocalPartition part = entry.localPartition();
 
-                newRow = part.dataStore().createRow(cctx, entry.key(), TombstoneCacheObject.INSTANCE, newVer,
-                    cctx.shared().ttl().tombstoneExpireTime(), oldRow);
+                newRow = part.dataStore().createRow(
+                    cctx,
+                    entry.key(),
+                    TombstoneCacheObject.INSTANCE,
+                    newVer,
+                    cctx.shared().ttl().tombstoneExpireTime(),
+                    oldRow);
 
                 if (oldRow != null && oldRow.link() == newRow.link())
                     treeOp = IgniteTree.OperationType.IN_PLACE;
@@ -6881,8 +6920,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                         if (val == null)
                             cctx.store().remove(null, entry.key);
-                        else
+                        else {
+                            assert !(val instanceof CacheObjectShadow) : "Invalid value type [entry=" + this + ']';
                             cctx.store().put(null, entry.key, val, entry.ver);
+                        }
                     }
                     else {
                         if (log.isDebugEnabled())

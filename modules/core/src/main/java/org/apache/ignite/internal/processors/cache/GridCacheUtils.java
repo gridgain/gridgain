@@ -48,6 +48,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.CachePartialUpdateException;
 import org.apache.ignite.cache.CacheServerNotFoundException;
@@ -133,6 +134,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC
 import static org.apache.ignite.configuration.CacheConfiguration.DFLT_CACHE_MODE;
 import static org.apache.ignite.internal.GridTopic.TOPIC_REPLICATION;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.DFLT_IGNITE_VALIDATE_CACHE_NAMES;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.cacheDirName;
 
 /**
@@ -1551,6 +1553,13 @@ public class GridCacheUtils {
 
         A.ensure(!isReservedCacheName(name), "Cache name cannot be \"" + name +
             "\" because it is reserved for internal purposes.");
+
+        if (IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_VALIDATE_CACHE_NAMES, DFLT_IGNITE_VALIDATE_CACHE_NAMES)) {
+            boolean hasIllegalCharacters = name.contains("/") || name.contains("\\") || name.contains("\0")
+                    || name.contains("\n");
+            A.ensure(!hasIllegalCharacters, "Cache name cannot contain slashes (/), backslashes (\\), " +
+                    "line separators (\\n), or null characters (\\0). [cacheName=" + name + "]");
+        }
     }
 
     /**
