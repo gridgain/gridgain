@@ -358,7 +358,6 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             partsToRepair = cpFrom.partsToRepair;
             parallelism = cpFrom.parallelism;
             batchSize = cpFrom.batchSize;
-            recheckAttempts = cpFrom.batchSize;
             recheckAttempts = cpFrom.recheckAttempts;
             recheckDelay = cpFrom.recheckDelay;
             repairAlg = cpFrom.repairAlg;

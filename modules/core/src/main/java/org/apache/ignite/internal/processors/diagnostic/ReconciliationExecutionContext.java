@@ -27,6 +27,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.compute.ComputeJobContinuation;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 
 /**
  * Responsible for storing context of all ongoing reconciliation activities.
@@ -52,6 +53,9 @@ public class ReconciliationExecutionContext {
 
     /** Id of last or current reconciliation session. */
     private long sesId;
+
+    /** Listener for reconciliation metrics updates. */
+    private volatile GridFutureAdapter<ReconciliationStatisticsUpdateListener> statisticsListenerFut = new GridFutureAdapter<>();
 
     /**
      * @param kernalCtx Kernal context.
@@ -81,6 +85,8 @@ public class ReconciliationExecutionContext {
         runningJobsLimit.put(sesId, parallelism);
 
         pendingJobs.put(sesId, new LinkedList<>());
+
+        statisticsListenerFut = new GridFutureAdapter<>();
 
         if (runningJobsCnt.size() == MAX_SESSIONS + 1) {
             Stream.of(runningJobsCnt, runningJobsLimit, pendingJobs)
@@ -146,6 +152,98 @@ public class ReconciliationExecutionContext {
             catch (IgniteCheckedException e) {
                 throw new IgniteException(e);
             }
+        }
+    }
+
+    /**
+     * Updates reconcilation statistics for the gievn cache and parition.
+     *
+     * @param sesId Session ID.
+     * @param cacheName Cache name.
+     * @param partId Partition ID.
+     * @param primary {@code true} if the partition is primary.
+     * @param keysCnt Number of keys scanned.
+     */
+    public void updatePartitionStatistics(long sesId, String cacheName, int partId, boolean primary, long keysCnt) {
+        statisticsListenerFut.listen(f -> {
+            try {
+                f.get().updateScannedPartition(sesId, cacheName, partId, primary, keysCnt);
+            }
+            catch (IgniteCheckedException ignore) {
+                // No-op.
+            }
+        });
+    }
+
+    /**
+     * Registers lsitener for reconciliation metrics updates.
+     *
+     * @param sesId Session ID.
+     * @param listener Listener.
+     */
+    public synchronized void listenMetricsUpdates(long sesId, ReconciliationStatisticsUpdateListener listener) {
+        if (sesId == this.sesId)
+            statisticsListenerFut.onDone(new ReconciliationStatisticsUpdateListenerAdapter(sesId, listener));
+    }
+
+    public synchronized void removeMetricsUpdateListener(long sesId) {
+        if (sesId == this.sesId) {
+            GridFutureAdapter<ReconciliationStatisticsUpdateListener> fut = new GridFutureAdapter<>();
+            fut.onDone(new NoopReconciliationStatisticsUpdateListener());
+
+            statisticsListenerFut = fut;
+        }
+    }
+
+    /**
+     * Listener for reconciliation metrics updates.
+     */
+    public static interface ReconciliationStatisticsUpdateListener {
+        /**
+         * Updates statistics for a scanned partition.
+         *
+         * @param sesId Session ID.
+         * @param cacheName Cache name.
+         * @param partId Partition ID.
+         * @param primary {@code true} if the partition is primary, {@code false} otherwise.
+         * @param keysCnt Number of keys scanned in the partition.
+         */
+        public void updateScannedPartition(long sesId, String cacheName, int partId, boolean primary, long keysCnt);
+    }
+
+    /**
+     * Adapter for {@link ReconciliationStatisticsUpdateListener} that filters updates by session ID.
+     */
+    private static class ReconciliationStatisticsUpdateListenerAdapter implements ReconciliationStatisticsUpdateListener {
+        /** Session ID. */
+        private final long sesId;
+
+        /** Actual listner. */
+        private final ReconciliationStatisticsUpdateListener listener;
+
+        /**
+         * @param sesId Session ID.
+         * @param listener Actual listener.
+         */
+        ReconciliationStatisticsUpdateListenerAdapter(long sesId, ReconciliationStatisticsUpdateListener listener) {
+            this.sesId = sesId;
+            this.listener = listener;
+        }
+
+        @Override
+        public void updateScannedPartition(long sesId, String cacheName, int partId, boolean primary, long keysCnt) {
+            // Just ignore invalid session updates.
+            if (sesId == this.sesId)
+                listener.updateScannedPartition(sesId, cacheName, partId, primary, keysCnt);
+        }
+    }
+
+    /**
+     * No-op implementation of {@link ReconciliationStatisticsUpdateListener}.
+     */
+    private static class NoopReconciliationStatisticsUpdateListener implements ReconciliationStatisticsUpdateListener {
+        @Override public void updateScannedPartition(long sesId, String cacheName, int partId, boolean primary, long keysCnt) {
+            // No-op.
         }
     }
 }
