@@ -232,6 +232,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             part.reserve();
 
+            boolean primary = cctx.affinity().primaryPartitions(ignite.localNode().id(), partBatch.startTopVer()).contains(part.id());
+
             try (GridCursor<? extends CacheDataRow> cursor = lowerKey == null ?
                 grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), DATA) :
                 grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), lowerKey, null)) {
@@ -251,6 +253,13 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     else
                         i--;
                 }
+
+                ignite.context().diagnostic().reconciliationExecutionContext().updatePartitionStatistics(
+                    partBatch.sessionId(),
+                    partBatch.cacheName(),
+                    partBatch.partitionId(),
+                    primary,
+                    partEntryHashRecords.size());
 
                 return new ExecutionResult<>(partEntryHashRecords);
             }
