@@ -139,6 +139,7 @@ import static org.apache.ignite.internal.util.StripedExecutor.DFLT_DATA_STREAMIN
 import static org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor.DFLT_NIO_RECOVERY_DESCRIPTOR_RESERVATION_TIMEOUT;
 import static org.apache.ignite.internal.util.nio.GridNioServer.DFLT_IO_BALANCE_PERIOD;
 import static org.apache.ignite.internal.util.nio.ssl.GridNioSslHandler.DFLT_SSL_HANDSHAKE_TIMEOUT_MS;
+import static org.apache.ignite.internal.util.nio.ssl.GridNioSslHandler.DFLT_SSL_UNWRAP_TIMEOUT_MS;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_TO_STRING_COLLECTION_LIMIT;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_TO_STRING_MAX_LENGTH;
@@ -2250,6 +2251,11 @@ public final class IgniteSystemProperties {
     @SystemProperty(value = "Node in maintenance mode will shut down with specified JVM exit code",
             defaults = "0")
     public static final String IGNITE_MAINTENANCE_MODE_EXIT_CODE = "IGNITE_MAINTENANCE_MODE_EXIT_CODE";
+
+    /** SSL unwrap timeout. */
+    @SystemProperty(value = "SSL unwrap timeout, in milliseconds", type = Long.class,
+            defaults = DFLT_SSL_UNWRAP_TIMEOUT_MS + " milliseconds")
+    public static final String IGNITE_SSL_UNWRAP_TIMEOUT = "IGNITE_SSL_UNWRAP_TIMEOUT";
 
     /**
      * Enforces singleton.
