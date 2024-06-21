@@ -22,8 +22,10 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.*;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
-public class H2JavaObjectSerializerTest {
+public class H2JavaObjectSerializerTest extends GridCommonAbstractTest {
+   
     private H2JavaObjectSerializer serializer;
     private IgniteLogger log;
 

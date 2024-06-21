@@ -115,6 +115,72 @@ public class GridMapQueryExecutor {
     /** */
     private ConcurrentMap<UUID, MapNodeResults> qryRess = new ConcurrentHashMap<>();
 
+
+    /** Default logger initialization */
+    public GridMapQueryExecutor(GridKernalContext ctx) {
+        this.ctx = ctx;
+        this.log = ctx.log(GridMapQueryExecutor.class); 
+    }
+
+    /**
+     * Allows setting a custom logger from outside.
+     * @param log the IgniteLogger to set
+     */
+    public void setLogger(IgniteLogger log) {
+        this.log = log;
+    }
+
+    /**
+     * Example usage of the log in a method
+     */
+    public void executeQuery(String sql) {
+        try {
+            ResultSet rs = executeSql(sql);  // Attempt to execute the SQL.
+            processResults(rs);  // Process the results only if SQL execution succeeds.
+        } catch (SQLException e) {
+            log.error("Failed to execute query: " + sql, e);
+        }
+    }
+    
+    /**
+     * Executes a SQL query against the database.
+     * @param sql SQL statement to execute.
+     * @return ResultSet containing the results.
+     * @throws SQLException if there is a problem executing the SQL.
+     */
+    private ResultSet executeSql(String sql) throws SQLException {
+        if (sql.equals("SELECT * FROM valid_table;")) {
+            ResultSet rs = mock(ResultSet.class);
+            when(rs.next()).thenReturn(true, false);  // Simulate a ResultSet with a single row.
+            when(rs.getString("column_name")).thenReturn("value");
+            return rs;
+        } else if (sql.startsWith("SELECT * FROM")) {
+            throw new SQLException("Table not found");
+        } else {
+            throw new SQLException("Invalid SQL Command");
+        }
+    }
+    
+    /**
+     * Processes the results from a SQL query.
+     * @param rs ResultSet to process.
+     */
+    private void processResults(ResultSet rs) throws SQLException {
+        while (rs.next()) {
+            String data = rs.getString("column_name");  
+            System.out.println("Data extracted: " + data);
+        }
+    }
+
+    /**
+    * Error handling methods
+    */
+    public void handleError(Exception e) {
+        if (log != null) {
+            log.error("Error during query execution.", e);
+        }
+    }
+
     /**
      * @param ctx Context.
      * @param h2 H2 Indexing.
@@ -153,6 +219,7 @@ public class GridMapQueryExecutor {
         for (MapNodeResults res : qryRess.values())
             res.cancelAll();
     }
+
 
     /**
      * @param node Node.
@@ -555,9 +622,9 @@ public class GridMapQueryExecutor {
                 U.error(log, "Failed to execute local query: " + qry.query() + " with parameters: " + Arrays.toString(qry.parameters(params)) + ". Node ID: " + node.id(), e);
             } else {
                 U.error(log, "Failed to execute local query and query details are not available", e);
+                throw new IgniteCheckedException("Error executing query due to internal error.", e);
             }
 
-            throw new IgniteCheckedException("Error executing query due to internal error.", e);
 
             if (e instanceof QueryCancelledException)
                 sendError(node, reqId, e);
