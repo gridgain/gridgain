@@ -2251,6 +2251,9 @@ public final class IgniteSystemProperties {
             defaults = "0")
     public static final String IGNITE_MAINTENANCE_MODE_EXIT_CODE = "IGNITE_MAINTENANCE_MODE_EXIT_CODE";
 
+    @SystemProperty(value = "Nodes will send messages with compacted topology history", defaults = "false")
+    public static final String IGNITE_TOPOLOGY_HISTORY_COMPACT = "IGNITE_TOPOLOGY_HISTORY_COMPACT";
+
     /**
      * Enforces singleton.
      */

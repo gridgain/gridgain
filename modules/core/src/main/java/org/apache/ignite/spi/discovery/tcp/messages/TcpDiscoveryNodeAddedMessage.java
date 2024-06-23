@@ -19,13 +19,18 @@ package org.apache.ignite.spi.discovery.tcp.messages;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.spi.discovery.tcp.internal.CompactedTopologyHistory;
 import org.apache.ignite.spi.discovery.tcp.internal.DiscoveryDataPacket;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TOPOLOGY_HISTORY_COMPACT;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 
 /**
  * Message telling nodes that new node should be added to topology.
@@ -35,8 +40,11 @@ import org.jetbrains.annotations.Nullable;
 @TcpDiscoveryEnsureDelivery
 @TcpDiscoveryRedirectToClient
 public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableMessage {
+
     /** */
     private static final long serialVersionUID = 0L;
+
+    private static final boolean COMPACTED_TOPOLOGY_HISTORY = getBoolean(IGNITE_TOPOLOGY_HISTORY_COMPACT, true);
 
     /** Added node. */
     private final TcpDiscoveryNode node;
@@ -63,6 +71,8 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
 
     /** Topology snapshots history. */
     private Map<Long, Collection<ClusterNode>> topHist;
+
+    private CompactedTopologyHistory compactedTopHist;
 
     /** Start time of the first grid node. */
     private final long gridStartTime;
@@ -200,6 +210,9 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
      * @return Map with topology snapshots history.
      */
     public Map<Long, Collection<ClusterNode>> topologyHistory() {
+        if (topHist == null && compactedTopHist != null) {
+            return compactedTopHist.restore();
+        }
         return topHist;
     }
 
@@ -209,7 +222,10 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
      * @param topHist Map with topology snapshots history.
      */
     public void topologyHistory(@Nullable Map<Long, Collection<ClusterNode>> topHist) {
-        this.topHist = topHist;
+        if (topHist != null && COMPACTED_TOPOLOGY_HISTORY)
+            this.compactedTopHist = new CompactedTopologyHistory(topHist);
+        else
+            this.topHist = topHist;
     }
 
     /**
