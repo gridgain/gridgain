@@ -573,7 +573,7 @@ public interface ReconciliationResultCollector {
                 if (c != null)
                     meta = c.remove(partId);
 
-                if  (!F.isEmpty(meta)) {
+                if (!F.isEmpty(meta)) {
                     totalInconsistentKeys.addAndGet(meta.size());
 
                     inconsistentKeysPerCache.merge(cacheName, (long) meta.size(), Long::sum);

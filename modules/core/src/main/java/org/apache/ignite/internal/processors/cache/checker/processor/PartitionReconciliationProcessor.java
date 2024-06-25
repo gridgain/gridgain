@@ -57,7 +57,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.util.Collections.EMPTY_SET;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.checkConflicts;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
 
@@ -567,8 +566,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             }
         }
 
-        @Override
-        public void updateScannedPartition(long sesId, String cacheName, int partId, boolean primary, long keysCnt) {
+        /** {@inheritDoc} */
+        @Override public void updateScannedPartition(long sesId, String cacheName, int partId, boolean primary, long keysCnt) {
             assert sesId == sessionId() : "Update partition scan metrics does not correspond to the current session " +
                 "[currSesId=" + sessionId() + ", updateSesId=" + sesId + ']';
 
