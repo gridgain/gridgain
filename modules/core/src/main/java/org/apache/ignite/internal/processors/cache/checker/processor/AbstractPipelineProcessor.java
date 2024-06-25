@@ -312,12 +312,12 @@ public class AbstractPipelineProcessor {
         // No-op.
     }
 
-        /**
-         * Returns a cluster group represents a set od nodes that own the given partition.
-         * Returned group can be {@code null} in case of there are no owners for the given partition.
-         *
-         * @return Cluster group of owners.
-         */
+    /**
+     * Returns a cluster group represents a set od nodes that own the given partition.
+     * Returned group can be {@code null} in case of there are no owners for the given partition.
+     *
+     * @return Cluster group of owners.
+     */
     private ClusterGroup partOwners(String cacheName, int partId) {
         Collection<ClusterNode> nodes = ignite.cachex(cacheName).context().topology().owners(partId, startTopVer);
 
