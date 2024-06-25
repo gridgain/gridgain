@@ -224,8 +224,6 @@ public class AbstractPipelineProcessor {
                 printStatistics();
         }
 
-        liveListeners.acquire();
-
         ClusterGroup grp = partOwners(workload.cacheName(), workload.partitionId());
 
         if (grp == null) {
