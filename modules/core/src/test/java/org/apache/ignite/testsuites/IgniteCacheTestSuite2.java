@@ -25,7 +25,6 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunctionExc
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunctionFastPowerOfTwoHashSelfTest;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunctionStandardHashSelfTest;
 import org.apache.ignite.internal.IgniteReflectionFactorySelfTest;
-import org.apache.ignite.internal.processors.cache.TransactionValidationTest;
 import org.apache.ignite.internal.processors.cache.CacheComparatorTest;
 import org.apache.ignite.internal.processors.cache.CacheConcurrentReadThroughTest;
 import org.apache.ignite.internal.processors.cache.CacheConfigurationLeakTest;
@@ -58,7 +57,9 @@ import org.apache.ignite.internal.processors.cache.IgniteOnePhaseCommitNearReade
 import org.apache.ignite.internal.processors.cache.MemoryPolicyConfigValidationTest;
 import org.apache.ignite.internal.processors.cache.NoPresentCacheInterceptorOnClientTest;
 import org.apache.ignite.internal.processors.cache.NonAffinityCoordinatorDynamicStartStopTest;
+import org.apache.ignite.internal.processors.cache.RebalanceDemanderNodeFailureTest;
 import org.apache.ignite.internal.processors.cache.RebalanceIteratorLargeEntriesOOMTest;
+import org.apache.ignite.internal.processors.cache.TransactionValidationTest;
 import org.apache.ignite.internal.processors.cache.TxCountersNeighbourcastOnRecoveryLogTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheDetectLostPartitionsTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheLoadingConcurrentGridStartSelfTest;
@@ -394,6 +395,8 @@ public class IgniteCacheTestSuite2 {
         GridTestUtils.addTestIfNeeded(suite, RebalanceIteratorLargeEntriesOOMTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, TxCountersNeighbourcastOnRecoveryLogTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, RebalanceDemanderNodeFailureTest.class, ignoredTests);
 
         return suite;
     }
