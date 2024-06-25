@@ -56,6 +56,7 @@ import org.apache.ignite.internal.processors.diagnostic.ReconciliationExecutionC
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.util.Collections.EMPTY_SET;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.checkConflicts;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
@@ -100,9 +101,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
     /** Error reason. */
     public static final String ERROR_REASON = "Reason [msg=%s, exception=%s]";
-
-    /** Work progress print interval. */
-    private final long workProgressPrintInterval = getLong("WORK_PROGRESS_PRINT_INTERVAL", 1000 * 60 * 3);
 
     /** Recheck delay seconds. */
     private final int recheckDelay;
@@ -261,7 +259,9 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     continue;
                 }
 
-                PipelineWorkload workload = takeTask();
+                PipelineWorkload workload = pollTask(workProgressPrintInterval / 5, MILLISECONDS);
+                if (workload == null)
+                    continue;
 
                 if (workload instanceof Batch)
                     handle((Batch)workload);
@@ -314,10 +314,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         }
     }
 
-    /**
-     * Print statistics.
-     */
-    public void printStatistics() {
+    /** {@inheritDoc} */
+    @Override public void printStatistics() {
         long currTimeMillis = U.currentTimeMillis();
 
         long lastUpdate = lastWorkProgressUpdateTime.get();
