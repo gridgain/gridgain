@@ -133,8 +133,15 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     @Test
     @WithSystemProperty(key = "RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL", value = "0")
     public void testProgressLogPrinted() throws Exception {
-        LogListener lsnr = LogListener.matches(s -> s.startsWith("Partition reconciliation task [sesId=")).atLeast(1).build();
-        log.registerListener(lsnr);
+        LogListener lsnr1 = LogListener.matches(s -> s.startsWith("Partition reconciliation status [sesId=")).atLeast(1).build();
+        LogListener lsnr2 = LogListener.matches(s -> s.startsWith("Partition reconciliation has started [sesionId")).atLeast(1).build();
+        LogListener lsnr3 = LogListener.matches(s -> s.startsWith("Partition reconciliation has finished locally [sessionId="))
+            .atLeast(1)
+            .build();
+
+        log.registerListener(lsnr1);
+        log.registerListener(lsnr2);
+        log.registerListener(lsnr3);
 
         startGrids(3);
 
@@ -143,7 +150,9 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--repair", "MAJORITY", "--recheck-attempts", "1"));
 
-        assertTrue(lsnr.check(10_000));
+        assertTrue(lsnr1.check(10_000));
+        assertTrue(lsnr2.check(10_000));
+        assertTrue(lsnr3.check(10_000));
     }
 
     /**
