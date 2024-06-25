@@ -40,8 +40,8 @@ import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
@@ -61,6 +61,7 @@ import org.apache.ignite.thread.IgniteThread;
 import org.apache.ignite.thread.OomExceptionHandler;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING;
 import static org.apache.ignite.internal.GridTopic.TOPIC_WAL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
@@ -419,10 +420,7 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
      * @param fut Exchange future.
      */
     public void disableGroupDurabilityForPreloading(GridDhtPartitionsExchangeFuture fut) {
-        if (fut.changedBaseline()
-            && cctx.tm().pendingTxsTracker().enabled()
-            || !IgniteSystemProperties.getBoolean(
-                IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING, DFLT_DISABLE_WAL_DURING_REBALANCING))
+        if (!IgniteSystemProperties.getBoolean(IGNITE_DISABLE_WAL_DURING_REBALANCING, DFLT_DISABLE_WAL_DURING_REBALANCING))
             return;
 
         Collection<CacheGroupContext> grpContexts = cctx.cache().cacheGroups();
