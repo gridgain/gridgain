@@ -1,75 +1,65 @@
-/*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
- *
- * Licensed under the GridGain Community Edition License (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.apache.ignite.internal.processors.query.h2;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
-import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.binary.BinaryObject;
+import org.apache.ignite.internal.binary.BinaryObjectImpl;
+import org.apache.ignite.internal.binary.BinaryTypeImpl;
+import org.apache.ignite.internal.processors.query.h2.twostep.GridMapQueryExecutor;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.mockito.Mockito;
-import static org.mockito.Mockito.*;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mockito;
 
+import java.io.IOException;
+import java.sql.SQLException;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
+import static org.mockito.Mockito.*;
+
+/**
+ * Unit tests for H2JavaObjectSerializer.
+ */
 public class H2JavaObjectSerializerTest extends GridCommonAbstractTest {
-   
     private H2JavaObjectSerializer serializer;
-    private IgniteLogger log;
 
     @Before
-    public void setUp() {
-        GridKernalContext ctx = Mockito.mock(GridKernalContext.class);
-        log = U.logger(ctx, "H2JavaObjectSerializer");
-        serializer = new H2JavaObjectSerializer(ctx);
+    public void setUp() throws Exception {
+        super.setUp();
+        serializer = new H2JavaObjectSerializer();
     }
 
     @Test
-    public void testSerialize() throws Exception {
-        Object obj = new Object(); // Use a more complex object as needed
-        byte[] data = serializer.serialize(obj);
-        assertNotNull("Serialized data should not be null", data);
-    }
+    public void testSerializeBinaryObject() throws IOException {
+        BinaryObject obj = mock(BinaryObject.class);
+        when(obj.typeId()).thenReturn(123);
 
-    @Test
-    public void testDeserialize() throws Exception {
-        Object obj = new Object(); // Original object
-        byte[] data = serializer.serialize(obj);
-        Object result = serializer.deserialize(data);
-        assertNotNull("Deserialized object should not be null", result);
-    }
-
-    @Test
-    public void testSerializationFailure() {
-        assertThrows("Expected serialization exception", Exception.class, () -> {
-            Object obj = new ProblematicObject(); // Object that causes serialization issues
+        IOException exception = assertThrows(IOException.class, () -> {
             serializer.serialize(obj);
         });
+
+        assertEquals("Failed to serialize BinaryObject with typeId: 123", exception.getMessage());
     }
 
     @Test
-    public void testDeserializationFailure() {
-        assertThrows("Expected deserialization exception", Exception.class, () -> {
-            byte[] data = new byte[] {1, 2, 3}; // Corrupted data
-            serializer.deserialize(data);
-        });
-    }
-}
+    public void testSerializeNonBinaryObject() throws IOException {
+        Object obj = new Object();
 
-class ProblematicObject implements Serializable {
-    private void writeObject(java.io.ObjectOutputStream out) throws IOException {
-        throw new IOException("Simulated Serialization Error");
+        IOException exception = assertThrows(IOException.class, () -> {
+            serializer.serialize(obj);
+        });
+
+        assertEquals("Failed to Serialize object: " + obj.getClass().getName(), exception.getMessage());
+    }
+
+    @Test
+    public void testDeserialize() throws IOException {
+        byte[] bytes = new byte[]{1, 2, 3};
+
+        IOException exception = assertThrows(IOException.class, () -> {
+            serializer.deserialize(bytes);
+        });
+
+        assertEquals("Failed to deserialize data: " + Arrays.toString(bytes), exception.getMessage());
     }
 }
