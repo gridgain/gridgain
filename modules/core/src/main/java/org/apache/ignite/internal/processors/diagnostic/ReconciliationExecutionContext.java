@@ -230,8 +230,7 @@ public class ReconciliationExecutionContext {
             this.listener = listener;
         }
 
-        @Override
-        public void updateScannedPartition(long sesId, String cacheName, int partId, boolean primary, long keysCnt) {
+        @Override public void updateScannedPartition(long sesId, String cacheName, int partId, boolean primary, long keysCnt) {
             // Just ignore invalid session updates.
             if (sesId == this.sesId)
                 listener.updateScannedPartition(sesId, cacheName, partId, primary, keysCnt);
