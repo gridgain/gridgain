@@ -78,10 +78,7 @@ class CacheGroupEncryptionKeys {
 
         GroupKey key = keys.get(0);
 
-        if (key == null) {
-            if (log.isDebugEnabled())
-                log.debug("First key is empty, falling back to null [grpId=" + grpId + ", keySetSize=" + keys.size() + ']');
-        }
+        assert key != null : "grpId=" + grpId;
 
         return key;
     }
@@ -262,9 +259,6 @@ class CacheGroupEncryptionKeys {
      * @return List of encryption keys of the removed cache group.
      */
     List<GroupKey> remove(int grpId) {
-        if (log.isDebugEnabled())
-            log.debug("Remove keys for [grpId=" + grpId + ']');
-
         return grpKeys.remove(grpId);
     }
 
@@ -276,15 +270,8 @@ class CacheGroupEncryptionKeys {
     boolean removeKeysById(int grpId, Set<Integer> ids) {
         List<GroupKey> keys = grpKeys.get(grpId);
 
-        if (F.isEmpty(keys)) {
-            if (log.isDebugEnabled())
-                log.debug("Remove keys by Id for [grpId=" + grpId + ", ids=" + ids + ", no keys left]");
-
+        if (F.isEmpty(keys))
             return false;
-        }
-
-        if (log.isDebugEnabled())
-            log.debug("Remove keys by Id for [grpId=" + grpId + ", ids=" + ids + "]");
 
         return keys.subList(1, keys.size()).removeIf(key -> ids.contains(key.unsignedId()));
     }
@@ -308,15 +295,8 @@ class CacheGroupEncryptionKeys {
             rmvKeyIds.remove(segment.keyId);
         }
 
-        if (keys.removeIf(key -> rmvKeyIds.contains(key.unsignedId()))) {
-            if (log.isDebugEnabled())
-                log.debug("Remove unused keys for [grpId=" + grpId + ", removed=" + rmvKeyIds + "]");
-
+        if (keys.removeIf(key -> rmvKeyIds.contains(key.unsignedId())))
             return rmvKeyIds;
-        }
-
-        if (log.isDebugEnabled())
-            log.debug("Remove unused keys for [grpId=" + grpId + ", removed=[]]");
 
         return Collections.emptySet();
     }

@@ -867,8 +867,8 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
 
                 metaStorage.remove(ENCRYPTION_KEYS_PREFIX + grpId);
 
-                if (log.isDebugEnabled())
-                    log.debug("Key(s) removed. [grp=" + grpId + "]");
+                if (log.isInfoEnabled())
+                    log.info("Encryption key(s) removed. [grp=" + grpId + "]");
             }
             catch (IgniteCheckedException e) {
                 U.error(log, "Failed to clear meta storage", e);
