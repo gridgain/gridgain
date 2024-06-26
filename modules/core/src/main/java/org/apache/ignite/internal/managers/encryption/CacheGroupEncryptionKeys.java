@@ -184,7 +184,7 @@ class CacheGroupEncryptionKeys {
      */
     GroupKey changeActiveKey(int grpId, int keyId) {
         if (log.isDebugEnabled())
-            log.debug("Change Active Key for [grpId=" + grpId + ", keyId=" + keyId + ']');
+            log.debug("Change active encryption key [grpId=" + grpId + ", keyId=" + keyId + ']');
 
         List<GroupKey> keys = grpKeys.get(grpId);
 
@@ -226,7 +226,7 @@ class CacheGroupEncryptionKeys {
      */
     boolean addKey(int grpId, GroupKeyEncrypted newEncKey) {
         if (log.isDebugEnabled())
-            log.debug("Add new key for [grpId=" + grpId + ", keyId=" + newEncKey.id() + ']');
+            log.debug("Add new encryption key [grpId=" + grpId + ", keyId=" + newEncKey.id() + ']');
 
         List<GroupKey> keys = grpKeys.computeIfAbsent(grpId, v -> new CopyOnWriteArrayList<>());
 
@@ -244,7 +244,7 @@ class CacheGroupEncryptionKeys {
      */
     void setGroupKeys(int grpId, List<GroupKeyEncrypted> encryptedKeys) {
         if (log.isDebugEnabled())
-            log.debug("Add new key for [grpId=" + grpId +
+            log.debug("Set new encryption key(s) [grpId=" + grpId +
                 ", keys=" + encryptedKeys.stream().map(GroupKeyEncrypted::id).collect(Collectors.toList()) + ']');
 
         List<GroupKey> keys = new CopyOnWriteArrayList<>();
@@ -333,7 +333,7 @@ class CacheGroupEncryptionKeys {
      */
     void trackedWalSegments(Collection<TrackedWalSegment> segments) {
         if (log.isDebugEnabled())
-            log.debug("Reserve WAL keys, segments=[" + segments.stream()
+            log.debug("Reserve WAL encryption keys, segments=[" + segments.stream()
                 .map(s -> "[grpId=" + s.grpId + ", keyId=" + s.keyId + ", walIdx=" + s.idx + "]")
                 .collect(Collectors.joining(", ")) + "]"
             );
@@ -350,7 +350,7 @@ class CacheGroupEncryptionKeys {
      */
     void reserveWalKey(int grpId, int keyId, long walIdx) {
         if (log.isDebugEnabled())
-            log.debug("Reserve WAL key [grpId=" + grpId + ", keyId=" + keyId + ", walIdx=" + walIdx + "]");
+            log.debug("Reserve WAL encryption key [grpId=" + grpId + ", keyId=" + keyId + ", walIdx=" + walIdx + "]");
         trackedWalSegments.add(new TrackedWalSegment(walIdx, grpId, keyId));
     }
 
