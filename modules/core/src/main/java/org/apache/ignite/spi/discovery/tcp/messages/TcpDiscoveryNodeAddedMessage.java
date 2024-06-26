@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
@@ -30,8 +29,10 @@ import org.apache.ignite.spi.discovery.tcp.internal.DiscoveryDataPacket;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_TOPOLOGY_HISTORY_COMPACT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_COMPACTED_TOPOLOGY_HISTORY;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.internal.IgniteFeatures.TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 
 /**
  * Message telling nodes that new node should be added to topology.
@@ -45,7 +46,8 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
     /** */
     private static final long serialVersionUID = 0L;
 
-    private static final boolean COMPACTED_TOPOLOGY_HISTORY = getBoolean(IGNITE_TOPOLOGY_HISTORY_COMPACT, true);
+    /** Feature flag for compacted topology history. */
+    private static final boolean COMPACTED_TOPOLOGY_HISTORY = getBoolean(IGNITE_COMPACTED_TOPOLOGY_HISTORY, true);
 
     /** Added node. */
     private final TcpDiscoveryNode node;
@@ -259,10 +261,13 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
         return gridStartTime;
     }
 
-    public boolean useCompactedTopologyHistory() {
+    /**
+     * @return {@code True} if node should use message with compacted topology history.
+     */
+    private boolean useCompactedTopologyHistory() {
         Iterable<ClusterNode> nodes = new ArrayList<>(top);
 
-        return COMPACTED_TOPOLOGY_HISTORY && IgniteFeatures.allNodesSupports(null, nodes, IgniteFeatures.TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY);
+        return COMPACTED_TOPOLOGY_HISTORY && allNodesSupports(null, nodes, TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY);
     }
 
     /** {@inheritDoc} */
