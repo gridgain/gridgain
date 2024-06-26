@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -46,7 +45,7 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
     /** */
     private static final long serialVersionUID = 0L;
 
-    private static final boolean COMPACTED_TOPOLOGY_HISTORY = getBoolean(IGNITE_TOPOLOGY_HISTORY_COMPACT, false);
+    private static final boolean COMPACTED_TOPOLOGY_HISTORY = getBoolean(IGNITE_TOPOLOGY_HISTORY_COMPACT, true);
 
     /** Added node. */
     private final TcpDiscoveryNode node;

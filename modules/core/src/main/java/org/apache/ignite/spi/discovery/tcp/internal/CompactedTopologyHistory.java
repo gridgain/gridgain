@@ -1,3 +1,19 @@
+/*
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.spi.discovery.tcp.internal;
 
 import java.io.Externalizable;
@@ -13,30 +29,37 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.ClusterMetricsSnapshot;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
-import org.apache.ignite.plugin.Extension;
-import org.apache.ignite.plugin.segmentation.SegmentationResolver;
 import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static java.util.Collections.emptyMap;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_NODE_CONSISTENT_ID;
+/**
+ * This class serves to optimize message size with topology history.
+ * In case of long-lived cluster topology history could be hundreds and even thousands entries.
+ * Each entry contains multiple {@link TcpDiscoveryNode} objects which may contains hundreds different attributes.
+ * Combination of many historical entries with multiple nodes in topology and multiple attributes on each node blow up
+ * message size.
+ * Currently only attributes are optimized.
+ * We assume that nodes rarely change their attributes during normal exploitation, therefore we divide history according
+ * node's consistentId and only store initial state of attributes for oldest topology version, for older topology
+ * versions we only record an attribute change.
+ */
+public class CompactedTopologyHistory implements Externalizable {
 
-public class CompactedTopologyHistory implements Serializable {
-
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 1L;
 
-    private final Map<Serializable, Data> historyByNode;
+    /** Stores topology history. Indexed by consistent ID. */
+    private Map<Serializable, HistoryData> historyByNode;
 
+    /** Ctor. */
     public CompactedTopologyHistory(@NotNull Map<Long, Collection<ClusterNode>> topHist) {
         assert !topHist.isEmpty();
 
@@ -70,7 +93,10 @@ public class CompactedTopologyHistory implements Serializable {
 
                 Map<String, Object> prevAttrs = prevAttrsPerNode.get(consistentId);
 
-                Data data = historyByNode.computeIfAbsent(consistentId, k -> new Data(lowTopVer, highTopVer));
+                HistoryData data = historyByNode.computeIfAbsent(
+                        consistentId,
+                        k -> new HistoryData(lowTopVer, highTopVer)
+                );
 
                 data.add(topVer, node, prevAttrs);
 
@@ -79,22 +105,28 @@ public class CompactedTopologyHistory implements Serializable {
         }
     }
 
+    /** Ctor required by {@link Externalizable}. */
+    public CompactedTopologyHistory() {}
+
+    /** Restore topology history to its original format. */
     public Map<Long, Collection<ClusterNode>> restore() {
         Map<Long, Collection<ClusterNode>> topHist = new TreeMap<>();
 
-        for (Map.Entry<Serializable, Data> e : historyByNode.entrySet()) {
+        for (Map.Entry<Serializable, HistoryData> e : historyByNode.entrySet()) {
             Serializable consistentId = e.getKey();
-            Data data = e.getValue();
+            HistoryData data = e.getValue();
 
             Map<String, Object> attrs = new HashMap<>();
 
-            DataEntry[] entries = data.entries;
-            for (int j = 0, entriesLength = entries.length; j < entriesLength; j++) {
-                DataEntry entry = entries[j];
-                long topVer = j + data.lowTopVer;
-
-                if (entry == null)
+            Object[] entries = data.entries;
+            for (int i = 0, entriesLength = entries.length; i < entriesLength; i++) {
+                if (entries[i] == null)
                     continue;
+
+                assert entries[i] instanceof NodeData;
+
+                NodeData entry = (NodeData) entries[i];
+                long topVer = i + data.lowTopVer;
 
                 TcpDiscoveryNode node = new TcpDiscoveryNode(
                         entry.id,
@@ -102,13 +134,13 @@ public class CompactedTopologyHistory implements Serializable {
                         entry.hostNames,
                         entry.discPort,
                         new DiscoveryMetricsProvider() {
-                            @Override
-                            public ClusterMetrics metrics() {
+                            /** {@inheritDoc} */
+                            @Override public ClusterMetrics metrics() {
                                 return entry.metrics;
                             }
 
-                            @Override
-                            public Map<Integer, CacheMetrics> cacheMetrics() {
+                            /** {@inheritDoc} */
+                            @Override public Map<Integer, CacheMetrics> cacheMetrics() {
                                 return null;
                             }
                         },
@@ -116,11 +148,14 @@ public class CompactedTopologyHistory implements Serializable {
                         consistentId
                 );
 
-                for (int i = 0; entry.attrKeys != null && i < entry.attrKeys.length; i++) {
-                    String attrKey = (String) entry.attrKeys[i];
-                    Object attrVal = entry.attrVals[i];
+                for (int j = 0; entry.attrKeys != null && j < entry.attrKeys.length; j++) {
+                    String attrKey = (String) entry.attrKeys[j];
+                    Object attrVal = entry.attrVals[j];
 
-                    attrs.put(attrKey, attrVal);
+                    if (attrVal == null)
+                        attrs.remove(attrKey);
+                    else
+                        attrs.put(attrKey, attrVal);
                 }
 
                 node.setAttributes(attrs);
@@ -132,80 +167,136 @@ public class CompactedTopologyHistory implements Serializable {
         return topHist;
     }
 
-    private static class Data implements Serializable {
-        /**
-         *
-         */
+    @Override public void writeExternal(ObjectOutput out) throws IOException {
+        U.writeMap(out, historyByNode);
+    }
+
+    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        historyByNode = U.readMap(in);
+    }
+
+    private static class HistoryData implements Externalizable {
+        /** */
         private static final long serialVersionUID = 1L;
 
-        private final long lowTopVer;
+        /** Oldest topology version. */
+        private long lowTopVer;
 
-        private final DataEntry[] entries;
+        /** DataEntries. */
+        private Object[] entries;
 
-        public Data(long lowTopVer, long highTopVer) {
+        /** Ctor required by {@link Externalizable}. */
+        public HistoryData() {}
+
+        /** Ctor. */
+        public HistoryData(long lowTopVer, long highTopVer) {
             this.lowTopVer = lowTopVer;
-            entries = new DataEntry[(int) (highTopVer - lowTopVer + 1)];
+            entries = new NodeData[(int) (highTopVer - lowTopVer + 1)];
         }
 
+        /**
+         * Add new entry to storage.
+         * @param topVer Topology version.
+         * @param node Ignite node.
+         * @param prevAttrs Previous topology version attributes.
+         */
         public void add(long topVer, TcpDiscoveryNode node, @Nullable Map<String, Object> prevAttrs) {
             Map<String, Object> attrs = node.getAttributes();
 
             List<String> deltaKeys = new ArrayList<>();
             List<Object> deltaVals = new ArrayList<>();
 
+            //Store new keys and updated values
             for (Map.Entry<String, Object> e : attrs.entrySet()) {
                 String key = e.getKey();
                 Object val = e.getValue();
 
-                boolean hasKey = prevAttrs != null && prevAttrs.containsKey(key);
+                boolean prevHasKey = prevAttrs != null && prevAttrs.containsKey(key);
 
-                if (!hasKey || Objects.equals(prevAttrs.get(key), val)) {
+                if (!prevHasKey || !Objects.equals(prevAttrs.get(key), val)) {
                     deltaKeys.add(key);
                     deltaVals.add(val);
                 }
             }
 
-            DataEntry dataEntry = deltaKeys.isEmpty()
-                    ? new DataEntry(node)
-                    : new DataEntry(node, deltaKeys.toArray(new String[0]), deltaVals.toArray());
+            if (prevAttrs != null) {
+                List<String> deletedKeys = prevAttrs.keySet().stream()
+                        .filter(k -> !attrs.containsKey(k))
+                        .collect(Collectors.toList());
 
-            entries[(int) (topVer - lowTopVer)] = dataEntry;
+                //store delete keys
+                for (String deletedKey : deletedKeys) {
+                    deltaKeys.add(deletedKey);
+                    deltaVals.add(null);
+                }
+            }
+
+            NodeData nodeData = deltaKeys.isEmpty()
+                    ? new NodeData(node)
+                    : new NodeData(node, deltaKeys.toArray(new String[0]), deltaVals.toArray());
+
+            entries[(int) (topVer - lowTopVer)] = nodeData;
+        }
+
+        @Override public void writeExternal(ObjectOutput out) throws IOException {
+            out.writeLong(lowTopVer);
+            U.writeArray(out, entries);
+        }
+
+        @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+            lowTopVer = in.readLong();
+            entries = U.readArray(in);
         }
     }
 
-    private static class DataEntry implements Externalizable {
-        /**
-         *
-         */
+    /** Represents compacted node data. */
+    private static class NodeData implements Externalizable {
+        /** */
         private static final long serialVersionUID = 1L;
 
-        UUID id;
+        /** Node ID. */
+        private UUID id;
 
-        Object[] attrKeys;
+        /** Node compacted attribute keys. */
+        private Object[] attrKeys;
 
-        Object[] attrVals;
+        /** Node compacted attribute vals. */
+        private Object[] attrVals;
 
-        Collection<String> addrs;
+        /** Node addresses. */
+        private Collection<String> addrs;
 
-        Collection<String> hostNames;
+        /** Node hostname. */
+        private Collection<String> hostNames;
 
-        int discPort;
+        /** Node discovery port. */
+        private int discPort;
 
-        ClusterMetrics metrics;
+        /** Node metrics. */
+        private ClusterMetrics metrics;
 
-        long order;
+        /** Node order. */
+        private long order;
 
-        long intOrder;
+        /** Node internal order. */
+        private long intOrder;
 
-        IgniteProductVersion ver;
+        /** Node product version. */
+        private IgniteProductVersion ver;
 
-        UUID clientRouterNodeId;
+        /** Client router node ID. */
+        private UUID clientRouterNodeId;
 
-        public DataEntry(TcpDiscoveryNode node) {
+        /** Ctor required by {@link Externalizable}. */
+        public NodeData() {}
+
+        /** Ctor. */
+        public NodeData(TcpDiscoveryNode node) {
             this(node, null, null);
         }
 
-        public DataEntry(TcpDiscoveryNode node, String[] attrKeys, Object[] attrVals) {
+        /** Ctor. */
+        public NodeData(TcpDiscoveryNode node, String[] attrKeys, Object[] attrVals) {
             this.id = node.id();
             this.attrKeys = attrKeys;
             this.attrVals = attrVals;
@@ -219,11 +310,8 @@ public class CompactedTopologyHistory implements Serializable {
             this.clientRouterNodeId = node.clientRouterNodeId();
         }
 
-        public DataEntry() {
-        }
-
-        @Override
-        public void writeExternal(ObjectOutput out) throws IOException {
+        /** {@inheritDoc} */
+        @Override public void writeExternal(ObjectOutput out) throws IOException {
             U.writeUuid(out, id);
             U.writeArray(out, attrKeys);
             U.writeArray(out, attrVals);
@@ -246,8 +334,8 @@ public class CompactedTopologyHistory implements Serializable {
             U.writeUuid(out, clientRouterNodeId);
         }
 
-        @Override
-        public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        /** {@inheritDoc} */
+        @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
             id = U.readUuid(in);
 
             attrKeys = U.readArray(in);
