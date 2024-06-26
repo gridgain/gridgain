@@ -263,7 +263,9 @@ public enum IgniteFeatures {
     TASK_EVT_ATTRIBUTE_SUPPORT(69),
 
     /** Allows to node check connections with special heartbeat message to detect network issues rather quickly. */
-    TCP_COMMUNICATION_HEARTBEATS(70);
+    TCP_COMMUNICATION_HEARTBEATS(70),
+
+    TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY(71);
 
     /**
      * Unique feature identifier.

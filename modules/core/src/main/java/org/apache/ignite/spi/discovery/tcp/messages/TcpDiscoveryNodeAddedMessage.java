@@ -16,11 +16,13 @@
 
 package org.apache.ignite.spi.discovery.tcp.messages;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
@@ -44,7 +46,7 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
     /** */
     private static final long serialVersionUID = 0L;
 
-    private static final boolean COMPACTED_TOPOLOGY_HISTORY = getBoolean(IGNITE_TOPOLOGY_HISTORY_COMPACT, true);
+    private static final boolean COMPACTED_TOPOLOGY_HISTORY = getBoolean(IGNITE_TOPOLOGY_HISTORY_COMPACT, false);
 
     /** Added node. */
     private final TcpDiscoveryNode node;
@@ -222,7 +224,7 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
      * @param topHist Map with topology snapshots history.
      */
     public void topologyHistory(@Nullable Map<Long, Collection<ClusterNode>> topHist) {
-        if (topHist != null && COMPACTED_TOPOLOGY_HISTORY)
+        if (topHist != null && useCompactedTopologyHistory())
             this.compactedTopHist = new CompactedTopologyHistory(topHist);
         else
             this.topHist = topHist;
@@ -256,6 +258,12 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
      */
     public long gridStartTime() {
         return gridStartTime;
+    }
+
+    public boolean useCompactedTopologyHistory() {
+        Iterable<ClusterNode> nodes = new ArrayList<>(top);
+
+        return COMPACTED_TOPOLOGY_HISTORY && IgniteFeatures.allNodesSupports(null, nodes, IgniteFeatures.TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY);
     }
 
     /** {@inheritDoc} */
