@@ -215,8 +215,13 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
      */
     public Map<Long, Collection<ClusterNode>> topologyHistory() {
         if (topHist == null && compactedTopHist != null) {
-            return compactedTopHist.restore();
+            Map<Long, Collection<ClusterNode>> restored = compactedTopHist.restore();
+
+            compactedTopHist = null;
+
+            topHist = restored;
         }
+
         return topHist;
     }
 

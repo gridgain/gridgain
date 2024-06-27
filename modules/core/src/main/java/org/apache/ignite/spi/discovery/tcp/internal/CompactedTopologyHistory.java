@@ -145,7 +145,8 @@ public class CompactedTopologyHistory implements Externalizable {
                             }
                         },
                         entry.ver,
-                        consistentId
+                        consistentId,
+                        false
                 );
 
                 for (int j = 0; entry.attrKeys != null && j < entry.attrKeys.length; j++) {

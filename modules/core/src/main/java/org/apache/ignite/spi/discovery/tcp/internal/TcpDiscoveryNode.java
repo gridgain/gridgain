@@ -174,6 +174,7 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
      * @param metricsProvider Metrics provider.
      * @param ver Version.
      * @param consistentId Node consistent ID.
+     * @param resolveSockAddrs If {@code true} resolves actual socket addresses.
      */
     public TcpDiscoveryNode(UUID id,
         Collection<String> addrs,
@@ -181,7 +182,8 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
         int discPort,
         DiscoveryMetricsProvider metricsProvider,
         IgniteProductVersion ver,
-        Serializable consistentId)
+        Serializable consistentId,
+        boolean resolveSockAddrs)
     {
         assert id != null;
         assert metricsProvider != null;
@@ -203,7 +205,31 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
 
         metrics = metricsProvider.metrics();
         cacheMetrics = metricsProvider.cacheMetrics();
-        sockAddrs = U.toSocketAddresses(this, discPort);
+
+        if (resolveSockAddrs)
+            sockAddrs = U.toSocketAddresses(this, discPort);
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param id Node Id.
+     * @param addrs Addresses.
+     * @param hostNames Host names.
+     * @param discPort Port.
+     * @param metricsProvider Metrics provider.
+     * @param ver Version.
+     * @param consistentId Node consistent ID.
+     */
+    public TcpDiscoveryNode(UUID id,
+                            Collection<String> addrs,
+                            Collection<String> hostNames,
+                            int discPort,
+                            DiscoveryMetricsProvider metricsProvider,
+                            IgniteProductVersion ver,
+                            Serializable consistentId)
+    {
+        this(id, addrs, hostNames, discPort, metricsProvider, ver, consistentId, true);
     }
 
     /**
