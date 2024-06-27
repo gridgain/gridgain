@@ -52,6 +52,7 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.ContinuousQuery;
+import org.apache.ignite.cache.query.ContinuousQueryWithTransformer;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.client.Config;
@@ -622,8 +623,23 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
                 for (int i = 0; i < 100; i++)
                     cache.put(i, i);
 
-                checkContinuousQueryView(originNode, origQrys, true);
+                checkContinuousQueryView(originNode, origQrys, false);
                 checkContinuousQueryView(originNode, remoteQrys, false);
+            }
+
+            ContinuousQueryWithTransformer<Integer, Integer, Integer> cqTrans = new ContinuousQueryWithTransformer<>();
+            cqTrans.setInitialQuery(new ScanQuery<>())
+                    .setPageSize(100)
+                    .setTimeInterval(1000)
+                    .setLocalListener(evts -> { /* No-po */})
+                    .setRemoteTransformerFactory(() -> arg -> 0);
+
+            try (QueryCursor<Cache.Entry<Integer, Integer>> qry = cache.query(cqTrans)) {
+                for (int i = 0; i < 100; i++)
+                    cache.put(i, i);
+
+                checkContinuousQueryView(originNode, origQrys, true);
+                checkContinuousQueryView(originNode, remoteQrys, true);
             }
 
             assertEquals(0, origQrys.size());
@@ -632,7 +648,7 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void checkContinuousQueryView(IgniteEx g, SystemView<ContinuousQueryView> qrys, boolean loc) {
+    private void checkContinuousQueryView(IgniteEx g, SystemView<ContinuousQueryView> qrys, boolean withTransformer) {
         assertEquals(1, qrys.size());
 
         for (ContinuousQueryView cq : qrys) {
@@ -641,14 +657,18 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
             assertEquals(1000, cq.interval());
             assertEquals(g.localNode().id(), cq.nodeId());
 
-            if (loc)
+            if (!withTransformer) {
                 assertTrue(cq.localListener().startsWith(getClass().getName()));
-            else
+                assertTrue(cq.remoteFilter().startsWith(getClass().getName()));
+                assertNull(cq.localTransformedListener());
+                assertNull(cq.remoteTransformer());
+            }
+            else {
                 assertNull(cq.localListener());
-
-            assertTrue(cq.remoteFilter().startsWith(getClass().getName()));
-            assertNull(cq.localTransformedListener());
-            assertNull(cq.remoteTransformer());
+                assertNull(cq.remoteFilter());
+                assertTrue(cq.localTransformedListener().startsWith(getClass().getName()));
+                assertTrue(cq.remoteTransformer().startsWith(getClass().getName()));
+            }
         }
     }
 
