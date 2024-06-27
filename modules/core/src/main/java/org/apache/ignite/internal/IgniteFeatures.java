@@ -265,6 +265,7 @@ public enum IgniteFeatures {
     /** Allows to node check connections with special heartbeat message to detect network issues rather quickly. */
     TCP_COMMUNICATION_HEARTBEATS(70),
 
+    /** Enables compacted topology history. */
     TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY(71);
 
     /**
