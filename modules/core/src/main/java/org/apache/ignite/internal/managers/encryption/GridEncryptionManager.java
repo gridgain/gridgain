@@ -327,7 +327,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         performMKChangeProc = new DistributedProcess<>(ctx, MASTER_KEY_CHANGE_FINISH, this::performMasterKeyChange,
             this::finishPerformMasterKeyChange);
 
-        grpKeys = new CacheGroupEncryptionKeys(getSpi());
+        grpKeys = new CacheGroupEncryptionKeys(getSpi(), log);
         pageScanner = new CacheGroupPageScanner(ctx);
         grpKeyChangeProc = new GroupKeyChangeProcess(ctx, grpKeys);
     }
@@ -867,8 +867,8 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
 
                 metaStorage.remove(ENCRYPTION_KEYS_PREFIX + grpId);
 
-                if (log.isDebugEnabled())
-                    log.debug("Key(s) removed. [grp=" + grpId + "]");
+                if (log.isInfoEnabled())
+                    log.info("Encryption key(s) removed. [grp=" + grpId + "]");
             }
             catch (IgniteCheckedException e) {
                 U.error(log, "Failed to clear meta storage", e);
@@ -998,7 +998,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
 
                 if (masterKeyName != null) {
                     if (log.isInfoEnabled())
-                        log.info("Master key name loaded from metastrore [masterKeyName=" + masterKeyName + ']');
+                        log.info("Master key name loaded from metastore [masterKeyName=" + masterKeyName + ']');
 
                     getSpi().setMasterKeyName(masterKeyName);
                 }
