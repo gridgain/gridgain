@@ -18,6 +18,7 @@ package org.apache.ignite.spi.discovery.tcp.messages;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.cluster.ClusterNode;
@@ -265,7 +266,8 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
      * @return {@code True} if node should use message with compacted topology history.
      */
     private boolean useCompactedTopologyHistory() {
-        Iterable<ClusterNode> nodes = new ArrayList<>(top);
+        List<ClusterNode> nodes = new ArrayList<>(top);
+        nodes.add(node);
 
         return COMPACTED_TOPOLOGY_HISTORY && allNodesSupports(null, nodes, TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY);
     }
