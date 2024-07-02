@@ -71,11 +71,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     public static final String TOPOLOGY_CHANGE_MSG = "Topology has changed. Partition reconciliation task was stopped.";
 
     /** Start execution message. */
-    private static final String START_EXECUTION_MSG = "Partition reconciliation has started [sesionId=%s, repair=%s, repairAlgorithm=%s, " +
+    private static final String START_EXECUTION_MSG = "Partition reconciliation has started [sesId=%s, repair=%s, repairAlgorithm=%s, " +
         "fastCheck=%s, batchSize=%s, recheckAttempts=%s, parallelismLevel=%s, caches=%s]";
 
     /** Stop execution message. */
-    private static final String STOP_EXECUTION_MSG = "Partition reconciliation has finished locally [sessionId=%s, conflicts=%s, " +
+    private static final String STOP_EXECUTION_MSG = "Partition reconciliation has finished locally [sesId=%s, conflicts=%s, " +
         "repaired=%s, totalTime=%s(sec)]";
 
     /** Session progress message. */

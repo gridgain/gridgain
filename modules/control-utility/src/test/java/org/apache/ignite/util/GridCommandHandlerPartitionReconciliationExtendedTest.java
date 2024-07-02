@@ -133,17 +133,21 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     @Test
     @WithSystemProperty(key = "RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL", value = "0")
     public void testProgressLogPrinted() throws Exception {
+        int nodeCnt = 3;
+
         LogListener lsnr1 = LogListener.matches(s -> s.startsWith("Partition reconciliation status [sesId=")).atLeast(1).build();
-        LogListener lsnr2 = LogListener.matches(s -> s.startsWith("Partition reconciliation has started [sesionId")).atLeast(1).build();
-        LogListener lsnr3 = LogListener.matches(s -> s.startsWith("Partition reconciliation has finished locally [sessionId="))
-            .atLeast(1)
+        LogListener lsnr2 = LogListener.matches(s -> s.startsWith("Partition reconciliation has started [sesId="))
+            .times(nodeCnt)
+            .build();
+        LogListener lsnr3 = LogListener.matches(s -> s.startsWith("Partition reconciliation has finished locally [sesId="))
+            .times(nodeCnt)
             .build();
 
         log.registerListener(lsnr1);
         log.registerListener(lsnr2);
         log.registerListener(lsnr3);
 
-        startGrids(3);
+        startGrids(nodeCnt);
 
         IgniteEx ignite = grid(0);
         ignite.cluster().active(true);
