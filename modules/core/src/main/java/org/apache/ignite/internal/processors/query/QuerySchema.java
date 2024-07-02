@@ -278,7 +278,7 @@ public class QuerySchema implements Serializable {
                 QueryEntity target = ((List<QueryEntity>)entities).get(targetIdx);
 
                 for (QueryField field : op0.columns()) {
-                    target.getFields().put(field.name(), field.typeName());
+                    target.addQueryField(field.name(), field.typeName(), field.alias());
 
                     if (field.precision() != QueryField.UNDEFINED_PRECISION) {
                         target.getFieldsPrecision().put(field.name(), field.precision());
@@ -333,7 +333,7 @@ public class QuerySchema implements Serializable {
                 QueryEntity entity = ((List<QueryEntity>)entities).get(targetIdx);
 
                 for (String field : op0.columns()) {
-                    boolean rmv = QueryUtils.removeField(entity, field);
+                    boolean rmv = QueryUtils.removeFieldAndAlias(entity, field);
 
                     assert rmv || op0.ifExists() : "Invalid operation state [removed=" + rmv
                         + ", ifExists=" + op0.ifExists() + ']';
