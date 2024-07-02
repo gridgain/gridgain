@@ -21,6 +21,10 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.Marshaller;
 import org.gridgain.internal.h2.api.JavaObjectSerializer;
 import org.jetbrains.annotations.NotNull;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.binary.BinaryObject;  
+import java.util.Arrays; 
+
 
 /**
  * Ignite java object serializer implementation for H2.
@@ -37,18 +41,37 @@ class H2JavaObjectSerializer implements JavaObjectSerializer {
      *
      * @param ctx Kernal context.
      */
+
+    private final IgniteLogger log;
+
     H2JavaObjectSerializer(@NotNull GridKernalContext ctx) {
         marshaller = ctx.config().getMarshaller();
         clsLdr = U.resolveClassLoader(ctx.config());
+        log = ctx.log(H2JavaObjectSerializer.class);
     }
 
     /** {@inheritDoc} */
     @Override public byte[] serialize(Object obj) throws Exception {
-        return U.marshal(marshaller, obj);
+        try {
+            return U.marshal(marshaller, obj);
+        } catch (Exception e) {
+            String errorMsg = obj instanceof BinaryObject ?
+                "Failed to serialize BinaryObject with typeId: " + ((BinaryObject) obj).typeId() :
+                "Failed to Serialize object: " + obj.getClass().getName();
+            U.error(log, errorMsg, e);
+            throw new Exception(errorMsg, e);
+        }
     }
 
     /** {@inheritDoc} */
     @Override public Object deserialize(byte[] bytes) throws Exception {
-        return U.unmarshal(marshaller, bytes, clsLdr);
+        try {
+            return U.unmarshal(marshaller, bytes, clsLdr);
+        } catch (Exception e) {
+            String errorMsg = "Failed to deserialize data: " + Arrays.toString(bytes);
+            U.error(log, errorMsg, e);
+            throw new Exception(errorMsg, e);
+        }
     }
 }
+
