@@ -56,7 +56,7 @@ import org.apache.ignite.internal.processors.diagnostic.ReconciliationExecutionC
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.util.Collections.EMPTY_SET;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.checkConflicts;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
 
@@ -258,7 +258,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     continue;
                 }
 
-                PipelineWorkload workload = pollTask(workProgressPrintInterval / 5, MILLISECONDS);
+                PipelineWorkload workload = pollTask(workProgressPrintIntervalSec / 5, SECONDS);
                 if (workload == null)
                     continue;
 
@@ -319,7 +319,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
         long lastUpdate = lastWorkProgressUpdateTime.get();
 
-        if (currTimeMillis < lastUpdate + workProgressPrintInterval || !log.isInfoEnabled())
+        if (currTimeMillis < lastUpdate + SECONDS.toMillis(workProgressPrintIntervalSec) || !log.isInfoEnabled())
             return;
 
         if (!lastWorkProgressUpdateTime.compareAndSet(lastUpdate, currTimeMillis))

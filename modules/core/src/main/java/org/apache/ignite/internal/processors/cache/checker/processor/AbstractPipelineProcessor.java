@@ -39,6 +39,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.BEFORE_PROCESSING;
 import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.FINISHED;
@@ -51,7 +52,7 @@ import static org.apache.ignite.internal.processors.cache.checker.processor.Reco
  */
 public class AbstractPipelineProcessor {
     /** Work progress print interval. The default values is 1 min. */
-    protected final long workProgressPrintInterval = getLong("WORK_PROGRESS_PRINT_INTERVAL", 1000 * 60);
+    protected final long workProgressPrintIntervalSec = getLong("RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL_SEC", 60);
 
     /** Session identifier that allows identifying particular data flow and workload. */
     protected final long sesId;
@@ -218,7 +219,7 @@ public class AbstractPipelineProcessor {
         boolean acquired = false;
 
         while (!acquired) {
-            acquired = liveListeners.tryAcquire(workProgressPrintInterval / 5, MILLISECONDS);
+            acquired = liveListeners.tryAcquire(workProgressPrintIntervalSec / 5, SECONDS);
 
             if (!acquired)
                 printStatistics();

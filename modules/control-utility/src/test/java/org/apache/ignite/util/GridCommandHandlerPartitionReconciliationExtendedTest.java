@@ -47,7 +47,6 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 import static java.util.stream.Collectors.toList;
@@ -131,7 +130,6 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
      * Checks that the start message exist.
      */
     @Test
-    @WithSystemProperty(key = "RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL", value = "0")
     public void testProgressLogPrinted() throws Exception {
         int nodeCnt = 3;
 
