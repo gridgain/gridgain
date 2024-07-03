@@ -16,7 +16,9 @@
 
 package org.apache.ignite.internal.commandline;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.UUID;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.apache.ignite.internal.client.GridClient;
@@ -28,14 +30,18 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.checkpoint.VisorCheckpointTask;
 import org.apache.ignite.internal.visor.checkpoint.VisorCheckpointTaskResult;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.commandline.Command.usage;
 import static org.apache.ignite.internal.commandline.CommandList.CHECKPOINT;
 
 /**
- * Command to run checkpoint on cluster
+ * Command to run checkpoint on the cluster.
  */
 public class CheckpointCommand extends AbstractCommand<Void> {
+    /** */
+    private static final String NODE_ID_ARG_NAME = "--node-id";
+
     /** {@inheritDoc} */
     @Override public void printUsage(Logger log) {
         usage(log, "Start checkpointing process:", CHECKPOINT);
@@ -46,13 +52,21 @@ public class CheckpointCommand extends AbstractCommand<Void> {
         return CHECKPOINT.toCommandName();
     }
 
+    /** ID of a node to run checkpoint at. If null, checkpoint is run on all nodes. */
+    private @Nullable UUID nodeId;
+
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
             GridClientCompute compute = client.compute();
 
             // Try to find connectable server nodes
-            Collection<GridClientNode> nodes = compute.nodes((n) -> n.connectable() && !n.isClient());
+            Collection<GridClientNode> nodes;
+
+            if (nodeId == null)
+                nodes = compute.nodes((n) -> n.connectable() && !n.isClient());
+            else
+                nodes = Arrays.asList(compute.node(nodeId));
 
             if (F.isEmpty(nodes))
                 throw new GridClientDisconnectedException("Connectable nodes not found", null);
@@ -62,10 +76,16 @@ public class CheckpointCommand extends AbstractCommand<Void> {
                 new VisorTaskArgument<>(nodes.stream().map(GridClientNode::nodeId).collect(Collectors.toList()), arg(), false)
             );
 
-            if (res.isSuccess())
-                log.info("Checkpointing completed successfully on " + res.numberOfSuccessNodes() + " nodes.");
-            else
-                log.info("Checkpointing completed with errors. Number of failed nodes: " + res.numberOfFailedNodes() + ".");
+            if (res.isSuccess()) {
+                String nodeMsgPart = nodes.size() == 1 ? "1 node." : res.numberOfSuccessNodes() + " nodes.";
+
+                log.info("Checkpointing completed successfully on " + nodeMsgPart);
+            }
+            else {
+                String nodeMsgPart = nodes.size() == 1 ? "1 node." : res.numberOfFailedNodes() + " nodes.";
+
+                log.info("Checkpointing completed with errors on " + nodeMsgPart);
+            }
 
         }
         catch (Throwable e) {
@@ -80,5 +100,17 @@ public class CheckpointCommand extends AbstractCommand<Void> {
     /** {@inheritDoc} */
     @Override public Void arg() {
         return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void parseArguments(CommandArgIterator argIter) {
+        nodeId = null;
+
+        while (argIter.hasNextSubArg()) {
+            String nextArg = argIter.nextArg("Unexpected error on parsing checkpoint command args");
+
+            if (nextArg.equals(NODE_ID_ARG_NAME))
+                nodeId = UUID.fromString(argIter.nextArg("failed to read node ID"));
+        }
     }
 }
