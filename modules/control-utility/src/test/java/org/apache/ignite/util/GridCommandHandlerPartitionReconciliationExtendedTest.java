@@ -133,7 +133,9 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     public void testProgressLogPrinted() throws Exception {
         int nodeCnt = 3;
 
-        LogListener lsnr1 = LogListener.matches(s -> s.startsWith("Partition reconciliation status [sesId=")).atLeast(1).build();
+        LogListener lsnr1 = LogListener.matches(s -> s.startsWith("Partition reconciliation status [sesId="))
+            .atLeast(nodeCnt)
+            .build();
         LogListener lsnr2 = LogListener.matches(s -> s.startsWith("Partition reconciliation has started [sesId="))
             .times(nodeCnt)
             .build();
