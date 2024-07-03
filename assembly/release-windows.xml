@@ -55,6 +55,10 @@
         <fileSet>
             <directory>modules/platforms/dotnet/bin</directory>
             <outputDirectory>/platforms/dotnet/bin</outputDirectory>
+
+            <excludes>
+                <exclude>Release/net6.0/*</exclude>
+            </excludes>
         </fileSet>
 
         <!-- Move .Net docs. -->
