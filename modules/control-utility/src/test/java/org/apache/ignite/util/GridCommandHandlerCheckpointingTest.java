@@ -49,7 +49,7 @@ public class GridCommandHandlerCheckpointingTest extends GridCommandHandlerClust
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg =  super.getConfiguration(igniteInstanceName);
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.getDataStorageConfiguration()
             .setCheckpointFrequency(Integer.MAX_VALUE);
