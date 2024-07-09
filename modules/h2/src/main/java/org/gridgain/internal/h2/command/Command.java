@@ -213,7 +213,7 @@ public abstract class Command implements CommandInterface {
                         // the transaction may be applied partially
                         // in this case we need to panic:
                         // close the database
-                        database.shutdownImmediately();
+                        //database.shutdownImmediately();
                         throw DbException.convert(e);
                     } catch (Throwable e) {
                         throw DbException.convert(e);
