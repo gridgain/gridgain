@@ -533,11 +533,6 @@ public interface ReconciliationResultCollector {
         }
 
         /** {@inheritDoc} */
-        @Override public long conflictedEntriesSize() {
-            return totalInconsistentKeys.get() + super.conflictedEntriesSize();
-        }
-
-        /** {@inheritDoc} */
         @Override public long conflictedEntriesSize(String cacheName) {
             synchronized (inconsistentKeys) {
                 Long conflicts = inconsistentKeysPerCache.getOrDefault(cacheName, 0L);
