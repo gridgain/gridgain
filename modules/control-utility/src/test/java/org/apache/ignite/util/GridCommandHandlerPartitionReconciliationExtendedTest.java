@@ -28,6 +28,7 @@ import java.util.logging.StreamHandler;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -47,9 +48,11 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 import static java.util.stream.Collectors.toList;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.SESSION_CHANGE_MSG;
@@ -127,19 +130,46 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     }
 
     /**
-     * Checks that the start message exist.
+     * Checks that start, status and finished messages exist.
+     * Also, checks that finished messages contain correct number of conflicted and repaired keys.
      */
     @Test
+    @WithSystemProperty(key = "RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL_SEC", value = "1")
     public void testProgressLogPrinted() throws Exception {
         int nodeCnt = 3;
 
+        startGrids(nodeCnt);
+
+        IgniteEx ignite = grid(0);
+        ignite.cluster().state(ACTIVE);
+
+        testProgressLogPrinted(nodeCnt, true);
+        testProgressLogPrinted(nodeCnt, false);
+    }
+
+    /**
+     * @param nodeCnt Number of nodes.
+     * @param simpleCollector {@code true} if simple collector should be used.
+     * @throws Exception If failed.
+     */
+    private void testProgressLogPrinted(int nodeCnt, boolean simpleCollector) throws Exception {
         LogListener lsnr1 = LogListener.matches(s -> s.startsWith("Partition reconciliation status [sesId="))
             .atLeast(nodeCnt)
             .build();
+
         LogListener lsnr2 = LogListener.matches(s -> s.startsWith("Partition reconciliation has started [sesId="))
             .times(nodeCnt)
             .build();
-        LogListener lsnr3 = LogListener.matches(s -> s.startsWith("Partition reconciliation has finished locally [sesId="))
+
+        List<String> finishMsgs = new ArrayList<>();
+        LogListener lsnr3 = LogListener.matches(s -> {
+                if (s.startsWith("Partition reconciliation has finished locally [sesId=")) {
+                    finishMsgs.add(s);
+
+                    return true;
+                }
+                return false;
+            })
             .times(nodeCnt)
             .build();
 
@@ -147,16 +177,70 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         log.registerListener(lsnr2);
         log.registerListener(lsnr3);
 
-        startGrids(nodeCnt);
+        IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        IgniteEx ignite = grid(0);
-        ignite.cluster().active(true);
+        int keysCnt = 100;
+        int expectedConflicts = 0;
+        for (int i = 0; i < keysCnt; i++) {
+            cache.put(i, i);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--repair", "MAJORITY", "--recheck-attempts", "1"));
+            if (i % 10 == 0) {
+                corruptDataEntry(grid(0).cachex(DEFAULT_CACHE_NAME).context(), i);
+                expectedConflicts++;
+            }
+        }
 
-        assertTrue(lsnr1.check(10_000));
-        assertTrue(lsnr2.check(10_000));
-        assertTrue(lsnr3.check(10_000));
+        try {
+            List<String> args = new ArrayList<>(Arrays.asList(
+                "--cache",
+                "partition_reconciliation",
+                DEFAULT_CACHE_NAME,
+                "--repair",
+                "MAJORITY",
+                "--recheck-attempts",
+                "1",
+                "--batch-size",
+                "10",
+                "--recheck-delay",
+                "1"
+            ));
+
+            if (simpleCollector)
+                args.add("--local-output");
+
+            assertEquals(EXIT_CODE_OK, execute(args.toArray(new String[0])));
+
+            assertTrue(lsnr1.check(10_000));
+            assertTrue(lsnr2.check(10_000));
+            assertTrue(lsnr3.check(10_000));
+
+            Pattern pattern = Pattern.compile(".*finished locally.*conflicts=(\\d+).*repaired=(\\d+).*");
+
+            int totalConflicts = 0;
+            int totalRepaired = 0;
+            for (String msg : finishMsgs) {
+                Matcher matcher = pattern.matcher(msg);
+
+                assertTrue(matcher.matches());
+
+                int conflicts = Integer.parseInt(matcher.group(1));
+                int repaired = Integer.parseInt(matcher.group(2));
+
+                assertTrue(expectedConflicts >= conflicts);
+                assertTrue(expectedConflicts >= repaired);
+
+                totalConflicts += conflicts;
+                totalRepaired += repaired;
+            }
+
+            assertEquals(expectedConflicts, totalConflicts);
+            assertEquals(expectedConflicts, totalRepaired);
+        }
+        finally {
+            log.unregisterListener(lsnr1);
+            log.unregisterListener(lsnr2);
+            log.unregisterListener(lsnr3);
+        }
     }
 
     /**
