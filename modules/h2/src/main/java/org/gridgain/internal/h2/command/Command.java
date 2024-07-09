@@ -225,7 +225,7 @@ public abstract class Command implements CommandInterface {
                 database.exceptionThrown(s, sql);
                 if (s.getErrorCode() == ErrorCode.OUT_OF_MEMORY) {
                     callStop = false;
-                    database.shutdownImmediately();
+                    //database.shutdownImmediately();
                     throw e;
                 }
                 database.checkPowerOff();
