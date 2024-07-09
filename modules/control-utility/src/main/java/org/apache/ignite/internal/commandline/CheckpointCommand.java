@@ -105,7 +105,7 @@ public class CheckpointCommand extends AbstractCommand<Void> {
     @Override public void parseArguments(CommandArgIterator argIter) {
         nodeId = null;
 
-        while (argIter.hasNextArg()) {
+        while (argIter.hasNextSubArg()) {
             String nextArg = argIter.nextArg("Unexpected error on parsing checkpoint command args");
 
             if (nextArg.equals(NODE_ID_ARG_NAME))
