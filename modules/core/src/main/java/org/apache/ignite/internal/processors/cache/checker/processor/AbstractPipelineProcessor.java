@@ -38,6 +38,9 @@ import org.apache.ignite.internal.processors.cache.checker.util.DelayedHolder;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.BEFORE_PROCESSING;
 import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.FINISHED;
 import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.READY;
@@ -48,6 +51,9 @@ import static org.apache.ignite.internal.processors.cache.checker.processor.Reco
  * Abstraction for the control unit of work.
  */
 public class AbstractPipelineProcessor {
+    /** Work progress print interval. The default values is 1 min. */
+    protected final long workProgressPrintIntervalSec = getLong("RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL_SEC", 60);
+
     /** Session identifier that allows identifying particular data flow and workload. */
     protected final long sesId;
 
@@ -179,6 +185,26 @@ public class AbstractPipelineProcessor {
     }
 
     /**
+     * @param timeout how long to wait before giving up, in units of unit
+     * @param unit a TimeUnit determining how to interpret the timeout parameter
+     * @return {@link PipelineWorkload} from queue of tasks or null if the specified waiting time elapses before an element is available.
+     */
+    protected PipelineWorkload pollTask(long timeout, TimeUnit unit) throws InterruptedException {
+        if (!highPriorityQueue.isEmpty()) {
+            DelayedHolder<? extends PipelineWorkload> holder = highPriorityQueue.poll(timeout, unit);
+            if (holder != null)
+                return holder.getTask();
+        }
+        else {
+            DelayedHolder<? extends PipelineWorkload> holder = queue.poll(timeout, unit);
+            if (holder != null)
+                return holder.getTask();
+        }
+
+        return null;
+    }
+
+    /**
      * Executes the given task.
      *
      * @param taskCls Task class.
@@ -190,7 +216,14 @@ public class AbstractPipelineProcessor {
         T workload,
         IgniteInClosure<? super R> lsnr
     ) throws InterruptedException {
-        liveListeners.acquire();
+        boolean acquired = false;
+
+        while (!acquired) {
+            acquired = liveListeners.tryAcquire(workProgressPrintIntervalSec / 5, SECONDS);
+
+            if (!acquired)
+                printStatistics();
+        }
 
         ClusterGroup grp = partOwners(workload.cacheName(), workload.partitionId());
 
@@ -246,7 +279,7 @@ public class AbstractPipelineProcessor {
      * @param task Task object.
      */
     protected void schedule(PipelineWorkload task) {
-        schedule(task, 0, TimeUnit.MILLISECONDS);
+        schedule(task, 0, MILLISECONDS);
     }
 
     /**
@@ -271,6 +304,13 @@ public class AbstractPipelineProcessor {
         evtLsnr.onEvent(SCHEDULED, task);
 
         queue.offer(new DelayedHolder<>(finishTime, task));
+    }
+
+    /**
+     * Print statistics.
+     */
+    protected void printStatistics() {
+        // No-op.
     }
 
     /**

@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.checker.processor;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -26,6 +27,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.cache.expiry.EternalExpiryPolicy;
@@ -33,6 +35,8 @@ import javax.cache.expiry.ExpiryPolicy;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.CachePartitionRequest;
@@ -49,12 +53,15 @@ import org.apache.ignite.internal.processors.cache.checker.processor.workload.Re
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.diagnostic.ReconciliationExecutionContext.ReconciliationStatisticsUpdateListener;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
-import static java.util.Collections.EMPTY_SET;
-import static org.apache.ignite.IgniteSystemProperties.getLong;
+import static java.util.Collections.emptySet;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.checkConflicts;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
 
@@ -68,18 +75,38 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /** Topology change message. */
     public static final String TOPOLOGY_CHANGE_MSG = "Topology has changed. Partition reconciliation task was stopped.";
 
-    /** Work progress message. */
-    public static final String WORK_PROGRESS_MSG = "Partition reconciliation task [sesId=%s, total=%s, remaining=%s]";
-
     /** Start execution message. */
-    public static final String START_EXECUTION_MSG = "Partition reconciliation has started [repair=%s, repairAlg=%s, " +
+    private static final String START_EXECUTION_MSG = "Partition reconciliation has started [sesId=%s, repair=%s, repairAlgorithm=%s, " +
         "fastCheck=%s, batchSize=%s, recheckAttempts=%s, parallelismLevel=%s, caches=%s]";
+
+    /** Stop execution message. */
+    private static final String STOP_EXECUTION_MSG = "Partition reconciliation has finished locally [sesId=%s, conflicts=%s, " +
+        "repaired=%s, totalTime=%s(sec)]";
+
+    /** Session progress message. */
+    private static final String SESSION_PROGRESS_MSG = "Partition reconciliation status [" +
+        "sesId=%s, " +              // session identifier
+        "caches=%s, " +             // total number of caches to be scanned, this number may be less than number of caches requested
+                                    // by the tool due to the fact that some caches might be skipped because of the expiration policy or
+                                    // the node does not own primary partitions of the cache
+        "parts= %s, " +             // total number of primary partitions to be scanned
+        "conflicts=%s, " +          // total number of conflicts found
+        "repaired=%s " +            // total number of fixed conflicts
+        ", caches=[";
+
+    private static final String CACHE_PROGRESS_MSG = "[" +
+        "name=%s, " +                   // cache name
+        "primaryParts=%s, " +           // number of primary partitions owned by this node
+        "processedPrimaryKeys=%s, " +   // number of primary keys scanned [owned by this node]
+        "currPrimaryKeysSize=%s, " +    // total number of primary keys [owned by this node]
+        "processedBackupKeys=%s, " +    // number of backup keys scanned [owned by this node]
+        "currBackupKeysSize=%s, " +     // total number of backup keys [owned by this node]
+        "conflicts=%s, " +              // number of conflicts found
+        "repaired=%s, " +               // number of fixed conflicts
+        "completed=%s]";                // true if primary partitions are fully scanned
 
     /** Error reason. */
     public static final String ERROR_REASON = "Reason [msg=%s, exception=%s]";
-
-    /** Work progress print interval. */
-    private final long workProgressPrintInterval = getLong("WORK_PROGRESS_PRINT_INTERVAL", 1000 * 60 * 3);
 
     /** Recheck delay seconds. */
     private final int recheckDelay;
@@ -113,6 +140,9 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
     /** Results collector. */
     final ReconciliationResultCollector collector;
+
+    /** */
+    private AtomicLong lastWorkProgressUpdateTime = new AtomicLong(0);
 
     /**
      * Creates a new instance of Partition reconciliation processor.
@@ -167,9 +197,12 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      * @return Partition reconciliation result
      */
     public ExecutionResult<ReconciliationAffectedEntries> execute() {
+        long startTime = U.currentTimeMillis();
+
         if (log.isInfoEnabled()) {
             log.info(String.format(
                 START_EXECUTION_MSG,
+                sessionId(),
                 repair,
                 repairAlg,
                 partsToValidate != null,
@@ -183,14 +216,22 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             for (String cache : caches) {
                 IgniteInternalCache<Object, Object> cachex = ignite.cachex(cache);
 
-                ExpiryPolicy expPlc = cachex.context().expiry();
-                if (expPlc != null && !(expPlc instanceof EternalExpiryPolicy)) {
-                    log.warning("The cache '" + cache + "' was skipped because CacheConfiguration#setExpiryPolicyFactory is set.");
+                if (cachex == null) {
+                    if (log.isInfoEnabled())
+                        log.info("The cache '" + cache + "' was skipped because it does not exist.");
 
                     continue;
                 }
 
-                int[] partitions = partitions(cache);
+                ExpiryPolicy expPlc = cachex.context().expiry();
+                if (expPlc != null && !(expPlc instanceof EternalExpiryPolicy)) {
+                    if (log.isInfoEnabled())
+                        log.info("The cache '" + cache + "' was skipped because CacheConfiguration#setExpiryPolicyFactory is set.");
+
+                    continue;
+                }
+
+                int[] partitions = primaryPartitionsToValidate(cache);
 
                 for (int partId : partitions) {
                     Batch workload = new Batch(sesId, UUID.randomUUID(), cache, partId, null);
@@ -201,8 +242,10 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 }
             }
 
+            ctx.diagnostic().reconciliationExecutionContext().listenMetricsUpdates(sessionId(), workloadTracker);
+
             boolean live = false;
-            long lastUpdateTime = 0;
+            lastWorkProgressUpdateTime.set(U.currentTimeMillis());
 
             while (!isEmpty() || (live = hasLiveHandlers())) {
                 if (topologyChanged())
@@ -214,27 +257,17 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 if (isInterrupted())
                     throw new IgniteException(error.get());
 
+                printStatistics();
+
                 if (isEmpty() && live) {
                     U.sleep(100);
 
                     continue;
                 }
 
-                long currTimeMillis = System.currentTimeMillis();
-
-                if (currTimeMillis >= lastUpdateTime + workProgressPrintInterval) {
-                    if (log.isInfoEnabled()) {
-                        log.info(String.format(
-                            WORK_PROGRESS_MSG,
-                            sesId,
-                            workloadTracker.totalChains(),
-                            workloadTracker.remaningChains()));
-                    }
-
-                    lastUpdateTime = currTimeMillis;
-                }
-
-                PipelineWorkload workload = takeTask();
+                PipelineWorkload workload = pollTask(workProgressPrintIntervalSec / 5, SECONDS);
+                if (workload == null)
+                    continue;
 
                 if (workload instanceof Batch)
                     handle((Batch)workload);
@@ -269,6 +302,97 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
             return new ExecutionResult<>(collector.result(), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
         }
+        finally {
+            ctx.diagnostic().reconciliationExecutionContext().removeMetricsUpdateListener(sessionId());
+
+            // force print statistics
+            lastWorkProgressUpdateTime.set(0);
+            printStatistics();
+
+            if (log.isInfoEnabled()) {
+                log.info(String.format(
+                    STOP_EXECUTION_MSG,
+                    sessionId(),
+                    collector.conflictedEntriesSize(),
+                    collector.repairedEntriesSize(),
+                    (U.currentTimeMillis() - startTime) / 1000));
+            }
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void printStatistics() {
+        long currTimeMillis = U.currentTimeMillis();
+
+        long lastUpdate = lastWorkProgressUpdateTime.get();
+
+        if (currTimeMillis < lastUpdate + SECONDS.toMillis(workProgressPrintIntervalSec) || !log.isInfoEnabled())
+            return;
+
+        if (!lastWorkProgressUpdateTime.compareAndSet(lastUpdate, currTimeMillis))
+            return;
+
+        try {
+            StringBuilder sb = new StringBuilder();
+
+            sb.append(String.format(
+                SESSION_PROGRESS_MSG,
+                sesId,
+                workloadTracker.totalCaches(),
+                workloadTracker.totalChains(),
+                collector.conflictedEntriesSize(),
+                collector.repairedEntriesSize()));
+
+            boolean first = true;
+            for (Map.Entry<String, WorkloadTracker.CacheStatisticsDescriptor> e : workloadTracker.cacheStatistics.entrySet()) {
+                WorkloadTracker.CacheStatisticsDescriptor cacheDesc = e.getValue();
+
+                long currPrimaryKeysCnt = 0;
+                long currBackupKeysCnt = 0;
+                int cacheId = CU.cacheId(cacheDesc.cacheName);
+
+                GridCacheContext<?, ?> cctx = ignite.context().cache().context().cacheContext(cacheId);
+                if (cctx != null) {
+                    List<GridDhtLocalPartition> parts = cctx.group().topology().localPartitions();
+
+                    for (GridDhtLocalPartition part : parts) {
+                        if (partsToValidate == null || partsToValidate.getOrDefault(cacheDesc.cacheName, emptySet()).contains(part.id())) {
+                            long partSize = part.dataStore().cacheSize(cacheId);
+
+                            if (part.primary(startTopVer))
+                                currPrimaryKeysCnt += partSize;
+                            else if (part.backup(startTopVer))
+                                currBackupKeysCnt += partSize;
+                        }
+                    }
+                }
+
+                if (!first)
+                    sb.append(", ");
+
+                sb.append(String.format(
+                    CACHE_PROGRESS_MSG,
+                    cacheDesc.cacheName,
+                    cacheDesc.chainsCnt.get(),
+                    cacheDesc.scannedPrimaryKeysCnt.get(),
+                    currPrimaryKeysCnt,
+                    cacheDesc.scannedBackupKeysCnt.get(),
+                    currBackupKeysCnt,
+                    collector.conflictedEntriesSize(cacheDesc.cacheName),
+                    collector.repairedEntriesSize(cacheDesc.cacheName),
+                    cacheDesc.chainsCnt.get() == cacheDesc.processedChainsCnt.get()));
+
+                first = false;
+            }
+
+            sb.append(']');
+
+            if (log.isInfoEnabled())
+                log.info(sb.toString());
+        }
+        catch (Exception e) {
+            log.warning("Failed to calculate partition reconciliation statistics [err=" + e + ']', e);
+        }
     }
 
     /**
@@ -279,12 +403,12 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     }
 
     /**
-     * Returns primary partitions that belong to the local node for the given cache name.
+     * Returns primary partitions that belong to the local node for the given cache name and should be validated.
      *
      * @param name Cache name.
      * @return Primary partitions that belong to the local node.
      */
-    private int[] partitions(String name) {
+    private int[] primaryPartitionsToValidate(String name) {
         int[] cacheParts = ignite.affinity(name).primaryPartitions(ignite.localNode());
 
         if (partsToValidate == null) {
@@ -292,9 +416,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             return cacheParts;
         }
 
-        Set<Integer> parts = partsToValidate.getOrDefault(ctx.cache().cacheDescriptor(name).groupId(), EMPTY_SET);
+        DynamicCacheDescriptor desc = ctx.cache().cacheDescriptor(name);
 
-        return IntStream.of(cacheParts).filter(p -> parts.contains(p)).toArray();
+        Set<Integer> parts = (desc != null) ? partsToValidate.getOrDefault(desc.groupId(), emptySet()) : emptySet();
+
+        return IntStream.of(cacheParts).filter(parts::contains).toArray();
     }
 
     /**
@@ -447,9 +573,12 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /**
      * This class allows tracking workload chains based on its lifecycle.
      */
-    private class WorkloadTracker implements ReconciliationEventListener {
-        /** Map of trackable chains. */
-        private final Map<UUID, ChainDescriptor> chanIds = new ConcurrentHashMap<>();
+    private class WorkloadTracker implements ReconciliationEventListener, ReconciliationStatisticsUpdateListener {
+        /** Map of active trackable chains. */
+        private final Map<UUID, ChainDescriptor> activeChains = new ConcurrentHashMap<>();
+
+        /** Map of cache metrics. */
+        private final Map<String, CacheStatisticsDescriptor> cacheStatistics = new ConcurrentHashMap<>();
 
         /** Total number of tracked chains. */
         private final AtomicInteger trackedChainsCnt = new AtomicInteger();
@@ -479,6 +608,20 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             }
         }
 
+        /** {@inheritDoc} */
+        @Override public void updateScannedPartition(long sesId, String cacheName, int partId, boolean primary, long keysCnt) {
+            assert sesId == sessionId() : "Update partition scan metrics does not correspond to the current session " +
+                "[currSesId=" + sessionId() + ", updateSesId=" + sesId + ']';
+
+            CacheStatisticsDescriptor desc = cacheStatistics.get(cacheName);
+            if (desc != null) {
+                if (primary)
+                    desc.scannedPrimaryKeysCnt.addAndGet(keysCnt);
+                else
+                    desc.scannedBackupKeysCnt.addAndGet(keysCnt);
+            }
+        }
+
         /**
          * @return Total number of tracked chains.
          */
@@ -494,6 +637,13 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         }
 
         /**
+         * @return Total number of caches.
+         */
+        public Integer totalCaches() {
+            return cacheStatistics.size();
+        }
+
+        /**
          * Adds the provided chain to a set of trackable chains.
          *
          * @param batch Chain to track.
@@ -502,9 +652,13 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             assert batch.sessionId() == sesId : "New tracking chain does not correspond to the current session " +
                 "[currSesId=" + sesId + ", chainSesId=" + batch.sessionId() + ", chainId=" + batch.workloadChainId() + ']';
 
-            chanIds.putIfAbsent(
+            activeChains.putIfAbsent(
                 batch.workloadChainId(),
                 new ChainDescriptor(batch.workloadChainId(), batch.cacheName(), batch.partitionId()));
+
+            CacheStatisticsDescriptor stat = cacheStatistics.computeIfAbsent(batch.cacheName(), CacheStatisticsDescriptor::new);
+
+            stat.chainsCnt.incrementAndGet();
 
             trackedChainsCnt.incrementAndGet();
         }
@@ -517,7 +671,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         private void attachWorkload(PipelineWorkload workload) {
             // It should be guaranteed that the workload can be scheduled
             // strictly before its parent workload is finished.
-            Optional.ofNullable(chanIds.get(workload.workloadChainId()))
+            Optional.ofNullable(activeChains.get(workload.workloadChainId()))
                 .map(d -> d.workloadCnt.incrementAndGet());
         }
 
@@ -532,14 +686,18 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         private void detachWorkload(PipelineWorkload workload) {
             // It should be guaranteed that the workload can be finished
             // strictly after all subsequent workloads are scheduled.
-            ChainDescriptor desc = chanIds.get(workload.workloadChainId());
+            ChainDescriptor desc = activeChains.get(workload.workloadChainId());
 
             if (desc != null && desc.workloadCnt.decrementAndGet() == 0) {
                 completedChainsCnt.incrementAndGet();
 
-                chanIds.remove(desc.chainId);
+                activeChains.remove(desc.chainId);
 
                 onChainCompleted(desc.chainId, desc.cacheName, desc.partId);
+
+                CacheStatisticsDescriptor stat = cacheStatistics.get(desc.cacheName);
+
+                stat.processedChainsCnt.incrementAndGet();
             }
         }
 
@@ -594,6 +752,35 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 this.chainId = chainId;
                 this.cacheName = cacheName;
                 this.partId = partId;
+            }
+        }
+
+        /**
+         * Cache statistics descriptor.
+         */
+        private class CacheStatisticsDescriptor {
+            /** Cache name. */
+            final String cacheName;
+
+            /** Number of primary partitions that are onwned by this node. */
+            final AtomicInteger chainsCnt = new AtomicInteger();
+
+            /** This field indicates that cache processing is completed. */
+            final AtomicInteger processedChainsCnt = new AtomicInteger();
+
+            /** Number of scanned primary keys that are onwned by this node. */
+            final AtomicLong scannedPrimaryKeysCnt = new AtomicLong();
+
+            /** Number of scanned backup keys that are onwned by this node. */
+            final AtomicLong scannedBackupKeysCnt = new AtomicLong();
+
+            /**
+             * Creates a new instance of cache descriptor.
+             *
+             * @param cacheName Cache name.
+             */
+            CacheStatisticsDescriptor(String cacheName) {
+                this.cacheName = cacheName;
             }
         }
     }
