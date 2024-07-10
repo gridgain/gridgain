@@ -90,6 +90,7 @@ public final class IgniteNodeAttributes {
     public static final String ATTR_JMX_PORT = ATTR_PREFIX + ".jmx.port";
 
     /** Internal attribute name constant. */
+    @Deprecated
     public static final String ATTR_RESTART_ENABLED = ATTR_PREFIX + ".restart.enabled";
 
     /** Internal attribute name constant. */
