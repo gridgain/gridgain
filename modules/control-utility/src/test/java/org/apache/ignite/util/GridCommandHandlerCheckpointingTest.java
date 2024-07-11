@@ -29,7 +29,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /**
- * Checks --checkpoint command
+ * Checks --checkpoint command.
  */
 public class GridCommandHandlerCheckpointingTest extends GridCommandHandlerClusterByClassAbstractTest {
     /** */
@@ -40,6 +40,7 @@ public class GridCommandHandlerCheckpointingTest extends GridCommandHandlerClust
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
+        // This check is needed because one of the tests checks that checkpoint happenes only on one node.
         assertTrue("Need at least 2 nodes to test checkpoint command", SERVER_NODE_CNT >= 2);
 
         super.beforeTestsStarted();
@@ -91,43 +92,41 @@ public class GridCommandHandlerCheckpointingTest extends GridCommandHandlerClust
         IgniteEx ignite0 = grid(0);
         IgniteEx ignite1 = grid(1);
 
-        final CheckpointHistory checkpointHist0 = getCheckpointHistory(ignite0);
-        final CheckpointHistory checkpointHist1 = getCheckpointHistory(ignite1);
+        CheckpointHistory checkpointHist0 = getCheckpointHistory(ignite0);
+        CheckpointHistory checkpointHist1 = getCheckpointHistory(ignite1);
 
-        final int numOfCheckpointsBefore0 = checkpointHist0.checkpoints().size();
-        final int numOfCheckpointsBefore1 = checkpointHist1.checkpoints().size();
+        int numOfCheckpointsBefore0 = checkpointHist0.checkpoints().size();
+        int numOfCheckpointsBefore1 = checkpointHist1.checkpoints().size();
 
-        final CheckpointEntry lastCheckpointBefore0 = checkpointHist0.lastCheckpoint();
-        final CheckpointEntry lastCheckpointBefore1 = checkpointHist1.lastCheckpoint();
+        CheckpointEntry lastCheckpointBefore0 = checkpointHist0.lastCheckpoint();
+        CheckpointEntry lastCheckpointBefore1 = checkpointHist1.lastCheckpoint();
 
         assertEquals(EXIT_CODE_OK, execute("--checkpoint", "--node-id", crd.localNode().id().toString()));
 
-        final int numOfCheckpointsAfter0 = checkpointHist0.checkpoints().size();
-        final int numOfCheckpointsAfter1 = checkpointHist1.checkpoints().size();
+        int numOfCheckpointsAfter0 = checkpointHist0.checkpoints().size();
+        int numOfCheckpointsAfter1 = checkpointHist1.checkpoints().size();
 
-        final CheckpointEntry lastCheckpointAfter0 = checkpointHist0.lastCheckpoint();
-        final CheckpointEntry lastCheckpointAfter1 = checkpointHist1.lastCheckpoint();
+        CheckpointEntry lastCheckpointAfter0 = checkpointHist0.lastCheckpoint();
+        CheckpointEntry lastCheckpointAfter1 = checkpointHist1.lastCheckpoint();
 
         // check that checkpoint happened only on one node
-        {
-            assertTrue(numOfCheckpointsAfter0 > numOfCheckpointsBefore0);
-            assertNotSame(lastCheckpointBefore0, lastCheckpointAfter0);
+        assertTrue(numOfCheckpointsAfter0 > numOfCheckpointsBefore0);
+        assertNotSame(lastCheckpointBefore0, lastCheckpointAfter0);
 
-            assertTrue(numOfCheckpointsAfter1 == numOfCheckpointsBefore1);
-            assertSame(lastCheckpointBefore1, lastCheckpointAfter1);
-        }
+        assertTrue(numOfCheckpointsAfter1 == numOfCheckpointsBefore1);
+        assertSame(lastCheckpointBefore1, lastCheckpointAfter1);
 
-        final String out = testOut.toString();
+        String out = testOut.toString();
         assertContains(log, out, "Checkpointing completed successfully on " + 1 + " node.");
     }
 
     /**  */
-    @NotNull private CheckpointHistory getCheckpointHistory(IgniteEx ignite0) {
-        final GridCacheDatabaseSharedManager gridDb0 = (GridCacheDatabaseSharedManager)ignite0.context().cache().context().database();
+    private CheckpointHistory getCheckpointHistory(IgniteEx ignite) {
+        GridCacheDatabaseSharedManager gridDb0 = (GridCacheDatabaseSharedManager)ignite.context().cache().context().database();
 
-        final CheckpointHistory checkpointHist0 = gridDb0.checkpointHistory();
+        CheckpointHistory checkpointHist0 = gridDb0.checkpointHistory();
 
-        assert null != checkpointHist0;
+         assertNotNull("Checkpoint history object for " + ignite.name(), checkpointHist0);
 
         return checkpointHist0;
     }
