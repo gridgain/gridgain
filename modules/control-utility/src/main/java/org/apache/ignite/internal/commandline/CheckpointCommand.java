@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.commandline;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -30,12 +30,13 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.checkpoint.VisorCheckpointTask;
 import org.apache.ignite.internal.visor.checkpoint.VisorCheckpointTaskResult;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.commandline.Command.usage;
 import static org.apache.ignite.internal.commandline.CommandList.CHECKPOINT;
 
 /**
- * Command to run checkpoint on cluster
+ * Command to run checkpoint on the cluster.
  */
 public class CheckpointCommand extends AbstractCommand<Void> {
     /** */
@@ -51,8 +52,8 @@ public class CheckpointCommand extends AbstractCommand<Void> {
         return CHECKPOINT.toCommandName();
     }
 
-    /** ID of a node to run checkpoint at */
-    private UUID nodeId;
+    /** ID of a node to run checkpoint at. If null, checkpoint is run on all nodes. */
+    private @Nullable UUID nodeId;
 
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
@@ -64,11 +65,8 @@ public class CheckpointCommand extends AbstractCommand<Void> {
 
             if (nodeId == null)
                 nodes = compute.nodes((n) -> n.connectable() && !n.isClient());
-            else {
-                nodes = new ArrayList<>();
-
-                nodes.add(compute.node(nodeId));
-            }
+            else
+                nodes = Arrays.asList(compute.node(nodeId));
 
             if (F.isEmpty(nodes))
                 throw new GridClientDisconnectedException("Connectable nodes not found", null);
@@ -79,12 +77,15 @@ public class CheckpointCommand extends AbstractCommand<Void> {
             );
 
             if (res.isSuccess()) {
-                String nodeMsgPart = nodes.size() == 1 ? 1 + " node." : res.numberOfSuccessNodes() + " nodes.";
+                String nodeMsgPart = nodes.size() == 1 ? "1 node." : res.numberOfSuccessNodes() + " nodes.";
 
                 log.info("Checkpointing completed successfully on " + nodeMsgPart);
             }
-            else
-                log.info("Checkpointing completed with errors. Number of failed nodes: " + res.numberOfFailedNodes() + ".");
+            else {
+                String nodeMsgPart = nodes.size() == 1 ? "1 node." : res.numberOfFailedNodes() + " nodes.";
+
+                log.info("Checkpointing completed with errors on " + nodeMsgPart);
+            }
 
         }
         catch (Throwable e) {
