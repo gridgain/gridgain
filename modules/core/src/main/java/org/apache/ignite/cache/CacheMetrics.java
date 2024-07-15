@@ -16,13 +16,14 @@
 
 package org.apache.ignite.cache;
 
-import javax.cache.Cache;
-import javax.cache.integration.CacheLoader;
-import javax.cache.integration.CacheWriter;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.mxbean.TransactionsMXBean;
 import org.jetbrains.annotations.NotNull;
+
+import javax.cache.Cache;
+import javax.cache.integration.CacheLoader;
+import javax.cache.integration.CacheWriter;
 
 /**
  * Cache metrics used to obtain statistics on cache itself.
@@ -72,6 +73,44 @@ public interface CacheMetrics {
      * @return The number of puts.
      */
     public long getCachePuts();
+
+    /**
+     * The number of touch requests that were satisfied by the cache.
+     *
+     * @return The number of touch hits.
+     */
+    public long getCacheTouchHits();
+
+    /**
+     * A miss is a touch request that is not satisfied.
+     *
+     * @return The number of touch misses.
+     */
+    public long getCacheTouchMisses();
+
+    /**
+     * The total number of touch requests to the cache. This will be equal to the sum of
+     * the touch hits and misses.
+     *
+     * @return The number of touches.
+     */
+    public long getCacheTouches();
+
+    /**
+     * This is a measure of cache efficiency for touch operations.
+     *
+     * @return The percentage of successful touch hits, as a decimal e.g 75.
+     */
+    public float getCacheTouchHitPercentage();
+
+    /**
+     * Returns the percentage of cache touch accesses that did not find a requested entry
+     * in the cache.
+     *
+     * @return The percentage of touch accesses that failed to find anything.
+     */
+    public float getCacheTouchMissPercentage();
+
 
     /**
      * The total number of cache invocations, caused update.
