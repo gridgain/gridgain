@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnLoc
 import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnPartitionDataView;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.systemview.view.BaselineNodeAttributeView;
 import org.apache.ignite.spi.systemview.view.BinaryMetadataView;
 import org.apache.ignite.spi.systemview.view.CacheGroupView;
 import org.apache.ignite.spi.systemview.view.CachePagesListView;
@@ -48,7 +49,10 @@ import org.apache.ignite.spi.systemview.view.ClientConnectionView;
 import org.apache.ignite.spi.systemview.view.ClusterNodeView;
 import org.apache.ignite.spi.systemview.view.ComputeJobView;
 import org.apache.ignite.spi.systemview.view.ComputeTaskView;
+import org.apache.ignite.spi.systemview.view.ConfigurationView;
 import org.apache.ignite.spi.systemview.view.ContinuousQueryView;
+import org.apache.ignite.spi.systemview.view.PartitionStateView;
+import org.apache.ignite.spi.systemview.view.MetastorageView;
 import org.apache.ignite.spi.systemview.view.PagesListView;
 import org.apache.ignite.spi.systemview.view.ScanQueryView;
 import org.apache.ignite.spi.systemview.view.ServiceView;
@@ -117,7 +121,9 @@ public class SystemViewRowAttributeWalkerGenerator {
         gen.generateAndWrite(StripedExecutorTaskView.class, DFLT_SRC_DIR);
         gen.generateAndWrite(PagesListView.class, DFLT_SRC_DIR);
         gen.generateAndWrite(CachePagesListView.class, DFLT_SRC_DIR);
+        gen.generateAndWrite(PartitionStateView.class, DFLT_SRC_DIR);
         gen.generateAndWrite(BinaryMetadataView.class, DFLT_SRC_DIR);
+        gen.generateAndWrite(MetastorageView.class, DFLT_SRC_DIR);
         gen.generateAndWrite(QueueView.class, DFLT_SRC_DIR);
         gen.generateAndWrite(SetView.class, DFLT_SRC_DIR);
         gen.generateAndWrite(AtomicLongView.class, DFLT_SRC_DIR);
@@ -127,6 +133,8 @@ public class SystemViewRowAttributeWalkerGenerator {
         gen.generateAndWrite(CountDownLatchView.class, DFLT_SRC_DIR);
         gen.generateAndWrite(ReentrantLockView.class, DFLT_SRC_DIR);
         gen.generateAndWrite(SemaphoreView.class, DFLT_SRC_DIR);
+        gen.generateAndWrite(BaselineNodeAttributeView.class, DFLT_SRC_DIR);
+        gen.generateAndWrite(ConfigurationView.class, DFLT_SRC_DIR);
 
         gen.generateAndWrite(SqlSchemaView.class, INDEXING_SRC_DIR);
         gen.generateAndWrite(SqlTableView.class, INDEXING_SRC_DIR);
