@@ -2130,7 +2130,7 @@ public class GridCacheUtils {
     public static int encryptedPageSize(int pageSize, EncryptionSpi encSpi) {
         // If encryption is enabled, a space of one encryption block is reserved to store CRC and encryption key ID.
         // If encryption is disabled, NoopEncryptionSPI with a zero encryption block size is used.
-        assert encSpi.blockSize() >= /* CRC */ 4 + /* Key ID */ 1 || encSpi.blockSize() == 0;
+        assert encSpi.blockSize() >= /* CRC */ 4 + /* Key ID */ 1 + /**  */ 4 || encSpi.blockSize() == 0;
 
         return pageSize
             - (encSpi.encryptedSizeNoPadding(pageSize) - pageSize)

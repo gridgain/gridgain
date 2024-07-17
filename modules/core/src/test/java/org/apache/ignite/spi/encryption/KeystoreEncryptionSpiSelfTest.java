@@ -16,6 +16,7 @@
 
 package org.apache.ignite.spi.encryption;
 
+import com.google.common.base.Strings;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import org.apache.ignite.IgniteException;
@@ -93,20 +94,24 @@ public class KeystoreEncryptionSpiSelfTest {
         assertNotNull(k);
         assertNotNull(k.key());
 
-        byte[] plainText = "Just a test string to encrypt!".getBytes(UTF_8);
-        byte[] cipherText = new byte[spi().encryptedSize(plainText.length)];
+        for (int i = 0; i < encSpi.blockSize(); i++) {
+            byte[] plainText = ("Just a test string to encrypt!" + Strings.repeat("-", i)).getBytes(UTF_8);
+            byte[] cipherText = new byte[encSpi.encryptedSize(plainText.length)];
 
-        encSpi.encrypt(ByteBuffer.wrap(plainText), k, ByteBuffer.wrap(cipherText));
+            ByteBuffer plainTextBuffer = ByteBuffer.wrap(plainText);
+            ByteBuffer cipherTextBuffer = ByteBuffer.wrap(cipherText);
+            encSpi.encrypt(plainTextBuffer, k, cipherTextBuffer);
 
-        assertNotNull(cipherText);
-        assertEquals(encSpi.encryptedSize(plainText.length), cipherText.length);
+            assertEquals(0, plainTextBuffer.remaining());
+            assertEquals(cipherText.length, cipherTextBuffer.position());
 
-        byte[] decryptedText = encSpi.decrypt(cipherText, k);
+            byte[] decryptedText = encSpi.decrypt(cipherText, k);
 
-        assertNotNull(decryptedText);
-        assertEquals(plainText.length, decryptedText.length);
+            assertNotNull(decryptedText);
+            assertEquals(plainText.length, decryptedText.length);
 
-        assertEquals(new String(plainText, UTF_8), new String(decryptedText, UTF_8));
+            assertEquals(new String(plainText, UTF_8), new String(decryptedText, UTF_8));
+        }
     }
 
     /** @throws Exception If failed. */
