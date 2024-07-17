@@ -320,6 +320,7 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
     public void testGetAllView() throws Exception {
         Set<String> expViews = new HashSet<>(Arrays.asList(
             "BASELINE_NODES",
+            "BASELINE_NODE_ATTRIBUTES",
             "CACHES",
             "CACHE_GROUPS",
             "INDEXES",
@@ -329,6 +330,7 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             "SCAN_QUERIES",
             "NODES",
             "NODE_ATTRIBUTES",
+            "CONFIGURATION",
             "NODE_METRICS",
             "SCHEMAS",
             "TABLES",
@@ -345,6 +347,8 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             "STRIPED_THREADPOOL_QUEUE",
             "DATASTREAM_THREADPOOL_QUEUE",
             "CACHE_GROUP_PAGE_LISTS",
+            "PARTITION_STATES",
+            "CACHE_GROUP_PAGE_LISTS",
             "METRICS",
             "STATISTICS_CONFIGURATION",
             "STATISTICS_PARTITION_DATA",
@@ -358,7 +362,8 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             "DS_COUNTDOWNLATCHES",
             "DS_SEMAPHORES",
             "DS_REENTRANTLOCKS",
-            "BINARY_METADATA"
+            "BINARY_METADATA",
+            "DISTRIBUTED_METASTORAGE"
         ));
 
         Set<String> actViews = new HashSet<>();
