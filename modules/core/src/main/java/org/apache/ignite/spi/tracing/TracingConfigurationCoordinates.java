@@ -75,6 +75,18 @@ public class TracingConfigurationCoordinates implements Serializable {
         return lb;
     }
 
+    /**
+     * Since most of the time we can expect nullable labels we can reuse existing coordinates instances.
+     * @param label Label.
+     * @return Coordinates.
+     */
+    public @NotNull TracingConfigurationCoordinates withLabel(@Nullable String label) {
+        if (label == null)
+            return this;
+
+        return new TracingConfigurationCoordinates.Builder(scope).withLabel(lb).build();
+    }
+
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (this == o)

@@ -184,8 +184,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
         // Optimization for zero sampling rate == 0.
         if ((parentSpan == NoopSpan.INSTANCE || parentSpan == null) &&
-            tracingConfiguration.get(new TracingConfigurationCoordinates.Builder(spanType.scope()).build()).
-                samplingRate() == SAMPLING_RATE_NEVER)
+            tracingConfiguration.get(spanType.scope().coordinates()).samplingRate() == SAMPLING_RATE_NEVER)
             return NoopSpan.INSTANCE;
 
         return enrichWithLocalNodeParameters(
@@ -197,15 +196,15 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     }
 
     /** {@inheritDoc} */
-    @Override public Span create(@NotNull SpanType spanType, @Nullable byte[] serializedParentSpan) {
+    @Override public Span create(@NotNull SpanType spanType, byte @Nullable [] serializedParentSpan) {
         // Optimization for noop spi.
         if (noop)
             return NoopSpan.INSTANCE;
 
+        boolean isEmptySpan = serializedParentSpan == null || serializedParentSpan.length == 0;
         // Optimization for zero sampling rate == 0.
-        if ((serializedParentSpan.length == 0 || serializedParentSpan == null) &&
-            tracingConfiguration.get(new TracingConfigurationCoordinates.Builder(spanType.scope()).build()).
-                samplingRate() == SAMPLING_RATE_NEVER)
+        if (isEmptySpan &&
+            tracingConfiguration.get(spanType.scope().coordinates()).samplingRate() == SAMPLING_RATE_NEVER)
             return NoopSpan.INSTANCE;
 
         // 1 byte: special flags;
@@ -221,7 +220,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
         Span span;
 
         try {
-            if (serializedParentSpan == null || serializedParentSpan.length == 0)
+            if (isEmptySpan)
                 return create(spanType, NoopSpan.INSTANCE);
 
             // First byte of the serializedSpan is reserved for special flags - it's not used right now.
@@ -295,7 +294,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
             assert parentSpanType != null;
 
-            // If there's is parent span and parent span supports given scope then...
+            // If there is parent span and parent span supports given scope then...
             if (parentSpanType.scope() == spanType.scope() || includedScopes.contains(spanType.scope())) {
                 // create new span as child span for parent span, using parents span included scopes.
 
@@ -352,9 +351,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
         // Optimization for zero sampling rate == 0.
         if ((parentSpan == NoopSpan.INSTANCE || parentSpan == null) &&
-            tracingConfiguration.get(
-                new TracingConfigurationCoordinates.Builder(spanType.scope()).withLabel(lb).build()).
-                samplingRate() == SAMPLING_RATE_NEVER)
+            tracingConfiguration.get(spanType.scope().coordinates(lb)).samplingRate() == SAMPLING_RATE_NEVER)
             return NoopSpan.INSTANCE;
 
         return enrichWithLocalNodeParameters(
@@ -493,7 +490,8 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
                     // Get tracing configuration.
                     TracingConfigurationParameters tracingConfigurationParameters = tracingConfiguration.get(
-                        new TracingConfigurationCoordinates.Builder(spanTypeToCreate.scope()).withLabel(lb).build());
+                        spanTypeToCreate.scope().coordinates(lb)
+                    );
 
                     return shouldSample(tracingConfigurationParameters.samplingRate()) ?
                         new SpanImpl(
@@ -508,7 +506,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
                     return NoopSpan.INSTANCE;
             }
             else {
-                // If there's is parent span and parent span supports given scope then...
+                // If there is parent span and parent span supports given scope then...
                 if (parentSpan.isChainable(spanTypeToCreate.scope())) {
                     // create new span as child span for parent span, using parents span included scopes.
 
@@ -552,13 +550,13 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     }
 
     /**
-     * @param samlingRate Sampling rate.
+     * @param samplingRate Sampling rate.
      * @return {@code true} if according to given sampling-rate span should be sampled.
      */
-    private boolean shouldSample(double samlingRate) {
-        if (samlingRate == SAMPLING_RATE_NEVER)
+    private boolean shouldSample(double samplingRate) {
+        if (samplingRate == SAMPLING_RATE_NEVER)
             return false;
 
-        return Math.random() <= samlingRate;
+        return Math.random() <= samplingRate;
     }
 }

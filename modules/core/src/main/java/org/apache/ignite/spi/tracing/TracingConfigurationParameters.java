@@ -26,13 +26,19 @@ import org.jetbrains.annotations.NotNull;
  * Set of tracing configuration parameters like sampling rate or included scopes.
  */
 public class TracingConfigurationParameters implements Serializable {
+
+    public static final TracingConfigurationParameters EMPTY = new TracingConfigurationParameters.Builder()
+        .withSamplingRate(0d)
+        .withIncludedScopes(Collections.emptySet())
+        .build();
+
     /** */
     private static final long serialVersionUID = 0L;
 
     /** Min valid sampling rate with special meaning that span won't be created. */
     public static final double SAMPLING_RATE_NEVER = 0d;
 
-    /** Max valid sampling rate with special meaning that span will be always created. */
+    /** Max valid sampling rate with special meaning that span will always be created. */
     public static final double SAMPLING_RATE_ALWAYS = 1d;
 
     /**
@@ -84,7 +90,7 @@ public class TracingConfigurationParameters implements Serializable {
      * If no scopes are specified, empty set will be returned.
      */
     public @NotNull Set<Scope> includedScopes() {
-        return Collections.unmodifiableSet(includedScopes);
+        return includedScopes;
     }
 
     /** {@inheritDoc} */

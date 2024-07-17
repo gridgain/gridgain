@@ -48,7 +48,7 @@ public interface SpanManager {
      * @param serializedParentSpan Parent span as serialized bytes.
      * @return Created span.
      */
-    Span create(@NotNull SpanType spanType, @Nullable byte[] serializedParentSpan);
+    Span create(@NotNull SpanType spanType, byte @Nullable [] serializedParentSpan);
 
     /**
      * Creates Span given name and explicit parent.

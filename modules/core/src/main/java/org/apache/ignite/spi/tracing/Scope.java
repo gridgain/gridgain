@@ -16,6 +16,9 @@
 
 package org.apache.ignite.spi.tracing;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 /**
  * Tracing span scope.
  */
@@ -44,6 +47,9 @@ public enum Scope {
     /** Scope index. */
     private final short idx;
 
+    /** Coordinates without label. */
+    private final TracingConfigurationCoordinates coordinates;
+
     /** Values. */
     private static final Scope[] VALS;
 
@@ -54,6 +60,7 @@ public enum Scope {
      */
     Scope(short idx) {
         this.idx = idx;
+        this.coordinates = new TracingConfigurationCoordinates.Builder(this).build();
     }
 
     /**
@@ -61,6 +68,20 @@ public enum Scope {
      */
     public short idx() {
         return idx;
+    }
+
+    /**
+     * @return Coordinates without label.
+     */
+    @NotNull public TracingConfigurationCoordinates coordinates() {
+        return coordinates;
+    }
+
+    /**
+     * @return Coordinates with optional label.
+     */
+    @NotNull public TracingConfigurationCoordinates coordinates(@Nullable String label) {
+        return coordinates.withLabel(label);
     }
 
     static {
@@ -78,7 +99,7 @@ public enum Scope {
     }
 
     /**
-     * Created Scope from it's index.
+     * Created Scope from its index.
      * @param idx Index.
      * @return Scope.
      */
