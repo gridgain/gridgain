@@ -420,9 +420,11 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".JOBS",
                 sysSchemaName() + ".SQL_QUERIES_HISTORY",
                 sysSchemaName() + ".NODES",
+                sysSchemaName() + ".CONFIGURATION",
                 sysSchemaName() + ".SCHEMAS",
                 sysSchemaName() + ".NODE_METRICS",
                 sysSchemaName() + ".BASELINE_NODES",
+                sysSchemaName() + ".BASELINE_NODE_ATTRIBUTES",
                 sysSchemaName() + ".INDEXES",
                 sysSchemaName() + ".LOCAL_CACHE_GROUPS_IO",
                 sysSchemaName() + ".SQL_QUERIES",
@@ -452,7 +454,9 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".DS_COUNTDOWNLATCHES",
                 sysSchemaName() + ".DS_SEMAPHORES",
                 sysSchemaName() + ".DS_REENTRANTLOCKS",
-                sysSchemaName() + ".BINARY_METADATA"
+                sysSchemaName() + ".BINARY_METADATA",
+                sysSchemaName() + ".DISTRIBUTED_METASTORAGE",
+                sysSchemaName() + ".PARTITION_STATES"
         ));
 
         if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
@@ -658,6 +662,9 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
             expectedCols = new HashSet<>(Arrays.asList(
                 sysSchemaName() + ".BASELINE_NODES.CONSISTENT_ID.null.2147483647",
                 sysSchemaName() + ".BASELINE_NODES.ONLINE.null.1",
+                sysSchemaName() + ".BASELINE_NODE_ATTRIBUTES.NODE_CONSISTENT_ID.null.2147483647",
+                sysSchemaName() + ".BASELINE_NODE_ATTRIBUTES.NAME.null.2147483647",
+                sysSchemaName() + ".BASELINE_NODE_ATTRIBUTES.VALUE.null.2147483647",
                 sysSchemaName() + ".CACHES.CACHE_GROUP_ID.null.10",
                 sysSchemaName() + ".CACHES.CACHE_GROUP_NAME.null.2147483647",
                 sysSchemaName() + ".CACHES.CACHE_ID.null.10",
@@ -808,6 +815,8 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".NODE_ATTRIBUTES.NODE_ID.null.16",
                 sysSchemaName() + ".NODE_ATTRIBUTES.NAME.null.2147483647",
                 sysSchemaName() + ".NODE_ATTRIBUTES.VALUE.null.2147483647",
+                sysSchemaName() + ".CONFIGURATION.NAME.null.2147483647",
+                sysSchemaName() + ".CONFIGURATION.VALUE.null.2147483647",
                 sysSchemaName() + ".NODE_METRICS.NODE_ID.null.16",
                 sysSchemaName() + ".NODE_METRICS.LAST_UPDATE_TIME.null.29.9",
                 sysSchemaName() + ".NODE_METRICS.MAX_ACTIVE_JOBS.null.10",
@@ -1115,7 +1124,14 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".BINARY_METADATA.TYPE_ID.null.10",
                 sysSchemaName() + ".BINARY_METADATA.IS_ENUM.null.1",
                 sysSchemaName() + ".BINARY_METADATA.FIELDS_COUNT.null.10",
-                sysSchemaName() + ".BINARY_METADATA.TYPE_NAME.null.2147483647"
+                sysSchemaName() + ".BINARY_METADATA.TYPE_NAME.null.2147483647",
+                sysSchemaName() + ".DISTRIBUTED_METASTORAGE.NAME.null.2147483647",
+                sysSchemaName() + ".DISTRIBUTED_METASTORAGE.VALUE.null.2147483647",
+                sysSchemaName() + ".PARTITION_STATES.CACHE_GROUP_ID.null.10",
+                sysSchemaName() + ".PARTITION_STATES.PARTITION_ID.null.10",
+                sysSchemaName() + ".PARTITION_STATES.NODE_ID.null.16",
+                sysSchemaName() + ".PARTITION_STATES.STATE.null.2147483647",
+                sysSchemaName() + ".PARTITION_STATES.IS_PRIMARY.null.1"
             ));
 
             if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {

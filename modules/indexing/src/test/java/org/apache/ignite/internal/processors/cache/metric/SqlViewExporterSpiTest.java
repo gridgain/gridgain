@@ -17,12 +17,15 @@ package org.apache.ignite.internal.processors.cache.metric;
 
 import java.lang.reflect.Field;
 import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
@@ -35,12 +38,16 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteJdbcThinDriver;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.affinity.AffinityFunction;
+import org.apache.ignite.cache.affinity.AffinityFunctionContext;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.client.IgniteClient;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -53,10 +60,17 @@ import org.apache.ignite.internal.metric.AbstractExporterSpiTest;
 import org.apache.ignite.internal.metric.SystemViewSelfTest.TestPredicate;
 import org.apache.ignite.internal.metric.SystemViewSelfTest.TestRunnable;
 import org.apache.ignite.internal.metric.SystemViewSelfTest.TestTransformer;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.service.DummyService;
 import org.apache.ignite.internal.util.StripedExecutor;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.services.ServiceConfiguration;
+import org.apache.ignite.spi.systemview.view.MetastorageView;
 import org.apache.ignite.spi.systemview.view.SqlSchemaView;
 import org.apache.ignite.spi.systemview.view.SystemView;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -71,6 +85,8 @@ import static org.apache.ignite.internal.metric.SystemViewSelfTest.TEST_TRANSFOR
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheGroupId;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheId;
 import static org.apache.ignite.internal.processors.cache.index.AbstractSchemaSelfTest.queryProcessor;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.METASTORE_VIEW;
+import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl.DISTRIBUTED_METASTORE_VIEW;
 import static org.apache.ignite.internal.processors.query.QueryUtils.DFLT_SCHEMA;
 import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
 import static org.apache.ignite.internal.processors.query.h2.SchemaManager.SQL_SCHEMA_VIEW;
@@ -396,7 +412,9 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
             "NODES",
             "SCHEMAS",
             "NODE_METRICS",
+            "CONFIGURATION",
             "BASELINE_NODES",
+            "BASELINE_NODE_ATTRIBUTES",
             "INDEXES",
             "LOCAL_CACHE_GROUPS_IO",
             "SQL_QUERIES",
@@ -426,7 +444,10 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
             "DS_SETS",
             "DS_SEMAPHORES",
             "DS_QUEUES",
-            "BINARY_METADATA"
+            "BINARY_METADATA",
+            "METASTORAGE",
+            "DISTRIBUTED_METASTORAGE",
+            "PARTITION_STATES"
         ));
 
         Set<String> actViews = new HashSet<>();
@@ -928,6 +949,131 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
 
     /** */
     @Test
+    public void testPartitionStates() throws Exception {
+        String nodeName0 = getTestIgniteInstanceName(0);
+        String nodeName1 = getTestIgniteInstanceName(1);
+        String nodeName2 = getTestIgniteInstanceName(2);
+
+        IgniteCache<Integer, Integer> cache1 = ignite0.createCache(new CacheConfiguration<Integer, Integer>()
+                .setName("cache1")
+                .setCacheMode(CacheMode.PARTITIONED)
+                .setAffinity(new TestAffinityFunction(new String[][] {{nodeName0, nodeName1}, {nodeName1, nodeName2},
+                        {nodeName2, nodeName0}})));
+
+        IgniteCache<Integer, Integer> cache2 = ignite0.createCache(new CacheConfiguration<Integer, Integer>()
+                .setName("cache2")
+                .setCacheMode(CacheMode.PARTITIONED)
+                .setAffinity(new TestAffinityFunction(new String[][] {{nodeName0, nodeName1, nodeName2}, {nodeName1}})));
+
+        for (int i = 0; i < 100; i++) {
+            cache1.put(i, i);
+            cache2.put(i, i);
+        }
+
+        try (IgniteEx ignite2 = startGrid(nodeName2)) {
+            ignite2.rebalanceEnabled(false);
+
+            ignite0.cluster().setBaselineTopology(ignite0.cluster().topologyVersion());
+
+            String partStateSql = "SELECT STATE FROM SYS.PARTITION_STATES WHERE CACHE_GROUP_ID = ? AND NODE_ID = ? " +
+                    "AND PARTITION_ID = ?";
+
+            UUID nodeId0 = ignite0.cluster().localNode().id();
+            UUID nodeId1 = ignite1.cluster().localNode().id();
+            UUID nodeId2 = ignite2.cluster().localNode().id();
+
+            Integer cacheGrpId1 = ignite0.cachex("cache1").context().groupId();
+            Integer cacheGrpId2 = ignite0.cachex("cache2").context().groupId();
+
+            String owningState = GridDhtPartitionState.OWNING.name();
+            String movingState = GridDhtPartitionState.MOVING.name();
+
+            for (Ignite ignite : Arrays.asList(ignite0, ignite1, ignite2)) {
+                // Check partitions for cache1.
+                assertEquals(owningState, execute(ignite, partStateSql, cacheGrpId1, nodeId0, 0).get(0).get(0));
+                assertEquals(owningState, execute(ignite, partStateSql, cacheGrpId1, nodeId1, 0).get(0).get(0));
+                assertEquals(owningState, execute(ignite, partStateSql, cacheGrpId1, nodeId1, 1).get(0).get(0));
+                assertEquals(movingState, execute(ignite, partStateSql, cacheGrpId1, nodeId2, 1).get(0).get(0));
+                assertEquals(owningState, execute(ignite, partStateSql, cacheGrpId1, nodeId0, 2).get(0).get(0));
+                assertEquals(movingState, execute(ignite, partStateSql, cacheGrpId1, nodeId2, 2).get(0).get(0));
+
+                // Check partitions for cache2.
+                assertEquals(owningState, execute(ignite, partStateSql, cacheGrpId2, nodeId0, 0).get(0).get(0));
+                assertEquals(owningState, execute(ignite, partStateSql, cacheGrpId2, nodeId1, 0).get(0).get(0));
+                assertEquals(movingState, execute(ignite, partStateSql, cacheGrpId2, nodeId2, 0).get(0).get(0));
+                assertEquals(owningState, execute(ignite, partStateSql, cacheGrpId2, nodeId1, 1).get(0).get(0));
+            }
+
+            // Check primary flag.
+            String partPrimarySql = "SELECT IS_PRIMARY FROM SYS.PARTITION_STATES WHERE CACHE_GROUP_ID = ? " +
+                    "AND NODE_ID = ? AND PARTITION_ID = ?";
+
+            for (Ignite ignite : Arrays.asList(ignite0, ignite1, ignite2)) {
+                // Check partitions for cache1.
+                assertEquals(true, execute(ignite, partPrimarySql, cacheGrpId1, nodeId0, 0).get(0).get(0));
+                assertEquals(false, execute(ignite, partPrimarySql, cacheGrpId1, nodeId1, 0).get(0).get(0));
+                assertEquals(true, execute(ignite, partPrimarySql, cacheGrpId1, nodeId1, 1).get(0).get(0));
+                assertEquals(false, execute(ignite, partPrimarySql, cacheGrpId1, nodeId2, 1).get(0).get(0));
+                assertEquals(true, execute(ignite, partPrimarySql, cacheGrpId1, nodeId0, 2).get(0).get(0));
+                assertEquals(false, execute(ignite, partPrimarySql, cacheGrpId1, nodeId2, 2).get(0).get(0));
+
+                // Check partitions for cache2.
+                assertEquals(true, execute(ignite, partPrimarySql, cacheGrpId2, nodeId0, 0).get(0).get(0));
+                assertEquals(false, execute(ignite, partPrimarySql, cacheGrpId2, nodeId1, 0).get(0).get(0));
+                assertEquals(false, execute(ignite, partPrimarySql, cacheGrpId2, nodeId2, 0).get(0).get(0));
+                assertEquals(true, execute(ignite, partPrimarySql, cacheGrpId2, nodeId1, 1).get(0).get(0));
+            }
+
+            // Check joins with cache groups and nodes views.
+            assertEquals(owningState, execute(ignite0, "SELECT p.STATE " +
+                    "FROM SYS.PARTITION_STATES p " +
+                    "JOIN SYS.CACHE_GROUPS g ON p.CACHE_GROUP_ID = g.CACHE_GROUP_ID " +
+                    "JOIN SYS.NODES n ON p.NODE_ID = n.NODE_ID " +
+                    "WHERE g.CACHE_GROUP_NAME = 'cache2' AND n.CONSISTENT_ID = ? AND p.PARTITION_ID = 1", nodeName1)
+                    .get(0).get(0));
+
+            // Check malformed or invalid values for indexed columns.
+            assertEquals(0, execute(ignite0, "SELECT * FROM SYS.PARTITION_STATES WHERE PARTITION_ID = ?",
+                    Integer.MAX_VALUE).size());
+            assertEquals(0, execute(ignite0, "SELECT * FROM SYS.PARTITION_STATES WHERE PARTITION_ID = -1")
+                    .size());
+            assertEquals(0, execute(ignite0, "SELECT * FROM SYS.PARTITION_STATES WHERE NODE_ID = '123'")
+                    .size());
+            assertEquals(0, execute(ignite0, "SELECT * FROM SYS.PARTITION_STATES WHERE NODE_ID = ?",
+                    UUID.randomUUID()).size());
+            assertEquals(0, execute(ignite0, "SELECT * FROM SYS.PARTITION_STATES WHERE CACHE_GROUP_ID = 0")
+                    .size());
+
+            AffinityTopologyVersion topVer = ignite0.context().discovery().topologyVersionEx();
+
+            ignite2.rebalanceEnabled(true);
+
+            // Wait until rebalance complete.
+            assertTrue(GridTestUtils.waitForCondition(() -> ignite0.context().discovery().topologyVersionEx()
+                    .compareTo(topVer) > 0, 5_000L));
+
+            // Check that all partitions are in OWNING state now.
+            String cntByStateSql = "SELECT COUNT(*) FROM SYS.PARTITION_STATES " +
+                    "WHERE CACHE_GROUP_ID IN (?, ?) AND STATE = ?";
+
+            for (Ignite ignite : Arrays.asList(ignite0, ignite1, ignite2)) {
+                assertEquals(10L, execute(ignite, cntByStateSql, cacheGrpId1, cacheGrpId2, owningState).get(0).get(0));
+                assertEquals(0L, execute(ignite, cntByStateSql, cacheGrpId1, cacheGrpId2, movingState).get(0).get(0));
+            }
+
+            // Check that assignment is now changed to ideal.
+            for (Ignite ignite : Arrays.asList(ignite0, ignite1, ignite2)) {
+                assertEquals(false, execute(ignite, partPrimarySql, cacheGrpId1, nodeId0, 2).get(0).get(0));
+                assertEquals(true, execute(ignite, partPrimarySql, cacheGrpId1, nodeId2, 2).get(0).get(0));
+            }
+        }
+        finally {
+            ignite0.cluster().setBaselineTopology(ignite0.cluster().topologyVersion());
+        }
+    }
+
+    /** */
+    @Test
     public void testBinaryMeta() {
         IgniteCache<Integer, TestObjectAllTypes> c1 = ignite0.createCache("test-cache");
         IgniteCache<Integer, TestObjectEnum> c2 = ignite0.createCache("test-enum-cache");
@@ -971,6 +1117,52 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
         }
     }
 
+    /** */
+    @Test
+    public void testMetastorage() throws Exception {
+        IgniteCacheDatabaseSharedManager db = ignite0.context().cache().context().database();
+
+        SystemView<MetastorageView> metaStoreView = ignite0.context().systemView().view(METASTORE_VIEW);
+
+        assertNotNull(metaStoreView);
+
+        String name = "test-key";
+        String val = "test-value";
+
+        db.checkpointReadLock();
+
+        try {
+            db.metaStorage().write(name, val);
+        } finally {
+            db.checkpointReadUnlock();
+        }
+
+        assertEquals(1, execute(ignite0, "SELECT * FROM SYS.METASTORAGE WHERE name = ? AND value = ?",
+            name, val).size());
+    }
+
+    /** */
+    @Test
+    public void testDistributedMetastorage() throws Exception {
+        DistributedMetaStorage dms = ignite0.context().distributedMetastorage();
+
+        SystemView<MetastorageView> distributedMetaStoreView = ignite0.context().systemView().view(DISTRIBUTED_METASTORE_VIEW);
+
+        assertNotNull(distributedMetaStoreView);
+
+        String name = "test-distributed-key";
+        String val = "test-distributed-value";
+
+        dms.write(name, val);
+
+        assertEquals(1, execute(ignite0, "SELECT * FROM SYS.DISTRIBUTED_METASTORAGE WHERE name = ? AND value = ?",
+            name, val).size());
+
+        assertTrue(waitForCondition(() -> execute(ignite1,
+            "SELECT * FROM SYS.DISTRIBUTED_METASTORAGE WHERE name = ? AND value = ?", name, val).size() == 1,
+            getTestTimeout()));
+    }
+
     /**
      * Execute query on given node.
      *
@@ -983,5 +1175,61 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
             .setSchema("PUBLIC");
 
         return queryProcessor(node).querySqlFields(qry, true).getAll();
+    }
+
+    /**
+     * Affinity function with fixed partition allocation.
+     */
+    private static class TestAffinityFunction implements AffinityFunction {
+        /** Partitions to nodes map. */
+        private final String[][] partMap;
+
+        /**
+         * @param partMap Parition allocation map, contains nodes consistent ids for each partition.
+         */
+        private TestAffinityFunction(String[][] partMap) {
+            this.partMap = partMap;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void reset() {
+            // No-op.
+        }
+
+        /** {@inheritDoc} */
+        @Override public int partitions() {
+            return partMap.length;
+        }
+
+        /** {@inheritDoc} */
+        @Override public int partition(Object key) {
+            return key.hashCode() % partitions();
+        }
+
+        /** {@inheritDoc} */
+        @Override public List<List<ClusterNode>> assignPartitions(AffinityFunctionContext affCtx) {
+            List<List<ClusterNode>> parts = new ArrayList<>(partMap.length);
+
+            for (String[] nodes : partMap) {
+                List<ClusterNode> nodesList = new ArrayList<>();
+
+                for (String nodeConsistentId: nodes) {
+                    ClusterNode affNode = F.find(affCtx.currentTopologySnapshot(), null,
+                        (IgnitePredicate<ClusterNode>)node -> node.consistentId().equals(nodeConsistentId));
+
+                    if (affNode != null)
+                        nodesList.add(affNode);
+                }
+
+                parts.add(nodesList);
+            }
+
+            return parts;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void removeNode(UUID nodeId) {
+            // No-op.
+        }
     }
 }
