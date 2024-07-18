@@ -54,17 +54,17 @@ public enum TracingConfigurationCommandArg implements CommandArg {
     private final String name;
 
     /** Arg format. */
-    private final String format;
+    private final String placeholder;
 
     /**
      * Creates a new instance of tracing configuration argument.
      *
      * @param name Argument name.
-     * @param format Argument format.
+     * @param placeholder Argument format.
      */
-    TracingConfigurationCommandArg(String name, String format) {
+    TracingConfigurationCommandArg(String name, String placeholder) {
         this.name = name;
-        this.format = format;
+        this.placeholder = placeholder;
     }
 
     /**
@@ -81,7 +81,8 @@ public enum TracingConfigurationCommandArg implements CommandArg {
         return name;
     }
 
+    /** Argument name with value placeholder */
     public String signature() {
-        return name + " " + format;
+        return name + " " + placeholder;
     }
 }

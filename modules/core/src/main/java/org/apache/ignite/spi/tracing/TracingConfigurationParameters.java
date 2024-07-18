@@ -90,7 +90,7 @@ public class TracingConfigurationParameters implements Serializable {
      * If no scopes are specified, empty set will be returned.
      */
     public @NotNull Set<Scope> includedScopes() {
-        return includedScopes;
+        return includedScopes;  // Is already unmodifiableSet
     }
 
     /** {@inheritDoc} */
