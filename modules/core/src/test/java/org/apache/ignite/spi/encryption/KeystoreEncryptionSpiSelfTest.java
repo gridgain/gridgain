@@ -16,9 +16,9 @@
 
 package org.apache.ignite.spi.encryption;
 
-import com.google.common.base.Strings;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionKey;
 import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
@@ -94,8 +94,9 @@ public class KeystoreEncryptionSpiSelfTest {
         assertNotNull(k);
         assertNotNull(k.key());
 
-        for (int i = 0; i < encSpi.blockSize(); i++) {
-            byte[] plainText = ("Just a test string to encrypt!" + Strings.repeat("-", i)).getBytes(UTF_8);
+        for (int suffixLen = 0; suffixLen < encSpi.blockSize(); suffixLen++) {
+            String randomString = GridTestUtils.randomString(ThreadLocalRandom.current(), suffixLen, suffixLen);
+            byte[] plainText = ("Just a test string to encrypt!" + randomString).getBytes(UTF_8);
             byte[] cipherText = new byte[encSpi.encryptedSize(plainText.length)];
 
             ByteBuffer plainTextBuffer = ByteBuffer.wrap(plainText);
