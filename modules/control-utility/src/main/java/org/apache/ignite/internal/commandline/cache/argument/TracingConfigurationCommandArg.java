@@ -31,16 +31,16 @@ public enum TracingConfigurationCommandArg implements CommandArg {
     /**
      * Specify the {@link Scope} of a trace's root span to which some specific tracing configuration will be applied.
      */
-    SCOPE("--scope"),
+    SCOPE("--scope", "<scope>"),
 
     /** Specify the label of a traced operation. It's an optional attribute. */
-    LABEL("--label"),
+    LABEL("--label", "<label>"),
 
     /**
      * Number between 0 and 1 that more or less reflects the probability of sampling specific trace. 0 and 1 have
      * special meaning here, 0 means never 1 means always. Default value is 0 (never).
      */
-    SAMPLING_RATE("--sampling-rate"),
+    SAMPLING_RATE("--sampling-rate", "<samplingRate>"),
 
     /**
      * Set of {@link Scope} that defines which sub-traces will be included in given trace. In other words, if child's
@@ -48,18 +48,23 @@ public enum TracingConfigurationCommandArg implements CommandArg {
      * will be attached to the current trace, otherwise it'll be skipped. See {@link
      * Span#isChainable(Scope)} for more details.
      */
-    INCLUDED_SCOPES("--included-scopes");
+    INCLUDED_SCOPES("--included-scopes", "<scope, ...>");
 
     /** Arg name. */
     private final String name;
 
+    /** Arg format. */
+    private final String format;
+
     /**
      * Creates a new instance of tracing configuration argument.
      *
-     * @param name command name.
+     * @param name Argument name.
+     * @param format Argument format.
      */
-    TracingConfigurationCommandArg(String name) {
+    TracingConfigurationCommandArg(String name, String format) {
         this.name = name;
+        this.format = format;
     }
 
     /**
@@ -74,5 +79,9 @@ public enum TracingConfigurationCommandArg implements CommandArg {
     /** {inheritDoc} */
     @Override public String argName() {
         return name;
+    }
+
+    public String signature() {
+        return name + " " + format;
     }
 }

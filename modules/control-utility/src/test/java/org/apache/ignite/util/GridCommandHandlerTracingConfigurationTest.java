@@ -145,6 +145,19 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
     }
 
     /**
+     * Ensure that "--tracing-configuration help" prints verbose usage
+     */
+    @Test
+    public void testTracingConfigurationHelpCommand() {
+        // Check how it's printed in main help
+        assertEquals(EXIT_CODE_OK, execute(hnd, "--help"));
+
+        // Check verbose usage
+        assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "help"));
+        assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "--help"));
+    }
+
+    /**
      * Ensure that in case of "--tracing-configuration" without arguments
      * tracing configuration for all scopes will be returned.
      */
