@@ -1,0 +1,43 @@
+Control utility [ver. <!any!>
+2024 Copyright(C) GridGain Systems, Inc. and Contributors
+User: <!any!>
+Time: <!any!>
+Command [TRACING-CONFIGURATION] started
+Arguments: --tracing-configuration help --yes
+--------------------------------------------------------------------------------
+  The '--tracing-configuration' is used to get or update tracing configuration. The command has the following syntax:
+
+  control.(sh|bat) [--host HOST_OR_IP] [--port PORT] [--user USER] [--password PASSWORD] [--ping-interval PING_INTERVAL] [--ping-timeout PING_TIMEOUT] [--connection-timeout CONNECTION_TIMEOUT] [--verbose] [--ssl-protocol SSL_PROTOCOL[, SSL_PROTOCOL_2, ..., SSL_PROTOCOL_N]] [--ssl-cipher-suites SSL_CIPHER_1[, SSL_CIPHER_2, ..., SSL_CIPHER_N]] [--ssl-key-algorithm SSL_KEY_ALGORITHM] [--keystore-type KEYSTORE_TYPE] [--keystore KEYSTORE_PATH] [--keystore-password KEYSTORE_PASSWORD] [--truststore-type TRUSTSTORE_TYPE] [--truststore TRUSTSTORE_PATH] [--truststore-password TRUSTSTORE_PASSWORD] --tracing-configuration [subcommand <subcommand_parameters>]
+
+  <scope> value of '--scope' or '--included-scopes' options in all subcommands can be: DISCOVERY|EXCHANGE|COMMUNICATION|TX|CACHE_API_WRITE|CACHE_API_READ|SQL
+
+
+  Subcommands:
+
+  --tracing-configuration
+    Print tracing configuration. Works as '--tracing-configuration get_all' without params.
+
+  --tracing-configuration get_all [--scope <scope>]
+    Print tracing configuration for given --scope, or all scopes if nothing was specified.
+
+  --tracing-configuration get (--scope <scope>) [--label <label>]
+    Print specific tracing configuration based on specified --scope and --label.
+
+  --tracing-configuration reset_all [--scope <scope>]
+    Reset all specific tracing configuration the to default. If --scope is specified, then remove all label specific configuration for the given scope and reset given scope specific configuration to the default, if --scope is skipped then reset all tracing configurations to the default. Print resulting configuration.
+
+  --tracing-configuration reset (--scope <scope>) [--label <label>]
+    Reset specific tracing configuration to the default. If both --scope and --label are specified then remove given configuration, if only --scope is specified then reset given configuration to the default. Print resulting configuration.
+
+  --tracing-configuration set [--scope <scope>] [--label <label>] [--sampling-rate <samplingRate>] [--included-scopes <scope, ...>]
+    Comma separated set new tracing configuration. If both --scope and --label are specified then add or override label specific configuration, if only --scope is specified, then override scope specific configuration. Print applied configuration.
+
+    Parameters:
+      --scope <scope>                 - Scope of a trace's root span to which provided configuration will be applied.
+      --label <label>                 - Label of a traced operations
+      --sampling-rate <samplingRate>  - Decimal value between 0 and 1.0, where 0 means never and 1.0 means always. More or less reflects the probability of sampling specific trace. Default value is 0
+      --included-scopes <scope, ...>  - Set of scopes that defines which sub-traces will be included in given trace. In other words, if child's span scope is equals to parent's scope or it belongs to the parent's span included scopes, then given child span will be attached to the current trace, otherwise it'll be skipped.
+
+Command [TRACING-CONFIGURATION] finished with code: 0
+Control utility has completed execution at: <!any!>
+Execution time: <!any!> ms

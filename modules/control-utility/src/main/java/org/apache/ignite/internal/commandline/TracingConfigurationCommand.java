@@ -46,12 +46,12 @@ import static org.apache.ignite.internal.commandline.CommandLogger.join;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommonArgParser.getCommonOptions;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
-import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
 import static org.apache.ignite.internal.commandline.cache.argument.TracingConfigurationCommandArg.INCLUDED_SCOPES;
 import static org.apache.ignite.internal.commandline.cache.argument.TracingConfigurationCommandArg.LABEL;
 import static org.apache.ignite.internal.commandline.cache.argument.TracingConfigurationCommandArg.SAMPLING_RATE;
 import static org.apache.ignite.internal.commandline.cache.argument.TracingConfigurationCommandArg.SCOPE;
 import static org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand.GET_ALL;
+import static org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand.HELP;
 import static org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand.RESET_ALL;
 import static org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand.of;
 import static org.apache.ignite.internal.commandline.util.TopologyUtils.coordinatorId;
@@ -64,8 +64,6 @@ import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPL
 public class TracingConfigurationCommand extends AbstractCommand<TracingConfigurationArguments> {
     /** Arguments. */
     private TracingConfigurationArguments args;
-
-    private boolean isHelpCommand = false;
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger log) {
@@ -202,7 +200,8 @@ public class TracingConfigurationCommand extends AbstractCommand<TracingConfigur
      */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         if (experimentalEnabled()) {
-            if (isHelpCommand) {
+
+            if (HELP.equals(args.command())) {
                 printVerboseUsage(log);
                 return null;
             }
@@ -247,7 +246,7 @@ public class TracingConfigurationCommand extends AbstractCommand<TracingConfigur
 
         String cmdString = argIter.nextArg("Expected tracing configuration action.");
         if ("help".equalsIgnoreCase(cmdString) || "--help".equalsIgnoreCase(cmdString)) {
-            isHelpCommand = true;
+            args = new TracingConfigurationArguments.Builder(HELP).build();
 
             return;
         }
@@ -269,7 +268,7 @@ public class TracingConfigurationCommand extends AbstractCommand<TracingConfigur
 
         while (argIter.hasNextSubArg()) {
             TracingConfigurationCommandArg arg =
-                CommandArgUtils.of(argIter.nextArg(""), TracingConfigurationCommandArg.class);
+                CommandArgUtils.ofArg(TracingConfigurationCommandArg.class, argIter.nextArg(""));
 
             String strVal;
 
