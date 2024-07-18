@@ -47,6 +47,7 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
+import org.apache.ignite.logger.java.JavaLogger;
 import org.apache.ignite.logger.java.JavaLoggerFileHandler;
 import org.apache.ignite.logger.java.JavaLoggerFormatter;
 import org.apache.ignite.plugin.security.SecurityCredentials;
@@ -146,26 +147,30 @@ public class CommandHandler {
      * @return prepared JULs logger.
      */
     private Logger setupJavaLogger() {
-        Logger result = initLogger(CommandHandler.class.getName() + "Log");
+        if(!JavaLogger.isConfigured()) {
+            Logger result = initLogger(CommandHandler.class.getName() + "Log");
 
-        // Adding logging to file.
-        try {
-            String absPathPattern = new File(JavaLoggerFileHandler.logDirectory(U.defaultWorkDirectory()), "control-utility-%g.log").getAbsolutePath();
+            // Adding logging to file.
+            try {
+                String absPathPattern = new File(JavaLoggerFileHandler.logDirectory(U.defaultWorkDirectory()), "control-utility-%g.log").getAbsolutePath();
 
-            FileHandler fileHandler = new FileHandler(absPathPattern, 5 * 1024 * 1024, 5);
+                FileHandler fileHandler = new FileHandler(absPathPattern, 5 * 1024 * 1024, 5);
 
-            fileHandler.setFormatter(new JavaLoggerFormatter());
+                fileHandler.setFormatter(new JavaLoggerFormatter());
 
-            result.addHandler(fileHandler);
+                result.addHandler(fileHandler);
+            }
+            catch (Exception e) {
+                System.out.println("Failed to configure logging to file");
+            }
+
+            // Adding logging to console.
+            result.addHandler(setupStreamHandler());
+
+            return result;
+        } else {
+            return Logger.getLogger(CommandHandler.class.getName());
         }
-        catch (Exception e) {
-            System.out.println("Failed to configure logging to file");
-        }
-
-        // Adding logging to console.
-        result.addHandler(setupStreamHandler());
-
-        return result;
     }
 
     /**
