@@ -147,6 +147,8 @@ public class GridCacheUtils {
     /** */
     public static final int UNDEFINED_CACHE_ID = 0;
 
+    public static final int ENCRYPTION_CRC_AND_METADATA_SIZE = /* CRC */ Integer.BYTES + /* Key ID */ Byte.BYTES;
+
     /*
      *
      */
@@ -2128,9 +2130,11 @@ public class GridCacheUtils {
      * @return Page size without encryption overhead.
      */
     public static int encryptedPageSize(int pageSize, EncryptionSpi encSpi) {
-        // If encryption is enabled, a space of one encryption block is reserved to store CRC and encryption key ID.
+        // If encryption is enabled, a space of one encryption block is reserved to store CRC, encryption key ID
+        // and position for EncryptedOutputStream.
         // If encryption is disabled, NoopEncryptionSPI with a zero encryption block size is used.
-        assert encSpi.blockSize() >= /* CRC */ 4 + /* Key ID */ 1 + /**  */ 4 || encSpi.blockSize() == 0;
+        assert encSpi.blockSize() >= ENCRYPTION_CRC_AND_METADATA_SIZE + Integer.BYTES
+            || encSpi.blockSize() == 0;
 
         return pageSize
             - (encSpi.encryptedSizeNoPadding(pageSize) - pageSize)
