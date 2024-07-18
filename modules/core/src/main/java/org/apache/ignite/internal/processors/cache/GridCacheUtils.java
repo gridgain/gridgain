@@ -147,6 +147,7 @@ public class GridCacheUtils {
     /** */
     public static final int UNDEFINED_CACHE_ID = 0;
 
+    /** Size of the metadata, located in the last block of encrypted page. 5 bytes. */
     public static final int ENCRYPTION_CRC_AND_METADATA_SIZE = /* CRC */ Integer.BYTES + /* Key ID */ Byte.BYTES;
 
     /*
