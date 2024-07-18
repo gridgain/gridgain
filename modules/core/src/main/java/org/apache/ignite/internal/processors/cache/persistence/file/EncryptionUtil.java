@@ -56,7 +56,7 @@ public class EncryptionUtil {
      * @param grpKey Encryption key.
      */
     public void encrypt(ByteBuffer srcBuf, ByteBuffer res, GroupKey grpKey) {
-        assert srcBuf.remaining() >= pageSize:
+        assert srcBuf.remaining() >= pageSize :
             "The number of elements remaining in buffer should be more or equal to page size " +
                 "[srcBuf.remaining() = " + srcBuf.remaining() + ", pageSize = " + pageSize + "]";
         assert tailIsEmpty(srcBuf, PageIO.getType(srcBuf));
