@@ -17,14 +17,11 @@
 package org.apache.ignite.client;
 
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.QueryEntity;
-import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterState;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -34,9 +31,8 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import java.io.Serializable;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 
 /**
  * TooManyOpenCursorsTest
@@ -66,11 +62,17 @@ public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
                                 .setMaxOpenCursorsPerConnection(3));
     }
 
-    /**
-     * @throws Exception If failed.
-     */
     @Test
-    public void testTooManyOpenCursors() throws Exception {
+    public void testPartitionLoss() throws Exception {
+        testPartitionLoss(cache -> {
+            SqlFieldsQuery sqlFieldsQuery = new SqlFieldsQuery("select id, name from \"Person\".PERSON where id = ?");
+            sqlFieldsQuery.setArgs(ThreadLocalRandom.current().nextLong(100));
+
+            return cache.query(sqlFieldsQuery);
+        });
+    }
+
+    private void testPartitionLoss(Function<ClientCache<Integer, Person>, QueryCursor<?>> queryFunc) throws Exception {
         // TODO: Test other cursor types (ScanQuery, SqlQuery).
         Ignite srv1 = startGrid(0);
         Ignite srv2 = startGrid(1);
@@ -97,10 +99,7 @@ public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
                 srv2.close();
             }
 
-            SqlFieldsQuery query = new SqlFieldsQuery("select id, name from \"Person\".PERSON where id = ?");
-            query.setArgs(ThreadLocalRandom.current().nextLong(100));
-
-            try (QueryCursor<List<?>> cursor = personCache.query(query)) {
+            try (QueryCursor<?> cursor = queryFunc.apply(personCache)) {
                 cursor.getAll();
             } catch (ClientException e) {
                 if (e.getMessage().contains(
