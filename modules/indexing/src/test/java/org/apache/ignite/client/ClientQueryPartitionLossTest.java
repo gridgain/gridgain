@@ -37,9 +37,9 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
 /**
- * TooManyOpenCursorsTest
+ * Tests client queries in the event of partition loss.
  */
-public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
+public class ClientQueryPartitionLossTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();

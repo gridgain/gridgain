@@ -83,7 +83,7 @@ import org.junit.runners.Suite;
     IgniteClientConnectionEventListenerTest.class,
     IgniteClientRequestEventListenerTest.class,
     BlockingTxOpsTest.class,
-    TooManyOpenCursorsTest.class
+    ClientQueryPartitionLossTest.class
 })
 public class ClientTestSuite {
     // No-op.
