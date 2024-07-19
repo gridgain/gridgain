@@ -2135,7 +2135,8 @@ public class GridCacheUtils {
         // and position for EncryptedOutputStream.
         // If encryption is disabled, NoopEncryptionSPI with a zero encryption block size is used.
         assert encSpi.blockSize() >= ENCRYPTION_CRC_AND_METADATA_SIZE + Integer.BYTES
-            || encSpi.blockSize() == 0;
+            || encSpi.blockSize() == 0
+            : encSpi.blockSize();
 
         return pageSize
             - (encSpi.encryptedSizeNoPadding(pageSize) - pageSize)

@@ -121,7 +121,7 @@ public class EncryptionUtil {
         int encryptedDataSize = encryptedDataSize();
         int crc = FastCrc.calcCrc(res, encryptedDataSize);
 
-        assert res.position() == encryptedDataSize;
+        assert res.position() == encryptedDataSize : res.position();
 
         // Avoid junk explicitly.
         res.put(zeroes, 0, encSpi.blockSize());
