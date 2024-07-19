@@ -57,9 +57,9 @@ class ClientCacheSqlFieldsQueryResponse extends ClientResponse {
 
     /** {@inheritDoc} */
     @Override public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
-        super.encode(ctx, writer);
-
         try {
+            super.encode(ctx, writer);
+
             writer.writeLong(cursor.id());
 
             int cnt = fieldsCursor.getColumnsCount();
