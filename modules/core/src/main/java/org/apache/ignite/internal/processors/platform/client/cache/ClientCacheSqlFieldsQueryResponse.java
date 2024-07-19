@@ -57,19 +57,25 @@ class ClientCacheSqlFieldsQueryResponse extends ClientResponse {
 
     /** {@inheritDoc} */
     @Override public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
-        super.encode(ctx, writer);
+        try {
+            super.encode(ctx, writer);
 
-        writer.writeLong(cursor.id());
+            writer.writeLong(cursor.id());
 
-        int cnt = fieldsCursor.getColumnsCount();
-        writer.writeInt(cnt);
+            int cnt = fieldsCursor.getColumnsCount();
+            writer.writeInt(cnt);
 
-        if (includeFieldNames) {
-            for (int i = 0; i < cnt; i++) {
-                writer.writeString(fieldsCursor.getFieldName(i));
+            if (includeFieldNames) {
+                for (int i = 0; i < cnt; i++) {
+                    writer.writeString(fieldsCursor.getFieldName(i));
+                }
             }
-        }
 
-        cursor.writePage(writer);
+            cursor.writePage(writer);
+        } catch (Throwable t) {
+            cursor.close();
+
+            throw t;
+        }
     }
 }

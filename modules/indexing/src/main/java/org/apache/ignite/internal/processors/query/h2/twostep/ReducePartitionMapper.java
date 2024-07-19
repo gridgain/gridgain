@@ -99,7 +99,7 @@ public class ReducePartitionMapper {
 
                 if (lostPart >= 0) {
                     throw new CacheException(new CacheInvalidStateException("Failed to execute query because cache " +
-                        "partition has been lostPart [cacheName=" + cctx.name() + ", part=" + lostPart + ']'));
+                        "partition has been lost [cacheName=" + cctx.name() + ", part=" + lostPart + ']'));
                 }
             }
         }

@@ -70,7 +70,7 @@ public class ClientCacheSqlQueryRequest extends ClientCacheDataRequest implement
 
             return new ClientCacheQueryResponse(requestId(), cliCur);
         }
-        catch (Exception e) {
+        catch (Throwable e) {
             ctx.decrementCursors();
 
             throw e;

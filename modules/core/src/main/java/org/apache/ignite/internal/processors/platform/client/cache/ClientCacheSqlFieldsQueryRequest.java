@@ -159,7 +159,7 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
 
             return new ClientCacheSqlFieldsQueryResponse(requestId(), cliCur, cur, includeFieldNames);
         }
-        catch (Exception e) {
+        catch (Throwable e) {
             ctx.decrementCursors();
 
             SecurityException securityEx = X.cause(e, SecurityException.class);
