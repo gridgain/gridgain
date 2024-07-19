@@ -907,6 +907,38 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
         }
     }
 
+    /** */
+    @Test
+    public void test0() {
+        IgniteCache<Integer, Integer> cache = ignite(0).getOrCreateCache(cacheConfig("ints", true,
+                Integer.class, Integer.class));
+
+        cache.query(new SqlFieldsQuery("CREATE TABLE T1 (\n" +
+                "\tID VARCHAR NOT NULL,\n" +
+                "\tENUM VARCHAR NOT NULL,\n" +
+                "\tROCPROFILE VARCHAR,\n" +
+                "\tCONSTRAINT PK_PUBLIC_T1 PRIMARY KEY (ID, ENUM)\n" +
+                ")")
+        ).getAll();
+
+        cache.query(new SqlFieldsQuery("CREATE INDEX T1_ENUM ON T1 (ENUM)")).getAll();
+
+        cache.query(new SqlFieldsQuery("CREATE TABLE T2 (\n" +
+                "\tENUM VARCHAR NOT NULL,\n" +
+                "\tCASCADINGCODES VARCHAR,\n" +
+                "\tID VARCHAR NOT NULL,\n" +
+                "\tCONSTRAINT PK_PUBLIC_T2 PRIMARY KEY (ENUM, ID)\n" +
+                ")")
+        ).getAll();
+
+        cache.query(new SqlFieldsQuery("SELECT ENUM, ROCPROFILE FROM "
+                + "(WITH CTDetails AS (SELECT ENUM, ROCProfile FROM T1 WHERE ENUM = 'H121001' ), " +
+                "    CTWithRoCDetails AS (SELECT CTD.* FROM T2 ROC INNER JOIN CTDetails CTD "
+                + "ON ROC.CASCADINGCODES LIKE CONCAT(CTD.ROCProfile,'|%') " +
+                "        AND CTD.ROCProfile = 'PAU Receiving' WHERE ROC.ENUM = 'H121001' ) " +
+                "    SELECT * FROM CTWithRoCDetails)").setDistributedJoins(true)).getAll();
+    }
+
     /**
      * Ensure that a ROW statement could be used in WHERE condition.
      */
