@@ -20,6 +20,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.QueryCursor;
+import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.ClientConfiguration;
@@ -63,13 +64,18 @@ public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
     }
 
     @Test
-    public void testPartitionLoss() throws Exception {
+    public void testPartitionLossSqlFieldsQuery() throws Exception {
         testPartitionLoss(cache -> {
             SqlFieldsQuery sqlFieldsQuery = new SqlFieldsQuery("select id, name from \"Person\".PERSON where id = ?");
             sqlFieldsQuery.setArgs(ThreadLocalRandom.current().nextLong(100));
 
             return cache.query(sqlFieldsQuery);
         });
+    }
+
+    @Test
+    public void testPartitionLossScanQuery() throws Exception {
+        testPartitionLoss(cache -> cache.query(new ScanQuery<Integer, Person>()));
     }
 
     private void testPartitionLoss(Function<ClientCache<Integer, Person>, QueryCursor<?>> queryFunc) throws Exception {
@@ -103,7 +109,7 @@ public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
                 cursor.getAll();
             } catch (ClientException e) {
                 if (e.getMessage().contains(
-                        "Failed to execute query because cache partition has been lostPart [cacheName=Person")) {
+                        "Failed to execute query because cache partition has been lost [cacheName=Person")) {
                     partitionsLost = true;
 
                     // Ignore expected exception.
