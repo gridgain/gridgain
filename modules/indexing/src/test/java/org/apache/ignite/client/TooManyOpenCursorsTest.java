@@ -22,6 +22,7 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
@@ -73,13 +74,25 @@ public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
         });
     }
 
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testPartitionLossSqlQuery() throws Exception {
+        testPartitionLoss(cache -> {
+            SqlQuery<Integer, Person> sqlQuery = new SqlQuery<>(
+                    Person.class, "select * from PERSON where id = ?");
+
+            sqlQuery.setArgs(ThreadLocalRandom.current().nextLong(100));
+
+            return cache.query(sqlQuery);
+        });
+    }
+
     @Test
     public void testPartitionLossScanQuery() throws Exception {
         testPartitionLoss(cache -> cache.query(new ScanQuery<Integer, Person>()));
     }
 
     private void testPartitionLoss(Function<ClientCache<Integer, Person>, QueryCursor<?>> queryFunc) throws Exception {
-        // TODO: Test other cursor types (ScanQuery, SqlQuery).
         Ignite srv1 = startGrid(0);
         Ignite srv2 = startGrid(1);
 
