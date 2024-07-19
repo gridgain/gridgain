@@ -21,6 +21,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -76,16 +77,17 @@ public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
 
         srv1.cluster().state(ClusterState.ACTIVE);
 
-        CacheConfiguration<Integer, Person> ccfg = new CacheConfiguration<>("Person");
-        ccfg.setQueryEntities(Collections.singletonList(createPersonQueryEntity()));
+        ClientConfiguration cfg = new ClientConfiguration().setAddresses("127.0.0.1:10800");
+        IgniteClient client = Ignition.startClient(cfg);
 
-        IgniteCache<Integer, Person> personCache = srv1.getOrCreateCache(ccfg);
+        ClientCacheConfiguration ccfg = new ClientCacheConfiguration()
+                .setName("Person")
+                .setQueryEntities(createPersonQueryEntity());
+
+        ClientCache<Integer, Person> personCache = client.getOrCreateCache(ccfg);
 
         for (int i = 0; i < 100; i++)
             personCache.put(i, new Person("Name" + i));
-
-        ClientConfiguration cfg = new ClientConfiguration().setAddresses("127.0.0.1:10800");
-        IgniteClient client = Ignition.startClient(cfg);
 
         boolean partitionsLost = false;
 
@@ -98,7 +100,7 @@ public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
             SqlFieldsQuery query = new SqlFieldsQuery("select id, name from \"Person\".PERSON where id = ?");
             query.setArgs(ThreadLocalRandom.current().nextLong(100));
 
-            try (FieldsQueryCursor<List<?>> cursor = client.query(query)) {
+            try (QueryCursor<List<?>> cursor = personCache.query(query)) {
                 cursor.getAll();
             } catch (ClientException e) {
                 if (e.getMessage().contains(
