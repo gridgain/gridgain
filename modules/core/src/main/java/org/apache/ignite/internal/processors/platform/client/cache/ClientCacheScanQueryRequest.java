@@ -95,7 +95,7 @@ public class ClientCacheScanQueryRequest extends ClientCacheDataRequest implemen
 
             return new ClientCacheQueryResponse(requestId(), cliCur);
         }
-        catch (Exception e) {
+        catch (Throwable e) {
             ctx.decrementCursors();
 
             throw e;
