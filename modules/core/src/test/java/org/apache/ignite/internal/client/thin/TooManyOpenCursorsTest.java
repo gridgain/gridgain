@@ -25,11 +25,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.cluster.ClusterState;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.ClientConfiguration;
-import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.*;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -73,6 +69,8 @@ public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
                                         .setPersistenceEnabled(true)
                         )
         );
+
+        cfg.setClientConnectorConfiguration(new ClientConnectorConfiguration().setMaxOpenCursorsPerConnection(3));
 
         return cfg;
     }
