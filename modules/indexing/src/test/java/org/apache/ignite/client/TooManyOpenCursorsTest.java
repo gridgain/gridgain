@@ -29,7 +29,6 @@ import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.client.thin.ClientServerError;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -37,8 +36,6 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-
-import static org.apache.ignite.internal.processors.platform.client.ClientStatus.TOO_MANY_CURSORS;
 
 /**
  * TooManyOpenCursorsTest
@@ -83,7 +80,7 @@ public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
     public void testTooManyOpenCursors() throws Exception {
         // TODO: Test other cursor types (ScanQuery, SqlQuery).
         Ignite srv1 = startGrid(0);
-        startGrid(1);
+        Ignite srv2 = startGrid(1);
 
         srv1.cluster().state(ClusterState.ACTIVE);
 
@@ -98,29 +95,36 @@ public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
         ClientConfiguration cfg = new ClientConfiguration().setAddresses("127.0.0.1:10800");
         IgniteClient client = Ignition.startClient(cfg);
 
-        // Run multiple queries
+        boolean partitionsLost = false;
+
         for (int i = 0; i < 100; i++) {
-            String sql = "select id, name from \"Person\".PERSON where id = ?";
+            if (i == 10) {
+                // Stop node to cause partition loss.
+                srv2.close();
+            }
 
-            SqlFieldsQuery query = new SqlFieldsQuery(sql);
-
+            SqlFieldsQuery query = new SqlFieldsQuery("select id, name from \"Person\".PERSON where id = ?");
             query.setArgs(ThreadLocalRandom.current().nextLong(100));
 
             try (FieldsQueryCursor<List<?>> cursor = client.query(query)) {
                 cursor.getAll();
             } catch (ClientException e) {
-                if (e.getCause() != null && e.getCause() instanceof ClientServerError) {
-                    ClientServerError cse = (ClientServerError) e.getCause();
-                    if (cse.getCode() == TOO_MANY_CURSORS) {
-                        throw e;
-                    }
+                if (e.getMessage().contains(
+                        "Failed to execute query because cache partition has been lostPart [cacheName=Person")) {
+                    partitionsLost = true;
+
+                    // Ignore expected exception.
+                    //noinspection CallToPrintStackTrace
+                    e.printStackTrace();
+
+                    continue;
                 }
 
-                // Ignore expected partition loss error.
-                //noinspection CallToPrintStackTrace
-                e.printStackTrace();
+                throw e;
             }
         }
+
+        assertTrue(partitionsLost);
     }
 
     private static QueryEntity createPersonQueryEntity() {
