@@ -392,6 +392,9 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     /** */
     @Test
     public void testTracingHelp() throws Exception {
+        Set<TracingConfigurationSubcommand> skippedCommands = new HashSet<>();
+        skippedCommands.add(TracingConfigurationSubcommand.HELP);
+
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--tracing-configuration", "help"));
@@ -399,6 +402,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         String output = testOut.toString();
 
         for (TracingConfigurationSubcommand cmd : TracingConfigurationSubcommand.values()) {
+            if (!skippedCommands.contains(cmd))
                 assertContains(log, output, cmd.toString());
         }
 

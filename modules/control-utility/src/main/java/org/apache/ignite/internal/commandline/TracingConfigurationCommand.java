@@ -109,7 +109,7 @@ public class TracingConfigurationCommand extends AbstractCommand<TracingConfigur
             "Print specific tracing configuration based on specified " +
                 SCOPE.argName() + " and " + LABEL.argName() + '.',
             TracingConfigurationSubcommand.GET,
-            grouped(SCOPE.signature()),
+            SCOPE.signature(),
             optional(LABEL.signature()));
 
         usageTracing(
@@ -130,7 +130,7 @@ public class TracingConfigurationCommand extends AbstractCommand<TracingConfigur
                 "if only " + SCOPE.argName() + " is specified then reset given configuration to the default. " +
                 "Print resulting configuration.",
             TracingConfigurationSubcommand.RESET,
-            grouped(SCOPE.signature()),
+            SCOPE.signature(),
             optional(LABEL.signature()));
 
 

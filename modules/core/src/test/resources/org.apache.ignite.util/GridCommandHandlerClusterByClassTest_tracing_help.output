@@ -20,13 +20,13 @@ Arguments: --tracing-configuration help --yes
   --tracing-configuration get_all [--scope <scope>]
     Print tracing configuration for given --scope, or all scopes if nothing was specified.
 
-  --tracing-configuration get (--scope <scope>) [--label <label>]
+  --tracing-configuration get --scope <scope> [--label <label>]
     Print specific tracing configuration based on specified --scope and --label.
 
   --tracing-configuration reset_all [--scope <scope>]
     Reset all specific tracing configuration the to default. If --scope is specified, then remove all label specific configuration for the given scope and reset given scope specific configuration to the default, if --scope is skipped then reset all tracing configurations to the default. Print resulting configuration.
 
-  --tracing-configuration reset (--scope <scope>) [--label <label>]
+  --tracing-configuration reset --scope <scope> [--label <label>]
     Reset specific tracing configuration to the default. If both --scope and --label are specified then remove given configuration, if only --scope is specified then reset given configuration to the default. Print resulting configuration.
 
   --tracing-configuration set [--scope <scope>] [--label <label>] [--sampling-rate <samplingRate>] [--included-scopes <scope, ...>]

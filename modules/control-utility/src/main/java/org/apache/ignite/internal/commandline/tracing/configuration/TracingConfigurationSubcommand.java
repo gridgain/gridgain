@@ -24,7 +24,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public enum TracingConfigurationSubcommand {
     /** Print verbose usage help */
-    HELP("--help", null),
+    HELP("help", null),
 
     /** Get specific tracing configuration. */
     GET("get", VisorTracingConfigurationOperation.GET),
