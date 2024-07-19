@@ -42,35 +42,27 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        cleanPersistenceDir();
-
-        stopAllGrids();
-    }
-
-    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        stopAllGrids();
+        super.afterTest();
 
+        stopAllGrids();
         cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(gridName);
-
-        cfg.setDataStorageConfiguration(
-                new DataStorageConfiguration()
-                        .setDefaultDataRegionConfiguration(
-                                new DataRegionConfiguration()
-                                        .setMaxSize(100L * 1024 * 1024)
-                                        .setPersistenceEnabled(true)
-                        )
-        );
-
-        cfg.setClientConnectorConfiguration(new ClientConnectorConfiguration().setMaxOpenCursorsPerConnection(3));
-
-        return cfg;
+        return super.getConfiguration(gridName)
+                .setDataStorageConfiguration(
+                        new DataStorageConfiguration()
+                                .setDefaultDataRegionConfiguration(
+                                        new DataRegionConfiguration()
+                                                .setMaxSize(100L * 1024 * 1024)
+                                                .setPersistenceEnabled(true)
+                                )
+                )
+                .setClientConnectorConfiguration(
+                        new ClientConnectorConfiguration()
+                                .setMaxOpenCursorsPerConnection(3));
     }
 
     /**
