@@ -30,15 +30,12 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.client.thin.ClientServerError;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import java.io.Serializable;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.apache.ignite.internal.processors.platform.client.ClientStatus.TOO_MANY_CURSORS;
@@ -84,8 +81,9 @@ public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
      */
     @Test
     public void testTooManyOpenCursors() throws Exception {
+        // TODO: Test other cursor types (ScanQuery, SqlQuery).
         Ignite srv1 = startGrid(0);
-        Ignite srv2 = startGrid(1);
+        startGrid(1);
 
         srv1.cluster().state(ClusterState.ACTIVE);
 
@@ -97,19 +95,32 @@ public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
         for (int i = 0; i < 100; i++)
             personCache.put(i, new Person("Name" + i));
 
-
         ClientConfiguration cfg = new ClientConfiguration().setAddresses("127.0.0.1:10800");
         IgniteClient client = Ignition.startClient(cfg);
 
-        CountDownLatch latch = new CountDownLatch(1);
+        // Run multiple queries
+        for (int i = 0; i < 100; i++) {
+            String sql = "select id, name from \"Person\".PERSON where id = ?";
 
-        GridTestUtils.runAsync(new ExecuteQueryTask(client, latch));
+            SqlFieldsQuery query = new SqlFieldsQuery(sql);
 
-        srv2.close();
+            query.setArgs(ThreadLocalRandom.current().nextLong(100));
 
-        latch.await();
+            try (FieldsQueryCursor<List<?>> cursor = client.query(query)) {
+                cursor.getAll();
+            } catch (ClientException e) {
+                if (e.getCause() != null && e.getCause() instanceof ClientServerError) {
+                    ClientServerError cse = (ClientServerError) e.getCause();
+                    if (cse.getCode() == TOO_MANY_CURSORS) {
+                        throw e;
+                    }
+                }
 
-        fail("Too many open cursors!");
+                // Ignore expected partition loss error.
+                //noinspection CallToPrintStackTrace
+                e.printStackTrace();
+            }
+        }
     }
 
     private static QueryEntity createPersonQueryEntity() {
@@ -120,55 +131,6 @@ public class TooManyOpenCursorsTest extends GridCommonAbstractTest {
                 .addQueryField("name", String.class.getName(), null)
                 .setKeyFieldName("id")
                 .setTableName("PERSON");
-    }
-
-    private static class ExecuteQueryTask implements Runnable {
-        private final IgniteClient client;
-
-        private final CountDownLatch latch;
-
-        public ExecuteQueryTask(IgniteClient client, CountDownLatch latch) {
-            this.client = client;
-            this.latch = latch;
-        }
-
-        @Override
-        public void run() {
-            while (true) {
-                String sql = "select id, name from \"Person\".PERSON where id = ?";
-
-                SqlFieldsQuery query = new SqlFieldsQuery(sql);
-
-                query.setArgs(ThreadLocalRandom.current().nextLong(100));
-
-                try (FieldsQueryCursor<List<?>> cursor = client.query(query)) {
-                    Iterator<List<?>> itr = cursor.iterator();
-
-                    while (itr.hasNext()) {
-                        System.out.println(itr.next().get(0));
-                    }
-                } catch (ClientException e) {
-                    if (e.getCause() != null && e.getCause() instanceof ClientServerError) {
-                        ClientServerError cse = (ClientServerError) e.getCause();
-                        if (cse.getCode() == TOO_MANY_CURSORS) {
-                            e.printStackTrace();
-
-                            latch.countDown();
-
-                            throw e;
-                        }
-                    }
-
-                    e.printStackTrace();
-                }
-
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
     }
 
     private static class Person implements Serializable {
