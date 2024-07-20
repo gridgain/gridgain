@@ -41,7 +41,6 @@ import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME
 import static org.apache.ignite.internal.commandline.CommandList.TRACING_CONFIGURATION;
 import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
-import static org.apache.ignite.internal.commandline.CommandLogger.grouped;
 import static org.apache.ignite.internal.commandline.CommandLogger.join;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommonArgParser.getCommonOptions;
@@ -132,7 +131,6 @@ public class TracingConfigurationCommand extends AbstractCommand<TracingConfigur
             TracingConfigurationSubcommand.RESET,
             SCOPE.signature(),
             optional(LABEL.signature()));
-
 
         Map<String, String> setParams = U.newLinkedHashMap(4);
         setParams.put(SCOPE.signature(),
