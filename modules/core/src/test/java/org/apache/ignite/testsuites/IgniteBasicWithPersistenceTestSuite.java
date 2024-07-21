@@ -37,6 +37,7 @@ import org.apache.ignite.internal.encryption.MasterKeyChangeConsistencyCheckTest
 import org.apache.ignite.internal.encryption.MasterKeyChangeTest;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointReadLockFailureTest;
 import org.apache.ignite.internal.processors.cache.persistence.SingleNodePersistenceSslTest;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointerTest;
 import org.apache.ignite.internal.processors.cache.persistence.defragmentation.LinkMapTest;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsConsistentIdProcessorTest;
 import org.apache.ignite.marshaller.GridMarshallerMappingConsistencyTest;
@@ -56,6 +57,7 @@ import org.junit.runners.Suite;
     FailureHandlingConfigurationTest.class,
     SystemWorkersBlockingTest.class,
     CheckpointReadLockFailureTest.class,
+    CheckpointerTest.class,
     PdsConsistentIdProcessorTest.class,
 
     GridInternalTaskUnusedWalSegmentsTest.class,
