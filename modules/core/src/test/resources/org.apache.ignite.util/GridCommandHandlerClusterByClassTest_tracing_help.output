@@ -29,7 +29,7 @@ Arguments: --tracing-configuration help --yes
   --tracing-configuration reset --scope <scope> [--label <label>]
     Reset specific tracing configuration to the default. If both --scope and --label are specified then remove given configuration, if only --scope is specified then reset given configuration to the default. Print resulting configuration.
 
-  --tracing-configuration set [--scope <scope>] [--label <label>] [--sampling-rate <samplingRate>] [--included-scopes <scope, ...>]
+  --tracing-configuration set --scope <scope> [--label <label>] [--sampling-rate <samplingRate>] [--included-scopes <scope, ...>]
     Comma separated set new tracing configuration. If both --scope and --label are specified then add or override label specific configuration, if only --scope is specified, then override scope specific configuration. Print applied configuration.
 
     Parameters:

@@ -151,7 +151,7 @@ public class TracingConfigurationCommand extends AbstractCommand<TracingConfigur
                 "if only " + SCOPE.argName() + " is specified, then override scope specific configuration. " +
                 "Print applied configuration.",
             setParams,
-            optional(SCOPE.signature()),
+            SCOPE.signature(),
             optional(LABEL.signature()),
             optional(SAMPLING_RATE.signature()),
             optional(INCLUDED_SCOPES.signature())
