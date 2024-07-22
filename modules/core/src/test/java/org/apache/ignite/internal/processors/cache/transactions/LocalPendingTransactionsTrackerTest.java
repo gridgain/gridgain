@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.transactions;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
@@ -50,6 +51,7 @@ import static org.junit.Assert.fail;
 /**
  * Unit test for {@link LocalPendingTransactionsTracker}
  */
+// TODO include tests into test suite the same thin is about consistent cut unit tests
 public class LocalPendingTransactionsTrackerTest {
     /** Timeout executor. */
     private static ScheduledExecutorService timeoutExecutor;
@@ -492,6 +494,41 @@ public class LocalPendingTransactionsTrackerTest {
         assertEquals(2, committedTxs.size());
         assertTrue(committedTxs.contains(nearXidVersion(3)));
         assertTrue(committedTxs.contains(nearXidVersion(4)));
+    }
+
+    @Test
+    public void testConsistentCutUseCase2() throws Exception {
+        txPrepare(1);
+
+        tracker.writeLockState(); // Cut 1. First stage
+
+        Set<GridCacheVersion> committingTxs;
+        IgniteInternalFuture<Set<GridCacheVersion>> awaitFutCut1;
+        try {
+            tracker.startTrackingCommitted();
+
+            committingTxs = U.sealSet(tracker.startTxFinishAwaiting(10_000, 600_000));
+        }
+        finally {
+            tracker.writeUnlockState();
+        }
+
+        // cut2 second stage
+        Set<GridCacheVersion> locSkipTxs = new HashSet<>();
+        tracker.writeLockState();
+
+        try {
+            awaitFutCut1 = tracker.awaitPendingTxsFinished(Collections.emptySet());
+        }
+        finally {
+            tracker.writeUnlockState();
+        }
+
+        Set<GridCacheVersion> failedToAwait = awaitFutCut1.get();
+
+        locSkipTxs.addAll(failedToAwait);
+
+        assertEquals(1, failedToAwait.size());
     }
 
     /**

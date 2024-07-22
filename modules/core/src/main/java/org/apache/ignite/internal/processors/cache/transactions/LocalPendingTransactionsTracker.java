@@ -334,8 +334,8 @@ public class LocalPendingTransactionsTracker {
      * @return Collection of local transactions in committing state.
      */
     public Set<GridCacheVersion> startTxFinishAwaiting(
-        long preparedTxsTimeout, long committingTxsTimeout) {
-
+        long preparedTxsTimeout,
+        long committingTxsTimeout) {
         assert stateLock.writeLock().isHeldByCurrentThread();
 
         assert txFinishAwaiting == null : txFinishAwaiting;
