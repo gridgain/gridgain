@@ -337,7 +337,7 @@ public final class CollocationModel {
         for (int idx = 0; idx < filterIdx; idx++) {
             CollocationModel child = child(idx, false);
 
-            // The c can be null if it is not a GridH2Table and not a sub-query,
+            // The child can be null if it is not a GridH2Table and not a sub-query,
             // it is a some kind of function table or anything else that considered replicated.
             if (child != null && child.type(true).isPartitioned())
                 return true;

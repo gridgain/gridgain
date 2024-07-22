@@ -913,30 +913,45 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
         IgniteCache<Integer, Integer> cache = ignite(0).getOrCreateCache(cacheConfig("ints", true,
                 Integer.class, Integer.class));
 
-        cache.query(new SqlFieldsQuery("CREATE TABLE T1 (\n" +
-                "\tID VARCHAR NOT NULL,\n" +
-                "\tENUM VARCHAR NOT NULL,\n" +
-                "\tROCPROFILE VARCHAR,\n" +
-                "\tCONSTRAINT PK_PUBLIC_T1 PRIMARY KEY (ID, ENUM)\n" +
-                ")")
-        ).getAll();
+        try {
 
-        cache.query(new SqlFieldsQuery("CREATE INDEX T1_ENUM ON T1 (ENUM)")).getAll();
+            cache.query(new SqlFieldsQuery("CREATE TABLE T1 (" +
+                    "ID VARCHAR NOT NULL," +
+                    "ENUM VARCHAR NOT NULL," +
+                    "PROFILE VARCHAR," +
+                    "CONSTRAINT PK_T1 PRIMARY KEY (ID, ENUM))")
+            ).getAll();
 
-        cache.query(new SqlFieldsQuery("CREATE TABLE T2 (\n" +
-                "\tENUM VARCHAR NOT NULL,\n" +
-                "\tCASCADINGCODES VARCHAR,\n" +
-                "\tID VARCHAR NOT NULL,\n" +
-                "\tCONSTRAINT PK_PUBLIC_T2 PRIMARY KEY (ENUM, ID)\n" +
-                ")")
-        ).getAll();
+            cache.query(new SqlFieldsQuery("CREATE INDEX T1_ENUM ON T1 (ENUM)")).getAll();
 
-        cache.query(new SqlFieldsQuery("SELECT ENUM, ROCPROFILE FROM "
-                + "(WITH CTDetails AS (SELECT ENUM, ROCProfile FROM T1 WHERE ENUM = 'H121001' ), " +
-                "    CTWithRoCDetails AS (SELECT CTD.* FROM T2 ROC INNER JOIN CTDetails CTD "
-                + "ON ROC.CASCADINGCODES LIKE CONCAT(CTD.ROCProfile,'|%') " +
-                "        AND CTD.ROCProfile = 'PAU Receiving' WHERE ROC.ENUM = 'H121001' ) " +
-                "    SELECT * FROM CTWithRoCDetails)").setDistributedJoins(true)).getAll();
+            cache.query(new SqlFieldsQuery("CREATE TABLE T2 (" +
+                    "ENUM VARCHAR NOT NULL," +
+                    "CODES VARCHAR," +
+                    "ID VARCHAR NOT NULL," +
+                    "CONSTRAINT PK_T2 PRIMARY KEY (ID, ENUM))")
+            ).getAll();
+
+            String plan = cache.query(new SqlFieldsQuery(
+                    "EXPLAIN SELECT ENUM, PROFILE FROM "
+                            + "(WITH "
+                            + "CTE1 AS (SELECT ENUM, PROFILE FROM T1 WHERE ENUM = '' ), "
+                            + "CTE2 AS (SELECT CTD.* FROM T2 ROC INNER JOIN CTE1 CTD ON CTD.PROFILE = '' WHERE ROC.ENUM = '') "
+                            + "SELECT * FROM CTE2)")
+                    .setDistributedJoins(true)).getAll().toString();
+
+            X.println("Plan : " + plan);
+
+            assertEquals(1, StringUtils.countOccurrencesOf(plan, "batched:broadcast"));
+        }
+        finally {
+            grid(CLIENT).context().query().querySqlFields(
+                    new SqlFieldsQuery("drop table if exists T1"), false
+            ).getAll();
+
+            grid(CLIENT).context().query().querySqlFields(
+                    new SqlFieldsQuery("drop table if exists T2"), false
+            ).getAll();
+        }
     }
 
     /**
