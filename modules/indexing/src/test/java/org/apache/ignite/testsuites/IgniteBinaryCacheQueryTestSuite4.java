@@ -63,6 +63,7 @@ import org.apache.ignite.internal.processors.query.oom.MemoryQuotaDynamicConfigu
 import org.apache.ignite.internal.processors.query.oom.MemoryQuotaStaticAndDynamicConfigurationTest;
 import org.apache.ignite.internal.processors.query.oom.MemoryQuotaStaticConfigurationTest;
 import org.apache.ignite.internal.processors.query.oom.MemoryTrackerOnReducerTest;
+import org.apache.ignite.internal.processors.query.oom.OOMLeadsTest;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryManagerConfigurationSelfTest;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryManagerSelfTest;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
@@ -152,6 +153,7 @@ import org.junit.runners.Suite;
     IgniteCacheQueryReservationOnUnstableTopologyTest.class,
 
     ScriptTestSuite.class,
+    OOMLeadsTest.class,
 })
 public class IgniteBinaryCacheQueryTestSuite4 {
     /** Setup lazy mode default. */
