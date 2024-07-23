@@ -50,6 +50,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.command.Prepared;
 import org.gridgain.internal.h2.command.dml.Query;
 import org.gridgain.internal.h2.table.Column;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.query.h2.opt.join.CollocationModel.isCollocated;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlConst.TRUE;
@@ -1268,6 +1269,12 @@ public class GridSqlQuerySplitter {
 
         SqlAstTraverser traverser = new SqlAstTraverser(mapQry, distributedJoins, log);
         traverser.traverse();
+
+        @Nullable SqlAstTraverser.MixedModeCachesJoinIssue mixedJoinIssue = traverser.hasOuterJoinMixedCacheModeIssue();
+
+        if (mixedJoinIssue != null && mixedJoinIssue.error()) {
+            throw new CacheException(mixedJoinIssue.errorMessage());
+        }
 
         map.columns(collectColumns(mapExps));
         map.sortColumns(mapQry.sort());
