@@ -909,7 +909,7 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
-    public void test0() {
+    public void testNumerousCTE() {
         IgniteCache<Integer, Integer> cache = ignite(0).getOrCreateCache(cacheConfig("ints", true,
                 Integer.class, Integer.class));
 
