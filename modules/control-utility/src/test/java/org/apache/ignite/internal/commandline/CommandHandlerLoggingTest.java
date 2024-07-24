@@ -24,6 +24,8 @@ import java.util.logging.Handler;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.logging.StreamHandler;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.junit.After;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -35,13 +37,16 @@ import static org.junit.Assert.assertTrue;
 public class CommandHandlerLoggingTest {
 
     private static final String DEFAULT_LOGGER_NAME = "org.apache.ignite.internal.commandline.CommandHandlerLog";
+
     private static final String CUSTOM_LOGGER_NAME = "org.apache.ignite.internal.commandline.CommandHandler";
+
     private static final String ROOT_LOGGER_NAME = "";
 
     /**
      * Verifies that custom logging configuration is provided and is not overriden.
      */
     @Test
+    @WithSystemProperty(key = "java.util.logging.config.file", value = "control-utility-logging.properties")
     public void testExternalConfigIsNotOverridden() {
         String resourceName = "control-utility-logging.properties";
         String resourcePath = getClass().getClassLoader().getResource(resourceName).getPath();
@@ -61,8 +66,6 @@ public class CommandHandlerLoggingTest {
         Logger rootLogger = LogManager.getLogManager().getLogger(ROOT_LOGGER_NAME);
         assertEquals(1, rootLogger.getHandlers().length);
         assertEquals(FileHandler.class, rootLogger.getHandlers()[0].getClass());
-
-        System.clearProperty("java.util.logging.config.file");
     }
 
     /**
@@ -77,7 +80,7 @@ public class CommandHandlerLoggingTest {
 
         Logger logger = LogManager.getLogManager().getLogger(DEFAULT_LOGGER_NAME);
 
-        Handler[] handlers =  logger.getHandlers();
+        Handler[] handlers = logger.getHandlers();
 
         FileHandler fileHandler = Arrays.stream(handlers)
             .filter(h -> h instanceof FileHandler)
@@ -90,5 +93,10 @@ public class CommandHandlerLoggingTest {
             .map(h -> (StreamHandler) h)
             .findFirst()
             .orElseThrow(() -> new AssertionError("StreamHandler not found"));
+    }
+
+    @After
+    public void tearDown() {
+        System.clearProperty("java.util.logging.config.file");
     }
 }

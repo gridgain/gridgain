@@ -147,7 +147,7 @@ public class CommandHandler {
      * @return prepared JULs logger.
      */
     private Logger setupJavaLogger() {
-        if(!JavaLogger.isConfigured()) {
+        if (!JavaLogger.isConfigured()) {
             Logger result = initLogger(CommandHandler.class.getName() + "Log");
 
             // Adding logging to file.
