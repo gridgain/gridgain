@@ -180,7 +180,12 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
      * @return number of written pages.
      */
     private int cpWrittenPages() {
-        AtomicInteger writtenPagesCntr = cpProgress.apply().writtenPagesCounter();
+        CheckpointProgress cpProgress = this.cpProgress.apply();
+
+        if (cpProgress == null)
+            return 0;
+
+        AtomicInteger writtenPagesCntr = cpProgress.writtenPagesCounter();
 
         return writtenPagesCntr == null ? 0 : writtenPagesCntr.get();
     }
