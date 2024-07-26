@@ -16,14 +16,15 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import org.apache.ignite.cache.CacheMetrics;
+import org.apache.ignite.internal.marshaller.optimized.OptimizedObjectOutputStream;
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Collection;
-import org.apache.ignite.cache.CacheMetrics;
-import org.apache.ignite.internal.marshaller.optimized.OptimizedObjectOutputStream;
-import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Metrics snapshot.
@@ -39,6 +40,15 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
 
     /** Number of puts. */
     private long puts = 0;
+
+    /** Number of touch requests. */
+    private long cacheTouches = 0;
+
+    /** Number of touch requests that were satisfied by the cache. */
+    private long cacheTouchHits = 0;
+
+    /** Number of touch requests that were not satisfied by the cache. */
+    private long cacheTouchMisses = 0;
 
     /** Number of invokes caused updates. */
     private long entryProcessorPuts = 0;
@@ -329,6 +339,10 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
         evicts = m.getCacheEvictions();
         removes = m.getCacheRemovals();
 
+        cacheTouches = m.getCacheTouches();
+        cacheTouchHits = m.getCacheTouchHits();
+        cacheTouchMisses = m.getCacheTouchMisses();
+
         entryProcessorPuts = m.getEntryProcessorPuts();
         entryProcessorReadOnlyInvocations = m.getEntryProcessorReadOnlyInvocations();
         entryProcessorInvocations = m.getEntryProcessorInvocations();
@@ -459,6 +473,10 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
             txRollbacks += e.getCacheTxRollbacks();
             evicts += e.getCacheEvictions();
             removes += e.getCacheRemovals();
+
+            cacheTouches += e.getCacheTouches();
+            cacheTouchHits += e.getCacheTouchHits();
+            cacheTouchMisses += e.getCacheTouchMisses();
 
             entryProcessorPuts = e.getEntryProcessorPuts();
             entryProcessorReadOnlyInvocations = e.getEntryProcessorReadOnlyInvocations();
@@ -607,6 +625,36 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
     /** {@inheritDoc} */
     @Override public long getCachePuts() {
         return puts;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getCacheTouches() {
+        return cacheTouches;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getCacheTouchHits() {
+        return cacheTouchHits;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getCacheTouchMisses() {
+        return cacheTouchMisses;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public float getCacheTouchHitPercentage() {
+        return cacheTouches == 0 ? 0 : (float) cacheTouchHits / cacheTouches * 100;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public float getCacheTouchMissPercentage() {
+        return cacheTouches == 0 ? 0 : (float) cacheTouchMisses / cacheTouches * 100;
     }
 
     /** {@inheritDoc} */
