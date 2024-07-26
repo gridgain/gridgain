@@ -266,7 +266,10 @@ public enum IgniteFeatures {
     TCP_COMMUNICATION_HEARTBEATS(70),
 
     /** Optimization of compression for encrypted snapshots. */
-    OPTIMIZED_COMPRESSED_ENCRYPTED_SNAPSHOTS(71);
+    OPTIMIZED_COMPRESSED_ENCRYPTED_SNAPSHOTS(71),
+
+    /** This feature allows using exchangeless snapshots for point-in-time recovery. */
+    POINT_IN_TIME_RECOVERY_EXCHANGELESS_SUPPORT(72);
 
     /**
      * Unique feature identifier.
