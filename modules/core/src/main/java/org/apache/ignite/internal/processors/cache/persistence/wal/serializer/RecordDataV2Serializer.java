@@ -43,6 +43,7 @@ import org.apache.ignite.internal.pagemem.wal.record.OutOfOrderDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.pagemem.wal.record.SnapshotRecord;
+import org.apache.ignite.internal.pagemem.wal.record.TimeStampedConsistentCutRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType;
@@ -123,6 +124,9 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
 
             case CONSISTENT_CUT:
                 return 0;
+
+            case TIME_STAMPED_CONSISTENT_CUT:
+                return 8 /*timestamp*/;
 
             case ROLLBACK_TX_RECORD:
                 return 4 + 4 + 8 + 8;
@@ -246,6 +250,11 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
 
             case CONSISTENT_CUT:
                 return new ConsistentCutRecord();
+
+            case TIME_STAMPED_CONSISTENT_CUT:
+                timeStamp = in.readLong();
+
+                return new TimeStampedConsistentCutRecord(timeStamp);
 
             case ROLLBACK_TX_RECORD:
                 int grpId = in.readInt();
@@ -405,6 +414,13 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
                 break;
 
             case CONSISTENT_CUT:
+                break;
+
+            case TIME_STAMPED_CONSISTENT_CUT:
+                TimeStampedConsistentCutRecord tsCut = (TimeStampedConsistentCutRecord)rec;
+
+                buf.putLong(tsCut.timestamp());
+
                 break;
 
             case DATA_PAGE_FRAGMENTED_UPDATE_RECORD:
