@@ -267,12 +267,18 @@ public class CacheMetricsImpl implements CacheMetrics {
         if (cctx.isNear())
             dhtCtx = cctx.near().dht().context();
 
-        if (cctx.store().store() instanceof GridCacheWriteBehindStore)
-            store = (GridCacheWriteBehindStore)cctx.store().store();
+        if (cctx.store() != null && cctx.store().store() != null) {
+            if (cctx.store() instanceof GridCacheWriteBehindStore)
+                store = (GridCacheWriteBehindStore) cctx.store().store();
+        }
 
         delegate = null;
 
         MetricRegistry mreg = cctx.kernalContext().metric().registry(cacheMetricsRegistryName(cctx.name(), isNear));
+
+        cacheTouches = mreg.longMetric("CacheTouches", "Total number of touch requests to the cache.");
+        cacheTouchHits = mreg.longMetric("CacheTouchHits", "Number of touch requests that were satisfied by the cache.");
+        cacheTouchMisses = mreg.longMetric("CacheTouchMisses", "Number of touch requests that were not satisfied by the cache.");
 
         reads = mreg.longMetric("CacheGets",
             "The total number of gets to the cache.");
@@ -415,12 +421,6 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         heapEntriesCnt = mreg.registerOrReplace("HeapEntriesCount",
             () -> getEntriesStat().heapEntriesCount(), "Onheap entries count.");
-
-        // Initialize touch metrics
-        String metricPrefix = MetricUtils.metricName(CACHE_METRICS, cctx.name());
-        this.cacheTouches = mreg.longMetric(metricPrefix + ".cacheTouches", "Total number of touch requests to the cache.");
-        this.cacheTouchHits = mreg.longMetric(metricPrefix + ".cacheTouchHits", "Number of touch requests that were satisfied by the cache.");
-        this.cacheTouchMisses = mreg.longMetric(metricPrefix + ".cacheTouchMisses", "Number of touch requests that were not satisfied by the cache.");
 
         cacheSize = mreg.registerOrReplace("CacheSize",
             () -> getEntriesStat().cacheSize(), "Local cache size.");

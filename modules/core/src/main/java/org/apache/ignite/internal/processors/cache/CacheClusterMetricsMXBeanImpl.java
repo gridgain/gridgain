@@ -16,9 +16,10 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.util.Collections;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.mxbean.CacheMetricsMXBean;
+
+import java.util.Collections;
 
 /**
  * Management bean that provides access to {@link IgniteCache IgniteCache}.
@@ -286,6 +287,31 @@ public class CacheClusterMetricsMXBeanImpl implements CacheMetricsMXBean {
     /** {@inheritDoc} */
     @Override public long getCachePuts() {
         return cache.clusterMetrics().getCachePuts();
+    }
+
+    @Override
+    public long getCacheTouches() {
+        return cache.clusterMetrics().getCacheTouches();
+    }
+
+    @Override
+    public long getCacheTouchHits() {
+        return cache.clusterMetrics().getCacheTouchHits();
+    }
+
+    @Override
+    public long getCacheTouchMisses() {
+        return cache.clusterMetrics().getCacheTouchMisses();
+    }
+
+    @Override
+    public float getCacheTouchHitPercentage() {
+        return cache.clusterMetrics().getCacheTouchHitPercentage();
+    }
+
+    @Override
+    public float getCacheTouchMissPercentage() {
+        return cache.clusterMetrics().getCacheTouchMissPercentage();
     }
 
     /** {@inheritDoc} */
