@@ -44,6 +44,7 @@ public class ClearCachesTask extends VisorOneNodeTask<ClearCachesTaskArg, ClearC
         private static final long serialVersionUID = 0L;
 
         /** Local Ignite instance. */
+        @IgniteInstanceResource
         private Ignite ignite;
 
         /** */
@@ -69,12 +70,6 @@ public class ClearCachesTask extends VisorOneNodeTask<ClearCachesTaskArg, ClearC
             }
 
             return new ClearCachesTaskResult(clearedCaches, nonExistentCaches);
-        }
-
-        /** */
-        @IgniteInstanceResource
-        public void setIgnite(Ignite ignite) {
-            this.ignite = ignite;
         }
     }
 }
