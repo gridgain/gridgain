@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache;
+package org.apache.ignite.internal.visor.cache;
 
 import java.util.ArrayList;
 import java.util.List;

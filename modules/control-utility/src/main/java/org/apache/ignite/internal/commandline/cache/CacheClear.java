@@ -26,9 +26,9 @@ import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.TaskExecutor;
-import org.apache.ignite.internal.processors.cache.ClearCachesTask;
-import org.apache.ignite.internal.processors.cache.ClearCachesTaskArg;
-import org.apache.ignite.internal.processors.cache.ClearCachesTaskResult;
+import org.apache.ignite.internal.visor.cache.ClearCachesTask;
+import org.apache.ignite.internal.visor.cache.ClearCachesTaskArg;
+import org.apache.ignite.internal.visor.cache.ClearCachesTaskResult;
 import org.apache.ignite.internal.util.typedef.F;
 
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
