@@ -21,10 +21,10 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.List;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.visor.VisorDataTransferObject;
+import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 
 /** Result of {@link ClearCachesTask}. */
-public class ClearCachesTaskResult extends VisorDataTransferObject {
+public class ClearCachesTaskResult extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
