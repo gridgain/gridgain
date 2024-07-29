@@ -16,15 +16,17 @@
 
 package org.apache.ignite.internal.visor.cache;
 
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.compute.ComputeJobContext;
 import org.apache.ignite.internal.processors.task.GridInternal;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.apache.ignite.resources.IgniteInstanceResource;
+import org.apache.ignite.resources.JobContextResource;
 import org.jetbrains.annotations.Nullable;
 
 /** Clears specified caches. */
@@ -47,6 +49,11 @@ public class ClearCachesTask extends VisorOneNodeTask<ClearCachesTaskArg, ClearC
         @IgniteInstanceResource
         private Ignite ignite;
 
+        private GridCompoundFuture opFut;
+
+        @JobContextResource
+        private ComputeJobContext jobCtx;
+
         /** */
         private ClearCacheJob(ClearCachesTaskArg arg, boolean debug) {
             super(arg, debug);
@@ -54,22 +61,29 @@ public class ClearCachesTask extends VisorOneNodeTask<ClearCachesTaskArg, ClearC
 
         /** {@inheritDoc} */
         @Override protected ClearCachesTaskResult run(@Nullable ClearCachesTaskArg arg) throws IgniteException {
-            List<String> clearedCaches = new ArrayList<>();
-            List<String> nonExistentCaches = new ArrayList<>();
+            if (opFut == null) {
+                opFut = new GridCompoundFuture<>();
 
-            for (String cache: arg.caches()) {
-                IgniteCache<?, ?> ignCache = ignite.cache(cache);
-
-                if (ignCache == null)
-                    nonExistentCaches.add(cache);
-                else {
-                    ignCache.clear();
-
-                    clearedCaches.add(cache);
+                for (String cache: arg.caches()) {
+                    IgniteCache<?, ?> ignCache = ignite.cache(cache);
+                    GridFutureAdapter<?> fut = new GridFutureAdapter<>();
+                    ignCache.clearAsync().listen(asyncClearFut -> fut.onDone());
+                    opFut.add(fut);
                 }
+
+                jobCtx.holdcc();
+
+                opFut.listen(f -> jobCtx.callcc());
+
+                opFut.markInitialized();
+
+                return null;
             }
 
-            return new ClearCachesTaskResult(clearedCaches, nonExistentCaches);
+            assert opFut.isDone();
+
+            return new ClearCachesTaskResult();
         }
     }
 }
+
