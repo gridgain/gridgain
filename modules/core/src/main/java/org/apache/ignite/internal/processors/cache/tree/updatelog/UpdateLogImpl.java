@@ -58,7 +58,9 @@ public class UpdateLogImpl implements UpdateLog {
     }
 
     /** {@inheritDoc} */
-    @Override public PartitionLogTree tree() {
+    @Override public PartitionLogTree tree() throws IgniteCheckedException {
+        init();
+
         return logTree;
     }
 
