@@ -18,7 +18,6 @@ package org.apache.ignite.internal.pagemem.wal.record;
 /**
  * Empty record which is logged to WAL to obtain pointer to consistent cut border.
  */
-@Deprecated
 public class ConsistentCutRecord extends WALRecord {
     /** {@inheritDoc} */
     @Override public RecordType type() {

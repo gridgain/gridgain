@@ -218,8 +218,6 @@ public abstract class WALRecord {
         MVCC_TX_RECORD(55, LOGICAL),
 
         /** Consistent cut record. */
-        // We still can use this record for the fuzzy border of consistent cut, which does not require a timestamp.
-        @Deprecated
         CONSISTENT_CUT(56),
 
         /** Rollback tx record. */
