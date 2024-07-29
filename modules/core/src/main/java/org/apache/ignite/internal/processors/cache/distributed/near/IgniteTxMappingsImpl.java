@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxMapping;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
@@ -30,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class IgniteTxMappingsImpl implements IgniteTxMappings {
     /** */
+    @GridToStringExclude
     private final Map<UUID, GridDistributedTxMapping> mappings = new ConcurrentHashMap<>();
 
     /** {@inheritDoc} */

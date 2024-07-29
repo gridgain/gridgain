@@ -57,11 +57,6 @@ public abstract class IgniteTxRemoteStateAdapter implements IgniteTxRemoteState 
     }
 
     /** {@inheritDoc} */
-    @Override public void awaitLastFuture(GridCacheSharedContext cctx) {
-        assert false;
-    }
-
-    /** {@inheritDoc} */
     @Override public IgniteCheckedException validateTopology(
         GridCacheSharedContext cctx,
         boolean read,
@@ -121,11 +116,6 @@ public abstract class IgniteTxRemoteStateAdapter implements IgniteTxRemoteState 
     /** {@inheritDoc} */
     @Override public boolean hasInterceptor(GridCacheSharedContext cctx) {
         return false;
-    }
-
-    /** {@inheritDoc} */
-    @Nullable @Override public GridCacheContext singleCacheContext(GridCacheSharedContext cctx) {
-        return null;
     }
 
     /** {@inheritDoc} */

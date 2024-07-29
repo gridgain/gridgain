@@ -208,12 +208,10 @@ public abstract class Command implements CommandInterface {
                     } catch (DbException e) {
                         start = filterConcurrentUpdate(e, start);
                     } catch (OutOfMemoryError e) {
-                        callStop = false;
                         // there is a serious problem:
                         // the transaction may be applied partially
                         // in this case we need to panic:
                         // close the database
-                        database.shutdownImmediately();
                         throw DbException.convert(e);
                     } catch (Throwable e) {
                         throw DbException.convert(e);
@@ -224,8 +222,6 @@ public abstract class Command implements CommandInterface {
                 SQLException s = e.getSQLException();
                 database.exceptionThrown(s, sql);
                 if (s.getErrorCode() == ErrorCode.OUT_OF_MEMORY) {
-                    callStop = false;
-                    database.shutdownImmediately();
                     throw e;
                 }
                 database.checkPowerOff();

@@ -26,15 +26,26 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteState;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.maintenance.MaintenanceAction;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.maintenance.MaintenanceTask;
 import org.apache.ignite.maintenance.MaintenanceWorkflowCallback;
+import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAINTENANCE_MODE_EXIT_CODE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY;
+import static org.apache.ignite.IgniteSystemProperties.getInteger;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 
 /** */
 public class MaintenanceProcessor extends GridProcessorAdapter implements MaintenanceRegistry {
@@ -43,6 +54,9 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
 
     /** */
     private static final Pattern ALPHANUMERIC_UNDERSCORE = Pattern.compile("^[a-zA-Z_0-9]+$");
+
+    /** @see org.apache.ignite.IgniteSystemProperties#IGNITE_MAINTENANCE_MODE_EXIT_CODE */
+    public static final int DFLT_MAINTENANCE_MODE_EXIT_CODE = 0;
 
     /**
      * Active {@link MaintenanceTask}s are the ones that were read from disk when node entered Maintenance Mode.
@@ -66,6 +80,12 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
 
     /** */
     private volatile boolean maintenanceMode;
+
+    /** Node in maintenance mode will shut down after all active tasks would be completed. */
+    private final boolean autoShutdown = getBoolean(IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY);
+
+    /** Node in maintenance mode will automatically shut down with specified exit code. */
+    private final int mntcModeExitCode = getInteger(IGNITE_MAINTENANCE_MODE_EXIT_CODE, DFLT_MAINTENANCE_MODE_EXIT_CODE);
 
     /**
      * @param ctx Kernal context.
@@ -231,6 +251,14 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
                     "Restart the node to get it back to normal operations.");
             }
         }
+
+        if (isMaintenanceMode() && autoShutdown) {
+            if (log.isInfoEnabled())
+                log.info("Starting a thread that will shut down the node when all active maintenance tasks " +
+                        "are completed.");
+
+            startShutdownThread();
+        }
     }
 
     /**
@@ -343,5 +371,38 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
     /** {@inheritDoc} */
     @Nullable @Override public MaintenanceTask requestedTask(String maintenanceTaskName) {
         return requestedTasks.get(maintenanceTaskName);
+    }
+
+    /** Starts a thread which will shut down the node when all maintenance tasks are completed. */
+    private void startShutdownThread() {
+        String igniteInstanceName = ctx.config().getIgniteInstanceName();
+
+        IgniteThread t = new IgniteThread(new GridWorker(igniteInstanceName, "maintenance-shutdown-thread", log) {
+            @Override protected void body() throws InterruptedException {
+                long lastLogTs = U.currentTimeMillis();
+
+                while (true) {
+                    if (activeTasks.isEmpty() && Ignition.state(igniteInstanceName) == IgniteState.STARTED) {
+                        G.stop(igniteInstanceName, false);
+
+                        if (mntcModeExitCode != 0)
+                            System.exit(mntcModeExitCode);
+
+                        return;
+                    }
+
+                    if (log.isInfoEnabled() && U.currentTimeMillis() - lastLogTs > 2000) {
+                        lastLogTs = U.currentTimeMillis();
+
+                        log.info("Node will be shut down when all active maintenance tasks are completed " +
+                                "[activeTasks=" + activeTasks + "]");
+                    }
+
+                    Thread.sleep(100);
+                }
+            }
+        });
+
+        t.start();
     }
 }

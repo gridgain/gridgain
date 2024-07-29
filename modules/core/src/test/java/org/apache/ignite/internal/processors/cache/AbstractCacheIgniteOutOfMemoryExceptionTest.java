@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import com.sun.management.HotSpotDiagnosticMXBean;
-import com.sun.management.VMOption;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,6 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.management.MBeanServer;
+import com.sun.management.HotSpotDiagnosticMXBean;
+import com.sun.management.VMOption;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -54,7 +54,7 @@ public class AbstractCacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstr
     protected static final long DATA_REGION_SIZE = 10L * U.MB;
 
     /** Huge data region. */
-    private static final long HUGE_DATA_REGION_SIZE = U.GB;
+    protected static final long HUGE_DATA_REGION_SIZE = U.GB;
 
     /** Region name. */
     protected static final String HUGE_DATA_REGION_NAME = "hugeRegion";
@@ -123,7 +123,9 @@ public class AbstractCacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstr
      * @param dataRegion Data region name.
      * @return Cache configuration.
      */
-    protected CacheConfiguration<Integer, Object> cacheConfiguration(CacheAtomicityMode mode, String cacheName,
+    protected CacheConfiguration<Integer, Object> cacheConfiguration(
+        CacheAtomicityMode mode,
+        String cacheName,
         String dataRegion) {
         return new CacheConfiguration<Integer, Object>(cacheName)
             .setAtomicityMode(mode)
@@ -133,7 +135,7 @@ public class AbstractCacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstr
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        startGrid(0);
+        startGrids(2);
     }
 
     /** {@inheritDoc} */
@@ -190,17 +192,8 @@ public class AbstractCacheIgniteOutOfMemoryExceptionTest extends GridCommonAbstr
         }
     }
 
-    public void testContainsFromBackup0(IgniteCache<Integer, Object> cache, int cnt) throws Exception {
-        startGrid(1);
-
-        try {
-            awaitPartitionMapExchange();
-
-            testContains(cache, backupKeys(cache, 1, 0), true);
-        }
-        finally {
-            stopGrid(1);
-        }
+    public void testContainsFromBackup0(IgniteCache<Integer, Object> cache, int cnt) {
+        testContains(cache, backupKeys(cache, 1, 0), true);
     }
 
     /**

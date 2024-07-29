@@ -36,7 +36,7 @@ public class SystemViewInnerCollectionsAdapter<C, R, D> extends AbstractSystemVi
     private final Iterable<C> containers;
 
     /** Function to extract collection of the data from container. */
-    private final Function<C, Collection<D>> dataExtractor;
+    private final Function<C, Iterable<D>> dataExtractor;
 
     /** Row function. */
     private final BiFunction<C, D, R> rowFunc;
@@ -52,7 +52,7 @@ public class SystemViewInnerCollectionsAdapter<C, R, D> extends AbstractSystemVi
     public SystemViewInnerCollectionsAdapter(String name, String desc,
         SystemViewRowAttributeWalker<R> walker,
         Iterable<C> containers,
-        Function<C, Collection<D>> dataExtractor,
+        Function<C, Iterable<D>> dataExtractor,
         BiFunction<C, D, R> rowFunc) {
         super(name, desc, walker);
 
@@ -65,8 +65,11 @@ public class SystemViewInnerCollectionsAdapter<C, R, D> extends AbstractSystemVi
     @Override public int size() {
         int sz = 0;
 
-        for (C c : containers)
-            sz += dataExtractor.apply(c).size();
+        for (C c : containers) {
+            Iterable<D> data = dataExtractor.apply(c);
+
+            sz += data instanceof Collection ? ((Collection<D>)data).size() : F.size(data.iterator());
+        }
 
         return sz;
     }

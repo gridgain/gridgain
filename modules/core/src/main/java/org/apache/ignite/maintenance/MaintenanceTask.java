@@ -16,6 +16,7 @@
 
 package org.apache.ignite.maintenance;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteExperimental;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -83,5 +84,10 @@ public class MaintenanceTask {
      */
     public @Nullable String parameters() {
         return params;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(MaintenanceTask.class, this);
     }
 }

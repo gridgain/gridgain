@@ -1490,7 +1490,6 @@ public class GridNioServer<T> {
                         }
                     }
 
-                    Message msg;
                     boolean finished = false;
 
                     List<SessionWriteRequest> pendingRequests = new ArrayList<>(2);

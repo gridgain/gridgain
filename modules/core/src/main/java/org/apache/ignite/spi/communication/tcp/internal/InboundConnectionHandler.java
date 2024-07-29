@@ -58,6 +58,7 @@ import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
 import org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage;
+import org.apache.ignite.spi.communication.tcp.messages.ConnectionCheckMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
@@ -321,6 +322,13 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
                     recovery.ackReceived(msg0.received());
                 }
+
+                return;
+            }
+            else if (msg instanceof ConnectionCheckMessage) {
+                if (log.isDebugEnabled())
+                    log.debug("Heartbeat message received [rmtNode=" + connKey.nodeId() +
+                            ", connIdx=" + connKey.connectionIndex() + "]");
 
                 return;
             }
@@ -606,6 +614,9 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
                     ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
 
+                    // We are sending ConectionCheckMessage through old session to validate if session is alive.
+                    ((GridTcpNioCommunicationClient) oldClient).checkConnectionIfEnabled();
+
                     closeStaleConnections(connKey);
 
                     return;
@@ -700,25 +711,19 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                     ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
                 }
                 else {
-                    try {
-                        // The code below causes a race condition between shmem and TCP (see IGNITE-1294)
-                        boolean reserved = recoveryDesc.tryReserve();
+                    // The code below causes a race condition between shmem and TCP (see IGNITE-1294)
+                    boolean reserved = recoveryDesc.tryReserve();
 
-                        if (reserved) {
-                            GridTcpNioCommunicationClient client =
-                                connected(recoveryDesc, ses, rmtNode, msg0.received(), true, !hasShmemClient);
+                    if (reserved) {
+                        GridTcpNioCommunicationClient client =
+                            connected(recoveryDesc, ses, rmtNode, msg0.received(), true, !hasShmemClient);
 
-                            oldFut.onDone(client);
-                        }
-                        else {
-                            ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
+                        oldFut.onDone(client);
 
-                            oldFut.onDone();
-                        }
-                    }
-                    finally {
                         clientPool.removeFut(connKey, oldFut);
                     }
+                    else
+                        ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
                 }
             }
         }
@@ -748,6 +753,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
      * @param createClient If {@code true} creates NIO communication client.
      * @return Client.
      */
+    @Nullable
     private GridTcpNioCommunicationClient connected(
         GridNioRecoveryDescriptor recovery,
         GridNioSession ses,
@@ -780,7 +786,10 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         GridTcpNioCommunicationClient client = null;
 
         if (createClient) {
-            client = new GridTcpNioCommunicationClient(connKey.connectionIndex(), ses, log);
+            boolean enableConnectionCheck = cfg.enableConnectionCheck()
+                    && stateProvider.isTcpCommunicationConnectionCheckSupported(node);
+
+            client = new GridTcpNioCommunicationClient(connKey.connectionIndex(), ses, log, enableConnectionCheck);
 
             clientPool.addNodeClient(node, connKey.connectionIndex(), client);
         }

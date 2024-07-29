@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
+
 import java.util.Map;
 import java.util.Set;
 
@@ -61,4 +63,12 @@ public interface IgniteTxLocalState extends IgniteTxState {
      * @return Recovery mode flag.
      */
     public boolean recovery();
+
+    /**
+     * Awaits for previous async operations on active caches to be completed.
+     */
+    public void awaitLastFuture();
+
+    /** Previous async operations on caches. */
+    public GridCacheAdapter.FutureHolder lastAsyncFuture();
 }

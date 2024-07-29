@@ -87,6 +87,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.preloa
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition.DFLT_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.DFLT_MVCC_TX_SIZE_CACHING_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.DFLT_IGNITE_VALIDATE_CACHE_NAMES;
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.DFLT_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory.DFLT_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE;
 import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage.DFLT_IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD;
@@ -138,6 +139,7 @@ import static org.apache.ignite.internal.util.StripedExecutor.DFLT_DATA_STREAMIN
 import static org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor.DFLT_NIO_RECOVERY_DESCRIPTOR_RESERVATION_TIMEOUT;
 import static org.apache.ignite.internal.util.nio.GridNioServer.DFLT_IO_BALANCE_PERIOD;
 import static org.apache.ignite.internal.util.nio.ssl.GridNioSslHandler.DFLT_SSL_HANDSHAKE_TIMEOUT_MS;
+import static org.apache.ignite.internal.util.nio.ssl.GridNioSslHandler.DFLT_SSL_UNWRAP_TIMEOUT_MS;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_TO_STRING_COLLECTION_LIMIT;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_TO_STRING_MAX_LENGTH;
@@ -2152,6 +2154,15 @@ public final class IgniteSystemProperties {
         "IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE";
 
     /**
+     * If {@code true}, cache names will be validated not to contain characters which cause issues when persistence is used
+     * ({@code \}, {@code /}, {@code \0}). Default is {@code true}.
+     */
+    @SystemProperty(value = "If true, cache names will be validated not to contain characters " +
+        "which cause issues when persistence is used ({@code \\}, {@code /}, {@code \\0})",
+        defaults = "" + DFLT_IGNITE_VALIDATE_CACHE_NAMES)
+    public static final String IGNITE_VALIDATE_CACHE_NAMES = "IGNITE_VALIDATE_CACHE_NAMES";
+
+    /**
      * There can be background tasks that can be interrupted due to node stop, node fail, or cluster deactivation,
      * but need to be completed, so they start after node start or cluster activation. If this option is set to
      * {@code false}, then tasks will not be started.
@@ -2224,6 +2235,37 @@ public final class IgniteSystemProperties {
         " when the cache-based implementation of the service framework is used",
         defaults = "" + DFLT_IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START)
     public static final String IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START = "IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START";
+
+    /** Node in maintenance mode will automatically shut down after all active maintenance would be completed. */
+    @SystemProperty(value = "Node in maintenance mode will automatically shut down after all active maintenance " +
+            "would be completed",
+            defaults = "false")
+    public static final String IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY = "IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY";
+
+    /** Dumps latest WAL segments and related index and partition files on data corruption error. */
+    @SystemProperty(value = "Dumps latest WAL segments and related index and partition files on data corruption error",
+            defaults = "false")
+    public static final String IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION = "IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION";
+
+    /** Node in maintenance mode will shut down with specified JVM exit code. */
+    @SystemProperty(value = "Node in maintenance mode will shut down with specified JVM exit code",
+            defaults = "0")
+    public static final String IGNITE_MAINTENANCE_MODE_EXIT_CODE = "IGNITE_MAINTENANCE_MODE_EXIT_CODE";
+
+    /** SSL unwrap timeout. */
+    @SystemProperty(value = "SSL unwrap timeout, in milliseconds", type = Long.class,
+            defaults = DFLT_SSL_UNWRAP_TIMEOUT_MS + " milliseconds")
+    public static final String IGNITE_SSL_UNWRAP_TIMEOUT = "IGNITE_SSL_UNWRAP_TIMEOUT";
+
+    /**
+     * Comma separated packages list to expose in configuration view.
+     * The default value is null.
+     * @see org.apache.ignite.internal.managers.systemview.GridSystemViewManager
+     * @see org.apache.ignite.spi.systemview.view.ConfigurationView
+     */
+    @SystemProperty(value = "Packages list to expose in configuration view")
+    @IgniteExperimental
+    public static final String IGNITE_CONFIGURATION_VIEW_PACKAGES = "IGNITE_CONFIGURATION_VIEW_PACKAGES";
 
     /**
      * Enforces singleton.

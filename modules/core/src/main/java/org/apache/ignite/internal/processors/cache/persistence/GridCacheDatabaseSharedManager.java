@@ -66,6 +66,7 @@ import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
+import org.apache.ignite.internal.managers.systemview.walker.MetastorageViewWalker;
 import org.apache.ignite.internal.mem.DirectMemoryProvider;
 import org.apache.ignite.internal.mem.DirectMemoryRegion;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
@@ -168,6 +169,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.maintenance.MaintenanceTask;
 import org.apache.ignite.mxbean.DataStorageMetricsMXBean;
+import org.apache.ignite.spi.systemview.view.MetastorageView;
 import org.apache.ignite.transactions.TransactionState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -175,6 +177,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Objects.nonNull;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE;
@@ -223,6 +226,12 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** MemoryPolicyConfiguration name reserved for meta store. */
     public static final String METASTORE_DATA_REGION_NAME = "metastoreMemPlc";
 
+    /** Name of the system view for a system {@link MetaStorage}. */
+    public static final String METASTORE_VIEW = "metastorage";
+
+    /** Description of the system view for a {@link MetaStorage}. */
+    public static final String METASTORE_VIEW_DESC = "Local metastorage data";
+
     /** */
     public static final String DEFRAGMENTATION_PART_REGION_NAME = "defragPartitionsDataRegion";
 
@@ -250,6 +259,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** @see IgniteSystemProperties#IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE */
     public static final int DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE = 60;
+
+    /** @see IgniteSystemProperties#IGNITE_VALIDATE_CACHE_NAMES */
+    public static final boolean DFLT_IGNITE_VALIDATE_CACHE_NAMES = true;
 
     /**
      * Threshold value to use history or full rebalance for local partition.
@@ -409,6 +421,26 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      */
     public FilePageStoreManager getFileStoreManager() {
         return storeMgr;
+    }
+
+    /** Registers system view. */
+    private void registerSystemView() {
+        cctx.kernalContext().systemView().registerView(METASTORE_VIEW, METASTORE_VIEW_DESC,
+            new MetastorageViewWalker(), () -> {
+                try {
+                    List<MetastorageView> data = new ArrayList<>();
+
+                    metaStorage.iterate("", (key, val) ->
+                        data.add(new MetastorageView(key, IgniteUtils.toStringSafe(val))), true);
+
+                    return data;
+                }
+                catch (IgniteCheckedException e) {
+                    log.warning("Metastore iteration error", e);
+
+                    return Collections.emptyList();
+                }
+            }, identity());
     }
 
     /** */
@@ -861,6 +893,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 checkpointManager.initializeStorage();
 
+                registerSystemView();
+
                 notifyMetastorageReadyForRead();
 
                 cctx.kernalContext().maintenanceRegistry()
@@ -982,7 +1016,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 long freeSpace = 0L;
 
                 for (CacheGroupContext grpCtx : cctx.cache().cacheGroups()) {
-                    if (!grpCtx.dataRegion().config().getName().equals(dataRegName))
+                    if (grpCtx.dataRegion() == null || !grpCtx.dataRegion().config().getName().equals(dataRegName))
                         continue;
 
                     assert grpCtx.offheap() instanceof GridCacheOffheapManager;
@@ -997,7 +1031,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 long emptyDataPages = 0L;
 
                 for (CacheGroupContext grpCtx : cctx.cache().cacheGroups()) {
-                    if (!grpCtx.dataRegion().config().getName().equals(dataRegName))
+                    if (grpCtx.dataRegion() == null || !grpCtx.dataRegion().config().getName().equals(dataRegName))
                         continue;
 
                     assert grpCtx.offheap() instanceof GridCacheOffheapManager;
@@ -1239,6 +1273,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             changeTracker = null;
 
         PageMemoryImpl pageMem = new PageMemoryImpl(
+            plcCfg,
             wrapMetricsPersistentMemoryProvider(memProvider, memMetrics),
             calculateFragmentSizes(
                 plcCfg.getName(),

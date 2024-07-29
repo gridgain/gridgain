@@ -31,6 +31,9 @@ public class SqlKeyword {
     /** Keyword: QUERY. */
     public static final String QUERY = "QUERY";
 
+    /** Keyword: CONTINUOUS. */
+    public static final String CONTINUOUS = "CONTINUOUS";
+
     /** Keyword: ALTER. */
     public static final String ALTER = "ALTER";
 

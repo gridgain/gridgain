@@ -403,6 +403,9 @@ public class GridNioServerWrapper {
                         "Recovery descriptor not found [connKey=" + connKey + ", rmtNode=" + node.id() + ']';
 
                     if (!recoveryDesc.reserve()) {
+                        if (log.isDebugEnabled())
+                            log.debug("Was not able to reserve recovery descriptor [connKey=" + connKey + "]");
+
                         U.closeQuiet(ch);
 
                         // Ensure the session is closed.
@@ -415,6 +418,9 @@ public class GridNioServerWrapper {
 
                         return null;
                     }
+
+                    if (log.isDebugEnabled())
+                        log.debug("Reserved recovery descriptor for outbound connection [connKey=" + connKey + "]");
 
                     long rcvCnt;
 
@@ -668,8 +674,10 @@ public class GridNioServerWrapper {
         else {
             GridNioSession ses = createNioSession(node, connIdx);
 
+            boolean enableConnectionCheck = cfg.enableConnectionCheck() && stateProvider.isTcpCommunicationConnectionCheckSupported(node);
+
             return ses == null ?
-                null : new GridTcpNioCommunicationClient(connIdx, ses, log);
+                null : new GridTcpNioCommunicationClient(connIdx, ses, log, enableConnectionCheck);
         }
     }
 

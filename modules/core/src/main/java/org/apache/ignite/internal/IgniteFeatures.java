@@ -260,7 +260,13 @@ public enum IgniteFeatures {
     CHECK_CACHE_GENERATION(68),
 
     /** This feature enables attributes to be included into TaskEvents. */
-    TASK_EVT_ATTRIBUTE_SUPPORT(69);
+    TASK_EVT_ATTRIBUTE_SUPPORT(69),
+
+    /** Allows to node check connections with special heartbeat message to detect network issues rather quickly. */
+    TCP_COMMUNICATION_HEARTBEATS(70),
+
+    /** Optimization of compression for encrypted snapshots. */
+    OPTIMIZED_COMPRESSED_ENCRYPTED_SNAPSHOTS(71);
 
     /**
      * Unique feature identifier.

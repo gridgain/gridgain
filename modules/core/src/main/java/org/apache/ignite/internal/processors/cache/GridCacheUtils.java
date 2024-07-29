@@ -48,6 +48,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.CachePartialUpdateException;
 import org.apache.ignite.cache.CacheServerNotFoundException;
@@ -133,6 +134,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC
 import static org.apache.ignite.configuration.CacheConfiguration.DFLT_CACHE_MODE;
 import static org.apache.ignite.internal.GridTopic.TOPIC_REPLICATION;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.DFLT_IGNITE_VALIDATE_CACHE_NAMES;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.cacheDirName;
 
 /**
@@ -144,6 +146,9 @@ public class GridCacheUtils {
 
     /** */
     public static final int UNDEFINED_CACHE_ID = 0;
+
+    /** Size of the metadata, located in the last block of encrypted page. 5 bytes. */
+    public static final int ENCRYPTION_CRC_AND_METADATA_SIZE = /* CRC */ Integer.BYTES + /* Key ID */ Byte.BYTES;
 
     /*
      *
@@ -1551,6 +1556,13 @@ public class GridCacheUtils {
 
         A.ensure(!isReservedCacheName(name), "Cache name cannot be \"" + name +
             "\" because it is reserved for internal purposes.");
+
+        if (IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_VALIDATE_CACHE_NAMES, DFLT_IGNITE_VALIDATE_CACHE_NAMES)) {
+            boolean hasIllegalCharacters = name.contains("/") || name.contains("\\") || name.contains("\0")
+                    || name.contains("\n");
+            A.ensure(!hasIllegalCharacters, "Cache name cannot contain slashes (/), backslashes (\\), " +
+                    "line separators (\\n), or null characters (\\0). [cacheName=" + name + "]");
+        }
     }
 
     /**
@@ -2119,9 +2131,12 @@ public class GridCacheUtils {
      * @return Page size without encryption overhead.
      */
     public static int encryptedPageSize(int pageSize, EncryptionSpi encSpi) {
-        // If encryption is enabled, a space of one encryption block is reserved to store CRC and encryption key ID.
+        // If encryption is enabled, a space of one encryption block is reserved to store CRC, encryption key ID
+        // and position for EncryptedOutputStream.
         // If encryption is disabled, NoopEncryptionSPI with a zero encryption block size is used.
-        assert encSpi.blockSize() >= /* CRC */ 4 + /* Key ID */ 1 || encSpi.blockSize() == 0;
+        assert encSpi.blockSize() >= ENCRYPTION_CRC_AND_METADATA_SIZE + Integer.BYTES
+            || encSpi.blockSize() == 0
+            : encSpi.blockSize();
 
         return pageSize
             - (encSpi.encryptedSizeNoPadding(pageSize) - pageSize)

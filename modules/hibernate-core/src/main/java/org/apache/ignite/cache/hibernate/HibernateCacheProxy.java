@@ -667,6 +667,11 @@ public class HibernateCacheProxy implements IgniteInternalCache<Object, Object> 
     }
 
     /** {@inheritDoc} */
+    @Override public IgniteInternalFuture<Boolean> touchAsync(Object key) {
+        return delegate.get().touchAsync(keyTransformer.transform(key));
+    }
+
+    /** {@inheritDoc} */
     @Nullable @Override public EntryProcessorResult invoke(
         @Nullable AffinityTopologyVersion topVer,
         Object key,

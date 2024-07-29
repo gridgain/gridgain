@@ -28,6 +28,7 @@ import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.binary.BinaryTypeConfiguration;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
@@ -129,7 +130,12 @@ public class FunctionalQueryTest {
             .setPageSize(pageSize)
             .setLazy(lazy);
 
-        try (QueryCursor<List<?>> cur = cache.query(qry)) {
+        try (FieldsQueryCursor<List<?>> cur = cache.query(qry)) {
+            // Columns are available before we iterate - same as embedded mode.
+            assertEquals(2, cur.getColumnsCount());
+            assertEquals("ID", cur.getFieldName(0));
+            assertEquals("NAME", cur.getFieldName(1));
+
             List<List<?>> res = cur.getAll();
 
             assertEquals(expSize, res.size());

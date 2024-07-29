@@ -33,6 +33,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.testframework.GridStringLogger;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Assert;
@@ -51,6 +52,26 @@ public class ClientConfigurationTest {
     /** Per test timeout */
     @Rule
     public Timeout globalTimeout = new Timeout((int) GridTestUtils.DFLT_TEST_TIMEOUT);
+
+    @Test(expected = ClientException.class)
+    public void testBrokenCert() {
+        SslContextFactory sslContextFactory = new SslContextFactory();
+        sslContextFactory.setKeyStoreFilePath("bad_keystore.jks");
+        sslContextFactory.setKeyStorePassword("qwerty".toCharArray());
+
+        sslContextFactory.setTrustStoreFilePath("bad_truststore.jks");
+        sslContextFactory.setTrustStorePassword("qwerty".toCharArray());
+
+        ClientConfiguration cfg = new ClientConfiguration()
+            .setAddresses("127.0.0.1")
+            .setSslMode(SslMode.REQUIRED)
+            .setUserName("client")
+            .setUserPassword("password")
+            .setSslContextFactory(sslContextFactory);
+
+        Ignition.startClient(cfg);
+    }
+
 
     /** Serialization/deserialization. */
     @Test

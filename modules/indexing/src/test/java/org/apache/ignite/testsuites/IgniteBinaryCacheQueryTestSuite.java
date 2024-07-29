@@ -160,6 +160,8 @@ import org.apache.ignite.sqltests.PartitionedSqlTest;
 import org.apache.ignite.sqltests.ReplicatedSqlCustomPartitionsTest;
 import org.apache.ignite.sqltests.ReplicatedSqlTest;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.util.KillCommandsMXBeanTest;
+import org.apache.ignite.util.KillCommandsSQLTest;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -189,6 +191,8 @@ import org.junit.runners.Suite;
     SqlParserSetStreamingSelfTest.class,
     SqlParserKillQuerySelfTest.class,
     SqlParserMultiStatementSelfTest.class,
+    KillCommandsMXBeanTest.class,
+    KillCommandsSQLTest.class,
 
     SqlConnectorConfigurationValidationSelfTest.class,
     ClientConnectorConfigurationValidationSelfTest.class,

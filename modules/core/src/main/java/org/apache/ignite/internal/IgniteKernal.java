@@ -121,6 +121,8 @@ import org.apache.ignite.internal.managers.failover.GridFailoverManager;
 import org.apache.ignite.internal.managers.indexing.GridIndexingManager;
 import org.apache.ignite.internal.managers.loadbalancer.GridLoadBalancerManager;
 import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
+import org.apache.ignite.internal.managers.systemview.IgniteConfigurationIterable;
+import org.apache.ignite.internal.managers.systemview.walker.ConfigurationViewWalker;
 import org.apache.ignite.internal.managers.tracing.GridTracingManager;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
 import org.apache.ignite.internal.processors.GridProcessor;
@@ -231,6 +233,7 @@ import org.apache.ignite.spi.tracing.TracingConfigurationManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Collections.singleton;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_MARSHALLER_USE_STRING_SERIALIZATION_VER_2;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CONFIG_URL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DAEMON;
@@ -320,6 +323,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
     /** System line separator. */
     public static final String NL = U.nl();
+
+    /** Name of the configuration system view. */
+    public static final String CFG_VIEW = "configuration";
+
+    /** Description of the configuration system view. */
+    public static final String CFG_VIEW_DESC = "Node configuration";
 
     /** System megabyte. */
     private static final int MEGABYTE = 1024 * 1024;
@@ -1306,6 +1315,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             registerMetrics();
 
+            registerConfigurationSystemView();
+
             ctx.cluster().registerMetrics();
 
             // Register MBeans.
@@ -1440,11 +1451,14 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                     // If all threads are active and no task has completed since last time and there is
                     // at least one waiting request, then it is possible starvation.
                     if (exec.getPoolSize() == exec.getActiveCount() && completedCnt == lastCompletedCnt &&
-                        !exec.getQueue().isEmpty())
+                        !exec.getQueue().isEmpty()) {
                         LT.warn(
                             log,
                             "Possible thread pool starvation detected (no task completed in last " +
                                 interval + "ms, is " + pool + " thread pool size large enough?)");
+
+                        U.dumpThreads(log);
+                    }
 
                     return completedCnt;
                 }
@@ -2268,7 +2282,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 .a(getUpTimeFormatted()).a("]").nl()
                 .a("    ^-- Cluster [hosts=").a(hosts).a(", CPUs=").a(cpus).a(", servers=").a(servers)
                 .a(", clients=").a(clients).a(", topVer=").a(topVer.topologyVersion())
-                .a(", minorTopVer=").a(topVer.minorTopologyVersion()).a("]").nl()
+                .a(", minorTopVer=").a(topVer.minorTopologyVersion()).a(", state=")
+                    .a(cluster().state().name()).a("]").nl()
                 .a("    ^-- Network [addrs=").a(locNode.addresses()).a(networkDetails).a("]").nl()
                 .a("    ^-- CPU [CPUs=").a(localCpus).a(", curLoad=").a(dblFmt.format(cpuLoadPct))
                 .a("%, avgLoad=").a(dblFmt.format(avgCpuLoadPct)).a("%, GC=").a(dblFmt.format(gcPct)).a("%]").nl()
@@ -2342,6 +2357,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         long offHeapUsedSummary = 0;
         long offHeapMaxSummary = 0;
         long offHeapCommSummary = 0;
+        long dataSizeSummary = 0;
         long pdsUsedSummary = 0;
 
         boolean persistenceEnabled = false;
@@ -2356,11 +2372,13 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 long offHeapInit = regCfg.getInitialSize();
                 long offHeapMax = regCfg.getMaxSize();
                 long offHeapComm = region.metrics().getOffHeapSize();
+                long dataSize = region.pageMemory().metrics().getSizeUsedByData();
 
                 long offHeapUsedInMBytes = offHeapUsed / MEGABYTE;
                 long offHeapMaxInMBytes = offHeapMax / MEGABYTE;
                 long offHeapCommInMBytes = offHeapComm / MEGABYTE;
                 long offHeapInitInMBytes = offHeapInit / MEGABYTE;
+                long dataSizeInMBytes = dataSize / MEGABYTE;
 
                 double freeOffHeapPct = offHeapMax > 0 ?
                     ((double)((offHeapMax - offHeapUsed) * 100)) / offHeapMax : -1;
@@ -2368,6 +2386,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 offHeapUsedSummary += offHeapUsed;
                 offHeapMaxSummary += offHeapMax;
                 offHeapCommSummary += offHeapComm;
+                dataSizeSummary += dataSize;
                 loadedPages += pagesCnt;
 
                 String type = "user";
@@ -2390,6 +2409,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                     .a("      ...  ")
                     .a("initCfg=").a(dblFmt.format(offHeapInitInMBytes))
                     .a("MB, maxCfg=").a(dblFmt.format(offHeapMaxInMBytes))
+                    .a("MB, sizeUsedByData=").a(dblFmt.format(dataSizeInMBytes))
                     .a("MB, usedRam=").a(dblFmt.format(offHeapUsedInMBytes))
                     .a("MB, freeRam=").a(dblFmt.format(freeOffHeapPct))
                     .a("%, allocRam=").a(dblFmt.format(offHeapCommInMBytes)).a("MB");
@@ -2414,11 +2434,13 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         if (includeMemoryStatistics) {
             long offHeapUsedInMBytes = offHeapUsedSummary / MEGABYTE;
             long offHeapCommInMBytes = offHeapCommSummary / MEGABYTE;
+            long dataSizeInMBytes = dataSizeSummary / MEGABYTE;
 
             double freeOffHeapPct = offHeapMaxSummary > 0 ?
                 ((double)((offHeapMaxSummary - offHeapUsedSummary) * 100)) / offHeapMaxSummary : -1;
 
-            info.a("    ^-- Off-heap memory [used=").a(dblFmt.format(offHeapUsedInMBytes))
+            info.a("    ^-- Off-heap memory [sizeUsedByData=").a(dblFmt.format(dataSizeInMBytes))
+                .a("MB, used=").a(dblFmt.format(offHeapUsedInMBytes))
                 .a("MB, free=").a(dblFmt.format(freeOffHeapPct))
                 .a("%, allocated=").a(dblFmt.format(offHeapCommInMBytes)).a("MB]").nl()
                 .a("    ^-- Page memory [pages=").a(loadedPages).a("]").nl();
@@ -4482,6 +4504,18 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      */
     public IgniteInternalFuture sendIoTest(List<ClusterNode> nodes, byte[] payload, boolean procFromNioThread) {
         return ctx.io().sendIoTest(nodes, payload, procFromNioThread);
+    }
+
+    /** Registers configuration system view. */
+    private void registerConfigurationSystemView() {
+        ctx.systemView().registerInnerCollectionView(
+            CFG_VIEW,
+            CFG_VIEW_DESC,
+            new ConfigurationViewWalker(),
+            singleton(ctx.config()),
+            IgniteConfigurationIterable::new,
+            (cfg, view) -> view
+        );
     }
 
     /**

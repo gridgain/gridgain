@@ -39,6 +39,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
+import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.SslMode;
 import org.apache.ignite.client.SslProtocol;
 import org.apache.ignite.configuration.ClientConfiguration;
@@ -85,7 +86,7 @@ public class ClientSslUtils {
                 return sslCtxFactory.create();
             }
             catch (Exception e) {
-                throw new ClientError("SSL Context Factory failed", e);
+                throw new ClientException("SSL Context Factory failed", e);
             }
         }
 
@@ -132,7 +133,7 @@ public class ClientSslUtils {
                 return SSLContext.getDefault();
             }
             catch (NoSuchAlgorithmException e) {
-                throw new ClientError("Default SSL context cryptographic algorithm is not available", e);
+                throw new ClientException("Default SSL context cryptographic algorithm is not available", e);
             }
         }
 
@@ -150,10 +151,10 @@ public class ClientSslUtils {
             return sslCtx;
         }
         catch (NoSuchAlgorithmException e) {
-            throw new ClientError("SSL context cryptographic algorithm is not available", e);
+            throw new ClientException("SSL context cryptographic algorithm is not available", e);
         }
         catch (KeyManagementException e) {
-            throw new ClientError("Failed to create SSL Context", e);
+            throw new ClientException("Failed to create SSL Context", e);
         }
     }
 
@@ -167,6 +168,9 @@ public class ClientSslUtils {
 
             case TLSv1_2:
                 return "TLSv1.2";
+
+            case TLSv1_3:
+                return "TLSv1.3";
 
             default:
                 return proto.toString();
@@ -186,7 +190,7 @@ public class ClientSslUtils {
             keyMgrFactory = KeyManagerFactory.getInstance(algorithm);
         }
         catch (NoSuchAlgorithmException e) {
-            throw new ClientError("Key manager cryptographic algorithm is not available", e);
+            throw new ClientException("Key manager cryptographic algorithm is not available", e);
         }
 
         Predicate<String> empty = s -> s == null || s.isEmpty();
@@ -200,16 +204,16 @@ public class ClientSslUtils {
                 keyMgrFactory.init(store, pwd);
             }
             catch (UnrecoverableKeyException e) {
-                throw new ClientError("Could not recover key store key", e);
+                throw new ClientException("Could not recover key store key", e);
             }
             catch (KeyStoreException e) {
-                throw new ClientError(
+                throw new ClientException(
                         String.format("Client key store provider of type [%s] is not available", keyStoreType),
                         e
                 );
             }
             catch (NoSuchAlgorithmException e) {
-                throw new ClientError("Client key store integrity check algorithm is not available", e);
+                throw new ClientException("Client key store integrity check algorithm is not available", e);
             }
         }
 
@@ -229,7 +233,7 @@ public class ClientSslUtils {
             trustMgrFactory = TrustManagerFactory.getInstance(algorithm);
         }
         catch (NoSuchAlgorithmException e) {
-            throw new ClientError("Trust manager cryptographic algorithm is not available", e);
+            throw new ClientException("Trust manager cryptographic algorithm is not available", e);
         }
 
         Predicate<String> empty = s -> s == null || s.isEmpty();
@@ -243,7 +247,7 @@ public class ClientSslUtils {
                 trustMgrFactory.init(store);
             }
             catch (KeyStoreException e) {
-                throw new ClientError(
+                throw new ClientException(
                         String.format("Trust key store provider of type [%s] is not available", trustStoreType),
                         e
                 );
@@ -261,7 +265,7 @@ public class ClientSslUtils {
             store = KeyStore.getInstance(type);
         }
         catch (KeyStoreException e) {
-            throw new ClientError(
+            throw new ClientException(
                     String.format("%s key store provider of type [%s] is not available", lb, type),
                     e
             );
@@ -274,19 +278,19 @@ public class ClientSslUtils {
             return store;
         }
         catch (FileNotFoundException e) {
-            throw new ClientError(String.format("%s key store file [%s] does not exist", lb, path), e);
+            throw new ClientException(String.format("%s key store file [%s] does not exist", lb, path), e);
         }
         catch (NoSuchAlgorithmException e) {
-            throw new ClientError(
+            throw new ClientException(
                     String.format("%s key store integrity check algorithm is not available", lb),
                     e
             );
         }
         catch (CertificateException e) {
-            throw new ClientError(String.format("Could not load certificate from %s key store", lb), e);
+            throw new ClientException(String.format("Could not load certificate from %s key store", lb), e);
         }
         catch (IOException e) {
-            throw new ClientError(String.format("Could not read %s key store", lb), e);
+            throw new ClientException(String.format("Could not read %s key store", lb), e);
         }
     }
 }

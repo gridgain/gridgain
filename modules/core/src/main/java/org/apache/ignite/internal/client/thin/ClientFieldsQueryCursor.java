@@ -25,6 +25,9 @@ class ClientFieldsQueryCursor<T> extends ClientQueryCursor<T> implements FieldsQ
     /** Constructor. */
     ClientFieldsQueryCursor(FieldsQueryPager<T> pager) {
         super(pager);
+
+        // Load field names.
+        pager.loadFirstPage();
     }
 
     /** {@inheritDoc} */

@@ -551,7 +551,7 @@ public class GridNearAtomicUpdateFuture extends GridNearAtomicAbstractUpdateFutu
 
                     Collection<Object> failedKeys = cause.failedKeys();
 
-                    remapKeys = new ArrayList<>(failedKeys.size());
+                    remapKeys = U.newHashSet(failedKeys.size());
 
                     for (Object key : failedKeys)
                         remapKeys.add(cctx.toCacheKeyObject(key));

@@ -1,0 +1,92 @@
+/*
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.ignite.spi.communication.tcp.internal;
+
+import java.net.InetAddress;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Test;
+
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
+
+/**
+ * Tests for {@link CommunicationTcpUtils}.
+ */
+public class NetworkInterfaceMatcherTest extends GridCommonAbstractTest {
+    @Test
+    public void testExactIPv4Matcher() throws Exception {
+        String netInterface = "127.127.127.127";
+
+        IPv4Matcher matcher = new IPv4Matcher(netInterface);
+
+        assertTrue(matcher.matches(InetAddress.getByName(netInterface)));
+        assertFalse(matcher.matches(InetAddress.getByName("127.10.127.10")));
+    }
+
+    @Test
+    public void testIPv4WrongNetworkInterface() {
+        // Wrong segment value.
+        String w1 = "127.127.127.300";
+        String w2 = "127.127.127.-1";
+        String w3 = "a.b.c.d";
+        String w8 = "127.127.15-5.127";
+
+        String errMsgPrefix = "Invalid IPv4 address pattern: '";
+
+        assertThrows(log, () -> new IPv4Matcher(w1), IllegalArgumentException.class, errMsgPrefix + w1 + '\'');
+        assertThrows(log, () -> new IPv4Matcher(w2), IllegalArgumentException.class, errMsgPrefix + w2 + '\'');
+        assertThrows(log, () -> new IPv4Matcher(w3), IllegalArgumentException.class, errMsgPrefix + w3 + '\'');
+        assertThrows(log, () -> new IPv4Matcher(w8), IllegalArgumentException.class, errMsgPrefix + w8 + '\'');
+
+        // Wrong number of segments.
+        String w4 = "127.127.127";
+        String w5 = "127..127";
+        String w6 = "";
+        String w7 = "2001:db8:85a3:8d3:1319:8a2e:370:7348";
+
+        assertThrows(log, () -> new IPv4Matcher(w4), IllegalArgumentException.class, errMsgPrefix + w4 + '\'');
+        assertThrows(log, () -> new IPv4Matcher(w5), IllegalArgumentException.class, errMsgPrefix + w5 + '\'');
+        assertThrows(log, () -> new IPv4Matcher(w6), IllegalArgumentException.class, errMsgPrefix + w6 + '\'');
+        assertThrows(log, () -> new IPv4Matcher(w7), IllegalArgumentException.class, errMsgPrefix + w7 + '\'');
+    }
+
+    @Test
+    public void testIPv4MatcherWildcard() throws Exception {
+        String netInterface = "127.127.*.127";
+
+        IPv4Matcher matcher = new IPv4Matcher(netInterface);
+
+        assertTrue(matcher.matches(InetAddress.getByName("127.127.0.127")));
+        assertTrue(matcher.matches(InetAddress.getByName("127.127.255.127")));
+        assertTrue(matcher.matches(InetAddress.getByName("127.127.127.127")));
+
+        assertFalse(matcher.matches(InetAddress.getByName("127.255.0.127")));
+    }
+
+    @Test
+    public void testIPv4MatcherRange() throws Exception {
+        String netInterface = "127.127.12-127.127";
+
+        IPv4Matcher matcher = new IPv4Matcher(netInterface);
+
+        assertTrue(matcher.matches(InetAddress.getByName("127.127.12.127")));
+        assertTrue(matcher.matches(InetAddress.getByName("127.127.127.127")));
+        assertTrue(matcher.matches(InetAddress.getByName("127.127.64.127")));
+
+        assertFalse(matcher.matches(InetAddress.getByName("127.127.11.127")));
+        assertFalse(matcher.matches(InetAddress.getByName("127.127.128.127")));
+    }
+}

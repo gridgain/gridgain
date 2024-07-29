@@ -27,12 +27,16 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -91,6 +95,7 @@ public interface ReconciliationResultCollector {
 
     /**
      * Appends conflicted entries.
+     * When this result collector has a registered conflict for a key, the existing one is updated with a new value.
      *
      * @param cacheName Cache name.
      * @param partId Partition id.
@@ -104,6 +109,21 @@ public interface ReconciliationResultCollector {
         Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys);
 
     /**
+     * Returns the total number of conflicts.
+     *
+     * @return The total number of conflicts.
+     */
+    long conflictedEntriesSize();
+
+    /**
+     * Returns the total number of conflicts for the specified cache.
+     *
+     * @param cacheName Cache name.
+     * @return The total number of conflicts for the specified cache.
+     */
+    long conflictedEntriesSize(String cacheName);
+
+    /**
      * Appends repaired entries.
      *
      * @param cacheName Cache name.
@@ -114,6 +134,21 @@ public interface ReconciliationResultCollector {
         String cacheName,
         int partId,
         Map<VersionedKey, RepairMeta> repairedKeys);
+
+    /**
+     * Returns the total number of repaired entries.
+     *
+     * @return The total number of repaired entries.
+     */
+    long repairedEntriesSize();
+
+    /**
+     * Returns the total number of repaired entries for the specified cache.
+     *
+     * @param cacheName Cache name.
+     * @return The total number of repaired entries for the specified cache.
+     */
+    long repairedEntriesSize(String cacheName);
 
     /**
      * This method is called when the given partition is completely processed.
@@ -141,7 +176,9 @@ public interface ReconciliationResultCollector {
     /**
      * Represents a collector of inconsistent and repaired entries.
      */
-    public static class Simple implements ReconciliationResultCollector {
+    static class Simple implements ReconciliationResultCollector {
+        public static final RowMetaComparator ROW_META_COMPARATOR = new RowMetaComparator();
+
         /** Ignite instance. */
         protected final IgniteEx ignite;
 
@@ -154,11 +191,22 @@ public interface ReconciliationResultCollector {
         /** Root folder. */
         protected final File reconciliationDir;
 
-        /** Keys that were detected as inconsistent during the reconciliation process. */
-        protected final Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
+        /**
+         * Keys that were detected as inconsistent during the reconciliation process.
+         * Cache name -> {Partition identifier -> set of inconsistent keys. }
+         */
+        protected final Map<String, Map<Integer, TreeSet<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
 
         /** Entries that were detected as inconsistent but weren't repaired due to some reason. */
         protected final Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries = new HashMap<>();
+
+        /** Custom comparator for {@link PartitionReconciliationDataRowMeta}. It only compares binary representation of keys. */
+        public static class RowMetaComparator implements Comparator<PartitionReconciliationDataRowMeta> {
+            /** {@inheritDoc} */
+            @Override public int compare(PartitionReconciliationDataRowMeta o1, PartitionReconciliationDataRowMeta o2) {
+                return U.compareByteArrays(o1.keyMeta().binaryView(), o2.keyMeta().binaryView());
+            }
+        }
 
         /**
          * Creates a new SimpleCollector.
@@ -250,12 +298,59 @@ public interface ReconciliationResultCollector {
             synchronized (inconsistentKeys) {
                 try {
                     inconsistentKeys.computeIfAbsent(cacheName, k -> new HashMap<>())
-                        .computeIfAbsent(partId, k -> new ArrayList<>())
+                        .computeIfAbsent(partId, k -> new TreeSet<>(ROW_META_COMPARATOR))
                         .addAll(mapPartitionReconciliation(conflicts, actualKeys, ctx));
                 }
                 catch (IgniteCheckedException e) {
                     log.error("Broken key can't be added to result. ", e);
                 }
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public long conflictedEntriesSize() {
+            synchronized (inconsistentKeys) {
+                return inconsistentKeys
+                    .keySet()
+                    .stream()
+                    .mapToLong(this::conflictedEntriesSize)
+                    .sum();
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public long conflictedEntriesSize(String cacheName) {
+            synchronized (inconsistentKeys) {
+                return inconsistentKeys
+                    .getOrDefault(cacheName, Collections.emptyMap())
+                    .values()
+                    .stream()
+                    .mapToLong(Set::size)
+                    .sum();
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public long repairedEntriesSize() {
+            synchronized (inconsistentKeys) {
+                return inconsistentKeys
+                    .keySet()
+                    .stream()
+                    .mapToLong(this::repairedEntriesSize)
+                    .sum();
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public long repairedEntriesSize(String cacheName) {
+            synchronized (inconsistentKeys) {
+                return inconsistentKeys
+                    .getOrDefault(cacheName, Collections.emptyMap())
+                    .values()
+                    .stream()
+                    .flatMap(Collection::stream)
+                    .filter(r -> r.repairMeta() != null && r.repairMeta().fixed())
+                    .count();
             }
         }
 
@@ -315,7 +410,7 @@ public interface ReconciliationResultCollector {
                     }
 
                     inconsistentKeys.computeIfAbsent(cacheName, k -> new HashMap<>())
-                        .computeIfAbsent(partId, k -> new ArrayList<>())
+                        .computeIfAbsent(partId, k -> new TreeSet<>(ROW_META_COMPARATOR))
                         .addAll(res);
                 }
                 catch (IgniteCheckedException e) {
@@ -333,9 +428,21 @@ public interface ReconciliationResultCollector {
         @Override public ReconciliationAffectedEntries result() {
             synchronized (inconsistentKeys) {
                 synchronized (skippedEntries) {
+                    // This copy is need to avoid RU incompatible changes.
+                    Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> copy = new HashMap<>(inconsistentKeys.size());
+
+                    for (Map.Entry<String, Map<Integer, TreeSet<PartitionReconciliationDataRowMeta>>> e : inconsistentKeys.entrySet()) {
+                        Map<Integer, List<PartitionReconciliationDataRowMeta>> c = new HashMap<>(e.getValue().size());
+
+                        for (Map.Entry<Integer, TreeSet<PartitionReconciliationDataRowMeta>> e0 : e.getValue().entrySet())
+                            c.put(e0.getKey(), new ArrayList<>(e0.getValue()));
+
+                        copy.put(e.getKey(), c);
+                    }
+
                     return new ReconciliationAffectedEntries(
                         collectNodeIdToConsistentIdMapping(ignite),
-                        inconsistentKeys,
+                        copy,
                         skippedEntries
                     );
                 }
@@ -380,9 +487,18 @@ public interface ReconciliationResultCollector {
     /**
      * Represents a collector of inconsistent and repaired entries that persists temporary results (per partition).
      */
-    public static class Compact extends Simple {
+    static class Compact extends Simple {
         /** Total number of inconsistent keys. */
-        private final AtomicInteger totalKeysCnt = new AtomicInteger();
+        private final AtomicInteger totalInconsistentKeys = new AtomicInteger();
+
+        /** Total number of repaired keys. */
+        private final AtomicInteger totalRepairedKeys = new AtomicInteger();
+
+        /** Mapping of cache name to the number of inconsistent keys. */
+        private final Map<String, Long> inconsistentKeysPerCache = new HashMap<>();
+
+        /** Mapping of cache name to the number of repaired keys. */
+        private final Map<String, Long> repairedKeysPerCache = new HashMap<>();
 
         /** Total number of skipped entities. */
         private final AtomicInteger totalSkippedCnt = new AtomicInteger();
@@ -417,31 +533,63 @@ public interface ReconciliationResultCollector {
         }
 
         /** {@inheritDoc} */
+        @Override public long conflictedEntriesSize(String cacheName) {
+            synchronized (inconsistentKeys) {
+                Long conflicts = inconsistentKeysPerCache.getOrDefault(cacheName, 0L);
+
+                return conflicts + super.conflictedEntriesSize(cacheName);
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public long repairedEntriesSize() {
+            return totalRepairedKeys.get() + super.repairedEntriesSize();
+        }
+
+        /** {@inheritDoc} */
+        @Override public long repairedEntriesSize(String cacheName) {
+            synchronized (inconsistentKeys) {
+                Long repaired = repairedKeysPerCache.getOrDefault(cacheName, 0L);
+
+                return repaired + super.repairedEntriesSize(cacheName);
+            }
+        }
+
+        /** {@inheritDoc} */
         @Override public void onPartitionProcessed(String cacheName, int partId) {
             if (log.isDebugEnabled())
                 log.debug("Partition has been processed [cacheName=" + cacheName + ", partId=" + partId + ']');
 
-            List<PartitionReconciliationDataRowMeta> meta = null;
+            TreeSet<PartitionReconciliationDataRowMeta> meta = null;
             Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>> skipped = null;
 
             synchronized (inconsistentKeys) {
-                Map<Integer, List<PartitionReconciliationDataRowMeta>> c = inconsistentKeys.get(cacheName);
+                Map<Integer, TreeSet<PartitionReconciliationDataRowMeta>> c = inconsistentKeys.get(cacheName);
                 if (c != null)
                     meta = c.remove(partId);
+
+                if (!F.isEmpty(meta)) {
+                    totalInconsistentKeys.addAndGet(meta.size());
+
+                    inconsistentKeysPerCache.merge(cacheName, (long) meta.size(), Long::sum);
+
+                    long repairedKeysCnt = meta.stream().filter(m -> m.repairMeta() != null && m.repairMeta().fixed()).count();
+
+                    repairedKeysPerCache.merge(cacheName, repairedKeysCnt, Long::sum);
+                }
             }
 
             synchronized (skippedEntries) {
                 Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>> c = skippedEntries.get(cacheName);
                 if (c != null)
                     skipped = c.remove(partId);
+
+                if (!F.isEmpty(skipped))
+                    totalSkippedCnt.addAndGet(skipped.size());
             }
 
-            if (!F.isEmpty(meta) || !F.isEmpty(skipped)) {
-                totalKeysCnt.addAndGet(F.isEmpty(meta) ? 0 : meta.size());
-                totalSkippedCnt.addAndGet(F.isEmpty(skipped) ? 0 : skipped.size());
-
+            if (!F.isEmpty(meta) || !F.isEmpty(skipped))
                 storePartition(cacheName, partId, meta, skipped);
-            }
         }
 
         /** {@inheritDoc} */
@@ -450,7 +598,7 @@ public interface ReconciliationResultCollector {
                 synchronized (skippedEntries) {
                     return new ReconciliationAffectedEntriesExtended(
                         collectNodeIdToConsistentIdMapping(ignite),
-                        totalKeysCnt.get(),
+                        totalInconsistentKeys.get(),
                         0, // skipped caches count which is not tracked/used.
                         totalSkippedCnt.get());
                 }
@@ -464,7 +612,7 @@ public interface ReconciliationResultCollector {
                     File file = createLocalResultFile(ignite.context().discovery().localNode(), startTime);
 
                     try (PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(file)))) {
-                        printFileHead(out, totalKeysCnt.get(), totalSkippedCnt.get());
+                        printFileHead(out, totalInconsistentKeys.get(), totalSkippedCnt.get());
 
                         for (Map.Entry<String, String> e : tmpFiles.entrySet()) {
                             out.println(e.getKey());
@@ -528,7 +676,7 @@ public interface ReconciliationResultCollector {
         private void storePartition(
             String cacheName,
             int partId,
-            List<PartitionReconciliationDataRowMeta> meta,
+            TreeSet<PartitionReconciliationDataRowMeta> meta,
             Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>> skipped
         ) {
             String maskId = U.maskForFileName(ignite.context().discovery().localNode().consistentId().toString());
