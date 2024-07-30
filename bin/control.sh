@@ -124,8 +124,10 @@ fi
 # Final CONTROL_JVM_OPTS for Java 9+ compatibility
 #
 if [ "$JAVA_VERSION" -ge 9 ]; then
+  if [ "$JAVA_VERSION" -lt 17 ]; then
     CONTROL_JVM_OPTS+=" --illegal-access=warn"
-    CONTROL_JVM_OPTS+=" --add-opens=java.base/java.nio=ALL-UNNAMED"
+  fi
+  CONTROL_JVM_OPTS+=" --add-opens=java.base/java.nio=ALL-UNNAMED"
 fi
 
 if [ -n "${JVM_OPTS}" ]; then
