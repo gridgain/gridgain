@@ -56,8 +56,13 @@ public class BasicBulkLoadCommandProcessor implements BulkLoadCommandProcessor {
         if (!(cmd.from() instanceof BulkLoadLocationFile
                 && cmd.into() instanceof BulkLoadLocationTable
                 && cmd.format() instanceof BulkLoadCsvFormat))
-            throw new IgniteSQLException("Community edition supports only COPY FROM <file> INTO <table> FORMAT CSV",
-                    IgniteQueryErrorCode.UNEXPECTED_ELEMENT_TYPE);
+
+            throw new IgniteSQLException(
+                String.format("To use %s format, enable gridgain-bulkload module (requires Enterprise or Ultimate Edition)",
+                    cmd.format().name()
+                ),
+                IgniteQueryErrorCode.UNEXPECTED_ELEMENT_TYPE
+            );
 
         if (cmd.packetSize() == null)
             cmd.packetSize(BulkLoadAckClientParameters.DFLT_PACKET_SIZE);
