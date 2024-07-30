@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-if [ ! -z "${IGNITE_SCRIPT_STRICT_MODE:-}" ]
+if [ ! -z "${IGNITE_SCRIPT_STRICT_MODE:-}" ];
 then
     set -o nounset
     set -o errexit
@@ -14,7 +14,7 @@ fi
 # Licensed under the GridGain Community Edition License (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#
+
 #     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
 #
 # Unless required by applicable law or agreed to in writing, software
@@ -22,7 +22,7 @@ fi
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+
 
 #
 # Grid cluster control.
@@ -30,10 +30,10 @@ fi
 
 #
 # Import common functions.
-#
+
 if [ "${IGNITE_HOME:-}" = "" ];
-    then IGNITE_HOME_TMP="$(dirname "$(cd "$(dirname "$0")"; "pwd")")";
-    else IGNITE_HOME_TMP=${IGNITE_HOME};
+    then IGNITE_HOME_TMP="$(dirname "$(cd "$(dirname "$0")"; pwd)")"
+    else IGNITE_HOME_TMP=${IGNITE_HOME}
 fi
 
 #
@@ -41,13 +41,20 @@ fi
 #
 SCRIPTS_HOME="${IGNITE_HOME_TMP}/bin"
 
-source "${SCRIPTS_HOME}"/include/functions.sh
-source "${SCRIPTS_HOME}"/include/jvmdefaults.sh
+source "${SCRIPTS_HOME}/include/functions.sh"
+source "${SCRIPTS_HOME}/include/jvmdefaults.sh"
 
 #
-# Discover path to Java executable and check it's version.
+# Discover path to Java executable and check its version.
 #
 checkJava
+
+# Determine Java version function
+determineJavaVersion() {
+    local version_output=$(java -version 2>&1)
+    local version=$(echo "$version_output" | awk -F '"' '/version/ {print $2}' | awk -F '.' '{if ($1 == 1) {print $2} else {print $1}}')
+    echo $version
+}
 
 #
 # Discover IGNITE_HOME environment variable.
@@ -61,14 +68,13 @@ fi
 #
 # Set IGNITE_LIBS.
 #
-. "${SCRIPTS_HOME}"/include/setenv.sh
-. "${SCRIPTS_HOME}"/include/build-classpath.sh # Will be removed in the binary release.
+. "${SCRIPTS_HOME}/include/setenv.sh"
 CP="${IGNITE_LIBS}:${IGNITE_HOME}/libs/optional/ignite-zookeeper/*"
 
 RANDOM_NUMBER=$("$JAVA" -cp "${CP}" org.apache.ignite.startup.cmdline.CommandLineRandomNumberGenerator)
 
 # Mac OS specific support to display correct name in the dock.
-osname=`uname`
+osname=$(uname)
 
 if [ "${DOCK_OPTS:-}" == "" ]; then
     DOCK_OPTS="-Xdock:name=Ignite Node"
@@ -79,12 +85,18 @@ fi
 #
 # ADD YOUR/CHANGE ADDITIONAL OPTIONS HERE
 #
-if [ -z "${CONTROL_JVM_OPTS:-}" ] ; then
-    if [[ `"$JAVA" -version 2>&1 | egrep "1\.[7]\."` ]]; then
-        CONTROL_JVM_OPTS="-Xms256m -Xmx1g"
-    else
-        CONTROL_JVM_OPTS="-Xms256m -Xmx1g"
-    fi
+# Set JVM options with dynamic version check
+JAVA_VERSION=$(determineJavaVersion)
+CONTROL_JVM_OPTS=$(getJavaSpecificOpts $JAVA_VERSION "$CONTROL_JVM_OPTS")
+
+# Enable assertions if set.
+if [ "${ENABLE_ASSERTIONS:-}" = "1" ]; then
+    CONTROL_JVM_OPTS+=" -ea"
+fi
+
+# Set main class to start service (grid node by default).
+if [ "${MAIN_CLASS:-}" = "" ]; then
+    MAIN_CLASS=org.apache.ignite.internal.commandline.CommandHandler
 fi
 
 #
@@ -95,7 +107,7 @@ fi
 #
 # Uncomment the following GC settings if you see spikes in your throughput due to Garbage Collection.
 #
-# CONTROL_JVM_OPTS="$CONTROL_JVM_OPTS -XX:+UseG1GC"
+# CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} -XX:+UseG1GC"
 
 #
 # Uncomment if you get StackOverflowError.
@@ -109,56 +121,31 @@ fi
 # CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} -Djava.net.preferIPv4Stack=true"
 
 #
-# Assertions are disabled by default since version 3.5.
-# If you want to enable them - set 'ENABLE_ASSERTIONS' flag to '1'.
-#
-ENABLE_ASSERTIONS="1"
-
-#
-# Set '-ea' options if assertions are enabled.
-#
-if [ "${ENABLE_ASSERTIONS:-}" = "1" ]; then
-    CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} -ea"
-fi
-
-#
-# Set main class to start service (grid node by default).
-#
-if [ "${MAIN_CLASS:-}" = "" ]; then
-    MAIN_CLASS=org.apache.ignite.internal.commandline.CommandHandler
-fi
-
-#
-# Remote debugging (JPDA).
-# Uncomment and change if remote debugging is required.
-#
-# CONTROL_JVM_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8787 ${CONTROL_JVM_OPTS}"
-
-#
 # Final CONTROL_JVM_OPTS for Java 9+ compatibility
 #
-CONTROL_JVM_OPTS=$(getJavaSpecificOpts $version "$CONTROL_JVM_OPTS")
+if [ "$JAVA_VERSION" -ge 9 ]; then
+  if [ "$JAVA_VERSION" -lt 17 ]; then
+    CONTROL_JVM_OPTS+=" --illegal-access=warn"
+  fi
+  CONTROL_JVM_OPTS+=" --add-opens=java.base/java.nio=ALL-UNNAMED"
+fi
 
-if [ -n "${JVM_OPTS}" ] ; then
-  echo "JVM_OPTS environment variable is set, but will not be used. To pass JVM options use CONTROL_JVM_OPTS"
-  echo "JVM_OPTS=${JVM_OPTS}"
+if [ -n "${JVM_OPTS}" ]; then
+    echo "JVM_OPTS environment variable is set, but will not be used. To pass JVM options use CONTROL_JVM_OPTS"
+    echo "JVM_OPTS=${JVM_OPTS}"
 fi
 
 case $osname in
     Darwin*)
-        "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} "${DOCK_OPTS}" \
-         -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
+        "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} "${DOCK_OPTS}" -DIGNITE_HOME="${IGNITE_HOME}" \
          -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} "$@"
-    ;;
+        ;;
     OS/390*)
-        "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} \
-         -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
-         $(getIbmSslOpts $version) \
-         -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} "$@"
-    ;;
+        "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
+         $(getIbmSslOpts $JAVA_VERSION) -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} "$@"
+        ;;
     *)
-        "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} \
-         -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
+        "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} -DIGNITE_HOME="${IGNITE_HOME}" \
          -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} "$@"
-    ;;
+        ;;
 esac
