@@ -127,15 +127,6 @@ if %ERRORLEVEL% neq 0 (
 )
 
 ::
-:: Process 'restart'.
-::
-set RANDOM_NUMBER_COMMAND="!JAVA_HOME!\bin\java.exe" -cp "%CP%" org.apache.ignite.startup.cmdline.CommandLineRandomNumberGenerator
-for /f "usebackq tokens=*" %%i in (`"!RANDOM_NUMBER_COMMAND!"`) do set RANDOM_NUMBER=%%i
-
-set RESTART_SUCCESS_FILE="%IGNITE_HOME%\work\ignite_success_%RANDOM_NUMBER%"
-set RESTART_SUCCESS_OPT=-DIGNITE_SUCCESS_FILE=%RESTART_SUCCESS_FILE%
-
-::
 :: JVM options. See http://java.sun.com/javase/technologies/hotspot/vmoptions.jsp for more details.
 ::
 :: ADD YOUR/CHANGE ADDITIONAL OPTIONS HERE
@@ -199,11 +190,11 @@ if "%MAIN_CLASS%" == "" set MAIN_CLASS=org.apache.ignite.startup.cmdline.Command
 call "%SCRIPTS_HOME%\include\jvmdefaults.bat" %MAJOR_JAVA_VER% "%JVM_OPTS%" JVM_OPTS
 
 if "%INTERACTIVE%" == "1" (
-    "%JAVA_HOME%\bin\java.exe" %QUIET% %JVM_OPTS% %RESTART_SUCCESS_OPT% ^
+    "%JAVA_HOME%\bin\java.exe" %QUIET% %JVM_OPTS% ^
     -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="%IGNITE_HOME%" -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
     -cp "%CP%" %MAIN_CLASS%
 ) else (
-    "%JAVA_HOME%\bin\java.exe" %QUIET% %JVM_OPTS% %RESTART_SUCCESS_OPT% ^
+    "%JAVA_HOME%\bin\java.exe" %QUIET% %JVM_OPTS% ^
     -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="%IGNITE_HOME%" -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
     -cp "%CP%" %MAIN_CLASS% "%CONFIG%"
 )
@@ -213,16 +204,12 @@ set JAVA_ERRORLEVEL=%ERRORLEVEL%
 :: errorlevel 130 if aborted with Ctrl+c
 if %JAVA_ERRORLEVEL%==130 goto finish
 
-:: Exit if first run unsuccessful (Loader must create file).
-if not exist %RESTART_SUCCESS_FILE% goto error_finish
-del %RESTART_SUCCESS_FILE%
+:: Exit if first run unsuccessful.
+if %JAVA_ERRORLEVEL% neq 250 goto error_finish
 
 goto run_java
 
 :finish
-if not exist %RESTART_SUCCESS_FILE% goto error_finish
-del %RESTART_SUCCESS_FILE%
-
 :error_finish
 
 if not "%NO_PAUSE%" == "1" pause

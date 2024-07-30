@@ -426,9 +426,12 @@ public final class IgniteSystemProperties {
      * Name of the system property defining success file name. This file
      * is used with auto-restarting functionality when Ignite is started
      * by supplied <tt>ignite.{bat|sh}</tt> scripts.
+     *
+     * @deprecated No longer used.
      */
     @SystemProperty(value = "Success file name. This file is used with auto-restarting functionality " +
         "when Ignite is started by supplied ignite.{bat|sh} scripts", type = String.class)
+    @Deprecated
     public static final String IGNITE_SUCCESS_FILE = "IGNITE_SUCCESS_FILE";
 
     /**

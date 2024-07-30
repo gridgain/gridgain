@@ -244,7 +244,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OPTIMIZED_MARSHALL
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_START_ON_CLIENT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_STARVATION_CHECK_INTERVAL;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SUCCESS_FILE;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.snapshot;
 import static org.apache.ignite.internal.GridKernalState.DISCONNECTED;
@@ -286,7 +285,6 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PEER_CLASSLOA
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PHY_RAM;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PREFIX;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REBALANCE_POOL_SIZE;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_RESTART_ENABLED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REST_PORT_RANGE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SHUTDOWN_POLICY;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SPI_CLASS;
@@ -1841,9 +1839,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 }
         }
 
-        // Whether restart is enabled and stick the attribute.
-        add(ATTR_RESTART_ENABLED, Boolean.toString(isRestartEnabled()));
-
         // Save port range, port numbers will be stored by rest processor at runtime.
         if (cfg.getConnectorConfiguration() != null)
             add(ATTR_REST_PORT_RANGE, cfg.getConnectorConfiguration().getPortRange());
@@ -2008,7 +2003,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         boolean on = isJmxRemoteEnabled();
 
-        sb.a("restart: ").a(onOff(isRestartEnabled())).a(", ");
         sb.a("REST: ").a(onOff(isRestEnabled())).a(", ");
         sb.a("JMX (");
         sb.a("remote: ").a(onOff(on));
@@ -2826,18 +2820,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      */
     @Override public boolean isJmxRemoteEnabled() {
         return System.getProperty("com.sun.management.jmxremote") != null;
-    }
-
-    /**
-     * Whether or not node restart is enabled. Node restart us supported when this node was started with {@code
-     * bin/ignite.{sh|bat}} script using {@code -r} argument. Node can be programmatically restarted using {@link
-     * Ignition#restart(boolean)}} method.
-     *
-     * @return {@code True} if restart mode is enabled, {@code false} otherwise.
-     * @see Ignition#restart(boolean)
-     */
-    @Override public boolean isRestartEnabled() {
-        return System.getProperty(IGNITE_SUCCESS_FILE) != null;
     }
 
     /**
