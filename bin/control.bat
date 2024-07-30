@@ -2,7 +2,7 @@
 :: Copyright 2019 GridGain Systems, Inc. and Contributors.
 ::
 :: Licensed under the GridGain Community Edition License (the "License");
-:: You may not use this file except in compliance with the License.
+:: you may not use this file except in compliance with the License.
 :: You may obtain a copy of the License at
 ::
 ::     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
@@ -27,7 +27,7 @@ if defined JAVA_HOME  goto checkJdk
     echo %0, ERROR:
     echo JAVA_HOME environment variable is not found.
     echo Please point JAVA_HOME variable to location of JDK 1.8 or later.
-    echo You may download the latest JDK at http://java.com/download.
+    echo You can also download the latest JDK at http://java.com/download.
 goto error_finish
 
 :checkJdk
@@ -36,7 +36,7 @@ if exist "%JAVA_HOME%\bin\java.exe" goto checkJdkVersion
     echo %0, ERROR:
     echo JAVA is not found in JAVA_HOME=%JAVA_HOME%.
     echo Please point JAVA_HOME variable to installation of JDK 1.8 or later.
-    echo You may download the latest JDK at http://java.com/download.
+    echo You can also download the latest JDK at http://java.com/download.
 goto error_finish
 
 :checkJdkVersion
@@ -47,7 +47,7 @@ for /f "tokens=* USEBACKQ" %%f in (`%cmd% -version 2^>^&1`) do (
 )
 :LoopEscape
 
-for /f "tokens=1-3 delims= " %%a in ("%var%") do set JAVA_VER_STR=%%c
+for /f "tokens=1-3  delims= " %%a in ("%var%") do set JAVA_VER_STR=%%c
 set JAVA_VER_STR=%JAVA_VER_STR:"=%
 
 for /f "tokens=1,2 delims=." %%a in ("%JAVA_VER_STR%.x") do set MAJOR_JAVA_VER=%%a& set MINOR_JAVA_VER=%%b
@@ -57,7 +57,7 @@ if %MAJOR_JAVA_VER% LSS 8 (
     echo %0, ERROR:
     echo The version of JAVA installed in %JAVA_HOME% is incorrect.
     echo Please point JAVA_HOME variable to installation of JDK 1.8 or later.
-    echo You may download the latest JDK at http://java.com/download.
+    echo You can aslo download the latest JDK at http://java.com/download.
     goto error_finish
 )
 
@@ -72,7 +72,7 @@ if defined IGNITE_HOME goto checkIgniteHome2
 :: Strip double quotes from IGNITE_HOME
 set IGNITE_HOME=%IGNITE_HOME:"=%
 
-:: Remove all trailing slashes from IGNITE_HOME.
+:: remove all trailing slashes from IGNITE_HOME.
 if %IGNITE_HOME:~-1,1% == \ goto removeTrailingSlash
 if %IGNITE_HOME:~-1,1% == / goto removeTrailingSlash
 goto checkIgniteHome3
@@ -84,65 +84,91 @@ goto checkIgniteHome2
 :checkIgniteHome3
 if exist "%IGNITE_HOME%\config" goto checkIgniteHome4
     echo %0, ERROR: Ignite installation folder is not found or IGNITE_HOME environment variable is not valid.
-    echo Please create IGNITE_HOME environment variable pointing to location of Ignite installation folder.
+    echo Please create IGNITE_HOME environment variable pointing to location of
+    echo Ignite installation folder.
     goto error_finish
 
 :checkIgniteHome4
 
+::
 :: Set SCRIPTS_HOME - base path to scripts.
+::
 set SCRIPTS_HOME=%IGNITE_HOME%\bin
 
 :: Remove trailing spaces
 for /l %%a in (1,1,31) do if /i "%SCRIPTS_HOME:~-1%" == " " set SCRIPTS_HOME=%SCRIPTS_HOME:~0,-1%
 
 if /i "%SCRIPTS_HOME%\" == "%~dp0" goto setProgName
-    echo %0, WARN: IGNITE_HOME environment variable may be pointing to the wrong folder: %IGNITE_HOME%
+    echo %0, WARN: IGNITE_HOME environment variable may be pointing to wrong folder: %IGNITE_HOME%
 
 :setProgName
+::
 :: Set program name.
+::
 set PROG_NAME=ignite.bat
 if "%OS%" == "Windows_NT" set PROG_NAME=%~nx0%
 
 :run
 
+::
 :: Set IGNITE_LIBS
+::
 call "%SCRIPTS_HOME%\include\setenv.bat"
+call "%SCRIPTS_HOME%\include\build-classpath.bat"
 set CP=%IGNITE_LIBS%;%IGNITE_HOME%\libs\optional\ignite-zookeeper\*
 
+::
 :: Process 'restart'.
+::
 set RANDOM_NUMBER_COMMAND="!JAVA_HOME!\bin\java.exe" -cp %CP% org.apache.ignite.startup.cmdline.CommandLineRandomNumberGenerator
 for /f "usebackq tokens=*" %%i in (`!RANDOM_NUMBER_COMMAND!`) do set RANDOM_NUMBER=%%i
 
 set RESTART_SUCCESS_FILE="%IGNITE_HOME%\work\ignite_success_%RANDOM_NUMBER%"
 set RESTART_SUCCESS_OPT=-DIGNITE_SUCCESS_FILE=%RESTART_SUCCESS_FILE%
 
+::
 :: Determine Java version function
+::
 :determineJavaVersion
 for /f "tokens=1,2 delims=." %%a in ("%JAVA_VER_STR%.x") do set JAVA_VERSION=%%a
 
+::
 :: Set JVM options with dynamic version check
+::
 call :getJavaSpecificOpts %JAVA_VERSION% "%CONTROL_JVM_OPTS%"
 
+::
 :: Enable assertions if set.
+::
 if "%ENABLE_ASSERTIONS%" == "1" set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -ea
 
 :: Set main class to start service (grid node by default).
 if "%MAIN_CLASS%" == "" set MAIN_CLASS=org.apache.ignite.internal.commandline.CommandHandler
 
+::
 :: Uncomment to enable experimental commands [--wal]
+::
 :: set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -DIGNITE_ENABLE_EXPERIMENTAL_COMMAND=true
 
+::
 :: Uncomment the following GC settings if you see spikes in your throughput due to Garbage Collection.
+::
 :: set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -XX:+UseG1GC
 
+::
 :: Uncomment if you get StackOverflowError.
 :: On 64 bit systems this value can be larger, e.g. -Xss16m
+::
 :: set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -Xss4m
 
+::
 :: Uncomment to set preference to IPv4 stack.
+::
 :: set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -Djava.net.preferIPv4Stack=true
 
+::
 :: Final CONTROL_JVM_OPTS for Java 9+ compatibility
+::
 if %JAVA_VERSION% GEQ 9 (
     set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% --illegal-access=warn
     set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% --add-opens=java.base/java.nio=ALL-UNNAMED

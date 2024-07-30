@@ -3,7 +3,7 @@
 # Copyright 2022 GridGain Systems, Inc. and Contributors.
 #
 # Licensed under the GridGain Community Edition License (the "License");
-# You may not use this file except in compliance with the License.
+# you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
@@ -37,6 +37,7 @@ getJavaSpecificOpts() {
   if [ "$version" -eq 8 ]; then
       # Keep options minimal and avoid deprecated ones for Java 8
       value="-XX:+AggressiveOpts $current_value"
+
   elif [ "$version" -ge 9 ] && [ "$version" -lt 11 ]; then
       # Java 9 and 10 require additional modules due to removed Java EE modules
       value="-XX:+AggressiveOpts \
@@ -48,6 +49,7 @@ getJavaSpecificOpts() {
           --illegal-access=permit \
           --add-modules=java.xml.bind \
           $current_value"
+
   elif [ "$version" -ge 11 ]; then
       # From Java 11 onwards, reduce the use of aggressive exports and opens, focusing on necessary access only
       value="--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
