@@ -291,7 +291,14 @@ public abstract class WALRecord {
         CDC_DATA_RECORD(78, CUSTOM),
 
         /** Physical WAL record that represents a fragment of an entry update. */
-        DATA_PAGE_FRAGMENTED_UPDATE_RECORD(81, PHYSICAL);
+        DATA_PAGE_FRAGMENTED_UPDATE_RECORD(81, PHYSICAL),
+
+        // Custom GridGain WAL records should use indexes starting from 100.
+        // It allows avoiding overlapping with existing Apache Ignite records and not port placeholders to it.
+
+        // TODO https://ggsystems.atlassian.net/browse/GG-40160
+        /** Consistent cut record with a timestamp. */
+        TIME_STAMPED_CONSISTENT_CUT(100);
 
         /** Index for serialization. Should be consistent throughout all versions. */
         private final int idx;
