@@ -296,6 +296,7 @@ public abstract class WALRecord {
         // Custom GridGain WAL records should use indexes starting from 100.
         // It allows avoiding overlapping with existing Apache Ignite records and not port placeholders to it.
 
+        // TODO https://ggsystems.atlassian.net/browse/GG-40160
         /** Consistent cut record with a timestamp. */
         TIME_STAMPED_CONSISTENT_CUT(100);
 
