@@ -44,6 +44,7 @@ import org.apache.ignite.internal.pagemem.wal.record.ReencryptionStartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.pagemem.wal.record.SnapshotRecord;
 import org.apache.ignite.internal.pagemem.wal.record.SwitchSegmentRecord;
+import org.apache.ignite.internal.pagemem.wal.record.TimeStampedConsistentCutRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.ClusterSnapshotRecord;
@@ -182,6 +183,7 @@ import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ROTATED_ID_PART_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.SNAPSHOT;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.SWITCH_SEGMENT_RECORD;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.TIME_STAMPED_CONSISTENT_CUT;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.TRACKING_PAGE_DELTA;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.TRACKING_PAGE_REPAIR_DELTA;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.TX_RECORD;
@@ -270,6 +272,7 @@ public class RecordUtils {
             put(MVCC_DATA_RECORD, RecordUtils::buildMvccDataRecord);
             put(MVCC_TX_RECORD, RecordUtils::buildMvccTxRecord);
             put(CONSISTENT_CUT, RecordUtils::buildConsistentCutRecord);
+            put(TIME_STAMPED_CONSISTENT_CUT, RecordUtils::buildTimeStampedConsistentCutRecord);
             put(BTREE_META_PAGE_INIT_ROOT_V3, RecordUtils::buildMetaPageInitRootInlineFlagsCreatedVersionRecord);
             put(OUT_OF_ORDER_UPDATE, RecordUtils::buildOutOfOrderRecord);
             put(ENCRYPTED_OUT_OF_ORDER_UPDATE, buildUpsupportedWalRecord(ENCRYPTED_OUT_OF_ORDER_UPDATE));
@@ -621,6 +624,11 @@ public class RecordUtils {
     /** **/
     public static ConsistentCutRecord buildConsistentCutRecord() {
         return new ConsistentCutRecord();
+    }
+
+    /** **/
+    public static TimeStampedConsistentCutRecord buildTimeStampedConsistentCutRecord() {
+        return new TimeStampedConsistentCutRecord();
     }
 
     /** **/
