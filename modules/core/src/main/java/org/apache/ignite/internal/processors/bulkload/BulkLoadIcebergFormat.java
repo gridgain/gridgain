@@ -17,4 +17,7 @@
 package org.apache.ignite.internal.processors.bulkload;
 
 public class BulkLoadIcebergFormat implements BulkLoadFormat {
+    @Override public String name() {
+        return "Iceberg";
+    }
 }

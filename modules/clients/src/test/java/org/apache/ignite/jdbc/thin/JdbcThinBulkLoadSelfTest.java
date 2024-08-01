@@ -1119,7 +1119,37 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
 
                 return null;
             }
-        }, SQLException.class, "Community edition supports only COPY FROM <file> INTO <table> FORMAT CSV");
+        }, SQLException.class, "To use export feature, enable gridgain-bulkload module (requires Enterprise or Ultimate Edition)");
+    }
+
+    @Test
+    public void testParquetNotSupportedInCommunityEdition() {
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                stmt.executeUpdate(
+                    "copy from '/path/any.file'" +
+                        " into " + TBL_NAME +
+                        "(_key, age, firstName, lastName)" +
+                        " format parquet");
+
+                return null;
+            }
+        }, SQLException.class, "To use Parquet format, enable gridgain-bulkload module (requires Enterprise or Ultimate Edition)");
+    }
+
+    @Test
+    public void testIcebergNotSupportedInCommunityEdition() {
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                stmt.executeUpdate(
+                    "copy from '/path/any.file'" +
+                        " into " + TBL_NAME +
+                        "(_key, age, firstName, lastName)" +
+                        " format iceberg");
+
+                return null;
+            }
+        }, SQLException.class, "To use Iceberg format, enable gridgain-bulkload module (requires Enterprise or Ultimate Edition)");
     }
 
     /**
