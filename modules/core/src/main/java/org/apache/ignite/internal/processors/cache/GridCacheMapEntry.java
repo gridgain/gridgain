@@ -1457,8 +1457,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 assert dhtVer != null;
 
                 // It is possible that 'get' could load more recent value.
-                if (!((GridNearCacheEntry)this).recordDhtVersion(dhtVer))
+                if (!((GridNearCacheEntry)this).recordDhtVersion(dhtVer)) {
+                    logOnMoreRecent();
+
                     return new GridCacheUpdateTxResult(false, logPtr);
+                }
             }
 
             assert tx == null || (!tx.local() && tx.onePhaseCommit()) || tx.ownsLock(this) :
@@ -1534,6 +1537,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 logPtr = logTxUpdate(tx, val, expireTime, newVer, cctx.group().walEnabled());
 
             update(val, expireTime, ttl, newVer, true);
+
+            debugReplicate("innerSet");
 
             drReplicate(drType, val, newVer, topVer);
 
@@ -1673,8 +1678,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 assert dhtVer != null;
 
                 // It is possible that 'get' could load more recent value.
-                if (!((GridNearCacheEntry)this).recordDhtVersion(dhtVer))
+                if (!((GridNearCacheEntry)this).recordDhtVersion(dhtVer)) {
+                    logOnMoreRecent();
+
                     return new GridCacheUpdateTxResult(false, logPtr);
+                }
             }
 
             assert tx == null || (!tx.local() && tx.onePhaseCommit()) || tx.ownsLock(this) :
@@ -1717,6 +1725,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             if (tx != null && cctx.group().persistenceEnabled())
                 logPtr = logTxUpdate(tx, null, 0, newVer, cctx.group().walEnabled());
+
+            debugReplicate("innerRemove");
 
             drReplicate(drType, null, newVer, topVer);
 
@@ -2260,6 +2270,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (isNear()) {
                 CacheDataRow dataRow = val != null ? new CacheDataRowAdapter(key, val, ver, expireTimeExtras()) : null;
 
+                log.debug("Operation op=" + op.name() + " is executed on near=" + cctx.isNear() + "cache, key=" + keyValue(false));
+
                 c.call(dataRow);
             }
             else
@@ -2377,6 +2389,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 assert updateVal != null : c;
 
+                debugReplicate("innerUpdate / op = UPDATE");
+
                 drReplicate(drType, updateVal, updateVer, topVer);
 
                 recordNodeId(affNodeId, topVer);
@@ -2406,6 +2420,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 assert c.op == DELETE : c.op;
 
                 clearReaders();
+
+                debugReplicate("innerUpdate / op = DELETE");
 
                 drReplicate(drType, null, updateVer, topVer);
 
@@ -2579,8 +2595,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     private void drReplicate(GridDrType drType, @Nullable CacheObject val, GridCacheVersion ver, AffinityTopologyVersion topVer)
         throws IgniteCheckedException {
-        if (cctx.isDrEnabled() && drType != DR_NONE && !isInternal())
+        if (cctx.isDrEnabled() && drType != DR_NONE && !isInternal()) {
+            log.debug("Key replication, key=" + keyValue(false) + ", dr=" + cctx.isDrEnabled() + "drType=" + drType);
             cctx.dr().replicate(key, val, rawTtl(), rawExpireTime(), ver.conflictVersion(), drType, topVer);
+        } else {
+            log.debug("Skipping key replication, key=" + keyValue(false) + ", dr=" + cctx.isDrEnabled() + "drType=" + drType);
+        }
     }
 
     /**
@@ -3384,6 +3404,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         )));
                     }
                 }
+
+                debugReplicate("initialValue / op = UPDATE");
 
                 drReplicate(drType, val, ver, topVer);
 
@@ -7202,5 +7224,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         GridCacheAdapter cache = cctx.cache();
 
         return cache != null && cache.cacheCfg.getPlatformCacheConfiguration() != null;
+    }
+
+    private void debugReplicate(String methodCalled) {
+        log.debug("Invoking replication from " + methodCalled + ", key=" + keyValue(false) + ", near=" + cctx.isNear()
+                + ", detached=" + detached());
+    }
+
+    private void logOnMoreRecent(){
+        log.debug("recordDhtVersion is more recent, skipping cache op for key=" + keyValue(false));
     }
 }
