@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.util.lang.GridCursor;
 
 /**
@@ -34,9 +36,19 @@ public interface UpdateLog {
     void put(UpdateLogRow row) throws IgniteCheckedException;
 
     /**
+     * Put a row to the log.
+     */
+    void put(UpdateLogRow row, IgniteLogger log, CacheObjectContext cctx) throws IgniteCheckedException;
+
+    /**
      * Removes a row from the log.
      */
     void remove(UpdateLogRow row) throws IgniteCheckedException;
+
+    /**
+     * Removes a row from the log.
+     */
+    void remove(UpdateLogRow row, IgniteLogger log, CacheObjectContext cctx) throws IgniteCheckedException;
 
     /**
      * Destroys the log.
