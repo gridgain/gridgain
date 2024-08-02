@@ -2270,7 +2270,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (isNear()) {
                 CacheDataRow dataRow = val != null ? new CacheDataRowAdapter(key, val, ver, expireTimeExtras()) : null;
 
-                log.debug("Operation op=" + op.name() + " is executed on near=" + cctx.isNear() + "cache, key=" + keyValue(false));
+                if (log.isDebugEnabled())
+                    log.debug("Operation op=" + op.name() + " is executed on near=" + cctx.isNear()
+                            + "cache, key=" + keyValue(false));
 
                 c.call(dataRow);
             }
@@ -2596,10 +2598,15 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     private void drReplicate(GridDrType drType, @Nullable CacheObject val, GridCacheVersion ver, AffinityTopologyVersion topVer)
         throws IgniteCheckedException {
         if (cctx.isDrEnabled() && drType != DR_NONE && !isInternal()) {
-            log.debug("Key replication, key=" + keyValue(false) + ", dr=" + cctx.isDrEnabled() + "drType=" + drType);
+            if (log.isDebugEnabled())
+                log.debug("Key replication, key=" + keyValue(false) + ", dr=" + cctx.isDrEnabled()
+                        + ", drType=" + drType);
+
             cctx.dr().replicate(key, val, rawTtl(), rawExpireTime(), ver.conflictVersion(), drType, topVer);
         } else {
-            log.debug("Skipping key replication, key=" + keyValue(false) + ", dr=" + cctx.isDrEnabled() + "drType=" + drType);
+            if (log.isDebugEnabled())
+                log.debug("Skipping key replication, key=" + keyValue(false) + ", dr=" + cctx.isDrEnabled()
+                        + ", drType=" + drType);
         }
     }
 
@@ -7231,12 +7238,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      * @param methodCalled Method name.
      */
     private void debugReplicate(String methodCalled) {
-        log.debug("Invoking replication from " + methodCalled + ", key=" + keyValue(false) + ", near=" + cctx.isNear()
-                + ", detached=" + detached());
+        if (log.isDebugEnabled())
+            log.debug("Invoking replication from " + methodCalled + ", key=" + keyValue(false) +
+                    ", near=" + cctx.isNear() + ", detached=" + detached());
     }
 
     /** */
     private void logOnMoreRecent(){
-        log.debug("recordDhtVersion is more recent, skipping cache op for key=" + keyValue(false));
+        if (log.isDebugEnabled())
+            log.debug("recordDhtVersion is more recent, skipping cache op for key=" + keyValue(false));
     }
 }

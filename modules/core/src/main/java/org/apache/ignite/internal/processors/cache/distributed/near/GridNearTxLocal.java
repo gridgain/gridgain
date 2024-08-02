@@ -4933,7 +4933,8 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             }
         };
 
-        log.debug("isAll created detached entry for key=" + key.value(cctx.cacheObjectContext(), false));
+        if (log.isDebugEnabled())
+            log.debug("isAll created detached entry for key=" + key.value(cctx.cacheObjectContext(), false));
 
         for (CacheEntryPredicate p0 : filter) {
             if (p0 != null && !p0.apply(e))
