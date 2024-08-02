@@ -2429,6 +2429,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             CacheObject oldVal = oldRow == null ? null : oldRow.value();
 
+            log.debug("EntryProcessor.apply created detached entry for key=" + key.value(cctx.cacheObjectContext(), false));
+
             CacheInvokeEntry invokeEntry = new CacheInvokeEntry<>(key, oldVal, ver, keepBinary,
                 new GridDhtDetachedCacheEntry(cctx, key));
 

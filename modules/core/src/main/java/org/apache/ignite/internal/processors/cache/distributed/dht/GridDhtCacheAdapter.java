@@ -484,6 +484,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
      * @return Cache entry.
      */
     protected GridDistributedCacheEntry createEntry(KeyCacheObject key) {
+        log.debug("createEntry created detached entry for key=" + key.value(ctx.cacheObjectContext(), false));
         return new GridDhtDetachedCacheEntry(ctx, key);
     }
 
