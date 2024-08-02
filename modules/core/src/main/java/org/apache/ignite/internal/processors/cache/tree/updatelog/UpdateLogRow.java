@@ -113,7 +113,7 @@ public class UpdateLogRow {
 
     /** Updated entry key. */
     public KeyCacheObject key() {
-        return rowData.key();
+        return rowData == null ? null : rowData.key();
     }
 
     /** Updated entry value. */
