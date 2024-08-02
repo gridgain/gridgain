@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,20 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.ignite.cache.affinity;
 
-package org.apache.ignite.cache.affinity.rendezvous;
+import org.apache.ignite.cache.affinity.fair.CachePartitionFairAffinity;
 
-import org.apache.ignite.cache.affinity.AbstractAffinityFunctionSelfTest;
-import org.apache.ignite.cache.affinity.AffinityFunction;
-
-/**
- * Tests for {@link RendezvousAffinityFunction}.
- */
-public class RendezvousAffinityFunctionStandardHashSelfTest extends AbstractAffinityFunctionSelfTest {
-    /** {@inheritDoc} */
+public class FairFunctionStandardHashSelfTest extends AbstractAffinityFunctionSelfTest {
     @Override protected AffinityFunction affinityFunction() {
-        AffinityFunction aff = new RendezvousAffinityFunction(40, null);
-
-        return aff;
+        return new CachePartitionFairAffinity(40);
     }
 }

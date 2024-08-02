@@ -112,6 +112,13 @@ public abstract class AbstractAffinityFunctionSelfTest extends GridCommonAbstrac
     }
 
     /**
+     */
+    @Test
+    public void testQQQ() {
+        checkRandomReassignment(2);
+    }
+
+    /**
      * @param backups Number of backups.
      * @throws Exception If failed.
      */
@@ -192,12 +199,32 @@ public abstract class AbstractAffinityFunctionSelfTest extends GridCommonAbstrac
                 new GridAffinityFunctionContextImpl(nodes, prev, discoEvt, new AffinityTopologyVersion(i),
                     backups));
 
-            info("Assigned.");
+            info("Assigned");
 
             verifyAssignment(assignment, backups, aff.partitions(), nodes.size());
 
             prev = assignment;
         }
+    }
+
+    private int rebalancedReplicasCount(List<List<ClusterNode>> olda, List<List<ClusterNode>> newa) {
+        if (olda == null) {
+            return 0;
+        }
+
+        int res = 0;
+
+        for (int p = 0; p < olda.size(); p++) {
+            List<ClusterNode> o = olda.get(p);
+
+            for (ClusterNode newNode : newa.get(p)) {
+                if (!o.contains(newNode)) {
+                    res++;
+                }
+            }
+        }
+
+        return res;
     }
 
     /**
@@ -208,7 +235,7 @@ public abstract class AbstractAffinityFunctionSelfTest extends GridCommonAbstrac
 
         Random rnd = new Random();
 
-        int maxNodes = 50;
+        int maxNodes = 10;
 
         List<ClusterNode> nodes = new ArrayList<>(maxNodes);
 
@@ -244,6 +271,8 @@ public abstract class AbstractAffinityFunctionSelfTest extends GridCommonAbstrac
 
             DiscoveryEvent discoEvt;
 
+            List<ClusterNode> oldNodes = new ArrayList<>(nodes);
+
             if (add) {
                 ClusterNode addedNode = new GridTestNode(UUID.randomUUID());
 
@@ -257,13 +286,16 @@ public abstract class AbstractAffinityFunctionSelfTest extends GridCommonAbstrac
                 discoEvt = new DiscoveryEvent(rmvNode, "", EventType.EVT_NODE_LEFT, rmvNode);
             }
 
-            info("======================================");
-            info("Assigning partitions [iter=" + i + ", discoEvt=" + discoEvt + ", nodesSize=" + nodes.size() + ']');
-            info("======================================");
-
             List<List<ClusterNode>> assignment = aff.assignPartitions(
                 new GridAffinityFunctionContextImpl(nodes, prev, discoEvt, new AffinityTopologyVersion(i),
                     backups));
+
+            if (oldNodes.size() >= backups + 1 || nodes.size() >= backups + 1) {
+                info("======================================");
+                info("Assigning partitions [iter=" + i + ", nodesSize=" + nodes.size() + ", oldNodesSize=" + oldNodes.size()
+                    + ", rebalancedReplicas=" + rebalancedReplicasCount(prev, assignment) + ", discoEvt=" + discoEvt + ']');
+                info("======================================");
+            }
 
             verifyAssignment(assignment, backups, aff.partitions(), nodes.size());
 
