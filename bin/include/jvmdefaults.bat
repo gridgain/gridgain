@@ -24,47 +24,51 @@ set value=""
 :: Second argument is the current value of the jvm options
 :: Third value is the name of the environment variable that jvm options should be set to
 if %java_version% == 8 (
-    set value=
-    -XX:+AggressiveOpts
+    set value= ^
+    -XX:+AggressiveOpts ^
     %current_value%
 )
 
 if %java_version% GEQ 9 if %java_version% LSS 11 (
-    set value=
-    -XX:+AggressiveOpts
-    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
-    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
-    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
-    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
-    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED --illegal-access=permit
-    --add-modules=java.xml.bind
+    set value= ^
+    -XX:+AggressiveOpts ^
+    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED ^
+    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED ^
+    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
+    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
+    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
+    --illegal-access=permit ^
+    --add-modules=java.xml.bind ^
     %current_value%
 )
 
 if %java_version% GEQ 11 (
-    set value=
-    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
-    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
-    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
-    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
-    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
-    --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
-    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
-    --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
-    --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
-    --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
-    --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED
-    --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.security.cert=ALL-UNNAMED
-    --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
-    --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED
-    --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
-    --add-opens=java.base/java.lang=ALL-UNNAMED
-    --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
-    --add-opens=java.base/java.math=ALL-UNNAMED
-    --add-opens=java.base/java.time=ALL-UNNAMED
-    --add-opens=java.base/sun.security.ssl=ALL-UNNAMED
-    --add-opens=java.base/sun.security.x509=ALL-UNNAMED
-    --add-opens=java.sql/java.sql=ALL-UNNAMED
+    set value= ^
+    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED ^
+    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED ^
+    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
+    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
+    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
+    --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED ^
+    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED ^
+    --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
+    --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
+    --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
+    --add-opens=java.base/java.io=ALL-UNNAMED ^
+    --add-opens=java.base/java.net=ALL-UNNAMED ^
+    --add-opens=java.base/java.nio=ALL-UNNAMED ^
+    --add-opens=java.base/java.security.cert=ALL-UNNAMED ^
+    --add-opens=java.base/java.util=ALL-UNNAMED ^
+    --add-opens=java.base/java.util.concurrent=ALL-UNNAMED ^
+    --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED ^
+    --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED ^
+    --add-opens=java.base/java.lang=ALL-UNNAMED ^
+    --add-opens=java.base/java.lang.invoke=ALL-UNNAMED ^
+    --add-opens=java.base/java.math=ALL-UNNAMED ^
+    --add-opens=java.base/java.time=ALL-UNNAMED ^
+    --add-opens=java.base/sun.security.ssl=ALL-UNNAMED ^
+    --add-opens=java.base/sun.security.x509=ALL-UNNAMED ^
+    --add-opens=java.sql/java.sql=ALL-UNNAMED ^
     %current_value%
 )
 

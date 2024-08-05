@@ -27,7 +27,7 @@ if defined JAVA_HOME  goto checkJdk
     echo %0, ERROR:
     echo JAVA_HOME environment variable is not found.
     echo Please point JAVA_HOME variable to location of JDK 1.8 or later.
-    echo You can also download the latest JDK at http://java.com/download.
+    echo You can also download latest JDK at http://java.com/download.
 goto error_finish
 
 :checkJdk
@@ -36,7 +36,7 @@ if exist "%JAVA_HOME%\bin\java.exe" goto checkJdkVersion
     echo %0, ERROR:
     echo JAVA is not found in JAVA_HOME=%JAVA_HOME%.
     echo Please point JAVA_HOME variable to installation of JDK 1.8 or later.
-    echo You can also download the latest JDK at http://java.com/download.
+    echo You can also download latest JDK at http://java.com/download.
 goto error_finish
 
 :checkJdkVersion
@@ -57,7 +57,7 @@ if %MAJOR_JAVA_VER% LSS 8 (
     echo %0, ERROR:
     echo The version of JAVA installed in %JAVA_HOME% is incorrect.
     echo Please point JAVA_HOME variable to installation of JDK 1.8 or later.
-    echo You can aslo download the latest JDK at http://java.com/download.
+    echo You can aslo download latest JDK at http://java.com/download.
     goto error_finish
 )
 
@@ -208,11 +208,13 @@ if defined JVM_OPTS (
 
 if "%INTERACTIVE%" == "1" (
     "%JAVA_HOME%\bin\java.exe" %CONTROL_JVM_OPTS% %QUIET% %RESTART_SUCCESS_OPT% ^
-    -DIGNITE_HOME="%IGNITE_HOME%" -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
+    -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="%IGNITE_HOME%" ^
+    -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
     -cp "%CP%" %MAIN_CLASS% %*
 ) else (
     "%JAVA_HOME%\bin\java.exe" %CONTROL_JVM_OPTS% %QUIET% %RESTART_SUCCESS_OPT% ^
-    -DIGNITE_HOME="%IGNITE_HOME%" -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
+    -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="%IGNITE_HOME%" ^
+    -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
     -cp "%CP%" %MAIN_CLASS% %*
 )
 
@@ -244,12 +246,46 @@ if %1 == 8 (
 )
 
 if %1 GEQ 9 if %1 LSS 11 (
-    set CONTROL_JVM_OPTS=-XX:+AggressiveOpts --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED --illegal-access=permit --add-modules=java.xml.bind %2
+    set CONTROL_JVM_OPTS=-XX:+AggressiveOpts
+    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
+    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
+    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
+    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
+    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
+    --illegal-access=permit
+    --add-modules=java.xml.bind
+    %2
     exit /b 0
 )
 
 if %1 GEQ 11 (
-    set CONTROL_JVM_OPTS=--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.security.cert=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.math=ALL-UNNAMED --add-opens=java.base/java.time=ALL-UNNAMED --add-opens=java.base/sun.security.ssl=ALL-UNNAMED --add-opens=java.base/sun.security.x509=ALL-UNNAMED --add-opens=java.sql/java.sql=ALL-UNNAMED %2
+    set CONTROL_JVM_OPTS=
+    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
+    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
+    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
+    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
+    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
+    --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
+    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+    --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
+    --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
+    --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
+    --add-opens=java.base/java.io=ALL-UNNAMED
+    --add-opens=java.base/java.net=ALL-UNNAMED
+    --add-opens=java.base/java.nio=ALL-UNNAMED
+    --add-opens=java.base/java.security.cert=ALL-UNNAMED
+    --add-opens=java.base/java.util=ALL-UNNAMED
+    --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+    --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED
+    --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
+    --add-opens=java.base/java.lang=ALL-UNNAMED
+    --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+    --add-opens=java.base/java.math=ALL-UNNAMED
+    --add-opens=java.base/java.time=ALL-UNNAMED
+    --add-opens=java.base/sun.security.ssl=ALL-UNNAMED
+    --add-opens=java.base/sun.security.x509=ALL-UNNAMED
+    --add-opens=java.sql/java.sql=ALL-UNNAMED
+    %2
     exit /b 0
 )
 exit /b 1

@@ -14,7 +14,7 @@ fi
 # Licensed under the GridGain Community Edition License (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-
+#
 #     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
 #
 # Unless required by applicable law or agreed to in writing, software
@@ -22,7 +22,7 @@ fi
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+#
 
 #
 # Grid cluster control.
@@ -30,7 +30,7 @@ fi
 
 #
 # Import common functions.
-
+#
 if [ "${IGNITE_HOME:-}" = "" ];
     then IGNITE_HOME_TMP="$(dirname "$(cd "$(dirname "$0")"; pwd)")"
     else IGNITE_HOME_TMP=${IGNITE_HOME}
@@ -137,15 +137,19 @@ fi
 
 case $osname in
     Darwin*)
-        "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} "${DOCK_OPTS}" -DIGNITE_HOME="${IGNITE_HOME}" \
+        "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} "${DOCK_OPTS}" \
+        -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
          -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} "$@"
-        ;;
+    ;;
     OS/390*)
-        "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
-         $(getIbmSslOpts $JAVA_VERSION) -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} "$@"
-        ;;
-    *)
-        "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} -DIGNITE_HOME="${IGNITE_HOME}" \
+        "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} \
+        -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
+         $(getIbmSslOpts $JAVA_VERSION) \
          -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} "$@"
+    ;;
+    *)
+        "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} \
+        -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
+        -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} "$@"
         ;;
 esac
