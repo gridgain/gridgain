@@ -23,6 +23,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -291,8 +292,18 @@ public class FilePageStore implements PageStore {
 
             fileIO = null;
 
-            if (delete)
+            if (delete) {
+                final Path filePath = pathProvider.apply();
                 Files.delete(pathProvider.apply());
+
+                // Remove parent directory if empty (GG-39863)
+                final Path dir = filePath.getParent();
+                if (Files.isDirectory(dir, LinkOption.NOFOLLOW_LINKS)) {
+                    if (!Files.list(dir).findFirst().isPresent()) {
+                        Files.delete(dir);
+                    }
+                }
+            }
         }
         catch (IOException e) {
             throw new StorageException("Failed to stop serving partition file [file=" + getFileAbsolutePath()
