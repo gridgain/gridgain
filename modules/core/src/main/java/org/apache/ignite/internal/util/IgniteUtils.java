@@ -10415,11 +10415,9 @@ public abstract class IgniteUtils {
         int idx0 = clsName.indexOf("$$Lambda$"); // Java 8+
         int idx1 = clsName.indexOf("$$Lambda/"); // Java 21+
 
-        // If both are "-1".
         if (idx0 == idx1)
             return null;
 
-        // One of indexes is -1, other one is a valid value.
         return clsName.substring(0, idx0 >= 0 ? idx0 : idx1);
     }
 
