@@ -34,7 +34,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
  * Tests client atomic long.
- * Partition awareness tests are in {@link ThinClientPartitionAwarenessStableTopologyTest#testAtomicLong()}.
+ * Partition awareness tests are in {@link ThinClientAffinityAwarenessStableTopologyTest#testAtomicLong()}.
  */
 public class AtomicLongTest extends AbstractThinClientTest {
     /** {@inheritDoc} */

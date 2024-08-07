@@ -35,7 +35,21 @@ import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.client.*;
+import org.apache.ignite.client.ClientAtomicConfiguration;
+import org.apache.ignite.client.ClientAtomicLong;
+import org.apache.ignite.client.ClientAtomicSequence;
+import org.apache.ignite.client.ClientCache;
+import org.apache.ignite.client.ClientCacheConfiguration;
+import org.apache.ignite.client.ClientCluster;
+import org.apache.ignite.client.ClientClusterGroup;
+import org.apache.ignite.client.ClientCollectionConfiguration;
+import org.apache.ignite.client.ClientCompute;
+import org.apache.ignite.client.ClientException;
+import org.apache.ignite.client.ClientIgniteSet;
+import org.apache.ignite.client.ClientServices;
+import org.apache.ignite.client.ClientTransactions;
+import org.apache.ignite.client.IgniteClient;
+import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientTransactionConfiguration;
@@ -463,6 +477,19 @@ public class TcpIgniteClient implements IgniteClient {
         }
     }
 
+    private void writeClientAtomicConfiguration(ClientAtomicConfiguration cfg, PayloadOutputChannel out) {
+        if (cfg == null) {
+            out.out().writeBoolean(false);
+            return;
+        }
+
+        out.out().writeBoolean(true);
+        out.out().writeInt(cfg.getAtomicSequenceReserveSize());
+        out.out().writeByte((byte) cfg.getCacheMode().ordinal());
+        out.out().writeInt(cfg.getBackups());
+        writeString(cfg.getGroupName(), out.out());
+    }
+
     /** Load cluster binary configration. */
     private void retrieveBinaryConfiguration(ClientConfiguration cfg) {
         if (!cfg.isAutoBinaryConfigurationEnabled())
@@ -666,19 +693,6 @@ public class TcpIgniteClient implements IgniteClient {
          */
         void onReconnect() {
             cache = BinaryCachingMetadataHandler.create();
-        }
-
-        private void writeClientAtomicConfiguration(ClientAtomicConfiguration cfg, PayloadOutputChannel out) {
-            if (cfg == null) {
-                out.out().writeBoolean(false);
-                return;
-            }
-
-            out.out().writeBoolean(true);
-            out.out().writeInt(cfg.getAtomicSequenceReserveSize());
-            out.out().writeByte((byte) cfg.getCacheMode().ordinal());
-            out.out().writeInt(cfg.getBackups());
-            writeString(cfg.getGroupName(), out.out());
         }
     }
 
