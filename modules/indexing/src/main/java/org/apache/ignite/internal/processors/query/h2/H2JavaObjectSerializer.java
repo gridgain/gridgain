@@ -22,9 +22,7 @@ import org.apache.ignite.marshaller.Marshaller;
 import org.gridgain.internal.h2.api.JavaObjectSerializer;
 import org.jetbrains.annotations.NotNull;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.binary.BinaryObject;  
-import java.util.Arrays; 
-
+import java.util.Arrays;
 
 /**
  * Ignite java object serializer implementation for H2.
@@ -36,14 +34,14 @@ class H2JavaObjectSerializer implements JavaObjectSerializer {
     /** Marshaller. */
     private final Marshaller marshaller;
 
+    /** Logger. */
+    private final IgniteLogger log;
+
     /**
      * Constructor.
      *
      * @param ctx Kernal context.
      */
-
-    private final IgniteLogger log;
-
     H2JavaObjectSerializer(@NotNull GridKernalContext ctx) {
         marshaller = ctx.config().getMarshaller();
         clsLdr = U.resolveClassLoader(ctx.config());
@@ -55,9 +53,7 @@ class H2JavaObjectSerializer implements JavaObjectSerializer {
         try {
             return U.marshal(marshaller, obj);
         } catch (Exception e) {
-            String errorMsg = obj instanceof BinaryObject ?
-                "Failed to serialize BinaryObject with typeId: " + ((BinaryObject) obj).typeId() :
-                "Failed to Serialize object: " + obj.getClass().getName();
+            String errorMsg = "Failed to serialize object: " + obj.getClass().getName();
             U.error(log, errorMsg, e);
             throw new Exception(errorMsg, e);
         }
@@ -74,4 +70,3 @@ class H2JavaObjectSerializer implements JavaObjectSerializer {
         }
     }
 }
-

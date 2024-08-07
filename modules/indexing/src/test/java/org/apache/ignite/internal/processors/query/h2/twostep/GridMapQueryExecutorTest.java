@@ -1,33 +1,38 @@
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
+import org.apache.ignite.internal.processors.query.GridQueryCancel;
+import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
+import org.apache.ignite.internal.processors.query.h2.MapH2QueryInfo;
+import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryRequest;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collections;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 public class GridMapQueryExecutorTest extends GridCommonAbstractTest {
     private GridMapQueryExecutor executor;
     private GridKernalContext ctx;
-    private IgniteH2Indexing h2;
     private ClusterNode node;
     private GridH2QueryRequest req;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         super.setUp();
         ctx = Mockito.mock(GridKernalContext.class);
-        h2 = Mockito.mock(IgniteH2Indexing.class);
-        executor = new GridMapQueryExecutor(ctx, h2);
+        executor = new GridMapQueryExecutor(ctx);
         node = Mockito.mock(ClusterNode.class);
         req = Mockito.mock(GridH2QueryRequest.class);
 
@@ -36,12 +41,12 @@ public class GridMapQueryExecutorTest extends GridCommonAbstractTest {
 
     @Test
     public void testQueryExecutionFailure() {
-        GridMapQueryExecutor executorSpy = Mockito.spy(new GridMapQueryExecutor(ctx, h2));
+        GridMapQueryExecutor executorSpy = Mockito.spy(new GridMapQueryExecutor(ctx));
         IgniteLogger log = ctx.log(GridMapQueryExecutor.class);
-        Mockito.doReturn(log).when(executorSpy).log();
-        
+        Mockito.doReturn(log).when(executorSpy).getLog();
+
         // Simulate query execution failure
-        Mockito.doThrow(new SQLException("Forced error")).when(executorSpy).onQueryRequest(any(), any());
+        Mockito.doThrow(new IgniteCheckedException(new SQLException("Forced error"))).when(executorSpy).onQueryRequest(any(), any());
 
         try {
             executorSpy.onQueryRequest(Mockito.mock(ClusterNode.class), Mockito.mock(GridH2QueryRequest.class));
@@ -55,14 +60,13 @@ public class GridMapQueryExecutorTest extends GridCommonAbstractTest {
     @Test
     public void testOnQueryRequest() throws Exception {
         // Mocking behaviors for query request
-        when(req.query()).thenReturn("SELECT * FROM test;");
+        when(req.queries()).thenReturn(Collections.singletonList(new GridCacheSqlQuery()));
         when(req.partitions()).thenReturn(null);
         when(req.queryPartitions()).thenReturn(null);
         when(req.caches()).thenReturn(Collections.emptyList());
         when(req.parameters()).thenReturn(new Object[]{});
         when(req.isDataPageScanEnabled()).thenReturn(false);
         when(req.schemaName()).thenReturn("PUBLIC");
-        when(req.queries()).thenReturn(Collections.singletonList(new GridCacheSqlQuery()));
         when(req.topologyVersion()).thenReturn(AffinityTopologyVersion.NONE);
         when(req.timeout()).thenReturn(0);
         when(req.explicitTimeout()).thenReturn(false);
@@ -75,7 +79,7 @@ public class GridMapQueryExecutorTest extends GridCommonAbstractTest {
         when(req.isFlagSet(GridH2QueryRequest.FLAG_REPLICATED_AS_PARTITIONED)).thenReturn(false);
 
         // Simulate query execution failure to check logging
-        doThrow(new SQLException("Test exception")).when(h2).executeSqlQueryWithTimer(
+        doThrow(new IgniteCheckedException(new SQLException("Test exception"))).when(executor).executeSqlQueryWithTimer(
                 any(PreparedStatement.class),
                 any(H2PooledConnection.class),
                 anyString(),
