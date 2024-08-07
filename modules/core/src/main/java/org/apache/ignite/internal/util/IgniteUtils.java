@@ -10412,9 +10412,15 @@ public abstract class IgniteUtils {
      *      {@code null} if passed in name is not related to lambda.
      */
     @Nullable public static String lambdaEnclosingClassName(String clsName) {
-        int idx = clsName.indexOf("$$Lambda$");
+        int idx0 = clsName.indexOf("$$Lambda$"); // Java 8+
+        int idx1 = clsName.indexOf("$$Lambda/"); // Java 21+
 
-        return idx != -1 ? clsName.substring(0, idx) : null;
+        // If both are "-1".
+        if (idx0 == idx1)
+            return null;
+
+        // One of indexes is -1, other one is a valid value.
+        return clsName.substring(0, idx0 >= 0 ? idx0 : idx1);
     }
 
     /**
