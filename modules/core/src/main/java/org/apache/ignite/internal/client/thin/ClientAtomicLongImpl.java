@@ -18,26 +18,12 @@ package org.apache.ignite.internal.client.thin;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.client.ClientAtomicLong;
-import org.apache.ignite.internal.binary.BinaryRawWriterEx;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Client atomic long.
  */
-class ClientAtomicLongImpl implements ClientAtomicLong {
-    /** */
-    private final String name;
-
-    /** */
-    private final String groupName;
-
-    /** */
-    private final ReliableChannel ch;
-
-    /** Cache id. */
-    private final int cacheId;
-
+class ClientAtomicLongImpl extends AbstractClientAtomic implements ClientAtomicLong {
     /**
      * Constructor.
      *
@@ -46,12 +32,7 @@ class ClientAtomicLongImpl implements ClientAtomicLong {
      * @param ch Channel.
      */
     public ClientAtomicLongImpl(String name, @Nullable String groupName, ReliableChannel ch) {
-        // name and groupName uniquely identify the data structure.
-        this.name = name;
-        this.groupName = groupName;
-        this.ch = ch;
-
-        cacheId = ClientUtils.atomicsCacheId(name, groupName);
+        super(name, groupName, ch);
     }
 
     /** {@inheritDoc} */
@@ -123,27 +104,5 @@ class ClientAtomicLongImpl implements ClientAtomicLong {
     /** {@inheritDoc} */
     @Override public void close() {
         ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_REMOVE, this::writeName, null);
-    }
-
-    /**
-     * Writes the name.
-     *
-     * @param out Output channel.
-     */
-    private void writeName(PayloadOutputChannel out) {
-        try (BinaryRawWriterEx w = new BinaryWriterExImpl(null, out.out(), null, null)) {
-            w.writeString(name);
-            w.writeString(groupName);
-        }
-    }
-
-    /**
-     * Gets the affinity key for this data structure.
-     * 
-     * @return Affinity key.
-     */
-    private String affinityKey() {
-        // GridCacheInternalKeyImpl uses name as AffinityKeyMapped.
-        return name;
     }
 }
