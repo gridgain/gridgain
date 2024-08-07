@@ -279,7 +279,22 @@ public enum ClientOperation {
     OP_SET_ITERATOR_START(9022),
 
     /** IgniteSet.iterator page. */
-    OP_SET_ITERATOR_GET_PAGE(9023);
+    OP_SET_ITERATOR_GET_PAGE(9023),
+
+    /** Get or create an AtomicSequence by name. */
+    ATOMIC_SEQUENCE_CREATE(9030),
+
+    /** Remove an AtomicSequence. */
+    ATOMIC_SEQUENCE_REMOVE(9031),
+
+    /** Check if AtomicSequence exists. */
+    ATOMIC_SEQUENCE_EXISTS(9032),
+
+    /** AtomicSequence.get. */
+    ATOMIC_SEQUENCE_VALUE_GET(9033),
+
+    /** AtomicSequence.addAndGet (also covers incrementAndGet, getAndIncrement, getAndAdd). */
+    ATOMIC_SEQUENCE_VALUE_ADD_AND_GET(9034);
 
     /** Code. */
     private final int code;

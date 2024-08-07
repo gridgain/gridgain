@@ -28,26 +28,14 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryBasicNameMapper;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.client.ClientAtomicConfiguration;
-import org.apache.ignite.client.ClientAtomicLong;
-import org.apache.ignite.client.ClientCache;
-import org.apache.ignite.client.ClientCacheConfiguration;
-import org.apache.ignite.client.ClientCluster;
-import org.apache.ignite.client.ClientClusterGroup;
-import org.apache.ignite.client.ClientCollectionConfiguration;
-import org.apache.ignite.client.ClientCompute;
-import org.apache.ignite.client.ClientException;
-import org.apache.ignite.client.ClientIgniteSet;
-import org.apache.ignite.client.ClientServices;
-import org.apache.ignite.client.ClientTransactions;
-import org.apache.ignite.client.IgniteClient;
-import org.apache.ignite.client.IgniteClientFuture;
+import org.apache.ignite.client.*;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientTransactionConfiguration;
@@ -403,6 +391,19 @@ public class TcpIgniteClient implements IgniteClient {
 
             return new ClientIgniteSetImpl<>(ch, serDes, name, colocated, cacheId);
         });
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public ClientAtomicSequence atomicSequence(String name, long initVal, boolean create) throws IgniteException {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public ClientAtomicSequence atomicSequence(String name, ClientAtomicConfiguration cfg, long initVal, boolean create)
+            throws IgniteException {
+        return null;
     }
 
     /**
