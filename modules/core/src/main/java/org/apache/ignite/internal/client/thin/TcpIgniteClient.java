@@ -343,16 +343,7 @@ public class TcpIgniteClient implements IgniteClient {
             ch.service(ClientOperation.ATOMIC_LONG_CREATE, out -> {
                 writeString(name, out.out());
                 out.out().writeLong(initVal);
-
-                if (cfg != null) {
-                    out.out().writeBoolean(true);
-                    out.out().writeInt(cfg.getAtomicSequenceReserveSize());
-                    out.out().writeByte((byte)cfg.getCacheMode().ordinal());
-                    out.out().writeInt(cfg.getBackups());
-                    writeString(cfg.getGroupName(), out.out());
-                }
-                else
-                    out.out().writeBoolean(false);
+                writeClientAtomicConfiguration(cfg, out);
             }, null);
         }
 
@@ -409,16 +400,7 @@ public class TcpIgniteClient implements IgniteClient {
             ch.service(ClientOperation.ATOMIC_SEQUENCE_CREATE, out -> {
                 writeString(name, out.out());
                 out.out().writeLong(initVal);
-
-                if (cfg != null) {
-                    out.out().writeBoolean(true);
-                    out.out().writeInt(cfg.getAtomicSequenceReserveSize());
-                    out.out().writeByte((byte)cfg.getCacheMode().ordinal());
-                    out.out().writeInt(cfg.getBackups());
-                    writeString(cfg.getGroupName(), out.out());
-                }
-                else
-                    out.out().writeBoolean(false);
+                writeClientAtomicConfiguration(cfg, out);
             }, null);
         }
 
@@ -684,6 +666,19 @@ public class TcpIgniteClient implements IgniteClient {
          */
         void onReconnect() {
             cache = BinaryCachingMetadataHandler.create();
+        }
+
+        private void writeClientAtomicConfiguration(ClientAtomicConfiguration cfg, PayloadOutputChannel out) {
+            if (cfg == null) {
+                out.out().writeBoolean(false);
+                return;
+            }
+
+            out.out().writeBoolean(true);
+            out.out().writeInt(cfg.getAtomicSequenceReserveSize());
+            out.out().writeByte((byte) cfg.getCacheMode().ordinal());
+            out.out().writeInt(cfg.getBackups());
+            writeString(cfg.getGroupName(), out.out());
         }
     }
 

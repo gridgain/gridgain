@@ -24,6 +24,7 @@ import org.jetbrains.annotations.Nullable;
  * Client atomic sequence.
  */
 class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAtomicSequence {
+    // TODO: Manage batches locally.
     private int batchSize;
 
     /**
@@ -35,13 +36,11 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
      */
     public ClientAtomicSequenceImpl(String name, @Nullable String groupName, ReliableChannel ch) {
         super(name, groupName, ch);
-        // name and groupName uniquely identify the data structure.
-
     }
 
     /** {@inheritDoc} */
     @Override public long get() throws IgniteException {
-        return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_VALUE_GET, this::writeName, in -> in.in().readLong());
+        return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_SEQUENCE_VALUE_GET, this::writeName, in -> in.in().readLong());
     }
 
     /** {@inheritDoc} */
@@ -56,6 +55,7 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
 
     /** {@inheritDoc} */
     @Override public long addAndGet(long l) throws IgniteException {
+        // TODO: Local increment
         return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_VALUE_ADD_AND_GET, out -> {
             writeName(out);
             out.out().writeLong(l);
@@ -79,12 +79,12 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
 
     /** {@inheritDoc} */
     @Override public boolean removed() {
-        return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_EXISTS, this::writeName,
+        return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_SEQUENCE_EXISTS, this::writeName,
                 in -> !in.in().readBoolean());
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
-        ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_REMOVE, this::writeName, null);
+        ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_SEQUENCE_REMOVE, this::writeName, null);
     }
 }
