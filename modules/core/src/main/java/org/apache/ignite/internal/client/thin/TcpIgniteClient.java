@@ -396,14 +396,39 @@ public class TcpIgniteClient implements IgniteClient {
     /** {@inheritDoc} */
     @Override
     public ClientAtomicSequence atomicSequence(String name, long initVal, boolean create) throws IgniteException {
-        return null;
+        return atomicSequence(name, null, initVal, create);
     }
 
     /** {@inheritDoc} */
     @Override
     public ClientAtomicSequence atomicSequence(String name, ClientAtomicConfiguration cfg, long initVal, boolean create)
             throws IgniteException {
-        return null;
+        GridArgumentCheck.notNull(name, "name");
+
+        if (create) {
+            ch.service(ClientOperation.ATOMIC_SEQUENCE_CREATE, out -> {
+                writeString(name, out.out());
+                out.out().writeLong(initVal);
+
+                if (cfg != null) {
+                    out.out().writeBoolean(true);
+                    out.out().writeInt(cfg.getAtomicSequenceReserveSize());
+                    out.out().writeByte((byte)cfg.getCacheMode().ordinal());
+                    out.out().writeInt(cfg.getBackups());
+                    writeString(cfg.getGroupName(), out.out());
+                }
+                else
+                    out.out().writeBoolean(false);
+            }, null);
+        }
+
+        ClientAtomicSequence res = new ClientAtomicSequenceImpl(name, cfg != null ? cfg.getGroupName() : null, ch);
+
+        // Return null when specified atomic long does not exist to match IgniteKernal behavior.
+        if (!create && res.removed())
+            return null;
+
+        return res;
     }
 
     /**
