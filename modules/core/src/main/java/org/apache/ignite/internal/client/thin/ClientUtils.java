@@ -63,6 +63,7 @@ import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
+import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy;
 import org.apache.ignite.internal.util.MutableSingletonList;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -93,6 +94,21 @@ public final class ClientUtils {
         Objects.requireNonNull(name, "name");
 
         return name.hashCode();
+    }
+
+    /**
+     * Gets atomic cache ID by atomic name and group name.
+     */
+    static int atomicsCacheId(String name, @Nullable String groupName) {
+        Objects.requireNonNull(name, "name");
+
+        if (groupName == null) {
+            groupName = DataStructuresProcessor.DEFAULT_DS_GROUP_NAME;
+        }
+
+        String cacheName = DataStructuresProcessor.ATOMICS_CACHE_NAME + "@" + groupName;
+
+        return cacheId(cacheName);
     }
 
     /**

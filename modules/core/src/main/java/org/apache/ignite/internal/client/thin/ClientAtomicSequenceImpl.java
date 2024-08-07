@@ -23,9 +23,9 @@ import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Client atomic long.
+ * Client atomic sequence.
  */
-public class ClientAtomicLongImpl implements ClientAtomicLong {
+public class ClientAtomicSequenceImpl implements ClientAtomicLong {
     /** */
     private final String name;
 
@@ -45,7 +45,7 @@ public class ClientAtomicLongImpl implements ClientAtomicLong {
      * @param groupName Cache group name.
      * @param ch Channel.
      */
-    public ClientAtomicLongImpl(String name, @Nullable String groupName, ReliableChannel ch) {
+    public ClientAtomicSequenceImpl(String name, @Nullable String groupName, ReliableChannel ch) {
         // name and groupName uniquely identify the data structure.
         this.name = name;
         this.groupName = groupName;
