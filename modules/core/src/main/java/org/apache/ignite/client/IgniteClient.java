@@ -227,6 +227,8 @@ public interface IgniteClient extends AutoCloseable {
      */
     public <T> ClientIgniteSet<T> set(String name, @Nullable ClientCollectionConfiguration cfg);
 
+    public ClientAtomicSequence atomicSequence(String name, long initVal, boolean create);
+
     /**
      * Closes this client's open connections and relinquishes all underlying resources.
      */
