@@ -22,6 +22,7 @@ import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -227,7 +228,32 @@ public interface IgniteClient extends AutoCloseable {
      */
     public <T> ClientIgniteSet<T> set(String name, @Nullable ClientCollectionConfiguration cfg);
 
-    public ClientAtomicSequence atomicSequence(String name, long initVal, boolean create);
+    /**
+     * Gets an atomic sequence from cache. Creates one if it has not been created yet and {@code create} flag
+     * is {@code true}. Uses configuration from {@link IgniteConfiguration#getAtomicConfiguration()}.
+     *
+     * @param name Sequence name.
+     * @param initVal Initial value for sequence. Ignored if {@code create} flag is {@code false}.
+     * @param create Boolean flag indicating whether data structure should be created if it does not exist.
+     * @return Sequence for the given name.
+     * @throws IgniteException If sequence could not be fetched or created.
+     */
+    public ClientAtomicSequence atomicSequence(String name, long initVal, boolean create)
+            throws IgniteException;
+
+    /**
+     * Gets an atomic sequence from cache. Creates one if it has not been created yet and {@code create} flag
+     * is {@code true}. Uses provided configuration.
+     *
+     * @param name Sequence name.
+     * @param cfg Configuration.
+     * @param initVal Initial value for sequence. Ignored if {@code create} flag is {@code false}.
+     * @param create Boolean flag indicating whether data structure should be created if it does not exist.
+     * @return Sequence for the given name.
+     * @throws IgniteException If sequence could not be fetched or created.
+     */
+    public ClientAtomicSequence atomicSequence(String name, ClientAtomicConfiguration cfg, long initVal, boolean create)
+            throws IgniteException;
 
     /**
      * Closes this client's open connections and relinquishes all underlying resources.
