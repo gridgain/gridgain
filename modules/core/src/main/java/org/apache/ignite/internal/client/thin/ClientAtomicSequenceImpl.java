@@ -17,26 +17,14 @@
 package org.apache.ignite.internal.client.thin;
 
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.client.ClientAtomicLong;
-import org.apache.ignite.internal.binary.BinaryRawWriterEx;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.client.ClientAtomicSequence;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Client atomic sequence.
  */
-public class ClientAtomicSequenceImpl implements ClientAtomicLong {
-    /** */
-    private final String name;
-
-    /** */
-    private final String groupName;
-
-    /** */
-    private final ReliableChannel ch;
-
-    /** Cache id. */
-    private final int cacheId;
+class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAtomicSequence {
+    private int batchSize;
 
     /**
      * Constructor.
@@ -46,17 +34,9 @@ public class ClientAtomicSequenceImpl implements ClientAtomicLong {
      * @param ch Channel.
      */
     public ClientAtomicSequenceImpl(String name, @Nullable String groupName, ReliableChannel ch) {
+        super(name, groupName, ch);
         // name and groupName uniquely identify the data structure.
-        this.name = name;
-        this.groupName = groupName;
-        this.ch = ch;
 
-        cacheId = ClientUtils.atomicsCacheId(name, groupName);
-    }
-
-    /** {@inheritDoc} */
-    @Override public String name() {
-        return name;
     }
 
     /** {@inheritDoc} */
@@ -87,31 +67,14 @@ public class ClientAtomicSequenceImpl implements ClientAtomicLong {
         return addAndGet(l) - l;
     }
 
-    /** {@inheritDoc} */
-    @Override public long decrementAndGet() throws IgniteException {
-        return addAndGet(-1);
+    @Override
+    public int batchSize() {
+        return batchSize;
     }
 
-    /** {@inheritDoc} */
-    @Override public long getAndDecrement() throws IgniteException {
-        return decrementAndGet() + 1;
-    }
-
-    /** {@inheritDoc} */
-    @Override public long getAndSet(long l) throws IgniteException {
-        return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_VALUE_GET_AND_SET, out -> {
-            writeName(out);
-            out.out().writeLong(l);
-        }, in -> in.in().readLong());
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean compareAndSet(long expVal, long newVal) throws IgniteException {
-        return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_VALUE_COMPARE_AND_SET, out -> {
-            writeName(out);
-            out.out().writeLong(expVal);
-            out.out().writeLong(newVal);
-        }, in -> in.in().readBoolean());
+    @Override
+    public void batchSize(int size) {
+        batchSize = size;
     }
 
     /** {@inheritDoc} */
@@ -123,27 +86,5 @@ public class ClientAtomicSequenceImpl implements ClientAtomicLong {
     /** {@inheritDoc} */
     @Override public void close() {
         ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_REMOVE, this::writeName, null);
-    }
-
-    /**
-     * Writes the name.
-     *
-     * @param out Output channel.
-     */
-    private void writeName(PayloadOutputChannel out) {
-        try (BinaryRawWriterEx w = new BinaryWriterExImpl(null, out.out(), null, null)) {
-            w.writeString(name);
-            w.writeString(groupName);
-        }
-    }
-
-    /**
-     * Gets the affinity key for this data structure.
-     * 
-     * @return Affinity key.
-     */
-    private String affinityKey() {
-        // GridCacheInternalKeyImpl uses name as AffinityKeyMapped.
-        return name;
     }
 }

@@ -25,7 +25,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Client atomic long.
  */
-public class ClientAtomicLongImpl implements ClientAtomicLong {
+class ClientAtomicLongImpl implements ClientAtomicLong {
     /** */
     private final String name;
 
