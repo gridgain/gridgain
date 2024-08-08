@@ -89,6 +89,7 @@ import org.apache.ignite.internal.processors.platform.client.datastructures.Clie
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicLongValueGetAndSetRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicLongValueGetRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicSequenceCreateRequest;
+import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicSequenceRemoveRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientIgniteSetClearRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientIgniteSetCloseRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientIgniteSetExistsRequest;
@@ -725,6 +726,9 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
             case OP_ATOMIC_SEQUENCE_CREATE:
                 return new ClientAtomicSequenceCreateRequest(reader);
+
+            case OP_ATOMIC_SEQUENCE_REMOVE:
+                return new ClientAtomicSequenceRemoveRequest(reader);
 
             case OP_CUSTOM_QUERY:
                 return new ClientCustomQueryRequest(reader);
