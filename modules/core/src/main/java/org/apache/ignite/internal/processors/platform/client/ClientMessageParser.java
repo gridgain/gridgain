@@ -89,7 +89,10 @@ import org.apache.ignite.internal.processors.platform.client.datastructures.Clie
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicLongValueGetAndSetRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicLongValueGetRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicSequenceCreateRequest;
+import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicSequenceExistsRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicSequenceRemoveRequest;
+import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicSequenceValueAddAndGetRequest;
+import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicSequenceValueGetRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientIgniteSetClearRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientIgniteSetCloseRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientIgniteSetExistsRequest;
@@ -729,6 +732,15 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
             case OP_ATOMIC_SEQUENCE_REMOVE:
                 return new ClientAtomicSequenceRemoveRequest(reader);
+
+            case OP_ATOMIC_SEQUENCE_EXISTS:
+                return new ClientAtomicSequenceExistsRequest(reader);
+
+            case OP_ATOMIC_SEQUENCE_VALUE_GET:
+                return new ClientAtomicSequenceValueGetRequest(reader);
+
+            case OP_ATOMIC_SEQUENCE_VALUE_ADD_AND_GET:
+                return new ClientAtomicSequenceValueAddAndGetRequest(reader);
 
             case OP_CUSTOM_QUERY:
                 return new ClientCustomQueryRequest(reader);
