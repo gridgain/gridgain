@@ -118,14 +118,38 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
         assert l > 0 : "l > 0";
 
         long locVal0 = locVal;
-        long newVal = locVal0 + l;
+        long newLocVal = locVal0 + l;
 
-        if (newVal > upBound) {
-            // TODO Request new batch from server.
+        if (newLocVal <= upBound) {
+            // Local update within reserved range.
+            locVal = newLocVal;
+
+            return updated ? newLocVal : locVal0;
         }
 
-        locVal = newVal;
+        // Update is out of reserved range - reserve new range remotely.
+        // Remaining values in old range are accounted for.
+        // E.g. if old range is 10-20, locVal is 15, we add 10:
+        // locVal = 25
+        // upBound = 35
+        // globalVal = 36
+        long remainingOldRange = upBound - locVal0;
+        long newRangeOffset = batchSize + l - remainingOldRange;
+        long globalVal = remoteAddAndGet(newRangeOffset + 1);
+        locVal = globalVal - batchSize - 1;
 
         return updated ? locVal : locVal0;
+    }
+
+    private long remoteAddAndGet(long l) {
+        return ch.affinityService(
+                cacheId,
+                affinityKey(),
+                ClientOperation.ATOMIC_SEQUENCE_VALUE_ADD_AND_GET,
+                out -> {
+                    writeName(out);
+                    out.out().writeLong(l);
+                },
+                r -> r.in().readLong());
     }
 }
