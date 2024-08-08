@@ -76,6 +76,8 @@ import org.apache.ignite.marshaller.MarshallerUtils;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.client.ClientAtomicConfiguration.DFLT_ATOMIC_SEQUENCE_RESERVE_SIZE;
+
 /**
  * Implementation of {@link IgniteClient} over TCP protocol.
  */
@@ -418,7 +420,11 @@ public class TcpIgniteClient implements IgniteClient {
             }, null);
         }
 
-        ClientAtomicSequence res = new ClientAtomicSequenceImpl(name, cfg != null ? cfg.getGroupName() : null, ch);
+        ClientAtomicSequence res = new ClientAtomicSequenceImpl(
+                name,
+                cfg != null ? cfg.getGroupName() : null,
+                cfg != null ? cfg.getAtomicSequenceReserveSize() : DFLT_ATOMIC_SEQUENCE_RESERVE_SIZE,
+                ch);
 
         // Return null when specified atomic long does not exist to match IgniteKernal behavior.
         if (!create && res.removed())

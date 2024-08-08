@@ -41,39 +41,47 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
      *
      * @param name Atomic long name.
      * @param groupName Cache group name.
+     * @param batchSize Batch size (reserved range).
      * @param ch Channel.
      */
-    public ClientAtomicSequenceImpl(String name, @Nullable String groupName, ReliableChannel ch) {
+    public ClientAtomicSequenceImpl(String name, @Nullable String groupName, int batchSize, ReliableChannel ch) {
         super(name, groupName, ch);
+
+        this.batchSize = batchSize;
+
+        locVal = ch.affinityService(
+                cacheId,
+                affinityKey(),
+                ClientOperation.ATOMIC_SEQUENCE_VALUE_GET,
+                this::writeName,
+                in -> in.in().readLong());
+
+        upBound = locVal;
     }
 
     /** {@inheritDoc} */
     @Override public long get() throws IgniteException {
-        return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_SEQUENCE_VALUE_GET, this::writeName, in -> in.in().readLong());
+        return locVal;
     }
 
     /** {@inheritDoc} */
     @Override public long incrementAndGet() throws IgniteException {
-        return addAndGet(1);
+        return internalUpdate(1, true);
     }
 
     /** {@inheritDoc} */
     @Override public long getAndIncrement() throws IgniteException {
-        return incrementAndGet() - 1;
+        return internalUpdate(1, false);
     }
 
     /** {@inheritDoc} */
     @Override public long addAndGet(long l) throws IgniteException {
-        // TODO: Local increment
-        return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_VALUE_ADD_AND_GET, out -> {
-            writeName(out);
-            out.out().writeLong(l);
-        }, in -> in.in().readLong());
+        return internalUpdate(l, true);
     }
 
     /** {@inheritDoc} */
     @Override public long getAndAdd(long l) throws IgniteException {
-        return addAndGet(l) - l;
+        return internalUpdate(l, false);
     }
 
     @Override
