@@ -1,18 +1,3 @@
-::
-:: Copyright 2022 GridGain Systems, Inc. and Contributors.
-::
-:: Licensed under the GridGain Community Edition License (the "License");
-:: you may not use this file except in compliance with the License.
-:: You may obtain a copy of the License at
-::
-::     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
-::
-:: Unless required by applicable law or agreed to in writing, software
-:: distributed under the License is distributed on an "AS IS" BASIS,
-:: WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-:: See the License for the specific language governing permissions and
-:: limitations under the License.
-::
 @echo off
 
 set java_version=%~1
@@ -42,40 +27,18 @@ if %java_version% GEQ 9 if %java_version% LSS 11 (
     %current_value%
 )
 
-if %java_version% GEQ 11 if %java_version% LSS 14 (
+if %java_version% GEQ 11 (
     set value= ^
     --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED ^
     --add-exports=java.base/sun.nio.ch=ALL-UNNAMED ^
     --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
     --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
     --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
-    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED ^
-    --illegal-access=permit ^
-    %current_value%
-)
-
-if %java_version% GEQ 14 if %java_version% LSS 15 (
-    set value= ^
-    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED ^
-    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED ^
-    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
-    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
-    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
-    --add-opens=java.base/jdk.internal.access=ALL-UNNAMED ^
-    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED ^
-    --illegal-access=permit ^
-    %current_value%
-)
-
-if %java_version% GEQ 15 (
-    set value= ^
-    --add-opens=java.base/jdk.internal.access=ALL-UNNAMED ^
     --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED ^
     --add-opens=java.base/sun.nio.ch=ALL-UNNAMED ^
     --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
     --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
     --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
-    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED ^
     --add-opens=java.base/java.io=ALL-UNNAMED ^
     --add-opens=java.base/java.net=ALL-UNNAMED ^
     --add-opens=java.base/java.nio=ALL-UNNAMED ^
