@@ -24,20 +24,20 @@ import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 /**
  * Gets or creates atomic long by name.
  */
-public class ClientAtomicLongCreateRequest extends ClientAtomicCreateRequest {
+public class ClientAtomicSequenceCreateRequest extends ClientAtomicCreateRequest {
     /**
      * Constructor.
      *
      * @param reader Reader.
      */
-    public ClientAtomicLongCreateRequest(BinaryRawReader reader) {
+    public ClientAtomicSequenceCreateRequest(BinaryRawReader reader) {
         super(reader);
     }
 
     /** {@inheritDoc} */
     @Override public ClientResponse process(ClientConnectionContext ctx) {
         try {
-            ctx.kernalContext().dataStructures().atomicLong(name, atomicConfiguration, initVal, true);
+            ctx.kernalContext().dataStructures().sequence(name, atomicConfiguration, initVal, true);
 
             return new ClientResponse(requestId());
         }
