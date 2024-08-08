@@ -1,29 +1,10 @@
-::
-:: Copyright 2019 GridGain Systems, Inc. and Contributors.
-::
-:: Licensed under the GridGain Community Edition License (the "License");
-:: you may not use this file except in compliance with the License.
-:: You may obtain a copy of the License at
-::
-::     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
-::
-:: Unless required by applicable law or agreed to in writing, software
-:: distributed under the License is distributed on an "AS IS" BASIS,
-:: WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-:: See the License for the specific language governing permissions and
-:: limitations under the License.
-::
-::
-:: Grid command line loader.
-::
-
 @echo off
 Setlocal EnableDelayedExpansion
 
 if "%OS%" == "Windows_NT"  setlocal
 
 :: Check JAVA_HOME.
-if defined JAVA_HOME  goto checkJdk
+if defined JAVA_HOME goto checkJdk
     echo %0, ERROR:
     echo JAVA_HOME environment variable is not found.
     echo Please point JAVA_HOME variable to location of JDK 1.8 or later.
@@ -90,9 +71,7 @@ if exist "%IGNITE_HOME%\config" goto checkIgniteHome4
 
 :checkIgniteHome4
 
-::
 :: Set SCRIPTS_HOME - base path to scripts.
-::
 set SCRIPTS_HOME=%IGNITE_HOME%\bin
 
 :: Remove trailing spaces
@@ -102,73 +81,51 @@ if /i "%SCRIPTS_HOME%\" == "%~dp0" goto setProgName
     echo %0, WARN: IGNITE_HOME environment variable may be pointing to wrong folder: %IGNITE_HOME%
 
 :setProgName
-::
 :: Set program name.
-::
 set PROG_NAME=ignite.bat
 if "%OS%" == "Windows_NT" set PROG_NAME=%~nx0%
 
 :run
 
-::
 :: Set IGNITE_LIBS
-::
 call "%SCRIPTS_HOME%\include\setenv.bat"
 call "%SCRIPTS_HOME%\include\build-classpath.bat"
 set CP=%IGNITE_LIBS%;%IGNITE_HOME%\libs\optional\ignite-zookeeper\*
 
-::
 :: Process 'restart'.
-::
 set RANDOM_NUMBER_COMMAND="!JAVA_HOME!\bin\java.exe" -cp %CP% org.apache.ignite.startup.cmdline.CommandLineRandomNumberGenerator
 for /f "usebackq tokens=*" %%i in (`!RANDOM_NUMBER_COMMAND!`) do set RANDOM_NUMBER=%%i
 
 set RESTART_SUCCESS_FILE="%IGNITE_HOME%\work\ignite_success_%RANDOM_NUMBER%"
 set RESTART_SUCCESS_OPT=-DIGNITE_SUCCESS_FILE=%RESTART_SUCCESS_FILE%
 
-::
 :: Determine Java version function
-::
 :determineJavaVersion
 for /f "tokens=1,2 delims=." %%a in ("%JAVA_VER_STR%.x") do set JAVA_VERSION=%%a
 
-::
 :: Set JVM options with dynamic version check
-::
 call :getJavaSpecificOpts %JAVA_VERSION% "%CONTROL_JVM_OPTS%"
 
-::
 :: Enable assertions if set.
-::
 if "%ENABLE_ASSERTIONS%" == "1" set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -ea
 
 :: Set main class to start service (grid node by default).
 if "%MAIN_CLASS%" == "" set MAIN_CLASS=org.apache.ignite.internal.commandline.CommandHandler
 
-::
 :: Uncomment to enable experimental commands [--wal]
-::
 :: set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -DIGNITE_ENABLE_EXPERIMENTAL_COMMAND=true
 
-::
 :: Uncomment the following GC settings if you see spikes in your throughput due to Garbage Collection.
-::
 :: set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -XX:+UseG1GC
 
-::
 :: Uncomment if you get StackOverflowError.
 :: On 64 bit systems this value can be larger, e.g. -Xss16m
-::
 :: set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -Xss4m
 
-::
 :: Uncomment to set preference to IPv4 stack.
-::
 :: set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% -Djava.net.preferIPv4Stack=true
 
-::
 :: Final CONTROL_JVM_OPTS for Java 9+ compatibility
-::
 if %JAVA_VERSION% GEQ 9 (
     set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% --illegal-access=warn
     set CONTROL_JVM_OPTS=%CONTROL_JVM_OPTS% --add-opens=java.base/java.nio=ALL-UNNAMED
@@ -246,45 +203,44 @@ if %1 == 8 (
 )
 
 if %1 GEQ 9 if %1 LSS 11 (
-    set CONTROL_JVM_OPTS=-XX:+AggressiveOpts
-    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
-    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
-    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
-    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
-    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
-    --illegal-access=permit
-    --add-modules=java.xml.bind
+    set CONTROL_JVM_OPTS=-XX:+AggressiveOpts ^
+    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED ^
+    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED ^
+    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
+    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
+    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
+    --illegal-access=permit ^
+    --add-modules=java.xml.bind ^
     %2
     exit /b 0
 )
 
 if %1 GEQ 11 (
-    set CONTROL_JVM_OPTS=
-    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
-    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED
-    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
-    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
-    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
-    --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
-    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
-    --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
-    --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
-    --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
-    --add-opens=java.base/java.io=ALL-UNNAMED
-    --add-opens=java.base/java.net=ALL-UNNAMED
-    --add-opens=java.base/java.nio=ALL-UNNAMED
-    --add-opens=java.base/java.security.cert=ALL-UNNAMED
-    --add-opens=java.base/java.util=ALL-UNNAMED
-    --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
-    --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED
-    --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
-    --add-opens=java.base/java.lang=ALL-UNNAMED
-    --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
-    --add-opens=java.base/java.math=ALL-UNNAMED
-    --add-opens=java.base/java.time=ALL-UNNAMED
-    --add-opens=java.base/sun.security.ssl=ALL-UNNAMED
-    --add-opens=java.base/sun.security.x509=ALL-UNNAMED
-    --add-opens=java.sql/java.sql=ALL-UNNAMED
+    set CONTROL_JVM_OPTS=--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED ^
+    --add-exports=java.base/sun.nio.ch=ALL-UNNAMED ^
+    --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
+    --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
+    --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
+    --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED ^
+    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED ^
+    --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED ^
+    --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
+    --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
+    --add-opens=java.base/java.io=ALL-UNNAMED ^
+    --add-opens=java.base/java.net=ALL-UNNAMED ^
+    --add-opens=java.base/java.nio=ALL-UNNAMED ^
+    --add-opens=java.base/java.security.cert=ALL-UNNAMED ^
+    --add-opens=java.base/java.util=ALL-UNNAMED ^
+    --add-opens=java.base/java.util.concurrent=ALL-UNNAMED ^
+    --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED ^
+    --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED ^
+    --add-opens=java.base/java.lang=ALL-UNNAMED ^
+    --add-opens=java.base/java.lang.invoke=ALL-UNNAMED ^
+    --add-opens=java.base/java.math=ALL-UNNAMED ^
+    --add-opens=java.base/java.time=ALL-UNNAMED ^
+    --add-opens=java.base/sun.security.ssl=ALL-UNNAMED ^
+    --add-opens=java.base/sun.security.x509=ALL-UNNAMED ^
+    --add-opens=java.sql/java.sql=ALL-UNNAMED ^
     %2
     exit /b 0
 )

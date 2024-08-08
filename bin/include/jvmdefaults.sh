@@ -40,8 +40,7 @@ getJavaSpecificOpts() {
 
   elif [ "$version" -ge 9 ] && [ "$version" -lt 11 ]; then
       # Java 9 and 10 require additional modules due to removed Java EE modules
-      value="\
-          -XX:+AggressiveOpts \
+      value="-XX:+AggressiveOpts \
           --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
           --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
           --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
@@ -53,8 +52,7 @@ getJavaSpecificOpts() {
 
   elif [ "$version" -ge 11 ]; then
       # From Java 11 onwards, reduce the use of aggressive exports and opens, focusing on necessary access only
-      value="\
-          --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
+      value="--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
           --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
           --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
           --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
