@@ -18,14 +18,23 @@ package org.apache.ignite.internal.client.thin;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.client.ClientAtomicSequence;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Client atomic sequence.
  */
 class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAtomicSequence {
-    // TODO: Manage batches locally.
-    private int batchSize;
+    /** Local value of sequence. */
+    @GridToStringInclude(sensitive = true)
+    private volatile long locVal;
+
+    /**  Upper bound of local counter. */
+    private long upBound;
+
+    /**  Sequence batch size */
+    private volatile int batchSize;
 
     /**
      * Constructor.
@@ -73,7 +82,9 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
     }
 
     @Override
-    public void batchSize(int size) {
+    public synchronized void batchSize(int size) {
+        A.ensure(size > 0, " Batch size can't be less then 0: " + size);
+
         batchSize = size;
     }
 
@@ -86,5 +97,27 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
     /** {@inheritDoc} */
     @Override public void close() {
         ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_SEQUENCE_REMOVE, this::writeName, null);
+    }
+
+    /**
+     * Performs an update.
+     *
+     * @param l Value to be added.
+     * @param updated If {@code true}, will return updated value, if {@code false}, will return previous value.
+     * @return Previous or updated value.
+     */
+    private synchronized long internalUpdate(final long l, final boolean updated) {
+        assert l > 0 : "l > 0";
+
+        long locVal0 = locVal;
+        long newVal = locVal0 + l;
+
+        if (newVal > upBound) {
+            // TODO Request new batch from server.
+        }
+
+        locVal = newVal;
+
+        return updated ? locVal : locVal0;
     }
 }
