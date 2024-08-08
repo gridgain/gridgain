@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.UUID;
 import org.apache.ignite.cluster.ClusterNode;
@@ -235,17 +236,29 @@ public abstract class AbstractAffinityFunctionSelfTest extends GridCommonAbstrac
 
         Random rnd = new Random();
 
-        int maxNodes = 10;
+        int maxNodes = 5;
 
         List<ClusterNode> nodes = new ArrayList<>(maxNodes);
 
         List<List<ClusterNode>> prev = null;
 
+        /*try {
+            for (int i = 0; i < 5; i++) {
+                nodes.add(new GridTestNode(UUID.randomUUID()));
+            }
+            List<List<ClusterNode>> ass = aff.assignPartitions(
+                new GridAffinityFunctionContextImpl(nodes, prev, new DiscoveryEvent(nodes.get(4), "", EventType.EVT_NODE_JOINED, nodes.get(4)), new AffinityTopologyVersion(1),
+                    backups));
+            printReplicas(ass);
+        } catch (Exception e) { }
+
+        System.out.println("---------------------------------------------------------------------");*/
+
         int state = 0;
 
         int i = 0;
 
-        while (true) {
+        while (i < 1000) {
             boolean add;
 
             if (nodes.size() < 2) {
@@ -286,15 +299,20 @@ public abstract class AbstractAffinityFunctionSelfTest extends GridCommonAbstrac
                 discoEvt = new DiscoveryEvent(rmvNode, "", EventType.EVT_NODE_LEFT, rmvNode);
             }
 
+            long start = System.currentTimeMillis();
             List<List<ClusterNode>> assignment = aff.assignPartitions(
                 new GridAffinityFunctionContextImpl(nodes, prev, discoEvt, new AffinityTopologyVersion(i),
                     backups));
+            long duration = System.currentTimeMillis() - start;
+            System.out.println("OldNodes: " + (oldNodes == null ? 0 : oldNodes.size()) + ", newNodes: " + nodes.size() + ", duration: " + duration);
 
             if (oldNodes.size() >= backups + 1 || nodes.size() >= backups + 1) {
                 info("======================================");
                 info("Assigning partitions [iter=" + i + ", nodesSize=" + nodes.size() + ", oldNodesSize=" + oldNodes.size()
                     + ", rebalancedReplicas=" + rebalancedReplicasCount(prev, assignment) + ", discoEvt=" + discoEvt + ']');
                 info("======================================");
+
+                printReplicas(assignment);
             }
 
             verifyAssignment(assignment, backups, aff.partitions(), nodes.size());
@@ -303,6 +321,27 @@ public abstract class AbstractAffinityFunctionSelfTest extends GridCommonAbstrac
 
             i++;
         }
+    }
+
+    private void printReplicas(List<List<ClusterNode>> assignment) {
+        Map<ClusterNode, Integer> replicas = new HashMap<>();
+
+        for (List<ClusterNode> a : assignment) {
+            for (ClusterNode node : a) {
+                replicas.compute(node, (k, v) -> {
+                    if (v == null) {
+                        v = 0;
+                    }
+
+                    return v + 1;
+                });
+            }
+        }
+
+        replicas.forEach((k, v) -> System.out.println(k.id() + ": " + v));
+
+        System.out.println("min. replicas: " + replicas.values().stream().mapToInt(i -> i).min().orElseThrow(NoSuchElementException::new));
+        System.out.println("max. replicas: " + replicas.values().stream().mapToInt(i -> i).max().orElseThrow(NoSuchElementException::new));
     }
 
     /**

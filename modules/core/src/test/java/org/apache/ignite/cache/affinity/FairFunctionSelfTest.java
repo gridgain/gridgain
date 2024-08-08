@@ -17,8 +17,8 @@ package org.apache.ignite.cache.affinity;
 
 import org.apache.ignite.cache.affinity.fair.CachePartitionFairAffinity;
 
-public class FairFunctionStandardHashSelfTest extends AbstractAffinityFunctionSelfTest {
+public class FairFunctionSelfTest extends AbstractAffinityFunctionSelfTest {
     @Override protected AffinityFunction affinityFunction() {
-        return new CachePartitionFairAffinity(40);
+        return new CachePartitionFairAffinity(10000);
     }
 }

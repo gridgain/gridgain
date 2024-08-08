@@ -25,7 +25,7 @@ import org.apache.ignite.cache.affinity.AffinityFunction;
 public class RendezvousAffinityFunctionStandardHashSelfTest extends AbstractAffinityFunctionSelfTest {
     /** {@inheritDoc} */
     @Override protected AffinityFunction affinityFunction() {
-        AffinityFunction aff = new RendezvousAffinityFunction(40, null);
+        AffinityFunction aff = new RendezvousAffinityFunction(10000, null);
 
         return aff;
     }
