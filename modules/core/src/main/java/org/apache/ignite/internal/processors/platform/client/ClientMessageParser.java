@@ -88,6 +88,7 @@ import org.apache.ignite.internal.processors.platform.client.datastructures.Clie
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicLongValueCompareAndSetRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicLongValueGetAndSetRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicLongValueGetRequest;
+import org.apache.ignite.internal.processors.platform.client.datastructures.ClientAtomicSequenceCreateRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientIgniteSetClearRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientIgniteSetCloseRequest;
 import org.apache.ignite.internal.processors.platform.client.datastructures.ClientIgniteSetExistsRequest;
@@ -393,19 +394,19 @@ public class ClientMessageParser implements ClientListenerMessageParser {
     private static final short OP_SET_ITERATOR_GET_PAGE = 9023;
 
     /** Create an AtomicSequence. */
-    private static final short ATOMIC_SEQUENCE_CREATE = 9030;
+    private static final short OP_ATOMIC_SEQUENCE_CREATE = 9030;
 
     /** Remove an AtomicSequence. */
-    private static final short ATOMIC_SEQUENCE_REMOVE = 9031;
+    private static final short OP_ATOMIC_SEQUENCE_REMOVE = 9031;
 
     /** Check if AtomicSequence exists. */
-    private static final short ATOMIC_SEQUENCE_EXISTS = 9032;
+    private static final short OP_ATOMIC_SEQUENCE_EXISTS = 9032;
 
     /** AtomicSequence.get. */
-    private static final short ATOMIC_SEQUENCE_VALUE_GET = 9033;
+    private static final short OP_ATOMIC_SEQUENCE_VALUE_GET = 9033;
 
     /** AtomicSequence.addAndGet. */
-    private static final short ATOMIC_SEQUENCE_VALUE_ADD_AND_GET = 9034;
+    private static final short OP_ATOMIC_SEQUENCE_VALUE_ADD_AND_GET = 9034;
 
     /* Custom queries working through processors registry. */
     private static final short OP_CUSTOM_QUERY = 32_000;
@@ -721,6 +722,9 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
             case OP_SET_ITERATOR_GET_PAGE:
                 return new ClientIgniteSetIteratorGetPageRequest(reader);
+
+            case OP_ATOMIC_SEQUENCE_CREATE:
+                return new ClientAtomicSequenceCreateRequest(reader);
 
             case OP_CUSTOM_QUERY:
                 return new ClientCustomQueryRequest(reader);
