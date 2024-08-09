@@ -147,6 +147,7 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
         upBound = globalVal - 1;
 
         if (oldGlobalVal > locVal0) {
+            // Not an initial reservation, adjust.
             locVal--;
         }
 

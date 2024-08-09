@@ -235,7 +235,7 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
     }
 
     @Test
-    public void testSequenceIntegrity() {
+    public void testIncrementIntegrity() {
         String seqName = UUID.randomUUID().toString();
 
         try (IgniteClient client = startClient(0)) {
@@ -249,7 +249,21 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
     }
 
     @Test
-    public void testSequenceIntegrityTwoInstances() {
+    public void testAddIntegrity() {
+        String seqName = UUID.randomUUID().toString();
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicSequence locSeq = client.atomicSequence(seqName, 0, true);
+            locSeq.batchSize(3);
+
+            for (int i = 0; i < 100; i++) {
+                assertEquals((i + 1) * 2, locSeq.addAndGet(2));
+            }
+        }
+    }
+
+    @Test
+    public void testIncrementIntegrityTwoInstances() {
         String seqName = "testSequenceIntegrityTwoInstances";
 
         try (IgniteClient client = startClient(0)) {
@@ -262,6 +276,7 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
             locSeq2.batchSize(4);
 
             for (int i = 0; i < 100; i++) {
+                // TODO
 //                assertEquals(i, locSeq.getAndIncrement());
 //                assertEquals(i, locSeq2.getAndIncrement());
                 System.out.println(locSeq.incrementAndGet() + " | " + locSeq2.incrementAndGet());
