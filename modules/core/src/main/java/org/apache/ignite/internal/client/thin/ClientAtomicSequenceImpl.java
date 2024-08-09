@@ -56,7 +56,7 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
                 this::writeName,
                 in -> in.in().readLong());
 
-        upBound = Integer.MIN_VALUE;
+        upBound = locVal;
     }
 
     /** {@inheritDoc} */
@@ -131,25 +131,23 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
             return updated ? newLocVal : locVal0;
         }
 
-        if (upBound == Integer.MIN_VALUE) {
-            // First reservation.
-            long globalVal = remoteAddAndGet(batchSize + l);
-            locVal = globalVal - batchSize;
-            upBound = globalVal - 1;
-        } else {
-            // Update is out of reserved range - reserve new range remotely.
-            // Remaining values in old range are accounted for.
-            // E.g. if old range is 10-20, locVal is 15, we add 10:
-            // locVal = 25
-            // upBound = 35
-            // globalVal = 36
-            long remainingOldRange = upBound - locVal0;
-            long newRangeOffset = batchSize + l - remainingOldRange;
+        // Update is out of reserved range - reserve new range remotely.
+        // Remaining values in old range are accounted for.
+        // E.g. if old range is 10-20, locVal is 15, we add 10:
+        // locVal = 25
+        // upBound = 35
+        // globalVal = 36
+        long remainingOldRange = upBound - locVal0;
+        long newRangeOffset = batchSize + l - remainingOldRange;
 
-            long globalVal = remoteAddAndGet(newRangeOffset);
+        long globalVal = remoteAddAndGet(newRangeOffset);
+        long oldGlobalVal = globalVal - newRangeOffset;
 
-            locVal = globalVal - batchSize - 1;
-            upBound = globalVal - 1;
+        locVal = globalVal - batchSize;
+        upBound = globalVal - 1;
+
+        if (oldGlobalVal > locVal0) {
+            locVal--;
         }
 
         return updated ? locVal : locVal0;
