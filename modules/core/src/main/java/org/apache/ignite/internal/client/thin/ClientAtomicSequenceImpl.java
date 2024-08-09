@@ -140,7 +140,12 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
         long remainingOldRange = upBound - locVal0;
         long newRangeOffset = batchSize + l - remainingOldRange;
         long globalVal = remoteAddAndGet(newRangeOffset + 1);
-        locVal = globalVal - batchSize - 1;
+        long oldGlovalVal = globalVal - newRangeOffset - 1;
+
+        locVal = oldGlovalVal == upBound + 1
+                ? globalVal - batchSize - 2
+                : globalVal - batchSize - 1;
+
         upBound = globalVal - 1;
 
         return updated ? locVal : locVal0;

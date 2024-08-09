@@ -28,6 +28,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
@@ -147,9 +148,9 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
             assertEquals(3, atomicSequence.get());
 
             assertEquals(103, atomicSequence.addAndGet(100));
-            assertEquals(103, atomicSequence.getAndAdd(-50));
+            assertEquals(103, atomicSequence.getAndAdd(1000));
 
-            assertEquals(53, atomicSequence.get());
+            assertEquals(1103, atomicSequence.get());
         }
     }
 
@@ -231,6 +232,20 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
 
         assertEquals("ignite-sys-atomic-cache@testSameNameDifferentOptions", replicatedCache.name());
         assertEquals(Integer.MAX_VALUE, replicatedCache.configuration().getBackups());
+    }
+
+    @Test
+    public void testSequenceIntegrity() {
+        String locSeqName = UUID.randomUUID().toString();
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicSequence locSeq = client.atomicSequence(locSeqName, 0, true);
+            locSeq.batchSize(3);
+
+            for (int i = 0; i < 100; i++) {
+                assertEquals(i, locSeq.getAndIncrement());
+            }
+        }
     }
 
     /**
