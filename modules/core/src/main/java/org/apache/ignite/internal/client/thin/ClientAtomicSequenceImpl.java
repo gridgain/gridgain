@@ -76,11 +76,15 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
 
     /** {@inheritDoc} */
     @Override public long addAndGet(long l) throws IgniteException {
+        A.ensure(l > 0, " Parameter can't be less then 1: " + l);
+
         return internalUpdate(l, true);
     }
 
     /** {@inheritDoc} */
     @Override public long getAndAdd(long l) throws IgniteException {
+        A.ensure(l > 0, " Parameter can't be less then 1: " + l);
+
         return internalUpdate(l, false);
     }
 
@@ -137,6 +141,7 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
         long newRangeOffset = batchSize + l - remainingOldRange;
         long globalVal = remoteAddAndGet(newRangeOffset + 1);
         locVal = globalVal - batchSize - 1;
+        upBound = globalVal - 1;
 
         return updated ? locVal : locVal0;
     }
