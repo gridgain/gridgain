@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.checkpoint;
 
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +34,7 @@ import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
@@ -86,7 +89,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.checkpoint
  *
  * Checkpointer is one threaded which means that only one checkpoint at the one moment possible.
  *
- * Responsiblity: Provide the API for schedule/trigger the checkpoint. Schedule new checkpoint after current one
+ * Responsibility: Provide the API for schedule/trigger the checkpoint. Schedule new checkpoint after current one
  * according to checkpoint frequency. Failure handling. Managing of page write threads - ? Logging and metrics of
  * checkpoint. *
  *
@@ -125,6 +128,8 @@ public class Checkpointer extends GridWorker {
     /** Long JVM pause threshold. */
     private final int longJvmPauseThreshold =
         getInteger(IGNITE_JVM_PAUSE_DETECTOR_THRESHOLD, DEFAULT_JVM_PAUSE_DETECTOR_THRESHOLD);
+
+    private final DataStorageConfiguration storageCfg;
 
     /** Pause detector. */
     private final LongJVMPauseDetector pauseDetector;
@@ -190,6 +195,7 @@ public class Checkpointer extends GridWorker {
      * @param workersRegistry Worker registry.
      * @param logger Logger.
      * @param detector Long JVM pause detector.
+     * @param storageCfg Storage configuration.
      * @param failureProcessor Failure processor.
      * @param snapshotManager Snapshot manager.
      * @param dsMetrics Data storage metrics.
@@ -206,6 +212,7 @@ public class Checkpointer extends GridWorker {
         String name,
         WorkersRegistry workersRegistry,
         Function<Class<?>, IgniteLogger> logger,
+        DataStorageConfiguration storageCfg,
         LongJVMPauseDetector detector,
         FailureProcessor failureProcessor,
         IgniteCacheSnapshotManager snapshotManager,
@@ -219,6 +226,7 @@ public class Checkpointer extends GridWorker {
         Supplier<Integer> cpFreqDeviation
     ) {
         super(gridName, name, logger.apply(Checkpointer.class), workersRegistry);
+        this.storageCfg = storageCfg;
         this.pauseDetector = detector;
         this.checkpointFreq = checkpointFrequency;
         this.failureProcessor = failureProcessor;
@@ -365,12 +373,12 @@ public class Checkpointer extends GridWorker {
     ) {
         CheckpointProgressImpl sched = curCpProgress;
 
-        //If checkpoint haven't taken the write lock yet it shouldn't trigger a new checkpoint but should return current one.
+        //If checkpoint haven't taken the write-lock yet, it shouldn't trigger a new checkpoint but should return current one.
         if (lsnr == null && sched != null && !sched.greaterOrEqualTo(CheckpointState.LOCK_TAKEN))
             return sched;
 
         if (lsnr != null) {
-            //To be sure lsnr always will be executed in checkpoint thread.
+            //To be sure lsnr will always be executed in checkpoint thread.
             synchronized (this) {
                 sched = scheduledCp;
 
@@ -505,8 +513,10 @@ public class Checkpointer extends GridWorker {
 
             if (chp.hasDelta() || destroyedPartitionsCnt > 0) {
                 if (log.isInfoEnabled()) {
+                    float avgWriteSpeedInBytes = storageCfg.getPageSize() * chp.pagesSize / tracker.totalDurationInSeconds();
+
                     log.info(String.format("Checkpoint finished [cpId=%s, pages=%d, markPos=%s, " +
-                            "walSegmentsCovered=%s, markDuration=%dms, pagesWrite=%dms, fsync=%dms, total=%dms]",
+                            "walSegmentsCovered=%s, markDuration=%dms, pagesWrite=%dms, fsync=%dms, total=%dms, avgWriteSpeed=%sMB/s]",
                         chp.cpEntry != null ? chp.cpEntry.checkpointId() : "",
                         chp.pagesSize,
                         chp.cpEntry != null ? chp.cpEntry.checkpointMark() : "",
@@ -514,7 +524,9 @@ public class Checkpointer extends GridWorker {
                         tracker.markDuration(),
                         tracker.pagesWriteDuration(),
                         tracker.fsyncDuration(),
-                        tracker.totalDuration()));
+                        tracker.totalDuration(),
+                        WriteSpeedFormatter.formatWriteSpeed(avgWriteSpeedInBytes)
+                    ));
                 }
             }
 
@@ -792,7 +804,7 @@ public class Checkpointer extends GridWorker {
                     pool.execute(destroyPartTask);
                 }
                 catch (RejectedExecutionException e) {
-                    handleRejectiedExecutionException(e);
+                    handleRejectedExecutionException(e);
                 }
             }
             else
@@ -898,7 +910,7 @@ public class Checkpointer extends GridWorker {
             if (tracker.lockWaitDuration() + tracker.lockHoldDuration() > longJvmPauseThreshold) {
                 long now = System.currentTimeMillis();
 
-                // We must get last wake up time before search possible pause in events map.
+                // We must get last wake-up time before search possible pause in events map.
                 long wakeUpTime = pauseDetector.getLastWakeUpTime();
 
                 IgniteBiTuple<Long, Long> lastLongPause = pauseDetector.getLastLongPause();
@@ -982,7 +994,7 @@ public class Checkpointer extends GridWorker {
      * {@link RejectedExecutionException} cannot be thrown by {@link #checkpointWritePagesPool}
      * but this handler still exists just in case.
      */
-    private void handleRejectiedExecutionException(RejectedExecutionException e) {
+    private void handleRejectedExecutionException(RejectedExecutionException e) {
         assert false : "Task should never be rejected by async runner";
 
         throw new IgniteException(e); //to protect from disabled asserts and call to failure handler
@@ -1064,7 +1076,7 @@ public class Checkpointer extends GridWorker {
     }
 
     /**
-     * @return Progress of current chekpoint, last finished one or {@code null}, if checkpoint has never started.
+     * @return Progress of current checkpoint, last finished one or {@code null}, if checkpoint has never started.
      */
     public CheckpointProgress currentProgress() {
         return curCpProgress;
@@ -1085,4 +1097,45 @@ public class Checkpointer extends GridWorker {
     public void skipCheckpointOnNodeStop(boolean skip) {
         skipCheckpointOnNodeStop = skip;
     }
+
+    /** Util class that encapsulates CP write speed formatting */
+    static class WriteSpeedFormatter {
+
+        private static final DecimalFormatSymbols SEPARATOR = DecimalFormatSymbols.getInstance();
+
+        static {
+            SEPARATOR.setDecimalSeparator('.');
+        }
+
+        /** Format for speed > 10 MB/sec */
+        private static final DecimalFormat HIGH_SPEED_FORMAT = new DecimalFormat("#", SEPARATOR);
+
+        /** Format for speed in range 1-10 MB/sec */
+        private static final DecimalFormat MEDIUM_SPEED_FORMAT = new DecimalFormat("#.##", SEPARATOR);
+
+        /**
+         * Format for speed < 1 MB/sec
+         * For cases when user deployed Grid to inappropriate HW, e.g. AWS EFS,
+         * where throughput is elastic and can degrade to near-zero values
+         */
+        private static final DecimalFormat LOW_SPEED_FORMAT = new DecimalFormat("#.####", SEPARATOR);
+
+        /** Constructor */
+        private WriteSpeedFormatter() {
+            // no-op
+        }
+
+        /**
+         * Format CP write speed in MB/sec.
+         * @param avgWriteSpeedInBytes CP write speed in bytes.
+         * @return Formatted CP write speed.
+         */
+        public static String formatWriteSpeed(float avgWriteSpeedInBytes) {
+            float speedInMbs = avgWriteSpeedInBytes / U.MB;
+            return speedInMbs >= 10.0
+                ? HIGH_SPEED_FORMAT.format(speedInMbs)
+                : speedInMbs >= 0.1 ? MEDIUM_SPEED_FORMAT.format(speedInMbs) : LOW_SPEED_FORMAT.format(speedInMbs);
+        }
+    }
+
 }

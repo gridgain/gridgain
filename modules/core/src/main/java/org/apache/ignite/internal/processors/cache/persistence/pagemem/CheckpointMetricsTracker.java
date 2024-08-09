@@ -201,6 +201,13 @@ public class CheckpointMetricsTracker {
     }
 
     /**
+     * @return Total checkpoint duration in seconds.
+     */
+    public float totalDurationInSeconds() {
+        return (cpEnd - cpStart) / 1000f;
+    }
+
+    /**
      * @return Checkpoint lock wait duration.
      */
     public long lockWaitDuration() {
