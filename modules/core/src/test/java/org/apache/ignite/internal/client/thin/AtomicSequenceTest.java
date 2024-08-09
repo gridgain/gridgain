@@ -18,7 +18,6 @@ package org.apache.ignite.internal.client.thin;
 
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.client.ClientAtomicConfiguration;
-import org.apache.ignite.client.ClientAtomicLong;
 import org.apache.ignite.client.ClientAtomicSequence;
 import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.IgniteClient;
@@ -84,8 +83,8 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
         String name = "testCreateIgnoresInitialValueWhenAlreadyExists";
 
         try (IgniteClient client = startClient(0)) {
-            ClientAtomicLong atomicLong = client.atomicLong(name, 42, true);
-            ClientAtomicLong atomicLong2 = client.atomicLong(name, -42, true);
+            ClientAtomicSequence atomicLong = client.atomicSequence(name, 42, true);
+            ClientAtomicSequence atomicLong2 = client.atomicSequence(name, -42, true);
 
             assertEquals(42, atomicLong.get());
             assertEquals(42, atomicLong2.get());
@@ -99,21 +98,16 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
     public void testOperationsThrowExceptionWhenAtomicLongDoesNotExist() {
         try (IgniteClient client = startClient(0)) {
             String name = "testOperationsThrowExceptionWhenAtomicLongDoesNotExist";
-            ClientAtomicLong atomicLong = client.atomicLong(name, 0, true);
-            atomicLong.close();
+            ClientAtomicSequence atomicSequence = client.atomicSequence(name, 0, true);
+            atomicSequence.close();
 
-            assertDoesNotExistError(name, atomicLong::get);
+            assertDoesNotExistError(name, atomicSequence::get);
 
-            assertDoesNotExistError(name, atomicLong::incrementAndGet);
-            assertDoesNotExistError(name, atomicLong::getAndIncrement);
-            assertDoesNotExistError(name, atomicLong::decrementAndGet);
-            assertDoesNotExistError(name, atomicLong::getAndDecrement);
+            assertDoesNotExistError(name, atomicSequence::incrementAndGet);
+            assertDoesNotExistError(name, atomicSequence::getAndIncrement);
 
-            assertDoesNotExistError(name, () -> atomicLong.addAndGet(1));
-            assertDoesNotExistError(name, () -> atomicLong.getAndAdd(1));
-
-            assertDoesNotExistError(name, () -> atomicLong.getAndSet(1));
-            assertDoesNotExistError(name, () -> atomicLong.compareAndSet(1, 2));
+            assertDoesNotExistError(name, () -> atomicSequence.addAndGet(1));
+            assertDoesNotExistError(name, () -> atomicSequence.getAndAdd(1));
         }
     }
 
@@ -125,15 +119,15 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
         String name = "testRemoved";
 
         try (IgniteClient client = startClient(0)) {
-            ClientAtomicLong atomicLong = client.atomicLong(name, 0, false);
-            assertNull(atomicLong);
+            ClientAtomicSequence atomicSequence = client.atomicSequence(name, 0, false);
+            assertNull(atomicSequence);
 
-            atomicLong = client.atomicLong(name, 1, true);
-            assertFalse(atomicLong.removed());
-            assertEquals(1, atomicLong.get());
+            atomicSequence = client.atomicSequence(name, 1, true);
+            assertFalse(atomicSequence.removed());
+            assertEquals(1, atomicSequence.get());
 
-            atomicLong.close();
-            assertTrue(atomicLong.removed());
+            atomicSequence.close();
+            assertTrue(atomicSequence.removed());
         }
     }
 
@@ -145,55 +139,17 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
         String name = "testIncrementDecrementAdd";
 
         try (IgniteClient client = startClient(0)) {
-            ClientAtomicLong atomicLong = client.atomicLong(name, 1, true);
+            ClientAtomicSequence atomicSequence = client.atomicSequence(name, 1, true);
 
-            assertEquals(2, atomicLong.incrementAndGet());
-            assertEquals(2, atomicLong.getAndIncrement());
+            assertEquals(2, atomicSequence.incrementAndGet());
+            assertEquals(2, atomicSequence.getAndIncrement());
 
-            assertEquals(3, atomicLong.get());
+            assertEquals(3, atomicSequence.get());
 
-            assertEquals(2, atomicLong.decrementAndGet());
-            assertEquals(2, atomicLong.getAndDecrement());
+            assertEquals(103, atomicSequence.addAndGet(100));
+            assertEquals(103, atomicSequence.getAndAdd(-50));
 
-            assertEquals(1, atomicLong.get());
-
-            assertEquals(101, atomicLong.addAndGet(100));
-            assertEquals(101, atomicLong.getAndAdd(-50));
-
-            assertEquals(51, atomicLong.get());
-        }
-    }
-
-    /**
-     * Tests getAndSet.
-     */
-    @Test
-    public void testGetAndSet() {
-        String name = "testGetAndSet";
-
-        try (IgniteClient client = startClient(0)) {
-            ClientAtomicLong atomicLong = client.atomicLong(name, 1, true);
-
-            assertEquals(1, atomicLong.getAndSet(100));
-            assertEquals(100, atomicLong.get());
-        }
-    }
-
-    /**
-     * Tests compareAndSet.
-     */
-    @Test
-    public void testCompareAndSet() {
-        String name = "testCompareAndSet";
-
-        try (IgniteClient client = startClient(0)) {
-            ClientAtomicLong atomicLong = client.atomicLong(name, 1, true);
-
-            assertFalse(atomicLong.compareAndSet(2, 3));
-            assertEquals(1, atomicLong.get());
-
-            assertTrue(atomicLong.compareAndSet(1, 4));
-            assertEquals(4, atomicLong.get());
+            assertEquals(53, atomicSequence.get());
         }
     }
 
@@ -217,9 +173,9 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
         String name = "testCustomConfiguration";
 
         try (IgniteClient client = startClient(0)) {
-            client.atomicLong(name, cfg1, 1, true);
-            client.atomicLong(name, cfg2, 2, true);
-            client.atomicLong(name, 3, true);
+            client.atomicSequence(name, cfg1, 1, true);
+            client.atomicSequence(name, cfg2, 2, true);
+            client.atomicSequence(name, 3, true);
         }
 
         List<IgniteInternalCache<?, ?>> caches = new ArrayList<>(grid(0).cachesx());
@@ -256,9 +212,9 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
         String name = "testSameNameDifferentOptionsDoesNotCreateSecondAtomic";
 
         try (IgniteClient client = startClient(0)) {
-            ClientAtomicLong al1 = client.atomicLong(name, cfg1, 1, true);
-            ClientAtomicLong al2 = client.atomicLong(name, cfg2, 2, true);
-            ClientAtomicLong al3 = client.atomicLong(name, 3, true);
+            ClientAtomicSequence al1 = client.atomicSequence(name, cfg1, 1, true);
+            ClientAtomicSequence al2 = client.atomicSequence(name, cfg2, 2, true);
+            ClientAtomicSequence al3 = client.atomicSequence(name, 3, true);
 
             assertEquals(1, al1.get());
             assertEquals(1, al2.get());
