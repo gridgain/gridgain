@@ -64,6 +64,7 @@ import org.apache.ignite.internal.commandline.argument.CommandArg;
 import org.apache.ignite.internal.commandline.cache.CacheCommandList;
 import org.apache.ignite.internal.commandline.cache.CacheDestroy;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
+import org.apache.ignite.internal.commandline.tracing.configuration.TracingConfigurationSubcommand;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheType;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -386,6 +387,26 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         }
 
         checkHelp(output, "org.apache.ignite.util/" + getClass().getSimpleName() + "_cache_help.output");
+    }
+
+    /** */
+    @Test
+    public void testTracingHelp() throws Exception {
+        Set<TracingConfigurationSubcommand> skippedCommands = new HashSet<>();
+        skippedCommands.add(TracingConfigurationSubcommand.HELP);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--tracing-configuration", "help"));
+
+        String output = testOut.toString();
+
+        for (TracingConfigurationSubcommand cmd : TracingConfigurationSubcommand.values()) {
+            if (!skippedCommands.contains(cmd))
+                assertContains(log, output, cmd.toString());
+        }
+
+        checkHelp(output, "org.apache.ignite.util/" + getClass().getSimpleName() + "_tracing_help.output");
     }
 
     /**

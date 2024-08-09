@@ -19,6 +19,7 @@ package org.apache.ignite.spi.tracing;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 
+import java.util.Objects;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -73,6 +74,19 @@ public class TracingConfigurationCoordinates implements Serializable {
      */
     @Nullable public String label() {
         return lb;
+    }
+
+    /**
+     * Since most of the time we can expect nullable labels (or labels with same value)
+     * we can reuse existing coordinates instances.
+     * @param label Label.
+     * @return Coordinates.
+     */
+    public @NotNull TracingConfigurationCoordinates withLabel(@Nullable String label) {
+        if (Objects.equals(lb, label))
+            return this;
+
+        return new TracingConfigurationCoordinates.Builder(scope).withLabel(label).build();
     }
 
     /** {@inheritDoc} */

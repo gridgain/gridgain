@@ -23,12 +23,12 @@ import java.util.HashSet;
 import java.util.Map;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
+import org.apache.ignite.internal.commandline.TracingConfigurationCommand;
+import org.apache.ignite.internal.visor.tracing.configuration.VisorTracingConfigurationTaskResult;
 import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
 import org.apache.ignite.spi.tracing.TracingConfigurationManager;
 import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
-import org.apache.ignite.internal.commandline.TracingConfigurationCommand;
-import org.apache.ignite.internal.visor.tracing.configuration.VisorTracingConfigurationTaskResult;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
@@ -145,6 +145,15 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
     }
 
     /**
+     * Ensure that "--tracing-configuration help" prints verbose usage
+     */
+    @Test
+    public void testTracingConfigurationHelpCommand() {
+        assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "help"));
+        assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "--help"));
+    }
+
+    /**
      * Ensure that in case of "--tracing-configuration" without arguments
      * tracing configuration for all scopes will be returned.
      */
@@ -242,13 +251,13 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
 
     /**
      * Ensure that in case of "--tracing-configuration reset_all --scope TX"
-     * TX based configuration will be reseted and returned:
+     * TX based configuration will be reset and returned:
      */
     @Test
     public void testResetAllWithScopeResetsScopeBasedConfigurationAndReturnsIt() {
         assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "reset_all", "--scope", "TX"));
 
-        // Ensure that configuration was actually reseted.
+        // Ensure that configuration was actually reset.
         assertEquals(
             Collections.singletonMap(
                 TX_SCOPE_SPECIFIC_COORDINATES,
@@ -265,13 +274,13 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
 
     /**
      * Ensure that in case of "--tracing-configuration reset_all"
-     * Whole tracing configurations will be reseted and returned.
+     * Whole tracing configurations will be reset and returned.
      */
     @Test
     public void testResetAllWithoutScopeResetsTracingConfigurationForAllScopesAndReturnsIt() {
         assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "reset_all"));
 
-        // Ensure that configuration was actually reseted.
+        // Ensure that configuration was actually reset.
         assertEquals(
             Collections.singletonMap(
                 TX_SCOPE_SPECIFIC_COORDINATES,
@@ -297,7 +306,7 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
 
     /**
      * Ensure that in case of "--tracing-configuration reset --scope TX"
-     * TX scope specific configuration will be reseted, TX label specific configuration should stay unchanged.
+     * TX scope specific configuration will be reset, TX label specific configuration should stay unchanged.
      * Whole TX based configuration should be returned.
      */
     @Test
@@ -320,8 +329,10 @@ public class GridCommandHandlerTracingConfigurationTest extends GridCommandHandl
      */
     @Test
     public void testResetWithScopeAndLabelResetsLabelSpecificConfigurationAndReturnsScopeBasedConfiguration() {
-        assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "reset", "--scope", "TX",
-            "--label", "label"));
+        assertEquals(EXIT_CODE_OK, execute(hnd, "--tracing-configuration", "reset",
+            "--scope", "TX",
+            "--label", "label"
+        ));
 
         // Check command result.
         VisorTracingConfigurationTaskResult expRes = new VisorTracingConfigurationTaskResult();

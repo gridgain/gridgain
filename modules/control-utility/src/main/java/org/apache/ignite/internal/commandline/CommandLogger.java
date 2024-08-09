@@ -24,7 +24,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 
 /**
- * Utility class for creating {@code CommangHandler} log messages.
+ * Utility class for creating {@link CommandHandler} log messages.
  */
 public class CommandLogger {
     /** Indent for help output. */
@@ -34,33 +34,33 @@ public class CommandLogger {
     public static final String DOUBLE_INDENT = INDENT + INDENT;
 
     /**
-     * Join input parameters with specified {@code delimeter} between them.
+     * Join input parameters with specified {@code delimiter} between them.
      *
-     * @param delimeter Specified delimeter.
+     * @param delimiter Specified delimiter.
      * @param params Other input parameter.
-     * @return Joined paramaters with specified {@code delimeter}.
+     * @return Joined parameters with specified {@code delimiter}.
      */
-    public static <T> String join(String delimeter, T... params) {
-        return join(new SB(), "", delimeter, params).toString();
+    public static <T> String join(String delimiter, T... params) {
+        return join(new SB(), "", delimiter, params).toString();
     }
 
     /**
-     * Join input parameters with specified {@code delimeter} between them and append to the end {@code delimeter}.
+     * Join input parameters with specified {@code delimiter} between them and append to the end {@code delimiter}.
      *
      * @param sb Specified string builder.
-     * @param sbDelimeter Delimeter between {@code sb} and appended {@code param}.
-     * @param delimeter Specified delimeter.
+     * @param sbDelimiter Delimiter between {@code sb} and appended {@code param}.
+     * @param delimiter Specified delimiter.
      * @param params Other input parameter.
-     * @return SB with appended to the end joined paramaters with specified {@code delimeter}.
+     * @return SB with appended to the end joined parameters with specified {@code delimiter}.
      */
-    public static <T> SB join(SB sb, String sbDelimeter, String delimeter, T... params) {
+    public static <T> SB join(SB sb, String sbDelimiter, String delimiter, T... params) {
         if (!F.isEmpty(params)) {
-            sb.a(sbDelimeter);
+            sb.a(sbDelimiter);
 
             for (Object par : params)
-                sb.a(par).a(delimeter);
+                sb.a(par).a(delimiter);
 
-            sb.setLength(sb.length() - delimeter.length());
+            sb.setLength(sb.length() - delimiter.length());
         }
 
         return sb;
@@ -98,7 +98,7 @@ public class CommandLogger {
 
     /**
      * Generates readable error message from exception
-     * @param e Exctption
+     * @param e Exception
      * @return error message
      */
     public static String errorMessage(Throwable e) {

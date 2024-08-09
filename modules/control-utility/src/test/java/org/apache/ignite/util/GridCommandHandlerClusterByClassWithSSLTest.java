@@ -38,4 +38,10 @@ public class GridCommandHandlerClusterByClassWithSSLTest extends GridCommandHand
     @Override public void testCacheHelp() {
         assertTrue("Logic the as in a parent class", true);
     }
+
+    /** {@inheritDoc} */
+    @Test
+    @Override public void testTracingHelp() {
+        assertTrue("Logic the as in a parent class", true);
+    }
 }
