@@ -56,7 +56,7 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
                 this::writeName,
                 in -> in.in().readLong());
 
-        upBound = locVal;
+        upBound = Integer.MIN_VALUE;
     }
 
     /** {@inheritDoc} */
@@ -131,26 +131,26 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
             return updated ? newLocVal : locVal0;
         }
 
-        // Update is out of reserved range - reserve new range remotely.
-        // Remaining values in old range are accounted for.
-        // E.g. if old range is 10-20, locVal is 15, we add 10:
-        // locVal = 25
-        // upBound = 35
-        // globalVal = 36
-        long remainingOldRange = upBound - locVal0;
-        long newRangeOffset = batchSize + l - remainingOldRange;
+        if (upBound == Integer.MIN_VALUE) {
+            // First reservation.
+            long globalVal = remoteAddAndGet(batchSize + l);
+            locVal = globalVal - batchSize;
+            upBound = globalVal - 1;
+        } else {
+            // Update is out of reserved range - reserve new range remotely.
+            // Remaining values in old range are accounted for.
+            // E.g. if old range is 10-20, locVal is 15, we add 10:
+            // locVal = 25
+            // upBound = 35
+            // globalVal = 36
+            long remainingOldRange = upBound - locVal0;
+            long newRangeOffset = batchSize + l - remainingOldRange;
 
-        long globalVal = remoteAddAndGet(newRangeOffset);
-        long oldGlovalVal = globalVal - newRangeOffset;
+            long globalVal = remoteAddAndGet(newRangeOffset);
 
-        locVal = globalVal - batchSize;
-
-        if (oldGlovalVal == upBound + 1) {
-            // No contention, we are the only one who reserved new range.
-            locVal -= 1;
+            locVal = globalVal - batchSize - 1;
+            upBound = globalVal - 1;
         }
-
-        upBound = globalVal - 1;
 
         return updated ? locVal : locVal0;
     }
