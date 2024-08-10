@@ -57,7 +57,7 @@ if %MAJOR_JAVA_VER% LSS 8 (
     echo %0, ERROR:
     echo The version of JAVA installed in %JAVA_HOME% is incorrect.
     echo Please point JAVA_HOME variable to installation of JDK 1.8 or later.
-    echo You can aslo download latest JDK at http://java.com/download.
+    echo You can also download latest JDK at http://java.com/download.
     goto error_finish
 )
 

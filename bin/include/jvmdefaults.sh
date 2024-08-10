@@ -77,7 +77,7 @@ getJavaSpecificOpts() {
           --add-opens=java.base/sun.security.ssl=ALL-UNNAMED \
           --add-opens=java.base/sun.security.x509=ALL-UNNAMED \
           --add-opens=java.sql/java.sql=ALL-UNNAMED \
-          $current_value"
+          ${current_value}"
   fi
 
   echo $value
