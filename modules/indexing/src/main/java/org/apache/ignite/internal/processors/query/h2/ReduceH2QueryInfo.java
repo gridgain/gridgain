@@ -36,8 +36,8 @@ public class ReduceH2QueryInfo extends H2QueryInfo {
      * @param runningQryId Query id assigned by {@link RunningQueryManager}.
      */
     public ReduceH2QueryInfo(PreparedStatement stmt, String sql, ClusterNode node, long reqId,
-        @Nullable Long runningQryId) {
-        super(QueryType.REDUCE, stmt, sql, node, runningQryId);
+        @Nullable Long runningQryId, String label) {
+        super(QueryType.REDUCE, stmt, sql, node, runningQryId, label);
 
         this.reqId = reqId;
     }

@@ -47,7 +47,6 @@ import org.apache.ignite.cache.affinity.AffinityKeyMapper;
 import org.apache.ignite.cache.eviction.EvictableEntry;
 import org.apache.ignite.cache.eviction.EvictionFilter;
 import org.apache.ignite.cache.eviction.EvictionPolicy;
-import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -578,94 +577,131 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
 
         cache.put(100,"200");
 
-        String sql = "SELECT SQL, QUERY_ID, SCHEMA_NAME, LOCAL, START_TIME, DURATION, ENFORCE_JOIN_ORDER, DISTRIBUTED_JOINS, LAZY FROM " +
+        String sql = "SELECT SQL, QUERY_ID, SCHEMA_NAME, LOCAL, START_TIME, DURATION, ENFORCE_JOIN_ORDER, DISTRIBUTED_JOINS, LAZY, LABEL FROM " +
             sysSchemaName() + ".SQL_QUERIES";
-
-        FieldsQueryCursor notClosedFieldQryCursor = cache.query(new SqlFieldsQuery(sql).setLocal(true));
-
-        List<?> cur = cache.query(new SqlFieldsQuery(sql).setLocal(true)).getAll();
-
-        assertEquals(2, cur.size());
-
-        List<?> res0 = (List<?>)cur.get(0);
-        List<?> res1 = (List<?>)cur.get(1);
-
-        Timestamp ts = (Timestamp)res0.get(4);
-
-        Instant now = Instant.now();
-
-        long diffInMillis = now.minusMillis(ts.getTime()).toEpochMilli();
-
-        assertTrue(diffInMillis < 3000);
-
-        assertEquals(sql, res0.get(0));
-
-        assertEquals(sql, res1.get(0));
-
-        assertTrue((Boolean)res0.get(3));
-
-        // ENFORCE_JOIN_ORDER
-        assertFalse((Boolean)res0.get(6));
-
-        // DISTRIBUTED_JOINS
-        assertFalse((Boolean)res0.get(7));
-
-        // LAZY
-        assertEquals(activateLazyByDflt, res0.get(8));
-
-        String id0 = (String)res0.get(1);
-        String id1 = (String)res1.get(1);
-
-        assertNotEquals(id0, id1);
 
         String qryPrefix = ignite.localNode().id() + "_";
 
-        String qryId1 = qryPrefix + "1";
-        String qryId2 = qryPrefix + "2";
+        {
+            String label0 = "test-label-0";
+            String label1 = "test-label-1";
 
-        assertTrue(id0.equals(qryId1) || id1.equals(qryId1));
+            QueryCursor notClosedFieldQryCursor = cache.query(new SqlFieldsQuery(sql).setLabel(label0).setLocal(true));
 
-        assertTrue(id0.equals(qryId2) || id1.equals(qryId2));
+            List<?> cur = cache.query(new SqlFieldsQuery(sql).setLabel(label1).setLocal(true)).getAll();
 
-        assertEquals(2, cache.query(new SqlFieldsQuery(sql)).getAll().size());
+            assertEquals(2, cur.size());
 
-        notClosedFieldQryCursor.close();
+            List<?> res0 = (List<?>)cur.get(0);
+            List<?> res1 = (List<?>)cur.get(1);
 
-        assertEquals(1, cache.query(new SqlFieldsQuery(sql)).getAll().size());
+            Timestamp ts = (Timestamp)res0.get(4);
 
-        cache.put(100,"200");
+            Instant now = Instant.now();
 
-        QueryCursor notClosedQryCursor = cache.query(new SqlQuery<>(String.class, "_key=100"));
+            long diffInMillis = now.minusMillis(ts.getTime()).toEpochMilli();
 
-        String expSqlQry = "SELECT \"default\".\"STRING\"._KEY, \"default\".\"STRING\"._VAL FROM " +
-            "\"default\".\"STRING\" WHERE _key=100";
+            assertTrue(diffInMillis < 3000);
 
-        cur = cache.query(new SqlFieldsQuery(sql)).getAll();
+            assertEquals(sql, res0.get(0));
+            assertEquals(sql, res1.get(0));
 
-        assertEquals(2, cur.size());
+            assertTrue((Boolean)res0.get(3));
 
-        res0 = (List<?>)cur.get(0);
-        res1 = (List<?>)cur.get(1);
+            // ENFORCE_JOIN_ORDER
+            assertFalse((Boolean)res0.get(6));
 
-        assertTrue(expSqlQry, res0.get(0).equals(expSqlQry) || res1.get(0).equals(expSqlQry));
+            // DISTRIBUTED_JOINS
+            assertFalse((Boolean)res0.get(7));
 
-        assertFalse((Boolean)res0.get(3));
+            // LAZY
+            assertEquals(activateLazyByDflt, res0.get(8));
 
-        assertFalse((Boolean)res1.get(3));
+            String id0 = (String)res0.get(1);
+            String id1 = (String)res1.get(1);
 
-        notClosedQryCursor.close();
+            assertNotEquals(id0, id1);
 
-        sql = "SELECT SQL, QUERY_ID FROM " + sysSchemaName() + ".SQL_QUERIES WHERE QUERY_ID='" + qryPrefix + "7'";
+            assertEquals(label0, res0.get(9));
+            assertEquals(label1, res1.get(9));
 
-        assertEquals(qryPrefix + "7", ((List<?>)cache.query(new SqlFieldsQuery(sql)).getAll().get(0)).get(1));
+            String qryId1 = qryPrefix + "1";
+            String qryId2 = qryPrefix + "2";
 
-        sql = "SELECT SQL FROM " + sysSchemaName() + ".SQL_QUERIES WHERE DURATION > 100000";
+            assertTrue(id0.equals(qryId1) || id1.equals(qryId1));
 
-        assertTrue(cache.query(new SqlFieldsQuery(sql)).getAll().isEmpty());
+            assertTrue(id0.equals(qryId2) || id1.equals(qryId2));
 
-        sql = "SELECT SQL FROM " + sysSchemaName() + ".SQL_QUERIES WHERE QUERY_ID='UNKNOWN'";
+            assertEquals(2, cache.query(new SqlFieldsQuery(sql)).getAll().size());
 
-        assertTrue(cache.query(new SqlFieldsQuery(sql)).getAll().isEmpty());
+            notClosedFieldQryCursor.close();
+
+            assertEquals(1, cache.query(new SqlFieldsQuery(sql)).getAll().size());
+        }
+
+        // Check deprecated but supported SqlQuery
+        {
+            cache.put(100, "200");
+
+            QueryCursor notClosedQryCursor = cache.query(new SqlQuery<>(String.class, "_key=100"));
+
+            String expSqlQry = "SELECT \"default\".\"STRING\"._KEY, \"default\".\"STRING\"._VAL FROM " +
+                "\"default\".\"STRING\" WHERE _key=100";
+
+            List<?> cur = cache.query(new SqlFieldsQuery(sql)).getAll();
+
+            assertEquals(2, cur.size());
+
+            List<?> res0 = (List<?>)cur.get(0);
+            List<?> res1 = (List<?>)cur.get(1);
+
+            assertTrue(expSqlQry, res0.get(0).equals(expSqlQry) || res1.get(0).equals(expSqlQry));
+
+            assertFalse((Boolean)res0.get(3));
+            assertFalse((Boolean)res1.get(3));
+
+            notClosedQryCursor.close();
+        }
+
+        // CHeck the same, but on SqlFieldQuery with label.
+        {
+            String label = "test-label-2";
+
+            String expSqlQry = "select * from \"default\".\"STRING\" where  _key=100";
+
+            QueryCursor notClosedQryCursor = cache.query(new SqlFieldsQuery(expSqlQry).setLabel(label));
+
+            List<?> cur = cache.query(new SqlFieldsQuery(sql).setLabel(label)).getAll();
+
+            assertEquals(2, cur.size());
+
+            List<?> res0 = (List<?>)cur.get(0);
+            List<?> res1 = (List<?>)cur.get(1);
+
+            assertTrue(expSqlQry, res0.get(0).equals(expSqlQry) || res1.get(0).equals(expSqlQry));
+
+            assertFalse((Boolean)res0.get(3));
+            assertFalse((Boolean)res1.get(3));
+
+            assertEquals(label, res0.get(9));
+            assertEquals(label, res1.get(9));
+
+            notClosedQryCursor.close();
+        }
+
+        {
+            sql = "SELECT SQL, QUERY_ID FROM " + sysSchemaName() + ".SQL_QUERIES WHERE QUERY_ID='" + qryPrefix + "9'";
+
+            assertEquals(qryPrefix + "9", ((List<?>)cache.query(new SqlFieldsQuery(sql)).getAll().get(0)).get(1));
+
+            sql = "SELECT SQL FROM " + sysSchemaName() + ".SQL_QUERIES WHERE DURATION > 100000";
+
+            assertTrue(cache.query(new SqlFieldsQuery(sql)).getAll().isEmpty());
+
+            sql = "SELECT SQL FROM " + sysSchemaName() + ".SQL_QUERIES WHERE QUERY_ID='UNKNOWN'";
+
+            assertTrue(cache.query(new SqlFieldsQuery(sql)).getAll().isEmpty());
+        }
     }
 
     /**

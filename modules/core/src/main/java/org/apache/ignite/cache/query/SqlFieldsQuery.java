@@ -107,6 +107,9 @@ public class SqlFieldsQuery extends Query<List<?>> {
     /** Whether server side DML should be enabled. */
     private boolean skipReducerOnUpdate;
 
+    /** Query label. */
+    protected String label;
+
     /**
      * Copy constructs SQL fields query.
      *
@@ -126,6 +129,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
         updateBatchSize = qry.updateBatchSize;
         qryInitiatorId = qry.qryInitiatorId;
         skipReducerOnUpdate = qry.skipReducerOnUpdate;
+        label = qry.label;
     }
 
     /**
@@ -321,6 +325,27 @@ public class SqlFieldsQuery extends Query<List<?>> {
      */
     public boolean isDistributedJoins() {
         return distributedJoins;
+    }
+
+    /**
+     * Gets query label.
+     *
+     * @return Query label.
+     */
+    public String getLabel() {
+        return label;
+    }
+
+    /**
+     * Sets query label.
+     *
+     * @param label Query label.
+     * @return {@code this} for chaining.
+     */
+    public SqlFieldsQuery setLabel(String label) {
+        this.label = label;
+
+        return this;
     }
 
     /** {@inheritDoc} */

@@ -357,6 +357,7 @@ public class GridReduceQueryExecutor {
      */
     public Iterator<List<?>> query(
         @Nullable final Long qryId,
+        String label,
         String schemaName,
         final GridCacheTwoStepQuery qry,
         boolean keepBinary,
@@ -465,7 +466,8 @@ public class GridReduceQueryExecutor {
                         .explicitTimeout(true)
                         .schemaName(schemaName)
                         .maxMemory(maxMem)
-                        .runningQryId(qryId);
+                        .runningQryId(qryId)
+                        .label(label);
 
                     if (mvccTracker != null)
                         req.mvccSnapshot(mvccTracker.snapshot());
@@ -544,7 +546,7 @@ public class GridReduceQueryExecutor {
 
                         H2Utils.bindParameters(stmt, F.asList(rdc.parameters(params)));
 
-                        ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), ctx.discovery().localNode(), qryReqId, qryId);
+                        ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), ctx.discovery().localNode(), qryReqId, qryId, label);
 
                         r.reducers().forEach(reducer -> reducer.memoryTracker(h2.memTracker(qryInfo)));
 

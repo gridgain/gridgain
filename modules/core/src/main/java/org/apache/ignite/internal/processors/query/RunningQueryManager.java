@@ -198,7 +198,7 @@ public class RunningQueryManager {
      */
     public Long register(String qry, GridCacheQueryType qryType, String schemaName, boolean loc,
         @Nullable GridQueryMemoryMetricProvider memTracker, @Nullable GridQueryCancel cancel,
-        String qryInitiatorId, boolean enforceJoinOrder, boolean lazy, boolean distributedJoins) {
+        String qryInitiatorId, boolean enforceJoinOrder, boolean lazy, boolean distributedJoins, String label) {
         long qryId = qryIdGen.incrementAndGet();
 
         if (qryInitiatorId == null)
@@ -217,7 +217,8 @@ public class RunningQueryManager {
             qryInitiatorId,
             enforceJoinOrder,
             lazy,
-            distributedJoins
+            distributedJoins,
+            label
         );
 
         GridRunningQueryInfo preRun = runs.putIfAbsent(qryId, run);

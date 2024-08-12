@@ -48,6 +48,12 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
     /** Keys count. */
     private static final int KEY_CNT = 1000;
 
+    /** Query label. */
+    private static final String LRQ_LABEL = "test-label";
+
+    /** Query label substring pattern. */
+    private static final Pattern LABEL_PATTERN = Pattern.compile(", label=" + LRQ_LABEL + ',');
+
     /** Local query mode. */
     private boolean local;
 
@@ -141,6 +147,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
         LogListener logLsnr = LogListener
             .matches(LONG_QUERY_EXEC_MSG)
             .andMatches(logStr -> currentThread().getName().startsWith(checkWorker.name()))
+            .andMatches(LABEL_PATTERN)
             .build();
 
         testLog().registerListener(logLsnr);
@@ -159,6 +166,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
 
         LogListener lsnr = LogListener
             .matches(Pattern.compile(LONG_QUERY_EXEC_MSG))
+            .andMatches(LABEL_PATTERN)
             .build();
 
         testLog.registerListener(lsnr);
@@ -179,6 +187,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
 
         LogListener lsnr = LogListener
             .matches(LONG_QUERY_EXEC_MSG)
+            .andMatches(LABEL_PATTERN)
             .build();
 
         testLog.registerListener(lsnr);
@@ -195,6 +204,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
 
         LogListener lsnr = LogListener
             .matches("Query produced big result set")
+            .andMatches(LABEL_PATTERN)
             .build();
 
         testLog.registerListener(lsnr);
@@ -235,6 +245,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
             .setLocal(local)
             .setLazy(lazy)
             .setSchema("TEST")
+            .setLabel(LRQ_LABEL)
             .setArgs(args), false);
     }
 

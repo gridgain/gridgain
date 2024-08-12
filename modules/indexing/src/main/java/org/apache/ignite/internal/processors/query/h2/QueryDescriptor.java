@@ -47,6 +47,8 @@ public class QueryDescriptor {
     /** Query initiator identifier. */
     private final String qryInitiatorId;
 
+    private final String label;
+
     /**
      * @param schemaName Schema name.
      * @param sql Sql.
@@ -66,7 +68,8 @@ public class QueryDescriptor {
         boolean loc,
         boolean skipReducerOnUpdate,
         boolean batched,
-        String qryInitiatorId
+        String qryInitiatorId,
+        String label
     ) {
         this.schemaName = schemaName;
         this.sql = sql;
@@ -77,6 +80,7 @@ public class QueryDescriptor {
         this.skipReducerOnUpdate = skipReducerOnUpdate;
         this.batched = batched;
         this.qryInitiatorId = qryInitiatorId;
+        this.label = label;
     }
 
     /**
@@ -119,6 +123,10 @@ public class QueryDescriptor {
      */
     public boolean local() {
         return loc;
+    }
+
+    public String label() {
+        return label;
     }
 
     /**

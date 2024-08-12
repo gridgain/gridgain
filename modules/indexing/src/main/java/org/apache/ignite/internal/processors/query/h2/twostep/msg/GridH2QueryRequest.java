@@ -107,6 +107,9 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     private long reqId;
 
     /** */
+    private String label;
+
+    /** */
     @GridToStringInclude
     @GridDirectCollection(Integer.class)
     private List<Integer> caches;
@@ -272,6 +275,16 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
      */
     public long requestId() {
         return reqId;
+    }
+
+    public String label() {
+        return label;
+    }
+
+    public GridH2QueryRequest label(String label) {
+        this.label = label;
+
+        return this;
     }
 
     /**
@@ -727,6 +740,12 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
                     return false;
 
                 writer.incrementState();
+
+            case 17:
+                if (!writer.writeString("label", label))
+                    return false;
+
+                writer.incrementState();
         }
 
         return true;
@@ -875,6 +894,14 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
                     return false;
 
                 reader.incrementState();
+
+            case 17:
+                label = reader.readString("label");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
         }
 
         return reader.afterMessageRead(GridH2QueryRequest.class);
@@ -887,7 +914,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 17;
+        return 18;
     }
 
     /** {@inheritDoc} */

@@ -40,8 +40,8 @@ public class MapH2QueryInfo extends H2QueryInfo {
      * @param runningQryId Query id assigned by {@link RunningQueryManager}.
      */
     public MapH2QueryInfo(PreparedStatement stmt, String sql,
-        ClusterNode node, long reqId, int segment, @Nullable Long runningQryId) {
-        super(QueryType.MAP, stmt, sql, node, runningQryId);
+        ClusterNode node, long reqId, int segment, @Nullable Long runningQryId, String label) {
+        super(QueryType.MAP, stmt, sql, node, runningQryId, label);
 
         this.reqId = reqId;
         this.segment = segment;

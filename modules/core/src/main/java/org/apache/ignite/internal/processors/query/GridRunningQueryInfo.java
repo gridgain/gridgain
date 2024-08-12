@@ -18,10 +18,10 @@ package org.apache.ignite.internal.processors.query;
 
 import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
-import org.apache.ignite.internal.util.tostring.GridToStringExclude;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.Span;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Query descriptor.
@@ -74,6 +74,9 @@ public class GridRunningQueryInfo {
     /** Distributed joins flag. */
     private final boolean distributedJoins;
 
+    /** Query label. */
+    private final String label;
+
     /**
      * Constructor.
      *
@@ -103,7 +106,8 @@ public class GridRunningQueryInfo {
         String qryInitiatorId,
         boolean enforceJoinOrder,
         boolean lazy,
-        boolean distributedJoins
+        boolean distributedJoins,
+        String label
     ) {
         this.id = id;
         this.nodeId = nodeId;
@@ -119,6 +123,7 @@ public class GridRunningQueryInfo {
         this.lazy = lazy;
         this.distributedJoins = distributedJoins;
         this.span = MTC.span();
+        this.label = label;
     }
 
     /**
@@ -252,6 +257,13 @@ public class GridRunningQueryInfo {
      */
     public boolean lazy() {
         return lazy;
+    }
+
+    /**
+     * @return Query label.
+     */
+    public String label() {
+        return label;
     }
 
 }

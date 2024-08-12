@@ -543,7 +543,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null,
                 false,
                 false,
-                false
+                false,
+                null
             );
 
             Throwable failReason = null;
@@ -639,7 +640,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         H2Utils.bindParameters(stmt, F.asList(params));
 
-                        H2QueryInfo qryInfo = new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry, ctx.discovery().localNode(), qryId);
+                        H2QueryInfo qryInfo = new H2QueryInfo(
+                            H2QueryInfo.QueryType.LOCAL,
+                            stmt,
+                            qry,
+                            ctx.discovery().localNode(),
+                            qryId,
+                            qryDesc.label()
+                        );
 
                         ResultSet rs = executeSqlQueryWithTimer(
                             stmt,
@@ -773,7 +781,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             qryInitiatorId,
             false,
             false,
-            false
+            false,
+            null
         );
 
         Exception failReason = null;
@@ -1720,7 +1729,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             qryDesc.queryInitiatorId(),
             qryDesc.enforceJoinOrder(),
             qryParams.lazy(),
-            qryDesc.distributedJoins()
+            qryDesc.distributedJoins(),
+            qryDesc.label()
         );
     }
 
@@ -1943,6 +1953,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     try (TraceSurroundings ignored = MTC.support(ctx.tracing().create(SQL_ITER_OPEN, MTC.span()))) {
                         return rdcQryExec.query(
                             qryId,
+                            qryDesc.label(),
                             qryDesc.schemaName(),
                             twoStepQry,
                             keepBinary,

@@ -65,6 +65,9 @@ public class H2QueryInfo {
     /** Originator node uid. */
     private final UUID node;
 
+    /** Query label. */
+    private final String label;
+
     /**
      * @param type Query type.
      * @param stmt Query statement.
@@ -73,7 +76,7 @@ public class H2QueryInfo {
      * @param runningQryId Query id assigned by {@link RunningQueryManager}.
      */
     public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql, ClusterNode node,
-        Long runningQryId) {
+        Long runningQryId, String label) {
         try {
             assert stmt != null;
             this.type = type;
@@ -91,6 +94,7 @@ public class H2QueryInfo {
             distributedJoin = s.isJoinBatchEnabled();
             lazy = s.isLazyQueryExecution();
             this.stmt = GridSqlQueryParser.prepared(stmt);
+            this.label = label;
         }
         catch (SQLException e) {
             throw new IgniteSQLException("Cannot collect query info", IgniteQueryErrorCode.UNKNOWN, e);
@@ -143,6 +147,9 @@ public class H2QueryInfo {
 
         StringBuilder msgSb = new StringBuilder(msg)
             .append(" [globalQueryId=").append(globalQueryId);
+
+        if (label != null)
+            msgSb.append(", label=").append(label);
 
         if (additionalInfo != null)
             msgSb.append(", ").append(additionalInfo);
