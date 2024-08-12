@@ -49,7 +49,9 @@ class AbstractClientAtomic {
     }
 
     /**
-     * {@inheritDoc}
+     * Gets the name of the atomic.
+     *
+     * @return Name of the atomic.
      */
     public String name() {
         return name;

@@ -401,14 +401,12 @@ public class TcpIgniteClient implements IgniteClient {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public ClientAtomicSequence atomicSequence(String name, long initVal, boolean create) throws IgniteException {
+    @Override public ClientAtomicSequence atomicSequence(String name, long initVal, boolean create) throws IgniteException {
         return atomicSequence(name, null, initVal, create);
     }
 
     /** {@inheritDoc} */
-    @Override
-    public ClientAtomicSequence atomicSequence(String name, ClientAtomicConfiguration cfg, long initVal, boolean create)
+    @Override public ClientAtomicSequence atomicSequence(String name, ClientAtomicConfiguration cfg, long initVal, boolean create)
             throws IgniteException {
         GridArgumentCheck.notNull(name, "name");
 

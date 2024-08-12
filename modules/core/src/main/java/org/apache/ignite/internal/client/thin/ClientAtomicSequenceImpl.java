@@ -98,13 +98,13 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
         return internalUpdate(l, false);
     }
 
-    @Override
-    public int batchSize() {
+    /** {@inheritDoc} */
+    @Override public int batchSize() {
         return batchSize;
     }
 
-    @Override
-    public synchronized void batchSize(int size) {
+    /** {@inheritDoc} */
+    @Override public synchronized void batchSize(int size) {
         A.ensure(size > 0, " Batch size can't be less then 0: " + size);
 
         batchSize = size;
