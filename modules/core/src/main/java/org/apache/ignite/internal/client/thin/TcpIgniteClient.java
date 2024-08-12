@@ -420,17 +420,23 @@ public class TcpIgniteClient implements IgniteClient {
             }, null);
         }
 
-        ClientAtomicSequence res = new ClientAtomicSequenceImpl(
-                name,
-                cfg != null ? cfg.getGroupName() : null,
-                cfg != null ? cfg.getAtomicSequenceReserveSize() : DFLT_ATOMIC_SEQUENCE_RESERVE_SIZE,
-                ch);
+        try {
+            return new ClientAtomicSequenceImpl(
+                    name,
+                    cfg != null ? cfg.getGroupName() : null,
+                    cfg != null ? cfg.getAtomicSequenceReserveSize() : DFLT_ATOMIC_SEQUENCE_RESERVE_SIZE,
+                    ch);
+        } catch (ClientException e) {
+            Throwable cause = e.getCause();
 
-        // Return null when specified atomic long does not exist to match IgniteKernal behavior.
-        if (!create && res.removed())
-            return null;
+            if (cause instanceof ClientServerError &&
+                    ((ClientServerError) cause).getCode() == ClientStatus.RESOURCE_DOES_NOT_EXIST) {
+                // Return null when specified atomic long does not exist to match IgniteKernal behavior.
+                return null;
+            }
 
-        return res;
+            throw e;
+        }
     }
 
     /**
