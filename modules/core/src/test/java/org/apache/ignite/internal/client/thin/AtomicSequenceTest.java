@@ -28,9 +28,11 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
@@ -265,6 +267,7 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
     @Test
     public void testIncrementIntegrityTwoInstances() {
         String seqName = "testSequenceIntegrityTwoInstances";
+        int count = 100;
 
         try (IgniteClient client = startClient(0)) {
             // Two instances with the same name and different batch sizes should produce correct sequence
@@ -275,12 +278,17 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
             locSeq.batchSize(3);
             locSeq2.batchSize(4);
 
-            for (int i = 0; i < 100; i++) {
-                // TODO
-//                assertEquals(i, locSeq.getAndIncrement());
-//                assertEquals(i, locSeq2.getAndIncrement());
-                System.out.println(locSeq.incrementAndGet() + " | " + locSeq2.incrementAndGet());
+            Set<Long> expected = LongStream.rangeClosed(1, count * 2).boxed().collect(Collectors.toSet());
+
+            for (int i = 0; i < count; i++) {
+                long val1 = locSeq.incrementAndGet();
+                long val2 = locSeq2.incrementAndGet();
+
+                assertTrue("val1: " + val1, expected.remove(val1));
+                assertTrue("val2: " + val2, expected.remove(val2));
             }
+
+            assertTrue(expected.isEmpty());
         }
     }
 
