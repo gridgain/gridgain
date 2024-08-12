@@ -21,11 +21,13 @@ import org.apache.ignite.IgniteException;
 import java.io.Closeable;
 
 /**
- * This interface provides a rich API for working with distributed atomic sequence.
+ * Client API for distributed atomic sequence.
+ *
  * <h1 class="header">Description</h1>
  * <p>
- * <h2 class="header">Functionality</h2>
- * Distributed atomic sequence includes the following main functionality:
+ * Distributed atomic sequence provides an efficient way to generate unique numbers.
+ * Unlike {@link ClientAtomicLong}, atomic sequence only goes up, and uses batching to reserve a local range of values,
+ * so that most operations do not require a network round-trip.
  * <ul>
  * <li>
  * Method {@link #get()} gets current value from atomic sequence.
@@ -49,9 +51,10 @@ import java.io.Closeable;
  * </li>
  * </ul>
  * <h2 class="header">Creating Distributed Atomic Sequence</h2>
- * Instance of distributed atomic sequence can be created by calling the following method:
+ * To create a new sequence or get an existing sequence use one of the following methods:
  * <ul>
  *     <li>{@link IgniteClient#atomicSequence(String, long, boolean)}</li>
+ *     <li>{@link IgniteClient#atomicSequence(String, ClientAtomicConfiguration, long, boolean)}</li>
  * </ul>
  * @see IgniteClient#atomicSequence(String, long, boolean)
  */
