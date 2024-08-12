@@ -16,14 +16,13 @@
 
 package org.apache.ignite.internal.client.thin;
 
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.client.ClientAtomicConfiguration;
 import org.apache.ignite.client.ClientAtomicSequence;
-import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
-import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -86,11 +85,11 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
         String name = "testCreateIgnoresInitialValueWhenAlreadyExists";
 
         try (IgniteClient client = startClient(0)) {
-            ClientAtomicSequence atomicLong = client.atomicSequence(name, 42, true);
-            ClientAtomicSequence atomicLong2 = client.atomicSequence(name, -42, true);
+            ClientAtomicSequence atomicSeq = client.atomicSequence(name, 42, true);
+            ClientAtomicSequence atomicSeq2 = client.atomicSequence(name, -42, true);
 
-            assertEquals(42, atomicLong.get());
-            assertEquals(42, atomicLong2.get());
+            assertEquals(42, atomicSeq.get());
+            assertEquals(42, atomicSeq2.get());
         }
     }
 
@@ -106,7 +105,6 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
             atomicSequence.batchSize(1);
             atomicSequence.close();
 
-            // TODO: add checkRemoved everywhere?
             assertDoesNotExistError(name, atomicSequence::get);
 
             assertDoesNotExistError(name, atomicSequence::incrementAndGet);
@@ -309,16 +307,9 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
         }
     }
 
-    /**
-     * Asserts that "does not exist" error is thrown.
-     *
-     * @param name Atomic long name.
-     * @param callable Callable.
-     */
     private void assertDoesNotExistError(String name, Callable<Object> callable) {
-        ClientException ex = assertThrows(null, callable, ClientException.class, null);
+        IgniteException ex = assertThrows(null, callable, IgniteException.class, null);
 
-        assertContains(null, ex.getMessage(), "AtomicLong with name '" + name + "' does not exist.");
-        assertEquals(ClientStatus.RESOURCE_DOES_NOT_EXIST, ((ClientServerError)ex.getCause()).getCode());
+        assertContains(null, ex.getMessage(), "Sequence was removed from cache: " + name);
     }
 }
