@@ -78,6 +78,23 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
     }
 
     /**
+     * Tests initial value setting.
+     */
+    @Test
+    public void testNegativeInitialValue() {
+        String name = "testNegativeInitialValue";
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicSequence seq = client.atomicSequence(name, -100, true);
+
+            assertEquals(-100, seq.get());
+            assertEquals(-99, seq.incrementAndGet());
+            assertEquals(-99, seq.getAndIncrement());
+            assertEquals(-97, seq.incrementAndGet());
+        }
+    }
+
+    /**
      * Tests that initial value is ignored when atomic long already exists.
      */
     @Test
