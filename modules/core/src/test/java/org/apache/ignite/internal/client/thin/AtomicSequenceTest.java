@@ -323,7 +323,9 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
 
         try (IgniteClient client = startClient(0)) {
             ClientAtomicSequence seq = client.atomicSequence(seqName, 33, true);
+
             seq.batchSize(3);
+            assertEquals(3, seq.batchSize());
 
             assertEquals(33, seq.get());
             assertEquals(33, getRemoteValue(client, seqName));
@@ -339,6 +341,20 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
 
             assertEquals(37, seq.incrementAndGet());
             assertEquals(41, getRemoteValue(client, seqName));
+
+            assertEquals(38, seq.incrementAndGet());
+            assertEquals(41, getRemoteValue(client, seqName));
+
+            assertEquals(39, seq.incrementAndGet());
+            assertEquals(41, getRemoteValue(client, seqName));
+
+            assertEquals(40, seq.incrementAndGet());
+            assertEquals(41, getRemoteValue(client, seqName));
+
+            seq.batchSize(10);
+
+            assertEquals(41, seq.incrementAndGet());
+            assertEquals(52, getRemoteValue(client, seqName));
         }
     }
 
