@@ -39,6 +39,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 /**
  * Tests client atomic sequence.
  */
+@SuppressWarnings("resource")
 public class AtomicSequenceTest extends AbstractThinClientTest {
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
