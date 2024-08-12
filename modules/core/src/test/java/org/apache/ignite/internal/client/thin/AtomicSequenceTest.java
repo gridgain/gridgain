@@ -98,12 +98,15 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
      * Tests that exception is thrown when atomic long does not exist.
      */
     @Test
-    public void testOperationsThrowExceptionWhenAtomicLongDoesNotExist() {
+    public void testOperationsThrowExceptionWhenAtomicSequenceDoesNotExist() {
         try (IgniteClient client = startClient(0)) {
-            String name = "testOperationsThrowExceptionWhenAtomicLongDoesNotExist";
+            String name = "testOperationsThrowExceptionWhenAtomicSequenceDoesNotExist";
+
             ClientAtomicSequence atomicSequence = client.atomicSequence(name, 0, true);
+            atomicSequence.batchSize(1);
             atomicSequence.close();
 
+            // TODO: add checkRemoved everywhere?
             assertDoesNotExistError(name, atomicSequence::get);
 
             assertDoesNotExistError(name, atomicSequence::incrementAndGet);
