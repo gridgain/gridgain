@@ -18,6 +18,8 @@ package org.apache.ignite.internal.client.thin;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.client.ClientAtomicSequence;
+import org.apache.ignite.client.ClientException;
+import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.A;
@@ -67,6 +69,8 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
 
     /** {@inheritDoc} */
     @Override public long get() throws IgniteException {
+        checkRemoved();
+
         return locVal;
     }
 
@@ -108,13 +112,28 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
 
     /** {@inheritDoc} */
     @Override public boolean removed() {
-        return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_SEQUENCE_EXISTS, this::writeName,
-                in -> !in.in().readBoolean());
+        boolean exists = ch.affinityService(
+                cacheId,
+                affinityKey(),
+                ClientOperation.ATOMIC_SEQUENCE_EXISTS,
+                this::writeName,
+                in -> in.in().readBoolean());
+
+        rmvd = !exists;
+
+        return !exists;
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
-        ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_SEQUENCE_REMOVE, this::writeName, null);
+        ch.affinityService(
+                cacheId,
+                affinityKey(),
+                ClientOperation.ATOMIC_SEQUENCE_REMOVE,
+                this::writeName,
+                null);
+
+        rmvd = true;
     }
 
     /** {@inheritDoc} */
@@ -131,6 +150,7 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
      */
     private synchronized long internalUpdate(final long l, final boolean updated) {
         assert l > 0 : "l > 0";
+        checkRemoved();
 
         long locVal0 = locVal;
         long newLocVal = locVal0 + l;
@@ -166,14 +186,30 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
     }
 
     private long remoteAddAndGet(long l) {
-        return ch.affinityService(
-                cacheId,
-                affinityKey(),
-                ClientOperation.ATOMIC_SEQUENCE_VALUE_ADD_AND_GET,
-                out -> {
-                    writeName(out);
-                    out.out().writeLong(l);
-                },
-                r -> r.in().readLong());
+        try {
+            return ch.affinityService(
+                    cacheId,
+                    affinityKey(),
+                    ClientOperation.ATOMIC_SEQUENCE_VALUE_ADD_AND_GET,
+                    out -> {
+                        writeName(out);
+                        out.out().writeLong(l);
+                    },
+                    r -> r.in().readLong());
+        } catch (ClientException e) {
+            Throwable cause = e.getCause();
+
+            if (cause instanceof ClientServerError &&
+                    ((ClientServerError) cause).getCode() == ClientStatus.RESOURCE_DOES_NOT_EXIST) {
+                rmvd = true;
+            }
+
+            throw e;
+        }
+    }
+
+    private void checkRemoved() {
+        if (rmvd)
+            throw new IgniteException("Sequence was removed from cache: " + name);
     }
 }
