@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.client.ClientAtomicConfiguration;
 import org.apache.ignite.client.ClientAtomicLong;
+import org.apache.ignite.client.ClientAtomicSequence;
 import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.configuration.ClientConfiguration;
@@ -273,6 +274,20 @@ public class AtomicLongTest extends AbstractThinClientTest {
 
         assertEquals("ignite-sys-atomic-cache@testSameNameDifferentOptions", replicatedCache.name());
         assertEquals(Integer.MAX_VALUE, replicatedCache.configuration().getBackups());
+    }
+
+    @Test
+    public void testToString() {
+        String name = "testToString";
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicLong atomicSequence = client.atomicLong(name, 0, true);
+
+            assertEquals(
+                    "ClientAtomicLongImpl [super=" +
+                            "AbstractClientAtomic [name=testToString, groupName=null, cacheId=1481046058]]",
+                    atomicSequence.toString());
+        }
     }
 
     /**

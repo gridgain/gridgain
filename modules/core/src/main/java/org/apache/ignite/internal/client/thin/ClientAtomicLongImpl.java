@@ -18,6 +18,7 @@ package org.apache.ignite.internal.client.thin;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.client.ClientAtomicLong;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -104,5 +105,10 @@ class ClientAtomicLongImpl extends AbstractClientAtomic implements ClientAtomicL
     /** {@inheritDoc} */
     @Override public void close() {
         ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_REMOVE, this::writeName, null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(ClientAtomicLongImpl.class, this, super.toString());
     }
 }
