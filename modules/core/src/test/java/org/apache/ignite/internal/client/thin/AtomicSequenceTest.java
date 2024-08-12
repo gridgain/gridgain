@@ -317,6 +317,31 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
     }
 
     @Test
+    public void testReservedRange() {
+        String seqName = "testReservedRange";
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicSequence seq = client.atomicSequence(seqName, 33, true);
+            seq.batchSize(3);
+
+            assertEquals(33, seq.get());
+            assertEquals(33, getRemoteValue(client, seqName));
+
+            assertEquals(34, seq.incrementAndGet());
+            assertEquals(37, getRemoteValue(client, seqName));
+
+            assertEquals(35, seq.incrementAndGet());
+            assertEquals(37, getRemoteValue(client, seqName));
+
+            assertEquals(36, seq.incrementAndGet());
+            assertEquals(37, getRemoteValue(client, seqName));
+
+            assertEquals(37, seq.incrementAndGet());
+            assertEquals(41, getRemoteValue(client, seqName));
+        }
+    }
+
+    @Test
     public void testToString() {
         String name = "testToString";
 
@@ -334,5 +359,9 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
         IgniteException ex = assertThrows(null, callable, IgniteException.class, null);
 
         assertContains(null, ex.getMessage(), "Sequence was removed from cache: " + name);
+    }
+
+    private static long getRemoteValue(IgniteClient client, String seqName) {
+        return client.atomicSequence(seqName, 0, false).get();
     }
 }
