@@ -159,11 +159,11 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
     }
 
     /**
-     * Tests increment, decrement, add.
+     * Tests increment, add.
      */
     @Test
-    public void testIncrementDecrementAdd() {
-        String name = "testIncrementDecrementAdd";
+    public void testIncrementAdd() {
+        String name = "testIncrementAdd";
 
         try (IgniteClient client = startClient(0)) {
             ClientAtomicSequence atomicSequence = client.atomicSequence(name, 1, true);
