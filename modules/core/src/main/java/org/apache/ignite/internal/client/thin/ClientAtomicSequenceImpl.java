@@ -18,8 +18,10 @@ package org.apache.ignite.internal.client.thin;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.client.ClientAtomicSequence;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -31,10 +33,14 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
     private volatile long locVal;
 
     /**  Upper bound of local counter. */
+    @GridToStringExclude
     private long upBound;
 
     /**  Sequence batch size */
     private volatile int batchSize;
+
+    /** Removed flag. */
+    private volatile boolean rmvd;
 
     /**
      * Constructor.
@@ -109,6 +115,11 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
     /** {@inheritDoc} */
     @Override public void close() {
         ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_SEQUENCE_REMOVE, this::writeName, null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(ClientAtomicSequenceImpl.class, this, super.toString());
     }
 
     /**

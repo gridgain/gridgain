@@ -295,6 +295,20 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
         }
     }
 
+    @Test
+    public void testToString() {
+        String name = "testToString";
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicSequence atomicSequence = client.atomicSequence(name, 0, true);
+
+            assertEquals(
+                    "ClientAtomicSequenceImpl [batchSize=1000, rmvd=false, super=" +
+                            "AbstractClientAtomic [name=testToString, groupName=null, cacheId=1481046058]]",
+                    atomicSequence.toString());
+        }
+    }
+
     /**
      * Asserts that "does not exist" error is thrown.
      *

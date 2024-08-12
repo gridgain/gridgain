@@ -18,15 +18,23 @@ package org.apache.ignite.internal.client.thin;
 
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Base class for client atomics.
  */
 class AbstractClientAtomic {
+    @GridToStringInclude
     protected final String name;
+
+    @GridToStringInclude
     protected final String groupName;
+
     protected final ReliableChannel ch;
+
+    @GridToStringInclude
     protected final int cacheId;
 
     protected AbstractClientAtomic(
@@ -45,6 +53,11 @@ class AbstractClientAtomic {
      */
     public String name() {
         return name;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(AbstractClientAtomic.class, this);
     }
 
     /**
