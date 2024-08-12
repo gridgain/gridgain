@@ -516,6 +516,21 @@ public enum ClientOperation {
             case OP_SET_ITERATOR_START:
                 return ClientOperationType.SET_ITERATOR;
 
+            case ATOMIC_SEQUENCE_CREATE:
+                return ClientOperationType.ATOMIC_SEQUENCE_CREATE;
+
+            case ATOMIC_SEQUENCE_REMOVE:
+                return ClientOperationType.ATOMIC_SEQUENCE_REMOVE;
+
+            case ATOMIC_SEQUENCE_EXISTS:
+                return ClientOperationType.ATOMIC_SEQUENCE_EXISTS;
+
+            case ATOMIC_SEQUENCE_VALUE_GET:
+                return ClientOperationType.ATOMIC_SEQUENCE_VALUE_GET;
+
+            case ATOMIC_SEQUENCE_VALUE_ADD_AND_GET:
+                return ClientOperationType.ATOMIC_SEQUENCE_VALUE_ADD_AND_GET;
+
             default:
                 return null;
         }
