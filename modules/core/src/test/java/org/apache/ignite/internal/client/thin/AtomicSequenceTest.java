@@ -123,15 +123,21 @@ public class AtomicSequenceTest extends AbstractThinClientTest {
         String name = "testRemoved";
 
         try (IgniteClient client = startClient(0)) {
-            ClientAtomicSequence atomicSequence = client.atomicSequence(name, 0, false);
-            assertNull(atomicSequence);
+            ClientAtomicSequence seq = client.atomicSequence(name, 0, false);
+            assertNull(seq);
 
-            atomicSequence = client.atomicSequence(name, 1, true);
-            assertFalse(atomicSequence.removed());
-            assertEquals(1, atomicSequence.get());
+            seq = client.atomicSequence(name, 1, true);
+            ClientAtomicSequence seq2 = client.atomicSequence(name, 0, false);
 
-            atomicSequence.close();
-            assertTrue(atomicSequence.removed());
+            assertFalse(seq.removed());
+            assertFalse(seq2.removed());
+
+            assertEquals(1, seq.get());
+            assertEquals(1, seq2.get());
+
+            seq.close();
+            assertTrue(seq.removed());
+            assertTrue(seq2.removed());
         }
     }
 
