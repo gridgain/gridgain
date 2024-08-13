@@ -84,6 +84,11 @@ public class ClientCacheIndexQueryRequest extends ClientCacheRequest {
                 criteria.add(readCriterion(reader));
         }
 
+        String label = null;
+
+        if (protocolCtx.isFeatureSupported(ClientBitmaskFeature.QRY_LABEL))
+            label = reader.readString();
+
         Object filterObj = reader.readObjectDetached();
 
         qry = new IndexQuery(valType, idxName);
@@ -102,6 +107,9 @@ public class ClientCacheIndexQueryRequest extends ClientCacheRequest {
 
         if (limit > 0)
             qry.setLimit(limit);
+
+        if (label != null)
+            qry.setLabel(label);
     }
 
     /** */
