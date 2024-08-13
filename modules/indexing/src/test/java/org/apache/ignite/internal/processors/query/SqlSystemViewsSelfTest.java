@@ -47,6 +47,7 @@ import org.apache.ignite.cache.affinity.AffinityKeyMapper;
 import org.apache.ignite.cache.eviction.EvictableEntry;
 import org.apache.ignite.cache.eviction.EvictionFilter;
 import org.apache.ignite.cache.eviction.EvictionPolicy;
+import org.apache.ignite.cache.query.IndexQuery;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -669,7 +670,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
 
             String expSqlQry = "select * from \"default\".\"STRING\" where  _key=100";
 
-            QueryCursor notClosedQryCursor = cache.query(new SqlFieldsQuery(expSqlQry).setLabel(label));
+            QueryCursor notClosedFieldsQryCursor = cache.query(new SqlFieldsQuery(expSqlQry).setLabel(label));
 
             List<?> cur = cache.query(new SqlFieldsQuery(sql).setLabel(label)).getAll();
 
@@ -686,13 +687,39 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
             assertEquals(label, res0.get(9));
             assertEquals(label, res1.get(9));
 
-            notClosedQryCursor.close();
+            notClosedFieldsQryCursor.close();
+        }
+
+        // CHeck the same, but on IndexQuery with label.
+        {
+            String label = "test-label-3";
+
+            String expSqlQry = "SELECT _KEY, _VAL FROM \"default\".\"STRING\" USE INDEX (\"_key_PK\") ORDER BY \"_KEY\"";
+
+            QueryCursor notClosedIdxQryCursor = cache.query(new IndexQuery(String.class, "_key_PK").setLabel(label));
+
+            List<?> cur = cache.query(new SqlFieldsQuery(sql).setLabel(label)).getAll();
+
+            assertEquals(2, cur.size());
+
+            List<?> res0 = (List<?>)cur.get(0);
+            List<?> res1 = (List<?>)cur.get(1);
+
+            assertTrue(expSqlQry, res0.get(0).equals(expSqlQry) || res1.get(0).equals(expSqlQry));
+
+            assertFalse((Boolean)res0.get(3));
+            assertFalse((Boolean)res1.get(3));
+
+            assertEquals(label, res0.get(9));
+            assertEquals(label, res1.get(9));
+
+            notClosedIdxQryCursor.close();
         }
 
         {
-            sql = "SELECT SQL, QUERY_ID FROM " + sysSchemaName() + ".SQL_QUERIES WHERE QUERY_ID='" + qryPrefix + "9'";
+            sql = "SELECT SQL, QUERY_ID FROM " + sysSchemaName() + ".SQL_QUERIES WHERE QUERY_ID='" + qryPrefix + "11'";
 
-            assertEquals(qryPrefix + "9", ((List<?>)cache.query(new SqlFieldsQuery(sql)).getAll().get(0)).get(1));
+            assertEquals(qryPrefix + "11", ((List<?>)cache.query(new SqlFieldsQuery(sql)).getAll().get(0)).get(1));
 
             sql = "SELECT SQL FROM " + sysSchemaName() + ".SQL_QUERIES WHERE DURATION > 100000";
 

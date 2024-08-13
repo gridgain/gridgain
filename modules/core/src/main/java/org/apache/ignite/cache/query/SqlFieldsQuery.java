@@ -108,7 +108,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
     private boolean skipReducerOnUpdate;
 
     /** Query label. */
-    protected String label;
+    private String label;
 
     /**
      * Copy constructs SQL fields query.

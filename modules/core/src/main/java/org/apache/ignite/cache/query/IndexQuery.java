@@ -52,6 +52,9 @@ public final class IndexQuery<K, V> extends Query<Cache.Entry<K, V>> {
     /** Partition to run IndexQuery over. */
     private @Nullable Integer part;
 
+    /** Query label. */
+    private String label;
+
     /**
      * Specify index with cache value class.
      *
@@ -218,6 +221,27 @@ public final class IndexQuery<K, V> extends Query<Cache.Entry<K, V>> {
      */
     @Nullable public Integer getPartition() {
         return part;
+    }
+
+    /**
+     * Sets query label.
+     *
+     * @param label Query label.
+     * @return {@code this} for chaining.
+     */
+    public IndexQuery<K, V> setLabel(String label) {
+        this.label = label;
+
+        return this;
+    }
+
+    /**
+     * Gets query label.
+     *
+     * @return Query label.
+     */
+    public String getLabel() {
+        return label;
     }
 
     /** */

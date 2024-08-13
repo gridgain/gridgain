@@ -1134,6 +1134,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         fieldsQuery.setLocal(qry.isLocal());
         fieldsQuery.setPageSize(qry.getPageSize());
         fieldsQuery.setSchema(schemaName);
+        fieldsQuery.setLabel(qry.getLabel());
 
         if (qry.getPartition() != null) {
             fieldsQuery.setPartitions(qry.getPartition());
