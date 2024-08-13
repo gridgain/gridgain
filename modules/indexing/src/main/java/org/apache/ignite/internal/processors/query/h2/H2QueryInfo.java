@@ -30,6 +30,7 @@ import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.command.Prepared;
 import org.gridgain.internal.h2.engine.Session;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Base H2 query info with commons for MAP, LOCAL, REDUCE queries.
@@ -37,6 +38,9 @@ import org.gridgain.internal.h2.engine.Session;
 public class H2QueryInfo {
     /** Query id assigned by {@link RunningQueryManager}. */
     private final Long runningQryId;
+
+    /** Query label specified by the user. */
+    private final String label;
 
     /** Type. */
     private final QueryType type;
@@ -65,18 +69,16 @@ public class H2QueryInfo {
     /** Originator node uid. */
     private final UUID node;
 
-    /** Query label. */
-    private final String label;
-
     /**
      * @param type Query type.
      * @param stmt Query statement.
      * @param sql Query statement.
      * @param node Originator node.
      * @param runningQryId Query id assigned by {@link RunningQueryManager}.
+     * @param label Query label specified by the user.
      */
     public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql, ClusterNode node,
-        Long runningQryId, String label) {
+        @Nullable Long runningQryId, @Nullable String label) {
         try {
             assert stmt != null;
             this.type = type;
@@ -130,7 +132,7 @@ public class H2QueryInfo {
     }
 
     /**
-     * @param type Query type.
+     * @return Query type.
      */
     public QueryType type() {
         return type;
