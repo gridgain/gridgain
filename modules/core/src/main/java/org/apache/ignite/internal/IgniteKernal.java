@@ -2277,7 +2277,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 .a("    ^-- Cluster [hosts=").a(hosts).a(", CPUs=").a(cpus).a(", servers=").a(servers)
                 .a(", clients=").a(clients).a(", topVer=").a(topVer.topologyVersion())
                 .a(", minorTopVer=").a(topVer.minorTopologyVersion()).a(", state=")
-                    .a(cluster().state().name()).a("]").nl()
+                    .a(ctx.state().clusterState().state().name()).a("]").nl()
                 .a("    ^-- Network [addrs=").a(locNode.addresses()).a(networkDetails).a("]").nl()
                 .a("    ^-- CPU [CPUs=").a(localCpus).a(", curLoad=").a(dblFmt.format(cpuLoadPct))
                 .a("%, avgLoad=").a(dblFmt.format(avgCpuLoadPct)).a("%, GC=").a(dblFmt.format(gcPct)).a("%]").nl()
