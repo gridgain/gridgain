@@ -217,9 +217,17 @@ public abstract class AbstractAffinityFunctionSelfTest extends GridCommonAbstrac
 
         for (int p = 0; p < olda.size(); p++) {
             List<ClusterNode> o = olda.get(p);
+            List<ClusterNode> n = newa.get(p);
 
-            for (ClusterNode newNode : newa.get(p)) {
+            for (ClusterNode newNode : n) {
                 if (!o.contains(newNode)) {
+                    res++;
+                }
+            }
+
+
+            for (ClusterNode oldNode : o) {
+                if (!n.contains(oldNode)) {
                     res++;
                 }
             }

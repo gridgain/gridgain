@@ -19,6 +19,6 @@ import org.apache.ignite.cache.affinity.fair.CachePartitionFairAffinity;
 
 public class FairFunctionSelfTest extends AbstractAffinityFunctionSelfTest {
     @Override protected AffinityFunction affinityFunction() {
-        return new CachePartitionFairAffinity(10000);
+        return new CachePartitionFairAffinity(32);
     }
 }
