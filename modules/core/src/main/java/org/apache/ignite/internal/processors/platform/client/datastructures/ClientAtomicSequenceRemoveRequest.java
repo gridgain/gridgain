@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,33 +16,32 @@
 
 package org.apache.ignite.internal.processors.platform.client.datastructures;
 
-import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
 /**
- * Gets or creates atomic long by name.
+ * Atomic sequence remove request.
  */
-public class ClientAtomicLongCreateRequest extends ClientAtomicCreateRequest {
+public class ClientAtomicSequenceRemoveRequest extends ClientAtomicSequenceRequest {
     /**
      * Constructor.
      *
      * @param reader Reader.
      */
-    public ClientAtomicLongCreateRequest(BinaryRawReader reader) {
+    public ClientAtomicSequenceRemoveRequest(BinaryRawReader reader) {
         super(reader);
     }
 
     /** {@inheritDoc} */
     @Override public ClientResponse process(ClientConnectionContext ctx) {
-        try {
-            ctx.kernalContext().dataStructures().atomicLong(name, atomicConfiguration, initVal, true);
+        IgniteAtomicSequence atomicSequence = atomicSequence(ctx);
 
-            return new ClientResponse(requestId());
-        }
-        catch (IgniteCheckedException e) {
-            return new ClientResponse(requestId(), e.getMessage());
-        }
+        // Same semantics as IgniteAtomicSequence - do nothing when does not exist.
+        if (atomicSequence != null)
+            atomicSequence.close();
+
+        return new ClientResponse(requestId());
     }
 }
