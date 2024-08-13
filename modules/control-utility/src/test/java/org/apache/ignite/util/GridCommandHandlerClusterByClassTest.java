@@ -1384,7 +1384,17 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     /** */
     @Test
-    public void testCacheClear() {
+    public void testCacheClear() throws IgniteCheckedException {
+        // Create some internal caches.
+        CacheConfiguration<Object, Object> internalCfg = new CacheConfiguration<>("temp-internal-cache");
+        crd.context().cache().dynamicStartCache(internalCfg, internalCfg.getName(), null, CacheType.INTERNAL, false,
+                true, true, false).get(getTestTimeout());
+        crd.countDownLatch("structure", 1, true, true);
+
+        long internalCachesCnt = crd.context().cache().cacheDescriptors().values().stream().filter(
+                desc -> desc.cacheType() == CacheType.INTERNAL || desc.cacheType() == CacheType.DATA_STRUCTURES).count();
+        assertTrue("Caches count: " + internalCachesCnt, internalCachesCnt >= 2);
+
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--cache", CLEAR.text()));
