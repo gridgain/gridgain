@@ -29,6 +29,9 @@ import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.JobContextResource;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /** Clears specified caches. */
 @GridInternal
 public class ClearCachesTask extends VisorOneNodeTask<ClearCachesTaskArg, ClearCachesTaskResult> {
@@ -54,6 +57,9 @@ public class ClearCachesTask extends VisorOneNodeTask<ClearCachesTaskArg, ClearC
         @JobContextResource
         private ComputeJobContext jobCtx;
 
+        private List<String> clearedCaches = new ArrayList<>();
+        private List<String> nonExistentCaches = new ArrayList<>();
+
         /** */
         private ClearCacheJob(ClearCachesTaskArg arg, boolean debug) {
             super(arg, debug);
@@ -66,9 +72,31 @@ public class ClearCachesTask extends VisorOneNodeTask<ClearCachesTaskArg, ClearC
 
                 for (String cache: arg.caches()) {
                     IgniteCache<?, ?> ignCache = ignite.cache(cache);
-                    GridFutureAdapter<?> fut = new GridFutureAdapter<>();
-                    ignCache.clearAsync().listen(asyncClearFut -> fut.onDone());
-                    opFut.add(fut);
+
+                    if (ignCache == null) {
+                        nonExistentCaches.add(cache);
+                        continue;
+                    }
+                    else {
+                        GridFutureAdapter<?> fut = new GridFutureAdapter<>();
+
+                        ignCache.clearAsync().listen(asyncClearFut -> {
+                            try {
+                                asyncClearFut.get();
+                            }
+                            catch (IgniteException e) {
+                                fut.onDone(e);
+
+                                return;
+                            }
+
+                            clearedCaches.add(cache);
+
+                            fut.onDone();
+                        });
+
+                        opFut.add(fut);
+                    }
                 }
 
                 jobCtx.holdcc();
@@ -82,7 +110,7 @@ public class ClearCachesTask extends VisorOneNodeTask<ClearCachesTaskArg, ClearC
 
             assert opFut.isDone();
 
-            return new ClearCachesTaskResult();
+            return new ClearCachesTaskResult(clearedCaches, nonExistentCaches);
         }
     }
 }
