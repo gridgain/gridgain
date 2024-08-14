@@ -1397,11 +1397,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         autoConfirmation = false;
 
-        String expConfirmation = String.format(CacheClear.CONFIRM_MSG, 2, DEFAULT_CACHE_NAME+ ", " + DEFAULT_CACHE_NAME + "1");
+        String expConfirmation = String.format(CacheClear.CONFIRM_MSG, 2, DEFAULT_CACHE_NAME + ", " + DEFAULT_CACHE_NAME + "1");
 
         // Ensure we cannot delete a cache groups.
         injectTestSystemIn(CONFIRM_MSG);
-        assertEquals(EXIT_CODE_OK, execute("--cache", CLEAR.text(), CacheClear.CACHES, DEFAULT_CACHE_NAME+ "," + DEFAULT_CACHE_NAME + "1"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", CLEAR.text(), CacheClear.CACHES, DEFAULT_CACHE_NAME + "," + DEFAULT_CACHE_NAME + "1"));
         assertContains(log, testOut.toString(), expConfirmation);
 
         autoConfirmation = true;
@@ -1412,8 +1412,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
             for (String cache: caches)
                 checkCacheClearCommand(caches, F.asList(cache), sql);
 
-            checkCacheClearCommand(caches, F.asList(DEFAULT_CACHE_NAME, DEFAULT_CACHE_NAME+"1"), sql);
-            checkCacheClearCommand(caches, F.asList(DEFAULT_CACHE_NAME, DEFAULT_CACHE_NAME+"1", DEFAULT_CACHE_NAME+"2"), sql);
+            checkCacheClearCommand(caches, F.asList(DEFAULT_CACHE_NAME, DEFAULT_CACHE_NAME + "1"), sql);
+            checkCacheClearCommand(caches, F.asList(DEFAULT_CACHE_NAME, DEFAULT_CACHE_NAME + "1", DEFAULT_CACHE_NAME + "2"), sql);
             checkCacheClearCommand(caches, F.asList("cacheX"), sql);
             checkCacheClearCommand(caches, F.asList("cacheX", DEFAULT_CACHE_NAME), sql);
         }
