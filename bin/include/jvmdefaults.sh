@@ -62,6 +62,7 @@ getJavaSpecificOpts() {
           --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
           --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
           --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
+          --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
           --add-opens=java.base/java.io=ALL-UNNAMED \
           --add-opens=java.base/java.net=ALL-UNNAMED \
           --add-opens=java.base/java.nio=ALL-UNNAMED \
