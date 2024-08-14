@@ -62,6 +62,7 @@ import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.IgniteSQLMapStepException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.H2FieldsIterator;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
@@ -341,6 +342,8 @@ public class GridReduceQueryExecutor {
 
     /**
      * @param schemaName Schema name.
+     * @param qryId Query id assigned by {@link RunningQueryManager}.
+     * @param label Query label.
      * @param qry Query.
      * @param keepBinary Keep binary.
      * @param enforceJoinOrder Enforce join order of tables.
@@ -357,7 +360,7 @@ public class GridReduceQueryExecutor {
      */
     public Iterator<List<?>> query(
         @Nullable final Long qryId,
-        String label,
+        @Nullable String label,
         String schemaName,
         final GridCacheTwoStepQuery qry,
         boolean keepBinary,

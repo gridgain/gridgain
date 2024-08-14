@@ -194,11 +194,12 @@ public class RunningQueryManager {
      * @param enforceJoinOrder Enforce join order flag.
      * @param lazy Lazy flag.
      * @param distributedJoins Distributed joins flag.
+     * @param label Query label.
      * @return Id of registered query.
      */
     public Long register(String qry, GridCacheQueryType qryType, String schemaName, boolean loc,
         @Nullable GridQueryMemoryMetricProvider memTracker, @Nullable GridQueryCancel cancel,
-        String qryInitiatorId, boolean enforceJoinOrder, boolean lazy, boolean distributedJoins, String label) {
+        String qryInitiatorId, boolean enforceJoinOrder, boolean lazy, boolean distributedJoins, @Nullable String label) {
         long qryId = qryIdGen.incrementAndGet();
 
         if (qryInitiatorId == null)

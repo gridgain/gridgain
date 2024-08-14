@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.util.Objects;
+import org.jetbrains.annotations.Nullable;
+
 /**
  * Key for cached two-step query.
  */
@@ -47,6 +50,7 @@ public class QueryDescriptor {
     /** Query initiator identifier. */
     private final String qryInitiatorId;
 
+    /** Query label. */
     private final String label;
 
     /**
@@ -58,6 +62,7 @@ public class QueryDescriptor {
      * @param loc Query is local flag.
      * @param skipReducerOnUpdate Skip reducer on update flag.
      * @param batched Batched flag.
+     * @param label Query label.
      */
     QueryDescriptor(
         String schemaName,
@@ -69,7 +74,7 @@ public class QueryDescriptor {
         boolean skipReducerOnUpdate,
         boolean batched,
         String qryInitiatorId,
-        String label
+        @Nullable String label
     ) {
         this.schemaName = schemaName;
         this.sql = sql;
@@ -125,6 +130,9 @@ public class QueryDescriptor {
         return loc;
     }
 
+    /**
+     * @return Query label.
+     */
     public String label() {
         return label;
     }
@@ -179,6 +187,9 @@ public class QueryDescriptor {
         if (schemaName != null ? !schemaName.equals(that.schemaName) : that.schemaName != null)
             return false;
 
+        if (!Objects.equals(label, that.label))
+            return false;
+
         return loc == that.loc && sql.equals(that.sql);
     }
 
@@ -195,6 +206,7 @@ public class QueryDescriptor {
         res = res + (loc ? 8 : 0);
         res = res + (skipReducerOnUpdate ? 16 : 0);
         res = res + (batched ? 32 : 0);
+        res = res + (label != null ? label.hashCode() : 0);
 
         return res;
     }

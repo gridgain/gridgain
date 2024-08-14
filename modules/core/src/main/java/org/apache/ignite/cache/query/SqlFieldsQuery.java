@@ -338,6 +338,9 @@ public class SqlFieldsQuery extends Query<List<?>> {
 
     /**
      * Sets query label.
+     * <p>
+     * The specified label can be used to identify the running query in system views
+     * and in the log when printing warnings about long-running queries.
      *
      * @param label Query label.
      * @return {@code this} for chaining.

@@ -34,7 +34,7 @@ public class ReduceH2QueryInfo extends H2QueryInfo {
      * @param node Originator node.
      * @param reqId Request ID.
      * @param runningQryId Query id assigned by {@link RunningQueryManager}.
-     * @param label Query label specified by the user.
+     * @param label Query label.
      */
     public ReduceH2QueryInfo(PreparedStatement stmt, String sql, ClusterNode node, long reqId,
         @Nullable Long runningQryId, @Nullable String label) {

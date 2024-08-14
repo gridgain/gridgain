@@ -39,7 +39,7 @@ public class H2QueryInfo {
     /** Query id assigned by {@link RunningQueryManager}. */
     private final Long runningQryId;
 
-    /** Query label specified by the user. */
+    /** Query label. */
     private final String label;
 
     /** Type. */
@@ -75,7 +75,7 @@ public class H2QueryInfo {
      * @param sql Query statement.
      * @param node Originator node.
      * @param runningQryId Query id assigned by {@link RunningQueryManager}.
-     * @param label Query label specified by the user.
+     * @param label Query label.
      */
     public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql, ClusterNode node,
         @Nullable Long runningQryId, @Nullable String label) {

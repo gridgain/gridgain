@@ -72,7 +72,7 @@ public enum ProtocolBitmaskFeature {
     /** IndexQuery limit. */
     INDEX_QUERY_LIMIT(15),
 
-    /** Custom query label specified by the user. */
+    /** Custom Query label. */
     QRY_LABEL(16),
 
     /** Cache plugin configurations. GG-specific, use higher id to avoid conflicts. */

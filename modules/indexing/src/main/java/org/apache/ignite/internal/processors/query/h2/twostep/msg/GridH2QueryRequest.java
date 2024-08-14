@@ -107,9 +107,6 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     private long reqId;
 
     /** */
-    private String label;
-
-    /** */
     @GridToStringInclude
     @GridDirectCollection(Integer.class)
     private List<Integer> caches;
@@ -167,6 +164,9 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
     /** Id of the query assigned by {@link RunningQueryManager}. */
     private Long runningQryId;
+
+    /** Query label. */
+    private String label;
 
     /** */
     private boolean explicitTimeout;
@@ -275,16 +275,6 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
      */
     public long requestId() {
         return reqId;
-    }
-
-    public String label() {
-        return label;
-    }
-
-    public GridH2QueryRequest label(String label) {
-        this.label = label;
-
-        return this;
     }
 
     /**
@@ -562,6 +552,25 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
      */
     public GridH2QueryRequest runningQryId(Long runningQryId) {
         this.runningQryId = runningQryId;
+
+        return this;
+    }
+
+    /**
+     * @return Query label.
+     */
+    public String label() {
+        return label;
+    }
+
+    /**
+     * Sets query label.
+     *
+     * @param label Query label.
+     * @return {@code this} for chaining.
+     */
+    public GridH2QueryRequest label(String label) {
+        this.label = label;
 
         return this;
     }
