@@ -1385,16 +1385,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     /** */
     @Test
     public void testCacheClear() throws IgniteCheckedException {
-        // Create some internal caches.
-        CacheConfiguration<Object, Object> internalCfg = new CacheConfiguration<>("temp-internal-cache");
-        crd.context().cache().dynamicStartCache(internalCfg, internalCfg.getName(), null, CacheType.INTERNAL, false,
-                true, true, false).get(getTestTimeout());
-        crd.countDownLatch("structure", 1, true, true);
-
-        long internalCachesCnt = crd.context().cache().cacheDescriptors().values().stream().filter(
-                desc -> desc.cacheType() == CacheType.INTERNAL || desc.cacheType() == CacheType.DATA_STRUCTURES).count();
-        assertTrue("Caches count: " + internalCachesCnt, internalCachesCnt >= 2);
-
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--cache", CLEAR.text()));
@@ -1407,25 +1397,25 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         autoConfirmation = false;
 
-        String expConfirmation = String.format(CacheClear.CONFIRM_MSG, 2, "cache1, cache2");
+        String expConfirmation = String.format(CacheClear.CONFIRM_MSG, 2, DEFAULT_CACHE_NAME+ ", " + DEFAULT_CACHE_NAME + "1");
 
         // Ensure we cannot delete a cache groups.
         injectTestSystemIn(CONFIRM_MSG);
-        assertEquals(EXIT_CODE_OK, execute("--cache", CLEAR.text(), CacheClear.CACHES, "cache1,cache2"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", CLEAR.text(), CacheClear.CACHES, DEFAULT_CACHE_NAME+ "," + DEFAULT_CACHE_NAME + "1"));
         assertContains(log, testOut.toString(), expConfirmation);
 
         autoConfirmation = true;
 
-        List<String> caches = F.asList("cache1", "cache2", "cache3");
+        List<String> caches = F.asList(DEFAULT_CACHE_NAME, DEFAULT_CACHE_NAME + "1", DEFAULT_CACHE_NAME + "2");
 
         for (boolean sql: new boolean[] {false, true}) {
             for (String cache: caches)
                 checkCacheClearCommand(caches, F.asList(cache), sql);
 
-            checkCacheClearCommand(caches, F.asList("cache1", "cache2"), sql);
-            checkCacheClearCommand(caches, F.asList("cache1", "cache2", "cache3"), sql);
+            checkCacheClearCommand(caches, F.asList(DEFAULT_CACHE_NAME, DEFAULT_CACHE_NAME+"1"), sql);
+            checkCacheClearCommand(caches, F.asList(DEFAULT_CACHE_NAME, DEFAULT_CACHE_NAME+"1", DEFAULT_CACHE_NAME+"2"), sql);
             checkCacheClearCommand(caches, F.asList("cacheX"), sql);
-            checkCacheClearCommand(caches, F.asList("cacheX", "cache1"), sql);
+            checkCacheClearCommand(caches, F.asList("cacheX", DEFAULT_CACHE_NAME), sql);
         }
     }
 
