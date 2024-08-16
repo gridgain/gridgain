@@ -29,6 +29,7 @@ import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 @WithSystemProperty(key = IgniteSystemProperties.IGNITE_MARSHAL_BUFFERS_RECHECK, value = "500")
 public class BinaryMemoryAllocatorTest extends GridCommonAbstractTest {
     private static final int SMALL_OBJECT_SIZE = 1024;
+
     private static final int LARGE_OBJECT_SIZE = 8 * 1024;
 
     /**
