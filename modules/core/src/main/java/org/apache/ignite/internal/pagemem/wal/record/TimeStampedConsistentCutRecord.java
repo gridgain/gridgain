@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.pagemem.wal.record;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
@@ -39,5 +40,9 @@ public class TimeStampedConsistentCutRecord extends TimeStampRecord {
     /** {@inheritDoc} */
     @Override public RecordType type() {
         return RecordType.TIME_STAMPED_CONSISTENT_CUT;
+    }
+
+    @Override public String toString() {
+        return S.toString(TimeStampedConsistentCutRecord.class, this, "super", super.toString());
     }
 }
