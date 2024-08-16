@@ -18,7 +18,6 @@ package org.apache.ignite.internal.binary.streams;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
-
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -56,6 +55,8 @@ public abstract class BinaryMemoryAllocator {
 
     /** */
     private static class ThreadLocalAllocator extends BinaryMemoryAllocator {
+        static final int MIN_BUFFER_SIZE = 128;
+
         /** Holders. */
         private final ThreadLocal<BinaryMemoryAllocatorChunk> holders = new ThreadLocal<>();
 
@@ -107,6 +108,9 @@ public abstract class BinaryMemoryAllocator {
                 if (data == null || size > data.length)
                     data = new byte[size];
 
+                if (U.nanosToMillis(System.nanoTime() - lastCheckNanos) >= CHECK_FREQ)
+                    maxMsgSize = 0; // Reset outdated metric.
+
                 return data;
             }
 
@@ -123,21 +127,27 @@ public abstract class BinaryMemoryAllocator {
             }
 
             /** {@inheritDoc} */
-            @Override public void release(byte[] data, int maxMsgSize) {
+            @Override public void release(byte[] data, int msgSize) {
                 if (this.data != data)
                     return;
 
-                if (maxMsgSize > this.maxMsgSize)
-                    this.maxMsgSize = maxMsgSize;
-
                 acquired = false;
+
+                if (msgSize > this.maxMsgSize)
+                    this.maxMsgSize = msgSize;
+
+                if (msgSize > (data.length >> 1)) {
+                    lastCheckNanos = System.nanoTime();
+
+                    return;
+                }
 
                 long nowNanos = System.nanoTime();
 
                 if (U.nanosToMillis(nowNanos - lastCheckNanos) >= CHECK_FREQ) {
                     int halfSize = data.length >> 1;
 
-                    if (this.maxMsgSize < halfSize)
+                    if (halfSize >= MIN_BUFFER_SIZE)
                         this.data = new byte[halfSize];
 
                     lastCheckNanos = nowNanos;
