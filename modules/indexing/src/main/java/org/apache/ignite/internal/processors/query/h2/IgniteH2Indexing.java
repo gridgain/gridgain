@@ -3329,7 +3329,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             // in WHERE condition because it may be cause of update one entry several times
             // (when index for such columns is selected for scan):
             // e.g. : UPDATE test SET val = val + 1 WHERE val >= ?
-            .setLazy(qryParams.lazy() && plan.canSelectBeLazy());
+            .setLazy(qryParams.lazy() && plan.canSelectBeLazy())
+            .setLabel(qryDesc.label());
 
         Iterable<List<?>> cur;
 

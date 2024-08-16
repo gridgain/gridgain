@@ -183,6 +183,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
      */
     public GridH2QueryRequest(GridH2QueryRequest req) {
         reqId = req.reqId;
+        label = req.label;
         caches = req.caches;
         topVer = req.topVer;
         parts = req.parts;
