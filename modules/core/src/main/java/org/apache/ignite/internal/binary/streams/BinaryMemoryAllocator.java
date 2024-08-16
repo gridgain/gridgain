@@ -89,9 +89,6 @@ public abstract class BinaryMemoryAllocator {
             /** Data array */
             private byte[] data;
 
-            /** Max message size detected between checks. */
-            private int maxMsgSize;
-
             /** Last time array size is checked. */
             private long lastCheckNanos = System.nanoTime();
 
@@ -107,9 +104,6 @@ public abstract class BinaryMemoryAllocator {
 
                 if (data == null || size > data.length)
                     data = new byte[size];
-
-                if (U.nanosToMillis(System.nanoTime() - lastCheckNanos) >= CHECK_FREQ)
-                    maxMsgSize = 0; // Reset outdated metric.
 
                 return data;
             }
@@ -132,9 +126,6 @@ public abstract class BinaryMemoryAllocator {
                     return;
 
                 acquired = false;
-
-                if (msgSize > this.maxMsgSize)
-                    this.maxMsgSize = msgSize;
 
                 if (msgSize > (data.length >> 1)) {
                     lastCheckNanos = System.nanoTime();
