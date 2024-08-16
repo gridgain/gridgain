@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.util.Objects;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -187,9 +186,6 @@ public class QueryDescriptor {
         if (schemaName != null ? !schemaName.equals(that.schemaName) : that.schemaName != null)
             return false;
 
-        if (!Objects.equals(label, that.label))
-            return false;
-
         return loc == that.loc && sql.equals(that.sql);
     }
 
@@ -206,7 +202,6 @@ public class QueryDescriptor {
         res = res + (loc ? 8 : 0);
         res = res + (skipReducerOnUpdate ? 16 : 0);
         res = res + (batched ? 32 : 0);
-        res = res + (label != null ? label.hashCode() : 0);
 
         return res;
     }
