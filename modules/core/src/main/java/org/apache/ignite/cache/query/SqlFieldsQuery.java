@@ -23,6 +23,7 @@ import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * SQL Fields query. This query can return specific fields of data based
@@ -108,7 +109,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
     private boolean skipReducerOnUpdate;
 
     /** Query label. */
-    private String label;
+    private @Nullable String label;
 
     /**
      * Copy constructs SQL fields query.
@@ -330,9 +331,9 @@ public class SqlFieldsQuery extends Query<List<?>> {
     /**
      * Gets query label.
      *
-     * @return Query label.
+     * @return Query label, or {@code null} if not set.
      */
-    public String getLabel() {
+    public @Nullable String getLabel() {
         return label;
     }
 
@@ -342,10 +343,10 @@ public class SqlFieldsQuery extends Query<List<?>> {
      * The specified label can be used to identify the running query in system views
      * and in the log when printing warnings about long-running queries.
      *
-     * @param label Query label.
+     * @param label Query label, or {@code null} to unset.
      * @return {@code this} for chaining.
      */
-    public SqlFieldsQuery setLabel(String label) {
+    public SqlFieldsQuery setLabel(@Nullable String label) {
         this.label = label;
 
         return this;
