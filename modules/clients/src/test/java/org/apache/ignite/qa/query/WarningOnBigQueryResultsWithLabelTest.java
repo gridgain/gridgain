@@ -24,8 +24,4 @@ public class WarningOnBigQueryResultsWithLabelTest extends WarningOnBigQueryLazy
     @Override protected String label() {
         return "test-label";
     }
-
-    @Override public void testQueryCacheTest0() throws Exception {
-        super.testQueryCacheTest0();
-    }
 }
