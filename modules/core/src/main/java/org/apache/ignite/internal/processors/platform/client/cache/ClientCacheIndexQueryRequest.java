@@ -95,6 +95,7 @@ public class ClientCacheIndexQueryRequest extends ClientCacheRequest {
 
         qry.setPageSize(pageSize);
         qry.setLocal(loc);
+        qry.setLabel(label);
 
         if (part >= 0)
             qry.setPartition(part);
@@ -107,9 +108,6 @@ public class ClientCacheIndexQueryRequest extends ClientCacheRequest {
 
         if (limit > 0)
             qry.setLimit(limit);
-
-        if (label != null)
-            qry.setLabel(label);
     }
 
     /** */
