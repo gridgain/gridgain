@@ -50,7 +50,7 @@ public class QueryDescriptor {
     private final String qryInitiatorId;
 
     /** Query label. */
-    private final String label;
+    private final @Nullable String label;
 
     /**
      * @param schemaName Schema name.
@@ -130,9 +130,9 @@ public class QueryDescriptor {
     }
 
     /**
-     * @return Query label.
+     * @return Query label, or {@code null} if not set.
      */
-    public String label() {
+    public @Nullable String label() {
         return label;
     }
 

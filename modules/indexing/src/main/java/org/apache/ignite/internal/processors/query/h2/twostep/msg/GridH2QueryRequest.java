@@ -166,7 +166,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     private Long runningQryId;
 
     /** Query label. */
-    private String label;
+    private @Nullable String label;
 
     /** */
     private boolean explicitTimeout;
@@ -558,9 +558,9 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     }
 
     /**
-     * @return Query label.
+     * @return Query label, or {@code null} if not set.
      */
-    public String label() {
+    public @Nullable String label() {
         return label;
     }
 
@@ -570,7 +570,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
      * @param label Query label.
      * @return {@code this} for chaining.
      */
-    public GridH2QueryRequest label(String label) {
+    public GridH2QueryRequest label(@Nullable String label) {
         this.label = label;
 
         return this;
