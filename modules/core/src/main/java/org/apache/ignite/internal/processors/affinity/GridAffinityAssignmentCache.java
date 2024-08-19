@@ -16,20 +16,6 @@
 
 package org.apache.ignite.internal.processors.affinity;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -53,6 +39,22 @@ import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MIN_AFFINITY_HISTORY_SIZE;
@@ -244,6 +246,8 @@ public class GridAffinityAssignmentCache {
         GridAffinityAssignmentV2 assignment = new GridAffinityAssignmentV2(topVer, affAssignment, idealAssignment.assignment());
 
         HistoryAffinityAssignmentImpl newHistEntry = new HistoryAffinityAssignmentImpl(assignment, backups);
+
+        printAssignment("Initialize assignment ", topVer, newHistEntry.assignment());
 
         HistoryAffinityAssignment existing = affCache.put(topVer, newHistEntry);
 
@@ -453,7 +457,25 @@ public class GridAffinityAssignmentCache {
         if (locCache)
             initialize(topVer, assignment.assignment());
 
+        printAssignment("Calculate assignment ", topVer, assignment.assignment());
+
         return assignment;
+    }
+
+    private void printAssignment(String msg, AffinityTopologyVersion topVer, List<List<ClusterNode>> assignment) {
+        if (log.isInfoEnabled() && assignment != null) {
+            LinkedHashMap<String, ArrayList<Integer>> assignmentToPrint = new LinkedHashMap<>();
+
+            for (int i = 0; i < partsCnt; i++) {
+                for (ClusterNode node : assignment.get(i)) {
+                    assignmentToPrint.computeIfAbsent(node.consistentId().toString(), s -> new ArrayList<>()).add(i);
+                }
+            }
+
+            log.info("DBG: " + msg + "[name=" + cacheOrGrpName +
+                    ", top=" + topVer +
+                    ", assignment=" + assignmentToPrint + ']');
+        }
     }
 
     /**
