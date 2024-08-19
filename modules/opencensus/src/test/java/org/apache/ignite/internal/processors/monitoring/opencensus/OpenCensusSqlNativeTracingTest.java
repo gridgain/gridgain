@@ -807,26 +807,23 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
 
         checkDroppedSpans();
 
+        ImmutableMap.Builder<String, String> expAttrsBuilder = ImmutableMap.<String, String>builder()
+            .put(NODE_ID, reducer().localNode().id().toString())
+            .put(tag(NODE, CONSISTENT_ID), reducer().localNode().consistentId().toString())
+            .put(tag(NODE, NAME), reducer().name())
+            .put(SQL_QRY_TEXT, sql)
+            .put(SQL_SCHEMA, schema);
+
+        if (queryLabelSupported())
+            expAttrsBuilder.put(SQL_QRY_LABEL, TEST_LABEL);
+
         return checkSpan(
             SQL_QRY,
             null,
             1,
-            putLabelIfNeeded(ImmutableMap.<String, String>builder()
-                .put(NODE_ID, reducer().localNode().id().toString())
-                .put(tag(NODE, CONSISTENT_ID), reducer().localNode().consistentId().toString())
-                .put(tag(NODE, NAME), reducer().name())
-                .put(SQL_QRY_TEXT, sql)
-                .put(SQL_SCHEMA, schema))
-                .build(),
+            expAttrsBuilder.build(),
             CheckAttributes.CONTAINS
         ).get(0);
-    }
-
-    private ImmutableMap.Builder<String, String> putLabelIfNeeded(ImmutableMap.Builder<String, String> builder) {
-        if (queryLabelSupported())
-            builder.put(SQL_QRY_LABEL, TEST_LABEL);
-
-        return builder;
     }
 
     /**
