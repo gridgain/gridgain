@@ -225,6 +225,9 @@ public final class IndexQuery<K, V> extends Query<Cache.Entry<K, V>> {
 
     /**
      * Sets query label.
+     * <p>
+     * The specified label can be used to identify the running query in system views
+     * and in the log when printing warnings about long-running queries.
      *
      * @param label Query label, or {@code null} to unset.
      * @return {@code this} for chaining.
