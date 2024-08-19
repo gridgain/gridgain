@@ -37,10 +37,10 @@ import org.jetbrains.annotations.Nullable;
  */
 public class H2QueryInfo {
     /** Query id assigned by {@link RunningQueryManager}. */
-    private final Long runningQryId;
+    private final @Nullable Long runningQryId;
 
     /** Query label. */
-    private final String label;
+    private final @Nullable String label;
 
     /** Type. */
     private final QueryType type;
