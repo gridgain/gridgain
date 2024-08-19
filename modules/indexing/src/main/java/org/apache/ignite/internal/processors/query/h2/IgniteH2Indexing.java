@@ -239,6 +239,7 @@ import static org.apache.ignite.internal.processors.query.h2.H2Utils.validateTyp
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.zeroCursor;
 import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.parseMaintenanceTaskParameters;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.ERROR;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_LABEL;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_TEXT;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_SCHEMA;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_CMD_QRY_EXECUTE;
@@ -1234,6 +1235,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         try {
             List<FieldsQueryCursor<List<?>>> res = new ArrayList<>(1);
 
+            String label = qry.getLabel();
+
             SqlFieldsQuery remainingQry = qry;
 
             if (!failOnMultipleStmts) {
@@ -1243,6 +1246,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             while (remainingQry != null) {
                 Span qrySpan = ctx.tracing().create(SQL_QRY, MTC.span())
                     .addTag(SQL_SCHEMA, () -> schemaName);
+
+                if (label != null)
+                    qrySpan.addTag(SQL_QRY_LABEL, () -> label);
 
                 try (TraceSurroundings ignored = MTC.supportContinual(qrySpan)) {
                     // Parse.
