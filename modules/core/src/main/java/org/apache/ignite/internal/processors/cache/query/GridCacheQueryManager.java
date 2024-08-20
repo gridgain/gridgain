@@ -2883,7 +2883,6 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
             null);
     }
 
-
     /**
      * Creates user's vector query, queried class, and query clause. For more information refer to {@link CacheQuery}
      * documentation.
