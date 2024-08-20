@@ -2120,8 +2120,10 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         if (F.isEmpty(drMap))
             return;
 
-        for (KeyCacheObject keyCacheObject : drMap.keySet()) {
-            log.debug("PutAllConflict invoked for the key = " + keyCacheObject.value(ctx.cacheObjectContext(), false));
+        if (log.isDebugEnabled()) {
+            for (KeyCacheObject keyCacheObject : drMap.keySet()) {
+                log.debug("PutAllConflict invoked for the key = " + keyCacheObject.value(ctx.cacheObjectContext(), false));
+            }
         }
 
         syncOp(new SyncInOp(drMap.size() == 1) {
