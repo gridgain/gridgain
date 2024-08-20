@@ -468,7 +468,8 @@ public class GridAffinityAssignmentCache {
 
             for (int i = 0; i < partsCnt; i++) {
                 for (ClusterNode node : assignment.get(i)) {
-                    assignmentToPrint.computeIfAbsent(node.consistentId().toString(), s -> new ArrayList<>()).add(i);
+                    assignmentToPrint.computeIfAbsent(node.consistentId().toString() +
+                            '(' + node.attributes().get("AVAILABILITY_ZONE") + ')', s -> new ArrayList<>()).add(i);
                 }
             }
 
