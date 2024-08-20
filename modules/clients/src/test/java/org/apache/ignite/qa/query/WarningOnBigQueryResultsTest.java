@@ -25,6 +25,7 @@ import java.util.List;
 import javax.management.InvalidAttributeValueException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.cache.query.IndexQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.configuration.ClientConfiguration;
@@ -33,6 +34,10 @@ import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
+
+import static org.apache.ignite.cache.query.SqlFieldsQuery.DFLT_LAZY;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assume.assumeThat;
 
 /**
  * Tests for log print for long running query.
@@ -58,6 +63,13 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
     }
 
     /**
+     * @return Query label.
+     */
+    protected String label() {
+        return null;
+    }
+
+    /**
      */
     @Test
     public void testDisableWarning() throws Exception {
@@ -67,9 +79,8 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
         setBigResultThreshold(grid(3), 0, 0);
 
         assertEquals(KEYS_PER_NODE * 2,
-            grid("cli").context().query().querySqlFields(new SqlFieldsQueryEx("SELECT * FROM TEST0", true)
-                    .setSchema("TEST0")
-                    .setLazy(lazy()),
+            grid("cli").context().query().querySqlFields(sqlFieldsQuery("SELECT * FROM TEST0")
+                    .setSchema("TEST0"),
                 false).getAll().size());
 
         assertEquals(0, listener(grid(0)).messageCount());
@@ -78,9 +89,8 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
         assertEquals(0, listener(grid(3)).messageCount());
 
         assertEquals(KEYS_PER_NODE * 2,
-            grid("cli").context().query().querySqlFields(new SqlFieldsQueryEx("SELECT * FROM TEST1", true)
-                    .setSchema("TEST1")
-                    .setLazy(lazy()),
+            grid("cli").context().query().querySqlFields(sqlFieldsQuery("SELECT * FROM TEST1")
+                    .setSchema("TEST1"),
             false).getAll().size());
 
         assertEquals(0, listener(grid(0)).messageCount());
@@ -94,9 +104,8 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
         setBigResultThreshold(grid(3), -1, -1);
 
         assertEquals(KEYS_PER_NODE * 2,
-            grid("cli").context().query().querySqlFields(new SqlFieldsQueryEx("SELECT * FROM TEST0", true)
-                    .setSchema("TEST0")
-                    .setLazy(lazy()),
+            grid("cli").context().query().querySqlFields(sqlFieldsQuery("SELECT * FROM TEST0")
+                    .setSchema("TEST0"),
         false).getAll().size());
 
         assertEquals(0, listener(grid(0)).messageCount());
@@ -105,9 +114,8 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
         assertEquals(0, listener(grid(3)).messageCount());
 
         assertEquals(KEYS_PER_NODE * 2,
-            grid("cli").context().query().querySqlFields(new SqlFieldsQueryEx("SELECT * FROM TEST1", true)
-                    .setSchema("TEST1")
-                    .setLazy(lazy()),
+            grid("cli").context().query().querySqlFields(sqlFieldsQuery("SELECT * FROM TEST1")
+                    .setSchema("TEST1"),
                 false).getAll().size());
 
         assertEquals(0, listener(grid(0)).messageCount());
@@ -122,9 +130,8 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
     public void testQueryCacheTest0() throws Exception {
         assertEquals(KEYS_PER_NODE * 2,
             grid("cli").context().query().querySqlFields(
-                new SqlFieldsQueryEx("SELECT * FROM TEST0 ORDER BY val DESC", true)
-                    .setSchema("TEST0")
-                    .setLazy(lazy()),
+                sqlFieldsQuery("SELECT * FROM TEST0 ORDER BY val DESC")
+                    .setSchema("TEST0"),
                 false).getAll().size());
 
         assertEquals(6, listener(grid("cli")).messageCount());
@@ -134,6 +141,7 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
 
         assertEquals("REDUCE", listener(grid("cli")).type);
         assertEquals("TEST0", listener(grid("cli")).schema);
+        assertEquals(label(), listener(grid("cli")).label);
 
         assertFalse(listener(grid("cli")).enforceJoinOrder);
         assertFalse(listener(grid("cli")).distributedJoin);
@@ -146,13 +154,16 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
      */
     @Test
     public void testQueryInsideCompute() throws Exception {
+        String label = label();
+
         List<List<?>> res = grid("cli").compute(grid("cli").cluster().forNode(grid(0).localNode())).call(
             new IgniteCallable<List<List<?>>>() {
                 @IgniteInstanceResource
                 Ignite ign;
 
                 @Override public List<List<?>> call() throws Exception {
-                    return ign.cache("test0").query(new SqlFieldsQuery("SELECT * FROM TEST0").setLazy(lazy())).getAll();
+                    return ign.cache("test0").query(new SqlFieldsQuery("SELECT * FROM TEST0")
+                        .setLabel(label).setLazy(lazy())).getAll();
                 }
             });
 
@@ -166,9 +177,8 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
     @Test
     public void testQueryCacheTest1() throws Exception {
         assertEquals(KEYS_PER_NODE * 2,
-            grid("cli").context().query().querySqlFields(new SqlFieldsQueryEx("SELECT * FROM TEST1", true)
+            grid("cli").context().query().querySqlFields(sqlFieldsQuery("SELECT * FROM TEST1")
                     .setSchema("TEST1")
-                    .setLazy(lazy())
                     .setEnforceJoinOrder(true),
                 false).getAll().size());
 
@@ -197,6 +207,9 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
 
         assertEquals(lazy(), listener(grid(2)).lazy);
         assertEquals(lazy(), listener(grid(3)).lazy);
+
+        assertEquals(label(), listener(grid(2)).label);
+        assertEquals(label(), listener(grid(3)).label);
     }
 
     /**
@@ -216,11 +229,27 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
     /**
      */
     @Test
-    public void testThinClient() throws Exception {
+    public void testThinClient() {
         try (IgniteClient cli = Ignition.startClient(new ClientConfiguration().setAddresses(THIN_CLI_ADDR))) {
-            assertEquals(KEYS_PER_NODE * 2, cli.query(new SqlFieldsQueryEx("SELECT * FROM TEST0", true)
-                .setLazy(lazy())
+            assertEquals(KEYS_PER_NODE * 2, cli.query(sqlFieldsQuery("SELECT * FROM TEST0")
                 .setSchema("TEST0")).getAll().size());
+
+            checkStateAfterQuery0("TEST0");
+        }
+    }
+
+    /**
+     */
+    @Test
+    public void testThinClientIndexQuery() {
+        assumeThat("Lazy mode is not configurable in index queries", lazy(), is(DFLT_LAZY));
+
+        try (IgniteClient cli = Ignition.startClient(new ClientConfiguration().setAddresses(THIN_CLI_ADDR))) {
+            List<?> res = cli.cache(CACHE0).query(
+                new IndexQuery<>(Long.class).setLabel(label())
+            ).getAll();
+
+            assertEquals(KEYS_PER_NODE * 2, res.size());
 
             checkStateAfterQuery0("TEST0");
         }
@@ -278,6 +307,13 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
             grid(0), "SQL Query", "SqlQueryMXBeanImpl", "ResultSetSizeThresholdMultiplier"));
     }
 
+    /** Returns {@link SqlFieldsQuery} with test parameters. */
+    private SqlFieldsQuery sqlFieldsQuery(String sql) {
+        return new SqlFieldsQueryEx(sql, true)
+            .setLazy(lazy())
+            .setLabel(label());
+    }
+
     /**
      */
     void checkJdbc(String url) throws Exception {
@@ -294,7 +330,7 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
 
                     assertEquals(KEYS_PER_NODE * 2, cnt);
 
-                    checkStateAfterQuery0("PUBLIC");
+                    checkStateAfterQuery0("PUBLIC", false);
                 }
             }
         }
@@ -303,6 +339,12 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
     /**
      */
     private void checkStateAfterQuery0(String schema) {
+        checkStateAfterQuery0(schema, true);
+    }
+
+    /**
+     */
+    private void checkStateAfterQuery0(String schema, boolean checkLabel) {
         assertEquals(6, listener(grid(0)).messageCount());
         assertEquals(7, listener(grid(1)).messageCount());
         assertEquals(0, listener(grid(2)).messageCount());
@@ -328,5 +370,10 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
 
         assertEquals(lazy(), listener(grid(0)).lazy);
         assertEquals(lazy(), listener(grid(1)).lazy);
+
+        if (checkLabel) {
+            assertEquals(label(), listener(grid(0)).label);
+            assertEquals(label(), listener(grid(1)).label);
+        }
     }
 }

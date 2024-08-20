@@ -69,6 +69,9 @@ public class QueryParserMetricsHolderSelfTest extends GridCommonAbstractTest {
 
         cache.query(new SqlFieldsQuery("SELECT * FROM tbl_hits"));
         Assert.assertEquals(10, hits.value());
+
+        cache.query(new SqlFieldsQuery("SELECT * FROM tbl_hits").setLabel("test-label"));
+        Assert.assertEquals(11, hits.value());
     }
 
     /**
@@ -91,6 +94,9 @@ public class QueryParserMetricsHolderSelfTest extends GridCommonAbstractTest {
         Assert.assertEquals(3, misses.value());
 
         cache.query(new SqlFieldsQuery("SELECT * FROM tbl_misses"));
+        Assert.assertEquals(3, misses.value());
+
+        cache.query(new SqlFieldsQuery("SELECT * FROM tbl_misses").setLabel("test"));
         Assert.assertEquals(3, misses.value());
     }
 }

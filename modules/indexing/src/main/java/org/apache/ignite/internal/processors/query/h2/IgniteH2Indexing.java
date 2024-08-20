@@ -239,6 +239,7 @@ import static org.apache.ignite.internal.processors.query.h2.H2Utils.validateTyp
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.zeroCursor;
 import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.parseMaintenanceTaskParameters;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.ERROR;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_LABEL;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_TEXT;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_SCHEMA;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_CMD_QRY_EXECUTE;
@@ -543,7 +544,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null,
                 false,
                 false,
-                false
+                false,
+                null
             );
 
             Throwable failReason = null;
@@ -639,7 +641,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         H2Utils.bindParameters(stmt, F.asList(params));
 
-                        H2QueryInfo qryInfo = new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry, ctx.discovery().localNode(), qryId);
+                        H2QueryInfo qryInfo = new H2QueryInfo(
+                            H2QueryInfo.QueryType.LOCAL,
+                            stmt,
+                            qry,
+                            ctx.discovery().localNode(),
+                            qryId,
+                            qryDesc.label()
+                        );
 
                         ResultSet rs = executeSqlQueryWithTimer(
                             stmt,
@@ -773,7 +782,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             qryInitiatorId,
             false,
             false,
-            false
+            false,
+            null
         );
 
         Exception failReason = null;
@@ -1125,6 +1135,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         fieldsQuery.setLocal(qry.isLocal());
         fieldsQuery.setPageSize(qry.getPageSize());
         fieldsQuery.setSchema(schemaName);
+        fieldsQuery.setLabel(qry.getLabel());
 
         if (qry.getPartition() != null) {
             fieldsQuery.setPartitions(qry.getPartition());
@@ -1224,6 +1235,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         try {
             List<FieldsQueryCursor<List<?>>> res = new ArrayList<>(1);
 
+            String label = qry.getLabel();
+
             SqlFieldsQuery remainingQry = qry;
 
             if (!failOnMultipleStmts) {
@@ -1233,6 +1246,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             while (remainingQry != null) {
                 Span qrySpan = ctx.tracing().create(SQL_QRY, MTC.span())
                     .addTag(SQL_SCHEMA, () -> schemaName);
+
+                if (label != null)
+                    qrySpan.addTag(SQL_QRY_LABEL, () -> label);
 
                 try (TraceSurroundings ignored = MTC.supportContinual(qrySpan)) {
                     // Parse.
@@ -1720,7 +1736,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             qryDesc.queryInitiatorId(),
             qryDesc.enforceJoinOrder(),
             qryParams.lazy(),
-            qryDesc.distributedJoins()
+            qryDesc.distributedJoins(),
+            qryDesc.label()
         );
     }
 
@@ -1943,6 +1960,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     try (TraceSurroundings ignored = MTC.support(ctx.tracing().create(SQL_ITER_OPEN, MTC.span()))) {
                         return rdcQryExec.query(
                             qryId,
+                            qryDesc.label(),
                             qryDesc.schemaName(),
                             twoStepQry,
                             keepBinary,
@@ -3317,7 +3335,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             // in WHERE condition because it may be cause of update one entry several times
             // (when index for such columns is selected for scan):
             // e.g. : UPDATE test SET val = val + 1 WHERE val >= ?
-            .setLazy(qryParams.lazy() && plan.canSelectBeLazy());
+            .setLazy(qryParams.lazy() && plan.canSelectBeLazy())
+            .setLabel(qryDesc.label());
 
         Iterable<List<?>> cur;
 

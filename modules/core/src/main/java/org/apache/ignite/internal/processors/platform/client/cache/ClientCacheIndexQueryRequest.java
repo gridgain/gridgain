@@ -84,12 +84,18 @@ public class ClientCacheIndexQueryRequest extends ClientCacheRequest {
                 criteria.add(readCriterion(reader));
         }
 
+        String label = null;
+
+        if (protocolCtx.isFeatureSupported(ClientBitmaskFeature.QRY_LABEL))
+            label = reader.readString();
+
         Object filterObj = reader.readObjectDetached();
 
         qry = new IndexQuery(valType, idxName);
 
         qry.setPageSize(pageSize);
         qry.setLocal(loc);
+        qry.setLabel(label);
 
         if (part >= 0)
             qry.setPartition(part);
