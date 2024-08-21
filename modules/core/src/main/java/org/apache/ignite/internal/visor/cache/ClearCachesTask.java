@@ -58,6 +58,7 @@ public class ClearCachesTask extends VisorOneNodeTask<ClearCachesTaskArg, ClearC
         private ComputeJobContext jobCtx;
 
         private List<String> clearedCaches = new ArrayList<>();
+
         private List<String> nonExistentCaches = new ArrayList<>();
 
         /** */
