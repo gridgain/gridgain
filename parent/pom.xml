@@ -101,7 +101,7 @@
         <jetty.version>9.4.53.v20231009</jetty.version>
         <jmh.version>1.13</jmh.version>
         <jms.spec.version>1.1.1</jms.spec.version>
-        <jna.version>4.5.2</jna.version>
+        <jna.version>5.14.0</jna.version>
         <jnr.posix.version>3.1.15</jnr.posix.version>
         <jotm.version>2.2.3</jotm.version>
         <jsch.bundle.version>0.1.54_1</jsch.bundle.version>
