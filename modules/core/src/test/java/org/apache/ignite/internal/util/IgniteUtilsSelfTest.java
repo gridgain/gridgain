@@ -101,7 +101,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static org.apache.ignite.internal.util.IgniteUtils.MAX_UTF_BYTES;
 import static org.apache.ignite.internal.util.IgniteUtils.UTF_BYTE_LIMIT;
-import static org.apache.ignite.internal.util.IgniteUtils.isStringToLongForWriteHeuristically;
+import static org.apache.ignite.internal.util.IgniteUtils.isStringTooLongForWriteHeuristically;
 import static org.apache.ignite.internal.util.IgniteUtils.utfBytes;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.nCopiesOfChar;
@@ -1668,10 +1668,10 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void testIsStringToLongForWriteHeuristically() {
+    public void testIsStringTooLongForWriteHeuristically() {
         // Simple checks.
-        assertFalse(isStringToLongForWriteHeuristically(""));
-        assertFalse(isStringToLongForWriteHeuristically("a"));
+        assertFalse(isStringTooLongForWriteHeuristically(""));
+        assertFalse(isStringTooLongForWriteHeuristically("a"));
 
         int maxLenShortStr = UTF_BYTE_LIMIT / MAX_UTF_BYTES;
 
@@ -1679,52 +1679,52 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
         char oneByteC = 0x0001;
         assertEquals(1, utfBytes(oneByteC));
 
-        assertFalse(isStringToLongForWriteHeuristically(nCopiesOfChar(1, oneByteC)));
-        assertFalse(isStringToLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr, oneByteC)));
+        assertFalse(isStringTooLongForWriteHeuristically(nCopiesOfChar(1, oneByteC)));
+        assertFalse(isStringTooLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr, oneByteC)));
 
-        assertTrue(isStringToLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr + 1, oneByteC)));
-        assertTrue(isStringToLongForWriteHeuristically(nCopiesOfChar(UTF_BYTE_LIMIT, oneByteC)));
+        assertTrue(isStringTooLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr + 1, oneByteC)));
+        assertTrue(isStringTooLongForWriteHeuristically(nCopiesOfChar(UTF_BYTE_LIMIT, oneByteC)));
 
         // Checks for strings with 2-byte characters.
         char twoByteC = 0x0080;
         assertEquals(2, utfBytes(twoByteC));
 
-        assertFalse(isStringToLongForWriteHeuristically(nCopiesOfChar(1, twoByteC)));
-        assertFalse(isStringToLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr, twoByteC)));
+        assertFalse(isStringTooLongForWriteHeuristically(nCopiesOfChar(1, twoByteC)));
+        assertFalse(isStringTooLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr, twoByteC)));
 
-        assertTrue(isStringToLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr + 1, twoByteC)));
-        assertTrue(isStringToLongForWriteHeuristically(nCopiesOfChar(UTF_BYTE_LIMIT, twoByteC)));
+        assertTrue(isStringTooLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr + 1, twoByteC)));
+        assertTrue(isStringTooLongForWriteHeuristically(nCopiesOfChar(UTF_BYTE_LIMIT, twoByteC)));
 
         // Checks for strings with 3-byte characters.
         char threeByteC = 0x0800;
         assertEquals(3, utfBytes(threeByteC));
 
-        assertFalse(isStringToLongForWriteHeuristically(nCopiesOfChar(1, threeByteC)));
-        assertFalse(isStringToLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr, threeByteC)));
+        assertFalse(isStringTooLongForWriteHeuristically(nCopiesOfChar(1, threeByteC)));
+        assertFalse(isStringTooLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr, threeByteC)));
 
-        assertTrue(isStringToLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr + 1, threeByteC)));
-        assertTrue(isStringToLongForWriteHeuristically(nCopiesOfChar(UTF_BYTE_LIMIT, threeByteC)));
+        assertTrue(isStringTooLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr + 1, threeByteC)));
+        assertTrue(isStringTooLongForWriteHeuristically(nCopiesOfChar(UTF_BYTE_LIMIT, threeByteC)));
 
         // Checks for strings with characters of different numbers of bytes.
-        assertFalse(isStringToLongForWriteHeuristically(
+        assertFalse(isStringTooLongForWriteHeuristically(
             nCopiesOfChar(1, oneByteC) +
                 nCopiesOfChar(1, twoByteC) +
                 nCopiesOfChar(1, threeByteC)
         ));
 
-        assertFalse(isStringToLongForWriteHeuristically(
+        assertFalse(isStringTooLongForWriteHeuristically(
             nCopiesOfChar(maxLenShortStr / 3, oneByteC) +
                 nCopiesOfChar(maxLenShortStr / 3, twoByteC) +
                 nCopiesOfChar(maxLenShortStr - ((maxLenShortStr / 3) * 2), threeByteC)
         ));
 
-        assertTrue(isStringToLongForWriteHeuristically(
+        assertTrue(isStringTooLongForWriteHeuristically(
             nCopiesOfChar(maxLenShortStr / 3, oneByteC) +
                 nCopiesOfChar(maxLenShortStr / 3, twoByteC) +
                 nCopiesOfChar(maxLenShortStr - ((maxLenShortStr / 3) * 2) + 1, threeByteC)
         ));
 
-        assertTrue(isStringToLongForWriteHeuristically(
+        assertTrue(isStringTooLongForWriteHeuristically(
             nCopiesOfChar(UTF_BYTE_LIMIT / 3, oneByteC) +
                 nCopiesOfChar(UTF_BYTE_LIMIT / 3, twoByteC) +
                 nCopiesOfChar(UTF_BYTE_LIMIT / 3, threeByteC)

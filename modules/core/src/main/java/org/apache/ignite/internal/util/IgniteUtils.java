@@ -12549,13 +12549,13 @@ public abstract class IgniteUtils {
      * Heuristically checks whether a string is long (greater than {@link #UTF_BYTE_LIMIT}) for
      * {@link DataOutput#writeUTF} (or {@link #writeString(DataOutput, String)}).
      *
-     * Long string can be written using {@link #writeLongString(DataOutput, String)}
-     * or {@link #writeCutString(DataOutput, String)}.
+     * <p>Long string can be written using {@link #writeLongString(DataOutput, String)}
+     * or {@link #writeCutString(DataOutput, String)}.</p>
      *
      * @param s String to check.
      * @return {@code True} if the string is heuristically long.
      */
-    public static boolean isStringToLongForWriteHeuristically(String s) {
+    public static boolean isStringTooLongForWriteHeuristically(String s) {
         return s.length() > UTF_BYTE_LIMIT / MAX_UTF_BYTES;
     }
 
