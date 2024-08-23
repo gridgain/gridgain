@@ -1474,6 +1474,4 @@ public class H2Utils {
         if (log != null && log.isDebugEnabled())
             log.debug("Aggregation function " + fnName + "(" + cls.getName() + ") has been registered.");
     }
-
-
 }
