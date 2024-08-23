@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,6 +75,9 @@ public abstract class IgniteDataTransferObject implements Externalizable {
 
     /** Version 13. */
     protected static final byte V13 = 13;
+
+    /** Version 14. */
+    protected static final byte V14 = 14;
 
     /**
      * @param col Source collection.
