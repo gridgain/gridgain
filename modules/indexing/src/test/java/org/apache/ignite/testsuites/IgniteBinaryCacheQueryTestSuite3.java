@@ -94,6 +94,7 @@ import org.apache.ignite.internal.processors.cache.metric.SqlViewExporterSpiTest
 import org.apache.ignite.internal.processors.cache.query.IgniteCacheQueryCacheDestroySelfTest;
 import org.apache.ignite.internal.processors.cache.query.ScanQueryConcurrentSqlUpdatesTest;
 import org.apache.ignite.internal.processors.cache.query.ScanQueryConcurrentUpdatesTest;
+import org.apache.ignite.internal.processors.query.IgniteQueryConvertibleTypesValidationTest;
 import org.apache.ignite.internal.processors.query.IgniteQueryDedicatedPoolTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlCustomAggregationTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlCustomFunctionTest;
@@ -133,6 +134,7 @@ import org.apache.ignite.internal.processors.query.SqlSystemViewsSelfTest;
 import org.apache.ignite.internal.processors.query.WrongQueryEntityFieldTypeTest;
 import org.apache.ignite.internal.processors.query.h2.GridIndexRebuildSelfTest;
 import org.apache.ignite.internal.processors.query.h2.GridIndexRebuildTest;
+import org.apache.ignite.internal.processors.query.h2.H2ColumnTypeConversionCheckSelfTest;
 import org.apache.ignite.internal.processors.query.h2.QueryParserMetricsHolderSelfTest;
 import org.apache.ignite.internal.processors.query.h2.sql.BaseH2CompareQueryTest;
 import org.apache.ignite.internal.processors.query.h2.sql.H2CompareBigQueryDistributedJoinsTest;
@@ -352,6 +354,9 @@ import org.junit.runners.Suite;
     KillQueryFromClientTest.class,
     KillQueryOnClientDisconnectTest.class,
     KillQueryErrorOnCancelTest.class,
+
+    IgniteQueryConvertibleTypesValidationTest.class,
+    H2ColumnTypeConversionCheckSelfTest.class,
 
     IgniteStatisticsTestSuite.class,
 
