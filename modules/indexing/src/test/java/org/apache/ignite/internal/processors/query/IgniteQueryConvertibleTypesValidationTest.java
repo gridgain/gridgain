@@ -104,7 +104,7 @@ public class IgniteQueryConvertibleTypesValidationTest extends GridCommonAbstrac
 
         Object sqlObj = sqlTypeConverter.apply(testObj);
 
-        assertTrue(selectData.get(0).stream().allMatch(d -> Objects.equals(sqlObj, d)));
+        assertTrue(selectData.stream().flatMap(Collection::stream).allMatch(d -> Objects.equals(sqlObj, d)));
     }
 
     /** */
