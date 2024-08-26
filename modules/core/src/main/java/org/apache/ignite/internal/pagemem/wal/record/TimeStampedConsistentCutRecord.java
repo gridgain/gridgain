@@ -23,23 +23,54 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  * This record represents a pointer to a consistent cut fuzzy border or actual cut border with a timestamp.
  */
 public class TimeStampedConsistentCutRecord extends TimeStampRecord {
+    /** Represents a placeholder for a snapshot identifier when the record is created outside of snapshot scope. */
+    public static final long UNDEFINED_SNAPSHOT_ID = -1;
+
+    /** Optional field that contains snapshot identifier in the case when this WAL record is created as a part of exchangeless snapshot. */
+    private long snapshotId;
+
     /**
      * Creates a new instance of consistent cut record initializing the timestamp with the current time using {@link U#currentTimeMillis()}.
+     * Snapshot identifier is set to {@link #UNDEFINED_SNAPSHOT_ID}.
      */
     public TimeStampedConsistentCutRecord() {
-        super(U.currentTimeMillis());
+        this(UNDEFINED_SNAPSHOT_ID, U.currentTimeMillis());
     }
 
     /**
-     * Creates a new instance of consistent cut record using the provided {@code timestamp}.
+     * Creates a new instance of consistent cut record using the provided {@code snaspshotId} and timestamp set to the current time
+     * using {@link U#currentTimeMillis()}.
+     *
+     * @param snapshotId Snapshot identifier.
      */
-    public TimeStampedConsistentCutRecord(long timestamp) {
+    public TimeStampedConsistentCutRecord(long snapshotId) {
+        this(UNDEFINED_SNAPSHOT_ID, U.currentTimeMillis());
+    }
+
+    /**
+     * Creates a new instance of consistent cut record using the provided {@code snapshotId} and {@code timestamp}.
+     *
+     * @param snapshotId Snapshot identifier.
+     * @param timestamp Timestamp.
+     */
+    public TimeStampedConsistentCutRecord(long snapshotId, long timestamp) {
         super(timestamp);
+
+        this.snapshotId = snapshotId;
     }
 
     /** {@inheritDoc} */
     @Override public RecordType type() {
         return RecordType.TIME_STAMPED_CONSISTENT_CUT;
+    }
+
+    /**
+     * Gets the snapshot identifier.
+     *
+     * @return Snapshot identifier.
+     */
+    public long snapshotId() {
+        return snapshotId;
     }
 
     @Override public String toString() {
