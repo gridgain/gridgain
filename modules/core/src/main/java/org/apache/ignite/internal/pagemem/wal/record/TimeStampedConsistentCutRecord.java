@@ -44,7 +44,7 @@ public class TimeStampedConsistentCutRecord extends TimeStampRecord {
      * @param snapshotId Snapshot identifier.
      */
     public TimeStampedConsistentCutRecord(long snapshotId) {
-        this(UNDEFINED_SNAPSHOT_ID, U.currentTimeMillis());
+        this(snapshotId, U.currentTimeMillis());
     }
 
     /**
