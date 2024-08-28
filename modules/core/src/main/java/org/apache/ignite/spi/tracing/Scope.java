@@ -73,15 +73,8 @@ public enum Scope {
     /**
      * @return Coordinates without label.
      */
-    @NotNull public TracingConfigurationCoordinates coordinates() {
+    public TracingConfigurationCoordinates coordinates() {
         return coordinates;
-    }
-
-    /**
-     * @return Coordinates with optional label.
-     */
-    @NotNull public TracingConfigurationCoordinates coordinates(@Nullable String label) {
-        return coordinates.withLabel(label);
     }
 
     static {

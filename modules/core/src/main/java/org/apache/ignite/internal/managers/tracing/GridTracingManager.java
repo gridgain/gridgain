@@ -195,7 +195,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     }
 
     /** {@inheritDoc} */
-    @Override public Span create(@NotNull SpanType spanType, byte @Nullable [] serializedParentSpan) {
+    @Override public Span create(@NotNull SpanType spanType, @Nullable byte[] serializedParentSpan) {
         // Optimization for noop spi.
         if (noop)
             return NoopSpan.INSTANCE;
@@ -350,7 +350,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
         // Optimization for zero sampling rate == 0.
         if ((parentSpan == NoopSpan.INSTANCE || parentSpan == null) &&
-            tracingConfiguration.get(spanType.scope().coordinates(lb)).samplingRate() == SAMPLING_RATE_NEVER)
+            tracingConfiguration.get(spanType.scope().coordinates().withLabel(lb)).samplingRate() == SAMPLING_RATE_NEVER)
             return NoopSpan.INSTANCE;
 
         return enrichWithLocalNodeParameters(
@@ -489,7 +489,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
                     // Get tracing configuration.
                     TracingConfigurationParameters tracingConfigurationParameters = tracingConfiguration.get(
-                        spanTypeToCreate.scope().coordinates(lb)
+                        spanTypeToCreate.scope().coordinates().withLabel(lb)
                     );
 
                     return shouldSample(tracingConfigurationParameters.samplingRate()) ?

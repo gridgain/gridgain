@@ -65,7 +65,7 @@ public class TracingConfigurationCoordinates implements Serializable {
     /**
      * @return {@link Scope} of a trace's root span to which some specific tracing configuration will be applied.
      */
-    @NotNull public Scope scope() {
+    public Scope scope() {
         return scope;
     }
 
@@ -82,7 +82,7 @@ public class TracingConfigurationCoordinates implements Serializable {
      * @param label Label.
      * @return Coordinates.
      */
-    public @NotNull TracingConfigurationCoordinates withLabel(@Nullable String label) {
+    public TracingConfigurationCoordinates withLabel(@Nullable String label) {
         if (Objects.equals(lb, label))
             return this;
 

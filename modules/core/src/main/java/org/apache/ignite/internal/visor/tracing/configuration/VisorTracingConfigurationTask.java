@@ -124,7 +124,7 @@ public class VisorTracingConfigurationTask
             @NotNull Scope scope,
             @Nullable String lb)
         {
-            TracingConfigurationCoordinates coordinates = scope.coordinates(lb);
+            TracingConfigurationCoordinates coordinates = scope.coordinates().withLabel(lb);
 
             TracingConfigurationParameters updatedParameters = ignite.tracingConfiguration().get(coordinates);
 
@@ -147,7 +147,7 @@ public class VisorTracingConfigurationTask
             @NotNull Scope scope,
             @Nullable String lb)
         {
-            ignite.tracingConfiguration().reset(scope.coordinates(lb));
+            ignite.tracingConfiguration().reset(scope.coordinates().withLabel(lb));
 
             return getAll(scope);
         }
@@ -180,7 +180,7 @@ public class VisorTracingConfigurationTask
             @Nullable Double samplingRate,
             @Nullable Set<Scope> includedScopes)
         {
-            TracingConfigurationCoordinates coordinates = scope.coordinates(lb);
+            TracingConfigurationCoordinates coordinates = scope.coordinates().withLabel(lb);
 
             TracingConfigurationParameters.Builder parametersBuilder = new TracingConfigurationParameters.Builder();
 
