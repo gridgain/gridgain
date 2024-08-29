@@ -126,7 +126,7 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
                 return 0;
 
             case TIME_STAMPED_CONSISTENT_CUT:
-                return 8 /*timestamp*/;
+                return 8 /*snapshot id*/ + 8 /*timestamp*/;
 
             case ROLLBACK_TX_RECORD:
                 return 4 + 4 + 8 + 8;
@@ -252,9 +252,10 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
                 return new ConsistentCutRecord();
 
             case TIME_STAMPED_CONSISTENT_CUT:
+                long snapshotId = in.readLong();
                 timeStamp = in.readLong();
 
-                return new TimeStampedConsistentCutRecord(timeStamp);
+                return new TimeStampedConsistentCutRecord(snapshotId, timeStamp);
 
             case ROLLBACK_TX_RECORD:
                 int grpId = in.readInt();
@@ -419,6 +420,7 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
             case TIME_STAMPED_CONSISTENT_CUT:
                 TimeStampedConsistentCutRecord tsCut = (TimeStampedConsistentCutRecord)rec;
 
+                buf.putLong(tsCut.snapshotId());
                 buf.putLong(tsCut.timestamp());
 
                 break;
