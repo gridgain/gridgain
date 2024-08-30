@@ -62,7 +62,12 @@ public class VisorTracingConfigurationTask
 
         /** {@inheritDoc} */
         @Override protected @NotNull VisorTracingConfigurationTaskResult run(
-            VisorTracingConfigurationTaskArg arg) throws IgniteException {
+            @Nullable VisorTracingConfigurationTaskArg arg) throws IgniteException {
+
+            if (arg == null) {
+                return getAll(null);
+            }
+
             switch (arg.operation()) {
                 case GET_ALL:
                     return getAll(arg.scope());
@@ -119,12 +124,9 @@ public class VisorTracingConfigurationTask
             @NotNull Scope scope,
             @Nullable String lb)
         {
-            TracingConfigurationCoordinates coordinates =
-                new TracingConfigurationCoordinates.Builder(scope).withLabel(lb).build();
+            TracingConfigurationCoordinates coordinates = scope.coordinates().withLabel(lb);
 
-            TracingConfigurationParameters updatedParameters =
-                ignite.tracingConfiguration().get(
-                    new TracingConfigurationCoordinates.Builder(scope).withLabel(lb).build());
+            TracingConfigurationParameters updatedParameters = ignite.tracingConfiguration().get(coordinates);
 
             VisorTracingConfigurationTaskResult res = new VisorTracingConfigurationTaskResult();
 
@@ -138,15 +140,14 @@ public class VisorTracingConfigurationTask
          *
          * @param scope Scope.
          * @param lb Label.
-         * @return Scope based configuration that was partly of fully reseted as
+         * @return Scope based configuration that was partly of fully reset as
          *  {@link VisorTracingConfigurationTaskResult} instance.
          */
         private @NotNull VisorTracingConfigurationTaskResult reset(
             @NotNull Scope scope,
             @Nullable String lb)
         {
-            ignite.tracingConfiguration().reset(
-                new TracingConfigurationCoordinates.Builder(scope).withLabel(lb).build());
+            ignite.tracingConfiguration().reset(scope.coordinates().withLabel(lb));
 
             return getAll(scope);
         }
@@ -179,8 +180,7 @@ public class VisorTracingConfigurationTask
             @Nullable Double samplingRate,
             @Nullable Set<Scope> includedScopes)
         {
-            TracingConfigurationCoordinates coordinates =
-                new TracingConfigurationCoordinates.Builder(scope).withLabel(lb).build();
+            TracingConfigurationCoordinates coordinates = scope.coordinates().withLabel(lb);
 
             TracingConfigurationParameters.Builder parametersBuilder = new TracingConfigurationParameters.Builder();
 
