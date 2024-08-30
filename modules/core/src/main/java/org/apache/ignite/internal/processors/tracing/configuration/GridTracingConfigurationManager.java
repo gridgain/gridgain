@@ -63,32 +63,25 @@ public class GridTracingConfigurationManager implements TracingConfigurationMana
     static {
         Map<TracingConfigurationCoordinates, TracingConfigurationParameters> tmpDfltConfigurationMap = new HashMap<>();
 
-        tmpDfltConfigurationMap.put(
-            new TracingConfigurationCoordinates.Builder(Scope.TX).build(),
+        tmpDfltConfigurationMap.put(Scope.TX.coordinates(),
             TracingConfigurationManager.DEFAULT_TX_CONFIGURATION);
 
-        tmpDfltConfigurationMap.put(
-            new TracingConfigurationCoordinates.Builder(Scope.COMMUNICATION).build(),
+        tmpDfltConfigurationMap.put(Scope.COMMUNICATION.coordinates(),
             TracingConfigurationManager.DEFAULT_COMMUNICATION_CONFIGURATION);
 
-        tmpDfltConfigurationMap.put(
-            new TracingConfigurationCoordinates.Builder(Scope.EXCHANGE).build(),
+        tmpDfltConfigurationMap.put(Scope.EXCHANGE.coordinates(),
             TracingConfigurationManager.DEFAULT_EXCHANGE_CONFIGURATION);
 
-        tmpDfltConfigurationMap.put(
-            new TracingConfigurationCoordinates.Builder(Scope.DISCOVERY).build(),
+        tmpDfltConfigurationMap.put(Scope.DISCOVERY.coordinates(),
             TracingConfigurationManager.DEFAULT_DISCOVERY_CONFIGURATION);
 
-        tmpDfltConfigurationMap.put(
-            new TracingConfigurationCoordinates.Builder(Scope.CACHE_API_WRITE).build(),
+        tmpDfltConfigurationMap.put(Scope.CACHE_API_WRITE.coordinates(),
             TracingConfigurationManager.DEFAULT_CACHE_API_WRITE_CONFIGURATION);
 
-        tmpDfltConfigurationMap.put(
-            new TracingConfigurationCoordinates.Builder(Scope.CACHE_API_READ).build(),
+        tmpDfltConfigurationMap.put(Scope.CACHE_API_READ.coordinates(),
             TracingConfigurationManager.DEFAULT_CACHE_API_READ_CONFIGURATION);
 
-        tmpDfltConfigurationMap.put(
-            new TracingConfigurationCoordinates.Builder(Scope.SQL).build(),
+        tmpDfltConfigurationMap.put(Scope.SQL.coordinates(),
             TracingConfigurationManager.DEFAULT_SQL_CONFIGURATION);
 
         DEFAULT_CONFIGURATION_MAP = Collections.unmodifiableMap(tmpDfltConfigurationMap);
