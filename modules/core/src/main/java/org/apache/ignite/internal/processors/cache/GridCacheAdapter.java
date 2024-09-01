@@ -4654,31 +4654,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 /*deserialize binary*/false,
                 /*skip values*/true,
                 /*needVer*/ false,
-                /*touchTtl*/true)).chain(fut -> {
-            try {
-                boolean updated = fut.get();
-
-                //Update TTL and metrics for touch operations
-                if (updated) {
-                    GridCacheEntryEx entry = entryEx(key);
-                    if (entry != null) {
-                        entry.touch();
-                    }
-                }
-
-                //Update metrics for touch operations
-                metrics.onCacheTouch();
-                if (updated) {
-                    metrics.onCacheTouchHit();
-                } else {
-                    metrics.onCacheTouchMiss();
-                }
-
-                return updated;
-            } catch (IgniteCheckedException e) {
-                throw new IgniteException(e);
-            }
-        });
+                /*touchTtl*/true));
     }
 
     /**

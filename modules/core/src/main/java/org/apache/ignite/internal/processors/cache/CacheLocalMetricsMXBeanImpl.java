@@ -16,12 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.Collections;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.mxbean.CacheMetricsMXBean;
-
-import java.util.Collections;
 
 /**
  * Management bean that provides access to {@link IgniteCache IgniteCache}.
@@ -127,6 +126,31 @@ public class CacheLocalMetricsMXBeanImpl implements CacheMetricsMXBean {
     /** {@inheritDoc} */
     @Override public int getKeySize() {
         return cache.metrics0().getKeySize();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getCacheTouches() {
+        return cache.metrics0().getCacheTouches();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getCacheTouchHits() {
+        return cache.metrics0().getCacheTouchHits();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getCacheTouchMisses() {
+        return cache.metrics0().getCacheTouchMisses();
+    }
+
+    /** {@inheritDoc} */
+    @Override public float getCacheTouchHitPercentage() {
+        return cache.metrics0().getCacheTouchHitPercentage();
+    }
+
+    /** {@inheritDoc} */
+    @Override public float getCacheTouchMissPercentage() {
+        return cache.metrics0().getCacheTouchMissPercentage();
     }
 
     /** {@inheritDoc} */
@@ -287,31 +311,6 @@ public class CacheLocalMetricsMXBeanImpl implements CacheMetricsMXBean {
     /** {@inheritDoc} */
     @Override public long getCachePuts() {
         return cache.metrics0().getCachePuts();
-    }
-
-    @Override
-    public long getCacheTouches() {
-        return cache.metrics0().getCacheTouches();
-    }
-
-    @Override
-    public long getCacheTouchHits() {
-        return cache.metrics0().getCacheTouchHits();
-    }
-
-    @Override
-    public long getCacheTouchMisses() {
-        return cache.metrics0().getCacheTouchMisses();
-    }
-
-    @Override
-    public float getCacheTouchHitPercentage() {
-        return cache.metrics0().getCacheTouchHitPercentage();
-    }
-
-    @Override
-    public float getCacheTouchMissPercentage() {
-        return cache.metrics0().getCacheTouchMissPercentage();
     }
 
     /** {@inheritDoc} */
