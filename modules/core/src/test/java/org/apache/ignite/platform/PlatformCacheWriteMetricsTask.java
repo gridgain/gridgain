@@ -544,21 +544,6 @@ public class PlatformCacheWriteMetricsTask extends ComputeTaskAdapter<Long, Obje
         }
 
         /** {@inheritDoc} */
-        @Override public long getCacheTouches() { return 79; }
-
-        /** {@inheritDoc} */
-        @Override public long getCacheTouchHits() { return 80; }
-
-        /** {@inheritDoc} */
-        @Override public long getCacheTouchMisses() { return 81; }
-
-        /** {@inheritDoc} */
-        @Override public float getCacheTouchHitPercentage() { return 82; }
-
-        /** {@inheritDoc} */
-        @Override public float getCacheTouchMissPercentage() { return 83; }
-
-        /** {@inheritDoc} */
         @Override public boolean isIndexRebuildInProgress() {
             return false;
         }
@@ -567,5 +552,31 @@ public class PlatformCacheWriteMetricsTask extends ComputeTaskAdapter<Long, Obje
         @Override public long getIndexRebuildKeysProcessed() {
             return 0;
         }
+
+        @Override
+        public long getCacheTouches() {
+            return 79;
+        }
+
+        @Override
+        public long getCacheTouchHits() {
+            return 80;
+        }
+
+        @Override
+        public long getCacheTouchMisses() {
+            return 81;
+        }
+
+        @Override
+        public float getCacheTouchHitPercentage() {
+            return 82.0f;
+        }
+
+        @Override
+        public float getCacheTouchMissPercentage() {
+            return 83.0f;
+        }
+
     }
 }

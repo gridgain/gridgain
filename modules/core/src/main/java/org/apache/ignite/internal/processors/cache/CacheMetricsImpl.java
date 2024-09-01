@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CachePeekMode;
@@ -42,10 +45,6 @@ import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
-import java.util.Map;
-import java.util.function.Supplier;
-
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheMetricsRegistryName;
@@ -71,15 +70,6 @@ public class CacheMetricsImpl implements CacheMetrics {
      * {@code "cache.sys-cache"}, for example.
      */
     public static final String CACHE_METRICS = "cache";
-
-    /** Number of touch requests. */
-    private final AtomicLongMetric cacheTouches;
-
-    /** Number of touch hits. */
-    private final AtomicLongMetric cacheTouchHits;
-
-    /** Number of touch misses. */
-    private final AtomicLongMetric cacheTouchMisses;
 
     /** Histogram buckets for duration get, put, remove, commit, rollback operations in nanoseconds. */
     public static final long[] HISTOGRAM_BUCKETS = new long[] {
@@ -244,6 +234,15 @@ public class CacheMetricsImpl implements CacheMetrics {
     /** Cache size. */
     private final LongGauge cacheSize;
 
+    /** Number of touch requests. */
+    private final AtomicLongMetric cacheTouches;
+
+    /** Number of touch hits. */
+    private final AtomicLongMetric cacheTouchHits;
+
+    /** Number of touch misses. */
+    private final AtomicLongMetric cacheTouchMisses;
+
     /**
      * Creates cache metrics.
      *
@@ -267,10 +266,8 @@ public class CacheMetricsImpl implements CacheMetrics {
         if (cctx.isNear())
             dhtCtx = cctx.near().dht().context();
 
-        if (cctx.store() != null && cctx.store().store() != null) {
             if (cctx.store() instanceof GridCacheWriteBehindStore)
                 store = (GridCacheWriteBehindStore) cctx.store().store();
-        }
 
         delegate = null;
 
@@ -530,6 +527,61 @@ public class CacheMetricsImpl implements CacheMetrics {
     }
 
     /** {@inheritDoc} */
+    @Override
+    public long getCacheTouchHits() {
+        return cacheTouchHits.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getCacheTouchMisses() {
+        return cacheTouchMisses.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getCacheTouches() {
+        return cacheTouches.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public float getCacheTouchHitPercentage() {
+        long hits = cacheTouchHits.value();
+        long touches = cacheTouches.value();
+
+        if (touches == 0)
+            return 0;
+
+        return (float) hits / touches * 100.0f;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public float getCacheTouchMissPercentage() {
+        long misses = cacheTouchMisses.value();
+        long touches = cacheTouches.value();
+
+        if (touches == 0)
+            return 0;
+
+        return (float) misses / touches * 100.0f;
+    }
+
+    public void onCacheTouch() {
+        cacheTouches.increment();
+    }
+
+    public void onCacheTouchHit() {
+        cacheTouchHits.increment();
+    }
+
+    public void onCacheTouchMiss() {
+        cacheTouchMisses.increment();
+    }
+
+
+    /** {@inheritDoc} */
     @Override public int getKeySize() {
         return getEntriesStat().keySize();
     }
@@ -785,35 +837,6 @@ public class CacheMetricsImpl implements CacheMetrics {
     /** {@inheritDoc} */
     @Override public long getCachePuts() {
         return writes.value();
-    }
-
-    @Override
-    public long getCacheTouches() {
-        return cacheTouches.value();
-    }
-
-    @Override
-    public long getCacheTouchHits() {
-        return cacheTouchHits.value();
-    }
-
-    @Override
-    public long getCacheTouchMisses() {
-        return cacheTouchMisses.value();
-    }
-
-    @Override
-    public float getCacheTouchHitPercentage() {
-        long touches = cacheTouches.value();
-        long hits = cacheTouchHits.value();
-        return touches == 0 ? 0 : (float) hits / touches * 100;
-    }
-
-    @Override
-    public float getCacheTouchMissPercentage() {
-        long touches = cacheTouches.value();
-        long misses = cacheTouchMisses.value();
-        return touches == 0 ? 0 : (float) misses / touches * 100;
     }
 
     /** {@inheritDoc} */
@@ -1617,27 +1640,6 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         if (delegate != null)
             delegate.onOffHeapEvict();
-    }
-
-    /**
-     * Increment the counter for touch operations.
-     */
-    public void onCacheTouch() {
-        cacheTouches.increment();
-    }
-
-    /**
-     * Increment the counter for successful touch operations.
-     */
-    public void onCacheTouchHit() {
-        cacheTouchHits.increment();
-    }
-
-    /**
-     * Increment the counter for unsuccessful touch operations.
-     */
-    public void onCacheTouchMiss() {
-        cacheTouchMisses.increment();
     }
 
     /** {@inheritDoc} */
