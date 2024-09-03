@@ -16,9 +16,6 @@
 
 package org.apache.ignite.spi.tracing;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 /**
  * Tracing span scope.
  */
