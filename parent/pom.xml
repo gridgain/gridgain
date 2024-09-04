@@ -139,7 +139,7 @@
         <slf4j16.version>1.6.4</slf4j16.version>
         <snappy.version>1.1.10.4</snappy.version>
         <spring.data-2.2.version>2.2.13.RELEASE</spring.data-2.2.version> <!-- don't forget to update spring version -->
-        <spring.version>5.3.34</spring.version>
+        <spring.version>5.3.39</spring.version>
         <spring41.osgi.feature.version>4.1.7.RELEASE_1</spring41.osgi.feature.version>
         <storm.version>1.2.3</storm.version>
         <surefire.version>3.0.0-M4</surefire.version>
