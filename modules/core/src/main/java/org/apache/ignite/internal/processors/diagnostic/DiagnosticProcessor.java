@@ -223,6 +223,12 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
             File dumpDir = new File(baseDumpDir, "jks");
             dumpDir.mkdirs();
 
+            log.warning(
+                "Sensitive encryption information is being collected into " +
+                dumpDir.getAbsolutePath() +
+                " in order to make further corruption analysis possible."
+            );
+
             String keyStorePath = encSpi.getKeyStorePath();
 
             // Copy of "org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi.keyStoreFile".
