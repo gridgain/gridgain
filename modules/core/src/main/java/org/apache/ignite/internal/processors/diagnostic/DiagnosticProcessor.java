@@ -215,6 +215,8 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
             // We can't call "encSpi.dumpKeys" because it's a public class, we shouldn't add unnecessary methods to it.
             dumpEncryptionKeys((KeystoreEncryptionSpi)encSpi, baseDumpDir);
         }
+
+        dumpLogs(baseDumpDir);
     }
 
     /** Dumps keystore and encryption SPI settings. */
@@ -253,6 +255,24 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
         }
         catch (Exception e) {
             log.error("Failed to dump encryption keys.", e);
+        }
+    }
+
+    /** Dumps "log" dir if it exists. */
+    private void dumpLogs(File baseDumpDir) {
+        try {
+            File logDir = U.resolveWorkDirectory(ctx.config().getWorkDirectory(), "log", false);
+
+            if (logDir.exists() && logDir.isDirectory()) {
+                File dumpDir = new File(baseDumpDir, "log");
+
+                for (File logFile : logDir.listFiles()) {
+                    U.copy(logFile, new File(dumpDir, logFile.getName()), false);
+                }
+            }
+        }
+        catch (Exception e) {
+            log.error("Failed to dump logs.", e);
         }
     }
 

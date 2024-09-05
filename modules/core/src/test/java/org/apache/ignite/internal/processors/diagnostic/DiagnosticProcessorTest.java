@@ -214,7 +214,7 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
             validateDiagnosticPathDir(n);
 
             File baseDumpDir = getBaseDumpDir(n);
-            assertEquals(6, baseDumpDir.list().length);
+            assertEquals(7, baseDumpDir.list().length);
 
             // 6 folders to validate.
             validateCacheDir(anyPageId, baseDumpDir);
@@ -223,6 +223,7 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
             validateCpDir(baseDumpDir);
             validateMetaStorageDir(baseDumpDir);
             validateUtilityCacheDir(baseDumpDir);
+            validateLogsCacheDir(baseDumpDir);
         });
     }
 
@@ -247,7 +248,7 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
             validateDiagnosticPathDir(n);
 
             File baseDumpDir = getBaseDumpDir(n);
-            assertEquals(7, baseDumpDir.list().length);
+            assertEquals(8, baseDumpDir.list().length);
 
             // 7 folders to validate.
             validateCacheDir(anyPageId, baseDumpDir);
@@ -256,6 +257,7 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
             validateCpDir(baseDumpDir);
             validateMetaStorageDir(baseDumpDir);
             validateUtilityCacheDir(baseDumpDir);
+            validateLogsCacheDir(baseDumpDir);
             validateJksDir(baseDumpDir);
         });
     }
@@ -370,6 +372,17 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
 
         // index.bin
         assertTrue(new File(utilityCachePath, INDEX_FILE_NAME).exists());
+    }
+
+    /**
+     * Validates that {@code <baseDumpDir>/log} directory exists and contains log files.
+     */
+    private void validateLogsCacheDir(File baseDumpDir) {
+        File logPath = new File(baseDumpDir, "log");
+        assertTrue(logPath.exists());
+        assertTrue(logPath.isDirectory());
+
+        assertThat(logPath.list().length, greaterThanOrEqualTo(1));
     }
 
     /**
