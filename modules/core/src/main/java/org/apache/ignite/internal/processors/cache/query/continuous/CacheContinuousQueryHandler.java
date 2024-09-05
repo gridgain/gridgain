@@ -1426,7 +1426,6 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
 
                     Set<UUID> sentToNodes = t.get2().size() > 1 ? new HashSet<>() : null;
 
-
                     for (AffinityTopologyVersion topVer : t.get2()) {
                         if (topVer == null)
                             topVer = AffinityTopologyVersion.NONE;
