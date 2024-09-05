@@ -28,6 +28,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.StandardCopyOption;
@@ -46,6 +47,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -1093,7 +1095,12 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
      */
     private IgniteCheckedException shutdown(CacheStoreHolder holder, boolean cleanFile,
         @Nullable IgniteCheckedException aggr) {
+
         aggr = shutdown(holder.idxStore, cleanFile, aggr);
+
+        if (cleanFile) {
+            cleanParentDirectories(holder);
+        }
 
         for (PageStore store : holder.partStores) {
             if (store != null)
@@ -1101,6 +1108,23 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
         }
 
         return aggr;
+    }
+
+    private void cleanParentDirectories(CacheStoreHolder holder) {
+        Arrays.stream(holder.partStores).map(store -> ((FilePageStoreV2)store).getPath().getParent()).distinct().forEach(new Consumer<Path>() {
+            @Override public void accept(Path dir) {
+                if (Files.isDirectory(dir, LinkOption.NOFOLLOW_LINKS)) {
+                    try {
+                        if (!Files.list(dir).findFirst().isPresent()) {
+                            Files.delete(dir);
+                        }
+                    }
+                    catch (IOException e) {
+                        log.warning("Failed to remove directory " + dir, e);
+                    }
+                }
+            }
+        });
     }
 
     /**

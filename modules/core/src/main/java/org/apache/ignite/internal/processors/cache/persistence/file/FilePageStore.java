@@ -292,18 +292,6 @@ public class FilePageStore implements PageStore {
 
             fileIO = null;
 
-            if (delete) {
-                final Path filePath = pathProvider.apply();
-                Files.delete(pathProvider.apply());
-
-                // Remove parent directory if empty (GG-39863)
-                final Path dir = filePath.getParent();
-                if (Files.isDirectory(dir, LinkOption.NOFOLLOW_LINKS)) {
-                    if (!Files.list(dir).findFirst().isPresent()) {
-                        Files.delete(dir);
-                    }
-                }
-            }
         }
         catch (IOException e) {
             throw new StorageException("Failed to stop serving partition file [file=" + getFileAbsolutePath()
