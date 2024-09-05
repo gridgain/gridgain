@@ -217,13 +217,7 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
             File baseDumpDir = getBaseDumpDir(node);
             assertEquals(7, baseDumpDir.list().length);
 
-            validateCacheDir(anyPageId, baseDumpDir);
-            validateWalDir(baseDumpDir);
-            validateBinaryMetaDir(baseDumpDir);
-            validateCpDir(baseDumpDir);
-            validateMetaStorageDir(baseDumpDir);
-            validateUtilityCacheDir(baseDumpDir);
-            validateLogsCacheDir(baseDumpDir);
+            validateCommonDirs(anyPageId, baseDumpDir);
         });
     }
 
@@ -250,15 +244,20 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
             File baseDumpDir = getBaseDumpDir(node);
             assertEquals(8, baseDumpDir.list().length);
 
-            validateCacheDir(anyPageId, baseDumpDir);
-            validateWalDir(baseDumpDir);
-            validateBinaryMetaDir(baseDumpDir);
-            validateCpDir(baseDumpDir);
-            validateMetaStorageDir(baseDumpDir);
-            validateUtilityCacheDir(baseDumpDir);
-            validateLogsCacheDir(baseDumpDir);
+            validateCommonDirs(anyPageId, baseDumpDir);
             validateJksDir(baseDumpDir);
         });
+    }
+
+    /** Validates dirs that are common between "encrypted" and "unencrypted" cases. */
+    private void validateCommonDirs(T2<Integer, Long> anyPageId, File baseDumpDir) {
+        validateCacheDir(anyPageId, baseDumpDir);
+        validateWalDir(baseDumpDir);
+        validateBinaryMetaDir(baseDumpDir);
+        validateCpDir(baseDumpDir);
+        validateMetaStorageDir(baseDumpDir);
+        validateUtilityCacheDir(baseDumpDir);
+        validateLogsCacheDir(baseDumpDir);
     }
 
     private void validateDiagnosticPathDir(IgniteEx node) {
@@ -402,7 +401,16 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
         assertTrue(new File(jksPath, "extras.txt").exists());
     }
 
-    /** */
+    /**
+     * Base test scenario that emulates a tree corruption and checks what {@link DiagnosticProcessor} does with it.
+     *
+     * @param cfgClosure Closure that is applied to node configuration before starting it.
+     * @param validator Validator closure. Has two parameters:
+     *      <ul>
+     *          <li>{@code node} - Ignite node instance.</li>
+     *          <li>{@code page} - A tuple {@code {groupId, pageId}} for a page of a corrupted tree.</li>
+     *      </ul>
+     */
     private void doTestOutputDiagnosticCorruptedPagesInfo(
         Consumer<IgniteConfiguration> cfgClosure,
         BiConsumer<IgniteEx, T2<Integer, Long>> validator

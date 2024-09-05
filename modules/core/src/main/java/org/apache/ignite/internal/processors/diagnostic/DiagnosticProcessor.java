@@ -226,11 +226,11 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
             String keyStorePath = encSpi.getKeyStorePath();
 
             // Copy of "org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi.keyStoreFile".
-            File abs = new File(keyStorePath);
+            File absolutePathKeyStoreFile = new File(keyStorePath);
 
             InputStream jksInputStream = null;
-            if (abs.exists())
-                jksInputStream = new FileInputStream(abs);
+            if (absolutePathKeyStoreFile.exists())
+                jksInputStream = new FileInputStream(absolutePathKeyStoreFile);
 
             if (jksInputStream == null) {
                 URL clsPthRes = KeystoreEncryptionSpi.class.getClassLoader().getResource(keyStorePath);
@@ -239,8 +239,11 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
                     jksInputStream = clsPthRes.openStream();
             }
 
-            if (jksInputStream != null)
-                writeStreamToFile(jksInputStream, new File(dumpDir, "keystore.jks"));
+            if (jksInputStream != null) {
+                try (InputStream in = jksInputStream) {
+                    writeStreamToFile(in, new File(dumpDir, "keystore.jks"));
+                }
+            }
 
             String extras = String.format(
                 "keySize=%d\n" +
@@ -251,6 +254,7 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
                 encSpi.getMasterKeyName()
             );
 
+            // No need to close byte array input stream when we're done.
             writeStreamToFile(new ByteArrayInputStream(extras.getBytes(UTF_8)), new File(dumpDir, "extras.txt"));
         }
         catch (Exception e) {
@@ -276,10 +280,9 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
         }
     }
 
-    /** Writes all data from the input stream into a given file and closes the stream. */
-    private static void writeStreamToFile(InputStream inputStream, File outFile) throws IOException {
+    /** Writes all data from the input stream into a given file. */
+    private static void writeStreamToFile(InputStream in, File outFile) throws IOException {
         try (
-            InputStream in = inputStream;
             FileOutputStream out = new FileOutputStream(outFile)
         ) {
             U.copy(in, out);
