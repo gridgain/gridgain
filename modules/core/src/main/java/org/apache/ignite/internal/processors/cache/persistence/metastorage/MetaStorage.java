@@ -54,6 +54,7 @@ import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDataba
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
+import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
@@ -71,6 +72,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_AUX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
+import static org.apache.ignite.internal.pagemem.PageIdAllocator.METASTORE_PARTITION;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.OLD_METASTORE_PARTITION;
 
 /**
@@ -691,6 +693,26 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
                 writeRaw(key, value);
             else
                 removeData(key);
+        }
+    }
+
+    /** Dumps meta storage partition files. */
+    public void dumpMetaStorage(File baseDumpDir) {
+        try {
+            File dumpDir = new File(baseDumpDir, "metastorage");
+
+            FilePageStoreManager filePageStoreManager = (FilePageStoreManager)cctx.pageStore();
+
+            for (int partId = OLD_METASTORE_PARTITION; partId < METASTORE_PARTITION; partId++) {
+                FilePageStore partStore = (FilePageStore)filePageStoreManager
+                    .getStore(METASTORAGE_CACHE_ID, partId);
+
+                File srcFile = new File(partStore.getFileAbsolutePath());
+                U.copy(srcFile, new File(dumpDir, srcFile.getName()), false);
+            }
+        }
+        catch (Exception e) {
+            log.error("Failed to dump meta storage files", e);
         }
     }
 
