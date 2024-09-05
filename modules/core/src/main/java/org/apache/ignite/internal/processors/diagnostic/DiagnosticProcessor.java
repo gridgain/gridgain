@@ -272,9 +272,21 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
                 catch (Throwable e) {
                     t.addSuppressed(e);
                 }
+
+                jksInputStream = null;
             }
 
             log.error("Failed to dump encryption keys.", t);
+        }
+        finally {
+            if (jksInputStream != null) {
+                try {
+                    jksInputStream.close();
+                }
+                catch (Throwable t) {
+                    log.error("Failed to close JKS input stream.", t);
+                }
+            }
         }
     }
 
