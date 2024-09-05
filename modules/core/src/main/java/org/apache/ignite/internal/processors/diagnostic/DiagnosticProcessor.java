@@ -171,15 +171,13 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
     /** Return a directory that will contain dumped files after a tree corruption. */
     File getBaseDumpDir() throws IgniteCheckedException {
         Serializable consistentId = ctx.config().getConsistentId();
-        String path = "db/dump/" + U.maskForFileName(consistentId == null ? "null" : consistentId.toString());
+        String path = "db/dump/" + U.maskForFileName(String.valueOf(consistentId));
 
         return U.resolveWorkDirectory(ctx.config().getWorkDirectory(), path, false);
     }
 
     /** Dumps latest WAL segments and related index and partition files on data corruption error. */
     private void dumpPersistenceFilesOnFailure(CorruptedDataStructureException ex) {
-        IgniteWriteAheadLogManager wal = ctx.cache().context().wal();
-
         File baseDumpDir;
         try {
             baseDumpDir = getBaseDumpDir();
@@ -190,33 +188,33 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
             return;
         }
 
-        if (wal instanceof FileWriteAheadLogManager)
-            ((FileWriteAheadLogManager) wal).dumpWalFiles(baseDumpDir);
-
-        IgnitePageStoreManager storeManager = ctx.cache().context().pageStore();
-
-        if (storeManager instanceof FilePageStoreManager) {
-            ((FilePageStoreManager)storeManager).dumpPartitionFiles(baseDumpDir, ex.groupId(), ex.pageIds());
-
-            ((FilePageStoreManager)storeManager).dumpUtilityCache(baseDumpDir);
-        }
-
-        IgniteCacheObjectProcessor processor = ctx.cacheObjects();
-
-        if (processor instanceof CacheObjectBinaryProcessorImpl)
-            ((CacheObjectBinaryProcessorImpl)processor).dumpMetadata(baseDumpDir);
-
-        IgniteCacheDatabaseSharedManager dbSharedManager = ctx.cache().context().database();
-        if (dbSharedManager instanceof GridCacheDatabaseSharedManager)
-            ((GridCacheDatabaseSharedManager)dbSharedManager).dumpMetaStorageAndCheckpoints(baseDumpDir);
-
+        // Do it first, without encryption keys we can't really read WAL.
         EncryptionSpi encSpi = ctx.config().getEncryptionSpi();
         if (encSpi instanceof KeystoreEncryptionSpi) {
             // We can't call "encSpi.dumpKeys" because it's a public class, we shouldn't add unnecessary methods to it.
             dumpEncryptionKeys((KeystoreEncryptionSpi)encSpi, baseDumpDir);
         }
 
+        IgniteCacheObjectProcessor processor = ctx.cacheObjects();
+        if (processor instanceof CacheObjectBinaryProcessorImpl)
+            ((CacheObjectBinaryProcessorImpl)processor).dumpMetadata(baseDumpDir);
+
         dumpLogs(baseDumpDir);
+
+        IgniteWriteAheadLogManager wal = ctx.cache().context().wal();
+        if (wal instanceof FileWriteAheadLogManager)
+            ((FileWriteAheadLogManager) wal).dumpWalFiles(baseDumpDir);
+
+        IgnitePageStoreManager storeManager = ctx.cache().context().pageStore();
+        if (storeManager instanceof FilePageStoreManager) {
+            ((FilePageStoreManager)storeManager).dumpPartitionFiles(baseDumpDir, ex.groupId(), ex.pageIds());
+
+            ((FilePageStoreManager)storeManager).dumpUtilityCache(baseDumpDir);
+        }
+
+        IgniteCacheDatabaseSharedManager dbSharedManager = ctx.cache().context().database();
+        if (dbSharedManager instanceof GridCacheDatabaseSharedManager)
+            ((GridCacheDatabaseSharedManager)dbSharedManager).dumpMetaStorageAndCheckpoints(baseDumpDir);
     }
 
     /** Dumps keystore and encryption SPI settings. */
@@ -234,10 +232,12 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
             if (abs.exists())
                 jksInputStream = new FileInputStream(abs);
 
-            URL clsPthRes = KeystoreEncryptionSpi.class.getClassLoader().getResource(keyStorePath);
+            if (jksInputStream == null) {
+                URL clsPthRes = KeystoreEncryptionSpi.class.getClassLoader().getResource(keyStorePath);
 
-            if (clsPthRes != null)
-                jksInputStream = clsPthRes.openStream();
+                if (clsPthRes != null)
+                    jksInputStream = clsPthRes.openStream();
+            }
 
             if (jksInputStream != null)
                 writeStreamToFile(jksInputStream, new File(dumpDir, "keystore.jks"));
@@ -276,9 +276,10 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
         }
     }
 
-    private static void writeStreamToFile(InputStream jksInputStream, File outFile) throws IOException {
+    /** Writes all data from the input stream into a given file and closes the stream. */
+    private static void writeStreamToFile(InputStream inputStream, File outFile) throws IOException {
         try (
-            InputStream in = jksInputStream;
+            InputStream in = inputStream;
             FileOutputStream out = new FileOutputStream(outFile)
         ) {
             U.copy(in, out);

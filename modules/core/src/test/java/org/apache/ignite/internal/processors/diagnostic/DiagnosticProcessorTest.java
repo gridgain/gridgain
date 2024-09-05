@@ -65,6 +65,7 @@ import org.junit.Test;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_PATH;
+import static org.apache.ignite.internal.pagemem.PageIdAllocator.METASTORE_PARTITION;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.OLD_METASTORE_PARTITION;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CACHE_DATA_FILENAME;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
@@ -203,20 +204,19 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Check that when an CorruptedTreeException is thrown, a "corruptedPages_TIMESTAMP.txt" will be created, data will
+     * Check that when a CorruptedTreeException is thrown, a "corruptedPages_TIMESTAMP.txt" will be created, data will
      * be dumped and a warning will be in the log.
      *
      * @throws Exception If failed.
      */
     @Test
     public void testOutputDiagnosticCorruptedPagesInfo() throws Exception {
-        doTestOutputDiagnosticCorruptedPagesInfo(cfg -> {}, (n, anyPageId) -> {
-            validateDiagnosticPathDir(n);
+        doTestOutputDiagnosticCorruptedPagesInfo(cfg -> {}, (node, anyPageId) -> {
+            validateDiagnosticPathDir(node);
 
-            File baseDumpDir = getBaseDumpDir(n);
+            File baseDumpDir = getBaseDumpDir(node);
             assertEquals(7, baseDumpDir.list().length);
 
-            // 6 folders to validate.
             validateCacheDir(anyPageId, baseDumpDir);
             validateWalDir(baseDumpDir);
             validateBinaryMetaDir(baseDumpDir);
@@ -228,8 +228,8 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Check that when an CorruptedTreeException is thrown, a "corruptedPages_TIMESTAMP.txt" will be created, data will
-     * be dumped and a warning will be in the log.
+     * Check that when a CorruptedTreeException is thrown, a "corruptedPages_TIMESTAMP.txt" will be created, data will
+     * be dumped and a warning will be in the log. This time encryption is also enabled.
      *
      * @throws Exception If failed.
      */
@@ -244,13 +244,12 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
             cfg.setEncryptionSpi(encSpi);
         };
 
-        doTestOutputDiagnosticCorruptedPagesInfo(cfgClosure, (n, anyPageId) -> {
-            validateDiagnosticPathDir(n);
+        doTestOutputDiagnosticCorruptedPagesInfo(cfgClosure, (node, anyPageId) -> {
+            validateDiagnosticPathDir(node);
 
-            File baseDumpDir = getBaseDumpDir(n);
+            File baseDumpDir = getBaseDumpDir(node);
             assertEquals(8, baseDumpDir.list().length);
 
-            // 7 folders to validate.
             validateCacheDir(anyPageId, baseDumpDir);
             validateWalDir(baseDumpDir);
             validateBinaryMetaDir(baseDumpDir);
@@ -262,8 +261,8 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
         });
     }
 
-    private void validateDiagnosticPathDir(IgniteEx n) {
-        Path diagnosticPath = getFieldValue(n.context().diagnostic(), "diagnosticPath");
+    private void validateDiagnosticPathDir(IgniteEx node) {
+        Path diagnosticPath = getFieldValue(node.context().diagnostic(), "diagnosticPath");
 
         List<File> corruptedPagesFiles = Arrays.stream(diagnosticPath.toFile().listFiles())
             .filter(f -> corruptedPagesFileNamePattern().matcher(f.getName()).matches()).collect(toList());
@@ -282,6 +281,7 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
         catch (IgniteCheckedException e) {
             fail(e.getMessage());
 
+            // Won't ever happen because of "fail" above.
             return null;
         }
     }
@@ -294,8 +294,9 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
         assertTrue(partitionsPath.exists());
         assertTrue(partitionsPath.isDirectory());
 
-        // cache_data.dat
         assertEquals(3, partitionsPath.list().length);
+
+        // cache_data.dat
         assertTrue(new File(partitionsPath, CACHE_DATA_FILENAME).exists());
 
         // index.bin
@@ -350,10 +351,13 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
         assertTrue(metaStoragePath.exists());
         assertTrue(metaStoragePath.isDirectory());
 
-        assertEquals(1, metaStoragePath.list().length);
-        // Somehow we use partition 0 instead of partition 1 for meta storage in this test, I don't know why.
-        String msPartFileName = String.format(PART_FILE_TEMPLATE, OLD_METASTORE_PARTITION);
-        assertTrue(new File(metaStoragePath, msPartFileName).exists());
+        assertEquals(2, metaStoragePath.list().length);
+
+        String msPart0FileName = String.format(PART_FILE_TEMPLATE, OLD_METASTORE_PARTITION);
+        assertTrue(new File(metaStoragePath, msPart0FileName).exists());
+
+        String msPart1FileName = String.format(PART_FILE_TEMPLATE, METASTORE_PARTITION);
+        assertTrue(new File(metaStoragePath, msPart1FileName).exists());
     }
 
     /**

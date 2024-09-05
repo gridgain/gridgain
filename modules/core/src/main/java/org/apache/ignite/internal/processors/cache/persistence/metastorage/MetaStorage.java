@@ -703,7 +703,7 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
 
             FilePageStoreManager filePageStoreManager = (FilePageStoreManager)cctx.pageStore();
 
-            for (int partId = OLD_METASTORE_PARTITION; partId < METASTORE_PARTITION; partId++) {
+            for (int partId = OLD_METASTORE_PARTITION; partId <= METASTORE_PARTITION; partId++) {
                 FilePageStore partStore = (FilePageStore)filePageStoreManager
                     .getStore(METASTORAGE_CACHE_ID, partId);
 

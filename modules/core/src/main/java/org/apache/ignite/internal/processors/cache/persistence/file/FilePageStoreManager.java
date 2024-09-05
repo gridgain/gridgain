@@ -1271,7 +1271,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
             CacheStoreHolder pageStores = idxCacheStores.get(grpId);
 
-            dumpIndexBinaAndCacheData(dumpDir, pageStores);
+            dumpIndexBinAndCacheDataDatFile(dumpDir, pageStores);
 
             Set<Integer> parts = new HashSet<>();
             for (long pageId : pageIds) {
@@ -1298,7 +1298,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
             CacheStoreHolder pageStores = idxCacheStores.get(GridCacheUtils.UTILITY_CACHE_GROUP_ID);
 
-            dumpIndexBinaAndCacheData(dumpDir, pageStores);
+            dumpIndexBinAndCacheDataDatFile(dumpDir, pageStores);
 
             for (int partId = 0; partId < pageStores.partStores.length; partId++) {
                 FilePageStore partStore = (FilePageStore) pageStores.partStores[partId];
@@ -1312,7 +1312,8 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
         }
     }
 
-    private void dumpIndexBinaAndCacheData(File dumpDir, CacheStoreHolder pageStores) throws IOException {
+    /** Dumps cache's {@code index.bin} and {@code cache_data.dat} files. */
+    private void dumpIndexBinAndCacheDataDatFile(File dumpDir, CacheStoreHolder pageStores) throws IOException {
         FilePageStore idxStore = (FilePageStore) pageStores.idxStore;
 
         File indexFile = new File(idxStore.getFileAbsolutePath());
