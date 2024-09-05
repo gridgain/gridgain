@@ -260,9 +260,6 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
 
             // No need to close byte array input stream when we're done.
             writeStreamToFile(new ByteArrayInputStream(extras.getBytes(UTF_8)), new File(dumpDir, "extras.txt"));
-
-            if (jksInputStream != null)
-                jksInputStream.close();
         }
         catch (Throwable t) {
             if (jksInputStream != null) {
