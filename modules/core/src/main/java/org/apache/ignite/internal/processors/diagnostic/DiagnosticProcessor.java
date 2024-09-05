@@ -235,20 +235,35 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
             File absolutePathKeyStoreFile = new File(keyStorePath);
 
             InputStream jksInputStream = null;
-            if (absolutePathKeyStoreFile.exists())
-                jksInputStream = new FileInputStream(absolutePathKeyStoreFile);
 
-            if (jksInputStream == null) {
-                URL clsPthRes = KeystoreEncryptionSpi.class.getClassLoader().getResource(keyStorePath);
+            try {
+                if (absolutePathKeyStoreFile.exists())
+                    jksInputStream = new FileInputStream(absolutePathKeyStoreFile);
 
-                if (clsPthRes != null)
-                    jksInputStream = clsPthRes.openStream();
-            }
+                if (jksInputStream == null) {
+                    URL clsPthRes = KeystoreEncryptionSpi.class.getClassLoader().getResource(keyStorePath);
 
-            if (jksInputStream != null) {
-                try (InputStream in = jksInputStream) {
-                    writeStreamToFile(in, new File(dumpDir, "keystore.jks"));
+                    if (clsPthRes != null)
+                        jksInputStream = clsPthRes.openStream();
                 }
+
+                if (jksInputStream != null) {
+                    writeStreamToFile(jksInputStream, new File(dumpDir, "keystore.jks"));
+
+                    jksInputStream.close();
+                }
+            }
+            catch (Throwable t) {
+                if (jksInputStream != null) {
+                    try {
+                        jksInputStream.close();
+                    }
+                    catch (Throwable e) {
+                        t.addSuppressed(e);
+                    }
+                }
+
+                throw t;
             }
 
             String extras = String.format(
