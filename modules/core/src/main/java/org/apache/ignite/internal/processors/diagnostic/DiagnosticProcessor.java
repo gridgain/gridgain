@@ -219,6 +219,8 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
 
     /** Dumps keystore and encryption SPI settings. */
     private void dumpEncryptionKeys(KeystoreEncryptionSpi encSpi, File baseDumpDir) {
+        InputStream jksInputStream = null;
+
         try {
             File dumpDir = new File(baseDumpDir, "jks");
             dumpDir.mkdirs();
@@ -234,37 +236,18 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
             // Copy of "org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi.keyStoreFile".
             File absolutePathKeyStoreFile = new File(keyStorePath);
 
-            InputStream jksInputStream = null;
+            if (absolutePathKeyStoreFile.exists())
+                jksInputStream = new FileInputStream(absolutePathKeyStoreFile);
 
-            try {
-                if (absolutePathKeyStoreFile.exists())
-                    jksInputStream = new FileInputStream(absolutePathKeyStoreFile);
+            if (jksInputStream == null) {
+                URL clsPthRes = KeystoreEncryptionSpi.class.getClassLoader().getResource(keyStorePath);
 
-                if (jksInputStream == null) {
-                    URL clsPthRes = KeystoreEncryptionSpi.class.getClassLoader().getResource(keyStorePath);
-
-                    if (clsPthRes != null)
-                        jksInputStream = clsPthRes.openStream();
-                }
-
-                if (jksInputStream != null) {
-                    writeStreamToFile(jksInputStream, new File(dumpDir, "keystore.jks"));
-
-                    jksInputStream.close();
-                }
+                if (clsPthRes != null)
+                    jksInputStream = clsPthRes.openStream();
             }
-            catch (Throwable t) {
-                if (jksInputStream != null) {
-                    try {
-                        jksInputStream.close();
-                    }
-                    catch (Throwable e) {
-                        t.addSuppressed(e);
-                    }
-                }
 
-                throw t;
-            }
+            if (jksInputStream != null)
+                writeStreamToFile(jksInputStream, new File(dumpDir, "keystore.jks"));
 
             String extras = String.format(
                 "keySize=%d\n" +
@@ -277,9 +260,21 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
 
             // No need to close byte array input stream when we're done.
             writeStreamToFile(new ByteArrayInputStream(extras.getBytes(UTF_8)), new File(dumpDir, "extras.txt"));
+
+            if (jksInputStream != null)
+                jksInputStream.close();
         }
-        catch (Exception e) {
-            log.error("Failed to dump encryption keys.", e);
+        catch (Throwable t) {
+            if (jksInputStream != null) {
+                try {
+                    jksInputStream.close();
+                }
+                catch (Throwable e) {
+                    t.addSuppressed(e);
+                }
+            }
+
+            log.error("Failed to dump encryption keys.", t);
         }
     }
 
