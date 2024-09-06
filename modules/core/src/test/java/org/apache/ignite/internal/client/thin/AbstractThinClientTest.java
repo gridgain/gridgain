@@ -44,6 +44,7 @@ public abstract class AbstractThinClientTest extends GridCommonAbstractTest {
 
         return new ClientConfiguration()
             .setAffinityAwarenessEnabled(isClientPartitionAwarenessEnabled())
+            .setReconnectThrottlingPeriod(0)
             .setLogger(log);
     }
 
