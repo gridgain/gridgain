@@ -175,7 +175,7 @@ public class ReliabilityTest extends AbstractThinClientTest {
             if (!partitionAware) {
                 Throwable ex = GridTestUtils.assertThrowsWithCause(() -> cachePut(cache, 0, 0), ClientConnectionException.class);
 
-                GridTestUtils.assertContains(null, ex.getMessage(), F.first(cluster.clientAddresses()));
+                GridTestUtils.assertContains(null, ex.getMessage(), "Channel is closed");
             }
 
             // Recover after fail.
