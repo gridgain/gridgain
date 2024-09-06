@@ -16,8 +16,14 @@
 
 package org.apache.ignite.internal.processors.diagnostic;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.Serializable;
+import java.net.URL;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -30,15 +36,21 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.persistence.CorruptedDataStructureException;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.SegmentRouter;
+import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.encryption.EncryptionSpi;
+import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
 import org.jetbrains.annotations.Nullable;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -156,17 +168,152 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
         }
     }
 
+    /** Return a directory that will contain dumped files after a tree corruption. */
+    File getBaseDumpDir() throws IgniteCheckedException {
+        Serializable consistentId = ctx.config().getConsistentId();
+        String path = "db/dump/" + U.maskForFileName(String.valueOf(consistentId));
+
+        return U.resolveWorkDirectory(ctx.config().getWorkDirectory(), path, false);
+    }
+
     /** Dumps latest WAL segments and related index and partition files on data corruption error. */
     private void dumpPersistenceFilesOnFailure(CorruptedDataStructureException ex) {
-        IgniteWriteAheadLogManager wal = ctx.cache().context().wal();
+        File baseDumpDir;
+        try {
+            baseDumpDir = getBaseDumpDir();
+        }
+        catch (IgniteCheckedException e) {
+            log.error("Unable to resolve dump directory", e);
 
+            return;
+        }
+
+        // Do it first, without encryption keys we can't really read WAL.
+        EncryptionSpi encSpi = ctx.config().getEncryptionSpi();
+        if (encSpi instanceof KeystoreEncryptionSpi) {
+            // We can't call "encSpi.dumpKeys" because it's a public class, we shouldn't add unnecessary methods to it.
+            dumpEncryptionKeys((KeystoreEncryptionSpi)encSpi, baseDumpDir);
+        }
+
+        IgniteCacheObjectProcessor processor = ctx.cacheObjects();
+        if (processor instanceof CacheObjectBinaryProcessorImpl)
+            ((CacheObjectBinaryProcessorImpl)processor).dumpMetadata(baseDumpDir);
+
+        dumpLogs(baseDumpDir);
+
+        IgniteWriteAheadLogManager wal = ctx.cache().context().wal();
         if (wal instanceof FileWriteAheadLogManager)
-            ((FileWriteAheadLogManager) wal).dumpWalFiles();
+            ((FileWriteAheadLogManager) wal).dumpWalFiles(baseDumpDir);
 
         IgnitePageStoreManager storeManager = ctx.cache().context().pageStore();
+        if (storeManager instanceof FilePageStoreManager) {
+            ((FilePageStoreManager)storeManager).dumpPartitionFiles(baseDumpDir, ex.groupId(), ex.pageIds());
 
-        if (storeManager instanceof FilePageStoreManager)
-            ((FilePageStoreManager) storeManager).dumpPartitionFiles(ex.groupId(), ex.pageIds());
+            ((FilePageStoreManager)storeManager).dumpUtilityCache(baseDumpDir);
+        }
+
+        IgniteCacheDatabaseSharedManager dbSharedManager = ctx.cache().context().database();
+        if (dbSharedManager instanceof GridCacheDatabaseSharedManager)
+            ((GridCacheDatabaseSharedManager)dbSharedManager).dumpMetaStorageAndCheckpoints(baseDumpDir);
+    }
+
+    /** Dumps keystore and encryption SPI settings. */
+    private void dumpEncryptionKeys(KeystoreEncryptionSpi encSpi, File baseDumpDir) {
+        InputStream jksInputStream = null;
+
+        try {
+            File dumpDir = new File(baseDumpDir, "jks");
+            dumpDir.mkdirs();
+
+            log.warning(
+                "Sensitive encryption information is being collected into " +
+                dumpDir.getAbsolutePath() +
+                " in order to make further corruption analysis possible."
+            );
+
+            String keyStorePath = encSpi.getKeyStorePath();
+
+            // Copy of "org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi.keyStoreFile".
+            File absolutePathKeyStoreFile = new File(keyStorePath);
+
+            if (absolutePathKeyStoreFile.exists())
+                jksInputStream = new FileInputStream(absolutePathKeyStoreFile);
+
+            if (jksInputStream == null) {
+                URL clsPthRes = KeystoreEncryptionSpi.class.getClassLoader().getResource(keyStorePath);
+
+                if (clsPthRes != null)
+                    jksInputStream = clsPthRes.openStream();
+            }
+
+            if (jksInputStream != null)
+                writeStreamToFile(jksInputStream, new File(dumpDir, "keystore.jks"));
+
+            String extras = String.format(
+                "keySize=%d\n" +
+                "keyStorePassword=%s\n" +
+                "masterKeyName=%s",
+                encSpi.getKeySize(),
+                new String(encSpi.getKeyStorePwd()),
+                encSpi.getMasterKeyName()
+            );
+
+            // No need to close byte array input stream when we're done.
+            writeStreamToFile(new ByteArrayInputStream(extras.getBytes(UTF_8)), new File(dumpDir, "extras.txt"));
+        }
+        catch (Throwable t) {
+            if (jksInputStream != null) {
+                try {
+                    jksInputStream.close();
+                }
+                catch (Throwable e) {
+                    t.addSuppressed(e);
+                }
+
+                jksInputStream = null;
+            }
+
+            log.error("Failed to dump encryption keys.", t);
+        }
+        finally {
+            if (jksInputStream != null) {
+                try {
+                    jksInputStream.close();
+                }
+                catch (Throwable t) {
+                    log.error("Failed to close JKS input stream.", t);
+                }
+            }
+        }
+    }
+
+    /** Dumps "log" dir if it exists. */
+    private void dumpLogs(File baseDumpDir) {
+        try {
+            File logDir = U.resolveWorkDirectory(ctx.config().getWorkDirectory(), "log", false);
+
+            if (logDir.exists() && logDir.isDirectory()) {
+                File dumpDir = new File(baseDumpDir, "log");
+
+                for (File logFile : logDir.listFiles()) {
+                    U.copy(logFile, new File(dumpDir, logFile.getName()), false);
+                }
+            }
+        }
+        catch (Exception e) {
+            log.error("Failed to dump logs.", e);
+        }
+    }
+
+    /** Writes all data from the input stream into a given file. */
+    private static void writeStreamToFile(InputStream in, File outFile) throws IOException {
+        try (
+            FileOutputStream out = new FileOutputStream(outFile)
+        ) {
+            U.copy(in, out);
+
+            out.getFD().sync();
+        }
     }
 
     /**

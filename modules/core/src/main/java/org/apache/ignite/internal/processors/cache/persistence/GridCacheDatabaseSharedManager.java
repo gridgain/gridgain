@@ -3238,6 +3238,33 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         return null;
     }
 
+    /** Dumps meta storage files and checkpoint files into a dump dir. */
+    public void dumpMetaStorageAndCheckpoints(File baseDumpDir) {
+        dumpCheckpoints(baseDumpDir);
+
+        metaStorage.dumpMetaStorage(baseDumpDir);
+    }
+
+    /** */
+    private void dumpCheckpoints(File baseDumpDir) {
+        File checkpointDirectory = checkpointManager.checkpointDirectory();
+
+        File dumpDir = new File(baseDumpDir, "cp");
+
+        try {
+            File[] cpFiles = checkpointDirectory.listFiles();
+
+            assert cpFiles != null : checkpointDirectory + " is not a folder";
+
+            for (File cpFile : cpFiles) {
+                U.copy(cpFile, new File(dumpDir, cpFile.getName()), false);
+            }
+        }
+        catch (IOException e) {
+            log.error("Failed to dump checkpoint files", e);
+        }
+    }
+
     /**
      *
      */
