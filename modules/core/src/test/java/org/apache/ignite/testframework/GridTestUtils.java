@@ -481,7 +481,7 @@ public final class GridTestUtils {
      */
     public static void assertContains(@Nullable IgniteLogger log, String str, String substr) {
         try {
-            assertTrue(str != null && str.contains(substr));
+            assertTrue(str, str != null && str.contains(substr));
         } catch (AssertionError e) {
             U.warn(log, String.format("String does not contain substring: '%s':", substr));
             U.warn(log, "String:");
