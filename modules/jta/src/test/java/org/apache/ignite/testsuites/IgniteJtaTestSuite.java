@@ -19,6 +19,7 @@ package org.apache.ignite.testsuites;
 import org.apache.ignite.internal.processors.cache.CacheJndiTmFactorySelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheJtaConfigurationValidationSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheJtaFactoryConfigValidationSelfTest;
+import org.apache.ignite.internal.processors.cache.GridJtaTransactionManagerDistributedSelfTest;
 import org.apache.ignite.internal.processors.cache.GridJtaTransactionManagerSelfTest;
 import org.apache.ignite.internal.processors.cache.jta.GridPartitionedCacheJtaFactorySelfTest;
 import org.apache.ignite.internal.processors.cache.jta.GridPartitionedCacheJtaFactoryUseSyncSelfTest;
@@ -49,6 +50,7 @@ import org.junit.runners.Suite;
     GridCacheJtaFactoryConfigValidationSelfTest.class,
 
     GridJtaTransactionManagerSelfTest.class,
+    GridJtaTransactionManagerDistributedSelfTest.class,
 
     // Factory
     CacheJndiTmFactorySelfTest.class
