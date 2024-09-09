@@ -469,7 +469,10 @@ public class TransactionConfiguration implements Serializable {
         return transients.isEmpty() ? null : transients.toArray(new String[transients.size()]);
     }
 
-    /** {@inheritDoc} */
+    /**
+     * TX configuration is used in node attributes, thus we must be able to compare it.
+     * {@inheritDoc}
+     */
     @Override public boolean equals(Object o) {
         if (this == o)
             return true;

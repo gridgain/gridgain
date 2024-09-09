@@ -77,7 +77,7 @@ public class CompactedTopologyHistory implements Externalizable {
     }
 
     /** Returns a topology history map. */
-    public Map<Long, Collection<ClusterNode>> restore() {
+    public SortedMap<Long, Collection<ClusterNode>> asMap() {
         return topHist;
     }
 
@@ -212,7 +212,7 @@ public class CompactedTopologyHistory implements Externalizable {
         }
 
         // TCP discovery node deserialization reads consistent ID from attributes instead of storing it separately. This
-        // is why we must put it there. "singletonMap" is cheaper that pre-allocated "HashMap" if "delta" is "null".
+        // is why we must put it there. "singletonMap" is cheaper than "HashMap", that's why we use lazy initialization.
         // See "TcpDiscoveryNode.readExternal".
         if (diffState.delta == null)
             diffState.delta = Collections.singletonMap(ATTR_NODE_CONSISTENT_ID, newNode.consistentId());
@@ -254,7 +254,7 @@ public class CompactedTopologyHistory implements Externalizable {
 
                         TcpDiscoveryNode oldNode = nodesMap.get(newNode.consistentId());
                         // Technically, this copying can be avoided if delta only has a consistent ID, but there's not
-                        // much of a performance benefit, while code would become much, much worse.
+                        // much of a performance benefit, while the code would become much, much worse.
                         Map<String, Object> newAttrs = new HashMap<>(oldNode.getAttributes());
 
                         newNode.getAttributes().forEach((k, v) -> {

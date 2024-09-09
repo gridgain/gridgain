@@ -60,7 +60,7 @@ public class CompactedTopologyHistorySelfTest {
     }
 
     private void assertTopologyHistoryEquals(Map<Long, Collection<ClusterNode>> expected, Map<Long, Collection<ClusterNode>> actual) {
-        assertEquals(expected, actual);//only checks map keys and node ids but not attributes
+        assertEquals(expected, actual); // Only checks map keys and node ids but not attributes.
 
         for (Map.Entry<Long, Collection<ClusterNode>> e : expected.entrySet()) {
             Long topVer = e.getKey();
@@ -144,9 +144,7 @@ public class CompactedTopologyHistorySelfTest {
 
         CompactedTopologyHistory compactedTopologyHistory = new CompactedTopologyHistory(history);
 
-        Map<Long, Collection<ClusterNode>> restored = compactedTopologyHistory.restore();
-
-        assertTopologyHistoryEquals(history, restored);
+        assertTopologyHistoryEquals(history, compactedTopologyHistory.asMap());
     }
 
     @Test
@@ -222,8 +220,6 @@ public class CompactedTopologyHistorySelfTest {
 
         CompactedTopologyHistory compacted = new CompactedTopologyHistory(history);
 
-        Map<Long, Collection<ClusterNode>> restored = compacted.restore();
-
-        assertTopologyHistoryEquals(history, restored);
+        assertTopologyHistoryEquals(history, compacted.asMap());
     }
 }
