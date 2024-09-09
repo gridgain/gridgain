@@ -232,4 +232,8 @@ public class BulkLoadCsvFormat implements BulkLoadFormat {
     public void header(@Nullable boolean header) {
         this.header = header;
     }
+
+    @Override public String name() {
+        return "CSV";
+    }
 }

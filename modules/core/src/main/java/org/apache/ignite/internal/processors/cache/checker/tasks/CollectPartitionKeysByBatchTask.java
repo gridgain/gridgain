@@ -129,7 +129,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             if (nodeRes.errorMessage() != null)
                 return new ExecutionResult<>(nodeRes.errorMessage());
 
-            // This variable is used to store the last key observed key for results.get(i).getNode().
+            // This variable is used to store the last observed key for results.get(i).getNode().
             KeyCacheObject lastNodeKey = null;
             for (VersionedKey partKeyVer : nodeRes.result()) {
                 try {
@@ -232,6 +232,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             part.reserve();
 
+            boolean primary = cctx.affinity().primaryPartitions(ignite.localNode().id(), partBatch.startTopVer()).contains(part.id());
+
             try (GridCursor<? extends CacheDataRow> cursor = lowerKey == null ?
                 grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), DATA) :
                 grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), lowerKey, null)) {
@@ -251,6 +253,13 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     else
                         i--;
                 }
+
+                ignite.context().diagnostic().reconciliationExecutionContext().updatePartitionStatistics(
+                    partBatch.sessionId(),
+                    partBatch.cacheName(),
+                    partBatch.partitionId(),
+                    primary,
+                    partEntryHashRecords.size());
 
                 return new ExecutionResult<>(partEntryHashRecords);
             }

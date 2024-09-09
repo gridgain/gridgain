@@ -1433,7 +1433,7 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
 
                     for (AffinityTopologyVersion topVer : t.get2()) {
                         for (ClusterNode node : ctx.discovery().cacheGroupAffinityNodes(cctx.groupId(), topVer)) {
-                            if (!node.isLocal()) {
+                            if (!node.isLocal() && cctx.discovery().alive(nodeId)) {
                                 try {
                                     cctx.io().send(node, msg, GridIoPolicy.SYSTEM_POOL);
                                 }

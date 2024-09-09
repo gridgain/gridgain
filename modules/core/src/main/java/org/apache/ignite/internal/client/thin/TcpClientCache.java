@@ -1048,6 +1048,13 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
                 }
                 else
                     out.writeByte(GridBinaryMarshaller.NULL);
+
+                if (!payloadCh.clientChannel().protocolCtx().isFeatureSupported(ProtocolBitmaskFeature.QRY_LABEL)) {
+                    if (qry.getLabel() != null)
+                        throw new ClientFeatureNotSupportedByServerException(ProtocolBitmaskFeature.QRY_LABEL);
+                }
+                else
+                    w.writeString(qry.getLabel());
             }
 
             if (qry.getFilter() == null)

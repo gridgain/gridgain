@@ -265,8 +265,14 @@ public enum IgniteFeatures {
     /** Allows to node check connections with special heartbeat message to detect network issues rather quickly. */
     TCP_COMMUNICATION_HEARTBEATS(70),
 
+    /** Optimization of compression for encrypted snapshots. */
+    OPTIMIZED_COMPRESSED_ENCRYPTED_SNAPSHOTS(71),
+
+    /** This feature allows using exchangeless snapshots for point-in-time recovery. */
+    POINT_IN_TIME_RECOVERY_EXCHANGELESS_SUPPORT(72),
+
     /** Enables compacted topology history. */
-    TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY(71);
+    TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY(73);
 
     /**
      * Unique feature identifier.

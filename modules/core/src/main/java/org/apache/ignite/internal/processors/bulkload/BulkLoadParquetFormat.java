@@ -37,4 +37,8 @@ public class BulkLoadParquetFormat implements BulkLoadFormat {
     public String pattern() {
         return pattern;
     }
+
+    @Override public String name() {
+        return "Parquet";
+    }
 }

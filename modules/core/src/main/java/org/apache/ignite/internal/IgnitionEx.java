@@ -17,7 +17,6 @@
 package org.apache.ignite.internal;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.management.ManagementFactory;
@@ -137,7 +136,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOCAL_HOST;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_NO_SHUTDOWN_HOOK;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_CONSISTENT_ID;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_RESTART_CODE;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SUCCESS_FILE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -481,31 +479,16 @@ public class IgnitionEx {
      * @see Ignition#RESTART_EXIT_CODE
      */
     public static void restart(boolean cancel) {
-        String file = System.getProperty(IGNITE_SUCCESS_FILE);
+        U.log(null, "Restarting node. Will exit (" + Ignition.RESTART_EXIT_CODE + ").");
 
-        if (file == null)
-            U.warn(null, "Cannot restart node when restart not enabled.");
-        else {
-            try {
-                new File(file).createNewFile();
-            }
-            catch (IOException e) {
-                U.error(null, "Failed to create restart marker file (restart aborted): " + e.getMessage());
+        // Set the exit code so that shell process can recognize it and loop
+        // the start up sequence again.
+        System.setProperty(IGNITE_RESTART_CODE, Integer.toString(Ignition.RESTART_EXIT_CODE));
 
-                return;
-            }
+        stopAll(cancel, null);
 
-            U.log(null, "Restarting node. Will exit (" + Ignition.RESTART_EXIT_CODE + ").");
-
-            // Set the exit code so that shell process can recognize it and loop
-            // the start up sequence again.
-            System.setProperty(IGNITE_RESTART_CODE, Integer.toString(Ignition.RESTART_EXIT_CODE));
-
-            stopAll(cancel, null);
-
-            // This basically leaves loaders hang - we accept it.
-            System.exit(Ignition.RESTART_EXIT_CODE);
-        }
+        // This basically leaves loaders hang - we accept it.
+        System.exit(Ignition.RESTART_EXIT_CODE);
     }
 
     /**

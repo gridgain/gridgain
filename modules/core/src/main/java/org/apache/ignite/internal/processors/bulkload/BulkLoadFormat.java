@@ -26,4 +26,8 @@ public interface BulkLoadFormat {
     /** The default input charset. */
     Charset DFLT_INPUT_CHARSET = StandardCharsets.UTF_8;
 
+    /**
+     * @return The name of the format.
+     */
+    String name();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -120,6 +120,7 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.LT;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -480,7 +481,7 @@ public final class GridTestUtils {
      */
     public static void assertContains(@Nullable IgniteLogger log, String str, String substr) {
         try {
-            assertTrue(str != null && str.contains(substr));
+            assertTrue(str, str != null && str.contains(substr));
         } catch (AssertionError e) {
             U.warn(log, String.format("String does not contain substring: '%s':", substr));
             U.warn(log, "String:");
@@ -2785,5 +2786,23 @@ public final class GridTestUtils {
                 }
             }
         );
+    }
+
+    /**
+     * Creates a string containing only copies of one character.
+     *
+     * @param cnt Number of characters in the returned string.
+     * @param c Character to be copied.
+     * @return String containing copies of characters appended one after another.
+     */
+    public static String nCopiesOfChar(int cnt, char c) {
+        assertTrue("Must be greater than zero: " + cnt, cnt >= 0);
+
+        SB sb = new SB(cnt);
+
+        for (int i = 0; i < cnt; i++)
+            sb.a(c);
+
+        return sb.toString();
     }
 }

@@ -114,13 +114,6 @@ public interface IgniteEx extends Ignite {
      */
     public boolean isJmxRemoteEnabled();
 
-    /**
-     * Whether or not node restart is enabled.
-     *
-     * @return {@code True} if restart mode is enabled, {@code false} otherwise.
-     */
-    public boolean isRestartEnabled();
-
     /** {@inheritDoc} */
     @Override IgniteClusterEx cluster();
 

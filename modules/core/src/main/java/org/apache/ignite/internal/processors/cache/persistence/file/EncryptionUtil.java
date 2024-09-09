@@ -118,7 +118,14 @@ public class EncryptionUtil {
      * @param res Destination buffer.
      */
     private void storeCRC(ByteBuffer res) {
-        int crc = FastCrc.calcCrc(res, encryptedDataSize());
+        int encryptedDataSize = encryptedDataSize();
+        int crc = FastCrc.calcCrc(res, encryptedDataSize);
+
+        assert res.position() == encryptedDataSize : res.position();
+
+        // Avoid junk explicitly.
+        res.put(zeroes, 0, encSpi.blockSize());
+        res.position(encryptedDataSize);
 
         res.put((byte) (crc >> 24));
         res.put((byte) (crc >> 16));
@@ -126,17 +133,21 @@ public class EncryptionUtil {
         res.put((byte) crc);
     }
 
+    public int encryptionOverhead() {
+        return encryptionOverhead;
+    }
+
     /**
      * @return Encrypted data size.
      */
-    private int encryptedDataSize() {
+    public int encryptedDataSize() {
         return pageSize - encSpi.blockSize();
     }
 
     /**
      * @return Plain data size.
      */
-    private int plainDataSize() {
+    public int plainDataSize() {
         return pageSize - encryptionOverhead;
     }
 

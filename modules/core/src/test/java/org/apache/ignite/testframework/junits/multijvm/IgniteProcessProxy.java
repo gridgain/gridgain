@@ -515,11 +515,6 @@ public class IgniteProcessProxy implements IgniteEx {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isRestartEnabled() {
-        throw new UnsupportedOperationException("Operation isn't supported yet.");
-    }
-
-    /** {@inheritDoc} */
     @Override public IgniteClusterEx cluster() {
         return new IgniteClusterProcessProxy(this);
     }

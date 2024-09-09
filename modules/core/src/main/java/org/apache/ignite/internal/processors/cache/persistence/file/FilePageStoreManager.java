@@ -67,6 +67,7 @@ import org.apache.ignite.internal.pagemem.store.PageStoreCollection;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
+import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.StoredCacheData;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
@@ -1264,16 +1265,13 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     }
 
     /** Dumps related partition files and index file to diagnostic dir. */
-    public void dumpPartitionFiles(int grpId, long... pageIds) {
+    public void dumpPartitionFiles(File baseDumpDir, int grpId, long... pageIds) {
         try {
-            String path = "db/dump/" + igniteCfg.getConsistentId() + "/" + grpId;
-            File dumpDir = U.resolveWorkDirectory(igniteCfg.getWorkDirectory(), path, false);
+            File dumpDir = new File(baseDumpDir, Integer.toString(grpId));
 
             CacheStoreHolder pageStores = idxCacheStores.get(grpId);
 
-            FilePageStore idxStore = (FilePageStore) pageStores.idxStore;
-
-            U.copy(new File(idxStore.getFileAbsolutePath()), new File(dumpDir, INDEX_FILE_NAME), false);
+            dumpIndexBinAndCacheDataDatFile(dumpDir, pageStores);
 
             Set<Integer> parts = new HashSet<>();
             for (long pageId : pageIds) {
@@ -1291,6 +1289,39 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
         } catch (Exception e) {
             log.error("Dump partition files has failed", e);
         }
+    }
+
+    /** Dumps utility cache files. */
+    public void dumpUtilityCache(File baseDumpDir) {
+        try {
+            File dumpDir = new File(baseDumpDir, "sys-cache");
+
+            CacheStoreHolder pageStores = idxCacheStores.get(GridCacheUtils.UTILITY_CACHE_GROUP_ID);
+
+            dumpIndexBinAndCacheDataDatFile(dumpDir, pageStores);
+
+            for (int partId = 0; partId < pageStores.partStores.length; partId++) {
+                FilePageStore partStore = (FilePageStore) pageStores.partStores[partId];
+
+                File srcPartFile = new File(partStore.getFileAbsolutePath());
+                if (srcPartFile.exists())
+                    U.copy(srcPartFile, new File(dumpDir, srcPartFile.getName()), false);
+            }
+        } catch (Exception e) {
+            log.error("Dump partition files has failed", e);
+        }
+    }
+
+    /** Dumps cache's {@code index.bin} and {@code cache_data.dat} files. */
+    private void dumpIndexBinAndCacheDataDatFile(File dumpDir, CacheStoreHolder pageStores) throws IOException {
+        FilePageStore idxStore = (FilePageStore) pageStores.idxStore;
+
+        File indexFile = new File(idxStore.getFileAbsolutePath());
+        if (indexFile.exists())
+            U.copy(indexFile, new File(dumpDir, INDEX_FILE_NAME), false);
+
+        File cacheDataFile = new File(indexFile.getParentFile(), CACHE_DATA_FILENAME);
+        U.copy(cacheDataFile, new File(dumpDir, CACHE_DATA_FILENAME), false);
     }
 
     /**
