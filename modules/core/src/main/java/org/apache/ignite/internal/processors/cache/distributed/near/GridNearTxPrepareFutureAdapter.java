@@ -185,7 +185,7 @@ public abstract class GridNearTxPrepareFutureAdapter extends
 
             Collection<UUID> backups = entry.getValue();
 
-            if (backups.size() <= 1 && !IGNITE_DISABLE_ONE_PHASE_COMMIT)
+            if (backups.size() <= 1 && !tx.disableOnePhaseCommit() && !IGNITE_DISABLE_ONE_PHASE_COMMIT)
                 tx.onePhaseCommit(true);
         }
     }

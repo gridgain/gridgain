@@ -170,6 +170,9 @@ public class CacheJtaManager extends CacheJtaManagerAdapter {
                                 /*tx size*/0,
                                 null
                             );
+
+                            tx.onePhaseCommit(false);
+                            tx.disableOnePhaseCommit(true);
                         }
 
                         rsrc = new CacheJtaResource(tx, cctx.kernalContext());
