@@ -83,8 +83,7 @@ public class CompactedTopologyHistory implements Externalizable {
 
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
-        // All keys in the map are sequential, so it's enough to write the first key and the size instead of writing
-        // each key separately.
+        // We write a single "long" here, so that later we can only write "int" as a diff between "ver" and "firstKey".
         out.writeLong(firstKey);
 
         int size = topHist.size();
@@ -92,7 +91,12 @@ public class CompactedTopologyHistory implements Externalizable {
 
         // Map from "consistentId" to the latest (in terms of topology versions)currently known cluster node instance.
         Map<Object, TcpDiscoveryNode> nodesMap = new HashMap<>();
-        for (Collection<ClusterNode> top : topHist.values()) {
+
+        for (Map.Entry<Long, Collection<ClusterNode>> entry : topHist.entrySet()) {
+            long ver = entry.getKey();
+            Collection<ClusterNode> top = entry.getValue();
+
+            out.writeInt((int)(ver - firstKey));
             out.writeInt(top.size());
 
             for (ClusterNode clusterNode : top) {
@@ -233,7 +237,7 @@ public class CompactedTopologyHistory implements Externalizable {
 
         Map<Object, TcpDiscoveryNode> nodesMap = new HashMap<>();
         for (int i = 0; i < size; i++) {
-            long ver = firstKey + i;
+            long ver = firstKey + in.readInt();
 
             int topSize = in.readInt();
             List<ClusterNode> top = new ArrayList<>(topSize);
