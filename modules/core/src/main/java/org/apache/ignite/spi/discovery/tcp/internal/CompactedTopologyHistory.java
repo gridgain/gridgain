@@ -20,25 +20,19 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import org.apache.ignite.cache.CacheMetrics;
-import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.ClusterMetricsSnapshot;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteProductVersion;
-import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_NODE_CONSISTENT_ID;
 
 /**
  * This class serves to optimize message size with topology history.
@@ -48,313 +42,244 @@ import org.jetbrains.annotations.Nullable;
  * message size.
  * Currently only attributes are optimized.
  * We assume that nodes rarely change their attributes during normal exploitation, therefore we divide history according
- * node's consistentId and only store initial state of attributes for oldest topology version, for older topology
+ * to node's consistentId and only store initial state of attributes for oldest topology version, for later topology
  * versions we only record an attribute change.
  */
 public class CompactedTopologyHistory implements Externalizable {
-
     /** */
     private static final long serialVersionUID = 1L;
 
-    /** Stores topology history. Indexed by consistent ID. */
-    private Map<Serializable, HistoryData> historyByNode;
+    /** Indicated that node didn't yet appear in topology history. */
+    private static final int NEW_NODE = 0;
+
+    /** Indicated that node appeared in topology history before, and it's not the same instance. */
+    private static final int DELTA_NODE = 1;
+
+    /** Indicated that node appeared in topology history before, and it's the same instance. */
+    private static final int SAME_NODE = 2;
+
+    /** Original topology history map. */
+    private SortedMap<Long, Collection<ClusterNode>> topHist;
+
+    /** The earliest known topology version. Cached in a field to save some time on a hot path. */
+    private long firstKey;
 
     /** Ctor. */
     public CompactedTopologyHistory(@NotNull Map<Long, Collection<ClusterNode>> topHist) {
-        assert !topHist.isEmpty();
+        assert topHist instanceof SortedMap && !topHist.isEmpty() : topHist + " is invalid";
 
-        long minVer = Long.MAX_VALUE;
-        long maxVer = 0;
-
-        for (long topVer : topHist.keySet()) {
-            minVer = Math.min(minVer, topVer);
-            maxVer = Math.max(maxVer, topVer);
-        }
-
-        long lowTopVer = minVer;
-        long highTopVer = maxVer;
-
-        historyByNode = new HashMap<>();
-
-        Map<Object, Map<String, Object>> prevAttrsPerNode = new HashMap<>();
-
-        for (Map.Entry<Long, Collection<ClusterNode>> e : topHist.entrySet()) {
-            Long topVer = e.getKey();
-            Collection<ClusterNode> top = e.getValue();
-
-            for (ClusterNode node_ : top) {
-                assert node_ instanceof TcpDiscoveryNode;
-
-                TcpDiscoveryNode node = (TcpDiscoveryNode) node_;
-
-                assert node.consistentId() instanceof Serializable;
-
-                Serializable consistentId = (Serializable) node.consistentId();
-
-                Map<String, Object> prevAttrs = prevAttrsPerNode.get(consistentId);
-
-                HistoryData data = historyByNode.computeIfAbsent(
-                        consistentId,
-                        k -> new HistoryData(lowTopVer, highTopVer)
-                );
-
-                data.add(topVer, node, prevAttrs);
-
-                prevAttrsPerNode.put(consistentId, node.getAttributes());
-            }
-        }
+        this.topHist = (SortedMap<Long, Collection<ClusterNode>>)topHist;
+        firstKey = this.topHist.firstKey();
     }
 
     /** Ctor required by {@link Externalizable}. */
-    public CompactedTopologyHistory() {}
+    public CompactedTopologyHistory() {
+    }
 
-    /** Restore topology history to its original format. */
+    /** Returns a topology history map. */
     public Map<Long, Collection<ClusterNode>> restore() {
-        Map<Long, Collection<ClusterNode>> topHist = new TreeMap<>();
-
-        for (Map.Entry<Serializable, HistoryData> e : historyByNode.entrySet()) {
-            Serializable consistentId = e.getKey();
-            HistoryData data = e.getValue();
-
-            Map<String, Object> attrs = new HashMap<>();
-
-            Object[] entries = data.entries;
-            for (int i = 0, entriesLength = entries.length; i < entriesLength; i++) {
-                if (entries[i] == null)
-                    continue;
-
-                assert entries[i] instanceof NodeData;
-
-                NodeData entry = (NodeData) entries[i];
-                long topVer = i + data.lowTopVer;
-
-                TcpDiscoveryNode node = new TcpDiscoveryNode(
-                        entry.id,
-                        entry.addrs,
-                        entry.hostNames,
-                        entry.discPort,
-                        new DiscoveryMetricsProvider() {
-                            /** {@inheritDoc} */
-                            @Override public ClusterMetrics metrics() {
-                                return entry.metrics;
-                            }
-
-                            /** {@inheritDoc} */
-                            @Override public Map<Integer, CacheMetrics> cacheMetrics() {
-                                return null;
-                            }
-                        },
-                        entry.ver,
-                        consistentId,
-                        false
-                );
-
-                for (int j = 0; entry.attrKeys != null && j < entry.attrKeys.length; j++) {
-                    String attrKey = (String) entry.attrKeys[j];
-                    Object attrVal = entry.attrVals[j];
-
-                    if (attrVal == null)
-                        attrs.remove(attrKey);
-                    else
-                        attrs.put(attrKey, attrVal);
-                }
-
-                node.setAttributes(attrs);
-
-                topHist.computeIfAbsent(topVer, k -> new ArrayList<>()).add(node);
-            }
-        }
-
         return topHist;
     }
 
+    /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
-        U.writeMap(out, historyByNode);
-    }
+        // All keys in the map are sequential, so it's enough to write the first key and the size instead of writing
+        // each key separately.
+        out.writeLong(firstKey);
 
-    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        historyByNode = U.readMap(in);
-    }
+        int size = topHist.size();
+        out.writeInt(size);
 
-    private static class HistoryData implements Externalizable {
-        /** */
-        private static final long serialVersionUID = 1L;
+        // Map from "consistentId" to the latest (in terms of topology versions)currently known cluster node instance.
+        Map<Object, TcpDiscoveryNode> nodesMap = new HashMap<>();
+        for (Collection<ClusterNode> top : topHist.values()) {
+            out.writeInt(top.size());
 
-        /** Oldest topology version. */
-        private long lowTopVer;
+            for (ClusterNode clusterNode : top) {
+                TcpDiscoveryNode newNode = (TcpDiscoveryNode)clusterNode;
 
-        /** DataEntries. */
-        private Object[] entries;
+                Object consistentId = newNode.consistentId();
+                TcpDiscoveryNode oldNode = nodesMap.get(consistentId);
 
-        /** Ctor required by {@link Externalizable}. */
-        public HistoryData() {}
+                if (oldNode == null) {
+                    nodesMap.put(consistentId, newNode);
 
-        /** Ctor. */
-        public HistoryData(long lowTopVer, long highTopVer) {
-            this.lowTopVer = lowTopVer;
-            entries = new NodeData[(int) (highTopVer - lowTopVer + 1)];
+                    out.write(NEW_NODE);
+                    writeTcpDiscoveryNode(out, newNode);
+                }
+                else if (oldNode != newNode) {
+                    nodesMap.put(consistentId, newNode);
+
+                    out.write(DELTA_NODE);
+                    writeTcpDiscoveryNode(out, diff(oldNode, newNode));
+                }
+                else { // oldNode == node
+                    out.write(SAME_NODE);
+
+                    // Although consistent IDs are usually strings or UUIDs, it's still more optimal to write them as
+                    // objects, due to internal cache in "ObjectOutput" instance.
+                    out.writeObject(consistentId);
+                }
+            }
         }
+    }
+
+    /**
+     * Writes {@link TcpDiscoveryNode} into an output stream, without writing any extra meta information about the type.
+     */
+    private static void writeTcpDiscoveryNode(ObjectOutput out, TcpDiscoveryNode node) throws IOException {
+        node.writeExternal(out);
+    }
+
+    /**
+     * Reads {@link TcpDiscoveryNode} from an input stream, without actually calling {@link ObjectInput#readObject()}.
+     * We call {@link TcpDiscoveryNode#readExternal(ObjectInput)} directly.
+     */
+    private static TcpDiscoveryNode readTcpDiscoveryNode(ObjectInput in) throws IOException, ClassNotFoundException {
+        TcpDiscoveryNode node = new TcpDiscoveryNode();
+
+        node.readExternal(in);
+
+        return node;
+    }
+
+    /**
+     * Helper class that stores mutable values, that are necessary to change in lambdas of
+     * {@link #diff(TcpDiscoveryNode, TcpDiscoveryNode)}.
+     */
+    private static class DiffState {
+        /**
+         * Optimization flag. Will be {@code true} if {@code newAttrs} contains all attributes from {@code oldAttrs}.
+         * In such a case, if {@code oldAttrs.size()} is equal to {@code newAttrs.size()}, we can conclude that their
+         * {@link Map#keySet()}s are equal.
+         *
+         * @see #diff(TcpDiscoveryNode, TcpDiscoveryNode)
+         */
+        boolean hasAllKeys = true;
 
         /**
-         * Add new entry to storage.
-         * @param topVer Topology version.
-         * @param node Ignite node.
-         * @param prevAttrs Previous topology version attributes.
+         * Map with the difference between {@code oldAttrs} and {@code newAttrs}. Key with {@code null} value means a
+         * removed attribute. This map is initially equal to {@code null} and initialized lazily, in order to save some
+         * precious allocations.
          */
-        public void add(long topVer, TcpDiscoveryNode node, @Nullable Map<String, Object> prevAttrs) {
-            Map<String, Object> attrs = node.getAttributes();
-
-            List<String> deltaKeys = new ArrayList<>();
-            List<Object> deltaVals = new ArrayList<>();
-
-            //Store new keys and updated values
-            for (Map.Entry<String, Object> e : attrs.entrySet()) {
-                String key = e.getKey();
-                Object val = e.getValue();
-
-                boolean prevHasKey = prevAttrs != null && prevAttrs.containsKey(key);
-
-                if (!prevHasKey || !Objects.equals(prevAttrs.get(key), val)) {
-                    deltaKeys.add(key);
-                    deltaVals.add(val);
-                }
-            }
-
-            if (prevAttrs != null) {
-                List<String> deletedKeys = prevAttrs.keySet().stream()
-                        .filter(k -> !attrs.containsKey(k))
-                        .collect(Collectors.toList());
-
-                //store delete keys
-                for (String deletedKey : deletedKeys) {
-                    deltaKeys.add(deletedKey);
-                    deltaVals.add(null);
-                }
-            }
-
-            NodeData nodeData = deltaKeys.isEmpty()
-                    ? new NodeData(node)
-                    : new NodeData(node, deltaKeys.toArray(new String[0]), deltaVals.toArray());
-
-            entries[(int) (topVer - lowTopVer)] = nodeData;
-        }
-
-        @Override public void writeExternal(ObjectOutput out) throws IOException {
-            out.writeLong(lowTopVer);
-            U.writeArray(out, entries);
-        }
-
-        @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-            lowTopVer = in.readLong();
-            entries = U.readArray(in);
-        }
+        Map<String, Object> delta = null;
     }
 
-    /** Represents compacted node data. */
-    private static class NodeData implements Externalizable {
-        /** */
-        private static final long serialVersionUID = 1L;
+    /**
+     * Returns a copy of {@code newNode}, but its attributes map contains a difference between attributes of
+     * {@code oldNode} and {@code newNode}.
+     */
+    private static TcpDiscoveryNode diff(TcpDiscoveryNode oldNode, TcpDiscoveryNode newNode) {
+        // It's important that we call "*.getAttributes()" instead of "*.attributes()", because the latter returns a
+        // wrapper that's a "view" on top of the original map, and it also filters out security attributes, meaning that
+        // it's literally missing some data.
+        Map<String, Object> oldAttrs = oldNode.getAttributes();
+        Map<String, Object> newAttrs = newNode.getAttributes();
 
-        /** Node ID. */
-        private UUID id;
+        DiffState diffState = new DiffState();
 
-        /** Node compacted attribute keys. */
-        private Object[] attrKeys;
+        // Calculate updated keys.
+        // "forEach" here is not a stylistic choice, but rather an optimization. Attributes map that we iterate here is
+        // initialized with "Collections.unmodifiableMap", and its "*.entrySet()" iterator leads to a missive allocation
+        // of "Map.Entry" instances, which is noticeably slower than "forEach".
+        newAttrs.forEach((key, val) -> {
+            Object oldAttr = oldAttrs.get(key);
 
-        /** Node compacted attribute vals. */
-        private Object[] attrVals;
+            // We only call "containsKey" if "oldAttr" is "null". This way we avoid doing two lookups in the map because
+            // that's expensive.
+            boolean prevHasKey = oldAttr != null || oldAttrs.containsKey(key);
+            diffState.hasAllKeys &= prevHasKey;
 
-        /** Node addresses. */
-        private Collection<String> addrs;
+            if (!prevHasKey || !Objects.deepEquals(oldAttr, val)) {
+                if (diffState.delta == null)
+                    diffState.delta = new HashMap<>(4); // Vast majority of attributes never change.
 
-        /** Node hostname. */
-        private Collection<String> hostNames;
+                diffState.delta.put(key, val);
+            }
+        });
 
-        /** Node discovery port. */
-        private int discPort;
+        // Calculate deleted keys. See "DiffState.hasAllKeys".
+        if (!diffState.hasAllKeys || oldAttrs.size() != newAttrs.size()) {
+            // Here we use "forEach" for the same reason.
+            oldAttrs.forEach((k, v) -> {
+                if (!newAttrs.containsKey(k)) {
+                    if (diffState.delta == null)
+                        diffState.delta = new HashMap<>(4); // Vast majority of attributes never change.
 
-        /** Node metrics. */
-        private ClusterMetrics metrics;
-
-        /** Node order. */
-        private long order;
-
-        /** Node internal order. */
-        private long intOrder;
-
-        /** Node product version. */
-        private IgniteProductVersion ver;
-
-        /** Client router node ID. */
-        private UUID clientRouterNodeId;
-
-        /** Ctor required by {@link Externalizable}. */
-        public NodeData() {}
-
-        /** Ctor. */
-        public NodeData(TcpDiscoveryNode node) {
-            this(node, null, null);
+                    diffState.delta.put(k, null);
+                }
+            });
         }
 
-        /** Ctor. */
-        public NodeData(TcpDiscoveryNode node, String[] attrKeys, Object[] attrVals) {
-            this.id = node.id();
-            this.attrKeys = attrKeys;
-            this.attrVals = attrVals;
+        // TCP discovery node deserialization reads consistent ID from attributes instead of storing it separately. This
+        // is why we must put it there. "singletonMap" is cheaper that pre-allocated "HashMap" if "delta" is "null".
+        // See "TcpDiscoveryNode.readExternal".
+        if (diffState.delta == null)
+            diffState.delta = Collections.singletonMap(ATTR_NODE_CONSISTENT_ID, newNode.consistentId());
+        else
+            diffState.delta.put(ATTR_NODE_CONSISTENT_ID, newNode.consistentId());
 
-            this.addrs = node.addresses();
-            this.hostNames = node.hostNames();
-            this.discPort = node.discoveryPort();
-            this.metrics = node.metrics();
-            this.order = node.order();
-            this.ver = node.version();
-            this.clientRouterNodeId = node.clientRouterNodeId();
-        }
+        TcpDiscoveryNode res = TcpDiscoveryNode.copy(newNode);
+        res.setAttributesNoCopy(diffState.delta);
+        return res;
+    }
 
-        /** {@inheritDoc} */
-        @Override public void writeExternal(ObjectOutput out) throws IOException {
-            U.writeUuid(out, id);
-            U.writeArray(out, attrKeys);
-            U.writeArray(out, attrVals);
-            U.writeCollection(out, addrs);
-            U.writeCollection(out, hostNames);
-            out.writeInt(discPort);
+    /** {@inheritDoc} */
+    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        topHist = new TreeMap<>();
+        firstKey = in.readLong();
 
-            ClusterMetrics metrics = this.metrics;
+        int size = in.readInt();
 
-            byte[] mtr = null;
+        Map<Object, TcpDiscoveryNode> nodesMap = new HashMap<>();
+        for (int i = 0; i < size; i++) {
+            long ver = firstKey + i;
 
-            if (metrics != null)
-                mtr = ClusterMetricsSnapshot.serialize(metrics);
+            int topSize = in.readInt();
+            List<ClusterNode> top = new ArrayList<>(topSize);
+            for (int j = 0; j < topSize; j++) {
+                switch (in.read()) {
+                    case NEW_NODE: {
+                        TcpDiscoveryNode node = readTcpDiscoveryNode(in);
 
-            U.writeByteArray(out, mtr);
+                        nodesMap.put(node.consistentId(), node);
 
-            out.writeLong(order);
-            out.writeLong(intOrder);
-            out.writeObject(ver);
-            U.writeUuid(out, clientRouterNodeId);
-        }
+                        top.add(node);
 
-        /** {@inheritDoc} */
-        @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-            id = U.readUuid(in);
+                        break;
+                    }
 
-            attrKeys = U.readArray(in);
-            attrVals = U.readArray(in);
+                    case DELTA_NODE: {
+                        TcpDiscoveryNode newNode = readTcpDiscoveryNode(in);
 
-            addrs = U.readCollection(in);
-            hostNames = U.readCollection(in);
-            discPort = in.readInt();
+                        TcpDiscoveryNode oldNode = nodesMap.get(newNode.consistentId());
+                        // Technically, this copying can be avoided if delta only has a consistent ID, but there's not
+                        // much of a performance benefit, while code would become much, much worse.
+                        Map<String, Object> newAttrs = new HashMap<>(oldNode.getAttributes());
 
-            byte[] mtr = U.readByteArray(in);
+                        newNode.getAttributes().forEach((k, v) -> {
+                            if (v != null)
+                                newAttrs.put(k, v);
+                            else
+                                newAttrs.remove(k);
+                        });
 
-            if (mtr != null)
-                metrics = ClusterMetricsSnapshot.deserialize(mtr, 0);
+                        newNode.setAttributesNoCopy(newAttrs);
 
-            order = in.readLong();
-            intOrder = in.readLong();
-            ver = (IgniteProductVersion) in.readObject();
-            clientRouterNodeId = U.readUuid(in);
+                        nodesMap.put(newNode.consistentId(), newNode);
+
+                        top.add(newNode);
+
+                        break;
+                    }
+                    case SAME_NODE:
+                        top.add(nodesMap.get(in.readObject()));
+
+                        break;
+                }
+            }
+
+            topHist.put(ver, top);
         }
     }
 }

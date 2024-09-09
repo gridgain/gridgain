@@ -16,9 +16,7 @@
 
 package org.apache.ignite.spi.discovery.tcp.messages;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.cluster.ClusterNode;
@@ -34,6 +32,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_COMPACTED_TOPOLOGY
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteFeatures.TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
+import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 
 /**
  * Message telling nodes that new node should be added to topology.
@@ -271,10 +270,9 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
      * @return {@code True} if node should use message with compacted topology history.
      */
     private boolean useCompactedTopologyHistory() {
-        List<ClusterNode> nodes = new ArrayList<>(top);
-        nodes.add(node);
-
-        return COMPACTED_TOPOLOGY_HISTORY && allNodesSupports(null, nodes, TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY);
+        return COMPACTED_TOPOLOGY_HISTORY
+            && nodeSupports(null, node, TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY)
+            && allNodesSupports(null, top, TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY);
     }
 
     /** {@inheritDoc} */
