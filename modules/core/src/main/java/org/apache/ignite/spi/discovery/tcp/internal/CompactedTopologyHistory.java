@@ -242,7 +242,9 @@ public class CompactedTopologyHistory implements Externalizable {
             int topSize = in.readInt();
             List<ClusterNode> top = new ArrayList<>(topSize);
             for (int j = 0; j < topSize; j++) {
-                switch (in.read()) {
+                int type = in.read();
+
+                switch (type) {
                     case NEW_NODE: {
                         TcpDiscoveryNode node = readTcpDiscoveryNode(in);
 
@@ -280,6 +282,9 @@ public class CompactedTopologyHistory implements Externalizable {
                         top.add(nodesMap.get(in.readObject()));
 
                         break;
+
+                    default:
+                        throw new IOException("Unexpected node serialization type: " + type);
                 }
             }
 
