@@ -203,7 +203,6 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
 
         metrics = metricsProvider.metrics();
         cacheMetrics = metricsProvider.cacheMetrics();
-
         sockAddrs = U.toSocketAddresses(this, discPort);
     }
 
