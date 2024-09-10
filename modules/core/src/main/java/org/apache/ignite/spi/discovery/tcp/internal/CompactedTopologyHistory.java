@@ -219,9 +219,9 @@ public class CompactedTopologyHistory implements Externalizable {
         // is why we must put it there. "singletonMap" is cheaper than "HashMap", that's why we use lazy initialization.
         // See "TcpDiscoveryNode.readExternal".
         if (diffState.delta == null)
-            diffState.delta = Collections.singletonMap(ATTR_NODE_CONSISTENT_ID, newNode.consistentId());
+            diffState.delta = Collections.singletonMap(ATTR_NODE_CONSISTENT_ID, oldNode.consistentId());
         else
-            diffState.delta.put(ATTR_NODE_CONSISTENT_ID, newNode.consistentId());
+            diffState.delta.put(ATTR_NODE_CONSISTENT_ID, oldNode.consistentId());
 
         TcpDiscoveryNode res = TcpDiscoveryNode.copy(newNode);
         res.setAttributesNoCopy(diffState.delta);

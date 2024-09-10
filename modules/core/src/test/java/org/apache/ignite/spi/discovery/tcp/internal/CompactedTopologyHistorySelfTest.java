@@ -22,14 +22,17 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 import org.junit.Test;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static java.util.Collections.singletonList;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_NODE_CONSISTENT_ID;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 
@@ -49,6 +52,8 @@ public class CompactedTopologyHistorySelfTest {
         );
 
         Map<String, Object> attrMap = new HashMap<>();
+
+        attrMap.put(ATTR_NODE_CONSISTENT_ID, consistentId);
 
         for (T2<String, Object> attr : attrs) {
             attrMap.put(attr.getKey(), attr.getValue());
@@ -101,7 +106,7 @@ public class CompactedTopologyHistorySelfTest {
     }
 
     @Test
-    public void testSameNodesLeaveAndJoinCluster() {
+    public void testSameNodesLeaveAndJoinCluster() throws IgniteCheckedException {
         Map<Long, Collection<ClusterNode>> history = new TreeMap<>();
 
         TcpDiscoveryNode n1 = newNode(
@@ -142,13 +147,16 @@ public class CompactedTopologyHistorySelfTest {
         history.put(lastTopVer++, newArrayList(n1, n2));
         history.put(lastTopVer++, newArrayList(n1, n2, n3));
 
-        CompactedTopologyHistory compactedTopologyHistory = new CompactedTopologyHistory(history);
+        CompactedTopologyHistory compacted = new CompactedTopologyHistory(history);
 
-        assertTopologyHistoryEquals(history, compactedTopologyHistory.asMap());
+        byte[] bytes = JdkMarshaller.DEFAULT.marshal(compacted);
+        compacted = JdkMarshaller.DEFAULT.unmarshal(bytes, Thread.currentThread().getContextClassLoader());
+
+        assertTopologyHistoryEquals(history, compacted.asMap());
     }
 
     @Test
-    public void testNodeChangeTheirAttributes() {
+    public void testNodeChangeTheirAttributes() throws IgniteCheckedException {
         Map<Long, Collection<ClusterNode>> history = new TreeMap<>();
 
         TcpDiscoveryNode n1 = newNode(
@@ -219,6 +227,9 @@ public class CompactedTopologyHistorySelfTest {
         history.put(lastTopVer++, newArrayList(n1_addedAttribute, n2_changedAttribute, n3_removedAttribute));
 
         CompactedTopologyHistory compacted = new CompactedTopologyHistory(history);
+
+        byte[] bytes = JdkMarshaller.DEFAULT.marshal(compacted);
+        compacted = JdkMarshaller.DEFAULT.unmarshal(bytes, Thread.currentThread().getContextClassLoader());
 
         assertTopologyHistoryEquals(history, compacted.asMap());
     }
