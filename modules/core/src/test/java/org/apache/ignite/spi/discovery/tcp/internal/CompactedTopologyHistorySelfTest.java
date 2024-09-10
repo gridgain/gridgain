@@ -21,9 +21,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
@@ -32,6 +32,7 @@ import org.junit.Test;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_NODE_CONSISTENT_ID;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -70,10 +71,10 @@ public class CompactedTopologyHistorySelfTest {
         for (Map.Entry<Long, Collection<ClusterNode>> e : expected.entrySet()) {
             Long topVer = e.getKey();
             Map<UUID, TcpDiscoveryNode> historyNodes = e.getValue().stream()
-                    .collect(Collectors.toMap(ClusterNode::id, node -> (TcpDiscoveryNode) node));
+                    .collect(toMap(ClusterNode::id, TcpDiscoveryNode.class::cast));
 
             Map<UUID, TcpDiscoveryNode> restoredNodes = actual.get(topVer).stream()
-                    .collect(Collectors.toMap(ClusterNode::id, node -> (TcpDiscoveryNode) node));
+                    .collect(toMap(ClusterNode::id, TcpDiscoveryNode.class::cast));
 
             for (Map.Entry<UUID, TcpDiscoveryNode> entry : historyNodes.entrySet()) {
                 UUID nodeId = entry.getKey();
@@ -110,27 +111,27 @@ public class CompactedTopologyHistorySelfTest {
         Map<Long, Collection<ClusterNode>> history = new TreeMap<>();
 
         TcpDiscoveryNode n1 = newNode(
-                UUID.randomUUID(),
-                "n1",
-                new T2<>("name", "node-1"),
-                new T2<>("foo", "bar"),
-                new T2<>("qwe", "xyz")
+            UUID.randomUUID(),
+            "n1",
+            new T2<>("name", "node-1"),
+            new T2<>("foo", "bar"),
+            new T2<>("qwe", "xyz")
         );
 
         TcpDiscoveryNode n2 = newNode(
-                UUID.randomUUID(),
-                "n2",
-                new T2<>("name", "node-2"),
-                new T2<>("foo", "bar"),
-                new T2<>("qwe", "xyz")
+            UUID.randomUUID(),
+            "n2",
+            new T2<>("name", "node-2"),
+            new T2<>("foo", "bar"),
+            new T2<>("qwe", "xyz")
         );
 
         TcpDiscoveryNode n3 = newNode(
-                UUID.randomUUID(),
-                "n3",
-                new T2<>("name", "node-3"),
-                new T2<>("foo", "bar"),
-                new T2<>("qwe", "xyz")
+            UUID.randomUUID(),
+            "n3",
+            new T2<>("name", "node-3"),
+            new T2<>("foo", "bar"),
+            new T2<>("qwe", "xyz")
         );
 
         long lastTopVer = 1;
@@ -160,51 +161,53 @@ public class CompactedTopologyHistorySelfTest {
         Map<Long, Collection<ClusterNode>> history = new TreeMap<>();
 
         TcpDiscoveryNode n1 = newNode(
-                UUID.randomUUID(),
-                "n1",
-                new T2<>("name", "node-1"),
-                new T2<>("foo", "bar"),
-                new T2<>("qwe", "xyz")
+            UUID.randomUUID(),
+            "n1",
+            new T2<>("name", "node-1"),
+            new T2<>("foo", "bar"),
+            new T2<>("qwe", "xyz"),
+            new T2<>(IgniteNodeAttributes.ATTR_SECURITY_CREDENTIALS, "cred1")
         );
 
         TcpDiscoveryNode n2 = newNode(
-                UUID.randomUUID(),
-                "n2",
-                new T2<>("name", "node-2"),
-                new T2<>("foo", "bar"),
-                new T2<>("qwe", "xyz")
+            UUID.randomUUID(),
+            "n2",
+            new T2<>("name", "node-2"),
+            new T2<>("foo", "bar"),
+            new T2<>("qwe", "xyz")
         );
 
         TcpDiscoveryNode n3 = newNode(
-                UUID.randomUUID(),
-                "n3",
-                new T2<>("name", "node-3"),
-                new T2<>("foo", "bar"),
-                new T2<>("qwe", "xyz")
+            UUID.randomUUID(),
+            "n3",
+            new T2<>("name", "node-3"),
+            new T2<>("foo", "bar"),
+            new T2<>("qwe", "xyz")
         );
 
         TcpDiscoveryNode n1_addedAttribute = newNode(
-                UUID.randomUUID(),
-                "n1",
-                new T2<>("name", "node-1"),
-                new T2<>("foo", "bar"),
-                new T2<>("qwe", "xyz"),
-                new T2<>("abc", "42")
+            UUID.randomUUID(),
+            "n1",
+            new T2<>("name", "node-1"),
+            new T2<>("foo", "bar"),
+            new T2<>("qwe", "xyz"),
+            new T2<>("abc", "42"),
+            new T2<>(IgniteNodeAttributes.ATTR_SECURITY_CREDENTIALS, "cred1")
         );
 
         TcpDiscoveryNode n2_changedAttribute = newNode(
-                UUID.randomUUID(),
-                "n2",
-                new T2<>("name", "node-2"),
-                new T2<>("foo", "bar"),
-                new T2<>("qwe", "XYZ")
+            UUID.randomUUID(),
+            "n2",
+            new T2<>("name", "node-2"),
+            new T2<>("foo", "bar"),
+            new T2<>("qwe", "XYZ")
         );
 
         TcpDiscoveryNode n3_removedAttribute = newNode(
-                UUID.randomUUID(),
-                "n3",
-                new T2<>("name", "node-3"),
-                new T2<>("foo", "bar")
+            UUID.randomUUID(),
+            "n3",
+            new T2<>("name", "node-3"),
+            new T2<>("foo", "bar")
         );
 
         long lastTopVer = 1;

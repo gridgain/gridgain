@@ -42,34 +42,34 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_NODE_CONSISTE
  * message size.
  * Currently only attributes are optimized.
  * We assume that nodes rarely change their attributes during normal exploitation, therefore we divide history according
- * to node's consistentId and only store initial state of attributes for oldest topology version, for later topology
+ * to node's consistentId and only store initial state of attributes for oldest topology version; for later topology
  * versions we only record an attribute change.
  */
 public class CompactedTopologyHistory implements Externalizable {
     /** */
     private static final long serialVersionUID = 1L;
 
-    /** Indicated that node didn't yet appear in topology history. */
+    /** Indicates that node didn't yet appear in topology history. */
     private static final int NEW_NODE = 0;
 
-    /** Indicated that node appeared in topology history before, and it's not the same instance. */
+    /** Indicates that node appeared in topology history before, and it's not the same instance. */
     private static final int DELTA_NODE = 1;
 
-    /** Indicated that node appeared in topology history before, and it's the same instance. */
+    /** Indicates that node appeared in topology history before, and it's the same instance. */
     private static final int SAME_NODE = 2;
 
     /** Original topology history map. */
     private SortedMap<Long, Collection<ClusterNode>> topHist;
 
     /** The earliest known topology version. Cached in a field to save some time on a hot path. */
-    private long firstKey;
+    private long earliestTopVer;
 
     /** Ctor. */
     public CompactedTopologyHistory(@NotNull Map<Long, Collection<ClusterNode>> topHist) {
         assert topHist instanceof SortedMap && !topHist.isEmpty() : topHist + " is invalid";
 
         this.topHist = (SortedMap<Long, Collection<ClusterNode>>)topHist;
-        firstKey = this.topHist.firstKey();
+        earliestTopVer = this.topHist.firstKey();
     }
 
     /** Ctor required by {@link Externalizable}. */
@@ -84,7 +84,7 @@ public class CompactedTopologyHistory implements Externalizable {
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         // We write a single "long" here, so that later we can only write "int" as a diff between "ver" and "firstKey".
-        out.writeLong(firstKey);
+        out.writeLong(earliestTopVer);
 
         int size = topHist.size();
         out.writeInt(size);
@@ -96,7 +96,7 @@ public class CompactedTopologyHistory implements Externalizable {
             long ver = entry.getKey();
             Collection<ClusterNode> top = entry.getValue();
 
-            out.writeInt((int)(ver - firstKey));
+            out.writeInt((int)(ver - earliestTopVer));
             out.writeInt(top.size());
 
             for (ClusterNode clusterNode : top) {
@@ -191,10 +191,10 @@ public class CompactedTopologyHistory implements Externalizable {
 
             // We only call "containsKey" if "oldAttr" is "null". This way we avoid doing two lookups in the map because
             // that's expensive.
-            boolean prevHasKey = oldAttr != null || oldAttrs.containsKey(key);
-            diffState.hasAllKeys &= prevHasKey;
+            boolean oldAttrsContainKey = oldAttr != null || oldAttrs.containsKey(key);
+            diffState.hasAllKeys &= oldAttrsContainKey;
 
-            if (!prevHasKey || !Objects.deepEquals(oldAttr, val)) {
+            if (!oldAttrsContainKey || !Objects.deepEquals(oldAttr, val)) {
                 if (diffState.delta == null)
                     diffState.delta = new HashMap<>(4); // Vast majority of attributes never change.
 
@@ -231,13 +231,13 @@ public class CompactedTopologyHistory implements Externalizable {
     /** {@inheritDoc} */
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         topHist = new TreeMap<>();
-        firstKey = in.readLong();
+        earliestTopVer = in.readLong();
 
         int size = in.readInt();
 
         Map<Object, TcpDiscoveryNode> nodesMap = new HashMap<>();
         for (int i = 0; i < size; i++) {
-            long ver = firstKey + in.readInt();
+            long ver = earliestTopVer + in.readInt();
 
             int topSize = in.readInt();
             List<ClusterNode> top = new ArrayList<>(topSize);
@@ -259,6 +259,8 @@ public class CompactedTopologyHistory implements Externalizable {
                         TcpDiscoveryNode newNode = readTcpDiscoveryNode(in);
 
                         TcpDiscoveryNode oldNode = nodesMap.get(newNode.consistentId());
+                        assert oldNode != null : "Can't find old node while deserializing compacted topology history";
+
                         // Technically, this copying can be avoided if delta only has a consistent ID, but there's not
                         // much of a performance benefit, while the code would become much, much worse.
                         Map<String, Object> newAttrs = new HashMap<>(oldNode.getAttributes());
@@ -278,10 +280,16 @@ public class CompactedTopologyHistory implements Externalizable {
 
                         break;
                     }
-                    case SAME_NODE:
-                        top.add(nodesMap.get(in.readObject()));
+                    case SAME_NODE: {
+                        Object consistentId = in.readObject();
+
+                        TcpDiscoveryNode oldNode = nodesMap.get(consistentId);
+                        assert oldNode != null : "Can't find old node while deserializing compacted topology history";
+
+                        top.add(oldNode);
 
                         break;
+                    }
 
                     default:
                         throw new IOException("Unexpected node serialization type: " + type);

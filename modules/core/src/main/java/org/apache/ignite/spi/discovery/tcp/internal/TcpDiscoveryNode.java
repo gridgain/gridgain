@@ -661,7 +661,8 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
     }
 
     /**
-     * For the exclusive use in {@link CompactedTopologyHistory}. Copies all non-transient fields into a new instance.
+     * For the exclusive use in {@link CompactedTopologyHistory}. Copies all non-transient fields into a new instance
+     * (so-called "shallow copy", similar to {@link Object#clone()}).
      *
      * @see #writeExternal(ObjectOutput)
      * @see #readExternal(ObjectInput)
