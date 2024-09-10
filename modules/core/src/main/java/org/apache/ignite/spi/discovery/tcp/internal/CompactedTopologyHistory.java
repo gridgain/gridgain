@@ -259,7 +259,9 @@ public class CompactedTopologyHistory implements Externalizable {
                         TcpDiscoveryNode newNode = readTcpDiscoveryNode(in);
 
                         TcpDiscoveryNode oldNode = nodesMap.get(newNode.consistentId());
-                        assert oldNode != null : "Can't find old node while deserializing compacted topology history";
+                        assert oldNode != null
+                            : "Can't find old node while deserializing compacted topology history [consistentId="
+                            + newNode.consistentId() + ']';
 
                         // Technically, this copying can be avoided if delta only has a consistent ID, but there's not
                         // much of a performance benefit, while the code would become much, much worse.
@@ -284,7 +286,9 @@ public class CompactedTopologyHistory implements Externalizable {
                         Object consistentId = in.readObject();
 
                         TcpDiscoveryNode oldNode = nodesMap.get(consistentId);
-                        assert oldNode != null : "Can't find old node while deserializing compacted topology history";
+                        assert oldNode != null
+                            : "Can't find old node while deserializing compacted topology history [consistentId="
+                            + consistentId + ']';
 
                         top.add(oldNode);
 
