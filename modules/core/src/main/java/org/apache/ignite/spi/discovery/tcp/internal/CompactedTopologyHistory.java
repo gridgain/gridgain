@@ -112,6 +112,7 @@ public class CompactedTopologyHistory implements Externalizable {
                     writeTcpDiscoveryNode(out, newNode);
                 }
                 else if (oldNode != newNode) {
+                    // Node instance might be different only if node re-entered topology.
                     nodesMap.put(consistentId, newNode);
 
                     out.write(DELTA_NODE);
