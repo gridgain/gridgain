@@ -89,7 +89,7 @@ public class CompactedTopologyHistory implements Externalizable {
         int size = topHist.size();
         out.writeInt(size);
 
-        // Map from "consistentId" to the latest (in terms of topology versions)currently known cluster node instance.
+        // Map from "consistentId" to the latest currently known (in terms of topology versions) cluster node instance.
         Map<Object, TcpDiscoveryNode> nodesMap = new HashMap<>();
 
         for (Map.Entry<Long, Collection<ClusterNode>> entry : topHist.entrySet()) {
