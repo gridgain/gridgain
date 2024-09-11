@@ -63,9 +63,16 @@ namespace ignite
             BinaryReader(ignite::impl::binary::BinaryReaderImpl* impl);
 
             /**
-             * Read 8-byte signed integer. Maps to "byte" type in Java.
+             * Check whether the field is null.
              *
              * @param fieldName Field name.
+             * @return @c true if the field is null or isn't present, and @c false otherwise.
+             */
+            bool IsNull(const char* fieldName);
+
+            /**
+             * Read 8-byte signed integer. Maps to "byte" type in Java.
+             *
              * @param fieldName Field name.
              * @return Result.
              */

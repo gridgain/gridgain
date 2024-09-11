@@ -777,6 +777,24 @@ namespace ignite
                 return ReadCollectionSizeUnprotected();
             }
 
+            bool BinaryReaderImpl::IsNull(const char* fieldName)
+            {
+                CheckRawMode(false);
+                CheckSingleMode(true);
+
+                InteropStreamPositionGuard<InteropInputStream> positionGuard(*stream);
+
+                int32_t fieldId = idRslvr->GetFieldId(typeId, fieldName);
+                int32_t fieldPos = FindField(fieldId);
+
+                if (fieldPos <= 0)
+                    return true;
+
+                stream->Position(fieldPos);
+
+                return SkipIfNull();
+            }
+
             bool BinaryReaderImpl::HasNextElement(int32_t id) const
             {
                 return elemId == id && elemRead < elemCnt;
