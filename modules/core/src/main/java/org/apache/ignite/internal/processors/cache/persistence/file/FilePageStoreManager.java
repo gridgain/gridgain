@@ -1098,14 +1098,13 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
         aggr = shutdown(holder.idxStore, cleanFile, aggr);
 
-        if (cleanFile) {
-            cleanParentDirectories(holder);
-        }
-
         for (PageStore store : holder.partStores) {
             if (store != null)
                 aggr = shutdown(store, cleanFile, aggr);
         }
+
+        if (cleanFile)
+            cleanParentDirectories(holder);
 
         return aggr;
     }
@@ -1115,9 +1114,8 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
             @Override public void accept(Path dir) {
                 if (Files.isDirectory(dir, LinkOption.NOFOLLOW_LINKS)) {
                     try {
-                        if (!Files.list(dir).findFirst().isPresent()) {
+                        if (!Files.list(dir).findFirst().isPresent())
                             Files.delete(dir);
-                        }
                     }
                     catch (IOException e) {
                         log.warning("Failed to remove directory " + dir, e);
