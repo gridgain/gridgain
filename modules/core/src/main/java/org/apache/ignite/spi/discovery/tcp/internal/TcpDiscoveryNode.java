@@ -274,6 +274,16 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
     }
 
     /**
+     * Sets node attributes, but doesn't copy the map in the process.
+     */
+    void setAttributesNoCopy(Map<String, Object> attrs) {
+        this.attrs = Collections.unmodifiableMap(attrs);
+
+        assert attrs.getClass() != this.attrs.getClass()
+            : "Wrapping unmodifiable map into another unmodifiable map " + attrs;
+    }
+
+    /**
      * Gets node attributes without filtering.
      *
      * @return Node attributes without filtering.
@@ -618,7 +628,7 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
     @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         id = U.readUuid(in);
 
-        attrs = U.sealMap(U.<String, Object>readMap(in));
+        attrs = Collections.unmodifiableMap(U.readMap(in));
         addrs = U.readCollection(in);
         hostNames = U.readCollection(in);
         discPort = in.readInt();
@@ -648,6 +658,36 @@ public class TcpDiscoveryNode extends GridMetadataAwareAdapter implements Ignite
             consistentId = consistentIdAttr != null ? consistentIdAttr : id;
         else
             consistentId = consistentIdAttr != null ? consistentIdAttr : U.consistentId(addrs, discPort);
+    }
+
+    /**
+     * For the exclusive use in {@link CompactedTopologyHistory}. Copies all non-transient fields into a new instance
+     * (so-called "shallow copy", similar to {@link Object#clone()}).
+     *
+     * @see #writeExternal(ObjectOutput)
+     * @see #readExternal(ObjectInput)
+     */
+    static TcpDiscoveryNode copy(TcpDiscoveryNode other) {
+        TcpDiscoveryNode node = new TcpDiscoveryNode();
+
+        node.id = other.id();
+
+        node.attrs = other.attrs;
+        node.addrs = other.addrs;
+        node.hostNames = other.hostNames;
+        node.discPort = other.discPort;
+
+        node.metrics = other.metrics;
+        node.cacheMetrics = other.cacheMetrics;
+
+        node.order = other.order;
+        node.intOrder = other.intOrder;
+        node.ver = other.ver;
+        node.clientRouterNodeId = other.clientRouterNodeId;
+
+        node.consistentId = other.consistentId;
+
+        return node;
     }
 
     /** {@inheritDoc} */
