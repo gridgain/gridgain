@@ -805,9 +805,9 @@ namespace ignite
                 bool HasNextElement(int32_t id) const;
 
                 /**
-                 * Skip next value if it is the null.
+                 * Skip the next value if it is null.
                  *
-                 * @return True if the null value has been detected and skipped.
+                 * @return @c true if a null value has been detected and skipped, and @c false otherwise.
                  */
                 bool SkipIfNull();
 
