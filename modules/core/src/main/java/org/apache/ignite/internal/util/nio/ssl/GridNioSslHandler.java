@@ -51,7 +51,17 @@ import static org.apache.ignite.internal.util.nio.ssl.GridNioSslFilter.HANDSHAKE
  * Class that encapsulate the per-session SSL state, encoding and decoding logic.
  */
 public class GridNioSslHandler extends ReentrantLock {
+    /** Default SSL handshake timeout. */
     public static final long DFLT_SSL_HANDSHAKE_TIMEOUT_MS = 3000;
+
+    /** Default SSL unwrap timeout. */
+    public static final long DFLT_SSL_UNWRAP_TIMEOUT_MS = 3000;
+
+    /** SSL handshake timeout message. */
+    public static final String SSL_HANDSHAKE_TIMEOUT_MSG_PREFIX = "SSL handshake timeout:";
+
+    /** SSL unwrap timeout message. */
+    public static final String SSL_UNWRAP_TIMEOUT_MSG_PREFIX = "SSL unwrap timeout:";
 
     /** */
     private static final long serialVersionUID = 0L;
@@ -62,6 +72,10 @@ public class GridNioSslHandler extends ReentrantLock {
     /** Handshake timeout; exception is thrown when exceeded. */
     private static final long HANDSHAKE_TIMEOUT_MS = IgniteSystemProperties.getLong(
         IgniteSystemProperties.IGNITE_SSL_HANDSHAKE_TIMEOUT, DFLT_SSL_HANDSHAKE_TIMEOUT_MS);
+
+    /** Unwrap timeout; exception is thrown when exceeded. */
+    private static final long UNWRAP_TIMEOUT_MS = IgniteSystemProperties.getLong(
+            IgniteSystemProperties.IGNITE_SSL_UNWRAP_TIMEOUT, DFLT_SSL_UNWRAP_TIMEOUT_MS);
 
     /** Grid logger. */
     private IgniteLogger log;
@@ -260,7 +274,7 @@ public class GridNioSslHandler extends ReentrantLock {
                         if (log.isDebugEnabled())
                             log.debug("Need to unwrap incoming data: " + ses);
 
-                        Status status = unwrapHandshake(startTs);
+                        Status status = unwrapHandshake();
 
                         if (status == BUFFER_UNDERFLOW && handshakeStatus != FINISHED ||
                             sslEngine.isInboundDone())
@@ -301,7 +315,7 @@ public class GridNioSslHandler extends ReentrantLock {
                 long elapsed = U.currentTimeMillis() - startTs;
 
                 if (elapsed > HANDSHAKE_TIMEOUT_MS) {
-                    throw new SSLException("SSL handshake timeout: [millis=" + elapsed +
+                    throw new SSLException(SSL_HANDSHAKE_TIMEOUT_MSG_PREFIX + " [millis=" + elapsed +
                             ", handshakeStatus=" + handshakeStatus + ", ses=" + ses + ']');
                 }
             }
@@ -346,7 +360,7 @@ public class GridNioSslHandler extends ReentrantLock {
             handshake();
 
         if (inNetBuf.hasRemaining())
-            unwrapData(-1);
+            unwrapData();
 
         if (isInboundDone()) {
             int newPosition = buf.position() - inNetBuf.position();
@@ -521,14 +535,14 @@ public class GridNioSslHandler extends ReentrantLock {
      * @throws SSLException If failed to process SSL data.
      * @throws GridNioException If failed to pass events to the next filter.
      */
-    private void unwrapData(long startTs) throws IgniteCheckedException, SSLException {
+    private void unwrapData() throws IgniteCheckedException, SSLException {
         if (log.isDebugEnabled())
             log.debug("Unwrapping received data: " + ses);
 
         // Flip buffer so we can read it.
         inNetBuf.flip();
 
-        SSLEngineResult res = unwrap0(startTs);
+        SSLEngineResult res = unwrap0();
 
         // prepare to be written again
         inNetBuf.compact();
@@ -545,11 +559,11 @@ public class GridNioSslHandler extends ReentrantLock {
      * @throws SSLException If SSL exception occurred while unwrapping.
      * @throws GridNioException If failed to pass event to the next filter.
      */
-    private Status unwrapHandshake(long startTs) throws SSLException, IgniteCheckedException {
+    private Status unwrapHandshake() throws SSLException, IgniteCheckedException {
         // Flip input buffer so we can read the collected data.
         inNetBuf.flip();
 
-        SSLEngineResult res = unwrap0(startTs);
+        SSLEngineResult res = unwrap0();
         handshakeStatus = res.getHandshakeStatus();
 
         checkStatus(res);
@@ -557,7 +571,7 @@ public class GridNioSslHandler extends ReentrantLock {
         // If handshake finished, no data was produced, and the status is still ok,
         // try to unwrap more
         if (handshakeStatus == FINISHED && res.getStatus() == Status.OK && inNetBuf.hasRemaining()) {
-            res = unwrap0(startTs);
+            res = unwrap0();
 
             handshakeStatus = res.getHandshakeStatus();
 
@@ -616,7 +630,9 @@ public class GridNioSslHandler extends ReentrantLock {
      * @return Result.
      * @throws SSLException If SSL exception occurs.
      */
-    private SSLEngineResult unwrap0(long startTs) throws SSLException {
+    private SSLEngineResult unwrap0() throws SSLException {
+        long startTs = U.currentTimeMillis();
+
         SSLEngineResult res;
 
         do {
@@ -632,8 +648,8 @@ public class GridNioSslHandler extends ReentrantLock {
             if (startTs > 0) {
                 long elapsed = U.currentTimeMillis() - startTs;
 
-                if (elapsed > HANDSHAKE_TIMEOUT_MS) {
-                    throw new SSLException("SSL handshake timeout: [millis=" + elapsed +
+                if (elapsed > UNWRAP_TIMEOUT_MS) {
+                    throw new SSLException(SSL_UNWRAP_TIMEOUT_MSG_PREFIX + " [millis=" + elapsed + ", status=" + res.getStatus() +
                             ", handshakeStatus=" + res.getHandshakeStatus() + ", ses=" + ses + ']');
                 }
             }

@@ -3239,14 +3239,28 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     /**
      * Dumps WAL segments since last known checkpoint.
      */
-    public void dumpWalFiles() {
+    public void dumpWalFiles(File baseDumpDir) {
         try {
             long lastCpIdx = lastCheckpointPtr.index();
 
             long currIdx = currentHandle().getSegmentId();
 
-            String path = "db/dump/" + igCfg.getConsistentId() + "/wal";
-            File dumpDir = U.resolveWorkDirectory(igCfg.getWorkDirectory(), path, false);
+            boolean reserved = false;
+
+            while (!reserved) {
+                if (lastCpIdx > currIdx)
+                    return;
+
+                reserved = reserve(new FileWALPointer(lastCpIdx, 0, 0));
+
+                if (!reserved) {
+                    log.warning("Unable to reserve WAL segment " + lastCpIdx + " for dumping, skipping.");
+
+                    lastCpIdx++;
+                }
+            }
+
+            File dumpDir = new File(baseDumpDir, "wal");
 
             // bit set for tracking which file was copied to evade copying same segment twice from archive and work dir.
             boolean[] copied = new boolean[(int) (currIdx - lastCpIdx + 1)];

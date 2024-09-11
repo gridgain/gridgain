@@ -18,26 +18,13 @@ package org.apache.ignite.internal.processors.platform.client.datastructures;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.binary.BinaryRawReader;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.configuration.AtomicConfiguration;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
-import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Gets or creates atomic long by name.
  */
-public class ClientAtomicLongCreateRequest extends ClientRequest {
-    /** Atomic long name. */
-    private final String name;
-
-    /** Initial value. */
-    private final long initVal;
-
-    /** Configuration. */
-    private final AtomicConfiguration atomicConfiguration;
-
+public class ClientAtomicLongCreateRequest extends ClientAtomicCreateRequest {
     /**
      * Constructor.
      *
@@ -45,10 +32,6 @@ public class ClientAtomicLongCreateRequest extends ClientRequest {
      */
     public ClientAtomicLongCreateRequest(BinaryRawReader reader) {
         super(reader);
-
-        name = reader.readString();
-        initVal = reader.readLong();
-        atomicConfiguration = readAtomicConfiguration(reader);
     }
 
     /** {@inheritDoc} */
@@ -61,22 +44,5 @@ public class ClientAtomicLongCreateRequest extends ClientRequest {
         catch (IgniteCheckedException e) {
             return new ClientResponse(requestId(), e.getMessage());
         }
-    }
-
-    /**
-     * Reads the atomic configuration.
-     *
-     * @param reader Reader.
-     * @return Config.
-     */
-    @Nullable private static AtomicConfiguration readAtomicConfiguration(BinaryRawReader reader) {
-        if (!reader.readBoolean())
-            return null;
-
-        return new AtomicConfiguration()
-                .setAtomicSequenceReserveSize(reader.readInt())
-                .setCacheMode(CacheMode.fromOrdinal(reader.readByte()))
-                .setBackups(reader.readInt())
-                .setGroupName(reader.readString());
     }
 }

@@ -36,7 +36,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_NO_DISCO_ORDER;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_NO_SHUTDOWN_HOOK;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PROG_NAME;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SUCCESS_FILE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
 import static org.apache.ignite.internal.processors.cluster.ClusterProcessor.DFLT_UPDATE_NOTIFIER;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.boolValue;
@@ -179,7 +178,6 @@ public class VisorBasicConfiguration extends VisorDataTransferObject {
         clientMode = c.isClientMode();
         daemon = boolValue(IGNITE_DAEMON, c.isDaemon());
         jmxRemote = ignite.isJmxRemoteEnabled();
-        restart = ignite.isRestartEnabled();
         netTimeout = c.getNetworkTimeout();
         log = compactClass(c.getGridLogger());
         discoStartupDelay = c.getDiscoveryStartupDelay();
@@ -189,7 +187,6 @@ public class VisorBasicConfiguration extends VisorDataTransferObject {
         noShutdownHook = boolValue(IGNITE_NO_SHUTDOWN_HOOK, false);
         progName = getProperty(IGNITE_PROG_NAME);
         quiet = boolValue(IGNITE_QUIET, false);
-        successFile = getProperty(IGNITE_SUCCESS_FILE);
         updateNtf = boolValue(IGNITE_UPDATE_NOTIFIER, DFLT_UPDATE_NOTIFIER);
         activeOnStart = c.isActiveOnStart();
         addrRslvr = compactClass(c.getAddressResolver());
@@ -268,6 +265,7 @@ public class VisorBasicConfiguration extends VisorDataTransferObject {
     /**
      * @return Is node restart enabled.
      */
+    @Deprecated
     public boolean isRestart() {
         return restart;
     }
@@ -338,6 +336,7 @@ public class VisorBasicConfiguration extends VisorDataTransferObject {
     /**
      * @return Success file name.
      */
+    @Deprecated
     public String getSuccessFile() {
         return successFile;
     }

@@ -121,6 +121,8 @@ import org.apache.ignite.internal.managers.failover.GridFailoverManager;
 import org.apache.ignite.internal.managers.indexing.GridIndexingManager;
 import org.apache.ignite.internal.managers.loadbalancer.GridLoadBalancerManager;
 import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
+import org.apache.ignite.internal.managers.systemview.IgniteConfigurationIterable;
+import org.apache.ignite.internal.managers.systemview.walker.ConfigurationViewWalker;
 import org.apache.ignite.internal.managers.tracing.GridTracingManager;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
 import org.apache.ignite.internal.processors.GridProcessor;
@@ -231,6 +233,7 @@ import org.apache.ignite.spi.tracing.TracingConfigurationManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Collections.singleton;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_MARSHALLER_USE_STRING_SERIALIZATION_VER_2;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CONFIG_URL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DAEMON;
@@ -241,7 +244,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OPTIMIZED_MARSHALL
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_START_ON_CLIENT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_STARVATION_CHECK_INTERVAL;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SUCCESS_FILE;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.snapshot;
 import static org.apache.ignite.internal.GridKernalState.DISCONNECTED;
@@ -283,7 +285,6 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PEER_CLASSLOA
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PHY_RAM;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PREFIX;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REBALANCE_POOL_SIZE;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_RESTART_ENABLED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REST_PORT_RANGE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SHUTDOWN_POLICY;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SPI_CLASS;
@@ -320,6 +321,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
     /** System line separator. */
     public static final String NL = U.nl();
+
+    /** Name of the configuration system view. */
+    public static final String CFG_VIEW = "configuration";
+
+    /** Description of the configuration system view. */
+    public static final String CFG_VIEW_DESC = "Node configuration";
 
     /** System megabyte. */
     private static final int MEGABYTE = 1024 * 1024;
@@ -1306,6 +1313,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             registerMetrics();
 
+            registerConfigurationSystemView();
+
             ctx.cluster().registerMetrics();
 
             // Register MBeans.
@@ -1830,9 +1839,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 }
         }
 
-        // Whether restart is enabled and stick the attribute.
-        add(ATTR_RESTART_ENABLED, Boolean.toString(isRestartEnabled()));
-
         // Save port range, port numbers will be stored by rest processor at runtime.
         if (cfg.getConnectorConfiguration() != null)
             add(ATTR_REST_PORT_RANGE, cfg.getConnectorConfiguration().getPortRange());
@@ -1997,7 +2003,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         boolean on = isJmxRemoteEnabled();
 
-        sb.a("restart: ").a(onOff(isRestartEnabled())).a(", ");
         sb.a("REST: ").a(onOff(isRestEnabled())).a(", ");
         sb.a("JMX (");
         sb.a("remote: ").a(onOff(on));
@@ -2271,7 +2276,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 .a(getUpTimeFormatted()).a("]").nl()
                 .a("    ^-- Cluster [hosts=").a(hosts).a(", CPUs=").a(cpus).a(", servers=").a(servers)
                 .a(", clients=").a(clients).a(", topVer=").a(topVer.topologyVersion())
-                .a(", minorTopVer=").a(topVer.minorTopologyVersion()).a("]").nl()
+                .a(", minorTopVer=").a(topVer.minorTopologyVersion()).a(", state=")
+                    .a(ctx.state().clusterState().state().name()).a("]").nl()
                 .a("    ^-- Network [addrs=").a(locNode.addresses()).a(networkDetails).a("]").nl()
                 .a("    ^-- CPU [CPUs=").a(localCpus).a(", curLoad=").a(dblFmt.format(cpuLoadPct))
                 .a("%, avgLoad=").a(dblFmt.format(avgCpuLoadPct)).a("%, GC=").a(dblFmt.format(gcPct)).a("%]").nl()
@@ -2814,18 +2820,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      */
     @Override public boolean isJmxRemoteEnabled() {
         return System.getProperty("com.sun.management.jmxremote") != null;
-    }
-
-    /**
-     * Whether or not node restart is enabled. Node restart us supported when this node was started with {@code
-     * bin/ignite.{sh|bat}} script using {@code -r} argument. Node can be programmatically restarted using {@link
-     * Ignition#restart(boolean)}} method.
-     *
-     * @return {@code True} if restart mode is enabled, {@code false} otherwise.
-     * @see Ignition#restart(boolean)
-     */
-    @Override public boolean isRestartEnabled() {
-        return System.getProperty(IGNITE_SUCCESS_FILE) != null;
     }
 
     /**
@@ -4492,6 +4486,18 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      */
     public IgniteInternalFuture sendIoTest(List<ClusterNode> nodes, byte[] payload, boolean procFromNioThread) {
         return ctx.io().sendIoTest(nodes, payload, procFromNioThread);
+    }
+
+    /** Registers configuration system view. */
+    private void registerConfigurationSystemView() {
+        ctx.systemView().registerInnerCollectionView(
+            CFG_VIEW,
+            CFG_VIEW_DESC,
+            new ConfigurationViewWalker(),
+            singleton(ctx.config()),
+            IgniteConfigurationIterable::new,
+            (cfg, view) -> view
+        );
     }
 
     /**

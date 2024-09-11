@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -347,6 +347,9 @@ public abstract class IgniteUtils {
      */
     public static final int UTF_BYTE_LIMIT = 65_535;
 
+    /** Maximum number of character bytes for {@link DataOutput#writeUTF}. */
+    public static final int MAX_UTF_BYTES = 3;
+
     /** Minimum checkpointing page buffer size (may be adjusted by Ignite). */
     public static final Long DFLT_MIN_CHECKPOINTING_PAGE_BUFFER_SIZE = GB / 4;
 
@@ -413,6 +416,9 @@ public abstract class IgniteUtils {
 
     /** Alphanumeric with underscore regexp pattern. */
     private static final Pattern ALPHANUMERIC_UNDERSCORE_PATTERN = Pattern.compile("^[a-zA-Z_0-9]+$");
+
+    /** Ignite package. */
+    public static final String IGNITE_PKG = "org.apache.ignite.";
 
     /** Project home directory. */
     private static volatile GridTuple<String> ggHome;
@@ -6985,7 +6991,7 @@ public abstract class IgniteUtils {
         return s.replace("org.apache.ignite.internal.visor.", "o.a.i.i.v.").
             replace("org.apache.ignite.internal.", "o.a.i.i.").
             replace("org.apache.ignite.scalar.", "o.a.i.s.").
-            replace("org.apache.ignite.", "o.a.i.");
+                replace(IGNITE_PKG, "o.a.i.");
     }
 
     /**
@@ -10409,9 +10415,13 @@ public abstract class IgniteUtils {
      *      {@code null} if passed in name is not related to lambda.
      */
     @Nullable public static String lambdaEnclosingClassName(String clsName) {
-        int idx = clsName.indexOf("$$Lambda$");
+        int idx0 = clsName.indexOf("$$Lambda$"); // Java 8+
+        int idx1 = clsName.indexOf("$$Lambda/"); // Java 21+
 
-        return idx != -1 ? clsName.substring(0, idx) : null;
+        if (idx0 == idx1)
+            return null;
+
+        return clsName.substring(0, idx0 >= 0 ? idx0 : idx1);
     }
 
     /**
@@ -12536,6 +12546,20 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Heuristically checks whether a string is long (greater than {@link #UTF_BYTE_LIMIT}) for
+     * {@link DataOutput#writeUTF} (or {@link #writeString(DataOutput, String)}).
+     *
+     * <p>Long string can be written using {@link #writeLongString(DataOutput, String)}
+     * or {@link #writeCutString(DataOutput, String)}.</p>
+     *
+     * @param s String to check.
+     * @return {@code True} if the string is heuristically long.
+     */
+    public static boolean isStringTooLongForWriteHeuristically(String s) {
+        return s.length() > UTF_BYTE_LIMIT / MAX_UTF_BYTES;
+    }
+
+    /**
      * Reads string from input stream accounting for {@code null} values. <br/>
      *
      * This method can read string of any length, no {@link #UTF_BYTE_LIMIT} limits are applied.
@@ -12652,7 +12676,7 @@ public abstract class IgniteUtils {
      * @return Number of bytes.
      */
     public static int utfBytes(char c) {
-        return (c >= 0x0001 && c <= 0x007F) ? 1 : (c > 0x07FF) ? 3 : 2;
+        return (c >= 0x0001 && c <= 0x007F) ? 1 : (c > 0x07FF) ? MAX_UTF_BYTES : 2;
     }
 
     /**

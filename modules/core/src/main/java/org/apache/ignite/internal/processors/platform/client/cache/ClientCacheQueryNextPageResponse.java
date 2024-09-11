@@ -43,8 +43,14 @@ class ClientCacheQueryNextPageResponse extends ClientResponse {
 
     /** {@inheritDoc} */
     @Override public void encode(ClientConnectionContext ctx, BinaryRawWriterEx writer) {
-        super.encode(ctx, writer);
+        try {
+            super.encode(ctx, writer);
 
-        cursor.writePage(writer);
+            cursor.writePage(writer);
+        } catch (Throwable t) {
+            cursor.close();
+
+            throw t;
+        }
     }
 }

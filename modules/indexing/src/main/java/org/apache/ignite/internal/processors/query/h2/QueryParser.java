@@ -820,7 +820,8 @@ public class QueryParser {
             qry.isLocal(),
             !qry.isLocal() && qry.isSkipReducerOnUpdate(),
             batched,
-            qry.getQueryInitiatorId()
+            qry.getQueryInitiatorId(),
+            qry.getLabel()
         );
     }
 }

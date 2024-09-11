@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import javax.cache.Cache;
@@ -46,7 +47,7 @@ import org.apache.ignite.cache.affinity.AffinityKeyMapper;
 import org.apache.ignite.cache.eviction.EvictableEntry;
 import org.apache.ignite.cache.eviction.EvictionFilter;
 import org.apache.ignite.cache.eviction.EvictionPolicy;
-import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.IndexQuery;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -85,6 +86,7 @@ import org.junit.Test;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
+import static org.apache.ignite.internal.util.IgniteUtils.MB;
 import static org.junit.Assert.assertNotEquals;
 
 /**
@@ -576,94 +578,157 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
 
         cache.put(100,"200");
 
-        String sql = "SELECT SQL, QUERY_ID, SCHEMA_NAME, LOCAL, START_TIME, DURATION, ENFORCE_JOIN_ORDER, DISTRIBUTED_JOINS, LAZY FROM " +
+        String sql = "SELECT SQL, QUERY_ID, SCHEMA_NAME, LOCAL, START_TIME, DURATION, ENFORCE_JOIN_ORDER, DISTRIBUTED_JOINS, LAZY, LABEL FROM " +
             sysSchemaName() + ".SQL_QUERIES";
-
-        FieldsQueryCursor notClosedFieldQryCursor = cache.query(new SqlFieldsQuery(sql).setLocal(true));
-
-        List<?> cur = cache.query(new SqlFieldsQuery(sql).setLocal(true)).getAll();
-
-        assertEquals(2, cur.size());
-
-        List<?> res0 = (List<?>)cur.get(0);
-        List<?> res1 = (List<?>)cur.get(1);
-
-        Timestamp ts = (Timestamp)res0.get(4);
-
-        Instant now = Instant.now();
-
-        long diffInMillis = now.minusMillis(ts.getTime()).toEpochMilli();
-
-        assertTrue(diffInMillis < 3000);
-
-        assertEquals(sql, res0.get(0));
-
-        assertEquals(sql, res1.get(0));
-
-        assertTrue((Boolean)res0.get(3));
-
-        // ENFORCE_JOIN_ORDER
-        assertFalse((Boolean)res0.get(6));
-
-        // DISTRIBUTED_JOINS
-        assertFalse((Boolean)res0.get(7));
-
-        // LAZY
-        assertEquals(activateLazyByDflt, res0.get(8));
-
-        String id0 = (String)res0.get(1);
-        String id1 = (String)res1.get(1);
-
-        assertNotEquals(id0, id1);
 
         String qryPrefix = ignite.localNode().id() + "_";
 
-        String qryId1 = qryPrefix + "1";
-        String qryId2 = qryPrefix + "2";
+        {
+            String label0 = "test-label-0";
+            String label1 = "test-label-1";
 
-        assertTrue(id0.equals(qryId1) || id1.equals(qryId1));
+            QueryCursor notClosedFieldQryCursor = cache.query(new SqlFieldsQuery(sql).setLabel(label0).setLocal(true));
 
-        assertTrue(id0.equals(qryId2) || id1.equals(qryId2));
+            List<?> cur = cache.query(new SqlFieldsQuery(sql).setLabel(label1).setLocal(true)).getAll();
 
-        assertEquals(2, cache.query(new SqlFieldsQuery(sql)).getAll().size());
+            assertEquals(2, cur.size());
 
-        notClosedFieldQryCursor.close();
+            List<?> res0 = (List<?>)cur.get(0);
+            List<?> res1 = (List<?>)cur.get(1);
 
-        assertEquals(1, cache.query(new SqlFieldsQuery(sql)).getAll().size());
+            Timestamp ts = (Timestamp)res0.get(4);
 
-        cache.put(100,"200");
+            Instant now = Instant.now();
 
-        QueryCursor notClosedQryCursor = cache.query(new SqlQuery<>(String.class, "_key=100"));
+            long diffInMillis = now.minusMillis(ts.getTime()).toEpochMilli();
 
-        String expSqlQry = "SELECT \"default\".\"STRING\"._KEY, \"default\".\"STRING\"._VAL FROM " +
-            "\"default\".\"STRING\" WHERE _key=100";
+            assertTrue(diffInMillis < 3000);
 
-        cur = cache.query(new SqlFieldsQuery(sql)).getAll();
+            assertEquals(sql, res0.get(0));
+            assertEquals(sql, res1.get(0));
 
-        assertEquals(2, cur.size());
+            assertTrue((Boolean)res0.get(3));
 
-        res0 = (List<?>)cur.get(0);
-        res1 = (List<?>)cur.get(1);
+            // ENFORCE_JOIN_ORDER
+            assertFalse((Boolean)res0.get(6));
 
-        assertTrue(expSqlQry, res0.get(0).equals(expSqlQry) || res1.get(0).equals(expSqlQry));
+            // DISTRIBUTED_JOINS
+            assertFalse((Boolean)res0.get(7));
 
-        assertFalse((Boolean)res0.get(3));
+            // LAZY
+            assertEquals(activateLazyByDflt, res0.get(8));
 
-        assertFalse((Boolean)res1.get(3));
+            String id0 = (String)res0.get(1);
+            String id1 = (String)res1.get(1);
 
-        notClosedQryCursor.close();
+            assertNotEquals(id0, id1);
 
-        sql = "SELECT SQL, QUERY_ID FROM " + sysSchemaName() + ".SQL_QUERIES WHERE QUERY_ID='" + qryPrefix + "7'";
+            assertEquals(label0, res0.get(9));
+            assertEquals(label1, res1.get(9));
 
-        assertEquals(qryPrefix + "7", ((List<?>)cache.query(new SqlFieldsQuery(sql)).getAll().get(0)).get(1));
+            String qryId1 = qryPrefix + "1";
+            String qryId2 = qryPrefix + "2";
 
-        sql = "SELECT SQL FROM " + sysSchemaName() + ".SQL_QUERIES WHERE DURATION > 100000";
+            assertTrue(id0.equals(qryId1) || id1.equals(qryId1));
 
-        assertTrue(cache.query(new SqlFieldsQuery(sql)).getAll().isEmpty());
+            assertTrue(id0.equals(qryId2) || id1.equals(qryId2));
 
-        sql = "SELECT SQL FROM " + sysSchemaName() + ".SQL_QUERIES WHERE QUERY_ID='UNKNOWN'";
+            assertEquals(2, cache.query(new SqlFieldsQuery(sql)).getAll().size());
 
-        assertTrue(cache.query(new SqlFieldsQuery(sql)).getAll().isEmpty());
+            notClosedFieldQryCursor.close();
+
+            assertEquals(1, cache.query(new SqlFieldsQuery(sql)).getAll().size());
+        }
+
+        // Check deprecated but supported SqlQuery
+        {
+            cache.put(100, "200");
+
+            QueryCursor notClosedQryCursor = cache.query(new SqlQuery<>(String.class, "_key=100"));
+
+            String expSqlQry = "SELECT \"default\".\"STRING\"._KEY, \"default\".\"STRING\"._VAL FROM " +
+                "\"default\".\"STRING\" WHERE _key=100";
+
+            List<?> cur = cache.query(new SqlFieldsQuery(sql)).getAll();
+
+            assertEquals(2, cur.size());
+
+            List<?> res0 = (List<?>)cur.get(0);
+            List<?> res1 = (List<?>)cur.get(1);
+
+            assertTrue(expSqlQry, res0.get(0).equals(expSqlQry) || res1.get(0).equals(expSqlQry));
+
+            assertFalse((Boolean)res0.get(3));
+            assertFalse((Boolean)res1.get(3));
+
+            notClosedQryCursor.close();
+        }
+
+        // CHeck the same, but on SqlFieldQuery with label.
+        {
+            String label = "test-label-2";
+
+            String expSqlQry = "select * from \"default\".\"STRING\" where  _key=100";
+
+            QueryCursor notClosedFieldsQryCursor = cache.query(new SqlFieldsQuery(expSqlQry).setLabel(label));
+
+            List<?> cur = cache.query(new SqlFieldsQuery(sql).setLabel(label)).getAll();
+
+            assertEquals(2, cur.size());
+
+            List<?> res0 = (List<?>)cur.get(0);
+            List<?> res1 = (List<?>)cur.get(1);
+
+            assertTrue(expSqlQry, res0.get(0).equals(expSqlQry) || res1.get(0).equals(expSqlQry));
+
+            assertFalse((Boolean)res0.get(3));
+            assertFalse((Boolean)res1.get(3));
+
+            assertEquals(label, res0.get(9));
+            assertEquals(label, res1.get(9));
+
+            notClosedFieldsQryCursor.close();
+        }
+
+        // CHeck the same, but on IndexQuery with label.
+        {
+            String label = "test-label-3";
+
+            String expSqlQry = "SELECT _KEY, _VAL FROM \"default\".\"STRING\" USE INDEX (\"_key_PK\") ORDER BY \"_KEY\"";
+
+            QueryCursor notClosedIdxQryCursor = cache.query(new IndexQuery(String.class, "_key_PK").setLabel(label));
+
+            List<?> cur = cache.query(new SqlFieldsQuery(sql).setLabel(label)).getAll();
+
+            assertEquals(2, cur.size());
+
+            List<?> res0 = (List<?>)cur.get(0);
+            List<?> res1 = (List<?>)cur.get(1);
+
+            assertTrue(expSqlQry, res0.get(0).equals(expSqlQry) || res1.get(0).equals(expSqlQry));
+
+            assertFalse((Boolean)res0.get(3));
+            assertFalse((Boolean)res1.get(3));
+
+            assertEquals(label, res0.get(9));
+            assertEquals(label, res1.get(9));
+
+            notClosedIdxQryCursor.close();
+        }
+
+        {
+            sql = "SELECT SQL, QUERY_ID FROM " + sysSchemaName() + ".SQL_QUERIES WHERE QUERY_ID='" + qryPrefix + "11'";
+
+            assertEquals(qryPrefix + "11", ((List<?>)cache.query(new SqlFieldsQuery(sql)).getAll().get(0)).get(1));
+
+            sql = "SELECT SQL FROM " + sysSchemaName() + ".SQL_QUERIES WHERE DURATION > 100000";
+
+            assertTrue(cache.query(new SqlFieldsQuery(sql)).getAll().isEmpty());
+
+            sql = "SELECT SQL FROM " + sysSchemaName() + ".SQL_QUERIES WHERE QUERY_ID='UNKNOWN'";
+
+            assertTrue(cache.query(new SqlFieldsQuery(sql)).getAll().isEmpty());
+        }
     }
 
     /**
@@ -965,10 +1030,14 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testBaselineViews() throws Exception {
+        String customAttr = "CUSTOM_NODE_ATTR";
+
         cleanPersistenceDir();
 
-        Ignite ignite = startGrid(getTestIgniteInstanceName(), getPdsConfiguration("node0"));
-        startGrid(getTestIgniteInstanceName(1), getPdsConfiguration("node1"));
+        Ignite ignite = startGrid(getTestIgniteInstanceName(), getPdsConfiguration("node0")
+            .setUserAttributes(F.asMap(customAttr, "val0")));
+        startGrid(getTestIgniteInstanceName(1), getPdsConfiguration("node1")
+            .setUserAttributes(F.asMap(customAttr, "val1")));
 
         ignite.cluster().active(true);
 
@@ -993,7 +1062,8 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
 
         assertEquals("node1", res.get(0).get(0));
 
-        Ignite ignite2 = startGrid(getTestIgniteInstanceName(2), getPdsConfiguration("node2"));
+        Ignite ignite2 = startGrid(getTestIgniteInstanceName(2), getPdsConfiguration("node2")
+            .setUserAttributes(F.asMap(customAttr, "val2")));
 
         assertEquals(2, execSql(ignite2, "SELECT CONSISTENT_ID FROM " + sysSchemaName() + ".BASELINE_NODES").size());
 
@@ -1003,6 +1073,60 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         assertEquals(1, res.size());
 
         assertEquals("node2", res.get(0).get(0));
+
+        // Check baseline node attributes.
+        assertColumnTypes(execSql("SELECT NODE_CONSISTENT_ID, NAME, VALUE FROM " + sysSchemaName() +
+                ".BASELINE_NODE_ATTRIBUTES").get(0), String.class, String.class, String.class);
+
+        // Check without filters.
+        res = execSql("SELECT NAME, VALUE FROM " + sysSchemaName() + ".BASELINE_NODE_ATTRIBUTES ORDER BY VALUE");
+
+        assertTrue(res.size() > 1);
+        assertEquals(1, F.size(res, row -> customAttr.equals(row.get(0)) && "val0".equals(row.get(1))));
+        assertEquals(1, F.size(res, row -> customAttr.equals(row.get(0)) && "val1".equals(row.get(1))));
+
+        // Check filter by node consistent ID.
+        res = execSql("SELECT NAME, VALUE FROM " + sysSchemaName() + ".BASELINE_NODE_ATTRIBUTES " +
+            "WHERE NODE_CONSISTENT_ID = ?", "node0");
+
+        assertTrue(res.size() > 1);
+        assertEquals(1, F.size(res, row -> customAttr.equals(row.get(0)) && "val0".equals(row.get(1))));
+
+        // Check filter by node consistent ID and attribute name.
+        res = execSql("SELECT NAME, VALUE FROM " + sysSchemaName() + ".BASELINE_NODE_ATTRIBUTES " +
+            "WHERE NODE_CONSISTENT_ID = ? AND NAME = ?", "node0", customAttr);
+
+        assertEquals(1, res.size());
+        assertEquals("val0", res.get(0).get(1));
+
+        // Check filter by attribute name.
+        res = execSql("SELECT NAME, VALUE FROM " + sysSchemaName() + ".BASELINE_NODE_ATTRIBUTES " +
+            "WHERE NAME = ? ORDER BY VALUE", customAttr);
+
+        assertEquals(2, res.size());
+        assertEquals("val0", res.get(0).get(1));
+        assertEquals("val1", res.get(1).get(1));
+
+        // Check that stored in BLT attribute value is shown.
+        startGrid(getTestIgniteInstanceName(1), getPdsConfiguration("node1")
+            .setUserAttributes(F.asMap(customAttr, "val3")));
+
+        res = execSql("SELECT NAME, VALUE FROM " + sysSchemaName() + ".BASELINE_NODE_ATTRIBUTES " +
+            "WHERE NODE_CONSISTENT_ID = ? AND NAME = ?", "node1", customAttr);
+
+        assertEquals(1, res.size());
+        assertEquals("val1", res.get(0).get(1));
+
+        // Check join with BASELINE_NODES view.
+        res = execSql("SELECT N.CONSISTENT_ID, NA.NAME, NA.VALUE FROM " + sysSchemaName() +
+            ".BASELINE_NODE_ATTRIBUTES NA JOIN " + sysSchemaName() + ".BASELINE_NODES N " +
+            "ON N.CONSISTENT_ID = NA.NODE_CONSISTENT_ID " +
+            "WHERE NODE_CONSISTENT_ID = ? AND NAME = ?", "node0", customAttr);
+
+        assertEquals(1, res.size());
+        assertEquals("node0", res.get(0).get(0));
+        assertEquals(customAttr, res.get(0).get(1));
+        assertEquals("val0", res.get(0).get(2));
     }
 
     /**
@@ -1628,6 +1752,48 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
             .collect(Collectors.toList());
 
         assertEqualsCollections(elevenExpVals, durationMetrics);
+    }
+
+    /** */
+    @Test
+    public void testConfigurationView() throws Exception {
+        IgniteConfiguration icfg = new IgniteConfiguration();
+
+        long expMaxSize = 10 * MB;
+
+        String expName = "my-instance";
+
+        String expDrName = "my-dr";
+
+        icfg.setIgniteInstanceName(expName);
+
+        icfg.setDataStorageConfiguration(new DataStorageConfiguration()
+            .setDefaultDataRegionConfiguration(
+                new DataRegionConfiguration()
+                    .setLazyMemoryAllocation(false))
+            .setDataRegionConfigurations(
+                new DataRegionConfiguration()
+                    .setName(expDrName)
+                    .setMaxSize(expMaxSize)));
+
+        try (IgniteEx srv = startGrid(icfg)) {
+            srv.createCache(DEFAULT_CACHE_NAME);
+
+            BiConsumer<String, String> checker = (name, val) -> assertEquals(
+                val,
+                execSql(srv, "SELECT VALUE FROM SYS.CONFIGURATION WHERE NAME = ?", name).get(0).get(0)
+            );
+
+            checker.accept("IgniteInstanceName", expName);
+            checker.accept("DataStorageConfiguration.DefaultDataRegionConfiguration.LazyMemoryAllocation", "false");
+            checker.accept("DataStorageConfiguration.DataRegionConfigurations[0].Name", expDrName);
+            checker.accept(
+                "DataStorageConfiguration.DataRegionConfigurations[0].MaxSize",
+                Long.toString(expMaxSize)
+            );
+            checker.accept("CacheConfiguration[0].AtomicityMode", CacheAtomicityMode.TRANSACTIONAL.name());
+            checker.accept("AddressResolver", null);
+        }
     }
 
     /**

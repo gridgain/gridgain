@@ -70,11 +70,6 @@ fi
 . "${SCRIPTS_HOME}"/include/build-classpath.sh # Will be removed in the binary release.
 CP="${IGNITE_LIBS}"
 
-RANDOM_NUMBER=$("$JAVA" -cp "${CP}" org.apache.ignite.startup.cmdline.CommandLineRandomNumberGenerator)
-
-RESTART_SUCCESS_FILE="${IGNITE_HOME}/work/ignite_success_${RANDOM_NUMBER}"
-RESTART_SUCCESS_OPT="-DIGNITE_SUCCESS_FILE=${RESTART_SUCCESS_FILE}"
-
 # Mac OS specific support to display correct name in the dock.
 osname=`uname`
 
@@ -145,18 +140,18 @@ do
     if [ "${INTERACTIVE}" == "1" ] ; then
         case $osname in
             Darwin*)
-                "$JAVA" ${QUIET} ${JVM_OPTS} "${DOCK_OPTS}" "${RESTART_SUCCESS_OPT}" \
+                "$JAVA" ${QUIET} ${JVM_OPTS} "${DOCK_OPTS}" \
                 -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
                 -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} && ERRORCODE="$?" || ERRORCODE="$?"
             ;;
             OS/390*)
-                "$JAVA" ${QUIET} ${JVM_OPTS} "${RESTART_SUCCESS_OPT}" \
+                "$JAVA" ${QUIET} ${JVM_OPTS} \
                 -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" -DIGNITE_WAL_MMAP=false \
                 $(getIbmSslOpts $version) \
                 -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} && ERRORCODE="$?" || ERRORCODE="$?"
             ;;
             *)
-                "$JAVA" ${QUIET} ${JVM_OPTS} "${RESTART_SUCCESS_OPT}" \
+                "$JAVA" ${QUIET} ${JVM_OPTS} \
                 -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
                 -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} && ERRORCODE="$?" || ERRORCODE="$?"
             ;;
@@ -164,32 +159,25 @@ do
     else
         case $osname in
             Darwin*)
-                "$JAVA" ${QUIET} ${JVM_OPTS} "${DOCK_OPTS}" "${RESTART_SUCCESS_OPT}" \
+                "$JAVA" ${QUIET} ${JVM_OPTS} "${DOCK_OPTS}" \
                  -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
                  -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} "${CONFIG}" && ERRORCODE="$?" || ERRORCODE="$?"
             ;;
             OS/390*)
-                "$JAVA" ${QUIET} ${JVM_OPTS} "${RESTART_SUCCESS_OPT}" \
+                "$JAVA" ${QUIET} ${JVM_OPTS} \
                  -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" -DIGNITE_WAL_MMAP=false \
                  $(getIbmSslOpts $version) \
                  -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} "${CONFIG}" && ERRORCODE="$?" || ERRORCODE="$?"
             ;;
             *)
-                "$JAVA" ${QUIET} ${JVM_OPTS} "${RESTART_SUCCESS_OPT}" \
+                "$JAVA" ${QUIET} ${JVM_OPTS} \
                  -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
                  -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS} -cp "${CP}" ${MAIN_CLASS} "${CONFIG}" && ERRORCODE="$?" || ERRORCODE="$?"
             ;;
         esac
     fi
 
-    if [ ! -f "${RESTART_SUCCESS_FILE}" ] ; then
+    if [ "${ERRORCODE}" -ne "250" ] ; then
         break
-    else
-        rm -f "${RESTART_SUCCESS_FILE}"
     fi
 done
-
-if [ -f "${RESTART_SUCCESS_FILE}" ] ; then
-    rm -f "${RESTART_SUCCESS_FILE}"
-fi
-

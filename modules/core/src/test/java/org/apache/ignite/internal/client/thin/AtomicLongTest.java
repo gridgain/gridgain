@@ -16,10 +16,6 @@
 
 package org.apache.ignite.internal.client.thin;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.client.ClientAtomicConfiguration;
 import org.apache.ignite.client.ClientAtomicLong;
@@ -29,12 +25,18 @@ import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
+
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
  * Tests client atomic long.
- * Partition awareness tests are in {@link ThinClientPartitionAwarenessStableTopologyTest#testAtomicLong()}.
+ * Partition awareness tests are in {@link ThinClientAffinityAwarenessStableTopologyTest#testAtomicLong()}.
  */
 public class AtomicLongTest extends AbstractThinClientTest {
     /** {@inheritDoc} */
@@ -273,6 +275,20 @@ public class AtomicLongTest extends AbstractThinClientTest {
 
         assertEquals("ignite-sys-atomic-cache@testSameNameDifferentOptions", replicatedCache.name());
         assertEquals(Integer.MAX_VALUE, replicatedCache.configuration().getBackups());
+    }
+
+    @Test
+    public void testToString() {
+        String name = "testToString";
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicLong atomicSequence = client.atomicLong(name, 0, true);
+
+            assertEquals(
+                    "ClientAtomicLongImpl [super=" +
+                            "AbstractClientAtomic [name=testToString, groupName=null, cacheId=1481046058]]",
+                    atomicSequence.toString());
+        }
     }
 
     /**

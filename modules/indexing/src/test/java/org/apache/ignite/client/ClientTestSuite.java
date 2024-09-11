@@ -17,6 +17,7 @@
 package org.apache.ignite.client;
 
 import org.apache.ignite.internal.client.thin.AtomicLongTest;
+import org.apache.ignite.internal.client.thin.AtomicSequenceTest;
 import org.apache.ignite.internal.client.thin.BlockingTxOpsTest;
 import org.apache.ignite.internal.client.thin.CacheAsyncTest;
 import org.apache.ignite.internal.client.thin.CacheEntryListenersTest;
@@ -83,6 +84,8 @@ import org.junit.runners.Suite;
     IgniteClientConnectionEventListenerTest.class,
     IgniteClientRequestEventListenerTest.class,
     BlockingTxOpsTest.class,
+    ClientQueryPartitionLossTest.class,
+    AtomicSequenceTest.class
 })
 public class ClientTestSuite {
     // No-op.

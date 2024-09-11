@@ -49,6 +49,7 @@ import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.client.ClientCacheConfiguration;
 import org.apache.ignite.client.ClientCachePluginConfiguration;
+import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryFieldMetadata;
 import org.apache.ignite.internal.binary.BinaryMetadata;
@@ -63,6 +64,7 @@ import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
+import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy;
 import org.apache.ignite.internal.util.MutableSingletonList;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -93,6 +95,21 @@ public final class ClientUtils {
         Objects.requireNonNull(name, "name");
 
         return name.hashCode();
+    }
+
+    /**
+     * Gets atomic cache ID by atomic name and group name.
+     */
+    static int atomicsCacheId(String name, @Nullable String groupName) {
+        Objects.requireNonNull(name, "name");
+
+        if (groupName == null) {
+            groupName = DataStructuresProcessor.DEFAULT_DS_GROUP_NAME;
+        }
+
+        String cacheName = DataStructuresProcessor.ATOMICS_CACHE_NAME + "@" + groupName;
+
+        return cacheId(cacheName);
     }
 
     /**
@@ -553,6 +570,13 @@ public final class ClientUtils {
             out.writeInt(-1);
 
         out.writeInt(qry.getUpdateBatchSize());
+
+        if (protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.QRY_LABEL)) {
+            writeObject(out, qry.getLabel());
+        }
+        else if (qry.getLabel() != null) {
+            throw new ClientFeatureNotSupportedByServerException(ProtocolBitmaskFeature.QRY_LABEL);
+        }
     }
 
     /** Write Ignite binary object to output stream. */

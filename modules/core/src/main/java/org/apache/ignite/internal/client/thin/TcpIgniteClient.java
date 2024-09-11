@@ -28,6 +28,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryBasicNameMapper;
 import org.apache.ignite.binary.BinaryObjectException;
@@ -36,6 +37,7 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.client.ClientAtomicConfiguration;
 import org.apache.ignite.client.ClientAtomicLong;
+import org.apache.ignite.client.ClientAtomicSequence;
 import org.apache.ignite.client.ClientCache;
 import org.apache.ignite.client.ClientCacheConfiguration;
 import org.apache.ignite.client.ClientCluster;
@@ -73,6 +75,8 @@ import org.apache.ignite.marshaller.MarshallerContext;
 import org.apache.ignite.marshaller.MarshallerUtils;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.client.ClientAtomicConfiguration.DFLT_ATOMIC_SEQUENCE_RESERVE_SIZE;
 
 /**
  * Implementation of {@link IgniteClient} over TCP protocol.
@@ -355,16 +359,7 @@ public class TcpIgniteClient implements IgniteClient {
             ch.service(ClientOperation.ATOMIC_LONG_CREATE, out -> {
                 writeString(name, out.out());
                 out.out().writeLong(initVal);
-
-                if (cfg != null) {
-                    out.out().writeBoolean(true);
-                    out.out().writeInt(cfg.getAtomicSequenceReserveSize());
-                    out.out().writeByte((byte)cfg.getCacheMode().ordinal());
-                    out.out().writeInt(cfg.getBackups());
-                    writeString(cfg.getGroupName(), out.out());
-                }
-                else
-                    out.out().writeBoolean(false);
+                writeClientAtomicConfiguration(cfg, out);
             }, null);
         }
 
@@ -403,6 +398,43 @@ public class TcpIgniteClient implements IgniteClient {
 
             return new ClientIgniteSetImpl<>(ch, serDes, name, colocated, cacheId);
         });
+    }
+
+    /** {@inheritDoc} */
+    @Override public ClientAtomicSequence atomicSequence(String name, long initVal, boolean create) throws IgniteException {
+        return atomicSequence(name, null, initVal, create);
+    }
+
+    /** {@inheritDoc} */
+    @Override public ClientAtomicSequence atomicSequence(String name, ClientAtomicConfiguration cfg, long initVal, boolean create)
+            throws IgniteException {
+        GridArgumentCheck.notNull(name, "name");
+
+        if (create) {
+            ch.service(ClientOperation.ATOMIC_SEQUENCE_CREATE, out -> {
+                writeString(name, out.out());
+                out.out().writeLong(initVal);
+                writeClientAtomicConfiguration(cfg, out);
+            }, null);
+        }
+
+        try {
+            return new ClientAtomicSequenceImpl(
+                    name,
+                    cfg != null ? cfg.getGroupName() : null,
+                    cfg != null ? cfg.getAtomicSequenceReserveSize() : DFLT_ATOMIC_SEQUENCE_RESERVE_SIZE,
+                    ch);
+        } catch (ClientException e) {
+            Throwable cause = e.getCause();
+
+            if (cause instanceof ClientServerError &&
+                    ((ClientServerError) cause).getCode() == ClientStatus.RESOURCE_DOES_NOT_EXIST) {
+                // Return null when specified atomic long does not exist to match IgniteKernal behavior.
+                return null;
+            }
+
+            throw e;
+        }
     }
 
     /**
@@ -453,6 +485,19 @@ public class TcpIgniteClient implements IgniteClient {
         catch (IOException e) {
             throw new BinaryObjectException(e);
         }
+    }
+
+    private void writeClientAtomicConfiguration(ClientAtomicConfiguration cfg, PayloadOutputChannel out) {
+        if (cfg == null) {
+            out.out().writeBoolean(false);
+            return;
+        }
+
+        out.out().writeBoolean(true);
+        out.out().writeInt(cfg.getAtomicSequenceReserveSize());
+        out.out().writeByte((byte) cfg.getCacheMode().ordinal());
+        out.out().writeInt(cfg.getBackups());
+        writeString(cfg.getGroupName(), out.out());
     }
 
     /** Load cluster binary configration. */

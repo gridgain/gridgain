@@ -202,7 +202,9 @@ final class MarshallerMappingFileStore {
                     }
                 }
                 catch (IOException e) {
-                    log.warning("Failed to read mapping [file=" + file.getName() + ", err=" + e + ']');
+                    if (log.isDebugEnabled())
+                        log.debug("Failed to read mapping [file=" + file.getName() + ", err=" + e + ']');
+
                     return null;
                 }
             }

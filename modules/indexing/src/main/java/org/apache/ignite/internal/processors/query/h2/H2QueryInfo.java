@@ -30,13 +30,17 @@ import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.command.Prepared;
 import org.gridgain.internal.h2.engine.Session;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Base H2 query info with commons for MAP, LOCAL, REDUCE queries.
  */
 public class H2QueryInfo {
     /** Query id assigned by {@link RunningQueryManager}. */
-    private final Long runningQryId;
+    private final @Nullable Long runningQryId;
+
+    /** Query label. */
+    private final @Nullable String label;
 
     /** Type. */
     private final QueryType type;
@@ -71,9 +75,10 @@ public class H2QueryInfo {
      * @param sql Query statement.
      * @param node Originator node.
      * @param runningQryId Query id assigned by {@link RunningQueryManager}.
+     * @param label Query label.
      */
     public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql, ClusterNode node,
-        Long runningQryId) {
+        @Nullable Long runningQryId, @Nullable String label) {
         try {
             assert stmt != null;
             this.type = type;
@@ -91,6 +96,7 @@ public class H2QueryInfo {
             distributedJoin = s.isJoinBatchEnabled();
             lazy = s.isLazyQueryExecution();
             this.stmt = GridSqlQueryParser.prepared(stmt);
+            this.label = label;
         }
         catch (SQLException e) {
             throw new IgniteSQLException("Cannot collect query info", IgniteQueryErrorCode.UNKNOWN, e);
@@ -126,7 +132,7 @@ public class H2QueryInfo {
     }
 
     /**
-     * @param type Query type.
+     * @return Query type.
      */
     public QueryType type() {
         return type;
@@ -143,6 +149,9 @@ public class H2QueryInfo {
 
         StringBuilder msgSb = new StringBuilder(msg)
             .append(" [globalQueryId=").append(globalQueryId);
+
+        if (label != null)
+            msgSb.append(", label=").append(label);
 
         if (additionalInfo != null)
             msgSb.append(", ").append(additionalInfo);

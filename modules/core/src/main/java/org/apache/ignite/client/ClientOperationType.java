@@ -321,5 +321,32 @@ public enum ClientOperationType {
     /**
      * IgniteSet.iterator ({@link ClientIgniteSet#iterator()}, {@link ClientIgniteSet#toArray()}).
      */
-    SET_ITERATOR
+    SET_ITERATOR,
+
+    /**
+     * Get or create an AtomicSequence ({@link IgniteClient#atomicSequence(String, long, boolean)},
+     * {@link IgniteClient#atomicSequence(String, ClientAtomicConfiguration, long, boolean)}).
+     */
+    ATOMIC_SEQUENCE_CREATE,
+
+    /**
+     * Remove an AtomicSequence ({@link ClientAtomicSequence#close()}).
+     */
+    ATOMIC_SEQUENCE_REMOVE,
+
+    /**
+     * Check if AtomicSequence exists ({@link ClientAtomicSequence#removed()}).
+     */
+    ATOMIC_SEQUENCE_EXISTS,
+
+    /**
+     * AtomicSequence.get ({@link ClientAtomicSequence#get()}).
+     */
+    ATOMIC_SEQUENCE_VALUE_GET,
+
+    /**
+     * AtomicSequence.addAndGet (includes {@link ClientAtomicSequence#addAndGet(long)}, {@link ClientAtomicSequence#incrementAndGet()},
+     * {@link ClientAtomicSequence#getAndIncrement()}, {@link ClientAtomicSequence#getAndAdd(long)}.
+     */
+    ATOMIC_SEQUENCE_VALUE_ADD_AND_GET
 }

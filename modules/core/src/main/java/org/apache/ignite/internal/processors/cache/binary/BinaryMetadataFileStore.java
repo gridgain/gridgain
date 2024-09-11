@@ -358,6 +358,24 @@ class BinaryMetadataFileStore {
         writer.prepareRemoveFuture(typeId);
     }
 
+    /** Dumps all binary meta files. */
+    public void dumpMeta(File baseDumpDir) {
+        File dumpDir = new File(baseDumpDir, "binary_meta");
+
+        try {
+            File[] binaryMetaFiles = metadataDir.listFiles();
+
+            assert binaryMetaFiles != null : metadataDir + " is not a folder";
+
+            for (File binaryMetaFile : binaryMetaFiles) {
+                U.copy(binaryMetaFile, new File(dumpDir, binaryMetaFile.getName()), false);
+            }
+        }
+        catch (IOException e) {
+            log.error("Failed to dump binary metadata", e);
+        }
+    }
+
     /**
      *
      */

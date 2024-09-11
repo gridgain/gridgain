@@ -18,27 +18,13 @@ package org.apache.ignite.internal.client.thin;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.client.ClientAtomicLong;
-import org.apache.ignite.internal.binary.BinaryRawWriterEx;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Client atomic long.
  */
-public class ClientAtomicLongImpl implements ClientAtomicLong {
-    /** */
-    private final String name;
-
-    /** */
-    private final String groupName;
-
-    /** */
-    private final ReliableChannel ch;
-
-    /** Cache id. */
-    private final int cacheId;
-
+class ClientAtomicLongImpl extends AbstractClientAtomic implements ClientAtomicLong {
     /**
      * Constructor.
      *
@@ -47,13 +33,7 @@ public class ClientAtomicLongImpl implements ClientAtomicLong {
      * @param ch Channel.
      */
     public ClientAtomicLongImpl(String name, @Nullable String groupName, ReliableChannel ch) {
-        // name and groupName uniquely identify the data structure.
-        this.name = name;
-        this.groupName = groupName;
-        this.ch = ch;
-
-        String groupNameInternal = groupName == null ? DataStructuresProcessor.DEFAULT_DS_GROUP_NAME : groupName;
-        cacheId = ClientUtils.cacheId(DataStructuresProcessor.ATOMICS_CACHE_NAME + "@" + groupNameInternal);
+        super(name, groupName, ch);
     }
 
     /** {@inheritDoc} */
@@ -127,25 +107,8 @@ public class ClientAtomicLongImpl implements ClientAtomicLong {
         ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_REMOVE, this::writeName, null);
     }
 
-    /**
-     * Writes the name.
-     *
-     * @param out Output channel.
-     */
-    private void writeName(PayloadOutputChannel out) {
-        try (BinaryRawWriterEx w = new BinaryWriterExImpl(null, out.out(), null, null)) {
-            w.writeString(name);
-            w.writeString(groupName);
-        }
-    }
-
-    /**
-     * Gets the affinity key for this data structure.
-     * 
-     * @return Affinity key.
-     */
-    private String affinityKey() {
-        // GridCacheInternalKeyImpl uses name as AffinityKeyMapped.
-        return name;
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(ClientAtomicLongImpl.class, this, super.toString());
     }
 }

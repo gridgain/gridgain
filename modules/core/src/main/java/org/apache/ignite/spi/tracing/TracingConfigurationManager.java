@@ -16,7 +16,6 @@
 
 package org.apache.ignite.spi.tracing;
 
-import java.util.Collections;
 import java.util.Map;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.lang.IgniteExperimental;
@@ -29,64 +28,32 @@ import org.jetbrains.annotations.Nullable;
 @IgniteExperimental
 public interface TracingConfigurationManager {
     /** Default SQL tracing configuration. */
-    static final TracingConfigurationParameters DEFAULT_SQL_CONFIGURATION =
-        new TracingConfigurationParameters.Builder().
-            withSamplingRate(0d).
-            withIncludedScopes(Collections.emptySet()).
-            build();
+    static final TracingConfigurationParameters DEFAULT_SQL_CONFIGURATION = TracingConfigurationParameters.EMPTY;
 
     /** Default transaction tracing configuration. */
-    static final TracingConfigurationParameters DEFAULT_TX_CONFIGURATION =
-        new TracingConfigurationParameters.Builder().
-            withSamplingRate(0d).
-            withIncludedScopes(Collections.emptySet()).
-            build();
+    static final TracingConfigurationParameters DEFAULT_TX_CONFIGURATION = TracingConfigurationParameters.EMPTY;
 
     /** Default exchange configuration. */
-    static final TracingConfigurationParameters DEFAULT_EXCHANGE_CONFIGURATION =
-        new TracingConfigurationParameters.Builder().
-            withSamplingRate(0d).
-            withIncludedScopes(Collections.emptySet()).
-            build();
+    static final TracingConfigurationParameters DEFAULT_EXCHANGE_CONFIGURATION = TracingConfigurationParameters.EMPTY;
 
     /** Default discovery configuration. */
-    static final TracingConfigurationParameters DEFAULT_DISCOVERY_CONFIGURATION =
-        new TracingConfigurationParameters.Builder().
-            withSamplingRate(0d).
-            withIncludedScopes(Collections.emptySet()).
-            build();
+    static final TracingConfigurationParameters DEFAULT_DISCOVERY_CONFIGURATION = TracingConfigurationParameters.EMPTY;
 
     /** Default communication configuration. */
-    static final TracingConfigurationParameters DEFAULT_COMMUNICATION_CONFIGURATION =
-        new TracingConfigurationParameters.Builder().
-            withSamplingRate(0d).
-            withIncludedScopes(Collections.emptySet()).
-            build();
+    static final TracingConfigurationParameters DEFAULT_COMMUNICATION_CONFIGURATION = TracingConfigurationParameters.EMPTY;
 
     /** Default noop configuration. */
-    static final TracingConfigurationParameters NOOP_CONFIGURATION =
-        new TracingConfigurationParameters.Builder().
-            withSamplingRate(0d).
-            withIncludedScopes(Collections.emptySet()).
-            build();
+    static final TracingConfigurationParameters NOOP_CONFIGURATION = TracingConfigurationParameters.EMPTY;
 
     /** Default cache API write configuration. */
-    static final TracingConfigurationParameters DEFAULT_CACHE_API_WRITE_CONFIGURATION =
-        new TracingConfigurationParameters.Builder().
-            withSamplingRate(0d).
-            withIncludedScopes(Collections.emptySet()).
-            build();
+    static final TracingConfigurationParameters DEFAULT_CACHE_API_WRITE_CONFIGURATION = TracingConfigurationParameters.EMPTY;
 
     /** Default cache API read configuration. */
-    static final TracingConfigurationParameters DEFAULT_CACHE_API_READ_CONFIGURATION =
-        new TracingConfigurationParameters.Builder().
-            withSamplingRate(0d).
-            withIncludedScopes(Collections.emptySet()).
-            build();
+    static final TracingConfigurationParameters DEFAULT_CACHE_API_READ_CONFIGURATION = TracingConfigurationParameters.EMPTY;
 
     /**
      * Set new tracing configuration for the specific tracing coordinates (scope, label, etc.).
-     * If tracing configuration with specified coordinates already exists it'll be overrided,
+     * If tracing configuration with specified coordinates already exists it'll be overridden,
      * otherwise new one will be created.
      *
      * @param coordinates {@link TracingConfigurationCoordinates} Specific set of locators like {@link Scope} and label,

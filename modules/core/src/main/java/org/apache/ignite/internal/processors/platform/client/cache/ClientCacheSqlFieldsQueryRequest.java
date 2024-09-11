@@ -118,6 +118,12 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
             partitions = null;
             updateBatchSize = null;
         }
+
+        if (protocolCtx.isFeatureSupported(ClientBitmaskFeature.QRY_LABEL)) {
+            String label = reader.readString();
+
+            qry.setLabel(label);
+        }
     }
 
     /** {@inheritDoc} */
@@ -159,7 +165,7 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
 
             return new ClientCacheSqlFieldsQueryResponse(requestId(), cliCur, cur, includeFieldNames);
         }
-        catch (Exception e) {
+        catch (Throwable e) {
             ctx.decrementCursors();
 
             SecurityException securityEx = X.cause(e, SecurityException.class);
