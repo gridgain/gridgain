@@ -789,6 +789,14 @@ namespace ignite
                 int32_t ReadCollectionSize(const char* fieldName);
 
                 /**
+                 * Check whether the field is null.
+                 *
+                 * @param fieldName Field name.
+                 * @return @c true if the field is null or isn't present, and @c false otherwise.
+                 */
+                bool IsNull(const char* fieldName);
+
+                /**
                  * Check whether next value exists.
                  *
                  * @param id Session ID.

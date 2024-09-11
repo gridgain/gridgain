@@ -64,7 +64,14 @@ namespace ignite
              * @param impl Implementation.
              */
             BinaryRawReader(ignite::impl::binary::BinaryReaderImpl* impl);
-                        
+
+            /**
+             * Skip next value if it is the null.
+             *
+             * @return True if the null value has been detected and skipped.
+             */
+            bool SkipIfNull();
+
             /**
              * Read 8-byte signed integer. Maps to "byte" type in Java.
              *
