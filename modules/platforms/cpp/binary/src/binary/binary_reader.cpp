@@ -27,6 +27,11 @@ namespace ignite
         {
             // No-op.
         }
+
+        bool BinaryReader::IsNull(const char* fieldName)
+        {
+            return impl->IsNull(fieldName);
+        }
         
         int8_t BinaryReader::ReadInt8(const char* fieldName)
         {
