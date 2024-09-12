@@ -82,6 +82,7 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageReadW
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageReadWriteManagerImpl;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
 import org.apache.ignite.internal.util.GridStripedReadWriteLock;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -1095,8 +1096,8 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
      * @return Aggregating exception, if error occurred.
      */
     private IgniteCheckedException shutdown(CacheStoreHolder holder, boolean cleanFile,
-        @Nullable IgniteCheckedException aggr) {
-
+        @Nullable IgniteCheckedException aggr
+    ) {
         aggr = shutdown(holder.idxStore, cleanFile, aggr);
 
         for (PageStore store : holder.partStores) {
@@ -1111,16 +1112,14 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     }
 
     private void cleanParentDirectories(CacheStoreHolder holder) {
-        Arrays.stream(holder.partStores).map(store -> ((FilePageStoreV2)store).getPath().getParent()).distinct().forEach(new Consumer<Path>() {
-            @Override public void accept(Path dir) {
-                if (Files.isDirectory(dir, LinkOption.NOFOLLOW_LINKS)) {
-                    try {
-                        if (!Files.list(dir).findFirst().isPresent())
-                            Files.delete(dir);
-                    }
-                    catch (IOException e) {
-                        log.warning("Failed to remove directory " + dir, e);
-                    }
+        Arrays.stream(holder.partStores).map(store -> store.getPath().getParent()).findAny().ifPresent(dir -> {
+            if (Files.isDirectory(dir, LinkOption.NOFOLLOW_LINKS)) {
+                try {
+                    if (!Files.list(dir).findFirst().isPresent())
+                        IgniteUtils.delete(dir);
+                }
+                catch (IOException e) {
+                    log.warning("Failed to remove directory " + dir, e);
                 }
             }
         });
