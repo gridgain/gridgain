@@ -406,8 +406,13 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
         IgniteCache cache = ignite.cache(DEFAULT_CACHE_NAME);
         cache.put(30000, 30000);
 
+        assertTrue(resolveCacheDir(ignite, DEFAULT_CACHE_NAME).exists());
         cache.destroy();
+        assertFalse(resolveCacheDir(ignite, DEFAULT_CACHE_NAME).exists());
+    }
 
-        assertFalse(new File(((FilePageStoreManager)ignite.context().cache().context().pageStore()).workDir(), "cache-" + DEFAULT_CACHE_NAME).exists());
+    private File resolveCacheDir(IgniteEx ignite, String cacheName) {
+        File workDir = ((FilePageStoreManager)ignite.context().cache().context().pageStore()).workDir();
+        return new File(workDir, "cache-" + DEFAULT_CACHE_NAME);
     }
 }
