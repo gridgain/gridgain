@@ -2939,7 +2939,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         long ttl = CU.toTtl(expiryPlc.getExpiryForAccess());
 
         if (ttl != CU.TTL_NOT_CHANGED)
-            updateTtl(ttl);
+            updateTtl(ttl, false);
     }
 
     /**
@@ -2953,10 +2953,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         long ttl = expiryPlc.forAccess();
 
         if (ttl != CU.TTL_NOT_CHANGED) {
-            if (isFastUpdateTtlPossible())
-                fastUpdateTtl(ttl);
-            else
-                updateTtl(ttl);
+            updateTtl(ttl, isFastUpdateTtlPossible());
 
             expiryPlc.ttlUpdated(key(), version(), hasReaders() ? ((GridDhtCacheEntry)this).readers() : null);
         }
@@ -2964,8 +2961,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /**
      * @param ttl Time to live.
+     * @param fastUpdate If {@code true} then implementation uses a fast way to update the time-to-live value in the persistence store,
+     *                   it updates only pages that store ttl instead of rewriting the whole entry.
+     * @see #isFastUpdateTtlPossible()
      */
-    private void updateTtl(long ttl) throws IgniteCheckedException, GridCacheEntryRemovedException {
+    private void updateTtl(long ttl, boolean fastUpdate) throws IgniteCheckedException, GridCacheEntryRemovedException {
         assert ttl >= 0 || ttl == CU.TTL_ZERO : ttl;
         assert lock.isHeldByCurrentThread();
 
@@ -2983,7 +2983,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         cctx.shared().database().checkpointReadLock();
 
         try {
-            storeValue(val, expireTime, ver);
+            if (fastUpdate)
+                storeTtlValue(val, expireTime, ver);
+            else
+                storeValue(val, expireTime, ver);
         }
         finally {
             cctx.shared().database().checkpointReadUnlock();
@@ -3012,36 +3015,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         }
 
         return true;
-    }
-
-    /**
-     * This method is used to update TTL without updating the whole entry.
-     *
-     * @param ttl Time to live.
-     */
-    private void fastUpdateTtl(long ttl) throws IgniteCheckedException {
-        assert ttl >= 0 || ttl == CU.TTL_ZERO : ttl;
-        assert lock.isHeldByCurrentThread();
-
-        long expireTime;
-
-        if (ttl == CU.TTL_ZERO) {
-            ttl = CU.TTL_MINIMUM;
-            expireTime = CU.expireTimeInPast();
-        }
-        else
-            expireTime = CU.toExpireTime(ttl);
-
-        ttlAndExpireTimeExtras(ttl, expireTime);
-
-        cctx.shared().database().checkpointReadLock();
-
-        try {
-            storeTtlValue(val, expireTime, ver);
-        }
-        finally {
-            cctx.shared().database().checkpointReadUnlock();
-        }
     }
 
     /**
@@ -4184,7 +4157,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             if (hasValueUnlocked()) {
                 try {
-                    updateTtl(ttl);
+                    updateTtl(ttl, false);
                 }
                 catch (IgniteCheckedException e) {
                     U.error(log, "Failed to update TTL: " + e, e);
@@ -4255,7 +4228,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             // TODO IGNITE-305
             // TTL messages are not ordered, so the version cannot be used to properly handle a new ttl value.
-            fastUpdateTtl(ttl);
+            updateTtl(ttl, true);
 
             return val;
         }
