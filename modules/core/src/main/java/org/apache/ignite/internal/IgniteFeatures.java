@@ -269,7 +269,10 @@ public enum IgniteFeatures {
     OPTIMIZED_COMPRESSED_ENCRYPTED_SNAPSHOTS(71),
 
     /** This feature allows using exchangeless snapshots for point-in-time recovery. */
-    POINT_IN_TIME_RECOVERY_EXCHANGELESS_SUPPORT(72);
+    POINT_IN_TIME_RECOVERY_EXCHANGELESS_SUPPORT(72),
+
+    /** Enables compacted topology history. */
+    TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY(73);
 
     /**
      * Unique feature identifier.
@@ -341,7 +344,11 @@ public enum IgniteFeatures {
      * @param nodes cluster nodes to check their feature support.
      * @return if feature is declared to be supported by all nodes
      */
-    public static boolean allNodesSupports(@Nullable GridKernalContext ctx, Iterable<ClusterNode> nodes, IgniteFeatures feature) {
+    public static boolean allNodesSupports(
+        @Nullable GridKernalContext ctx,
+        Iterable<? extends ClusterNode> nodes,
+        IgniteFeatures feature
+    ) {
         if (ctx != null && nodes.iterator().hasNext()) {
             RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
