@@ -789,6 +789,14 @@ namespace ignite
                 int32_t ReadCollectionSize(const char* fieldName);
 
                 /**
+                 * Check whether the field is null.
+                 *
+                 * @param fieldName Field name.
+                 * @return @c true if the field is null or isn't present, and @c false otherwise.
+                 */
+                bool IsNull(const char* fieldName);
+
+                /**
                  * Check whether next value exists.
                  *
                  * @param id Session ID.
@@ -797,9 +805,9 @@ namespace ignite
                 bool HasNextElement(int32_t id) const;
 
                 /**
-                 * Skip next value if it is the null.
+                 * Skip the next value if it is null.
                  *
-                 * @return True if the null value has been detected and skipped.
+                 * @return @c true if a null value has been detected and skipped, and @c false otherwise.
                  */
                 bool SkipIfNull();
 

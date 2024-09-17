@@ -819,7 +819,9 @@ BOOST_AUTO_TEST_CASE(TestGuidNull)
     Guid expVal;
     Guid actualVal = reader.ReadGuid("test");
 
-    BOOST_REQUIRE(actualVal == expVal);
+    BOOST_CHECK(actualVal == expVal);
+    BOOST_CHECK(reader.IsNull("test"));
+    BOOST_CHECK(reader.IsNull("unknown"));
 }
 
 BOOST_AUTO_TEST_CASE(TestDateNull)
@@ -858,7 +860,9 @@ BOOST_AUTO_TEST_CASE(TestDateNull)
     Date expVal;
     Date actualVal = reader.ReadDate("test");
 
-    BOOST_REQUIRE(actualVal == expVal);
+    BOOST_CHECK(actualVal == expVal);
+    BOOST_CHECK(reader.IsNull("test"));
+    BOOST_CHECK(reader.IsNull("unknown"));
 }
 
 BOOST_AUTO_TEST_CASE(TestTimeNull)
@@ -897,7 +901,9 @@ BOOST_AUTO_TEST_CASE(TestTimeNull)
     Time expVal;
     Time actualVal = reader.ReadTime("test");
 
-    BOOST_REQUIRE(actualVal == expVal);
+    BOOST_CHECK(actualVal == expVal);
+    BOOST_CHECK(reader.IsNull("test"));
+    BOOST_CHECK(reader.IsNull("unknown"));
 }
 
 BOOST_AUTO_TEST_CASE(TestTimestampNull)
@@ -936,7 +942,9 @@ BOOST_AUTO_TEST_CASE(TestTimestampNull)
     Timestamp expVal;
     Timestamp actualVal = reader.ReadTimestamp("test");
 
-    BOOST_REQUIRE(actualVal == expVal);
+    BOOST_CHECK(actualVal == expVal);
+    BOOST_CHECK(reader.IsNull("test"));
+    BOOST_CHECK(reader.IsNull("unknown"));
 }
 
 BOOST_AUTO_TEST_CASE(TestString) {
@@ -1009,6 +1017,9 @@ BOOST_AUTO_TEST_CASE(TestString) {
 
     BOOST_REQUIRE(reader.ReadString("field4", readVal1, 9) == -1);
     BOOST_REQUIRE(reader.ReadString("field5", readVal1, 9) == -1);
+
+    BOOST_CHECK(reader.IsNull("field4"));
+    BOOST_CHECK(reader.IsNull("field5"));
 }
 
 BOOST_AUTO_TEST_CASE(TestStringArrayNull)
