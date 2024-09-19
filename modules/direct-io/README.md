@@ -56,7 +56,7 @@ Additional setup is not required. Once plugin is available in classpath, it will
 
 -------------------------------------
 See more information in GridGain documentation:
-[How to enable Direct IO](https://apacheignite.readme.io/docs/durable-memory-tuning#section-enabling-direct-i-o)
+[How to enable Direct IO](https://www.gridgain.com/docs/latest/perf-troubleshooting-guide/persistence-tuning#enabling-direct-io)
 
 and description of internal desing can be found in Wiki:
 [Under the hood: Direct IO](https://cwiki.apache.org/confluence/display/IGNITE/Ignite+Persistent+Store+-+under+the+hood#IgnitePersistentStore-underthehood-DirectI/O)

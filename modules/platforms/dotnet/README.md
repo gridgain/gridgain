@@ -46,8 +46,8 @@ up after a node or cluster restart because the Durable Memory is tightly coupled
 it as a secondary memory tier. This implies that if a subset of data or an index is missing in RAM,
 the Durable Memory will take it from the disk.
 <p align="center">
-    <a href="https://apacheignite.readme.io/docs/distributed-persistent-store">
-        <img src="https://ignite.apache.org/images/native_persistence.png?renew" width="400px"/>
+    <a href="https://www.gridgain.com/docs/latest/developers-guide/persistence/native-persistence">
+        <img src="https://www.gridgain.com/docs/8.9.11/images/persistent_store_structure_1.png?renew" width="400px"/>
     </a>
 </p>
 

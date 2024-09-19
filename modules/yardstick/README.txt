@@ -40,7 +40,7 @@ to be done:
 1. Go to `config/ignite-remote-config.xml` and replace
 `<value>127.0.0.1:47500..47509</value>` with actual IPs of all the remote hosts.
 Refer to the documentation section below if you prefer to use other kind of IP finder:
-https://apacheignite.readme.io/docs/cluster-config
+https://www.gridgain.com/docs/latest/developers-guide/clustering/clustering
 
 2. Go to `config/benchmark-remote-sample.properties` and replace the `localhost` with
 actual IPs of the remote hosts in the following places:
