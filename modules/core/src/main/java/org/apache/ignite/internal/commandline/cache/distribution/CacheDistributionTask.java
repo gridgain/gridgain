@@ -33,6 +33,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopologyImpl;
+import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorJob;
@@ -42,6 +43,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Collect information on the distribution of partitions.
  */
+@GridInternal
 public class CacheDistributionTask extends VisorMultiNodeTask<CacheDistributionTaskArg,
     CacheDistributionTaskResult, CacheDistributionNode> {
     /** */
