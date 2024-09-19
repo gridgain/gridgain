@@ -30,8 +30,11 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -40,7 +43,9 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REST_TCP_PORT;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
@@ -90,7 +95,7 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
 
         cfg.setDataStorageConfiguration(storageCfg);
 
-        CacheConfiguration[] ccfg = new CacheConfiguration[] {
+        CacheConfiguration<?, ?>[] ccfg = new CacheConfiguration[] {
             cacheConfiguration(CACHE_NAMES[0], CacheAtomicityMode.ATOMIC),
             cacheConfiguration(CACHE_NAMES[1], CacheAtomicityMode.ATOMIC),
             cacheConfiguration(CACHE_NAMES[2], CacheAtomicityMode.TRANSACTIONAL)
@@ -143,8 +148,63 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
         stopAllGrids();
         startGrids(3);
 
+        crd = grid(0);
+
         // All data was back.
         assertEquals(CACHE_NAMES.length * CACHE_SIZE, averageSizeAroundAllNodes());
+    }
+
+    /**
+     * Tests that resetting lost partitions for the system cache.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testResetLostPartitionsSystemCache() throws Exception {
+        IgniteEx g0 = startGrids(2);
+
+        g0.cluster().state(ACTIVE);
+
+        stopGrid(1);
+
+        // Fill the system cache with some data.
+        // Number of key value pairs should be enough to fill all partitions.
+        IgniteInternalCache<Integer, Integer> sysCache0 = g0.context().cache().utilityCache();
+        int keyNums = sysCache0.configuration().getAffinity().partitions() * 10;
+        for (int i = 0; i < keyNums; i++)
+            sysCache0.put(i, i);
+
+        // Block supply messages for the system cache and start previously stopped node to make it lost partitions.
+        TestRecordingCommunicationSpi spi0 = TestRecordingCommunicationSpi.spi(g0);
+        spi0.blockMessages(TestRecordingCommunicationSpi.blockSupplyMessageForGroup(CU.cacheId(CU.UTILITY_CACHE_NAME)));
+
+        IgniteInternalFuture<?> startFut = GridTestUtils.runAsync(() -> startGrid(1));
+
+        spi0.waitForBlocked();
+
+        stopGrid(0);
+
+        spi0.stopBlock(false);
+
+        startFut.get();
+
+        crd = grid(1);
+
+        IgniteInternalCache<Integer, Integer> sysCache1 = grid(1).context().cache().utilityCache();
+
+        // All partitions must be in lost state.
+        assertEquals(sysCache1.configuration().getAffinity().partitions(), sysCache1.lostPartitions().size());
+
+        // Resetting lost partitions for the syste cache.
+        assertEquals(EXIT_CODE_OK, execute(
+            "--port",
+            grid(1).localNode().attribute(ATTR_REST_TCP_PORT).toString(),
+            "--cache",
+            "reset_lost_partitions",
+            CU.UTILITY_CACHE_NAME));
+
+        // Check that all partitions were reset.
+        assertEquals(0, sysCache1.lostPartitions().size());
     }
 
     /**
@@ -153,7 +213,7 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
     private void doRebalanceAfterPartitionsWereLost() throws Exception {
         startGrids(3);
 
-        grid(0).cluster().active(true);
+        grid(0).cluster().state(ACTIVE);
 
         for (String cacheName : CACHE_NAMES) {
             Map<String, String> putMap = new LinkedHashMap<>();
