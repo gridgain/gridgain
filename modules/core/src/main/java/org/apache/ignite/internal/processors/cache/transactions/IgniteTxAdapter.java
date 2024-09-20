@@ -219,9 +219,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     /** One phase commit flag. */
     protected boolean onePhaseCommit;
 
-    /** Disable one phase commit flag. */
-    protected boolean disableOnePhaseCommit;
-
     /** Commit version. */
     private volatile GridCacheVersion commitVer;
 
@@ -1057,20 +1054,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
      */
     @Override public boolean onePhaseCommit() {
         return onePhaseCommit;
-    }
-
-    /**
-     * @param disableOnePhaseCommit {@code True} if transaction commit shouldn't be performed in short-path way.
-     */
-    public void disableOnePhaseCommit(boolean disableOnePhaseCommit) {
-        this.disableOnePhaseCommit = disableOnePhaseCommit;
-    }
-
-    /**
-     * @return Disable one-phase commit flag.
-     */
-    public boolean disableOnePhaseCommit() {
-        return disableOnePhaseCommit;
     }
 
     /** {@inheritDoc} */
