@@ -2251,7 +2251,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             String dataStorageInfo = dataStorageReport(ctx.cache().context().database(), dblFmt, true);
 
-            String id = U.id8(localNode().id());
+            String id = localNode().id().toString();
 
             AffinityTopologyVersion topVer = ctx.discovery().topologyVersionEx();
 
@@ -2272,7 +2272,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             msg.nl()
                 .a("Metrics for local node (to disable set 'metricsLogFrequency' to 0)").nl()
-                .a("    ^-- Node [id=").a(id).a(", consistentId=").a(locNode.consistentId()).a(name() != null ? ", name=" + name() : "").a(", uptime=")
+                .a("    ^-- Node [id=").a(id).a(", consistentId=").a(locNode.consistentId()).a(name() != null ? ", name=" + name() : "").a(", version=").a(ACK_VER_STR).a(", uptime=")
                 .a(getUpTimeFormatted()).a("]").nl()
                 .a("    ^-- Cluster [hosts=").a(hosts).a(", CPUs=").a(cpus).a(", servers=").a(servers)
                 .a(", clients=").a(clients).a(", topVer=").a(topVer.topologyVersion())
