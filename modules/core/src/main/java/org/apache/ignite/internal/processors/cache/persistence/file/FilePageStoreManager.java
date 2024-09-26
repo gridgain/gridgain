@@ -1220,13 +1220,9 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
         }
     }
 
-    /**
-     * @param grpId Cache group ID.
-     * @return Collection of related page stores.
-     * @throws IgniteCheckedException If failed.
-     */
-    @Override public Collection<PageStore> getStores(int grpId) throws IgniteCheckedException {
-        return getHolder(grpId);
+    /** {@inheritDoc} */
+    @Override public Collection<PageStore> getStores(int grpId) {
+        return idxCacheStores.get(grpId);
     }
 
     /**
