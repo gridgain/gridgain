@@ -72,6 +72,9 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     /** SQL clause as vector. */
     private float[] clauseVector;
 
+    /** [K]NN, how many vectors to return. */
+    private int k;
+
     /**
      * Constructs query for the given search string.
      *
@@ -79,10 +82,11 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
      * @param field Type.
      * @param cause Search string.
      */
-    public VectorQuery(Class<?> type, String field, String cause) {
+    public VectorQuery(Class<?> type, String field, String cause, int k) {
         setType(type);
         setField(field);
         setCause(cause);
+        setK(k);
     }
 
     /**
@@ -92,10 +96,11 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
      * @param field Type.
      * @param clauseVector Search string.
      */
-    public VectorQuery(Class<?> type, String field, float[] clauseVector) {
+    public VectorQuery(Class<?> type, String field, float[] clauseVector, int k) {
         setType(type);
         setField(field);
         setCauseVector(clauseVector);
+        setK(k);
     }
 
     /**
@@ -117,6 +122,22 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
         this.type = QueryUtils.typeName(type);
 
         return this;
+    }
+
+    /**
+     * Sets k.
+     *
+     * @param k K.
+     * @return {@code this} For chaining.
+     */
+    public VectorQuery<K, V> setK(int k) {
+        this.k = k;
+
+        return this;
+    }
+
+    public int getK() {
+        return k;
     }
 
     /**

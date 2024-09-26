@@ -134,6 +134,7 @@ public class DummyQueryIndexing implements GridQueryIndexing {
         String fieldName,
         String qry,
         float[] qryVector,
+        int k,
         String typeName,
         IndexingQueryFilter filter
     ) throws IgniteCheckedException {

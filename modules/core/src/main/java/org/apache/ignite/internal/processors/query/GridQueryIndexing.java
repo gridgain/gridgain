@@ -173,7 +173,7 @@ public interface GridQueryIndexing {
      * @throws IgniteCheckedException If failed.
      */
     public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryLocalVector(String schemaName, String cacheName,
-        String field, String qry, float[] qryVector, String typeName, IndexingQueryFilter filter) throws IgniteCheckedException;
+        String field, String qry, float[] qryVector, int k, String typeName, IndexingQueryFilter filter) throws IgniteCheckedException;
 
     /**
      * Create new index locally.

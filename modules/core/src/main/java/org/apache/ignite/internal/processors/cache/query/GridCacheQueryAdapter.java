@@ -149,6 +149,8 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
     /** Vector for query in case of vector query. */
     private final float[] qryVector;
 
+    private final int k;
+
     /**
      * @param cctx Context.
      * @param type Query type.
@@ -188,6 +190,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         clause = null;
         fieldName = null;
         qryVector = null;
+        k = -1;
     }
 
     /**
@@ -232,6 +235,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         clause = null;
         fieldName = null;
         qryVector = null;
+        k = -1;
     }
 
     /**
@@ -253,6 +257,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         @Nullable String fieldName,
         @Nullable String clause,
         @Nullable float[] qryVector,
+        int k,
         @Nullable IgniteBiPredicate<Object, Object> filter,
         @Nullable Integer part,
         boolean incMeta,
@@ -269,6 +274,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         this.fieldName = fieldName;
         this.clause = clause;
         this.qryVector = qryVector;
+        this.k = k;
         this.filter = filter;
         this.part = part;
         this.incMeta = incMeta;
@@ -339,6 +345,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
 
         fieldName = null;
         qryVector = null;
+        k = -1;
     }
 
     /**
@@ -353,6 +360,10 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
      */
     public float[] queryVector() {
         return qryVector;
+    }
+
+    public int k() {
+        return k;
     }
 
     /**

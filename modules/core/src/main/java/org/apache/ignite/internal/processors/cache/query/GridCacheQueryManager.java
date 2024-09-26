@@ -648,7 +648,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                             taskName));
                     }
 
-                    iter = qryProc.queryVector(cacheName, qry.fieldName(), qry.clause(), qry.queryVector(),
+                    iter = qryProc.queryVector(cacheName, qry.fieldName(), qry.clause(), qry.queryVector(), qry.k(),
                         qry.queryClassName(), filter(qry));
 
                     break;
@@ -2781,6 +2781,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
             null,
             null,
             null,
+            -1,
             null,
             null,
             false,
@@ -2876,6 +2877,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
             null,
             search,
             null,
+                -1,
             null,
             null,
             false,
@@ -2893,7 +2895,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
      * @return Created query.
      */
     public CacheQuery<Map.Entry<K, V>> createVectorQuery(String clsName, String field, String search, float[] vector,
-        boolean keepBinary) {
+        int k, boolean keepBinary) {
         A.notNull("clsName", clsName);
         A.notNull("field", field);
         A.notNull("search", search);
@@ -2904,6 +2906,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
             field,
             search,
             vector,
+            k,
             null,
             null,
             false,
