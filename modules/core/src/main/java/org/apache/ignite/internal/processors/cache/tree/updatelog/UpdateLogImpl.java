@@ -67,7 +67,8 @@ public class UpdateLogImpl implements UpdateLog {
         boolean treeUpdated = logTree.putx(row);
 
         if (log.isDebugEnabled()) {
-            log.debug("Attempt to update log tree for key " + row.key().value(cctx, false) + ", success="
+            String rowKey = row.key() == null ? "null" : row.key().value(cctx, false);
+            log.debug("Attempt to update log tree for key " + rowKey + ", success="
                     + treeUpdated);
         }
     }
@@ -105,7 +106,8 @@ public class UpdateLogImpl implements UpdateLog {
             boolean removeUpdated = logTree.removex(row);
 
             if (log.isDebugEnabled()) {
-                log.debug("Attempt to remove from log tree for key " + row.key().value(cctx, false) + ", success="
+                String rowKey = row.key() == null ? "null" : row.key().value(cctx, false);
+                log.debug("Attempt to remove from log tree for key " + rowKey + ", success="
                         + removeUpdated);
             }
         }
