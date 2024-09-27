@@ -2078,6 +2078,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /**
+     * Returns accumulated results for all page stores. Ignores all exceptions that could happen.
+     *
      * @param gctx Group context.
      * @param f Consumer.
      * @return Accumulated result for all page stores.
@@ -2087,16 +2089,17 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         long res = 0;
 
-        try {
-            Collection<PageStore> stores = storeMgr.getStores(groupId);
+        Collection<PageStore> stores = storeMgr.getStores(groupId);
 
-            if (stores != null) {
-                for (PageStore store : stores)
+        if (stores != null) {
+            for (PageStore store : stores) {
+                try {
                     res += f.applyAsLong(store);
+                }
+                catch (Exception ignore) {
+                    // Intentionally ignore it.
+                }
             }
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
         }
 
         return res;

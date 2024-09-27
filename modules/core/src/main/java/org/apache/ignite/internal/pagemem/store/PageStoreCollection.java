@@ -33,8 +33,7 @@ public interface PageStoreCollection {
 
     /**
      * @param grpId Cache group ID.
-     * @return Collection of related page stores.
-     * @throws IgniteCheckedException If failed.
+     * @return Collection of related page stores or {@code null} if it's not found.
      */
-    public Collection<PageStore> getStores(int grpId) throws IgniteCheckedException;
+    public Collection<PageStore> getStores(int grpId);
 }

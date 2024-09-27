@@ -91,17 +91,9 @@ class PageStoreMap implements PageStoreCollection {
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<PageStore> getStores(int grpId) throws IgniteCheckedException {
+    @Override public Collection<PageStore> getStores(int grpId) {
         IntMap<PageStore> partPageStoresMap = grpPageStoresMap.get(grpId);
 
-        if (partPageStoresMap == null) {
-            throw new IgniteCheckedException(S.toString("Page store map not found. ",
-                "grpId", grpId, false,
-                "keys", Arrays.toString(grpPageStoresMap.keys()), false,
-                "this", hashCode(), false
-            ));
-        }
-
-        return partPageStoresMap.values();
+        return partPageStoresMap == null ? null : partPageStoresMap.values();
     }
 }
