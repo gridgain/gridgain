@@ -2078,9 +2078,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /**
+     * Returns accumulated results for all page stores. Ignores all exceptions that could happen.
+     *
      * @param gctx Group context.
      * @param f Consumer.
-     * @return Accumulated result for all page stores. Ignores all exceptions that could happen.
+     * @return Accumulated result for all page stores.
      */
     public long forGroupPageStores(CacheGroupContext gctx, ToLongFunction<PageStore> f) {
         int groupId = gctx.groupId();
