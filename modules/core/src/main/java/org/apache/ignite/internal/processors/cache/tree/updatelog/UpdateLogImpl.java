@@ -60,8 +60,7 @@ public class UpdateLogImpl implements UpdateLog {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public void put(UpdateLogRow row, IgniteLogger log, CacheObjectContext cctx) throws IgniteCheckedException {
+    @Override public void put(UpdateLogRow row, IgniteLogger log, CacheObjectContext cctx) throws IgniteCheckedException {
         init();
 
         boolean treeUpdated = logTree.putx(row);
@@ -100,8 +99,7 @@ public class UpdateLogImpl implements UpdateLog {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public void remove(UpdateLogRow row, IgniteLogger log, CacheObjectContext cctx) throws IgniteCheckedException {
+    @Override public void remove(UpdateLogRow row, IgniteLogger log, CacheObjectContext cctx) throws IgniteCheckedException {
         if (logTree != null) {
             boolean removeUpdated = logTree.removex(row);
 

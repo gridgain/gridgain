@@ -7247,7 +7247,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** */
-    private void logOnMoreRecent(){
+    private void logOnMoreRecent() {
         if (log.isDebugEnabled())
             log.debug("recordDhtVersion is more recent, skipping cache op for key=" + keyValue(false));
     }
