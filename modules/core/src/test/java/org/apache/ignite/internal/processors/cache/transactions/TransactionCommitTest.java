@@ -52,7 +52,7 @@ public class TransactionCommitTest extends GridCommonAbstractTest {
         GridTestUtils.assertThrows(log, () -> {
             tx.prepare(true);
             return null;
-        }, IgniteException.class, "Locking manager is not available (probably, disconnected from a cluster)");
+        }, IgniteException.class, "Locking manager is not available (probably disconnected from the cluster)");
     }
 
     private GridNearTxLocal txStart(GridCacheSharedContext<Object, Object> cctx) {
