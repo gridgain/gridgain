@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
@@ -31,6 +32,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
+import org.apache.ignite.internal.processors.cache.GridCacheMvccManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxMapping;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxMapping;
@@ -173,6 +175,10 @@ public class GridNearPessimisticTxPrepareFuture extends GridNearTxPrepareFutureA
 
     /** {@inheritDoc} */
     @Override public void prepare() {
+        GridCacheMvccManager mvcc = cctx.mvcc();
+        if (mvcc == null)
+            throw new IgniteException("Locking manager is not available (probably, disconnected from a cluster)");
+
         try (TraceSurroundings ignored =
                  MTC.supportContinual(span = cctx.kernalContext().tracing().create(TX_NEAR_PREPARE, MTC.span()))) {
             if (!tx.state(PREPARING)) {
@@ -192,7 +198,7 @@ public class GridNearPessimisticTxPrepareFuture extends GridNearTxPrepareFutureA
             try {
                 tx.userPrepare(Collections.<IgniteTxEntry>emptyList());
 
-                cctx.mvcc().addFuture(this);
+                mvcc.addFuture(this);
 
                 preparePessimistic();
             }
