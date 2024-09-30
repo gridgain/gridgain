@@ -177,7 +177,7 @@ public class GridNearPessimisticTxPrepareFuture extends GridNearTxPrepareFutureA
     @Override public void prepare() {
         GridCacheMvccManager mvcc = cctx.mvcc();
         if (mvcc == null)
-            throw new IgniteException("Locking manager is not available (probably, disconnected from a cluster)");
+            throw new IgniteException("Locking manager is not available (probably disconnected from the cluster)");
 
         try (TraceSurroundings ignored =
                  MTC.supportContinual(span = cctx.kernalContext().tracing().create(TX_NEAR_PREPARE, MTC.span()))) {
