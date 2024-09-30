@@ -17,9 +17,11 @@
 package org.apache.ignite.internal.processors.query;
 
 import java.util.List;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -102,6 +104,33 @@ public class IgniteSqlDistributedJoinSelfTest extends AbstractIndexingCommonTest
             c1.destroy();
             c2.destroy();
         }
+    }
+
+    /**
+     * Check collocation processing is correctly passed for complex cte based query.
+     */
+    @Test
+    public void testCollocationForComplexCte() {
+        Ignite ign = ignite(0);
+
+        IgniteCache<Object, Object> cache = ign.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        String ddl = "CREATE TABLE T1 (SEQ_OF_CALC NUMBER(5, 0) NOT NULL, PAYMENT VARCHAR2(10), "
+                + "PRIMARY KEY (SEQ_OF_CALC));";
+
+        String query = " "
+                + "WITH q AS (SELECT * FROM T1)"
+                + "            SELECT SUBQRY.SEQ_OF_CALC"
+                + "            FROM"
+                + "                (SELECT PRTCH.SEQ_OF_CALC"
+                + "                    FROM"
+                + "                        (SELECT * FROM q),"
+                + "                    T1 PRTCH"
+                + "                    WHERE 0=1"
+                + "                ) SUBQRY";
+
+        cache.query(new SqlFieldsQuery(ddl));
+        cache.query(new SqlFieldsQuery(query).setDistributedJoins(true)).getAll();
     }
 
     /**

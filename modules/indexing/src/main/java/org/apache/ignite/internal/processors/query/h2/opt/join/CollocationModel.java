@@ -335,9 +335,9 @@ public final class CollocationModel {
      */
     private boolean isPartitionedTableBeforeExists(int filterIdx) {
         for (int idx = 0; idx < filterIdx; idx++) {
-            CollocationModel child = child(idx, true);
+            CollocationModel child = child(idx, false);
 
-            // The c can be null if it is not a GridH2Table and not a sub-query,
+            // The child can be null if it is not a GridH2Table and not a sub-query,
             // it is a some kind of function table or anything else that considered replicated.
             if (child != null && child.type(true).isPartitioned())
                 return true;
@@ -358,7 +358,7 @@ public final class CollocationModel {
         if (filterIdx == 0)
             return false;
 
-        CollocationModel child = child(filterIdx - 1, true);
+        CollocationModel child = child(filterIdx - 1, false);
 
         if (child != null && child.type(true) == CollocationModelType.REPLICATED)
             return true;
@@ -398,33 +398,34 @@ public final class CollocationModel {
 
             for (int i = 0; i < idxConditions.size(); i++) {
                 IndexCondition c = idxConditions.get(i);
-                int colId = c.getColumn().getColumnId();
                 int cmpType = c.getCompareType();
 
-                if ((cmpType == Comparison.EQUAL || cmpType == Comparison.EQUAL_NULL_SAFE) &&
-                    (colId == affColId || tbl.rowDescriptor().isKeyColumn(colId)) && c.isEvaluatable()) {
-                    affKeyCondFound = true;
+                if (cmpType == Comparison.EQUAL || cmpType == Comparison.EQUAL_NULL_SAFE) {
+                    int colId = c.getColumn().getColumnId();
+                    if ((colId == affColId || tbl.rowDescriptor().isKeyColumn(colId)) && c.isEvaluatable()) {
+                        affKeyCondFound = true;
 
-                    Expression exp = c.getExpression();
-                    exp = exp.getNonAliasExpression();
+                        Expression exp = c.getExpression();
+                        exp = exp.getNonAliasExpression();
 
-                    if (exp instanceof ExpressionColumn) {
-                        ExpressionColumn expCol = (ExpressionColumn)exp;
+                        if (exp instanceof ExpressionColumn) {
+                            ExpressionColumn expCol = (ExpressionColumn)exp;
 
-                        // This is one of our previous joins.
-                        TableFilter prevJoin = expCol.getTableFilter();
+                            // This is one of our previous joins.
+                            TableFilter prevJoin = expCol.getTableFilter();
 
-                        if (prevJoin != null) {
-                            CollocationModel cm = child(indexOf(prevJoin), true);
+                            if (prevJoin != null) {
+                                CollocationModel cm = child(indexOf(prevJoin), true);
 
-                            // If the previous joined model is a subquery (view), we can not be sure that
-                            // the found affinity column is the needed one, since we can select multiple
-                            // different affinity columns from different tables.
-                            if (cm != null && !cm.view) {
-                                CollocationModelType t = cm.type(true);
+                                // If the previous joined model is a subquery (view), we can not be sure that
+                                // the found affinity column is the needed one, since we can select multiple
+                                // different affinity columns from different tables.
+                                if (cm != null && !cm.view) {
+                                    CollocationModelType t = cm.type(true);
 
-                                if (t.isPartitioned() && t.isCollocated() && isAffinityColumn(prevJoin, expCol, validate))
-                                    return CollocationModelAffinity.COLLOCATED_JOIN;
+                                    if (t.isPartitioned() && t.isCollocated() && isAffinityColumn(prevJoin, expCol, validate))
+                                        return CollocationModelAffinity.COLLOCATED_JOIN;
+                                }
                             }
                         }
                     }
