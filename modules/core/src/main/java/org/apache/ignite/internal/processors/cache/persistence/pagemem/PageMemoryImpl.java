@@ -2637,4 +2637,10 @@ public class PageMemoryImpl implements PageMemoryEx {
         /** Speed based. CP writting speed and estimated ideal speed are used as border */
         SPEED_BASED
     }
+
+    /** Returns {@code true} if a page replacement has occurred at least once. */
+    @TestOnly
+    public boolean pageReplacementOccurred() {
+        return pageReplacementWarned > 0;
+    }
 }
