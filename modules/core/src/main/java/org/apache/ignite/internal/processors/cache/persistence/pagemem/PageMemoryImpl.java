@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,6 +65,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.InitNewPageRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageDeltaRecord;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockStateChecker;
+import org.apache.ignite.internal.processors.cache.persistence.CheckpointState;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
@@ -665,11 +666,10 @@ public class PageMemoryImpl implements PageMemoryEx {
         }
         finally {
             seg.writeLock().unlock();
-        }
 
-        // Finish replacement only when an exception wasn't thrown otherwise it possible to corrupt B+Tree.
-        if (delayedPageReplacementTracker != null)
-            delayedPageReplacementTracker.delayedPageWrite().finishReplacement();
+            if (delayedPageReplacementTracker != null)
+                delayedPageReplacementTracker.delayedPageWrite().flushCopiedPageIfExists();
+        }
 
         //we have allocated 'tracking' page, we need to allocate regular one
         return isTrackingPage ? allocatePage(grpId, partId, flags) : pageId;
@@ -881,7 +881,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             seg.writeLock().unlock();
 
             if (delayedPageReplacementTracker != null)
-                delayedPageReplacementTracker.delayedPageWrite().finishReplacement();
+                delayedPageReplacementTracker.delayedPageWrite().flushCopiedPageIfExists();
 
             if (readPageFromStore) {
                 assert lockedPageAbsPtr != -1 : "Page is expected to have a valid address [pageId=" + fullId +
@@ -2144,12 +2144,33 @@ public class PageMemoryImpl implements PageMemoryEx {
         }
 
         /**
-         * Prepares a page removal for page replacement, if needed.
+         * Tries to replace the page.
          *
-         * @param fullPageId Candidate page full ID.
-         * @param absPtr Absolute pointer of the page to evict.
-         * @return {@code True} if it is ok to replace this page, {@code false} if another page should be selected.
-         * @throws IgniteCheckedException If failed to write page to the underlying store during eviction.
+         * <p>The replacement will be successful if the following conditions are met:</p>
+         * <ul>
+         *     <li>Page is pinned by another thread, such as a checkpoint dirty page writer or in the process of being
+         *     modified - nothing needs to be done.</li>
+         *     <li>Page is not dirty - just remove it from the loaded pages.</li>
+         *     <li>Page is dirty, there is a checkpoint in the process and the following sub-conditions are met:</li>
+         *     <ul>
+         *         <li>Page belongs to current checkpoint.</li>
+         *         <li>If the {@link CheckpointState#MARKER_STORED_TO_DISK} phase is complete, otherwise we wait for
+         *         it.</li>
+         *         <li>If the checkpoint dirty page writer has not started writing the page or has already written it.</li>
+         *     </ul>
+         * </ul>
+         *
+         * <p>It is expected that if the method returns {@code true}, it will not be invoked again for the same page ID.</p>
+         *
+         * <p>If we intend to replace a page, it is important for us to block the delta file fsync phase of the checkpoint to preserve data
+         * consistency. The phase should not start until all dirty pages are written by the checkpoint writer, but for page replacement we
+         * must block it ourselves.</p>
+         *
+         * @param fullPageId Candidate page ID.
+         * @param absPtr Absolute pointer to the candidate page.
+         * @return {@code True} if the page replacement was successful, otherwise need to try another one.
+         * @throws IgniteCheckedException If any error occurred while waiting for the
+         *      {@link CheckpointState#MARKER_STORED_TO_DISK} phase to complete at a checkpoint.
          */
         public boolean tryToRemovePage(FullPageId fullPageId, long absPtr) throws IgniteCheckedException {
             assert writeLock().isHeldByCurrentThread();
@@ -2158,31 +2179,39 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (fullPageId.pageId() == META_PAGE_ID)
                 return false;
 
-            if (PageHeader.isAcquired(absPtr))
+            if (PageHeader.isAcquired(absPtr)) {
+                // Page is pinned by another thread, such as a checkpoint dirty page writer or in the process of being
+                // modified - nothing needs to be done.
                 return false;
+            }
 
             clearRowCache(fullPageId, absPtr);
 
             if (isDirty(absPtr)) {
                 CheckpointPages checkpointPages = this.checkpointPages;
-                // Can evict a dirty page only if this page should be written by a checkpoint.
-                // These pages do not have tmp buffer.
+                // Can replace a dirty page only if it should be written by a checkpoint.
+                // Safe to invoke because we keep segment write lock and the checkpoint writer must remove pages on the
+                // segment read lock.
                 if (checkpointPages != null && checkpointPages.removeOnPageReplacement(fullPageId)) {
                     assert pmPageMgr != null;
 
+                    checkpointPages.blockFsyncOnPageReplacement(fullPageId);
+
                     dataRegionMetrics.updatePageReplaceRate(U.currentTimeMillis() - PageHeader.readTimestamp(absPtr));
 
-                    PageStoreWriter saveDirtyPage = delayedPageReplacementTracker != null
-                        ? delayedPageReplacementTracker.delayedPageWrite() : flushDirtyPage;
+                    int tag = partGeneration(fullPageId.groupId(), PageIdUtils.partId(fullPageId.pageId()));
 
-                    saveDirtyPage.writePage(
-                        fullPageId,
-                        wrapPointer(absPtr + PAGE_OVERHEAD, pageSize()),
-                        partGeneration(
-                            fullPageId.groupId(),
-                            PageIdUtils.partId(fullPageId.pageId())
-                        )
-                    );
+                    ByteBuffer buf = wrapPointer(absPtr + PAGE_OVERHEAD, pageSize());
+
+                    if (delayedPageReplacementTracker != null)
+                        delayedPageReplacementTracker.delayedPageWrite().copyPageToTemporaryBuffer(
+                            fullPageId,
+                            buf,
+                            tag,
+                            checkpointPages
+                        );
+                    else
+                        flushDirtyPage.writePage(fullPageId, buf, tag);
 
                     setDirty(fullPageId, absPtr, false, true);
 

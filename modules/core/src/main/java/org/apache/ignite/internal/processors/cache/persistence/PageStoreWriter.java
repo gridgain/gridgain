@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,9 +31,9 @@ public interface PageStoreWriter {
      * Callback for write page. {@link PageMemoryEx} will copy page content to buffer before call.
      *
      * @param fullPageId Page ID to get byte buffer for. The page ID must be present in the collection returned by
-     *      the {@link PageMemoryEx#beginCheckpoint(IgniteInternalFuture)} method call.
+     *      the {@link PageMemoryEx#beginCheckpoint} method call.
      * @param buf Temporary buffer to write changes into.
-     * @param tag  {@code Partition generation} if data was read, {@code null} otherwise (data already saved to storage).
+     * @param tag Partition generation.
      * @throws IgniteCheckedException If write page failed.
      */
     void writePage(FullPageId fullPageId, ByteBuffer buf, int tag) throws IgniteCheckedException;
