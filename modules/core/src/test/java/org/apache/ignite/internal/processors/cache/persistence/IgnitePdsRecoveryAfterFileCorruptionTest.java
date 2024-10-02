@@ -351,7 +351,7 @@ public class IgnitePdsRecoveryAfterFileCorruptionTest extends GridCommonAbstract
             }
         }
 
-        Collection<FullPageId> pageIds = mem.beginCheckpoint(new GridFinishedFuture());
+        Collection<FullPageId> pageIds = mem.beginCheckpoint(null);
 
         info("Acquired pages for checkpoint: " + pageIds.size());
 

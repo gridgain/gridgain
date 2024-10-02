@@ -1108,7 +1108,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     /** {@inheritDoc} */
     @Override public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(
-        IgniteInternalFuture allowToReplace
+        @Nullable CheckpointProgress checkpointProgress
     ) throws IgniteException {
         if (segments == null)
             return new GridMultiCollectionWrapper<>(Collections.emptyList());
@@ -1124,7 +1124,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             Collection<FullPageId> dirtyPages = seg.dirtyPages;
             collections[i] = dirtyPages;
 
-            seg.checkpointPages = new CheckpointPages(dirtyPages, allowToReplace);
+            seg.checkpointPages = new CheckpointPages(dirtyPages, checkpointProgress);
 
             seg.resetDirtyPages();
         }
@@ -1286,7 +1286,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             return;
         }
 
-        if (!clearCheckpoint(fullId)) {
+        if (!removeOnCheckpoint(fullId)) {
             rwLock.writeUnlock(absPtr + PAGE_LOCK_OFFSET, OffheapReadWriteLock.TAG_LOCK_ALWAYS);
 
             if (!pageSingleAcquire)
@@ -1773,17 +1773,18 @@ public class PageMemoryImpl implements PageMemoryEx {
     }
 
     /**
-     * @param fullPageId Page ID to clear.
-     * @return {@code True} if remove successfully.
+     * Returns {@code true} if remove successfully.
+     *
+     * @param fullPageId Page ID to remove.
      */
-    boolean clearCheckpoint(FullPageId fullPageId) {
+    private boolean removeOnCheckpoint(FullPageId fullPageId) {
         Segment seg = segment(fullPageId.groupId(), fullPageId.pageId());
 
         CheckpointPages pages0 = seg.checkpointPages;
 
-        assert pages0 != null;
+        assert pages0 != null : fullPageId;
 
-        return pages0.markAsSaved(fullPageId);
+        return pages0.removeOnCheckpoint(fullPageId);
     }
 
     /**
@@ -2166,7 +2167,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                 CheckpointPages checkpointPages = this.checkpointPages;
                 // Can evict a dirty page only if this page should be written by a checkpoint.
                 // These pages do not have tmp buffer.
-                if (checkpointPages != null && checkpointPages.allowToSave(fullPageId)) {
+                if (checkpointPages != null && checkpointPages.removeOnPageReplacement(fullPageId)) {
                     assert pmPageMgr != null;
 
                     dataRegionMetrics.updatePageReplaceRate(U.currentTimeMillis() - PageHeader.readTimestamp(absPtr));
@@ -2184,8 +2185,6 @@ public class PageMemoryImpl implements PageMemoryEx {
                     );
 
                     setDirty(fullPageId, absPtr, false, true);
-
-                    checkpointPages.markAsSaved(fullPageId);
 
                     loadedPages.remove(fullPageId.groupId(), fullPageId.effectivePageId());
 
@@ -2292,7 +2291,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             CheckpointPages cpPages = checkpointPages;
 
             if (cpPages != null)
-                cpPages.markAsSaved(new FullPageId(pageId, grpId));
+                cpPages.removeOnRefreshOutdatedPage(new FullPageId(pageId, grpId));
 
             Collection<FullPageId> dirtyPages = this.dirtyPages;
 

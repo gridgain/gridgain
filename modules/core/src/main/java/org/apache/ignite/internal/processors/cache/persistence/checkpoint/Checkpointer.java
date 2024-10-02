@@ -600,6 +600,19 @@ public class Checkpointer extends GridWorker {
             return false;
         }
 
+        // Waiting for the completion of all page replacements if present.
+        // Will complete normally or with the first error on one of the page replacements.
+        // join() is used intentionally as get() above.
+        curCpProgress.getUnblockFsyncOnPageReplacementFuture().join();
+
+        // Must re-check shutdown flag here because threads could take a long time to complete the page replacement.
+        // If so, we should not finish checkpoint.
+        if (shutdownNow.getAsBoolean()) {
+            curCpProgress.fail(new NodeStoppingException("Node is stopping."));
+
+            return false;
+        }
+
         tracker.onFsyncStart();
 
         if (!skipSync) {
