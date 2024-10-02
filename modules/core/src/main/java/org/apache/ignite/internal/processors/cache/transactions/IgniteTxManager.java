@@ -2785,7 +2785,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * Enables pending transaction's tracker.
+     * Enables pending transactions' tracker.
      */
     public void trackPendingTxs() {
         pendingTracker.enable();
