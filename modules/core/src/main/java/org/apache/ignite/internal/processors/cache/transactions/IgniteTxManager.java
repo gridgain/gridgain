@@ -2845,16 +2845,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @return WALPointer or {@code null} if nothing was logged.
      */
     @Nullable WALPointer logTxRecord(IgniteTxAdapter tx) {
-        BaselineTopology baselineTop;
-
         // Skip logging tx state change to WAL if required.
-        if (cctx.wal() == null
-            || !containsCacheWithEnabledWal(tx)
-            || (baselineTop = cctx.kernalContext().state().clusterState().baselineTopology()) == null
-            || !baselineTop.consistentIds().contains(cctx.localNode().consistentId()))
+        if (cctx.wal() == null || canSkipTxRecordLogging(tx))
             return null;
 
-        Map<Short, Collection<Short>> nodes = tx.consistentIdMapper.mapToCompactIds(tx.topVer, tx.txNodes, baselineTop);
+        Map<Short, Collection<Short>> nodes = tx.consistentIdMapper.mapToCompactIds(tx.topVer, tx.txNodes);
 
         TxRecord record;
 
@@ -2873,8 +2868,22 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         }
     }
 
-    /** Checks if a record belongs to a persistent cache with WAL enabled. */
-    private boolean containsCacheWithEnabledWal(IgniteTxAdapter tx) {
+    /**
+     * Returns {@code true} if it is possible to skip logging of transaction record to WAL.
+     *
+     * @param tx Transaction.
+     * @return {@code true} if it is possible to skip logging of transaction record to WAL.
+     */
+    private boolean canSkipTxRecordLogging(IgniteTxAdapter tx) {
+        BaselineTopology baselineTop = cctx.kernalContext().state().clusterState().baselineTopology();
+
+        if (baselineTop == null || !baselineTop.consistentIds().contains(cctx.localNode().consistentId()))
+            return true;
+
+        // Point-in-time recovery is enabled, so we have to log all transaction markers.
+        if (cctx.snapshot().needTxReadLogging())
+            return false;
+
         IgniteTxState state = tx.txState();
         GridIntList cacheIds = state.cacheIds();
 
@@ -2886,7 +2895,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
                 GridCacheContext cctx = this.cctx.cacheContext(cacheId);
                 if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
-                    return true;
+                    return false;
             }
         }
         else if (!state.allEntries().isEmpty()) {
@@ -2895,11 +2904,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             for (IgniteTxEntry txEntry : state.allEntries()) {
                 GridCacheContext cctx = txEntry.context();
                 if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
-                    return true;
+                    return false;
             }
         }
 
-        return false;
+        return true;
     }
 
     /**
