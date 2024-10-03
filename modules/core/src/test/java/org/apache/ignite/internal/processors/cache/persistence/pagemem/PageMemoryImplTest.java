@@ -58,7 +58,6 @@ import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.plugin.IgnitePluginProcessor;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
-import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.lang.GridInClosure3X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -77,6 +76,7 @@ import org.mockito.Mockito;
 
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.MARKER_STORED_TO_DISK;
 import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.SYSTEM_DATA_REGION_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.CHECKPOINT_POOL_OVERFLOW_ERROR_MSG;
 
@@ -157,7 +157,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             //Success
         }
 
-        memory.beginCheckpoint(new GridFinishedFuture());
+        memory.beginCheckpoint(createCheckpointProgressForBeginCheckpoint());
 
         final AtomicReference<FullPageId> lastPage = new AtomicReference<>();
 
@@ -268,14 +268,16 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             writePage(memory, fullId, (byte)1);
         }
 
-        doCheckpoint(memory.beginCheckpoint(new GridFinishedFuture()), memory, pageStoreMgr);
+        doCheckpoint(memory.beginCheckpoint(createCheckpointProgressForBeginCheckpoint()), memory, pageStoreMgr);
 
         FullPageId cowPageId = allocated.get(0);
 
         // Mark some pages as dirty.
         writePage(memory, cowPageId, (byte)2);
 
-        GridMultiCollectionWrapper<FullPageId> cpPages = memory.beginCheckpoint(new GridFinishedFuture());
+        GridMultiCollectionWrapper<FullPageId> cpPages = memory.beginCheckpoint(
+            createCheckpointProgressForBeginCheckpoint()
+        );
 
         assertEquals(1, cpPages.size());
 
@@ -328,7 +330,9 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             writePage(memory, fullId, (byte)1);
         }
 
-        GridMultiCollectionWrapper<FullPageId> markedPages = memory.beginCheckpoint(new GridFinishedFuture());
+        GridMultiCollectionWrapper<FullPageId> markedPages = memory.beginCheckpoint(
+            createCheckpointProgressForBeginCheckpoint()
+        );
 
         for (int i = 0; i < pagesForStartThrottling + (memory.checkpointBufferPagesSize() * 2 / 3); i++)
             writePage(memory, allocated.get(i), (byte)1);
@@ -414,7 +418,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         }
 
         // CP Write lock.
-        memory.beginCheckpoint(new GridFinishedFuture());
+        memory.beginCheckpoint(createCheckpointProgressForBeginCheckpoint());
         // CP Write unlock.
 
         byte[] buf = new byte[PAGE_SIZE];
@@ -488,7 +492,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             acquireAndReleaseWriteLock(memory, fullPageId);
         }
 
-        memory.beginCheckpoint(new GridFinishedFuture());
+        memory.beginCheckpoint(createCheckpointProgressForBeginCheckpoint());
 
         CheckpointMetricsTracker mockTracker = Mockito.mock(CheckpointMetricsTracker.class);
 
@@ -510,7 +514,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             acquireAndReleaseWriteLock(memory, fullPageId);
         }
 
-        memory.beginCheckpoint(new GridFinishedFuture());
+        memory.beginCheckpoint(createCheckpointProgressForBeginCheckpoint());
 
         Collections.shuffle(pages); // Mix pages in checkpoint with clean pages
 
@@ -788,5 +792,14 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
 
             storedPages.put(fullPageId, data);
         }
+    }
+
+    /** */
+    private static CheckpointProgress createCheckpointProgressForBeginCheckpoint() {
+        CheckpointProgress checkpointProgress = new CheckpointProgressImpl(0);
+
+        checkpointProgress.transitTo(MARKER_STORED_TO_DISK);
+
+        return checkpointProgress;
     }
 }
