@@ -45,7 +45,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.CheckpointWriteOrder;
 import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.store.PageStore;
@@ -66,7 +65,6 @@ import org.apache.ignite.internal.util.GridConcurrentMultiPairQueue;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
 import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
-import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -289,7 +287,7 @@ public class CheckpointWorkflow {
                 snapFut = snapshotMgr.onMarkCheckPointBegin(curr.snapshotOperation(), cpRec, ctx0.partitionStatMap());
 
             //There are allowable to replace pages only after checkpoint entry was stored to disk.
-            cpPagesHolder = beginAllCheckpoints(checkpointedRegions, curr.futureFor(MARKER_STORED_TO_DISK));
+            cpPagesHolder = beginAllCheckpoints(checkpointedRegions, curr);
 
             curr.currentCheckpointPagesCount(cpPagesHolder.pagesNum());
 
@@ -438,12 +436,15 @@ public class CheckpointWorkflow {
     }
 
     /**
-     * @param allowToReplace The sign which allows to replace pages from a checkpoint by page replacer.
+     * @param checkpointProgress Progress of the current checkpoint at which the object was created, {@code null} on
+     *      binary recovery, it is expected that there will be no parallel writes on page replacement.
      * @return holder of FullPageIds obtained from each PageMemory, overall number of dirty pages, and flag defines at
      * least one user page became a dirty since last checkpoint.
      */
-    private CheckpointPagesInfoHolder beginAllCheckpoints(Collection<DataRegion> regions,
-        IgniteInternalFuture<?> allowToReplace) {
+    private CheckpointPagesInfoHolder beginAllCheckpoints(
+        Collection<DataRegion> regions,
+        @Nullable CheckpointProgress checkpointProgress
+    ) {
         Collection<Map.Entry<PageMemoryEx, GridMultiCollectionWrapper<FullPageId>>> res =
             new ArrayList<>(regions.size());
 
@@ -454,7 +455,7 @@ public class CheckpointWorkflow {
                 continue;
 
             GridMultiCollectionWrapper<FullPageId> nextCpPages = ((PageMemoryEx)reg.pageMemory())
-                .beginCheckpoint(allowToReplace);
+                .beginCheckpoint(checkpointProgress);
 
             pagesNum += nextCpPages.size();
 
@@ -637,7 +638,7 @@ public class CheckpointWorkflow {
 
         Collection<DataRegion> regions = dataRegions.get();
 
-        CheckpointPagesInfoHolder cpPagesHolder = beginAllCheckpoints(regions, new GridFinishedFuture<>());
+        CheckpointPagesInfoHolder cpPagesHolder = beginAllCheckpoints(regions, null);
 
         // Sort and split all dirty pages set to several stripes.
         GridConcurrentMultiPairQueue<PageMemoryEx, FullPageId> pages =

@@ -46,7 +46,6 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
-import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.logger.NullLogger;
@@ -60,6 +59,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.MARKER_STORED_TO_DISK;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -118,7 +118,9 @@ public class IgnitePageMemReplaceDelayedWriteUnitTest {
             memory.releasePage(1, pageId, ptr);
         }
 
-        GridMultiCollectionWrapper<FullPageId> ids = memory.beginCheckpoint(new GridFinishedFuture());
+        GridMultiCollectionWrapper<FullPageId> ids = memory.beginCheckpoint(
+            createCheckpointProgressForBeginCheckpoint()
+        );
         int cpPages = ids.size();
         log.info("Started CP with [" + cpPages + "] pages in it, created [" + markDirty + "] pages");
 
@@ -181,7 +183,9 @@ public class IgnitePageMemReplaceDelayedWriteUnitTest {
             memory.releasePage(1, pageId, ptr);
         }
 
-        GridMultiCollectionWrapper<FullPageId> ids = memory.beginCheckpoint(new GridFinishedFuture());
+        GridMultiCollectionWrapper<FullPageId> ids = memory.beginCheckpoint(
+            createCheckpointProgressForBeginCheckpoint()
+        );
         int cpPages = ids.size();
         log.info("Started CP with [" + cpPages + "] pages in it, created [" + markDirty + "] pages");
 
@@ -335,5 +339,14 @@ public class IgnitePageMemReplaceDelayedWriteUnitTest {
         sizes[segments] = overallSize / 100;
 
         return sizes;
+    }
+
+    /** */
+    private static CheckpointProgress createCheckpointProgressForBeginCheckpoint() {
+        CheckpointProgress checkpointProgress = new CheckpointProgressImpl(0);
+
+        checkpointProgress.transitTo(MARKER_STORED_TO_DISK);
+
+        return checkpointProgress;
     }
 }
