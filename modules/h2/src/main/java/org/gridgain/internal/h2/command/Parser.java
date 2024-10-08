@@ -100,7 +100,6 @@ import org.gridgain.internal.h2.command.ddl.CreateSchema;
 import org.gridgain.internal.h2.command.ddl.CreateSequence;
 import org.gridgain.internal.h2.command.ddl.CreateSynonym;
 import org.gridgain.internal.h2.command.ddl.CreateTable;
-import org.gridgain.internal.h2.command.ddl.CreateTrigger;
 import org.gridgain.internal.h2.command.ddl.CreateUser;
 import org.gridgain.internal.h2.command.ddl.CreateView;
 import org.gridgain.internal.h2.command.ddl.DeallocateProcedure;
@@ -116,7 +115,6 @@ import org.gridgain.internal.h2.command.ddl.DropSchema;
 import org.gridgain.internal.h2.command.ddl.DropSequence;
 import org.gridgain.internal.h2.command.ddl.DropSynonym;
 import org.gridgain.internal.h2.command.ddl.DropTable;
-import org.gridgain.internal.h2.command.ddl.DropTrigger;
 import org.gridgain.internal.h2.command.ddl.DropUser;
 import org.gridgain.internal.h2.command.ddl.DropView;
 import org.gridgain.internal.h2.command.ddl.GrantRevoke;
@@ -192,7 +190,6 @@ import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.util.geometry.EWKTUtils;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.api.IntervalQualifier;
-import org.gridgain.internal.h2.api.Trigger;
 import org.gridgain.internal.h2.engine.Constants;
 import org.gridgain.internal.h2.engine.Database;
 import org.gridgain.internal.h2.engine.DbObject;
@@ -2023,8 +2020,6 @@ public class Parser {
             type = DbObject.SCHEMA;
         } else if (readIf("SEQUENCE")) {
             type = DbObject.SEQUENCE;
-        } else if (readIf("TRIGGER")) {
-            type = DbObject.TRIGGER;
         } else if (readIf("USER")) {
             type = DbObject.USER;
         } else if (readIf("DOMAIN")) {
@@ -2126,14 +2121,6 @@ public class Parser {
             String constantName = readIdentifierWithSchema();
             DropConstant command = new DropConstant(session, getSchema());
             command.setConstantName(constantName);
-            ifExists = readIfExists(ifExists);
-            command.setIfExists(ifExists);
-            return command;
-        } else if (readIf("TRIGGER")) {
-            boolean ifExists = readIfExists(false);
-            String triggerName = readIdentifierWithSchema();
-            DropTrigger command = new DropTrigger(session, getSchema());
-            command.setTriggerName(triggerName);
             ifExists = readIfExists(ifExists);
             command.setIfExists(ifExists);
             return command;
@@ -5739,9 +5726,7 @@ public class Parser {
             return parseCreateSequence();
         } else if (readIf("USER")) {
             return parseCreateUser();
-        } else if (readIf("TRIGGER")) {
-            return parseCreateTrigger(force);
-        } else if (readIf("ROLE")) {
+        }else if (readIf("ROLE")) {
             return parseCreateRole();
         } else if (readIf("SCHEMA")) {
             return parseCreateSchema();
@@ -6117,74 +6102,6 @@ public class Parser {
         col.rename(null);
         command.setColumn(col);
         command.setIfNotExists(ifNotExists);
-        return command;
-    }
-
-    private CreateTrigger parseCreateTrigger(boolean force) {
-        boolean ifNotExists = readIfNotExists();
-        String triggerName = readIdentifierWithSchema(null);
-        Schema schema = getSchema();
-        boolean insteadOf, isBefore;
-        if (readIf("INSTEAD")) {
-            read("OF");
-            isBefore = true;
-            insteadOf = true;
-        } else if (readIf("BEFORE")) {
-            insteadOf = false;
-            isBefore = true;
-        } else {
-            read("AFTER");
-            insteadOf = false;
-            isBefore = false;
-        }
-        int typeMask = 0;
-        boolean onRollback = false;
-        do {
-            if (readIf("INSERT")) {
-                typeMask |= Trigger.INSERT;
-            } else if (readIf("UPDATE")) {
-                typeMask |= Trigger.UPDATE;
-            } else if (readIf("DELETE")) {
-                typeMask |= Trigger.DELETE;
-            } else if (readIf(SELECT)) {
-                typeMask |= Trigger.SELECT;
-            } else if (readIf("ROLLBACK")) {
-                onRollback = true;
-            } else {
-                throw getSyntaxError();
-            }
-        } while (readIf(COMMA)
-                || (database.getMode().getEnum() == ModeEnum.PostgreSQL
-                        && readIf("OR")));
-        read(ON);
-        String tableName = readIdentifierWithSchema();
-        checkSchema(schema);
-        CreateTrigger command = new CreateTrigger(session, getSchema());
-        command.setForce(force);
-        command.setTriggerName(triggerName);
-        command.setIfNotExists(ifNotExists);
-        command.setInsteadOf(insteadOf);
-        command.setBefore(isBefore);
-        command.setOnRollback(onRollback);
-        command.setTypeMask(typeMask);
-        command.setTableName(tableName);
-        if (readIf(FOR)) {
-            read("EACH");
-            read(ROW);
-            command.setRowBased(true);
-        } else {
-            command.setRowBased(false);
-        }
-        if (readIf("QUEUE")) {
-            command.setQueueSize(readNonNegativeInt());
-        }
-        command.setNoWait(readIf("NOWAIT"));
-        if (readIf("AS")) {
-            command.setTriggerSource(readString());
-        } else {
-            read("CALL");
-            command.setTriggerClassName(readUniqueIdentifier());
-        }
         return command;
     }
 

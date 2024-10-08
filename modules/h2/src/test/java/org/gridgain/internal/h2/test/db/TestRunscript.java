@@ -11,7 +11,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import org.gridgain.internal.h2.api.ErrorCode;
-import org.gridgain.internal.h2.api.Trigger;
 import org.gridgain.internal.h2.store.fs.FileUtils;
 import org.gridgain.internal.h2.test.TestBase;
 import org.gridgain.internal.h2.test.TestDb;
@@ -22,7 +21,7 @@ import org.gridgain.internal.h2.util.Task;
 /**
  * Tests the RUNSCRIPT SQL statement.
  */
-public class TestRunscript extends TestDb implements Trigger {
+public class TestRunscript extends TestDb {
 
     /**
      * Run just this test.
@@ -45,7 +44,6 @@ public class TestRunscript extends TestDb implements Trigger {
         testScriptExcludeConstant();
         testScriptExcludeSequence();
         testScriptExcludeConstraint();
-        testScriptExcludeTrigger();
         testScriptExcludeRight();
         testRunscriptFromClasspath();
         testCancelScript();
@@ -246,36 +244,6 @@ public class TestRunscript extends TestDb implements Trigger {
         conn.close();
     }
 
-    private void testScriptExcludeTrigger() throws Exception {
-        deleteDb("runscript");
-        Connection conn;
-        ResultSet rs;
-        conn = getConnection("runscript");
-        Statement stat = conn.createStatement();
-        stat.execute("create schema a");
-        stat.execute("create schema b");
-        stat.execute("create schema c");
-        stat.execute("create table a.test1(x varchar, y int)");
-        stat.execute("create trigger trigger_insert before insert on a.test1 " +
-                "for each row call \"org.gridgain.internal.h2.test.db.TestRunscript\"");
-        stat.execute("script schema b");
-        rs = stat.getResultSet();
-        while (rs.next()) {
-            assertFalse("The trigger 'trigger_insert' should not be present in the script",
-                    rs.getString(1).contains("trigger_insert".toUpperCase()));
-        }
-        rs.close();
-        stat.execute("create table a.test2(x varchar, y int)");
-        stat.execute("script table a.test2");
-        rs = stat.getResultSet();
-        while (rs.next()) {
-            assertFalse("The trigger 'trigger_insert' should not be present in the script",
-                    rs.getString(1).contains("trigger_insert".toUpperCase()));
-        }
-        rs.close();
-        conn.close();
-    }
-
     private void testScriptExcludeRight() throws Exception {
         deleteDb("runscript");
         Connection conn;
@@ -443,8 +411,6 @@ public class TestRunscript extends TestDb implements Trigger {
         stat1.execute("create sequence testSeq start with 100 increment by 10");
         stat1.execute("create alias myTest for \"" +
                 getClass().getName() + ".test\"");
-        stat1.execute("create trigger myTrigger before insert " +
-                "on test nowait call \"" + getClass().getName() + "\"");
         stat1.execute("create view testView as select * " +
                 "from test where 1=0 union all " +
                 "select * from test where 0=1");
@@ -536,31 +502,4 @@ public class TestRunscript extends TestDb implements Trigger {
         FileUtils.delete(getBaseDir() + "/backup.3.sql");
 
     }
-
-    @Override
-    public void init(Connection conn, String schemaName, String triggerName,
-            String tableName, boolean before, int type) {
-        if (!before) {
-            throw new InternalError("before:" + before);
-        }
-        if (type != INSERT) {
-            throw new InternalError("type:" + type);
-        }
-    }
-
-    @Override
-    public void fire(Connection conn, Object[] oldRow, Object[] newRow) {
-        // nothing to do
-    }
-
-    @Override
-    public void close() {
-        // ignore
-    }
-
-    @Override
-    public void remove() {
-        // ignore
-    }
-
 }
