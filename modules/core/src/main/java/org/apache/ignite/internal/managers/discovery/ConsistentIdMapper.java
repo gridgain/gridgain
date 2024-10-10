@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
@@ -92,8 +91,7 @@ public class ConsistentIdMapper {
      */
     public Map<Short, Collection<Short>> mapToCompactIds(
         AffinityTopologyVersion topVer,
-        @Nullable Map<UUID, Collection<UUID>> txNodes,
-        BaselineTopology baselineTop
+        @Nullable Map<UUID, Collection<UUID>> txNodes
     ) {
         if (txNodes == null)
             return null;
