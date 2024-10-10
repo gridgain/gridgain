@@ -169,6 +169,15 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
     /** Number of keys in the cache, possibly with {@code null} values. */
     private int keySize;
 
+    /** Number of touch requests. */
+    private long cacheTouches = 0;
+
+    /** Number of touch hits. */
+    private long cacheTouchHits = 0;
+
+    /** Number of touch misses. */
+    private long cacheTouchMisses = 0;
+
     /** Cache is empty. */
     private boolean isEmpty;
 
@@ -328,6 +337,9 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
         txRollbacks = m.getCacheTxRollbacks();
         evicts = m.getCacheEvictions();
         removes = m.getCacheRemovals();
+        cacheTouches = m.getCacheTouches();
+        cacheTouchHits = m.getCacheTouchHits();
+        cacheTouchMisses = m.getCacheTouchMisses();
 
         entryProcessorPuts = m.getEntryProcessorPuts();
         entryProcessorReadOnlyInvocations = m.getEntryProcessorReadOnlyInvocations();
@@ -798,6 +810,48 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
     /** {@inheritDoc} */
     @Override public int getKeySize() {
         return keySize;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getCacheTouches() {
+        return cacheTouches;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getCacheTouchHits() {
+        return cacheTouchHits;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getCacheTouchMisses() {
+        return cacheTouchMisses;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public float getCacheTouchHitPercentage() {
+        long hits = cacheTouchHits;
+        long touches = cacheTouches;
+
+        if (touches == 0)
+            return 0;
+
+        return (float) hits / touches * 100.0f;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public float getCacheTouchMissPercentage() {
+        long misses = cacheTouchMisses;
+        long touches = cacheTouches;
+
+        if (touches == 0)
+            return 0;
+
+        return (float) misses / touches * 100.0f;
     }
 
     /** {@inheritDoc} */

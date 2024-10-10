@@ -31,8 +31,8 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.store.GridCacheWriteBehindStore;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
-import org.apache.ignite.internal.processors.metric.impl.HistogramMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongGauge;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
@@ -234,6 +234,15 @@ public class CacheMetricsImpl implements CacheMetrics {
     /** Cache size. */
     private final LongGauge cacheSize;
 
+    /** Number of touch requests. */
+    private final AtomicLongMetric cacheTouches;
+
+    /** Number of touch hits. */
+    private final AtomicLongMetric cacheTouchHits;
+
+    /** Number of touch misses. */
+    private final AtomicLongMetric cacheTouchMisses;
+
     /**
      * Creates cache metrics.
      *
@@ -257,12 +266,16 @@ public class CacheMetricsImpl implements CacheMetrics {
         if (cctx.isNear())
             dhtCtx = cctx.near().dht().context();
 
-        if (cctx.store().store() instanceof GridCacheWriteBehindStore)
-            store = (GridCacheWriteBehindStore)cctx.store().store();
+            if (cctx.store() instanceof GridCacheWriteBehindStore)
+                store = (GridCacheWriteBehindStore) cctx.store().store();
 
         delegate = null;
 
         MetricRegistry mreg = cctx.kernalContext().metric().registry(cacheMetricsRegistryName(cctx.name(), isNear));
+
+        cacheTouches = mreg.longMetric("CacheTouches", "Total number of touch requests to the cache.");
+        cacheTouchHits = mreg.longMetric("CacheTouchHits", "Number of touch requests that were satisfied by the cache.");
+        cacheTouchMisses = mreg.longMetric("CacheTouchMisses", "Number of touch requests that were not satisfied by the cache.");
 
         reads = mreg.longMetric("CacheGets",
             "The total number of gets to the cache.");
@@ -512,6 +525,61 @@ public class CacheMetricsImpl implements CacheMetrics {
     @Override public long getCacheSize() {
         return cacheSize.value();
     }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getCacheTouchHits() {
+        return cacheTouchHits.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getCacheTouchMisses() {
+        return cacheTouchMisses.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public long getCacheTouches() {
+        return cacheTouches.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public float getCacheTouchHitPercentage() {
+        long hits = cacheTouchHits.value();
+        long touches = cacheTouches.value();
+
+        if (touches == 0)
+            return 0;
+
+        return (float) hits / touches * 100.0f;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public float getCacheTouchMissPercentage() {
+        long misses = cacheTouchMisses.value();
+        long touches = cacheTouches.value();
+
+        if (touches == 0)
+            return 0;
+
+        return (float) misses / touches * 100.0f;
+    }
+
+    public void onCacheTouch() {
+        cacheTouches.increment();
+    }
+
+    public void onCacheTouchHit() {
+        cacheTouchHits.increment();
+    }
+
+    public void onCacheTouchMiss() {
+        cacheTouchMisses.increment();
+    }
+
 
     /** {@inheritDoc} */
     @Override public int getKeySize() {
