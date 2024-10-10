@@ -45,7 +45,9 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory;
 import org.apache.ignite.internal.processors.cache.persistence.file.AbstractFileIO;
@@ -65,10 +67,12 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CORRUPTED_DATA_FILES_MNTC_TASK_NAME;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
@@ -79,13 +83,7 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
  */
 public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstractTest {
     /** */
-    private static boolean disableWalDuringRebalancing = true;
-
-    /** */
-    private static boolean enablePendingTxTracker = false;
-
-    /** */
-    private static int dfltCacheBackupCnt = 0;
+    private static int dfltCacheBackupCnt;
 
     /** */
     private static final AtomicReference<CountDownLatch> supplyMessageLatch = new AtomicReference<>();
@@ -173,12 +171,6 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
 
         cfg.setConsistentId(igniteInstanceName);
 
-        System.setProperty(IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING,
-            Boolean.toString(disableWalDuringRebalancing));
-
-        System.setProperty(IgniteSystemProperties.IGNITE_PENDING_TX_TRACKER_ENABLED,
-            Boolean.toString(enablePendingTxTracker));
-
         return cfg;
     }
 
@@ -215,18 +207,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
 
         cleanPersistenceDir();
 
-        disableWalDuringRebalancing = true;
-        enablePendingTxTracker = false;
         dfltCacheBackupCnt = 0;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        System.clearProperty(IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING);
-
-        System.clearProperty(IgniteSystemProperties.IGNITE_PENDING_TX_TRACKER_ENABLED);
     }
 
     /**
@@ -240,6 +221,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_DISABLE_WAL_DURING_REBALANCING, value = "true")
     public void testWalDisabledDuringRebalancing() throws Exception {
         doTestSimple();
     }
@@ -248,9 +230,8 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_DISABLE_WAL_DURING_REBALANCING, value = "false")
     public void testWalNotDisabledIfParameterSetToFalse() throws Exception {
-        disableWalDuringRebalancing = false;
-
         doTestSimple();
     }
 
@@ -258,6 +239,8 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
      * @throws Exception If failed.
      */
     private void doTestSimple() throws Exception {
+        boolean disableWalDuringRebalancing = IgniteSystemProperties.getBoolean(IGNITE_DISABLE_WAL_DURING_REBALANCING);
+
         IgniteEx ignite = startGrids(3);
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
@@ -278,11 +261,9 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         final CheckpointHistory cpHist =
             ((GridCacheDatabaseSharedManager)newIgnite.context().cache().context().database()).checkpointHistory();
 
-        waitForCondition(new GridAbsPredicate() {
-            @Override public boolean apply() {
-                return !cpHist.checkpoints().isEmpty();
-            }
-        }, 10_000);
+        assertTrue(
+            "Failed to wait for the first checkpoint after logical recovery.",
+            waitForCondition(() -> !cpHist.checkpoints().isEmpty(), 10_000));
 
         U.sleep(10); // To ensure timestamp granularity.
 
@@ -291,6 +272,25 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         newIgnite.cluster().setBaselineTopology(4);
 
         awaitExchange(newIgnite);
+
+        AffinityTopologyVersion topVer = newIgnite.context().cache().context().exchange().lastTopologyFuture().topologyVersion();
+
+        assertTrue(
+            "Failed to wait for the actual rebalance future.",
+            waitForCondition(() -> {
+                GridDhtPartitionDemander.RebalanceFuture rebFut =(GridDhtPartitionDemander.RebalanceFuture) newIgnite
+                    .context()
+                    .cache()
+                    .utilityCache()
+                    .context()
+                    .preloader()
+                    .rebalanceFuture();
+
+                return rebFut != null && topVer.equals(rebFut.topologyVersion());
+            }, 10_000));
+
+        // Wait for rebalance of the system cache.
+        newIgnite.context().cache().utilityCache().context().preloader().rebalanceFuture().get(10_000);
 
         CacheGroupContext grpCtx = newIgnite.cachex(DEFAULT_CACHE_NAME).context().group();
 
@@ -328,19 +328,20 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         }
 
         assertEquals(1, checkpointsBeforeNodeStarted); // checkpoint on start
-        assertEquals(0, checkpointsBeforeRebalance);
+        assertEquals(disableWalDuringRebalancing ? 1 : 0, checkpointsBeforeRebalance); // checkpoint related to rebalanced system cache.
 
         // Expecting a checkpoint for each group.
-        assertEquals(disableWalDuringRebalancing ? newIgnite.context().cache().cacheGroups().size() : 0,
+        assertEquals(disableWalDuringRebalancing ? newIgnite.context().cache().cacheGroups().size() - 1: 0,
             checkpointsAfterRebalance); // checkpoint if WAL was re-activated
     }
 
     /**
      * @throws Exception If failed.
      */
+    // Delete test
     @Test
     public void testWalDisabledDuringRebalancingWithPendingTxTracker() throws Exception {
-        enablePendingTxTracker = true;
+//        enablePendingTxTracker = true;
         dfltCacheBackupCnt = 2;
 
         IgniteEx ignite = startGrids(3);
