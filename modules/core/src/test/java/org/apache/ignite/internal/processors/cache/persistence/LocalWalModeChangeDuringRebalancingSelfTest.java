@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.file.OpenOption;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -338,65 +337,6 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
     /**
      * @throws Exception If failed.
      */
-    // Delete test
-    @Test
-    public void testWalDisabledDuringRebalancingWithPendingTxTracker() throws Exception {
-//        enablePendingTxTracker = true;
-        dfltCacheBackupCnt = 2;
-
-        IgniteEx ignite = startGrids(3);
-
-        ignite.cluster().baselineAutoAdjustEnabled(false);
-        ignite.cluster().state(ACTIVE);
-
-        ignite.cluster().setBaselineTopology(3);
-
-        IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
-
-        stopGrid(2);
-
-        awaitExchange((IgniteEx)ignite);
-
-        // Ensure each partition has received an update.
-        for (int k = 0; k < RendezvousAffinityFunction.DFLT_PARTITION_COUNT; k++)
-            cache.put(k, k);
-
-        IgniteEx newIgnite = startGrid(2);
-
-        awaitExchange(newIgnite);
-
-        CacheGroupContext grpCtx = newIgnite.cachex(DEFAULT_CACHE_NAME).context().group();
-
-        assertFalse(grpCtx.walEnabled());
-
-        long rebalanceStartedTs = System.currentTimeMillis();
-
-        for (Ignite g : G.allGrids())
-            g.cache(DEFAULT_CACHE_NAME).rebalance();
-
-        awaitPartitionMapExchange();
-
-        assertTrue(grpCtx.walEnabled());
-
-        long rebalanceFinishedTs = System.currentTimeMillis();
-
-        CheckpointHistory cpHist =
-            ((GridCacheDatabaseSharedManager)newIgnite.context().cache().context().database()).checkpointHistory();
-
-        assertNotNull(cpHist);
-
-        // Ensure there was a checkpoint on WAL re-activation.
-        assertEquals(
-            1,
-            cpHist.checkpoints()
-                .stream()
-                .filter(ts -> rebalanceStartedTs <= ts && ts <= rebalanceFinishedTs)
-                .count());
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
     @Test
     public void testLocalAndGlobalWalStateInterdependence() throws Exception {
         IgniteEx ignite = startGrids(3);
@@ -626,7 +566,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         ig1 = startGrid(1);
         ig1.cluster().state(ACTIVE);
 
-        ig1.resetLostPartitions(Arrays.asList(DEFAULT_CACHE_NAME));
+        ig1.resetLostPartitions(Collections.singletonList(DEFAULT_CACHE_NAME));
 
         awaitExchange(ig1);
 
@@ -800,7 +740,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         ignite.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
 
         // Await fully exchange complete.
-        awaitExchange((IgniteEx)ignite);
+        awaitExchange(ignite);
 
         for (Ignite g : G.allGrids()) {
             CacheGroupContext grpCtx = ((IgniteEx)g).cachex(DEFAULT_CACHE_NAME).context().group();
