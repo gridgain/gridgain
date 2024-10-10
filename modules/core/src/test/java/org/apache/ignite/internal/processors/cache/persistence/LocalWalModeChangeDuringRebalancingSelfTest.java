@@ -277,7 +277,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         assertTrue(
             "Failed to wait for the actual rebalance future.",
             waitForCondition(() -> {
-                GridDhtPartitionDemander.RebalanceFuture rebFut =(GridDhtPartitionDemander.RebalanceFuture) newIgnite
+                GridDhtPartitionDemander.RebalanceFuture rebFut = (GridDhtPartitionDemander.RebalanceFuture) newIgnite
                     .context()
                     .cache()
                     .utilityCache()
@@ -330,7 +330,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         assertEquals(disableWalDuringRebalancing ? 1 : 0, checkpointsBeforeRebalance); // checkpoint related to rebalanced system cache.
 
         // Expecting a checkpoint for each group.
-        assertEquals(disableWalDuringRebalancing ? newIgnite.context().cache().cacheGroups().size() - 1: 0,
+        assertEquals(disableWalDuringRebalancing ? newIgnite.context().cache().cacheGroups().size() - 1 : 0,
             checkpointsAfterRebalance); // checkpoint if WAL was re-activated
     }
 
