@@ -32,7 +32,6 @@ import java.util.UUID;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.api.Interval;
 import org.gridgain.internal.h2.api.IntervalQualifier;
-import org.gridgain.internal.h2.api.Trigger;
 import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.test.TestBase;
@@ -640,42 +639,10 @@ public class TestPreparedStatement extends TestDb {
         stat.execute("drop table test_uuid");
     }
 
-    /**
-     * A trigger that creates a sequence value.
-     */
-    public static class SequenceTrigger implements Trigger {
-
-        @Override
-        public void fire(Connection conn, Object[] oldRow, Object[] newRow)
-                throws SQLException {
-            conn.setAutoCommit(false);
-            conn.createStatement().execute("call next value for seq");
-        }
-
-        @Override
-        public void init(Connection conn, String schemaName,
-                String triggerName, String tableName, boolean before, int type) {
-            // ignore
-        }
-
-        @Override
-        public void close() {
-            // ignore
-        }
-
-        @Override
-        public void remove() {
-            // ignore
-        }
-
-    }
-
     private void testScopedGeneratedKey(Connection conn) throws SQLException {
         Statement stat = conn.createStatement();
         stat.execute("create table test(id identity)");
         stat.execute("create sequence seq start with 1000");
-        stat.execute("create trigger test_ins after insert on test call \"" +
-                SequenceTrigger.class.getName() + "\"");
         stat.execute("insert into test values(null)", Statement.RETURN_GENERATED_KEYS);
         ResultSet rs = stat.getGeneratedKeys();
         rs.next();
