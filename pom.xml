@@ -636,7 +636,9 @@
                                 <phase>validate</phase>
                                 <configuration>
                                     <target>
-                                        <script language="javascript">
+                                        <property name="plugin_classpath" refid="maven.plugin.classpath"/>
+
+                                        <script language="javascript" classpath="${plugin_classpath}">
                                             function setClientVersion(ggVer, clientVer) {
                                                 var p = project.getProperty(ggVer);
 
@@ -729,7 +731,7 @@
                                             </fileset>
                                         </replaceregexp>
 
-                                        <script language="javascript">
+                                        <script language="javascript" classpath="${plugin_classpath}">
                                             function setBinVersion(clientVer, binVer) {
                                             var p = project.getProperty(clientVer).replace(".", ",");
 
