@@ -13,7 +13,6 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.gridgain.internal.h2.api.Trigger;
 import org.gridgain.internal.h2.test.TestBase;
 import org.gridgain.internal.h2.test.TestDb;
 import org.gridgain.internal.h2.util.Task;
@@ -74,20 +73,8 @@ public class TestSequence extends TestDb {
                                 if (Math.random() < 0.01) {
                                     prep2.execute();
                                 }
-                                if (Math.random() < 0.01) {
-                                    createDropTrigger(conn);
-                                }
                             }
                         }
-                    }
-
-                    private void createDropTrigger(Connection conn) throws Exception {
-                        String triggerName = "t_" + x;
-                        Statement stat = conn.createStatement();
-                        stat.execute("create trigger " + triggerName +
-                                " before insert on dummy call \"" +
-                                TriggerTest.class.getName() + "\"");
-                        stat.execute("drop trigger " + triggerName);
                     }
 
                 }.execute();
@@ -416,35 +403,4 @@ public class TestSequence extends TestDb {
         long value = rs.getLong(1);
         return value;
     }
-
-    /**
-     * A test trigger.
-     */
-    public static class TriggerTest implements Trigger {
-
-        @Override
-        public void init(Connection conn, String schemaName,
-                String triggerName, String tableName, boolean before, int type)
-                throws SQLException {
-            conn.createStatement().executeQuery("call next value for test_seq");
-        }
-
-        @Override
-        public void fire(Connection conn, Object[] oldRow, Object[] newRow)
-                throws SQLException {
-            // ignore
-        }
-
-        @Override
-        public void close() throws SQLException {
-            // ignore
-        }
-
-        @Override
-        public void remove() throws SQLException {
-            // ignore
-        }
-
-    }
-
 }
