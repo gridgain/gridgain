@@ -5726,7 +5726,7 @@ public class Parser {
             return parseCreateSequence();
         } else if (readIf("USER")) {
             return parseCreateUser();
-        }else if (readIf("ROLE")) {
+        } else if (readIf("ROLE")) {
             return parseCreateRole();
         } else if (readIf("SCHEMA")) {
             return parseCreateSchema();
