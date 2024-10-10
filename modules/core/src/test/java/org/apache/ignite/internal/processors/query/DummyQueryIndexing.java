@@ -128,6 +128,20 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
+    @Override public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryLocalVector(
+        String schemaName,
+        String cacheName,
+        String fieldName,
+        String qry,
+        float[] qryVector,
+        int k,
+        String typeName,
+        IndexingQueryFilter filter
+    ) throws IgniteCheckedException {
+        return null;
+    }
+
+    /** {@inheritDoc} */
     @Override public void dynamicIndexCreate(
         String schemaName,
         String tblName,
