@@ -2845,16 +2845,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @return WALPointer or {@code null} if nothing was logged.
      */
     @Nullable WALPointer logTxRecord(IgniteTxAdapter tx) {
-        BaselineTopology baselineTop;
-
         // Skip logging tx state change to WAL if required.
-        if (cctx.wal() == null
-            || !containsCacheWithEnabledWal(tx)
-            || (baselineTop = cctx.kernalContext().state().clusterState().baselineTopology()) == null
-            || !baselineTop.consistentIds().contains(cctx.localNode().consistentId()))
+        if (cctx.wal() == null || !txRecordLoggingNeeded(tx))
             return null;
 
-        Map<Short, Collection<Short>> nodes = tx.consistentIdMapper.mapToCompactIds(tx.topVer, tx.txNodes, baselineTop);
+        Map<Short, Collection<Short>> nodes = tx.consistentIdMapper.mapToCompactIds(tx.topVer, tx.txNodes);
 
         TxRecord record;
 
@@ -2873,8 +2868,27 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         }
     }
 
-    /** Checks if a record belongs to a persistent cache with WAL enabled. */
-    private boolean containsCacheWithEnabledWal(IgniteTxAdapter tx) {
+    /**
+     * Returns {@code true} if the given transaction should be logged in WAL and {@code false} otherwise.
+     * Transaction marker should be logged if the following conditions are met:
+     * <ul>
+     *     <li>local node is a part of baseline topology.</li>
+     *     <li>point-in-time recovery is enabled,
+     *     or there is a cache enlisted in the transaction with persistence and WAL enabled for the corresponding cache group.</li>
+     * </ul>
+     * @param tx Transaction.
+     * @return {@code true} if the given transaction should be logged in WAL.
+     */
+    private boolean txRecordLoggingNeeded(IgniteTxAdapter tx) {
+        BaselineTopology baselineTop = cctx.kernalContext().state().clusterState().baselineTopology();
+
+        if (baselineTop == null || !baselineTop.consistentIds().contains(cctx.localNode().consistentId()))
+            return false;
+
+        // Point-in-time recovery is enabled, so we have to log all transaction markers.
+        if (cctx.snapshot().needTxReadLogging())
+            return true;
+
         IgniteTxState state = tx.txState();
         GridIntList cacheIds = state.cacheIds();
 
