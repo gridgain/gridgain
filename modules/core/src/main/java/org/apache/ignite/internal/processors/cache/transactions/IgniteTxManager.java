@@ -2874,7 +2874,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * <ul>
      *     <li>local node is a part of baseline topology.</li>
      *     <li>point-in-time recovery is enabled,
-     *     or there is a cache enlisted in the transaction with persistence and WAL enabled for the corresponding cache group.</li>
+     *     or there is a write-entry enlisted in the transaction with persistence and WAL enabled for the corresponding cache group.</li>
      * </ul>
      * @param tx Transaction.
      * @return {@code true} if the given transaction should be logged in WAL.
