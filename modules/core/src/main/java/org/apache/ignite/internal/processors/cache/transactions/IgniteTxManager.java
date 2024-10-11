@@ -102,8 +102,6 @@ import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.GridBoundedConcurrentOrderedMap;
 import org.apache.ignite.internal.util.GridIntList;
-import org.apache.ignite.internal.util.collection.BitSetIntSet;
-import org.apache.ignite.internal.util.collection.IntSet;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
@@ -2870,16 +2868,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         }
     }
 
-    public static void main(String[] args) {
-        IntSet set = new BitSetIntSet();
-
-        System.out.println("max = " + Integer.MAX_VALUE + ", min = " + Integer.MIN_VALUE + ", abs = " + Math.abs(Integer.MIN_VALUE));
-
-        set.add(Integer.MAX_VALUE);
-        set.add(Integer.MIN_VALUE);
-
-
-    }
     /**
      * Returns {@code true} if the given transaction should be logged in WAL and {@code false} otherwise.
      * Transaction marker should be logged if the following conditions are met:
