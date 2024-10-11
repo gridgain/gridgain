@@ -2908,12 +2908,14 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             for (IgniteTxEntry txEntry : state.writeEntries()) {
                 GridCacheContext<?, ?> cctx = txEntry.context();
 
-                if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
-                    return true;
+                if (checkedCacheIds.add(cctx.cacheId())) {
+                    if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
+                        return true;
 
-                if (checkedCacheIds.add(cctx.cacheId()) && checkedCacheIds.size() == cacheIds.size()) {
-                    // All cache groups are checked, no need to continue.
-                    break;
+                    if (checkedCacheIds.size() == cacheIds.size()) {
+                        // All cache groups are checked, no need to continue.
+                        break;
+                    }
                 }
             }
         }
