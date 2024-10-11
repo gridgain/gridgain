@@ -102,6 +102,8 @@ import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.GridBoundedConcurrentOrderedMap;
 import org.apache.ignite.internal.util.GridIntList;
+import org.apache.ignite.internal.util.collection.BitSetIntSet;
+import org.apache.ignite.internal.util.collection.IntSet;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
@@ -2868,6 +2870,16 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         }
     }
 
+    public static void main(String[] args) {
+        IntSet set = new BitSetIntSet();
+
+        System.out.println("max = " + Integer.MAX_VALUE + ", min = " + Integer.MIN_VALUE + ", abs = " + Math.abs(Integer.MIN_VALUE));
+
+        set.add(Integer.MAX_VALUE);
+        set.add(Integer.MIN_VALUE);
+
+
+    }
     /**
      * Returns {@code true} if the given transaction should be logged in WAL and {@code false} otherwise.
      * Transaction marker should be logged if the following conditions are met:
@@ -2889,25 +2901,40 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         if (cctx.snapshot().needTxReadLogging())
             return true;
 
+        if (tx.writeEntries().isEmpty())
+            return false;
+
         IgniteTxState state = tx.txState();
         GridIntList cacheIds = state.cacheIds();
 
         assert cacheIds != null;
 
         if (!cacheIds.isEmpty()) {
-            for (int i = 0; i < cacheIds.size(); i++) {
-                int cacheId = cacheIds.get(i);
+            if (cacheIds.size() == 1) {
+                GridCacheContext<?, ?> ctx = cctx.cacheContext(cacheIds.get(0));
+                return ctx.group().persistenceEnabled() && ctx.group().walEnabled();
+            }
 
-                GridCacheContext cctx = this.cctx.cacheContext(cacheId);
+            Set<Integer> checkedCacheIds = new HashSet<>(cacheIds.size());
+
+            for (IgniteTxEntry txEntry : state.writeEntries()) {
+                GridCacheContext<?, ?> cctx = txEntry.context();
+
                 if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
                     return true;
+
+                if (checkedCacheIds.add(cctx.cacheId()) && checkedCacheIds.size() == cacheIds.size()) {
+                    // All cache groups are checked, no need to continue.
+                    break;
+                }
             }
         }
-        else if (!state.allEntries().isEmpty()) {
+        else if (!state.writeEntries().isEmpty()) {
             // There can be a transaction with no #activeCaches specified, let's check entries individually.
             // TODO https://ggsystems.atlassian.net/browse/GG-36536
-            for (IgniteTxEntry txEntry : state.allEntries()) {
-                GridCacheContext cctx = txEntry.context();
+            for (IgniteTxEntry txEntry : state.writeEntries()) {
+                GridCacheContext<?, ?> cctx = txEntry.context();
+
                 if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
                     return true;
             }
