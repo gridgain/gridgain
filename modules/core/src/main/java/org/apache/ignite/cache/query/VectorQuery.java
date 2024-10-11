@@ -26,8 +26,9 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 /**
  * Vector queries based on Apache Lucene engine.
  * <h1 class="header">Description</h1>
- * Ignite supports cector queries based on Apache Lucene engine.
+ * Ignite supports vector queries based on Apache Lucene engine.
  * Note that all fields that are expected to show up in vector query results must be annotated with {@link QueryVectorField}
+ * and be of type {@code float[]}.
  *
  * <h2 class="header">Query usage</h2>
  * As an example, suppose we have data model consisting of {@code 'Employee'} class defined as follows:
@@ -39,7 +40,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  *
  *     // Index for text search.
  *     &#64;QueryVectorField
- *     private String resume;
+ *     private float[] resume;
  *     ...
  * }
  * </pre>
@@ -48,10 +49,12 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * check if employees have {@code Master} degree:
  * <pre name="code" class="java">
  * Query&lt;Cache.Entry&lt;Long, Person&gt;&gt; qry =
- *     new Vector(Person.class, "resume", "Master");
+ *     new Vector(Person.class, "resume", toEmbedding("Master"));
  *
  * // Query all cache nodes.
  * cache.query(qry).getAll();
+ *
+ * Where {@code toEmbedding} is a function that converts text to vector with the transformer.
  * </pre>
  *
  * @see IgniteCache#query(Query)
@@ -81,6 +84,7 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
      * @param type Type.
      * @param field Type.
      * @param cause Search string.
+     * @param k The nuber of vectors to return.
      */
     public VectorQuery(Class<?> type, String field, String cause, int k) {
         setType(type);
@@ -95,6 +99,7 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
      * @param type Type.
      * @param field Type.
      * @param clauseVector Search string.
+     * @param k The nuber of vectors to return.
      */
     public VectorQuery(Class<?> type, String field, float[] clauseVector, int k) {
         setType(type);
@@ -136,6 +141,11 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
         return this;
     }
 
+    /**
+     * Gets k.
+     *
+     * @return K.
+     */
     public int getK() {
         return k;
     }

@@ -60,7 +60,7 @@ import org.jetbrains.annotations.Nullable;
  * annotation.
  * <h1 class="header">Vector Queries</h1>
  * Ignite supports vector queries based on Apache Lucene engine. Note that all fields that
- * are expected to show up in vector query results must be annotated with {@link QueryVectorField}
+ * are expected to show up in vector query must be annotated with {@link org.apache.ignite.cache.query.annotations.QueryVectorField}
  * annotation.
  * <h1 class="header">Scan Queries</h1>
  * Sometimes when it is known in advance that SQL query will cause a full data scan, or whenever data set

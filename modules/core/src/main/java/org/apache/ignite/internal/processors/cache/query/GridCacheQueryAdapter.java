@@ -149,6 +149,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
     /** Vector for query in case of vector query. */
     private final float[] qryVector;
 
+    /** Number of vectors to return in case of vector query. */
     private final int k;
 
     /**
@@ -362,6 +363,9 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         return qryVector;
     }
 
+    /**
+     * @return Number of vectors to return in case of vector query.
+     */
     public int k() {
         return k;
     }
