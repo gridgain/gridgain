@@ -29,9 +29,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  * Metrics snapshot.
  */
 public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements CacheMetrics {
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 0L;
 
     /** Number of reads. */
@@ -46,49 +44,31 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
     /** Number of invokes caused no updates. */
     private long entryProcessorReadOnlyInvocations;
 
-    /**
-     * The mean time to execute cache invokes
-     */
+    /** The mean time to execute cache invokes. */
     private float entryProcessorAverageInvocationTime;
 
-    /**
-     * The total number of cache invocations.
-     */
+    /** The total number of cache invocations. */
     private long entryProcessorInvocations;
 
-    /**
-     * The total number of cache invocations, caused removal.
-     */
+    /** The total number of cache invocations, caused removal. */
     private long entryProcessorRemovals;
 
-    /**
-     * The total number of invocations on keys, which don't exist in cache.
-     */
+    /** The total number of invocations on keys, which don't exist in cache. */
     private long entryProcessorMisses;
 
-    /**
-     * The total number of invocations on keys, which exist in cache.
-     */
+    /** The total number of invocations on keys, which exist in cache. */
     private long entryProcessorHits;
 
-    /**
-     * The percentage of invocations on keys, which don't exist in cache.
-     */
+    /** The percentage of invocations on keys, which don't exist in cache. */
     private float entryProcessorMissPercentage;
 
-    /**
-     * The percentage of invocations on keys, which exist in cache.
-     */
+    /** The percentage of invocations on keys, which exist in cache. */
     private float entryProcessorHitPercentage;
 
-    /**
-     * So far, the maximum time to execute cache invokes.
-     */
+    /** So far, the maximum time to execute cache invokes. */
     private float entryProcessorMaxInvocationTime;
 
-    /**
-     * So far, the minimum time to execute cache invokes.
-     */
+    /** So far, the minimum time to execute cache invokes. */
     private float entryProcessorMinInvocationTime;
 
     /** Number of hits. */
@@ -170,13 +150,13 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
     private int keySize;
 
     /** Number of touch requests. */
-    private long cacheTouches = 0;
+    private long cacheTouches;
 
     /** Number of touch hits. */
-    private long cacheTouchHits = 0;
+    private long cacheTouchHits;
 
     /** Number of touch misses. */
-    private long cacheTouchMisses = 0;
+    private long cacheTouchMisses;
 
     /** Cache is empty. */
     private boolean isEmpty;
@@ -283,49 +263,31 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
     /** The number of clearing partitions need to await before rebalance. */
     private long rebalanceClearingPartitionsLeft;
 
-    /**
-     *
-     */
+    /** */
     private String keyType;
 
-    /**
-     *
-     */
+    /** */
     private String valType;
 
-    /**
-     *
-     */
+    /** */
     private boolean isStoreByVal;
 
-    /**
-     *
-     */
+    /** */
     private boolean isStatisticsEnabled;
 
-    /**
-     *
-     */
+    /** */
     private boolean isManagementEnabled;
 
-    /**
-     *
-     */
+    /** */
     private boolean isReadThrough;
 
-    /**
-     *
-     */
+    /** */
     private boolean isWriteThrough;
 
-    /**
-     *
-     */
+    /** */
     private boolean isValidForReading;
 
-    /**
-     *
-     */
+    /** */
     private boolean isValidForWriting;
 
     /** Tx key collisions with appropriate queue size string representation. */
@@ -358,6 +320,7 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         txRollbacks = m.getCacheTxRollbacks();
         evicts = m.getCacheEvictions();
         removes = m.getCacheRemovals();
+
         cacheTouches = m.getCacheTouches();
         cacheTouchHits = m.getCacheTouchHits();
         cacheTouchMisses = m.getCacheTouchMisses();
@@ -598,6 +561,10 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
             keysToRebalanceLeft += e.getKeysToRebalanceLeft();
             rebalancingBytesRate += e.getRebalancingBytesRate();
             rebalancingKeysRate += e.getRebalancingKeysRate();
+
+            cacheTouches += e.getCacheTouches();
+            cacheTouchHits += e.getCacheTouchHits();
+            cacheTouchMisses += e.getCacheTouchMisses();
         }
 
         int size = metrics.size();
@@ -839,26 +806,22 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
     }
 
     /** {@inheritDoc} */
-    @Override
-    public long getCacheTouches() {
+    @Override public long getCacheTouches() {
         return cacheTouches;
     }
 
     /** {@inheritDoc} */
-    @Override
-    public long getCacheTouchHits() {
+    @Override public long getCacheTouchHits() {
         return cacheTouchHits;
     }
 
     /** {@inheritDoc} */
-    @Override
-    public long getCacheTouchMisses() {
+    @Override public long getCacheTouchMisses() {
         return cacheTouchMisses;
     }
 
     /** {@inheritDoc} */
-    @Override
-    public float getCacheTouchHitPercentage() {
+    @Override public float getCacheTouchHitPercentage() {
         long hits = cacheTouchHits;
         long touches = cacheTouches;
 
@@ -869,8 +832,7 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
     }
 
     /** {@inheritDoc} */
-    @Override
-    public float getCacheTouchMissPercentage() {
+    @Override public float getCacheTouchMissPercentage() {
         long misses = cacheTouchMisses;
         long touches = cacheTouches;
 
@@ -1207,11 +1169,15 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         out.writeInt(size);
         out.writeInt(keySize);
         U.writeLongString(out, txKeyCollisions);
+
+        out.writeLong(cacheTouches);
+        out.writeLong(cacheTouchHits);
+        out.writeLong(cacheTouchMisses);
     }
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V2;
+        return V3;
     }
 
     /** {@inheritDoc} */
@@ -1293,5 +1259,11 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
 
         if (protoVer >= V2)
             txKeyCollisions = U.readLongString(in);
+
+        if (protoVer >= V3) {
+            cacheTouches = in.readLong();
+            cacheTouchHits = in.readLong();
+            cacheTouchMisses = in.readLong();
+        }
     }
 }
