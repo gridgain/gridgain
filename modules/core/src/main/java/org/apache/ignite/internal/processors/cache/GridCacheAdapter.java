@@ -4641,20 +4641,20 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         // TODO https://ggsystems.atlassian.net/browse/GG-38173
         if (!isDhtAtomic()) {
             throw new UnsupportedOperationException(
-                    "Operation is not supported on " +
-                            (isNear() ? "near " : "") + (isLocal() ? "local " : "") + ctx.config().getAtomicityMode() +
-                            " cache [name=" + name() + ']');
+                "Operation is not supported on " +
+                    (isNear() ? "near " : "") + (isLocal() ? "local " : "") + ctx.config().getAtomicityMode() +
+                    " cache [name=" + name() + ']');
         }
 
-        return ((IgniteInternalFuture<Boolean>) getAsync(
-                key,
-                /*skip tx*/false,
-                /*subj id*/null,
-                /*task name*/null,
-                /*deserialize binary*/false,
-                /*skip values*/true,
-                /*needVer*/ false,
-                /*touchTtl*/true));
+        return ((IgniteInternalFuture<Boolean>)getAsync(
+            key,
+            /*skip tx*/false,
+            /*subj id*/null,
+            /*task name*/null,
+            /*deserialize binary*/false,
+            /*skip values*/true,
+            /*needVer*/ false,
+            /*touchTtl*/true));
     }
 
     /**
