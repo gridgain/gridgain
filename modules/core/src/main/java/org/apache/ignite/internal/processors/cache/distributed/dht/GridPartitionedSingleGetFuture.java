@@ -487,7 +487,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
 
         GridDhtCacheAdapter colocated = cctx.dht();
 
-        boolean readNoEntry = cctx.readNoEntry(expiryPlc, false);
+        boolean readNoEntry = !touchTtl && cctx.readNoEntry(expiryPlc, false);
         boolean evt = !skipVals;
 
         // postProcessingClos can be not null on remap, need version for correct update on backup.
