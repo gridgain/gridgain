@@ -565,24 +565,21 @@ public class CacheMetricsImpl implements CacheMetrics {
     }
 
     /**
-     * Increments the number of times the {@link IgniteCache#touch(Object)} method is called.
+     * Increments the number of times the {@link IgniteCache#touch(Object)} method is called and
+     * increments the number of cache hits or misses depending on the {@code isHit} parameter.
+     *
+     * @param isHit {@code true} if the key is found in the cache and {@code false} otherwise.
      */
-    public void onCacheTouch() {
+    public void onCacheTouch(boolean isHit) {
         cacheTouches.increment();
-    }
 
-    /**
-     * Increments the number of times the {@link IgniteCache#touch(Object)} method is called and the key is found in the cache.
-     */
-    public void onCacheTouchHit() {
-        cacheTouchHits.increment();
-    }
+        if (isHit)
+            cacheTouchHits.increment();
+        else
+            cacheTouchMisses.increment();
 
-    /**
-     * Increments the number of times the {@link IgniteCache#touch(Object)} method is called and the key is not found in the cache.
-     */
-    public void onCacheTouchMiss() {
-        cacheTouchMisses.increment();
+        if (delegate != null)
+            delegate.onCacheTouch(isHit);
     }
 
     /** {@inheritDoc} */

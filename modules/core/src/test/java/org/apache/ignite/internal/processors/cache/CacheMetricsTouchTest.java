@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.store.CacheStoreManager;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -25,9 +26,13 @@ import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Before;
 import org.junit.Test;
-import java.util.concurrent.atomic.AtomicLong;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test class for cache touch metrics.
@@ -149,25 +154,30 @@ public class CacheMetricsTouchTest extends GridCommonAbstractTest {
 
     @Test
     public void testCacheTouchMetrics() {
-        metrics.onCacheTouch();
+        metrics.onCacheTouch(true);
+
         assertEquals(1, metrics.getCacheTouches());
-        metrics.onCacheTouchHit();
         assertEquals(1, metrics.getCacheTouchHits());
-        metrics.onCacheTouchMiss();
+        assertEquals(0, metrics.getCacheTouchMisses());
+
+        metrics.onCacheTouch(false);
+
+        assertEquals(2, metrics.getCacheTouches());
+        assertEquals(1, metrics.getCacheTouchHits());
         assertEquals(1, metrics.getCacheTouchMisses());
     }
 
     @Test
     public void testCacheTouchHitPercentage() {
-        metrics.onCacheTouch();
-        metrics.onCacheTouchHit();
+        metrics.onCacheTouch(true);
+
         assertEquals(100.0, metrics.getCacheTouchHitPercentage(), 0.01);
     }
 
     @Test
     public void testCacheTouchMissPercentage() {
-        metrics.onCacheTouch();
-        metrics.onCacheTouchMiss();
+        metrics.onCacheTouch(false);
+
         assertEquals(100.0, metrics.getCacheTouchMissPercentage(), 0.01);
     }
 }
