@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CachePeekMode;
@@ -563,14 +564,23 @@ public class CacheMetricsImpl implements CacheMetrics {
         return (float) misses / touches * 100.0f;
     }
 
+    /**
+     * Increments the number of times the {@link IgniteCache#touch(Object)} method is called.
+     */
     public void onCacheTouch() {
         cacheTouches.increment();
     }
 
+    /**
+     * Increments the number of times the {@link IgniteCache#touch(Object)} method is called and the key is found in the cache.
+     */
     public void onCacheTouchHit() {
         cacheTouchHits.increment();
     }
 
+    /**
+     * Increments the number of times the {@link IgniteCache#touch(Object)} method is called and the key is not found in the cache.
+     */
     public void onCacheTouchMiss() {
         cacheTouchMisses.increment();
     }
