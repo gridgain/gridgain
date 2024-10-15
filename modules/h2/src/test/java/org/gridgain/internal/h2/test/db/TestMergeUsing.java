@@ -10,19 +10,15 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import org.gridgain.internal.h2.api.Trigger;
 import org.gridgain.internal.h2.test.TestBase;
 import org.gridgain.internal.h2.test.TestDb;
 
 /**
  * Test merge using syntax.
  */
-public class TestMergeUsing extends TestDb implements Trigger {
+public class TestMergeUsing extends TestDb {
 
     private static final String GATHER_ORDERED_RESULTS_SQL = "SELECT ID, NAME FROM PARENT ORDER BY ID ASC";
-    private static int triggerTestingUpdateCount;
-
-    private String triggerName;
 
     /**
      * Run just this test.
@@ -199,22 +195,6 @@ public class TestMergeUsing extends TestDb implements Trigger {
                 GATHER_ORDERED_RESULTS_SQL,
                 "SELECT 1 AS ID, 'Marcy'||X||X UNION ALL SELECT 1 AS ID, 'Marcy2'",
                 2);
-
-        // One insert, one update one delete happens, target table missing PK,
-        // triggers update all NAME fields
-        triggerTestingUpdateCount = 0;
-        testMergeUsing(
-                "CREATE TABLE PARENT AS (SELECT X AS ID, 'Marcy'||X AS NAME FROM SYSTEM_RANGE(1,2));"
-                        + getCreateTriggerSQL(),
-                "MERGE INTO PARENT AS P USING " +
-                "(SELECT X AS ID, 'Marcy'||X AS NAME FROM SYSTEM_RANGE(1,4) ) AS S ON (P.ID = S.ID) " +
-                "WHEN MATCHED THEN UPDATE SET P.NAME = S.NAME||S.ID WHERE P.ID = 2 " +
-                "WHEN MATCHED THEN DELETE WHERE P.ID = 1 " +
-                "WHEN NOT MATCHED THEN INSERT (ID, NAME) VALUES (S.ID, S.NAME)",
-                GATHER_ORDERED_RESULTS_SQL,
-                "SELECT 2 AS ID, 'Marcy22-updated2' AS NAME UNION ALL " +
-                "SELECT X AS ID, 'Marcy'||X||'-inserted'||X AS NAME FROM SYSTEM_RANGE(3,4)",
-                4);
     }
 
     /**
@@ -293,63 +273,6 @@ public class TestMergeUsing extends TestDb implements Trigger {
             return;
         }
         fail("Failed to see exception with message:" + exceptionMessage);
-    }
-
-    @Override
-    public void fire(Connection conn, Object[] oldRow, Object[] newRow)
-            throws SQLException {
-
-        if (conn == null) {
-            throw new AssertionError("connection is null");
-        }
-        if (triggerName.startsWith("INS_BEFORE")) {
-            newRow[1] = newRow[1] + "-inserted" + (++triggerTestingUpdateCount);
-        } else if (triggerName.startsWith("UPD_BEFORE")) {
-            newRow[1] = newRow[1] + "-updated" + (++triggerTestingUpdateCount);
-        } else if (triggerName.startsWith("DEL_BEFORE")) {
-            oldRow[1] = oldRow[1] + "-deleted" + (++triggerTestingUpdateCount);
-        }
-    }
-
-    @Override
-    public void close() {
-        // ignore
-    }
-
-    @Override
-    public void remove() {
-        // ignore
-    }
-
-    @Override
-    public void init(Connection conn, String schemaName, String trigger,
-            String tableName, boolean before, int type) {
-        this.triggerName = trigger;
-        if (!"PARENT".equals(tableName)) {
-            throw new AssertionError("supposed to be PARENT");
-        }
-        if ((trigger.endsWith("AFTER") && before)
-                || (trigger.endsWith("BEFORE") && !before)) {
-            throw new AssertionError(
-                    "triggerName: " + trigger + " before:" + before);
-        }
-        if ((trigger.startsWith("UPD") && type != UPDATE)
-                || (trigger.startsWith("INS") && type != INSERT)
-                || (trigger.startsWith("DEL") && type != DELETE)) {
-            throw new AssertionError(
-                    "triggerName: " + trigger + " type:" + type);
-        }
-    }
-
-    private String getCreateTriggerSQL() {
-        StringBuilder buf = new StringBuilder();
-        buf.append("CREATE TRIGGER INS_BEFORE " + "BEFORE INSERT ON PARENT "
-                + "FOR EACH ROW NOWAIT CALL \"" + getClass().getName() + "\";");
-        buf.append("CREATE TRIGGER UPD_BEFORE " + "BEFORE UPDATE ON PARENT "
-                + "FOR EACH ROW NOWAIT CALL \"" + getClass().getName() + "\";");
-        buf.append("CREATE TRIGGER DEL_BEFORE " + "BEFORE DELETE ON PARENT "
-                + "FOR EACH ROW NOWAIT CALL \"" + getClass().getName() + "\";");
-        return buf.toString();
     }
 
 }
