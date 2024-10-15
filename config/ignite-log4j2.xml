@@ -30,8 +30,8 @@
         <Routing name="FILE">
             <Routes pattern="$${sys:nodeId}">
                 <Route>
-                    <RollingFile name="Rolling-${sys:nodeId}" fileName="${sys:IGNITE_HOME}/work/log/${sys:appId}-${sys:nodeId}.log"
-                                 filePattern="${sys:IGNITE_HOME}/work/log/${sys:appId}-${sys:nodeId}-%i-%d{yyyy-MM-dd}.log.gz">
+                    <RollingFile name="Rolling-${sys:nodeId}" fileName="C:\\work\\log\\${sys:appId}-${sys:nodeId}.log"
+                                 filePattern="C:\\work\\log\\${sys:appId}-${sys:nodeId}-%i-%d{yyyy-MM-dd}.log.gz">
                         <PatternLayout pattern="[%d{ISO8601}][%-5p][%t][%c{1}]%notEmpty{[%markerSimpleName]} %m%n"/>
                         <Policies>
                             <TimeBasedTriggeringPolicy interval="6" modulate="true" />
@@ -63,6 +63,21 @@
         <!-- Control Center Agent shaded dependencies. -->
         <Logger name="org.gridgain.control.shade" level="WARN"/>
 
+        <Logger name="org.apache.ignite.internal.processors.cache.GridCacheMapEntry" level="DEBUG"/>
+        <Logger name="org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl" level="DEBUG"/>
+        <Logger name="org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter" level="DEBUG"/>
+        <Logger name="org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal" level="DEBUG"/>
+        <Logger name="org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogImpl" level="DEBUG"/>
+
+        <Logger name="org.gridgain.grid.internal.processors.dr.DrReceiver" level="DEBUG"/>
+        <Logger name="org.gridgain.grid.internal.processors.cache.dr.CacheDrHandler" level="DEBUG"/>
+        <Logger name="org.apache.ignite.internal.processors.cache.GridCacheAdapter" level="DEBUG"/>
+        <Logger name="org.apache.ignite.internal.processors.cache.persistence.GridCacheOffheapManager" level="DEBUG"/>
+
+        <Logger name="org.gridgain.grid.internal.processors.cache.dr.ist.CacheIncrementalDrHandler" level="TRACE"/>
+        <Logger name="org.gridgain.grid.internal.processors.cache.dr.ist.GridGainCacheIncrementalDrManager" level="TRACE"/>
+        <Logger name="org.gridgain.grid.internal.processors.cache.dr.ist.CacheSenderHubManager" level="TRACE"/>
+
         <!--
         Avoid warnings about failed bind attempt when multiple nodes running on the same host.
         -->
@@ -73,9 +88,7 @@
 
         <Root level="INFO">
             <!-- Uncomment to enable logging to console. -->
-            <!--
             <AppenderRef ref="CONSOLE" level="DEBUG"/>
-            -->
 
             <AppenderRef ref="CONSOLE_ERR" level="ERROR"/>
             <AppenderRef ref="FILE" level="DEBUG"/>

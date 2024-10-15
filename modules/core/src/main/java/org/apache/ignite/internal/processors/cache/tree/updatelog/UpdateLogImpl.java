@@ -68,8 +68,8 @@ public class UpdateLogImpl implements UpdateLog {
 
         if (log.isDebugEnabled()) {
             String rowKey = row.key() == null ? "null" : row.key().value(cctx, false);
-            log.debug("Attempt to update log tree for key " + rowKey + ", success="
-                    + treeUpdated);
+            log.debug("Attempt to update log tree for key " + rowKey + ", replaced existing="
+                    + treeUpdated + ", update counter=" + row.updateCounter());
         }
     }
 
@@ -107,8 +107,8 @@ public class UpdateLogImpl implements UpdateLog {
 
             if (log.isDebugEnabled()) {
                 String rowKey = row.key() == null ? "null" : row.key().value(cctx, false);
-                log.debug("Attempt to remove from log tree for key " + rowKey + ", success="
-                        + removeUpdated);
+                log.debug("Attempt to remove from log tree for key " + rowKey + ", replaced existing="
+                        + removeUpdated + ", update counter=" + row.updateCounter());
             }
         }
     }
