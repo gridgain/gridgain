@@ -361,16 +361,22 @@ public class IgnitePdsTxRecordLoggingTest extends GridCommonAbstractTest {
             IgniteCache<Object, Object> cachePersistent = ignite0.cache(persistentCacneName);
             IgniteCache<Object, Object> cacheInMem = ignite0.cache(inMemoryCacneName);
 
-            Integer primaryKeyPersist = primaryKey(cachePersistent);
-            Integer primaryKeyInMem = primaryKey(ignite1.cache(inMemoryCacneName));
+            Integer primaryKeyPersist0 = primaryKey(cachePersistent);
+            Integer primaryKeyPersist1 = primaryKey(ignite1.cache(persistentCacneName));
+
+            Integer primaryKeyInMem1 = primaryKey(ignite1.cache(inMemoryCacneName));
+
+            cachePersistent.put(primaryKeyPersist1, 12);
 
             startRecordingTxRecords();
 
             // There are two write-entries.
             try (Transaction tx = ignite0.transactions().txStart(PESSIMISTIC, SERIALIZABLE)) {
-                cachePersistent.put(primaryKeyPersist, 12);
+                cachePersistent.put(primaryKeyPersist0, 12);
 
-                cacheInMem.put(primaryKeyInMem, 12);
+                cacheInMem.put(primaryKeyInMem1, 12);
+
+                assertEquals(12, cachePersistent.get(primaryKeyPersist1));
 
                 tx.commit();
             }
