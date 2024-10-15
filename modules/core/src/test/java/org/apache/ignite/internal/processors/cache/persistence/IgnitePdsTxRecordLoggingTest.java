@@ -347,24 +347,24 @@ public class IgnitePdsTxRecordLoggingTest extends GridCommonAbstractTest {
         IgniteEx ignite0 = grid(0);
         IgniteEx ignite1 = grid(1);
 
-        String persistentCacneName = PERSISTENT_CACHE_NAME + "-0-backups";
-        String inMemoryCacneName = IN_MEM_CACHE_NAME + "-0-backups";
+        String persistentCacheName = PERSISTENT_CACHE_NAME + "-0-backups";
+        String inMemoryCacheName = IN_MEM_CACHE_NAME + "-0-backups";
 
         ignite0.getOrCreateCaches(asList(
-            cacheConfiguration(persistentCacneName, null, 0),
-            cacheConfiguration(inMemoryCacneName, IN_MEMORY_REGION_NAME, 0)
+            cacheConfiguration(persistentCacheName, null, 0),
+            cacheConfiguration(inMemoryCacheName, IN_MEMORY_REGION_NAME, 0)
         ));
 
         try {
             awaitPartitionMapExchange();
 
-            IgniteCache<Object, Object> cachePersistent = ignite0.cache(persistentCacneName);
-            IgniteCache<Object, Object> cacheInMem = ignite0.cache(inMemoryCacneName);
+            IgniteCache<Object, Object> cachePersistent = ignite0.cache(persistentCacheName);
+            IgniteCache<Object, Object> cacheInMem = ignite0.cache(inMemoryCacheName);
 
             Integer primaryKeyPersist0 = primaryKey(cachePersistent);
-            Integer primaryKeyPersist1 = primaryKey(ignite1.cache(persistentCacneName));
+            Integer primaryKeyPersist1 = primaryKey(ignite1.cache(persistentCacheName));
 
-            Integer primaryKeyInMem1 = primaryKey(ignite1.cache(inMemoryCacneName));
+            Integer primaryKeyInMem1 = primaryKey(ignite1.cache(inMemoryCacheName));
 
             cachePersistent.put(primaryKeyPersist1, 12);
 
@@ -387,8 +387,8 @@ public class IgnitePdsTxRecordLoggingTest extends GridCommonAbstractTest {
             verifyTxRecords(ignite1, 0, null);
         }
         finally {
-            ignite0.destroyCache(persistentCacneName);
-            ignite0.destroyCache(inMemoryCacneName);
+            ignite0.destroyCache(persistentCacheName);
+            ignite0.destroyCache(inMemoryCacheName);
 
             awaitPartitionMapExchange();
         }
