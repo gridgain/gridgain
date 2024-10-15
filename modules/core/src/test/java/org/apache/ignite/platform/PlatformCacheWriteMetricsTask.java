@@ -16,6 +16,9 @@
 
 package org.apache.ignite.platform;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cluster.ClusterNode;
@@ -33,10 +36,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Test task writing predefined metrics values to a stream.
@@ -553,30 +552,24 @@ public class PlatformCacheWriteMetricsTask extends ComputeTaskAdapter<Long, Obje
             return 0;
         }
 
-        @Override
-        public long getCacheTouches() {
+        @Override public long getCacheTouches() {
             return 79;
         }
 
-        @Override
-        public long getCacheTouchHits() {
+        @Override public long getCacheTouchHits() {
             return 80;
         }
 
-        @Override
-        public long getCacheTouchMisses() {
+        @Override public long getCacheTouchMisses() {
             return 81;
         }
 
-        @Override
-        public float getCacheTouchHitPercentage() {
+        @Override public float getCacheTouchHitPercentage() {
             return 82.0f;
         }
 
-        @Override
-        public float getCacheTouchMissPercentage() {
+        @Override public float getCacheTouchMissPercentage() {
             return 83.0f;
         }
-
     }
 }

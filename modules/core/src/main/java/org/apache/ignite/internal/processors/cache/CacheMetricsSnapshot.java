@@ -800,20 +800,17 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public long getCacheTouches() {
+    @Override public long getCacheTouches() {
         return cacheTouches;
     }
 
     /** {@inheritDoc} */
-    @Override
-    public long getCacheTouchHits() {
+    @Override public long getCacheTouchHits() {
         return cacheTouchHits;
     }
 
     /** {@inheritDoc} */
-    @Override
-    public long getCacheTouchMisses() {
+    @Override public long getCacheTouchMisses() {
         return cacheTouchMisses;
     }
 
