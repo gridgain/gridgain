@@ -37,7 +37,6 @@ import static org.mockito.Mockito.when;
 /**
  * Test class for cache touch metrics.
  */
-
 public class CacheMetricsTouchTest extends GridCommonAbstractTest {
     private CacheMetricsImpl metrics;
     private GridCacheContext<?, ?> cctx;
