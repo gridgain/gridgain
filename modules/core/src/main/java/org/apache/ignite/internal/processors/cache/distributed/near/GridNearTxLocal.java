@@ -250,7 +250,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     private long crdVer;
 
     /** One-phase commit is enabled. */
-    private boolean onePhaseCommitEnabled;
+    private boolean onePhaseCommitEnabled = true;
 
     /**
      * Empty constructor required for {@link Externalizable}.

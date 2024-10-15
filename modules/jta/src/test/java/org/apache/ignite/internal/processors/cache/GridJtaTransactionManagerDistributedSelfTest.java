@@ -108,7 +108,31 @@ public class GridJtaTransactionManagerDistributedSelfTest extends GridCommonAbst
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-40472")
+    public void testJtaTxCommit() throws Exception {
+        IgniteEx cluster1client = grid(CLUSTER_1_CLIENT_NAME);
+        IgniteEx cluster2client = grid(CLUSTER_2_CLIENT_NAME);
+
+        TransactionManager jtaTm = jotm.getTransactionManager();
+
+        IgniteCache<Object, Object> cluster1cache = cluster1client.cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Object, Object> cluster2cache = cluster2client.cache(DEFAULT_CACHE_NAME);
+
+        jtaTm.begin();
+
+        cluster1cache.put(1, Integer.toString(1));
+        cluster2cache.put(1, Integer.toString(1));
+
+        jtaTm.commit();
+
+        assertTrue("Record not found", cluster1cache.containsKey(1));
+        assertTrue("Record not found", cluster2cache.containsKey(1));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-40919")
     public void testJtaTxRollbackOnCommitFailure() throws Exception {
         IgniteEx cluster1client = grid(CLUSTER_1_CLIENT_NAME);
         IgniteEx cluster2client = grid(CLUSTER_2_CLIENT_NAME);
