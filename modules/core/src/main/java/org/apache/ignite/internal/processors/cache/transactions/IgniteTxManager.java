@@ -2874,7 +2874,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * <ul>
      *     <li>local node is a part of baseline topology.</li>
      *     <li>point-in-time recovery is enabled,
-     *     or there is a cache enlisted in the transaction with persistence and WAL enabled for the corresponding cache group.</li>
+     *     or there is a write-entry enlisted in the transaction with persistence and WAL enabled for the corresponding cache group.</li>
      * </ul>
      * @param tx Transaction.
      * @return {@code true} if the given transaction should be logged in WAL.
@@ -2889,25 +2889,42 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         if (cctx.snapshot().needTxReadLogging())
             return true;
 
+        if (tx.writeEntries().isEmpty())
+            return false;
+
         IgniteTxState state = tx.txState();
         GridIntList cacheIds = state.cacheIds();
 
         assert cacheIds != null;
 
         if (!cacheIds.isEmpty()) {
-            for (int i = 0; i < cacheIds.size(); i++) {
-                int cacheId = cacheIds.get(i);
+            if (cacheIds.size() == 1) {
+                GridCacheContext<?, ?> ctx = cctx.cacheContext(cacheIds.get(0));
+                return ctx.group().persistenceEnabled() && ctx.group().walEnabled();
+            }
 
-                GridCacheContext cctx = this.cctx.cacheContext(cacheId);
-                if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
-                    return true;
+            Set<Integer> checkedCacheIds = new HashSet<>(cacheIds.size());
+
+            for (IgniteTxEntry txEntry : state.writeEntries()) {
+                GridCacheContext<?, ?> cctx = txEntry.context();
+
+                if (checkedCacheIds.add(cctx.cacheId())) {
+                    if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
+                        return true;
+
+                    if (checkedCacheIds.size() == cacheIds.size()) {
+                        // All cache groups are checked, no need to continue.
+                        break;
+                    }
+                }
             }
         }
-        else if (!state.allEntries().isEmpty()) {
+        else if (!state.writeEntries().isEmpty()) {
             // There can be a transaction with no #activeCaches specified, let's check entries individually.
             // TODO https://ggsystems.atlassian.net/browse/GG-36536
-            for (IgniteTxEntry txEntry : state.allEntries()) {
-                GridCacheContext cctx = txEntry.context();
+            for (IgniteTxEntry txEntry : state.writeEntries()) {
+                GridCacheContext<?, ?> cctx = txEntry.context();
+
                 if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
                     return true;
             }
