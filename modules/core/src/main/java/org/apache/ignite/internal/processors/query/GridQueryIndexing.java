@@ -155,7 +155,8 @@ public interface GridQueryIndexing {
      * @param cacheName Cache name.
      * @param qry Text query.
      * @param typeName Type name.
-     * @param filter Cache name and key filter.    @return Queried rows.
+     * @param filter Cache name and key filter.
+     * @return Queried rows.
      * @throws IgniteCheckedException If failed.
      */
     public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryLocalText(String schemaName, String cacheName,
@@ -169,7 +170,10 @@ public interface GridQueryIndexing {
      * @param field Field name.
      * @param qry Text query.
      * @param typeName Type name.
-     * @param filter Cache name and key filter.    @return Queried rows.
+     * @param filter Cache name and key filter.
+     * @param qryVector Vector for the VectorQuery.
+     * @param k The number of vectors to return in the VectorQuery.
+     * @return Queried rows.
      * @throws IgniteCheckedException If failed.
      */
     public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryLocalVector(String schemaName, String cacheName,

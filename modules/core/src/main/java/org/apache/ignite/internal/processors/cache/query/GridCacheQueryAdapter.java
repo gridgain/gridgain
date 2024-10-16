@@ -245,6 +245,8 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
      * @param clsName Class name.
      * @param fieldName Field name.
      * @param clause Clause.
+     * @param qryVector Query vector.
+     * @param k Number of vectors to return.
      * @param filter Scan filter.
      * @param part Partition.
      * @param incMeta Include metadata flag.

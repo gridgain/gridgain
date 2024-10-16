@@ -38,7 +38,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  *
  *     private String name;
  *
- *     // Index for text search.
+ *     // Index for vector search.
  *     &#64;QueryVectorField
  *     private float[] resume;
  *     ...
@@ -49,12 +49,13 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * check if employees have {@code Master} degree:
  * <pre name="code" class="java">
  * Query&lt;Cache.Entry&lt;Long, Person&gt;&gt; qry =
- *     new Vector(Person.class, "resume", toEmbedding("Master"));
+ *     new VectorQuery(Person.class, "resume", toEmbedding("Master"), 1);
  *
  * // Query all cache nodes.
  * cache.query(qry).getAll();
  *
- * Where {@code toEmbedding} is a function that converts text to vector with the transformer.
+ * Where {@code toEmbedding} is a function that converts text to vector with the transformer
+ * and 1 is the number of vectors to return.
  * </pre>
  *
  * @see IgniteCache#query(Query)
@@ -70,7 +71,7 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     private String field;
 
     /** SQL clause. */
-    private String cause;
+    private String clause;
 
     /** SQL clause as vector. */
     private float[] clauseVector;
@@ -83,13 +84,13 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
      *
      * @param type Type.
      * @param field Type.
-     * @param cause Search string.
+     * @param clause Search string.
      * @param k The nuber of vectors to return.
      */
-    public VectorQuery(Class<?> type, String field, String cause, int k) {
+    public VectorQuery(Class<?> type, String field, String clause, int k) {
         setType(type);
         setField(field);
-        setCause(cause);
+        setClause(clause);
         setK(k);
     }
 
@@ -176,28 +177,28 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
      *
      * @return Text search string.
      */
-    public String getCause() {
-        return cause;
+    public String getClause() {
+        return clause;
     }
 
     /**
      * Sets text search string.
      *
-     * @param cause Text search string.
+     * @param clause Text search string.
      * @return {@code this} For chaining.
      */
-    public VectorQuery<K, V> setCause(String cause) {
-        A.notNull(cause, "cause");
+    public VectorQuery<K, V> setClause(String clause) {
+        A.notNull(clause, "cause");
 
-        this.cause = cause;
+        this.clause = clause;
 
         return this;
     }
 
     /**
-     * Gets text search string.
+     * Gets search vector.
      *
-     * @return Text search string as vector.
+     * @return Search vector.
      */
     public float[] getCauseVector() {
         return clauseVector;
