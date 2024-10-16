@@ -90,7 +90,6 @@ public interface CacheMetrics {
 
     /**
      * Returns the number of touch requests that were not satisfied by the cache.
-     * A requested key was not found in the cache.
      *
      * @return The number of touch misses.
      */
