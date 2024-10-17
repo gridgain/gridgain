@@ -18,14 +18,17 @@ package org.apache.ignite.internal.processors.cache.persistence.partstate;
 
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Queue;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -63,6 +66,18 @@ public class PartitionAllocationMap {
      */
     @Nullable public PagesAllocationRange get(FullPageId fullPageId) {
         return readMap.get(createCachePartId(fullPageId));
+    }
+
+    /**
+     * Represents partition allocation map as a concurrent queue, that could be read by multiple threads simultaneously.
+     */
+    public Queue<T2<GroupPartitionId, PagesAllocationRange>> asQueue() {
+        Queue<T2<GroupPartitionId, PagesAllocationRange>> readQueue = new ConcurrentLinkedQueue<>();
+
+        for (Map.Entry<GroupPartitionId, PagesAllocationRange> entry : readMap.entrySet())
+            readQueue.add(new T2<>(entry.getKey(), entry.getValue()));
+
+        return readQueue;
     }
 
     /**
