@@ -24,6 +24,7 @@ import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
@@ -114,7 +115,7 @@ final class CacheJtaResource implements XAResource, Synchronization {
         try {
             ctx.cache().context().rollbackTxAsync(cacheTx).get();
         }
-        catch (IgniteCheckedException e) {
+        catch (IgniteCheckedException | IgniteException e) {
             throwException("Failed to rollback cache transaction: " + e.getMessage(), e);
         }
     }
@@ -132,7 +133,7 @@ final class CacheJtaResource implements XAResource, Synchronization {
         try {
             cacheTx.prepare(true);
         }
-        catch (IgniteCheckedException e) {
+        catch (IgniteCheckedException | IgniteException e) {
             throwException("Failed to prepare cache transaction.", e);
         }
 

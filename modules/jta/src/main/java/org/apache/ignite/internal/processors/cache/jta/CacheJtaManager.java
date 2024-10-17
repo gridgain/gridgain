@@ -172,6 +172,8 @@ public class CacheJtaManager extends CacheJtaManagerAdapter {
                             );
                         }
 
+                        tx.onePhaseCommitEnabled(false);
+
                         rsrc = new CacheJtaResource(tx, cctx.kernalContext());
 
                         if (useJtaSync)
