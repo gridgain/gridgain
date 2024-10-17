@@ -35,94 +35,76 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
     private static final long serialVersionUID = 0L;
 
     /** Number of reads. */
-    private long reads = 0;
+    private long reads;
 
     /** Number of puts. */
-    private long puts = 0;
+    private long puts;
 
     /** Number of invokes caused updates. */
-    private long entryProcessorPuts = 0;
+    private long entryProcessorPuts;
 
     /** Number of invokes caused no updates. */
-    private long entryProcessorReadOnlyInvocations = 0;
+    private long entryProcessorReadOnlyInvocations;
 
-    /**
-     * The mean time to execute cache invokes
-     */
-    private float entryProcessorAverageInvocationTime = 0;
+    /** The mean time to execute cache invokes. */
+    private float entryProcessorAverageInvocationTime;
 
-    /**
-     * The total number of cache invocations.
-     */
-    private long entryProcessorInvocations = 0;
+    /** The total number of cache invocations. */
+    private long entryProcessorInvocations;
 
-    /**
-     * The total number of cache invocations, caused removal.
-     */
-    private long entryProcessorRemovals = 0;
+    /** The total number of cache invocations, caused removal. */
+    private long entryProcessorRemovals;
 
-    /**
-     * The total number of invocations on keys, which don't exist in cache.
-     */
-    private long entryProcessorMisses = 0;
+    /** The total number of invocations on keys, which don't exist in cache. */
+    private long entryProcessorMisses;
 
-    /**
-     * The total number of invocations on keys, which exist in cache.
-     */
-    private long entryProcessorHits = 0;
+    /** The total number of invocations on keys, which exist in cache. */
+    private long entryProcessorHits;
 
-    /**
-     * The percentage of invocations on keys, which don't exist in cache.
-     */
-    private float entryProcessorMissPercentage = 0;
+    /** The percentage of invocations on keys, which don't exist in cache. */
+    private float entryProcessorMissPercentage;
 
-    /**
-     * The percentage of invocations on keys, which exist in cache.
-     */
-    private float entryProcessorHitPercentage = 0;
+    /** The percentage of invocations on keys, which exist in cache. */
+    private float entryProcessorHitPercentage;
 
-    /**
-     * So far, the maximum time to execute cache invokes.
-     */
-    private float entryProcessorMaxInvocationTime = 0;
+    /** So far, the maximum time to execute cache invokes. */
+    private float entryProcessorMaxInvocationTime;
 
-    /**
-     * So far, the minimum time to execute cache invokes.
-     */
-    private float entryProcessorMinInvocationTime = 0;
+    /** So far, the minimum time to execute cache invokes. */
+    private float entryProcessorMinInvocationTime;
 
     /** Number of hits. */
-    private long hits = 0;
+    private long hits;
 
     /** Number of misses. */
-    private long misses = 0;
+    private long misses;
 
     /** Number of transaction commits. */
-    private long txCommits = 0;
+    private long txCommits;
 
     /** Number of transaction rollbacks. */
-    private long txRollbacks = 0;
+    private long txRollbacks;
 
     /** Number of evictions. */
-    private long evicts = 0;
+    private long evicts;
 
     /** Number of removed entries. */
-    private long removes = 0;
+    private long removes;
 
     /** Put time taken nanos. */
-    private float putAvgTimeNanos = 0;
+    private float putAvgTimeNanos;
 
     /** Get time taken nanos. */
-    private float getAvgTimeNanos = 0;
+    private float getAvgTimeNanos;
 
     /** Remove time taken nanos. */
-    private float rmvAvgTimeNanos = 0;
+    private float rmvAvgTimeNanos;
 
     /** Commit transaction time taken nanos. */
-    private float commitAvgTimeNanos = 0;
+    private float commitAvgTimeNanos;
 
     /** Commit transaction time taken nanos. */
-    private float rollbackAvgTimeNanos = 0;
+    private float rollbackAvgTimeNanos;
 
     /** Cache name */
     private String cacheName;
@@ -168,6 +150,15 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
 
     /** Number of keys in the cache, possibly with {@code null} values. */
     private int keySize;
+
+    /** Number of touch requests. */
+    private long cacheTouches;
+
+    /** Number of touch hits. */
+    private long cacheTouchHits;
+
+    /** Number of touch misses. */
+    private long cacheTouchMisses;
 
     /** Cache is empty. */
     private boolean isEmpty;
@@ -328,6 +319,10 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
         txRollbacks = m.getCacheTxRollbacks();
         evicts = m.getCacheEvictions();
         removes = m.getCacheRemovals();
+
+        cacheTouches = m.getCacheTouches();
+        cacheTouchHits = m.getCacheTouchHits();
+        cacheTouchMisses = m.getCacheTouchMisses();
 
         entryProcessorPuts = m.getEntryProcessorPuts();
         entryProcessorReadOnlyInvocations = m.getEntryProcessorReadOnlyInvocations();
@@ -560,6 +555,10 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
             keysToRebalanceLeft += e.getKeysToRebalanceLeft();
             rebalancingBytesRate += e.getRebalancingBytesRate();
             rebalancingKeysRate += e.getRebalancingKeysRate();
+
+            cacheTouches += e.getCacheTouches();
+            cacheTouchHits += e.getCacheTouchHits();
+            cacheTouchMisses += e.getCacheTouchMisses();
         }
 
         int size = metrics.size();
@@ -798,6 +797,43 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
     /** {@inheritDoc} */
     @Override public int getKeySize() {
         return keySize;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getCacheTouches() {
+        return cacheTouches;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getCacheTouchHits() {
+        return cacheTouchHits;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getCacheTouchMisses() {
+        return cacheTouchMisses;
+    }
+
+    /** {@inheritDoc} */
+    @Override public float getCacheTouchHitPercentage() {
+        long hits = cacheTouchHits;
+        long touches = cacheTouches;
+
+        if (touches == 0)
+            return 0;
+
+        return (float) hits / touches * 100.0f;
+    }
+
+    /** {@inheritDoc} */
+    @Override public float getCacheTouchMissPercentage() {
+        long misses = cacheTouchMisses;
+        long touches = cacheTouches;
+
+        if (touches == 0)
+            return 0;
+
+        return (float) misses / touches * 100.0f;
     }
 
     /** {@inheritDoc} */
@@ -1120,6 +1156,10 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
             out.writeLong(entryProcessorMisses);
             out.writeFloat(entryProcessorMissPercentage);
             out.writeLong(entryProcessorRemovals);
+
+            out.writeLong(cacheTouches);
+            out.writeLong(cacheTouchHits);
+            out.writeLong(cacheTouchMisses);
         }
     }
 
@@ -1198,6 +1238,13 @@ public class CacheMetricsSnapshot implements CacheMetrics, Externalizable {
             entryProcessorMisses = in.readLong();
             entryProcessorMissPercentage = in.readFloat();
             entryProcessorRemovals = in.readLong();
+        }
+
+        // 3 long fields.
+        if (in.available() >= 24) {
+            cacheTouches = in.readLong();
+            cacheTouchHits = in.readLong();
+            cacheTouchMisses = in.readLong();
         }
     }
 }

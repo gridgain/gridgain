@@ -4243,7 +4243,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public CacheObject touchTtl(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException {
+    @Override public CacheObject touchTtl(
+        @Nullable IgniteCacheExpiryPolicy expiryPlc,
+        boolean updateMetrics
+    ) throws GridCacheEntryRemovedException {
         CacheObject res = null;
 
         if (expiryPlc != null) {
@@ -4256,12 +4259,15 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
         }
 
+        if (updateMetrics && cctx.statisticsEnabled())
+            cctx.cache().metrics0().onCacheTouch(res != null);
+
         return res;
     }
 
     /** {@inheritDoc} */
     @Override public EntryGetResult touchTtlVersioned(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException {
-        CacheObject v = touchTtl(expiryPlc);
+        CacheObject v = touchTtl(expiryPlc, true);
 
         return v != null ? new EntryGetResult(v, version()) : null;
     }

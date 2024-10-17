@@ -487,7 +487,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
 
         GridDhtCacheAdapter colocated = cctx.dht();
 
-        boolean readNoEntry = cctx.readNoEntry(expiryPlc, false);
+        boolean readNoEntry = !touchTtl && cctx.readNoEntry(expiryPlc, false);
         boolean evt = !skipVals;
 
         // postProcessingClos can be not null on remap, need version for correct update on backup.
@@ -567,7 +567,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                             if (touchTtl) {
                                 assert skipVals : this;
 
-                                v = entry.touchTtl(expiryPlc);
+                                v = entry.touchTtl(expiryPlc, /*update-metrics*/false);
                             }
                             else {
                                 v = entry.innerGet(
@@ -595,8 +595,12 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                 }
 
                 if (v != null) {
-                    if (!skipVals && cctx.statisticsEnabled())
-                        cctx.cache().metrics0().onRead(true);
+                    if (cctx.statisticsEnabled()) {
+                        if (!skipVals)
+                            cctx.cache().metrics0().onRead(true);
+                        else if (touchTtl)
+                            cctx.cache().metrics0().onCacheTouch(true);
+                    }
 
                     if (!skipVals)
                         setResult(v, ver);

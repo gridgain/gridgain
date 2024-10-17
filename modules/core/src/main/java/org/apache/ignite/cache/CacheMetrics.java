@@ -74,6 +74,44 @@ public interface CacheMetrics {
     public long getCachePuts();
 
     /**
+     * Returns the total number of touch requests to the cache.
+     * This will be equal to the sum of the hits and misses.
+     *
+     * @return The total number of touch requests.
+     */
+    public long getCacheTouches();
+
+    /**
+     * Returns the number of touch requests that were satisfied by the cache.
+     *
+     * @return The number of touch hits.
+     */
+    public long getCacheTouchHits();
+
+    /**
+     * Returns the number of touch requests that were not satisfied by the cache.
+     *
+     * @return The number of touch misses.
+     */
+    public long getCacheTouchMisses();
+
+    /**
+     * Returns the percentage of cache touch requests that found a requested entry in the cache.
+     * This is calculated as {@link #getCacheTouchHits()} divided by {@link #getCacheTouches()} * 100.
+     *
+     * @return The percentage of touch hits.
+     */
+    public float getCacheTouchHitPercentage();
+
+    /**
+     * Returns the percentage of cache touch requests that did not find a requested entry in the cache.
+     * This is calculated as {@link #getCacheTouchMisses()} divided by {@link #getCacheTouches()} * 100.
+     *
+     * @return The percentage of touch misses.
+     */
+    public float getCacheTouchMissPercentage();
+
+    /**
      * The total number of cache invocations, caused update.
      *
      * @return The number of invocation updates.

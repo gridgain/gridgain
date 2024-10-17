@@ -16,24 +16,25 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import com.google.common.collect.ImmutableMap;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.expiry.ModifiedExpiryPolicy;
 import javax.cache.expiry.TouchedExpiryPolicy;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 import javax.cache.processor.MutableEntry;
+import com.google.common.collect.ImmutableMap;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CacheMode;
@@ -52,6 +53,9 @@ import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
+import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheMetricsRegistryName;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
@@ -62,9 +66,20 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
     /** */
     private static final int KEY_CNT = 500;
 
+    /** */
+    private static final String DEFAULT_CACHE_NAME_NO_NEAR = DEFAULT_CACHE_NAME + "-exclude-near-cache";
+
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration configuration = super.getConfiguration(igniteInstanceName);
+
         configuration.setMetricsUpdateFrequency(2000);
+
+        CacheConfiguration<?, ?> ccfg = cacheConfiguration(igniteInstanceName);
+        ccfg.setNearConfiguration(null);
+        ccfg.setName(DEFAULT_CACHE_NAME_NO_NEAR);
+
+        configuration.setCacheConfiguration(configuration.getCacheConfiguration()[0], ccfg);
+
         return configuration;
     }
 
@@ -880,7 +895,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
      */
     @Test
     public void testTxEvictions() throws Exception {
-        if (grid(0).cache(DEFAULT_CACHE_NAME).getConfiguration(CacheConfiguration.class).getAtomicityMode() != CacheAtomicityMode.ATOMIC)
+        if (grid(0).cache(DEFAULT_CACHE_NAME).getConfiguration(CacheConfiguration.class).getAtomicityMode() != ATOMIC)
             checkTtl(true);
     }
 
@@ -889,7 +904,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
      */
     @Test
     public void testNonTxEvictions() throws Exception {
-        if (grid(0).cache(DEFAULT_CACHE_NAME).getConfiguration(CacheConfiguration.class).getAtomicityMode() == CacheAtomicityMode.ATOMIC)
+        if (grid(0).cache(DEFAULT_CACHE_NAME).getConfiguration(CacheConfiguration.class).getAtomicityMode() == ATOMIC)
             checkTtl(false);
     }
 
@@ -1469,6 +1484,76 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
         cache.remove(1);
 
         assertEquals(1, Arrays.stream(m.value()).filter(v -> v == 1).count());
+    }
+
+    /**
+     * Tests metrics retaled to {@link IgniteCache#touch(Object)} method.
+     */
+    @Test
+    public void testTouch() {
+        // TODO https://ggsystems.atlassian.net/browse/GG-38173
+        IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME_NO_NEAR);
+
+        if (cache.getConfiguration(CacheConfiguration.class).getAtomicityMode() != ATOMIC
+            || cache.getConfiguration(CacheConfiguration.class).getCacheMode() == LOCAL)
+            return;
+
+        IgniteCache<Integer, Integer> ttlCache = cache.withExpiryPolicy(new TouchedExpiryPolicy(new Duration(SECONDS, 30)));
+
+        List<Integer> primaryKeys = primaryKeys(cache, 2);
+        Integer existingKey = primaryKeys.get(0);
+        Integer nonExistingKey = primaryKeys.get(1);
+
+        cache.put(existingKey, 1);
+
+        assertFalse(cache.touch(nonExistingKey)); // 1 touch, 1 miss
+        assertFalse(ttlCache.touch(nonExistingKey)); // 1 touch, 1 miss
+
+        assertEquals(2, ttlCache.localMetrics().getCacheTouches());
+        assertEquals(0, ttlCache.localMetrics().getCacheTouchHits());
+        assertEquals(2, ttlCache.localMetrics().getCacheTouchMisses());
+        assertEquals(0f, ttlCache.localMetrics().getCacheTouchHitPercentage());
+        assertEquals(100f, ttlCache.localMetrics().getCacheTouchMissPercentage());
+
+        assertFalse(cache.touch(existingKey)); // + 1 touch, 1 miss. cache does not provide expiry policy.
+        assertTrue(ttlCache.touch(existingKey)); // + 1 touch, 1 hit.
+
+        assertEquals(4, ttlCache.localMetrics().getCacheTouches());
+        assertEquals(1, ttlCache.localMetrics().getCacheTouchHits());
+        assertEquals(3, ttlCache.localMetrics().getCacheTouchMisses());
+        assertEquals(25f, ttlCache.localMetrics().getCacheTouchHitPercentage(), 0.1f);
+        assertEquals(75f, ttlCache.localMetrics().getCacheTouchMissPercentage(), 0.1f);
+
+        ttlCache = cache.withExpiryPolicy(new ModifiedExpiryPolicy(new Duration(SECONDS, 30)));
+
+        assertFalse(ttlCache.touch(existingKey)); // +1 touch, 1 miss. ModifiedExpiryPolicy is not applied.
+
+        assertEquals(5, ttlCache.localMetrics().getCacheTouches());
+        assertEquals(1, ttlCache.localMetrics().getCacheTouchHits());
+        assertEquals(4, ttlCache.localMetrics().getCacheTouchMisses());
+        assertEquals(20f, ttlCache.localMetrics().getCacheTouchHitPercentage(), 0.1f);
+        assertEquals(80f, ttlCache.localMetrics().getCacheTouchMissPercentage(), 0.1f);
+
+        if (gridCount() < 2)
+            return;
+
+        Integer backupKey = primaryKey(grid(1).cache(DEFAULT_CACHE_NAME_NO_NEAR));
+
+        assertFalse(ttlCache.touch(backupKey)); // +1 touch, 1 miss on backup node, grid0 should not be affected.
+
+        assertEquals(5, ttlCache.localMetrics().getCacheTouches());
+        assertEquals(1, ttlCache.localMetrics().getCacheTouchHits());
+        assertEquals(4, ttlCache.localMetrics().getCacheTouchMisses());
+        assertEquals(20f, ttlCache.localMetrics().getCacheTouchHitPercentage(), 0.1f);
+        assertEquals(80f, ttlCache.localMetrics().getCacheTouchMissPercentage(), 0.1f);
+
+        IgniteCache<Integer, Integer> bCache = grid(1).cache(DEFAULT_CACHE_NAME_NO_NEAR);
+
+        assertEquals(1, bCache.localMetrics().getCacheTouches());
+        assertEquals(0, bCache.localMetrics().getCacheTouchHits());
+        assertEquals(1, bCache.localMetrics().getCacheTouchMisses());
+        assertEquals(0f, bCache.localMetrics().getCacheTouchHitPercentage(), 0.1f);
+        assertEquals(100f, bCache.localMetrics().getCacheTouchMissPercentage(), 0.1f);
     }
 
     /**
