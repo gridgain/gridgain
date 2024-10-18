@@ -132,7 +132,6 @@ public class GridJtaTransactionManagerDistributedSelfTest extends GridCommonAbst
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-40919")
     public void testJtaTxRollbackOnCommitFailure() throws Exception {
         IgniteEx cluster1client = grid(CLUSTER_1_CLIENT_NAME);
         IgniteEx cluster2client = grid(CLUSTER_2_CLIENT_NAME);

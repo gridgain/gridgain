@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cluster.ClusterNode;
@@ -366,7 +367,8 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
 
                     if (super.onDone(tx0, err)) {
                         // Don't forget to clean up.
-                        cctx.mvcc().removeFuture(futId);
+                        if (cctx.mvcc() != null)
+                            cctx.mvcc().removeFuture(futId);
 
                         return true;
                     }
@@ -391,6 +393,12 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
     @Override public void finish(final boolean commit, final boolean clearThreadMap, final boolean onTimeout) {
         try (TraceSurroundings ignored =
                  MTC.supportContinual(span = cctx.kernalContext().tracing().create(TX_NEAR_FINISH, MTC.span()))) {
+            if (cctx.mvcc() == null) {
+                onDone(new IgniteException("Locking manager is not available (probably disconnected from the cluster)"));
+
+                return;
+            }
+
             if (!cctx.mvcc().addFuture(this, futureId()))
                 return;
 
