@@ -18,8 +18,10 @@ package org.apache.ignite.internal.processors.cache.distributed.near;
 
 import java.util.Collection;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.GridCacheMvccManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
@@ -230,6 +232,22 @@ public abstract class GridNearOptimisticTxPrepareFutureAdapter extends GridNearT
      * @param topLocked {@code True} if thread already acquired lock preventing topology change.
      */
     protected abstract void prepare0(boolean remap, boolean topLocked);
+
+
+    /**
+     * Recheck pending locks.
+     */
+    protected void recheckPendingLocks() {
+        GridCacheMvccManager mvcc = cctx.mvcc();
+
+        if (mvcc == null) {
+            onDone(new IgniteException("Locking manager is not available (probably disconnected from the cluster)"));
+
+            return;
+        }
+
+        mvcc.recheckPendingLocks();
+    }
 
     /**
      * @param e Exception.

@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cluster.ClusterNode;
@@ -33,6 +34,7 @@ import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheCompoundIdentityFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheFuture;
+import org.apache.ignite.internal.processors.cache.GridCacheMvccManager;
 import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.GridCacheReturnCompletableWrapper;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -366,7 +368,10 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
 
                     if (super.onDone(tx0, err)) {
                         // Don't forget to clean up.
-                        cctx.mvcc().removeFuture(futId);
+                        GridCacheMvccManager mvcc = cctx.mvcc();
+
+                        if (mvcc != null)
+                            mvcc.removeFuture(futId);
 
                         return true;
                     }
@@ -391,7 +396,15 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
     @Override public void finish(final boolean commit, final boolean clearThreadMap, final boolean onTimeout) {
         try (TraceSurroundings ignored =
                  MTC.supportContinual(span = cctx.kernalContext().tracing().create(TX_NEAR_FINISH, MTC.span()))) {
-            if (!cctx.mvcc().addFuture(this, futureId()))
+            GridCacheMvccManager mvcc = cctx.mvcc();
+
+            if (mvcc == null) {
+                onDone(new IgniteException("Locking manager is not available (probably disconnected from the cluster)"));
+
+                return;
+            }
+
+            if (!mvcc.addFuture(this, futureId()))
                 return;
 
             if (tx.onNeedCheckBackup()) {
