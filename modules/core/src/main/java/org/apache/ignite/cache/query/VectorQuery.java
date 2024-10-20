@@ -81,6 +81,34 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
      *
      * @param type Type.
      * @param field Type.
+     * @param cause Search string.
+     */
+    public VectorQuery(Class<?> type, String field, String cause, int k) {
+        setType(type);
+        setField(field);
+        setCause(cause);
+        setK(k);
+    }
+
+    /**
+     * Constructs query for the given search string.
+     *
+     * @param type Type.
+     * @param field Type.
+     * @param cause Search string.
+     */
+    public VectorQuery(String type, String field, String cause, int k) {
+        setType(type);
+        setField(field);
+        setCause(cause);
+        setK(k);
+    }
+
+    /**
+     * Constructs query for the given search string.
+     *
+     * @param type Type.
+     * @param field Type.
      * @param clauseVector Search string.
      * @param k The nuber of vectors to return.
      */
@@ -92,12 +120,38 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     }
 
     /**
+     * Constructs query for the given search string.
+     *
+     * @param type Type.
+     * @param field Type.
+     * @param clauseVector Search string.
+     */
+    public VectorQuery(String type, String field, float[] clauseVector, int k) {
+        setType(type);
+        setField(field);
+        setCauseVector(clauseVector);
+        setK(k);
+    }
+
+    /**
      * Gets type for query.
      *
      * @return Type.
      */
     public String getType() {
         return type;
+    }
+
+    /**
+     * Sets type for query.
+     *
+     * @param type Type.
+     * @return {@code this} For chaining.
+     */
+    public VectorQuery<K, V> setType(String type) {
+        this.type = type;
+
+        return this;
     }
 
     /**
