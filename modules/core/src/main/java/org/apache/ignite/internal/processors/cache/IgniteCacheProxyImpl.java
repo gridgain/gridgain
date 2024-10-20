@@ -542,7 +542,7 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
         if (filter instanceof VectorQuery) {
             VectorQuery p = (VectorQuery)filter;
 
-            qry = ctx.queries().createVectorQuery(p.getType(), p.getField(), p.getClause(), p.getCauseVector(), p.getK(), isKeepBinary);
+            qry = ctx.queries().createVectorQuery(p.getType(), p.getField(), p.getClause(), p.getClauseVector(), p.getK(), isKeepBinary);
 
             if (grp != null)
                 qry.projection(grp);

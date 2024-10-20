@@ -70,29 +70,11 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     /** */
     private String field;
 
-    /** SQL clause. */
-    private String clause;
-
-    /** SQL clause as vector. */
+    /** Query vector. */
     private float[] clauseVector;
 
     /** [K]NN, how many vectors to return. */
     private int k;
-
-    /**
-     * Constructs query for the given search string.
-     *
-     * @param type Type.
-     * @param field Type.
-     * @param clause Search string.
-     * @param k The nuber of vectors to return.
-     */
-    public VectorQuery(Class<?> type, String field, String clause, int k) {
-        setType(type);
-        setField(field);
-        setClause(clause);
-        setK(k);
-    }
 
     /**
      * Constructs query for the given search string.
@@ -105,7 +87,7 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     public VectorQuery(Class<?> type, String field, float[] clauseVector, int k) {
         setType(type);
         setField(field);
-        setCauseVector(clauseVector);
+        setClauseVector(clauseVector);
         setK(k);
     }
 
@@ -173,34 +155,11 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     }
 
     /**
-     * Gets text search string.
-     *
-     * @return Text search string.
-     */
-    public String getClause() {
-        return clause;
-    }
-
-    /**
-     * Sets text search string.
-     *
-     * @param clause Text search string.
-     * @return {@code this} For chaining.
-     */
-    public VectorQuery<K, V> setClause(String clause) {
-        A.notNull(clause, "cause");
-
-        this.clause = clause;
-
-        return this;
-    }
-
-    /**
      * Gets search vector.
      *
      * @return Search vector.
      */
-    public float[] getCauseVector() {
+    public float[] getClauseVector() {
         return clauseVector;
     }
 
@@ -210,7 +169,7 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
      * @param clauseVector Text search string as vector.
      * @return {@code this} For chaining.
      */
-    public VectorQuery<K, V> setCauseVector(float[] clauseVector) {
+    public VectorQuery<K, V> setClauseVector(float[] clauseVector) {
         A.notNull(clauseVector, "clauseVector");
 
         this.clauseVector = clauseVector;
