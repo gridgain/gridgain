@@ -233,7 +233,6 @@ public abstract class GridNearOptimisticTxPrepareFutureAdapter extends GridNearT
      */
     protected abstract void prepare0(boolean remap, boolean topLocked);
 
-
     /**
      * Recheck pending locks.
      */
