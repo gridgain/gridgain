@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.partstate;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
@@ -64,13 +63,6 @@ public class PartitionAllocationMap {
      */
     @Nullable public PagesAllocationRange get(FullPageId fullPageId) {
         return readMap.get(createCachePartId(fullPageId));
-    }
-
-    /**
-     * Represents a read-only map with the same content as current instance.
-     */
-    public Map<GroupPartitionId, PagesAllocationRange> asMap() {
-        return Collections.unmodifiableMap(readMap);
     }
 
     /**
