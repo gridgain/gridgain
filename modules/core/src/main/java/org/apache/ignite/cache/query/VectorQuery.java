@@ -26,7 +26,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 /**
  * Vector queries based on Apache Lucene engine.
  * <h1 class="header">Description</h1>
- * Ignite supports cector queries based on Apache Lucene engine.
+ * Ignite supports vector queries based on Apache Lucene engine.
  * Note that all fields that are expected to show up in vector query results must be annotated with {@link QueryVectorField}
  *
  * <h2 class="header">Query usage</h2>
@@ -104,12 +104,38 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     }
 
     /**
+     * Constructs query for the given search string.
+     *
+     * @param type Type.
+     * @param field Type.
+     * @param clauseVector Search string.
+     */
+    public VectorQuery(String type, String field, float[] clauseVector, int k) {
+        setType(type);
+        setField(field);
+        setCauseVector(clauseVector);
+        setK(k);
+    }
+
+    /**
      * Gets type for query.
      *
      * @return Type.
      */
     public String getType() {
         return type;
+    }
+
+    /**
+     * Sets type for query.
+     *
+     * @param type Type.
+     * @return {@code this} For chaining.
+     */
+    public VectorQuery<K, V> setType(String type) {
+        this.type = type;
+
+        return this;
     }
 
     /**
