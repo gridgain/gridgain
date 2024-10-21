@@ -95,20 +95,6 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
      *
      * @param type Type.
      * @param field Type.
-     * @param cause Search string.
-     */
-    public VectorQuery(String type, String field, String cause, int k) {
-        setType(type);
-        setField(field);
-        setCause(cause);
-        setK(k);
-    }
-
-    /**
-     * Constructs query for the given search string.
-     *
-     * @param type Type.
-     * @param field Type.
      * @param clauseVector Search string.
      * @param k The nuber of vectors to return.
      */

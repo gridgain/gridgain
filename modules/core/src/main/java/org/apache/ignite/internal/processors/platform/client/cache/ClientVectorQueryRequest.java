@@ -45,18 +45,10 @@ public class ClientVectorQueryRequest extends ClientCacheRequest {
 
         String type = reader.readString();
         String field = reader.readString();
-        String cause = reader.readString();
         float[] clauseVector = reader.readFloatArray();
         int k = reader.readInt();
 
-        if (cause == null) {
-            qry = new VectorQuery(type, field, clauseVector, k);
-        } else {
-            if (clauseVector != null)
-                throw new IllegalArgumentException("Both cause and clause vector can not be set");
-
-            qry = new VectorQuery(type, field, cause, k);
-        }
+        qry = new VectorQuery(type, field, clauseVector, k);
     }
 
     /** {@inheritDoc} */
