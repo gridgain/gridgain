@@ -1538,7 +1538,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             update(val, expireTime, ttl, newVer, true);
 
-            debugReplicate("innerSet");
+            debugReplicate("innerSet", newVer, updateCntr0);
 
             drReplicate(drType, val, newVer, topVer);
 
@@ -1726,7 +1726,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (tx != null && cctx.group().persistenceEnabled())
                 logPtr = logTxUpdate(tx, null, 0, newVer, cctx.group().walEnabled());
 
-            debugReplicate("innerRemove");
+            debugReplicate("innerRemove", newVer, updateCntr0);
 
             drReplicate(drType, null, newVer, topVer);
 
@@ -2391,7 +2391,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 assert updateVal != null : c;
 
-                debugReplicate("innerUpdate / op = UPDATE");
+                debugReplicate("innerUpdate / op = UPDATE", newVer, updateCntr == null ? 0L : updateCntr);
 
                 drReplicate(drType, updateVal, updateVer, topVer);
 
@@ -2423,7 +2423,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 clearReaders();
 
-                debugReplicate("innerUpdate / op = DELETE");
+                debugReplicate("innerUpdate / op = DELETE", updateVer, updateCntr);
 
                 drReplicate(drType, null, updateVer, topVer);
 
@@ -3412,7 +3412,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     }
                 }
 
-                debugReplicate("initialValue / op = UPDATE");
+                debugReplicate("initialValue / op = UPDATE", ver, updateCntr);
 
                 drReplicate(drType, val, ver, topVer);
 
@@ -7237,10 +7237,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      * Debug replication calls.
      * @param methodCalled Method name.
      */
-    private void debugReplicate(String methodCalled) {
-        if (log.isDebugEnabled())
+    private void debugReplicate(String methodCalled, GridCacheVersion ver, long updateCntr) {
+        // log version here
+
+        if (log.isDebugEnabled()) {
             log.debug("Invoking replication from " + methodCalled + ", key=" + keyValue(false) +
-                    ", near=" + cctx.isNear() + ", detached=" + detached());
+                    ", near=" + cctx.isNear() + ", detached=" + detached()
+                    + ", ver=" + ver + ", updateCounter=" + updateCntr);
+        }
     }
 
     /** */
