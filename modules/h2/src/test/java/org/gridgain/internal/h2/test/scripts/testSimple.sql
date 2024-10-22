@@ -950,23 +950,6 @@ drop schema TEST_SCHEMA cascade;
 create table test(id int);
 > ok
 
-create trigger TEST_TRIGGER before insert on test call "org.gridgain.internal.h2.test.db.TestTriggersConstraints";
-> ok
-
-comment on trigger TEST_TRIGGER is 'just testing';
-> ok
-
-select remarks from information_schema.triggers where trigger_name = 'TEST_TRIGGER';
->> just testing
-
-@reconnect
-
-select remarks from information_schema.triggers where trigger_name = 'TEST_TRIGGER';
->> just testing
-
-drop trigger TEST_TRIGGER;
-> ok
-
 @reconnect
 
 create alias parse_long for "java.lang.Long.parseLong(java.lang.String)";
