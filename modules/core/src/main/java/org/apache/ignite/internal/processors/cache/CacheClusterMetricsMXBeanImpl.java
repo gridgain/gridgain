@@ -124,6 +124,31 @@ public class CacheClusterMetricsMXBeanImpl implements CacheMetricsMXBean {
     }
 
     /** {@inheritDoc} */
+    @Override public long getCacheTouches() {
+        return cache.metrics0().getCacheTouches();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getCacheTouchHits() {
+        return cache.metrics0().getCacheTouchHits();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getCacheTouchMisses() {
+        return cache.metrics0().getCacheTouchMisses();
+    }
+
+    /** {@inheritDoc} */
+    @Override public float getCacheTouchHitPercentage() {
+        return cache.metrics0().getCacheTouchHitPercentage();
+    }
+
+    /** {@inheritDoc} */
+    @Override public float getCacheTouchMissPercentage() {
+        return cache.metrics0().getCacheTouchMissPercentage();
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean isEmpty() {
         return cache.clusterMetrics().isEmpty();
     }
