@@ -1128,10 +1128,11 @@ public interface GridCacheEntryEx {
      * The new value is calculated using {@link IgniteCacheExpiryPolicy#forAccess()}.
      *
      * @param expiryPlc Expiry policy to be uased to calculate new ttl value.
+     * @param updateMetrics If {@code true} then metrics will be updated.
      * @return Cached object.
      * @throws GridCacheEntryRemovedException If entry is obsolete (entry was removed).
      */
-    public CacheObject touchTtl(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException;
+    public CacheObject touchTtl(@Nullable IgniteCacheExpiryPolicy expiryPlc, boolean updateMetrics) throws GridCacheEntryRemovedException;
 
     /**
      * Calculates and updates time to live value for this entry and stores its value in storage.

@@ -24,6 +24,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupsMetricsRebalanceTe
 import org.apache.ignite.internal.processors.cache.CacheMetricsCacheSizeTest;
 import org.apache.ignite.internal.processors.cache.CacheMetricsEntitiesCountTest;
 import org.apache.ignite.internal.processors.cache.CacheMetricsForClusterGroupSelfTest;
+import org.apache.ignite.internal.processors.cache.CacheMetricsTouchTest;
 import org.apache.ignite.internal.processors.cache.CacheValidatorMetricsTest;
 import org.apache.ignite.internal.processors.cache.GridEvictionPolicyMBeansTest;
 import org.apache.ignite.internal.processors.cache.OffheapCacheMetricsForClusterGroupSelfTest;
@@ -81,6 +82,8 @@ public class IgniteCacheMetricsSelfTestSuite {
         GridTestUtils.addTestIfNeeded(suite, TransactionMetricsTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, GridEvictionPolicyMBeansTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, CacheMetricsTouchTest.class, ignoredTests);
 
         return suite;
     }
