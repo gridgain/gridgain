@@ -47,6 +47,8 @@ public class SqlDdlExample {
         try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
             print("Cache query DDL example started.");
 
+            print("work dir: " + ignite.configuration().getWorkDirectory());
+
             // Create dummy cache to act as an entry point for SQL queries (new SQL API which do not require this
             // will appear in future versions, JDBC and ODBC drivers do not require it already).
             CacheConfiguration<?, ?> cacheCfg = new CacheConfiguration<>(DUMMY_CACHE_NAME).setSqlSchema("PUBLIC");
