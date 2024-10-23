@@ -1643,10 +1643,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             }
         }
         else {
-            if (entryProcessor == null && txEntry.op() == TRANSFORM)
-                throw new IgniteCheckedException("Failed to enlist write value for key (cannot have update value in " +
-                    "transaction after EntryProcessor is applied): " + CU.value(cacheKey, cacheCtx, false));
-
             GridCacheEntryEx entry = txEntry.cached();
 
             CacheObject v = txEntry.value();
