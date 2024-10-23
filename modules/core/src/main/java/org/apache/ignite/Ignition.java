@@ -28,6 +28,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.client.thin.TcpIgniteClient;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.thread.IgniteThread;
 
 /**
@@ -84,6 +85,8 @@ import org.apache.ignite.thread.IgniteThread;
  * For more information refer to {@ignitelink org.apache.ignite.IgniteSpringBean} documentation.
  */
 public class Ignition {
+    public static volatile IgniteLogger LOG = new NullLogger();
+
     /**
      * This is restart code that can be used by external tools, like Shell scripts,
      * to auto-restart the Ignite JVM process. Note that there is no standard way
