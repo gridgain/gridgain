@@ -92,12 +92,38 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     }
 
     /**
+     * Constructs query for the given search string.
+     *
+     * @param type Type.
+     * @param field Type.
+     * @param clauseVector Search string.
+     */
+    public VectorQuery(String type, String field, float[] clauseVector, int k) {
+        setType(type);
+        setField(field);
+        setClauseVector(clauseVector);
+        setK(k);
+    }
+
+    /**
      * Gets type for query.
      *
      * @return Type.
      */
     public String getType() {
         return type;
+    }
+
+    /**
+     * Sets type for query.
+     *
+     * @param type Type.
+     * @return {@code this} For chaining.
+     */
+    public VectorQuery<K, V> setType(String type) {
+        this.type = type;
+
+        return this;
     }
 
     /**

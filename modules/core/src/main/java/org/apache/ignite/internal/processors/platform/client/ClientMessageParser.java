@@ -72,6 +72,7 @@ import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheRe
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheScanQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlFieldsQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlQueryRequest;
+import org.apache.ignite.internal.processors.platform.client.cache.ClientVectorQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterChangeStateRequest;
 import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterGetStateRequest;
 import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterGroupGetNodeIdsRequest;
@@ -412,7 +413,13 @@ public class ClientMessageParser implements ClientListenerMessageParser {
     /** AtomicSequence.addAndGet. */
     private static final short OP_ATOMIC_SEQUENCE_VALUE_ADD_AND_GET = 9034;
 
-    /* Custom queries working through processors registry. */
+    /** Vector query. */
+    private static final short OP_QUERY_VECTOR = 30_000;
+
+    /** Get next cursor page of the vector query. */
+    private static final short OP_QUERY_VECTOR_CURSOR_GET_PAGE = 30_001;
+
+    /** Custom queries working through processors registry. */
     private static final short OP_CUSTOM_QUERY = 32_000;
 
     /** Marshaller. */
@@ -496,6 +503,8 @@ public class ClientMessageParser implements ClientListenerMessageParser {
             case OP_QUERY_SQL_CURSOR_GET_PAGE:
 
             case OP_QUERY_INDEX_CURSOR_GET_PAGE:
+
+            case OP_QUERY_VECTOR_CURSOR_GET_PAGE:
                 return new ClientCacheQueryNextPageRequest(reader);
 
             case OP_RESOURCE_CLOSE:
@@ -744,6 +753,9 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
             case OP_CUSTOM_QUERY:
                 return new ClientCustomQueryRequest(reader);
+
+            case OP_QUERY_VECTOR:
+                return new ClientVectorQueryRequest(reader);
         }
 
         return new ClientRawRequest(reader.readLong(), ClientStatus.INVALID_OP_CODE,
