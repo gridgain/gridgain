@@ -3461,7 +3461,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     /**
      * @param cacheName Cache name.
      * @param field Field name.
-     * @param qry Clause.
+     * @param qryVector Query vector.
+     * @param k Number of results to return.
      * @param resType Result type.
      * @param filters Key and value filters.
      * @param <K> Key type.
@@ -3469,7 +3470,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @return Key/value rows.
      * @throws IgniteCheckedException If failed.
      */
-    public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryVector(String cacheName, String field, String qry,
+    public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryVector(String cacheName, String field,
         float[] qryVector, int k, String resType, IndexingQueryFilter filters) throws IgniteCheckedException {
         checkEnabled();
 
@@ -3479,13 +3480,13 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         try {
             final GridCacheContext<?, ?> cctx = ctx.cache().internalCache(cacheName).context();
 
-            return executeQuery(GridCacheQueryType.VECTOR, qry, cctx,
+            return executeQuery(GridCacheQueryType.VECTOR, null, cctx,
                 new IgniteOutClosureX<GridCloseableIterator<IgniteBiTuple<K, V>>>() {
                     @Override public GridCloseableIterator<IgniteBiTuple<K, V>> applyx() throws IgniteCheckedException {
                         String typeName = typeName(cacheName, resType);
                         String schemaName = idx.schema(cacheName);
 
-                        return idx.queryLocalVector(schemaName, cacheName, field, qry, qryVector, k, typeName, filters);
+                        return idx.queryLocalVector(schemaName, cacheName, field, qryVector, k, typeName, filters);
                     }
                 }, true);
         }

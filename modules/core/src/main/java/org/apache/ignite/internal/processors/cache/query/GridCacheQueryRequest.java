@@ -710,12 +710,6 @@ public class GridCacheQueryRequest extends GridCacheIdMessage implements GridCac
                     return false;
 
                 writer.incrementState();
-
-            case 26:
-                if (!writer.writeString("fieldName", fieldName))
-                    return false;
-
-                writer.incrementState();
         }
 
         return true;
@@ -912,14 +906,6 @@ public class GridCacheQueryRequest extends GridCacheIdMessage implements GridCac
 
                 reader.incrementState();
 
-            case 26:
-                fieldName = reader.readString("fieldName");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
-
         }
 
         return reader.afterMessageRead(GridCacheQueryRequest.class);
@@ -932,7 +918,7 @@ public class GridCacheQueryRequest extends GridCacheIdMessage implements GridCac
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 27;
+        return 26;
     }
 
     /** {@inheritDoc} */

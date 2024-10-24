@@ -648,7 +648,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                             taskName));
                     }
 
-                    iter = qryProc.queryVector(cacheName, qry.fieldName(), qry.clause(), qry.queryVector(), qry.k(),
+                    iter = qryProc.queryVector(cacheName, qry.fieldName(), qry.queryVector(), qry.k(),
                         qry.queryClassName(), filter(qry));
 
                     break;
@@ -2868,21 +2868,21 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
      */
     public CacheQuery<Map.Entry<K, V>> createFullTextQuery(String clsName,
         String search, boolean keepBinary) {
-        A.notNull("clsName", clsName);
-        A.notNull("search", search);
+        A.notNull(clsName, "clsName");
+        A.notNull(search, "search");
 
         return new GridCacheQueryAdapter<>(cctx,
-            TEXT,
-            clsName,
-            null,
-            search,
-            null,
+                TEXT,
+                clsName,
+                null,
+                search,
+                null,
                 -1,
-            null,
-            null,
-            false,
-            keepBinary,
-            null);
+                null,
+                null,
+                false,
+                keepBinary,
+                null);
     }
 
     /**
@@ -2890,21 +2890,20 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
      * documentation.
      *
      * @param clsName Query class name.
-     * @param search Search clause.
      * @param keepBinary Keep binary flag.
      * @return Created query.
      */
-    public CacheQuery<Map.Entry<K, V>> createVectorQuery(String clsName, String field, String search, float[] vector,
+    public CacheQuery<Map.Entry<K, V>> createVectorQuery(String clsName, String field, float[] vector,
         int k, boolean keepBinary) {
-        A.notNull("clsName", clsName);
-        A.notNull("field", field);
-        A.notNull("search", search);
+        A.notNull(clsName, "clsName");
+        A.notNull(field, "field");
+        A.notNull(vector, "vector");
 
         return new GridCacheQueryAdapter<>(cctx,
             VECTOR,
             clsName,
             field,
-            search,
+            null,
             vector,
             k,
             null,

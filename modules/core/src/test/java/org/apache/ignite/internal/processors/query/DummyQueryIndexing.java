@@ -132,7 +132,6 @@ public class DummyQueryIndexing implements GridQueryIndexing {
         String schemaName,
         String cacheName,
         String fieldName,
-        String qry,
         float[] qryVector,
         int k,
         String typeName,

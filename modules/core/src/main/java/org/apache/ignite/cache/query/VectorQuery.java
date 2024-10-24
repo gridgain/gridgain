@@ -31,7 +31,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * and be of type {@code float[]}.
  *
  * <h2 class="header">Query usage</h2>
- * As an example, suppose we have data model consisting of {@code 'Employee'} class defined as follows:
+ * As an example, suppose we have data model consisting of {@code 'Person'} class defined as follows:
  * <pre name="code" class="java">
  * public class Person {
  *     private long id;
@@ -77,12 +77,12 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     private int k;
 
     /**
-     * Constructs query for the given search string.
+     * Constructs query for the given search vector.
      *
      * @param type Type.
      * @param field Type.
-     * @param clauseVector Search string.
-     * @param k The nuber of vectors to return.
+     * @param clauseVector Search vector.
+     * @param k The number of vectors to return.
      */
     public VectorQuery(Class<?> type, String field, float[] clauseVector, int k) {
         setType(type);
@@ -113,7 +113,7 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     }
 
     /**
-     * Sets k.
+     * Sets k (the number of vectors to return).
      *
      * @param k K.
      * @return {@code this} For chaining.
@@ -125,7 +125,7 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     }
 
     /**
-     * Gets k.
+     * Gets k (the number of vectors to return).
      *
      * @return K.
      */
@@ -164,7 +164,7 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     }
 
     /**
-     * Sets text search string as vector.
+     * Sets text search vector.
      *
      * @param clauseVector Text search string as vector.
      * @return {@code this} For chaining.

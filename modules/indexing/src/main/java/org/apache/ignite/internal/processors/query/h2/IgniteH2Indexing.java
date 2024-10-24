@@ -569,7 +569,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         String schemaName,
         String cacheName,
         String field,
-        String qry,
         float[] qryVector,
         int k,
         String typeName,
@@ -579,7 +578,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         if (tbl != null && tbl.luceneIndex() != null) {
             Long qryId = runningQueryManager().register(
-                qry,
+                null,
                 VECTOR,
                 schemaName,
                 true,
@@ -593,7 +592,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             Throwable failReason = null;
             try {
-                return tbl.luceneIndex().queryVector(field.toUpperCase(), qry, qryVector, k, filter);
+                return tbl.luceneIndex().queryVector(field.toUpperCase(), qryVector, k, filter);
             }
             catch (Throwable t) {
                 failReason = t;

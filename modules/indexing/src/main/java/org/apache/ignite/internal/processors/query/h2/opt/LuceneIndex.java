@@ -61,12 +61,11 @@ public interface LuceneIndex extends AutoCloseable {
     /**
      * Runs lucene fulltext query over this index.
      *
-     * @param qry Query.
      * @param qryVector Query as vector.
      * @param filters Filters over result.
      * @return Query result.
      * @throws IgniteCheckedException If failed.
      */
-    public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryVector(String field, String qry, float[] qryVector,
+    public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryVector(String field, float[] qryVector,
         int k, IndexingQueryFilter filters) throws IgniteCheckedException;
 }
