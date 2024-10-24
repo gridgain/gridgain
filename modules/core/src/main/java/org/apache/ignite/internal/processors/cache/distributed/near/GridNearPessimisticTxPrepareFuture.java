@@ -175,10 +175,6 @@ public class GridNearPessimisticTxPrepareFuture extends GridNearTxPrepareFutureA
 
     /** {@inheritDoc} */
     @Override public void prepare() {
-        GridCacheMvccManager mvcc = cctx.mvcc();
-        if (mvcc == null)
-            throw new IgniteException("Locking manager is not available (probably disconnected from the cluster)");
-
         try (TraceSurroundings ignored =
                  MTC.supportContinual(span = cctx.kernalContext().tracing().create(TX_NEAR_PREPARE, MTC.span()))) {
             if (!tx.state(PREPARING)) {
@@ -198,11 +194,15 @@ public class GridNearPessimisticTxPrepareFuture extends GridNearTxPrepareFutureA
             try {
                 tx.userPrepare(Collections.<IgniteTxEntry>emptyList());
 
+                GridCacheMvccManager mvcc = cctx.mvcc();
+                if (mvcc == null)
+                    throw new IgniteException("Locking manager is not available (probably disconnected from the cluster)");
+
                 mvcc.addFuture(this);
 
                 preparePessimistic();
             }
-            catch (IgniteCheckedException e) {
+            catch (IgniteCheckedException | IgniteException e) {
                 onDone(e);
             }
         }
@@ -460,7 +460,10 @@ public class GridNearPessimisticTxPrepareFuture extends GridNearTxPrepareFutureA
                 tx.state(PREPARED);
 
             if (super.onDone(tx, err)) {
-                cctx.mvcc().removeVersionedFuture(this);
+                GridCacheMvccManager mvcc = cctx.mvcc();
+
+                if (mvcc != null)
+                    mvcc.removeVersionedFuture(this);
 
                 return true;
             }

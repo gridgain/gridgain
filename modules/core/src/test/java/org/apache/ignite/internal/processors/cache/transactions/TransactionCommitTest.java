@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -35,7 +35,7 @@ public class TransactionCommitTest extends GridCommonAbstractTest {
     }
 
     @Test
-    public void testCommit() throws Exception {
+    public void testCommitFailsIfClientIsClosed() throws Exception {
         IgniteEx server = startGrid(0);
 
         IgniteEx client = startClientGrid(1);
@@ -52,7 +52,7 @@ public class TransactionCommitTest extends GridCommonAbstractTest {
         GridTestUtils.assertThrows(log, () -> {
             tx.prepare(true);
             return null;
-        }, IgniteException.class, "Locking manager is not available (probably disconnected from the cluster)");
+        }, IgniteCheckedException.class, "Locking manager is not available (probably disconnected from the cluster)");
     }
 
     private GridNearTxLocal txStart(GridCacheSharedContext<Object, Object> cctx) {
