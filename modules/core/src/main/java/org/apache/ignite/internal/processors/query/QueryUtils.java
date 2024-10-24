@@ -307,7 +307,7 @@ public class QueryUtils {
 
             return entity;
         }
-    
+
         QueryEntityEx normalEntity = new QueryEntityEx();
 
         // Propagate plain properties.
@@ -371,7 +371,7 @@ public class QueryUtils {
         }
 
         normalEntity.setIndexes(normalIdxs);
-        
+
         if (!ctx.recoveryMode() && IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
                 IgniteDiscoverySpi.ALL_NODES), IgniteFeatures.FILLS_ABSENT_PKS_WITH_DEFAULTS)
         )
@@ -478,12 +478,12 @@ public class QueryUtils {
         desc.schemaName(schemaName);
 
         desc.aliases(qryEntity.getAliases());
-        
+
         if (qryEntity instanceof QueryEntityEx) {
             desc.setFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).fillAbsentPKsWithDefaults());
             desc.implicitPk(((QueryEntityEx)qryEntity).isImplicitPk());
         }
-        
+
         // Key and value classes still can be available if they are primitive or JDK part.
         // We need that to set correct types for _key and _val columns.
         // We better box these types - otherwise, if user provides, say, raw 'byte' for
@@ -681,7 +681,7 @@ public class QueryUtils {
 
         if (qryEntity instanceof QueryEntityEx)
             d.setFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).fillAbsentPKsWithDefaults());
-        
+
         // Sql-typed key/value doesn't have field property, but they may have precision and scale constraints.
         // Also if fields are not set then _KEY and _VAL will be created as visible,
         // so we have to add binary properties for them
@@ -835,14 +835,17 @@ public class QueryUtils {
 
             d.addIndex(idxDesc);
         }
-        else if (idxTyp == QueryIndexType.FULLTEXT) {
+        else if (idxTyp == QueryIndexType.FULLTEXT || idxTyp == QueryIndexType.VECTOR) {
             for (String field : idx.getFields().keySet()) {
                 String alias = d.aliases().get(field);
 
                 if (alias != null)
                     field = alias;
 
-                d.addFieldToTextIndex(field);
+                if (idxTyp == QueryIndexType.FULLTEXT)
+                    d.addFieldToTextIndex(field);
+                else
+                    d.addFieldToVectorIndex(field);
             }
         }
         else if (idxTyp != null)
