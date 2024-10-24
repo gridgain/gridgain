@@ -40,8 +40,10 @@ import org.apache.ignite.maintenance.MaintenanceTask;
  *
  */
 public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
-    /** Index rebuild maintenance task name. */
+    /** Partition log tree rebuild maintenance task name. */
     public static final String PART_LOG_TREE_REBUILD_MNTC_TASK_NAME = "PartitionLogTreeRebuildMaintenanceTask";
+    /** Partition log tree cleanup maintenance task name. */
+    public static final String PART_LOG_TREE_CLEANUP_MNTC_TASK_NAME = "PartitionLogTreeCleanupMaintenanceTask";
 
     /** Maintenance task parameters separator. */
     public static final String PARAMETER_SEPARATOR = "|";
