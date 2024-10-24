@@ -4322,7 +4322,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             if (mvcc == null)
                 throw stoppingException();
             else
-                cctx.mvcc().addFuture(fut);
+                mvcc.addFuture(fut);
 
             if (isSystemInvalidate())
                 fut.complete();
