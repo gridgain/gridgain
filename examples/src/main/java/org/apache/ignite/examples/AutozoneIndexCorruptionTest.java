@@ -28,7 +28,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
  */
 public class AutozoneIndexCorruptionTest {
 
-    private static final int REGION_SIZE = 64 * 1024 * 1024;
+    private static final long REGION_SIZE = 64 * 1024 * 1024 * 1024L;
 
     /**
      * Start up an empty node with example compute configuration.
@@ -37,6 +37,7 @@ public class AutozoneIndexCorruptionTest {
      * @throws IgniteException If failed.
      */
     public static void main(String[] args) throws IgniteException {
+        //Logger.getLogger("org.apache.ignite").setLevel(Level.DEBUG);
         System.setProperty(IgniteSystemProperties.IGNITE_QUIET, "false");
 
         IgniteConfiguration cfg = new IgniteConfiguration();
@@ -45,9 +46,15 @@ public class AutozoneIndexCorruptionTest {
             .setMetricsEnabled(true)
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setPersistenceEnabled(true)
-                /*.setMaxSize(REGION_SIZE)*/)
+                .setMaxSize(REGION_SIZE))
             //.setWalPath()
+            .setPageSize(4 * 1024)
+            .setWalSegmentSize(640 * 1024 * 1024)
+            .setWalSegments(20)
+            .setMaxWalArchiveSize(10 * 1024 * 1024 * 1024L)
         );
+
+        //String loggerClass = cfg.getGridLogger().getClass().toGenericString();
 
         cfg.setWorkDirectory("C:\\work\\bugs\\21028\\corrupted-index-bkup\\corrupted-index-bkup\\test_work_dir");
 
