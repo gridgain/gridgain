@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
+import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import org.apache.ignite.IgniteCheckedException;
@@ -174,6 +175,9 @@ public class JavaLogger implements IgniteLogger, LoggerNodeIdAndApplicationAware
      */
     public JavaLogger(boolean init) {
         impl = Logger.getLogger("");
+
+
+        //impl.setLevel(FINE);
 
         if (init) {
             // Implementation has already been inited, passing NULL.

@@ -1898,6 +1898,8 @@ public class IgnitionEx {
             // Initialize factory's log.
             log = cfgLog.getLogger(G.class);
 
+
+
             myCfg.setGridLogger(cfgLog);
 
             if (F.isEmpty(userProvidedWorkDir) && F.isEmpty(U.IGNITE_WORK_DIR))
