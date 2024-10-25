@@ -22,7 +22,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.objectweb.jotm.Current;
 import org.objectweb.jotm.Jotm;
@@ -69,8 +68,8 @@ public class GridJtaTransactionManagerDistributedSelfTest extends GridCommonAbst
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
 
         jotm = new Jotm(true, false);
 
@@ -98,7 +97,9 @@ public class GridJtaTransactionManagerDistributedSelfTest extends GridCommonAbst
     }
 
     /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
         stopAllGrids();
 
         jotm.stop();
@@ -132,7 +133,6 @@ public class GridJtaTransactionManagerDistributedSelfTest extends GridCommonAbst
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-40919")
     public void testJtaTxRollbackOnCommitFailure() throws Exception {
         IgniteEx cluster1client = grid(CLUSTER_1_CLIENT_NAME);
         IgniteEx cluster2client = grid(CLUSTER_2_CLIENT_NAME);
