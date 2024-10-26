@@ -125,6 +125,7 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRA
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry.SER_READ_EMPTY_ENTRY_VER;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry.SER_READ_NOT_EMPTY_VER;
+import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.IGNITE_DISABLE_ONE_PHASE_COMMIT;
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_NEAR_ENLIST_READ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_NEAR_ENLIST_WRITE;
@@ -247,6 +248,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
     /** */
     private long crdVer;
+
+    /** One-phase commit is enabled. */
+    private boolean onePhaseCommitEnabled = true;
 
     /**
      * Empty constructor required for {@link Externalizable}.
@@ -5118,6 +5122,20 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
         if (systemStartTime0 > 0)
             systemTime.addAndGet(System.nanoTime() - systemStartTime0);
+    }
+
+    /**
+     * @param onePhaseCommitEnabled {@code True} if one-phase commit is enabled.
+     */
+    public void onePhaseCommitEnabled(boolean onePhaseCommitEnabled) {
+        this.onePhaseCommitEnabled = onePhaseCommitEnabled;
+    }
+
+    /**
+     * @return One-phase commit is enabled.
+     */
+    public boolean onePhaseCommitEnabled() {
+        return !IGNITE_DISABLE_ONE_PHASE_COMMIT && onePhaseCommitEnabled;
     }
 
     /**
