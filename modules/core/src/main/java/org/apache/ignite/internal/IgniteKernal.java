@@ -1211,6 +1211,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 ctx.cache().context().database().notifyMetaStorageSubscribersOnReadyForRead();
 
+                //debug: check caches
+
+                final Collection<IgniteInternalCache<?, ?>> caches = ctx.cache().caches();
+
                 if (isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE))
                     ((DistributedMetaStorageImpl)ctx.distributedMetastorage()).inMemoryReadyForRead();
 

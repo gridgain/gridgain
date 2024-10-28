@@ -147,6 +147,8 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
         if (client)
             cfg.setClientMode(true);
 
+        cfg.setMetricsLogFrequency(10_000);
+
         return cfg;
     }
 
@@ -645,6 +647,23 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
 
         assertEquals(val2, primary.cache(CACHE_NAME).get(key));
         assertEquals(val2, backup.cache(CACHE_NAME).get(key));
+    }
+
+    @Test
+    public void myTest() throws Exception {
+        startGrids(NODE_COUNT);
+
+        IgniteEx ig = grid(0);
+
+        ig.active();
+
+        doSleep(5000);
+
+        stopAllGrids();
+
+        startGrid(0);
+
+        doSleep(50000);
     }
 
     /**
