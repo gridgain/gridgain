@@ -2270,14 +2270,25 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             SB msg = new SB();
 
+            final ClusterNode crdNode = ctx.discovery().discoCache().oldestAliveServerNode();
+            String crdInfoStr;
+            if (crdNode != null) {
+                crdInfoStr = "    ^-- Coordinator [id=" + crdNode.id() + ", consistentId=" + crdNode.consistentId() +
+                    ", version=" + crdNode.version().toString();
+            }
+            else
+                crdInfoStr = "    ^-- Coordinator [id=null";
+
             msg.nl()
                 .a("Metrics for local node (to disable set 'metricsLogFrequency' to 0)").nl()
-                .a("    ^-- Node [id=").a(id).a(", consistentId=").a(locNode.consistentId()).a(name() != null ? ", name=" + name() : "").a(", version=").a(ACK_VER_STR).a(", uptime=")
-                .a(getUpTimeFormatted()).a("]").nl()
+                .a("    ^-- Node [id=").a(id).a(", consistentId=").a(locNode.consistentId()).a(name() != null ? ", name=" + name() : "")
+                    .a(", version=").a(ACK_VER_STR).a(", uptime=").a(getUpTimeFormatted()).a("]").nl()
+                .a(crdInfoStr).nl()
                 .a("    ^-- Cluster [hosts=").a(hosts).a(", CPUs=").a(cpus).a(", servers=").a(servers)
-                .a(", clients=").a(clients).a(", topVer=").a(topVer.topologyVersion())
-                .a(", minorTopVer=").a(topVer.minorTopologyVersion()).a(", state=")
-                    .a(ctx.state().clusterState().state().name()).a("]").nl()
+                    .a(", clients=").a(clients).a(", topVer=").a(topVer.topologyVersion())
+                    .a(", minorTopVer=").a(topVer.minorTopologyVersion()).a(", state=")
+                    .a(ctx.state().clusterState().state().name())
+                    .a(", clusterId=").a(ctx.cluster().getId()).a(", clusterTag=").a(ctx.cluster().getTag()).a("]").nl()
                 .a("    ^-- Network [addrs=").a(locNode.addresses()).a(networkDetails).a("]").nl()
                 .a("    ^-- CPU [CPUs=").a(localCpus).a(", curLoad=").a(dblFmt.format(cpuLoadPct))
                 .a("%, avgLoad=").a(dblFmt.format(avgCpuLoadPct)).a("%, GC=").a(dblFmt.format(gcPct)).a("%]").nl()
