@@ -1989,6 +1989,9 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
             stopLock.unlock();
         }
 
+        if (log.isInfoEnabled())
+            log.info("Unregister CQ [routineId=" + routineId + ", loc=" + loc + ", rmt=" + remote + ']');
+
         if (log.isDebugEnabled())
             log.debug("unregisterRemote [routineId=" + routineId + ", loc=" + loc + ", rmt=" + remote + ']');
 
