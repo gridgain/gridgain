@@ -2851,6 +2851,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         Map<Short, Collection<Short>> nodes = tx.consistentIdMapper.mapToCompactIds(tx.topVer, tx.txNodes);
 
+//        log.warning(">>>>> logTxRecords [participants=" + nodes + ']');
+
         TxRecord record;
 
         if (tx.txState().mvccEnabled())
