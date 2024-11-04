@@ -2271,13 +2271,15 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             SB msg = new SB();
 
             final ClusterNode crdNode = ctx.discovery().discoCache().oldestAliveServerNode();
+
             String crdInfoStr;
+
             if (crdNode != null) {
                 crdInfoStr = "    ^-- Coordinator [id=" + crdNode.id() + ", consistentId=" + crdNode.consistentId() +
-                    ", version=" + crdNode.version().toString();
+                    ", version=" + crdNode.version().toString() + "]";
             }
             else
-                crdInfoStr = "    ^-- Coordinator [id=null";
+                crdInfoStr = "    ^-- Coordinator [id=null]";
 
             msg.nl()
                 .a("Metrics for local node (to disable set 'metricsLogFrequency' to 0)").nl()
