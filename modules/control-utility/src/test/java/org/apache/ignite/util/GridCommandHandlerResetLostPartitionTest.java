@@ -15,10 +15,6 @@
  */
 package org.apache.ignite.util;
 
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.concurrent.Callable;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
@@ -34,6 +30,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.util.typedef.G;
@@ -42,6 +39,11 @@ import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.Callable;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
@@ -129,7 +131,17 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
 
         doRebalanceAfterPartitionsWereLost();
 
+        AffinityTopologyVersion initTopVer = grid(0).context().discovery().topologyVersionEx();
+
         assertEquals(EXIT_CODE_OK, execute("--cache", "reset_lost_partitions", "--all"));
+
+        AffinityTopologyVersion resTopVer = grid(0).context().discovery().topologyVersionEx();
+
+        assertEquals(
+        "Resetting lost partitions should trigger PME only one time [initialTopologyVersion="
+                + initTopVer + ", finalTopologyVersion=" + resTopVer + ']',
+            initTopVer.nextMinorVersion(),
+            resTopVer);
 
         final String out = testOut.toString();
 
@@ -216,7 +228,7 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
         grid(0).cluster().state(ACTIVE);
 
         for (String cacheName : CACHE_NAMES) {
-            Map<String, String> putMap = new LinkedHashMap<>();
+            Map<String, String> putMap = new TreeMap<>();
             for (int i = 0; i < CACHE_SIZE; i++)
                 putMap.put(Integer.toString(i), "Value" + i);
 
