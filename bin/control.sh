@@ -33,7 +33,8 @@ fi
 #
 if [ "${IGNITE_HOME:-}" = "" ]; then
     IGNITE_HOME_TMP="$(dirname "$(cd "$(dirname "$0")"; pwd)")"
-else IGNITE_HOME_TMP=${IGNITE_HOME}
+else 
+    IGNITE_HOME_TMP=${IGNITE_HOME}
 fi
 
 #
@@ -125,7 +126,7 @@ fi
 
 #
 # Uncomment to set preference for IPv4 stack.
-
+#
 # CONTROL_JVM_OPTS="${CONTROL_JVM_OPTS} -Djava.net.preferIPv4Stack=true"
 
 if [ -n "${JVM_OPTS}" ]; then
