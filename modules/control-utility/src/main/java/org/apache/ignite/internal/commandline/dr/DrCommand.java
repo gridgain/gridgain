@@ -37,6 +37,7 @@ import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CACHE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CHECK;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CLEANUP_TREES;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.FULL_STATE_TRANSFER;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.HELP;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.NODE;
@@ -171,6 +172,14 @@ public class DrCommand extends AbstractCommand<Object> {
         usage(log, "Schedule/run maintenance task for rebuilding DR tries:",
             DATA_CENTER_REPLICATION,
             REBUILD_TREES.toString(),
+            optional(DrRebuildPartitionLogCommand.CACHES_ARG, "cacheName1,cacheName2,...,cacheNameN"),
+            optional(DrRebuildPartitionLogCommand.GROUPS_ARG, "groupName1,groupName2,...,groupNameN"),
+            optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Schedule/run maintenance task for cleanup DR tries:",
+            DATA_CENTER_REPLICATION,
+            CLEANUP_TREES.toString(),
             optional(DrRebuildPartitionLogCommand.CACHES_ARG, "cacheName1,cacheName2,...,cacheNameN"),
             optional(DrRebuildPartitionLogCommand.GROUPS_ARG, "groupName1,groupName2,...,groupNameN"),
             optional(CMD_AUTO_CONFIRMATION)

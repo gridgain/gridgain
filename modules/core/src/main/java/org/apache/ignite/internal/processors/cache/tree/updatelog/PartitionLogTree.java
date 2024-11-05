@@ -40,8 +40,11 @@ import org.apache.ignite.maintenance.MaintenanceTask;
  *
  */
 public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
-    /** Index rebuild maintenance task name. */
+    /** Partition log tree rebuild maintenance task name. */
     public static final String PART_LOG_TREE_REBUILD_MNTC_TASK_NAME = "PartitionLogTreeRebuildMaintenanceTask";
+
+    /** Partition log tree cleanup maintenance task name. */
+    public static final String PART_LOG_TREE_CLEANUP_MNTC_TASK_NAME = "PartitionLogTreeCleanupMaintenanceTask";
 
     /** Maintenance task parameters separator. */
     public static final String PARAMETER_SEPARATOR = "|";
@@ -51,6 +54,9 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
     /** Maintenance task description. */
     public static final String TASK_DESCRIPTION = "Partition log tree rebuild";
+
+    /** Maintenance task description. */
+    public static final String CLEANUP_TASK_DESCRIPTION = "Partition log tree cleanup";
 
     /** */
     public static final Object FULL_ROW = new Object();
@@ -235,6 +241,19 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     }
 
     /**
+     * Constructs a partition log tree cleanup maintenance task.
+     *
+     * @param groupIds Group id set.
+     * @return Maintenance task.
+     */
+    public static MaintenanceTask toCleanupMaintenanceTask(Set<Integer> groupIds) {
+        assert !groupIds.isEmpty();
+
+        return new MaintenanceTask(PART_LOG_TREE_CLEANUP_MNTC_TASK_NAME, CLEANUP_TASK_DESCRIPTION,
+            groupIds.stream().map(U::hexInt).collect(Collectors.joining(PARAMETER_SEPARATOR)));
+    }
+
+    /**
      * Merges two index rebuild maintenance tasks concatenating their parameters.
      *
      * @param oldTask Old task
@@ -245,6 +264,24 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
         assert Objects.equals(PART_LOG_TREE_REBUILD_MNTC_TASK_NAME, oldTask.name());
         assert Objects.equals(oldTask.name(), newTask.name());
 
+        return mergeTaskParameters(oldTask, newTask);
+    }
+
+    /**
+     * Merges two tree cleanup maintenance tasks concatenating their parameters.
+     *
+     * @param oldTask Old task
+     * @param newTask New task.
+     * @return Merged task.
+     */
+    public static MaintenanceTask mergeCleanupTasks(MaintenanceTask oldTask, MaintenanceTask newTask) {
+        assert Objects.equals(PART_LOG_TREE_CLEANUP_MNTC_TASK_NAME, oldTask.name());
+        assert Objects.equals(oldTask.name(), newTask.name());
+
+        return mergeTaskParameters(oldTask, newTask);
+    }
+
+    private static MaintenanceTask mergeTaskParameters(MaintenanceTask oldTask, MaintenanceTask newTask) {
         String oldTaskParams = oldTask.parameters();
         String newTaskParams = newTask.parameters();
 
