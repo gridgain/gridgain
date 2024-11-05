@@ -78,9 +78,10 @@ public class CacheResetLostPartitionsTask extends VisorOneNodeTask<CacheResetLos
                         CacheGroupContext grp = ignite.context().cache().cacheGroup(grpId);
 
                         if (grp != null) {
-                            grpToName.put(grpId, grp.cacheOrGroupName());
+                            Set<String> grpCaches = new TreeSet<>();
 
-                            Set<String> grpCaches = grpToCaches.computeIfAbsent(grpId, id -> new TreeSet<>());
+                            grpToName.put(grpId, grp.cacheOrGroupName());
+                            grpToCaches.put(grpId, grpCaches);
 
                             grp.caches().forEach(cctx -> grpCaches.add(cctx.name()));
                         }
