@@ -152,6 +152,9 @@ This utility can do the following commands:
   Schedule/run maintenance task for rebuilding DR tries:
     control.(sh|bat) --dr rebuild-partition-tree [--caches cacheName1,cacheName2,...,cacheNameN] [--groups groupName1,groupName2,...,groupNameN] [--yes]
 
+  Schedule/run maintenance task for cleanup DR tries:
+    control.(sh|bat) --dr cleanup-partition-tree [--caches cacheName1,cacheName2,...,cacheNameN] [--groups groupName1,groupName2,...,groupNameN] [--yes]
+
   View or update tracing configuration in a cluster. For more details type:
     control.(sh|bat) --tracing-configuration help
 
