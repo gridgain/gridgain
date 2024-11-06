@@ -1406,6 +1406,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                     kctx.encryption().onDeActivate(kctx);
 
+                    kctx.task().onDeActivate(kctx);
+
                     if (isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE))
                         ((IgniteChangeGlobalStateSupport)kctx.distributedMetastorage()).onDeActivate(kctx);
 
