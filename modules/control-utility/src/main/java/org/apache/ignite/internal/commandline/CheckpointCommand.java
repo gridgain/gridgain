@@ -16,8 +16,8 @@
 
 package org.apache.ignite.internal.commandline;
 
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -25,8 +25,10 @@ import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientCompute;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientDisconnectedException;
+import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.checkpoint.VisorCheckpointTask;
 import org.apache.ignite.internal.visor.checkpoint.VisorCheckpointTaskResult;
@@ -65,8 +67,14 @@ public class CheckpointCommand extends AbstractCommand<Void> {
 
             if (nodeId == null)
                 nodes = compute.nodes((n) -> n.connectable() && !n.isClient());
-            else
-                nodes = Arrays.asList(compute.node(nodeId));
+            else {
+                GridClientNode node = compute.node(nodeId);
+
+                if (node == null)
+                    throw new IllegalArgumentException(collectNodesInfo(compute));
+
+                nodes = Collections.singletonList(node);
+            }
 
             if (F.isEmpty(nodes))
                 throw new GridClientDisconnectedException("Connectable nodes not found", null);
@@ -112,5 +120,17 @@ public class CheckpointCommand extends AbstractCommand<Void> {
             if (nextArg.equals(NODE_ID_ARG_NAME))
                 nodeId = UUID.fromString(argIter.nextArg("failed to read node ID"));
         }
+    }
+
+    /**  */
+    private String collectNodesInfo(GridClientCompute compute) throws GridClientException {
+        SB b = new SB();
+
+        b.a("Node with id=" + nodeId + " not found in the topology").nl()
+            .a("Available cluster nodes:").nl();
+
+        compute.nodes((n) -> n.connectable() && !n.isClient()).forEach(node1 -> b.a(node1.nodeId()).nl());
+
+        return b.toString();
     }
 }

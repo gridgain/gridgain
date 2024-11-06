@@ -16,6 +16,8 @@
 
 package org.apache.ignite.util;
 
+import java.util.Random;
+import java.util.UUID;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
@@ -23,6 +25,8 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
@@ -30,6 +34,9 @@ import static org.apache.ignite.testframework.GridTestUtils.assertContains;
  * Checks --checkpoint command.
  */
 public class GridCommandHandlerCheckpointingTest extends GridCommandHandlerClusterByClassAbstractTest {
+    /**  */
+    private static Random r = new Random();
+
     /** */
     @Before
     public void init() {
@@ -38,10 +45,17 @@ public class GridCommandHandlerCheckpointingTest extends GridCommandHandlerClust
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        // This check is needed because one of the tests checks that checkpoint happenes only on one node.
+        // This check is needed because one of the tests checks that checkpoint happens only on one node.
         assertTrue("Need at least 2 nodes to test checkpoint command", SERVER_NODE_CNT >= 2);
 
         super.beforeTestsStarted();
+    }
+
+    /**
+     * Launched before every test. We need to update cache data for checkpoints to happen.
+     */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
 
         createCacheAndPreload(crd, 1);
     }
@@ -118,13 +132,32 @@ public class GridCommandHandlerCheckpointingTest extends GridCommandHandlerClust
         assertContains(log, out, "Checkpointing completed successfully on " + 1 + " node.");
     }
 
+    /**
+     * Checks non-existent --node-id
+     */
+    @Test
+    public void testWrongNodeId() {
+        IgniteEx ignite0 = grid(0);
+        IgniteEx ignite1 = grid(1);
+
+        final String testIdStr = UUID.randomUUID().toString();
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--checkpoint", "--node-id", testIdStr));
+
+        String s = testOut.toString();
+
+        assertTrue(s.contains("Node with id=" + testIdStr + " not found in the topology"));
+        assertTrue(s.contains(ignite0.localNode().id().toString()));
+        assertTrue(s.contains(ignite1.localNode().id().toString()));
+    }
+
     /**  */
     private CheckpointHistory getCheckpointHistory(IgniteEx ignite) {
         GridCacheDatabaseSharedManager gridDb0 = (GridCacheDatabaseSharedManager)ignite.context().cache().context().database();
 
         CheckpointHistory checkpointHist0 = gridDb0.checkpointHistory();
 
-         assertNotNull("Checkpoint history object for " + ignite.name(), checkpointHist0);
+        assertNotNull("Checkpoint history object for " + ignite.name(), checkpointHist0);
 
         return checkpointHist0;
     }
