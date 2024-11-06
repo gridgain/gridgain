@@ -1989,9 +1989,6 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
             stopLock.unlock();
         }
 
-        if (log.isInfoEnabled())
-            log.info("Unregister CQ [routineId=" + routineId + ", loc=" + loc + ", rmt=" + remote + ']');
-
         if (log.isDebugEnabled())
             log.debug("unregisterRemote [routineId=" + routineId + ", loc=" + loc + ", rmt=" + remote + ']');
 
@@ -2001,6 +1998,9 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
             // Removes routine at node started it when stopRoutine called from another node.
             unregisterHandler(routineId, loc.hnd, false);
         }
+
+        if (log.isInfoEnabled())
+            log.info("Continuous query was unregistered [routineId=" + routineId + ", loc=" + loc + ", rmt=" + remote + ']');
     }
 
     /**
