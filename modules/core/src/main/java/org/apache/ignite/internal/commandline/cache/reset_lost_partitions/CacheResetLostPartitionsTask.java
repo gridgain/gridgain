@@ -15,13 +15,8 @@
  */
 package org.apache.ignite.internal.commandline.cache.reset_lost_partitions;
 
-import java.util.HashMap;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -29,6 +24,14 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 /**
  * Reset status of lost partitions.
@@ -62,30 +65,56 @@ public class CacheResetLostPartitionsTask extends VisorOneNodeTask<CacheResetLos
             CacheResetLostPartitionsTaskArg arg) throws IgniteException {
             try {
                 final CacheResetLostPartitionsTaskResult res = new CacheResetLostPartitionsTaskResult();
+
                 res.setMessageMap(new HashMap<>());
 
                 if (!F.isEmpty(arg.getCaches())) {
+                    Map<Integer, Set<String>> grpToCaches = new HashMap<>();
+                    Map<Integer, String> grpToName = new HashMap<>();
+
                     for (String groupName : arg.getCaches()) {
-                        final int grpId = CU.cacheId(groupName);
+                        int grpId = CU.cacheId(groupName);
 
                         CacheGroupContext grp = ignite.context().cache().cacheGroup(grpId);
 
                         if (grp != null) {
-                            SortedSet<String> cacheNames = grp.caches().stream()
-                                .map(GridCacheContext::name)
-                                .collect(Collectors.toCollection(TreeSet::new));
+                            Set<String> grpCaches = new TreeSet<>();
 
-                            if (!F.isEmpty(cacheNames)) {
-                                ignite.resetLostPartitions(cacheNames);
+                            grpToName.put(grpId, grp.cacheOrGroupName());
+                            grpToCaches.put(grpId, grpCaches);
 
-                                res.put(groupName, String.format("Reset LOST-partitions performed successfully. " +
-                                        "Cache group (name = '%s', id = %d), caches (%s).",
-                                    groupName, grpId, cacheNames));
-                            }
+                            grp.caches().forEach(cctx -> grpCaches.add(cctx.name()));
                         }
-                        else
-                            res.put(groupName, String.format("Cache group (name = '%s', id = %d) not found.",
-                                groupName, grpId));
+                        else {
+                            res.put(
+                                groupName,
+                                String.format("Cache group (name = '%s', id = %d) not found.",
+                                groupName,
+                                grpId));
+                        }
+                    }
+
+                    if (!F.isEmpty(grpToCaches)) {
+                        List<String> cachesToResetParts = grpToCaches
+                            .values()
+                            .stream()
+                            .flatMap(Collection::stream)
+                            .collect(Collectors.toList());
+
+                        ignite.resetLostPartitions(cachesToResetParts);
+
+                        grpToCaches.forEach((id, names) -> {
+                            String grpName = grpToName.get(id);
+
+                            res.put(
+                                grpName,
+                                String.format("Reset LOST-partitions performed successfully. " +
+                                    "Cache group (name = '%s', id = %d), caches (%s).",
+                                grpName,
+                                id,
+                                names));
+
+                        });
                     }
                 }
 
