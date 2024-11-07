@@ -327,6 +327,12 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             U.join(tasks.values(), log);
         }
 
+        // Remove discovery and message listeners.
+        ctx.event().removeLocalEventListener(discoLsnr);
+
+        ctx.io().removeMessageListener(TOPIC_JOB_SIBLINGS);
+        ctx.io().removeMessageListener(TOPIC_TASK_CANCEL);
+
         // Set waiting flag to false to make sure that we do not get
         // listener notifications anymore.
         if (!cancel) {
@@ -361,7 +367,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
                         if (stopping)
                             throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                        LT.warn(log, "Still waiting for the cluster activation.");
+                        LT.info(log, "Executing a task on inactive cluster. Still waiting for the activation.");
 
                         continue;
                     }
@@ -382,12 +388,6 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) {
-        // Remove discovery and message listeners.
-        ctx.event().removeLocalEventListener(discoLsnr);
-
-        ctx.io().removeMessageListener(TOPIC_JOB_SIBLINGS);
-        ctx.io().removeMessageListener(TOPIC_TASK_CANCEL);
-
         if (log.isDebugEnabled())
             log.debug("Stopped task processor.");
     }
@@ -1327,7 +1327,39 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
     /** {@inheritDoc} */
     @Override public void onDeActivate(GridKernalContext kctx) {
-        onKernalStop(true);
+        boolean interrupted = false;
+
+        while (true) {
+            try {
+                if (lock.tryWriteLock(1, SECONDS))
+                    break;
+                else {
+                    LT.info(log, "Still waiting to acquire write lock on deactivation.");
+
+                    U.sleep(50);
+                }
+            }
+            catch (IgniteInterruptedCheckedException | InterruptedException e) {
+                LT.warn(log, "Stopping thread was interrupted while waiting for write lock (will wait anyway)");
+
+                interrupted = true;
+            }
+        }
+
+        try {
+            tasksMetaCache = null;
+
+            startLatch = new CountDownLatch(1);
+        }
+        finally {
+            lock.writeUnlock();
+
+            if (interrupted)
+                Thread.currentThread().interrupt();
+        }
+
+        if (log.isDebugEnabled())
+            log.debug("Finished executing task processor onDeactivate() callback.");
     }
 
     /**

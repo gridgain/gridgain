@@ -197,17 +197,16 @@ public class ComputeTaskExecutionOnInactiveClusterTest extends GridCommonAbstrac
             crd.compute().execute(new TestTask(), null);
         });
 
-        // There is the following inconsistency in behaviour:
-        // executing a task on inactive cluster that was started from scratch lead to waiting for cluster activation,
-        // on the other hand, in the case of changing cluster state ACTIVE -> INACTIVE,
-        // task execution results in IllegalStateException.
-        assertThrowsWithCause(() -> taskFut.get(), IllegalStateException.class);
+        assertThrows(
+            log,
+            () -> taskFut.get(TASK_EXECUTION_TIMEOUT, SECONDS),
+            IgniteFutureTimeoutCheckedException.class,
+            null
+        );
 
         crd.cluster().state(ACTIVE);
 
         assertEquals(ACTIVE, crd.cluster().state());
-
-        awaitPartitionMapExchange();
 
         crd.compute().execute(new TestTask(), null);
     }
