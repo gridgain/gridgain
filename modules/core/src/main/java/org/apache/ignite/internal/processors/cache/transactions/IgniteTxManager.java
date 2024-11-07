@@ -2849,9 +2849,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         if (cctx.wal() == null || !txRecordLoggingNeeded(tx))
             return null;
 
+        // This collection is used by point-in-time feature and WalStat for debugging/analyzing purposes.
         Map<Short, Collection<Short>> nodes = tx.consistentIdMapper.mapToCompactIds(tx.topVer, tx.txNodes);
-
-//        log.warning(">>>>> logTxRecords [participants=" + nodes + ']');
 
         TxRecord record;
 
