@@ -61,6 +61,9 @@ if %MAJOR_JAVA_VER% LSS 8 (
     goto error_finish
 )
 
+:: Store the Java version for dynamic JVM options.
+set JAVA_VERSION=%MAJOR_JAVA_VER%
+
 :: Check IGNITE_HOME.
 :checkIgniteHome1
 if defined IGNITE_HOME goto checkIgniteHome2
@@ -125,12 +128,6 @@ for /f "usebackq tokens=*" %%i in (`!RANDOM_NUMBER_COMMAND!`) do set RANDOM_NUMB
 
 set RESTART_SUCCESS_FILE="%IGNITE_HOME%\work\ignite_success_%RANDOM_NUMBER%"
 set RESTART_SUCCESS_OPT=-DIGNITE_SUCCESS_FILE=%RESTART_SUCCESS_FILE%
-
-::
-:: Determine Java version function
-::
-:determineJavaVersion
-for /f "tokens=1,2 delims=." %%a in ("%JAVA_VER_STR%.x") do set JAVA_VERSION=%%a
 
 ::
 :: Set JVM options with dynamic version check
