@@ -51,13 +51,10 @@ source "${SCRIPTS_HOME}/include/jvmdefaults.sh"
 checkJava
 
 #
-# Determine Java version function
+# Extract Java version
 #
-determineJavaVersion() {
-    local version_output=$(java -version 2>&1)
-    local version=$(echo "$version_output" | awk -F '"' '/version/ {print $2}' | awk -F '.' '{if ($1 == 1) {print $2} else {print $1}}')
-    echo $version
-}
+javaMajorVersion "$JAVA"
+JAVA_VERSION=$version
 
 #
 # Discover IGNITE_HOME environment variable.
@@ -91,7 +88,6 @@ fi
 #
 # Set JVM options with dynamic version check
 #
-JAVA_VERSION=$(determineJavaVersion)
 CONTROL_JVM_OPTS=$(getJavaSpecificOpts $JAVA_VERSION "$CONTROL_JVM_OPTS")
 
 #
