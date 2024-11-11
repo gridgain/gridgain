@@ -97,6 +97,7 @@ public class ConsistentIdMapper {
             return null;
 
         Map<UUID, Short> m = discoveryMgr.consistentId(topVer);
+        boolean fullBaseline = discoveryMgr.fullBaseline(topVer);
 
         int bltNodes = m.size();
 
@@ -123,7 +124,7 @@ public class ConsistentIdMapper {
             }
 
             // Optimization for short store full nodes set.
-            if (backups.size() == nodeCnt && nodeCnt == (bltNodes - 1))
+            if (fullBaseline && backups.size() == nodeCnt && nodeCnt == (bltNodes - 1))
                 backups = Collections.singletonList(Short.MAX_VALUE);
 
             consistentMap.put(mapToCompactId(topVer, node), backups);
