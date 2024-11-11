@@ -2003,6 +2003,18 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     }
 
     /**
+     * Return {@code true} when all baseline nodes are on-line for the given topology version,
+     * and {@code false} otherwise.
+     *
+     * @param topVer Topology version.
+     * @return Return {@code true} when all baseline nodes are on-line for the given topology version,
+     * and {@code false} otherwise.
+     */
+    public boolean fullBaseline(AffinityTopologyVersion topVer) {
+        return resolveDiscoCache(CU.cacheId(null), topVer).fullBaseline();
+    }
+
+    /**
      * Checks if node is a data node for the given cache.
      *
      * @param node Node to check.
