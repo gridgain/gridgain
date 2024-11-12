@@ -70,6 +70,7 @@ if %java_version% GEQ 11 (
     --add-opens=java.base/sun.security.ssl=ALL-UNNAMED ^
     --add-opens=java.base/sun.security.x509=ALL-UNNAMED ^
     --add-opens=java.sql/java.sql=ALL-UNNAMED ^
+    --illegal-access=permit ^
     %current_value%
 )
 
