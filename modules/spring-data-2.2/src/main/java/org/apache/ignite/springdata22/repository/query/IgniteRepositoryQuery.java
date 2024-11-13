@@ -53,6 +53,7 @@ import org.apache.ignite.springdata.proxy.IgniteCacheProxy;
 import org.apache.ignite.springdata22.repository.config.DynamicQueryConfig;
 import org.apache.ignite.springdata22.repository.query.StringQuery.ParameterBinding;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.core.convert.ConversionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -244,6 +245,8 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
     /** Static query configuration. */
     private final DynamicQueryConfig staticQueryConfiguration;
 
+    private final ConversionService conversionService;
+
     /**
      * Instantiates a new Ignite repository query.
      *
@@ -254,6 +257,7 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
      * @param cache                                Cache.
      * @param staticQueryConfiguration             the query configuration
      * @param queryMethodEvaluationContextProvider the query method evaluation context provider
+     * @param conversionService                    Conversion service.
      */
     public IgniteRepositoryQuery(
         RepositoryMetadata metadata,
@@ -262,7 +266,8 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
         ProjectionFactory factory,
         IgniteCacheProxy<?, ?> cache,
         @Nullable DynamicQueryConfig staticQueryConfiguration,
-        QueryMethodEvaluationContextProvider queryMethodEvaluationContextProvider) {
+        QueryMethodEvaluationContextProvider queryMethodEvaluationContextProvider,
+        ConversionService conversionService) {
         this.metadata = metadata;
         this.mtd = mtd;
         this.factory = factory;
@@ -283,6 +288,7 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
 
         expressionParser = new SpelExpressionParser();
         this.queryMethodEvaluationContextProvider = queryMethodEvaluationContextProvider;
+        this.conversionService = conversionService;
 
         qMethod = getQueryMethod();
 
@@ -452,19 +458,6 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
         }
 
         return false;
-    }
-
-    /**
-     * When select fields by query H2 returns Timestamp for types java.util.Date and java.qryStr.Timestamp
-     *
-     * @see org.apache.ignite.internal.processors.query.h2.H2DatabaseType map.put(Timestamp.class, TIMESTAMP)
-     * map.put(java.util.Date.class, TIMESTAMP) map.put(java.qryStr.Date.class, DATE)
-     */
-    private static <T> T fixExpectedType(final Object object, final Class<T> expected) {
-        if (expected != null && object instanceof java.sql.Timestamp && expected.equals(java.util.Date.class))
-            return (T)new java.util.Date(((java.sql.Timestamp)object).getTime());
-
-        return (T)object;
     }
 
     /**
@@ -864,7 +857,7 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
                 Field entityField = domainEntitiyFields.get(cursor.getFieldName(i).toLowerCase());
 
                 if (entityField != null)
-                    FieldUtils.writeField(entityField, res, fixExpectedType(row.get(i), entityField.getType()), true);
+                    FieldUtils.writeField(entityField, res, convert(row.get(i), entityField.getType()), true);
             }
 
             return (V)res;
@@ -873,6 +866,15 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
             throw new IgniteException("Unable to allocate instance of domain entity class " + type.getName(), e);
         }
     }
+
+    private <T> T convert(Object source, Class<?> targetType) {
+        if (conversionService.canConvert(source.getClass(), targetType)) {
+            return (T) conversionService.convert(source, targetType);
+        } else {
+            return (T) source;
+        }
+    }
+
 
     /**
      * Validates operations that requires Pageable parameter
