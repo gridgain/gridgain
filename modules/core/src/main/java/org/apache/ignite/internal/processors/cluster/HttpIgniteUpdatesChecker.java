@@ -57,6 +57,11 @@ public class HttpIgniteUpdatesChecker {
         conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
         conn.setRequestProperty("user-agent", "");
 
+        // TODO: Current version.
+        conn.setDoInput(true);
+        String requestBody = "{\"product\": \"gg\", \"version\": \"8.9.12\"}";
+        conn.getOutputStream().write(requestBody.getBytes(charset));
+
         conn.setConnectTimeout(5000);
         conn.setReadTimeout(5000);
 
