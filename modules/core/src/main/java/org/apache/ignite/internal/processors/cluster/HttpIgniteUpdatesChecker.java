@@ -74,19 +74,16 @@ public class HttpIgniteUpdatesChecker {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
             // Send HTTP GET request
-            String requestBody = "{\"product\": \"gg\", \"version\": \"" + IgniteVersionUtils.VER_STR +  "\"}";
-
-            byte[] requestBytes = requestBody.getBytes(charset);
-
             String request = "GET /" + url1.getPath() + " HTTP/1.1\r\n" +
                     "Host: " + url1.getHost() + "\r\n" +
                     "Connection: close\r\n" +
-                    "Content-Length: " + requestBytes.length + "\r\n" +
+                    "{\"product\": \"gg\", \"version\": \"8.9.12\"}" +
                     "\r\n";
 
-            os.write(request.getBytes(charset));
-            os.write(requestBytes);
-            os.write("\r\n".getBytes(charset));
+            // TODO
+            // String requestBody = "{\"product\": \"gg\", \"version\": \"" + IgniteVersionUtils.VER_STR +  "\"}";
+
+            os.write(request.getBytes());
             os.flush();
 
             // Read the response
