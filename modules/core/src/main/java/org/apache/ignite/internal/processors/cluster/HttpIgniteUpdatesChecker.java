@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 
@@ -53,14 +54,18 @@ public class HttpIgniteUpdatesChecker {
      * @throws IOException If HTTP request was failed
      */
     public String getUpdates(String updateReq) throws IOException {
-        URLConnection conn = new URL(url).openConnection();
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+
         conn.setDoOutput(true);
         conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Accept", "application/json");
-        conn.setRequestProperty("user-agent", "");
+        conn.setRequestProperty("Accept", "*/*");
+        conn.setRequestProperty("user-agent", "Foo");
 
         conn.setConnectTimeout(5000);
         conn.setReadTimeout(5000);
+
+        // TODO: This does not work - why?
+        conn.setRequestMethod("GET");
 
         try (OutputStream os = conn.getOutputStream()) {
             // TODO: ?
@@ -69,6 +74,7 @@ public class HttpIgniteUpdatesChecker {
             // String requestBody = "{\"product\": \"gg\", \"version\": \"" + IgniteVersionUtils.VER_STR +  "\"}";
             String requestBody = "{\"product\": \"gg\", \"version\": \"8.9.12\"}";
             os.write(requestBody.getBytes(charset));
+            os.flush();
         }
 
         try (InputStream in = conn.getInputStream()) {

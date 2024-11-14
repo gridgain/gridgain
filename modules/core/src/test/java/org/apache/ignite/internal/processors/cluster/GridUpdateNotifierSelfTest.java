@@ -153,7 +153,8 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
 
     @Test
     public void testGetUpdates() throws IOException {
-        HttpIgniteUpdatesChecker checker = new HttpIgniteUpdatesChecker(GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL, "UTF-8");
+        // https://echo.free.beeceptor.com
+        HttpIgniteUpdatesChecker checker = new HttpIgniteUpdatesChecker("https://echo.free.beeceptor.com", "UTF-8");
 
         String updates = checker.getUpdates("");
 
