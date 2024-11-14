@@ -69,15 +69,16 @@ public class HttpIgniteUpdatesChecker {
             StringBuilder bodyBuilder = new StringBuilder("{");
             bodyBuilder.append("\"product\": \"gg\", \"version\": \"")
                     .append(IgniteVersionUtils.VER_STR)
-                    .append("\"");
+                    .append("\", \"instanceData\": {");
 
             for (Map.Entry<String, Object> entry : updateReq.entrySet()) {
-                bodyBuilder.append(", \"").append(entry.getKey()).append("\": \"")
+                bodyBuilder.append(entry.getKey()).append("\": \"")
                         .append(escapeJson(entry.getValue().toString()))
-                        .append("\"");
+                        .append("\", ");
             }
 
-            bodyBuilder.append("}");
+            bodyBuilder.deleteCharAt(bodyBuilder.length() - 1);
+            bodyBuilder.append("}}");
 
             os.write(bodyBuilder.toString().getBytes(charset));
             os.flush();
