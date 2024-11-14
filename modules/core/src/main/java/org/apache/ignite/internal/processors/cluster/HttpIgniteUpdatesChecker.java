@@ -90,6 +90,7 @@ public class HttpIgniteUpdatesChecker {
     }
 
     private static String escapeJson(String str) {
+        // TODO: Escape control characters.
         // https://www.ietf.org/rfc/rfc4627.txt
         // All Unicode characters may be placed within the
         //   quotation marks except for the characters that must be escaped:
