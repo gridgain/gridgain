@@ -16,15 +16,6 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
@@ -41,8 +32,16 @@ import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Matchers.anyString;
 
 /**
  * Update notifier test.

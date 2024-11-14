@@ -72,12 +72,13 @@ public class HttpIgniteUpdatesChecker {
                     .append("\", \"instanceData\": {");
 
             for (Map.Entry<String, Object> entry : updateReq.entrySet()) {
-                bodyBuilder.append(entry.getKey()).append("\": \"")
+                bodyBuilder
+                        .append("\"").append(entry.getKey()).append("\": \"")
                         .append(escapeJson(entry.getValue().toString()))
                         .append("\", ");
             }
 
-            bodyBuilder.deleteCharAt(bodyBuilder.length() - 1);
+            bodyBuilder.delete(bodyBuilder.length() - 2, bodyBuilder.length());
             bodyBuilder.append("}}");
 
             os.write(bodyBuilder.toString().getBytes(charset));
