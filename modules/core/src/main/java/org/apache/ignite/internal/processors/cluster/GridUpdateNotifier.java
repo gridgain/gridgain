@@ -76,7 +76,7 @@ public class GridUpdateNotifier {
     private static final int WORKER_THREAD_SLEEP_TIME = 5000;
 
     /** Default url for request GridGain updates. */
-    public static final String DEFAULT_GRIDGAIN_UPDATES_URL = "https://www.gridgain.com/notifier/update";
+    public static final String DEFAULT_GRIDGAIN_UPDATES_URL = "https://www.gridgain.com/notifier/update/v2";
 
     /** Grid version. */
     private final String ver;
