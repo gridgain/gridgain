@@ -66,11 +66,20 @@ public class HttpIgniteUpdatesChecker {
         conn.setReadTimeout(5000);
 
         try (OutputStream os = conn.getOutputStream()) {
-            // TODO: Add updateReq as "instanceData" field
-            // TODO: JSON escaping
-            String requestBody = "{\"product\": \"gg\", \"version\": \"" + IgniteVersionUtils.VER_STR +  "\"}";
-            os.write(requestBody.getBytes(charset));
+            StringBuilder bodyBuilder = new StringBuilder("{");
+            bodyBuilder.append("\"product\": \"gg\", \"version\": \"")
+                    .append(IgniteVersionUtils.VER_STR)
+                    .append("\"");
 
+            for (Map.Entry<String, Object> entry : updateReq.entrySet()) {
+                bodyBuilder.append(", \"").append(entry.getKey()).append("\": \"")
+                        .append(escapeJson(entry.getValue().toString()))
+                        .append("\"");
+            }
+
+            bodyBuilder.append("}");
+
+            os.write(bodyBuilder.toString().getBytes(charset));
             os.flush();
         }
 
