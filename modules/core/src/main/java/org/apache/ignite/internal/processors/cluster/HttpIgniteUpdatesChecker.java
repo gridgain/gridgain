@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
-import org.apache.ignite.internal.IgniteVersionUtils;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,7 +23,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
 
 /**
  * This class is responsible for getting GridGain updates information via HTTP
