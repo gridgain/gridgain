@@ -33,7 +33,7 @@ public abstract class AbstractMetric implements Metric {
      * @param name Name.
      * @param desc Description.
      */
-    public AbstractMetric(String name, String desc) {
+    protected AbstractMetric(String name, @Nullable String desc) {
         assert name != null;
         assert !name.isEmpty();
 

@@ -17,6 +17,7 @@ package org.apache.ignite.internal.processors.cache.metric;
 
 import java.lang.reflect.Field;
 import java.sql.Connection;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -69,6 +70,7 @@ import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.service.DummyService;
 import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.services.ServiceConfiguration;
 import org.apache.ignite.spi.systemview.view.MetastorageView;
@@ -116,10 +118,15 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
 
         cfg.setDataStorageConfiguration(new DataStorageConfiguration()
             .setDataRegionConfigurations(
-                new DataRegionConfiguration().setName("in-memory").setMaxSize(100L * 1024 * 1024))
+                new DataRegionConfiguration()
+                    .setName("in-memory")
+                    .setMaxSize(100L * 1024 * 1024)
+                    .setMetricsEnabled(true))
             .setDefaultDataRegionConfiguration(
                 new DataRegionConfiguration()
-                    .setPersistenceEnabled(true)));
+                    .setName("persistent")
+                    .setPersistenceEnabled(true)
+                    .setMetricsEnabled(true)));
 
         return cfg;
     }
@@ -163,7 +170,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
     @Test
     public void testDataRegionMetrics() {
         List<List<?>> res = execute(ignite0,
-            "SELECT REPLACE(name, 'io.dataregion.default.'), value, description FROM " + sysSchemaName() + ".METRICS");
+            "SELECT REPLACE(name, 'io.dataregion.persistent.'), value, description FROM " + sysSchemaName() + ".METRICS");
 
         Set<String> names = new HashSet<>();
 
@@ -451,7 +458,8 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
             "BINARY_METADATA",
             "METASTORAGE",
             "DISTRIBUTED_METASTORAGE",
-            "PARTITION_STATES"
+            "PARTITION_STATES",
+            "PAGES_TIMESTAMP_HISTOGRAM"
         ));
 
         Set<String> actViews = new HashSet<>();
@@ -1165,6 +1173,32 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
         assertTrue(waitForCondition(() -> execute(ignite1,
             "SELECT * FROM SYS.DISTRIBUTED_METASTORAGE WHERE name = ? AND value = ?", name, val).size() == 1,
             getTestTimeout()));
+    }
+
+    /** */
+    @Test
+    public void testPagesTimestampHistogram() throws Exception {
+        IgniteCache<Integer, Integer> cache = ignite0.getOrCreateCache("test-page-ts-cache");
+
+        cache.put(0, 0);
+
+        assertEquals(0, execute(ignite0,
+                "SELECT * FROM SYS.PAGES_TIMESTAMP_HISTOGRAM WHERE DATA_REGION_NAME = ?", "in-memory").size());
+
+        // There should be two buckets after start: empty "out of bounds" bucket and current bucket.
+        assertEquals(2, execute(ignite0,
+                "SELECT * FROM SYS.PAGES_TIMESTAMP_HISTOGRAM WHERE DATA_REGION_NAME = ?", "persistent").size());
+
+        Timestamp ts = new Timestamp(U.currentTimeMillis());
+
+        List<List<?>> res = execute(ignite0, "SELECT INTERVAL_START, INTERVAL_END " +
+                "FROM SYS.PAGES_TIMESTAMP_HISTOGRAM " +
+                "WHERE DATA_REGION_NAME = ? AND PAGES_COUNT > 0", "persistent");
+
+        assertEquals(1, res.size());
+
+        assertTrue(ts.compareTo(((Timestamp)res.get(0).get(0))) >= 0);
+        assertTrue(ts.compareTo(((Timestamp)res.get(0).get(1))) <= 0);
     }
 
     /**
