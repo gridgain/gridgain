@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
+import org.apache.ignite.internal.IgniteVersionUtils;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,6 +25,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Map;
 
 /**
  * This class is responsible for getting GridGain updates information via HTTP
@@ -50,7 +53,7 @@ public class HttpIgniteUpdatesChecker {
      * @return Information about Ignite updates separated by line endings
      * @throws IOException If HTTP request was failed
      */
-    public String getUpdates(String updateReq) throws IOException {
+    public String getUpdates(Map<String, Object> updateReq) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
 
         conn.setDoOutput(true);
@@ -63,11 +66,9 @@ public class HttpIgniteUpdatesChecker {
         conn.setReadTimeout(5000);
 
         try (OutputStream os = conn.getOutputStream()) {
-            // TODO: ?
-            // os.write(updateReq.getBytes(charset));
-
-            // String requestBody = "{\"product\": \"gg\", \"version\": \"" + IgniteVersionUtils.VER_STR +  "\"}";
-            String requestBody = "{\"product\": \"gg\", \"version\": \"8.9.12\"}";
+            // TODO: Add updateReq as "instanceData" field
+            // TODO: JSON escaping
+            String requestBody = "{\"product\": \"gg\", \"version\": \"" + IgniteVersionUtils.VER_STR +  "\"}";
             os.write(requestBody.getBytes(charset));
             os.flush();
         }

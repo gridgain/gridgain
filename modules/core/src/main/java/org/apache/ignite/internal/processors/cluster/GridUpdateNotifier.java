@@ -16,17 +16,6 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.Set;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -34,12 +23,25 @@ import org.apache.ignite.internal.GridKernalGateway;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgniteProperties;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.plugin.PluginProvider;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static java.net.URLEncoder.encode;
 
@@ -395,18 +397,18 @@ public class GridUpdateNotifier {
 
                 srvNodes = discoSpi.serverNodes(discoSpi.topologyVersionEx()).size();
 
-                String postParams =
-                    "igniteInstanceName=" + encode(igniteInstanceName, CHARSET) +
-                        (!F.isEmpty(updStatusParams) ? "&" + updStatusParams : "") +
-                        "&srvNodes=" + srvNodes +
-                        "&product=" + product +
-                        (!F.isEmpty(stackTrace) ? "&stackTrace=" + encode(stackTrace, CHARSET) : "") +
-                        (!F.isEmpty(vmProps) ? "&vmProps=" + encode(vmProps, CHARSET) : "") +
-                        pluginsVers;
+                Map<String, Object> params = new HashMap<>();
+                params.put("igniteInstanceName", igniteInstanceName);
+                params.put("params", updStatusParams);
+                params.put("srvNodes", srvNodes);
+                params.put("product", product);
+                params.put("stackTrace", stackTrace);
+                params.put("vmProps", vmProps);
+                params.put("pluginsVers", pluginsVers);
 
                 if (!isCancelled()) {
                     try {
-                        String updatesRes = updatesChecker.getUpdates(postParams);
+                        String updatesRes = updatesChecker.getUpdates(params);
 
                         String[] lines = updatesRes.split("\n");
 
