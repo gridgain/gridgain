@@ -20,7 +20,10 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
@@ -38,6 +41,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Matchers.anyString;
 
 /**
@@ -88,7 +92,7 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         HttpIgniteUpdatesChecker updatesCheckerMock = Mockito.mock(HttpIgniteUpdatesChecker.class);
 
         // Return current node version and some other info
-        Mockito.when(updatesCheckerMock.getUpdates(anyString()))
+        Mockito.when(updatesCheckerMock.getUpdates(any()))
             .thenReturn("meta=meta" + "\n" + "version=" + nodeVer + "\n" + "downloadUrl=url");
 
         GridKernalContext ctx = Mockito.mock(GridKernalContext.class);
@@ -155,7 +159,11 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
     public void testGetUpdates() throws IOException {
         HttpIgniteUpdatesChecker checker = new HttpIgniteUpdatesChecker(GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL, "UTF-8");
 
-        String updates = checker.getUpdates("");
+        Map<String, Object> props = new HashMap<>();
+        props.put("foo", "bar");
+        props.put("baz", "qux");
+
+        String updates = checker.getUpdates(props);
 
         assertTrue(updates, updates.startsWith("{\"latest_version\":"));
         assertTrue(updates, updates.contains("\"end_of_life\":{\"date\":null,\"comment\":null}"));
