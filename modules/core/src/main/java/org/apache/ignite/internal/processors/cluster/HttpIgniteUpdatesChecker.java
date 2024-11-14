@@ -55,19 +55,20 @@ public class HttpIgniteUpdatesChecker {
     public String getUpdates(String updateReq) throws IOException {
         URLConnection conn = new URL(url).openConnection();
         conn.setDoOutput(true);
-        conn.setRequestProperty("Accept-Charset", charset);
-        conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("Accept", "application/json");
         conn.setRequestProperty("user-agent", "");
-
-        conn.setDoInput(true);
-        String requestBody = "{\"product\": \"gg\", \"version\": \"" + IgniteVersionUtils.VER_STR +  "\"}";
-        conn.getOutputStream().write(requestBody.getBytes(charset));
 
         conn.setConnectTimeout(5000);
         conn.setReadTimeout(5000);
 
         try (OutputStream os = conn.getOutputStream()) {
-            os.write(updateReq.getBytes(charset));
+            // TODO: ?
+            // os.write(updateReq.getBytes(charset));
+
+            // String requestBody = "{\"product\": \"gg\", \"version\": \"" + IgniteVersionUtils.VER_STR +  "\"}";
+            String requestBody = "{\"product\": \"gg\", \"version\": \"8.9.12\"}";
+            os.write(requestBody.getBytes(charset));
         }
 
         try (InputStream in = conn.getInputStream()) {
