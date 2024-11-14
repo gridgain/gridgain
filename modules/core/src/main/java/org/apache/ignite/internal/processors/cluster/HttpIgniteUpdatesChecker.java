@@ -70,6 +70,7 @@ public class HttpIgniteUpdatesChecker {
             // TODO: JSON escaping
             String requestBody = "{\"product\": \"gg\", \"version\": \"" + IgniteVersionUtils.VER_STR +  "\"}";
             os.write(requestBody.getBytes(charset));
+
             os.flush();
         }
 
@@ -86,5 +87,14 @@ public class HttpIgniteUpdatesChecker {
 
             return res.toString();
         }
+    }
+
+    private static String escapeJson(String str) {
+        // https://www.ietf.org/rfc/rfc4627.txt
+        // All Unicode characters may be placed within the
+        //   quotation marks except for the characters that must be escaped:
+        //   quotation mark, reverse solidus, and the control characters (U+0000
+        //   through U+001F).
+        return str.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }
