@@ -78,12 +78,7 @@ public class HttpIgniteUpdatesChecker {
 
             byte[] requestBytes = requestBody.getBytes(charset);
 
-            String path = url1.getPath();
-
-            if (path.isEmpty())
-                path = "/";
-
-            String request = "GET " + path + " HTTP/1.1\r\n" +
+            String request = "GET /" + url1.getPath() + " HTTP/1.1\r\n" +
                     "Host: " + url1.getHost() + "\r\n" +
                     "Connection: close\r\n" +
                     "Content-Length: " + requestBytes.length + "\r\n" +
