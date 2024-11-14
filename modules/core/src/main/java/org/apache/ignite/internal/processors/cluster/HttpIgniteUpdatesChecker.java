@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.cluster;
 
 import org.apache.ignite.internal.IgniteVersionUtils;
 
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -54,37 +56,37 @@ public class HttpIgniteUpdatesChecker {
      * @throws IOException If HTTP request was failed
      */
     public String getUpdates(String updateReq) throws IOException {
-        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        return getUpdates2();
+    }
 
-        conn.setDoOutput(true);
+    private String getUpdates2() throws IOException {
+        URL url1 = new URL(url);
+        int port = url1.getPort();
 
-        // TODO: This does not work - why?
-        conn.setRequestMethod("GET");
-
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Accept", "*/*");
-        conn.setRequestProperty("user-agent", "Foo");
-
-        conn.setConnectTimeout(5000);
-        conn.setReadTimeout(5000);
-
-        // TODO: getOutputStream forces a POST request.
-        try (OutputStream os = conn.getOutputStream()) {
-            // TODO: ?
-            // os.write(updateReq.getBytes(charset));
-
-            // String requestBody = "{\"product\": \"gg\", \"version\": \"" + IgniteVersionUtils.VER_STR +  "\"}";
-            String requestBody = "{\"product\": \"gg\", \"version\": \"8.9.12\"}";
-            os.write(requestBody.getBytes(charset));
-            os.flush();
+        if (port == -1) {
+            port = url1.getDefaultPort();
         }
 
-        try (InputStream in = conn.getInputStream()) {
-            if (in == null)
-                return null;
+        SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+        try (
+                SSLSocket socket = (SSLSocket) factory.createSocket(url1.getHost(), port);
+                OutputStream os = socket.getOutputStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in, charset));
+            // Send HTTP GET request
+            String request = "GET " + url1.getPath() + " HTTP/1.1\r\n" +
+                    "Host: " + url1.getHost() + "\r\n" +
+                    "Connection: close\r\n" +
+                    "{\"product\": \"gg\", \"version\": \"8.9.12\"}" +
+                    "\r\n";
 
+            // TODO
+            // String requestBody = "{\"product\": \"gg\", \"version\": \"" + IgniteVersionUtils.VER_STR +  "\"}";
+
+            os.write(request.getBytes());
+            os.flush();
+
+            // Read the response
             StringBuilder res = new StringBuilder();
 
             for (String line; (line = reader.readLine()) != null; )
