@@ -74,7 +74,7 @@ public class HttpIgniteUpdatesChecker {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
             // Send HTTP GET request
-            String request = "GET /" + url1.getPath() + " HTTP/1.1\r\n" +
+            String request = "GET " + url1.getPath() + " HTTP/1.1\r\n" +
                     "Host: " + url1.getHost() + "\r\n" +
                     "Connection: close\r\n" +
                     "{\"product\": \"gg\", \"version\": \"8.9.12\"}" +
