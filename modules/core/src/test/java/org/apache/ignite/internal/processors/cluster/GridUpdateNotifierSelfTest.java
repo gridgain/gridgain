@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collections;
@@ -148,5 +149,14 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         vers.setAccessible(true);
         String versionsString = (String)vers.get(notifier);
         assertTrue(versionsString.contains("my-cool-name-plugin-version=UNKNOWN"));
+    }
+
+    @Test
+    public void testGetUpdates() throws IOException {
+        HttpIgniteUpdatesChecker checker = new HttpIgniteUpdatesChecker(GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL, "UTF-8");
+
+        String updates = checker.getUpdates("");
+
+        assertEquals("x", updates);
     }
 }

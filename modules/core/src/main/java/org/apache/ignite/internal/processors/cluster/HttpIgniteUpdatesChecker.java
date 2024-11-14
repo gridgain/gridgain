@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
+import org.apache.ignite.internal.IgniteVersionUtils;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -57,9 +59,8 @@ public class HttpIgniteUpdatesChecker {
         conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
         conn.setRequestProperty("user-agent", "");
 
-        // TODO: Current version.
         conn.setDoInput(true);
-        String requestBody = "{\"product\": \"gg\", \"version\": \"8.9.12\"}";
+        String requestBody = "{\"product\": \"gg\", \"version\": \"" + IgniteVersionUtils.VER_STR +  "\"}";
         conn.getOutputStream().write(requestBody.getBytes(charset));
 
         conn.setConnectTimeout(5000);
