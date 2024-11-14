@@ -15,7 +15,12 @@
  */
 package org.apache.ignite.util;
 
+import java.util.Collection;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.Callable;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -38,24 +43,64 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.Callable;
-
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
-import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REST_TCP_PORT;
+import static org.apache.ignite.internal.TestRecordingCommunicationSpi.blockSupplyMessageForGroup;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheGroupId;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /** */
 public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandlerClusterByClassAbstractTest {
+    /**
+     * Cache name.
+     * Cache group is explicitly specified via configuration.
+     * Cache group name do not equal to the cache name.
+     */
+    private static final String CACHE_WITH_CUSTOM_GROUP = "cacheCustomGroup";
 
-    /** Cache name. */
-    private static final String[] CACHE_NAMES = {"cacheOne", "cacheTwo", "cacheThree"};
+    /**
+     * Cache name.
+     * Shared cache group is explicitly specified via configuration.
+     * Cache group name do not equal to the cache name.
+     */
+    private static final String CACHE_WITH_SHARED_GROUP_I = "cacheSharedGroupI";
+
+    /**
+     * Cache name.
+     * Shared cache group is explicitly specified via configuration.
+     * Cache group name do not equal to the cache name.
+     */
+    private static final String CACHE_WITH_SHARED_GROUP_II = "cacheSharedGroupII";
+
+    /** Custom cache group name, that is used by the 'cacheCustomGroup' cache. */
+    private static final String CUSTOM_CACHE_GROUP_NAME = "customGroupName";
+
+    /** Shared group name, that is used by 'cacheSharedGroupI' and 'cacheSharedGroupII' caches. */
+    private static final String SHARED_CACHE_GROUP_NAME = "sharedGroupName";
+
+    /** Cache names. */
+    private static final String[] CACHE_NAMES = {
+        "cacheOne",
+        "cacheTwo",
+        "cacheThree",
+        CACHE_WITH_CUSTOM_GROUP,
+        CACHE_WITH_SHARED_GROUP_I,
+        CACHE_WITH_SHARED_GROUP_II
+    };
+
+    /** Cache group names. */
+    private static final String[] CACHE_GROUP_NAMES = {
+        null,
+        null,
+        null,
+        CUSTOM_CACHE_GROUP_NAME,
+        SHARED_CACHE_GROUP_NAME,
+        SHARED_CACHE_GROUP_NAME
+    };
 
     /** Cache size */
     public static final int CACHE_SIZE = 10000 / CACHE_NAMES.length;
@@ -71,7 +116,7 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        super.afterTest();
+        //super.afterTest();
 
         stopAllGrids();
 
@@ -87,40 +132,47 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
 
         DataStorageConfiguration storageCfg = new DataStorageConfiguration();
 
-        storageCfg.setPageSize(1024)
-            .setWalMode(LOG_ONLY)
-            .setWalSegmentSize(4 * 1024 * 1024);
-
         storageCfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
             .setPersistenceEnabled(true)
             .setMaxSize(100L * 1024 * 1024));
 
         cfg.setDataStorageConfiguration(storageCfg);
 
-        CacheConfiguration<?, ?>[] ccfg = new CacheConfiguration[] {
-            cacheConfiguration(CACHE_NAMES[0], CacheAtomicityMode.ATOMIC),
-            cacheConfiguration(CACHE_NAMES[1], CacheAtomicityMode.ATOMIC),
-            cacheConfiguration(CACHE_NAMES[2], CacheAtomicityMode.TRANSACTIONAL)
-        };
+        CacheConfiguration<?, ?>[] ccfg = new CacheConfiguration[CACHE_NAMES.length];
+        for (int i = 0; i < CACHE_NAMES.length; ++i) {
+            ccfg[i] = cacheConfiguration(
+                CACHE_NAMES[i],
+                CACHE_GROUP_NAMES[i],
+                CacheAtomicityMode.ATOMIC);
+        }
 
         cfg.setCacheConfiguration(ccfg);
+
+        cfg.setFailureDetectionTimeout(600_000);
+        cfg.setClientFailureDetectionTimeout(600_000);
 
         return cfg;
     }
 
     /**
      * @param cacheName Cache name.
+     * @param groupName Optional group name.
      * @param mode Cache atomicity mode.
      * @return Configured cache configuration.
      */
-    private CacheConfiguration<Object, Object> cacheConfiguration(String cacheName, CacheAtomicityMode mode) {
+    private CacheConfiguration<Object, Object> cacheConfiguration(
+        String cacheName,
+        @Nullable String groupName,
+        CacheAtomicityMode mode
+    ) {
         return new CacheConfiguration<>(cacheName)
+            .setGroupName(groupName)
             .setCacheMode(CacheMode.PARTITIONED)
             .setAtomicityMode(mode)
             .setBackups(1)
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
             .setPartitionLossPolicy(PartitionLossPolicy.READ_ONLY_SAFE)
-            .setAffinity(new RendezvousAffinityFunction(false, 64))
+            .setAffinity(new RendezvousAffinityFunction(false, 32))
             .setIndexedTypes(String.class, String.class);
     }
 
@@ -167,7 +219,7 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
     }
 
     /**
-     * Tests that resetting lost partitions for the system cache.
+     * This method tests resetting lost partitions for the system cache.
      *
      * @throws Exception If failed.
      */
@@ -188,7 +240,7 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
 
         // Block supply messages for the system cache and start previously stopped node to make it lost partitions.
         TestRecordingCommunicationSpi spi0 = TestRecordingCommunicationSpi.spi(g0);
-        spi0.blockMessages(TestRecordingCommunicationSpi.blockSupplyMessageForGroup(CU.cacheId(CU.UTILITY_CACHE_NAME)));
+        spi0.blockMessages(blockSupplyMessageForGroup(CU.cacheId(CU.UTILITY_CACHE_NAME)));
 
         IgniteInternalFuture<?> startFut = GridTestUtils.runAsync(() -> startGrid(1));
 
@@ -207,7 +259,9 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
         // All partitions must be in lost state.
         assertEquals(sysCache1.configuration().getAffinity().partitions(), sysCache1.lostPartitions().size());
 
-        // Resetting lost partitions for the syste cache.
+        // Resetting lost partitions for the system cache.
+        // In general, resetting lost partitions on the cluster that has offline baseline nodes is error-prone,
+        // but it is OK for testing purposes.
         assertEquals(EXIT_CODE_OK, execute(
             "--port",
             grid(1).localNode().attribute(ATTR_REST_TCP_PORT).toString(),
@@ -217,6 +271,124 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
 
         // Check that all partitions were reset.
         assertEquals(0, sysCache1.lostPartitions().size());
+    }
+
+    /**
+     * This method tests resetting lost partitions for a cache with an explicitly specified cache group;
+     * the cache name does not equal the cache group name.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testResetLostPartitionsCustomCacheGroup() throws Exception {
+        IgniteEx g0 = startGrids(2);
+
+        g0.cluster().state(ACTIVE);
+
+        stopGrid(1);
+
+        // Fill the cache with some data.
+        // Number of key value pairs should be enough to fill all partitions.
+        IgniteCache<Integer, Integer> userCache = g0.cache(CACHE_WITH_CUSTOM_GROUP);
+        int keyNums = g0.affinity(CACHE_WITH_CUSTOM_GROUP).partitions() * 10;
+        for (int i = 0; i < keyNums; i++)
+            userCache.put(i, i);
+
+        // Block supply messages for the system cache and start previously stopped node to make it lost partitions.
+        TestRecordingCommunicationSpi spi0 = TestRecordingCommunicationSpi.spi(g0);
+        spi0.blockMessages(blockSupplyMessageForGroup(cacheGroupId(CACHE_WITH_CUSTOM_GROUP, CUSTOM_CACHE_GROUP_NAME)));
+
+        IgniteInternalFuture<?> startFut = GridTestUtils.runAsync(() -> startGrid(1));
+
+        spi0.waitForBlocked();
+
+        stopGrid(0);
+
+        spi0.stopBlock(false);
+
+        startFut.get();
+
+        crd = grid(1);
+
+        IgniteCache<Integer, Integer> userCache1 = grid(1).cache(CACHE_WITH_CUSTOM_GROUP);
+
+        // All partitions must be in lost state.
+        assertEquals(grid(1).affinity(CACHE_WITH_CUSTOM_GROUP).partitions(), userCache1.lostPartitions().size());
+
+        // Resetting lost partitions for the cache.
+        // In general, resetting lost partitions on the cluster that has offline baseline nodes is error-prone,
+        // but it is OK for testing purposes.
+        assertEquals(EXIT_CODE_OK, execute(
+            "--port",
+            grid(1).localNode().attribute(ATTR_REST_TCP_PORT).toString(),
+            "--cache",
+            "reset_lost_partitions",
+            CACHE_WITH_CUSTOM_GROUP));
+
+        // Check that all partitions were reset.
+        assertEquals(0, userCache1.lostPartitions().size());
+    }
+
+    /**
+     * Tests resetting lost partitions for the caches with an explicitly specified shared cache group.
+     * The cache names do not equal the cache group name.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testResetLostPartitionsSharedCacheGroup() throws Exception {
+        IgniteEx g0 = startGrids(2);
+
+        g0.cluster().state(ACTIVE);
+
+        stopGrid(1);
+
+        // Fill the cache with some data.
+        // Number of key value pairs should be enough to fill all partitions.
+        IgniteCache<Integer, Integer> userCache1 = g0.cache(CACHE_WITH_SHARED_GROUP_I);
+        IgniteCache<Integer, Integer> userCache2 = g0.cache(CACHE_WITH_SHARED_GROUP_II);
+        int keyNums = g0.affinity(CACHE_WITH_SHARED_GROUP_I).partitions() * 10;
+        for (int i = 0; i < keyNums; i++) {
+            userCache1.put(i, i);
+            userCache2.put(i, i);
+        }
+
+        // Block supply messages for the system cache and start previously stopped node to make it lost partitions.
+        TestRecordingCommunicationSpi spi0 = TestRecordingCommunicationSpi.spi(g0);
+        spi0.blockMessages(blockSupplyMessageForGroup(cacheGroupId(CACHE_WITH_SHARED_GROUP_I, SHARED_CACHE_GROUP_NAME)));
+
+        IgniteInternalFuture<?> startFut = GridTestUtils.runAsync(() -> startGrid(1));
+
+        spi0.waitForBlocked();
+
+        stopGrid(0);
+
+        spi0.stopBlock(false);
+
+        startFut.get();
+
+        crd = grid(1);
+
+        userCache1 = grid(1).cache(CACHE_WITH_SHARED_GROUP_I);
+        userCache2 = grid(1).cache(CACHE_WITH_SHARED_GROUP_II);
+
+        // All partitions must be in lost state.
+        assertEquals(grid(1).affinity(CACHE_WITH_SHARED_GROUP_I).partitions(), userCache1.lostPartitions().size());
+        assertEquals(grid(1).affinity(CACHE_WITH_SHARED_GROUP_II).partitions(), userCache2.lostPartitions().size());
+
+        // Resetting lost partitions for the caches.
+        // In general, resetting lost partitions on the cluster that has offline baseline nodes is error-prone,
+        // but it is OK for testing purposes.
+        assertEquals(EXIT_CODE_OK, execute(
+            "--port",
+            grid(1).localNode().attribute(ATTR_REST_TCP_PORT).toString(),
+            "--cache",
+            "reset_lost_partitions",
+            CACHE_WITH_SHARED_GROUP_I + ", " + CACHE_WITH_SHARED_GROUP_II));
+
+        // Check that all partitions were reset.
+        assertEquals(0, userCache1.lostPartitions().size());
+        assertEquals(0, userCache2.lostPartitions().size());
     }
 
     /**
@@ -247,6 +419,7 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
         // Start node 1 with empty PDS. Rebalance will be started, only sys cache will be rebalanced.
         IgniteConfiguration cfg1 = getConfiguration(getTestIgniteInstanceName(1));
         TestRecordingCommunicationSpi spi1 = (TestRecordingCommunicationSpi) cfg1.getCommunicationSpi();
+
         spi1.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
             @Override public boolean apply(ClusterNode clusterNode, Message msg) {
                 if (msg instanceof GridDhtPartitionDemandMessage) {
