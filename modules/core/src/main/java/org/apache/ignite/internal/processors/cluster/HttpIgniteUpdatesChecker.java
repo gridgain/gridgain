@@ -57,6 +57,10 @@ public class HttpIgniteUpdatesChecker {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
 
         conn.setDoOutput(true);
+
+        // TODO: This does not work - why?
+        conn.setRequestMethod("GET");
+
         conn.setRequestProperty("Content-Type", "application/json");
         conn.setRequestProperty("Accept", "*/*");
         conn.setRequestProperty("user-agent", "Foo");
@@ -64,9 +68,7 @@ public class HttpIgniteUpdatesChecker {
         conn.setConnectTimeout(5000);
         conn.setReadTimeout(5000);
 
-        // TODO: This does not work - why?
-        conn.setRequestMethod("GET");
-
+        // TODO: getOutputStream forces a POST request.
         try (OutputStream os = conn.getOutputStream()) {
             // TODO: ?
             // os.write(updateReq.getBytes(charset));
