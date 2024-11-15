@@ -164,12 +164,27 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
     }
 
     @Test
-    public void testGetUpdates() throws Exception {
+    public void testGetUpdatesCurrentVersion() throws Exception {
+        Map<String, String> updates = getUpdates(IgniteVersionUtils.VER_STR);
+
+        assertEquals("", updates.get("eol_date"));
+        assertEquals("", updates.get("eol_comment"));
+    }
+
+    @Test
+    public void testGetUpdatesOldVersion() throws Exception {
+        Map<String, String> updates = getUpdates("8.7.1");
+
+        assertEquals("2025-01-31", updates.get("eol_date"));
+        assertEquals("test comment text", updates.get("eol_comment"));
+    }
+
+    private static Map<String, String> getUpdates(String ver) throws Exception {
         HttpIgniteUpdatesChecker checker = new HttpIgniteUpdatesChecker(GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL, "UTF-8");
 
         GridUpdateNotifier notifier = new GridUpdateNotifier(
             "test-instance",
-                IgniteVersionUtils.VER_STR,
+            ver,
             Mockito.mock(GridKernalGateway.class),
             Mockito.mock(GridDiscoveryManager.class),
             Collections.emptyList(),
@@ -182,5 +197,7 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         assertTrue(updates.containsKey("latest_version"));
         assertTrue(updates.containsKey("eol_date"));
         assertTrue(updates.containsKey("eol_comment"));
+
+        return updates;
     }
 }
