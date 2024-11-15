@@ -177,10 +177,10 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
             checker
         );
 
-        // TODO
-        String updates = notifier.getUpdates().keySet().iterator().next();
+        Map<String, String> updates = notifier.getUpdates();
 
-        assertTrue(updates, updates.startsWith("{\"latest_version\":"));
-        assertTrue(updates, updates.contains("\"end_of_life\":{\"date\":null,\"comment\":null}"));
+        assertTrue(updates.containsKey("latest_version"));
+        assertTrue(updates.containsKey("eol_date"));
+        assertTrue(updates.containsKey("eol_comment"));
     }
 }
