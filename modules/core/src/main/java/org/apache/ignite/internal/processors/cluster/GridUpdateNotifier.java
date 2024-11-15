@@ -27,6 +27,7 @@ import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.plugin.PluginProvider;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -372,6 +373,30 @@ public class GridUpdateNotifier {
         workerThread.interrupt();
     }
 
+    private Map<String, Object> getUpdateCheckerParams() {
+        String stackTrace = gw != null ? gw.userStackTrace() : null;
+
+        srvNodes = discoSpi.serverNodes(discoSpi.topologyVersionEx()).size();
+
+        Map<String, Object> params = new HashMap<>();
+
+        params.put("igniteInstanceName", igniteInstanceName);
+        params.put("params", updStatusParams);
+        params.put("srvNodes", srvNodes);
+        params.put("product", product);
+        params.put("stackTrace", stackTrace);
+        params.put("vmProps", vmProps);
+        params.put("pluginsVers", pluginsVers);
+
+        return params;
+    }
+
+    String getUpdates() throws IOException {
+        Map<String, Object> params = getUpdateCheckerParams();
+
+        return updatesChecker.getUpdates(params);
+    }
+
     /**
      * Asynchronous checker of the latest version available.
      */
@@ -391,25 +416,11 @@ public class GridUpdateNotifier {
         }
 
         /** {@inheritDoc} */
-        @Override protected void body() throws InterruptedException {
+        @Override protected void body() {
             try {
-                String stackTrace = gw != null ? gw.userStackTrace() : null;
-
-                srvNodes = discoSpi.serverNodes(discoSpi.topologyVersionEx()).size();
-
-                Map<String, Object> params = new HashMap<>();
-                params.put("igniteInstanceName", igniteInstanceName);
-                params.put("params", updStatusParams);
-                params.put("srvNodes", srvNodes);
-                params.put("product", product);
-                params.put("stackTrace", stackTrace);
-                params.put("vmProps", vmProps);
-                params.put("pluginsVers", pluginsVers);
-
                 if (!isCancelled()) {
                     try {
-                        String updatesRes = updatesChecker.getUpdates(params);
-
+                        String updatesRes = getUpdates();
                         String[] lines = updatesRes.split("\n");
 
                         for (String line : lines) {

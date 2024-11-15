@@ -22,6 +22,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridKernalGateway;
 import org.apache.ignite.internal.IgniteProperties;
+import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -32,13 +33,10 @@ import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -155,14 +153,20 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
     }
 
     @Test
-    public void testGetUpdates() throws IOException {
+    public void testGetUpdates() throws Exception {
         HttpIgniteUpdatesChecker checker = new HttpIgniteUpdatesChecker(GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL, "UTF-8");
 
-        Map<String, Object> props = new HashMap<>();
-        props.put("foo", "bar");
-        props.put("baz", "qux");
+        GridUpdateNotifier notifier = new GridUpdateNotifier(
+            "test-instance",
+                IgniteVersionUtils.VER_STR,
+            Mockito.mock(GridKernalGateway.class),
+            Mockito.mock(GridDiscoveryManager.class),
+            Collections.emptyList(),
+            true,
+            checker
+        );
 
-        String updates = checker.getUpdates(props);
+        String updates = notifier.getUpdates();
 
         assertTrue(updates, updates.startsWith("{\"latest_version\":"));
         assertTrue(updates, updates.contains("\"end_of_life\":{\"date\":null,\"comment\":null}"));

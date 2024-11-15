@@ -73,9 +73,17 @@ public class HttpIgniteUpdatesChecker {
 
             for (Map.Entry<String, Object> entry : updateReq.entrySet()) {
                 bodyBuilder
-                        .append("\"").append(entry.getKey()).append("\": \"")
-                        .append(escapeJson(entry.getValue().toString()))
-                        .append("\", ");
+                        .append("\"").append(entry.getKey()).append("\": ");
+
+                if (entry.getValue() == null) {
+                    bodyBuilder.append("null, ");
+                }
+                else {
+                    bodyBuilder
+                            .append("\"")
+                            .append(escapeJson(entry.getValue().toString()))
+                            .append("\", ");
+                }
             }
 
             bodyBuilder.delete(bodyBuilder.length() - 2, bodyBuilder.length());
