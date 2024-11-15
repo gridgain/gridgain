@@ -100,7 +100,7 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
 
         GridKernalContext ctx = Mockito.mock(GridKernalContext.class);
         GridDiscoveryManager discovery = Mockito.mock(GridDiscoveryManager.class);
-        List<ClusterNode> srvNodes = Collections.emptyList();
+        List<ClusterNode> srvNodes = Mockito.mock(List.class);
 
         Mockito.when(srvNodes.size()).thenReturn(SERVER_NODES);
         Mockito.when(discovery.serverNodes(Mockito.any(AffinityTopologyVersion.class))).thenReturn(srvNodes);
