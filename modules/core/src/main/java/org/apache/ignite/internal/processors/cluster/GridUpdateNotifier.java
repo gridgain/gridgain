@@ -444,16 +444,16 @@ public class GridUpdateNotifier {
                     try {
                         Map<String, String> updatesRes = getUpdates();
 
-                        String ver = updatesRes.get("version");
+                        String ver = updatesRes.get("latest_version");
                         if (ver != null) {
                             latestVer = regularize(ver);
                         }
 
-                        downloadUrl = updatesRes.get("downloadUrl");
+                        downloadUrl = updatesRes.get("download_url");
 
-                        String eol = updatesRes.get("endOfLifeDate");
+                        String eol = updatesRes.get("eol_date");
 
-                        if (eol != null) {
+                        if (eol != null && !eol.isEmpty()) {
                             try {
                                 endOfLifeDate = LocalDate.parse(eol, DateTimeFormatter.ISO_DATE);
                             } catch (DateTimeParseException e) {
@@ -463,7 +463,8 @@ public class GridUpdateNotifier {
                                 endOfLifeDate = null;
                             }
                         }
-                        endOfLifeComment = updatesRes.get("endOfLifeComment");
+
+                        endOfLifeComment = updatesRes.get("eol_comment");
 
                         err = null;
                     }
