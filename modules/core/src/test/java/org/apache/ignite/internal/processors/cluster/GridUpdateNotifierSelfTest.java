@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
 /**
  * Update notifier test.
@@ -98,7 +99,7 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         updates.put("endOfLifeDate", "2023-10-21");
         updates.put("endOfLifeComment", "EOL comment");
 
-        Mockito.when(updatesCheckerMock.getUpdates(any())).thenReturn(updates);
+        Mockito.when(updatesCheckerMock.getUpdates(anyString(), any())).thenReturn(updates);
 
         GridKernalContext ctx = Mockito.mock(GridKernalContext.class);
         GridDiscoveryManager discovery = Mockito.mock(GridDiscoveryManager.class);

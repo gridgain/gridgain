@@ -54,7 +54,7 @@ public class HttpIgniteUpdatesChecker {
      * @return Information about Ignite updates separated by line endings
      * @throws IOException If HTTP request was failed
      */
-    public Map<String, String> getUpdates(Map<String, Object> updateReq) throws IOException {
+    public Map<String, String> getUpdates(String version, Map<String, Object> updateReq) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
 
         conn.setDoOutput(true);
@@ -69,7 +69,7 @@ public class HttpIgniteUpdatesChecker {
         try (OutputStream os = conn.getOutputStream()) {
             StringBuilder bodyBuilder = new StringBuilder("{");
             bodyBuilder.append("\"product\": \"gg\", \"version\": \"")
-                    .append(IgniteVersionUtils.VER_STR)
+                    .append(version)
                     .append("\", \"instanceData\": {");
 
             for (Map.Entry<String, Object> entry : updateReq.entrySet()) {

@@ -417,7 +417,7 @@ public class GridUpdateNotifier {
     Map<String, String> getUpdates() throws IOException {
         Map<String, Object> params = getUpdateCheckerParams();
 
-        return updatesChecker.getUpdates(params);
+        return updatesChecker.getUpdates(ver, params);
     }
 
     /**
