@@ -101,12 +101,12 @@ public class HttpIgniteUpdatesChecker {
     }
 
     private static String escapeJson(String str) {
-        // TODO: Escape control characters.
         // https://www.ietf.org/rfc/rfc4627.txt
-        // All Unicode characters may be placed within the
-        //   quotation marks except for the characters that must be escaped:
-        //   quotation mark, reverse solidus, and the control characters (U+0000
-        //   through U+001F).
-        return str.replace("\\", "\\\\").replace("\"", "\\\"");
+        // All Unicode characters may be placed within the quotation marks except for the characters that must be escaped:
+        // quotation mark, reverse solidus, and the control characters (U+0000 through U+001F).
+        return str
+                .replaceAll("[\u0000-\u001F]", "")
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"");
     }
 }
