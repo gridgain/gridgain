@@ -34,6 +34,7 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -345,6 +346,14 @@ public class GridUpdateNotifier {
                 throttle(log, true, "New version is available at " + downloadUrl + ": " + latestVer);
         else if (!reportOnlyNew)
             throttle(log, false, "Update status is not available.");
+
+        if (endOfLifeDate != null) {
+            // If closer than 6 months, log a warning.
+            if (endOfLifeDate.minusMonths(6).isBefore(LocalDate.now())) {
+                String msg = "End of life for current version " + ver + " is on " + endOfLifeDate + ". " + endOfLifeComment;
+                throttle(log, true, msg);
+            }
+        }
     }
 
     /**
@@ -434,7 +443,19 @@ public class GridUpdateNotifier {
                         }
 
                         downloadUrl = updatesRes.get("downloadUrl");
-                        endOfLifeDate = LocalDate.parse(updatesRes.get("endOfLifeDate"), DateTimeFormatter.ISO_DATE);
+
+                        String eol = updatesRes.get("endOfLifeDate");
+
+                        if (eol != null) {
+                            try {
+                                endOfLifeDate = LocalDate.parse(eol, DateTimeFormatter.ISO_DATE);
+                            } catch (DateTimeParseException e) {
+                                if (log.isDebugEnabled())
+                                    log.debug("Failed to parse end of life date '" + eol + "': " + e.getMessage());
+
+                                endOfLifeDate = null;
+                            }
+                        }
                         endOfLifeComment = updatesRes.get("endOfLifeComment");
 
                         err = null;
