@@ -25,6 +25,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -53,7 +55,7 @@ public class HttpIgniteUpdatesChecker {
      * @return Information about Ignite updates separated by line endings
      * @throws IOException If HTTP request was failed
      */
-    public String getUpdates(Map<String, Object> updateReq) throws IOException {
+    public List<String> getUpdates(Map<String, Object> updateReq) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
 
         conn.setDoOutput(true);
@@ -99,12 +101,12 @@ public class HttpIgniteUpdatesChecker {
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(in, charset));
 
-            StringBuilder res = new StringBuilder();
+            List<String> res = new ArrayList<>();
 
             for (String line; (line = reader.readLine()) != null; )
-                res.append(line).append('\n');
+                res.add(line);
 
-            return res.toString();
+            return res;
         }
     }
 

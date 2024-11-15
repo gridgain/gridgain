@@ -27,7 +27,6 @@ import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.plugin.PluginProvider;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -37,6 +36,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -391,7 +391,7 @@ public class GridUpdateNotifier {
         return params;
     }
 
-    String getUpdates() throws IOException {
+    List<String> getUpdates() throws IOException {
         Map<String, Object> params = getUpdateCheckerParams();
 
         return updatesChecker.getUpdates(params);
@@ -420,10 +420,9 @@ public class GridUpdateNotifier {
             try {
                 if (!isCancelled()) {
                     try {
-                        String updatesRes = getUpdates();
-                        String[] lines = updatesRes.split("\n");
+                        List<String> updatesRes = getUpdates();
 
-                        for (String line : lines) {
+                        for (String line : updatesRes) {
                             if (line.contains("version"))
                                 latestVer = regularize(obtainVersionFrom(line));
                             else if (line.contains("downloadUrl"))

@@ -34,6 +34,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -89,12 +90,16 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         HttpIgniteUpdatesChecker updatesCheckerMock = Mockito.mock(HttpIgniteUpdatesChecker.class);
 
         // Return current node version and some other info
-        Mockito.when(updatesCheckerMock.getUpdates(any()))
-            .thenReturn("meta=meta" + "\n" + "version=" + nodeVer + "\n" + "downloadUrl=url");
+        List<String> updates = new ArrayList<>();
+        updates.add("meta=meta");
+        updates.add("version=" + nodeVer);
+        updates.add("downloadUrl=url");
+
+        Mockito.when(updatesCheckerMock.getUpdates(any())).thenReturn(updates);
 
         GridKernalContext ctx = Mockito.mock(GridKernalContext.class);
         GridDiscoveryManager discovery = Mockito.mock(GridDiscoveryManager.class);
-        List<ClusterNode> srvNodes = Mockito.mock(List.class);
+        List<ClusterNode> srvNodes = Collections.emptyList();
 
         Mockito.when(srvNodes.size()).thenReturn(SERVER_NODES);
         Mockito.when(discovery.serverNodes(Mockito.any(AffinityTopologyVersion.class))).thenReturn(srvNodes);
@@ -166,7 +171,8 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
             checker
         );
 
-        String updates = notifier.getUpdates();
+        // TODO
+        String updates = notifier.getUpdates().get(0);
 
         assertTrue(updates, updates.startsWith("{\"latest_version\":"));
         assertTrue(updates, updates.contains("\"end_of_life\":{\"date\":null,\"comment\":null}"));
