@@ -366,7 +366,6 @@ public class GridUpdateNotifier {
             }
         else if (!reportOnlyNew)
             throttle(log, false, "Update status is not available.");
-
     }
 
     /**
