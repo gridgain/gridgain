@@ -103,6 +103,9 @@ public class HttpIgniteUpdatesChecker {
             Map<String, String> res = new HashMap<>();
 
             for (String line; (line = reader.readLine()) != null; ) {
+                if (line.isEmpty())
+                    continue;
+
                 String[] parts = line.split("=", 2);
 
                 if (parts.length == 2) {
