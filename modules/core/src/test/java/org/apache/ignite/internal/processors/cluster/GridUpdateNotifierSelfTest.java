@@ -96,10 +96,10 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         // Return current node version and some other info
         Map<String, String> updates = new HashMap<>();
         updates.put("meta", "meta");
-        updates.put("version", nodeVer);
-        updates.put("downloadUrl", "url");
-        updates.put("endOfLifeDate", "2023-10-21");
-        updates.put("endOfLifeComment", "EOL comment");
+        updates.put("latest_version", nodeVer);
+        updates.put("download_url", "url");
+        updates.put("eol_date", "2023-10-21");
+        updates.put("eol_comment", "EOL comment");
 
         Mockito.when(updatesCheckerMock.getUpdates(anyString(), any())).thenReturn(updates);
 
