@@ -96,8 +96,8 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         // Return current node version and some other info
         Map<String, String> updates = new HashMap<>();
         updates.put("meta", "meta");
-        updates.put("latest_version", nodeVer);
-        updates.put("download_url", "url");
+        updates.put("latest_version", "99.88.77");
+        updates.put("download_url", "http://example.com/gg");
         updates.put("eol_date", "2023-10-21");
         updates.put("eol_comment", "EOL comment");
 

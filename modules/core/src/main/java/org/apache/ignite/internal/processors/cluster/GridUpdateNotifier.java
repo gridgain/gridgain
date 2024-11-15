@@ -349,18 +349,24 @@ public class GridUpdateNotifier {
                 if (!reportOnlyNew)
                     throttle(log, false, "Your version is up to date.");
             }
-            else
-                throttle(log, true, "New version is available at " + downloadUrl + ": " + latestVer);
+            else {
+                String msg = "New version is available at " + downloadUrl + ": " + latestVer;
+
+                if (endOfLifeDate != null && endOfLifeDate.minusMonths(6).isBefore(LocalDate.now())) {
+                    String eolMsg = "End of life for current version " + ver + " is on " + endOfLifeDate;
+
+                    if (endOfLifeComment != null && !endOfLifeComment.isEmpty()) {
+                        eolMsg += " (" + endOfLifeComment + ")";
+                    }
+
+                    msg += ". " + eolMsg + ".";
+                }
+
+                throttle(log, true, msg);
+            }
         else if (!reportOnlyNew)
             throttle(log, false, "Update status is not available.");
 
-        if (endOfLifeDate != null) {
-            // If closer than 6 months, log a warning.
-            if (endOfLifeDate.minusMonths(6).isBefore(LocalDate.now())) {
-                String msg = "End of life for current version " + ver + " is on " + endOfLifeDate + ". " + endOfLifeComment;
-                throttle(log, true, msg);
-            }
-        }
     }
 
     /**
