@@ -296,6 +296,14 @@ public class GridUpdateNotifier {
         return latestVer;
     }
 
+    LocalDate endOfLifeDate() {
+        return endOfLifeDate;
+    }
+
+    String endOfLifeComment() {
+        return endOfLifeComment;
+    }
+
     /**
      * @return Error.
      */

@@ -95,6 +95,8 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         updates.put("meta", "meta");
         updates.put("version", nodeVer);
         updates.put("downloadUrl", "url");
+        updates.put("endOfLifeDate", "2023-10-21");
+        updates.put("endOfLifeComment", "EOL comment");
 
         Mockito.when(updatesCheckerMock.getUpdates(any())).thenReturn(updates);
 
@@ -131,6 +133,9 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
             (nodeMaintenance == 0 && lastMaintenance == 0) || (nodeMaintenance > 0 && lastMaintenance > 0));
 
         ntf.reportStatus(log);
+
+        assertEquals("EOL comment", ntf.endOfLifeComment());
+        assertEquals("2023-10-21", ntf.endOfLifeDate().toString());
     }
 
     /**
