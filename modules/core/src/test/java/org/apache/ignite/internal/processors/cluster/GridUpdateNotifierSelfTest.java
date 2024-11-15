@@ -34,6 +34,8 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.lang.reflect.Field;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -178,6 +180,11 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
 
         assertEquals("2025-01-31", updates.get("eol_date"));
         assertEquals("test comment text", updates.get("eol_comment"));
+
+        LocalDate eolDate = LocalDate.parse(updates.get("eol_date"), DateTimeFormatter.ISO_DATE);
+        assertEquals(2025, eolDate.getYear());
+        assertEquals(1, eolDate.getMonthValue());
+        assertEquals(31, eolDate.getDayOfMonth());
     }
 
     private static Map<String, String> getUpdates(String ver) throws Exception {
