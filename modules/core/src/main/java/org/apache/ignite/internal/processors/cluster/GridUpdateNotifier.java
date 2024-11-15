@@ -27,7 +27,6 @@ import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.plugin.PluginProvider;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -36,7 +35,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -391,7 +389,7 @@ public class GridUpdateNotifier {
         return params;
     }
 
-    List<String> getUpdates() throws IOException {
+    Map<String, String> getUpdates() throws IOException {
         Map<String, Object> params = getUpdateCheckerParams();
 
         return updatesChecker.getUpdates(params);
@@ -420,13 +418,12 @@ public class GridUpdateNotifier {
             try {
                 if (!isCancelled()) {
                     try {
-                        List<String> updatesRes = getUpdates();
+                        Map<String, String> updatesRes = getUpdates();
 
-                        for (String line : updatesRes) {
-                            if (line.contains("version"))
-                                latestVer = regularize(obtainVersionFrom(line));
-                            else if (line.contains("downloadUrl"))
-                                downloadUrl = obtainDownloadUrlFrom(line);
+                        String ver = updatesRes.get("version");
+                        if (ver != null) {
+                            latestVer = regularize(ver);
+                            downloadUrl = updatesRes.get("downloadUrl");
                         }
 
                         err = null;
@@ -445,40 +442,6 @@ public class GridUpdateNotifier {
                 if (log.isDebugEnabled())
                     log.debug("Unexpected exception in update checker. " + e.getMessage());
             }
-        }
-
-        /**
-         * Gets the version from the current {@code node}, if one exists.
-         *
-         * @param line Line which contains value for extract.
-         * @param metaName Name for extract.
-         * @return Version or {@code null} if one's not found.
-         */
-        @Nullable private String obtainMeta(String metaName, String line) {
-            assert line.contains(metaName);
-
-            return line.substring(line.indexOf(metaName) + metaName.length()).trim();
-
-        }
-
-        /**
-         * Gets the version from the current {@code node}, if one exists.
-         *
-         * @param line Line which contains value for extract.
-         * @return Version or {@code null} if one's not found.
-         */
-        @Nullable private String obtainVersionFrom(String line) {
-            return obtainMeta("version=", line);
-        }
-
-        /**
-         * Gets the download url from the current {@code node}, if one exists.
-         *
-         * @param line Which contains value for extract.
-         * @return download url or {@code null} if one's not found.
-         */
-        @Nullable private String obtainDownloadUrlFrom(String line) {
-            return obtainMeta("downloadUrl=", line);
         }
     }
 }

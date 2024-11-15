@@ -34,10 +34,11 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -90,10 +91,10 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         HttpIgniteUpdatesChecker updatesCheckerMock = Mockito.mock(HttpIgniteUpdatesChecker.class);
 
         // Return current node version and some other info
-        List<String> updates = new ArrayList<>();
-        updates.add("meta=meta");
-        updates.add("version=" + nodeVer);
-        updates.add("downloadUrl=url");
+        Map<String, String> updates = new HashMap<>();
+        updates.put("meta", "meta");
+        updates.put("version", nodeVer);
+        updates.put("downloadUrl", "url");
 
         Mockito.when(updatesCheckerMock.getUpdates(any())).thenReturn(updates);
 
