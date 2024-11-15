@@ -32,6 +32,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -91,6 +93,12 @@ public class GridUpdateNotifier {
 
     /** Download url for latest version. */
     private volatile String downloadUrl;
+
+    /** End of life date. */
+    private volatile LocalDate endOfLifeDate;
+
+    /** End of life comment. */
+    private volatile String endOfLifeComment;
 
     /** Ignite instance name. */
     private final String igniteInstanceName;
@@ -423,8 +431,11 @@ public class GridUpdateNotifier {
                         String ver = updatesRes.get("version");
                         if (ver != null) {
                             latestVer = regularize(ver);
-                            downloadUrl = updatesRes.get("downloadUrl");
                         }
+
+                        downloadUrl = updatesRes.get("downloadUrl");
+                        endOfLifeDate = LocalDate.parse(updatesRes.get("endOfLifeDate"), DateTimeFormatter.ISO_DATE);
+                        endOfLifeComment = updatesRes.get("endOfLifeComment");
 
                         err = null;
                     }
