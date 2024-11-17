@@ -456,8 +456,6 @@ class FileNioMemData {
      */
     final int nameHashCode;
 
-    private final CompressLaterCache<CompressItem, CompressItem> compressLaterCache =
-        new CompressLaterCache<>(CACHE_MIN_SIZE);
 
     private String name;
     private final boolean compress;
@@ -596,7 +594,6 @@ class FileNioMemData {
 
     private void addToCompressLaterCache(int page) {
         CompressItem c = new CompressItem(this, page);
-        compressLaterCache.put(c, c);
     }
 
     private ByteBuffer expandPage(int page) {
@@ -699,8 +696,6 @@ class FileNioMemData {
             }
             buffers = newBuffers;
         }
-        compressLaterCache.setCacheSize(Math.max(CACHE_MIN_SIZE, (int) (blocks *
-                compressLaterCachePercent / 100)));
     }
 
     /**

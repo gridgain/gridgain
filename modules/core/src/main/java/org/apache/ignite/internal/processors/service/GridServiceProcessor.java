@@ -838,9 +838,6 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
     @Override public IgniteInternalFuture<?> cancelAll(Collection<String> servicesNames) {
-        List<String> svcNamesCp = new ArrayList<>(servicesNames);
-
-        Collections.sort(svcNamesCp);
 
         GridCompoundFuture res;
 
