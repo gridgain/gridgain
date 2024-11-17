@@ -20,7 +20,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.eviction.EvictableEntry;
-import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.util.lang.GridMetadataAwareAdapter;
 import org.apache.ignite.internal.util.lang.GridTuple;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -125,8 +125,7 @@ public class CacheEvictableEntryImpl<K, V> implements EvictableEntry<K, V> {
 
     /** {@inheritDoc} */
     @Override public V getValue() {
-        try {
-            IgniteInternalTx tx = cached.context().tm().userTx();
+        try(GridNearTxLocal tx = cached.context().tm().userTx()) {
 
             if (tx != null) {
                 GridTuple<CacheObject> peek = tx.peek(cached.context(), false, cached.key());
@@ -160,7 +159,7 @@ public class CacheEvictableEntryImpl<K, V> implements EvictableEntry<K, V> {
                 }
             }
         }
-        catch (GridCacheFilterFailedException ignored) {
+        catch (GridCacheFilterFailedException | IgniteCheckedException ignored) {
             throw new IgniteException("Should never happen.");
         }
     }
