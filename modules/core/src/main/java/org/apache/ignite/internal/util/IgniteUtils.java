@@ -12313,7 +12313,7 @@ public abstract class IgniteUtils {
             bits = BigDecimal.valueOf(0L);
 
             try {
-                String[] octets = addr.contains(".") ? addr.split(".") : addr.split(":");
+                String[] octets = addr.contains(".") ? addr.split("\\.") : addr.split(":");
 
                 int len = octets.length;
 
