@@ -21,8 +21,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * This class is responsible for getting GridGain updates information via HTTP
@@ -50,18 +52,42 @@ public class HttpIgniteUpdatesChecker {
      * @return Information about Ignite updates separated by line endings
      * @throws IOException If HTTP request was failed
      */
-    public String getUpdates(String updateReq) throws IOException {
-        URLConnection conn = new URL(url).openConnection();
+    public Map<String, String> getUpdates(String version, Map<String, Object> updateReq) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+
         conn.setDoOutput(true);
-        conn.setRequestProperty("Accept-Charset", charset);
-        conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
-        conn.setRequestProperty("user-agent", "");
+
+        conn.setRequestProperty("Content-Type", "application/json");
 
         conn.setConnectTimeout(5000);
         conn.setReadTimeout(5000);
 
         try (OutputStream os = conn.getOutputStream()) {
-            os.write(updateReq.getBytes(charset));
+            StringBuilder bodyBuilder = new StringBuilder("{");
+            bodyBuilder.append("\"product\": \"gg\", \"version\": \"")
+                    .append(version)
+                    .append("\", \"instanceData\": {");
+
+            for (Map.Entry<String, Object> entry : updateReq.entrySet()) {
+                bodyBuilder
+                        .append("\"").append(entry.getKey()).append("\": ");
+
+                if (entry.getValue() == null) {
+                    bodyBuilder.append("null, ");
+                }
+                else {
+                    bodyBuilder
+                            .append("\"")
+                            .append(escapeJson(entry.getValue().toString()))
+                            .append("\", ");
+                }
+            }
+
+            bodyBuilder.delete(bodyBuilder.length() - 2, bodyBuilder.length());
+            bodyBuilder.append("}}");
+
+            os.write(bodyBuilder.toString().getBytes(charset));
+            os.flush();
         }
 
         try (InputStream in = conn.getInputStream()) {
@@ -70,12 +96,32 @@ public class HttpIgniteUpdatesChecker {
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(in, charset));
 
-            StringBuilder res = new StringBuilder();
+            Map<String, String> res = new HashMap<>();
 
-            for (String line; (line = reader.readLine()) != null; )
-                res.append(line).append('\n');
+            for (String line; (line = reader.readLine()) != null; ) {
+                if (line.isEmpty())
+                    continue;
 
-            return res.toString();
+                String[] parts = line.split("=", 2);
+
+                if (parts.length == 2) {
+                    res.put(parts[0].trim(), parts[1].trim());
+                } else {
+                    res.put(line.trim(), null);
+                }
+            }
+
+            return res;
         }
+    }
+
+    private static String escapeJson(String str) {
+        // https://www.ietf.org/rfc/rfc4627.txt
+        // All Unicode characters may be placed within the quotation marks except for the characters that must be escaped:
+        // quotation mark, reverse solidus, and the control characters (U+0000 through U+001F).
+        return str
+                .replaceAll("[\u0000-\u001F]", "")
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"");
     }
 }
