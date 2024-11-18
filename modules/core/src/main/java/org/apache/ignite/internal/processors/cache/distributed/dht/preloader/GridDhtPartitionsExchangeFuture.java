@@ -3964,7 +3964,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                                 cacheName -> {
                                     DynamicCacheDescriptor desc = cctx.cache().cacheDescriptor(cacheName);
 
-                                    return (desc != null)? desc.groupId() : null;
+                                    return (desc != null) ? desc.groupId() : null;
                                 }).filter(Objects::nonNull))
                             .collect(Collectors.toSet());
 
