@@ -34,8 +34,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.lang.reflect.Field;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -98,8 +96,7 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         updates.put("meta", "meta");
         updates.put("latest_version", "99.88.77");
         updates.put("download_url", "http://example.com/gg");
-        updates.put("eol_date", "2023-10-21");
-        updates.put("eol_comment", "EOL comment");
+        updates.put("eol_message", "EOL MESSAGE");
 
         Mockito.when(updatesCheckerMock.getUpdates(anyString(), any())).thenReturn(updates);
 
@@ -137,8 +134,7 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
 
         ntf.reportStatus(log);
 
-        assertEquals("EOL comment", ntf.endOfLifeComment());
-        assertEquals("2023-10-21", ntf.endOfLifeDate().toString());
+        assertEquals("EOL MESSAGE", ntf.endOfLifeMessage());
     }
 
     /**
@@ -170,21 +166,14 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
     public void testGetUpdatesCurrentVersion() throws Exception {
         Map<String, String> updates = getUpdates(IgniteVersionUtils.VER_STR);
 
-        assertEquals("", updates.get("eol_date"));
-        assertEquals("", updates.get("eol_comment"));
+        assertNull(updates.get("eol_message"));
     }
 
     @Test
     public void testGetUpdatesOldVersion() throws Exception {
         Map<String, String> updates = getUpdates("8.7.1");
 
-        assertEquals("2025-01-31", updates.get("eol_date"));
-        assertEquals("test comment text", updates.get("eol_comment"));
-
-        LocalDate eolDate = LocalDate.parse(updates.get("eol_date"), DateTimeFormatter.ISO_DATE);
-        assertEquals(2025, eolDate.getYear());
-        assertEquals(1, eolDate.getMonthValue());
-        assertEquals(31, eolDate.getDayOfMonth());
+        assertEquals("test comment text", updates.get("eol_message"));
     }
 
     private static Map<String, String> getUpdates(String ver) throws Exception {

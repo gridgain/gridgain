@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
-import org.apache.ignite.internal.IgniteVersionUtils;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;

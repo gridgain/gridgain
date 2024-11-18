@@ -20,9 +20,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -94,11 +91,8 @@ public class GridUpdateNotifier {
     /** Download url for latest version. */
     private volatile String downloadUrl;
 
-    /** End of life date. */
-    private volatile LocalDate endOfLifeDate;
-
-    /** End of life comment. */
-    private volatile String endOfLifeComment;
+    /** End of life message. */
+    private volatile String endOfLifeMessage;
 
     /** Ignite instance name. */
     private final String igniteInstanceName;
@@ -295,12 +289,8 @@ public class GridUpdateNotifier {
         return latestVer;
     }
 
-    LocalDate endOfLifeDate() {
-        return endOfLifeDate;
-    }
-
-    String endOfLifeComment() {
-        return endOfLifeComment;
+    String endOfLifeMessage() {
+        return endOfLifeMessage;
     }
 
     /**
@@ -350,16 +340,10 @@ public class GridUpdateNotifier {
                     throttle(log, false, "Your version is up to date.");
             }
             else {
-                String msg = "New version is available at " + downloadUrl + ": " + latestVer;
+                String msg = "New version is available at " + downloadUrl + ": " + latestVer + ".";
 
-                if (endOfLifeDate != null && endOfLifeDate.minusMonths(6).isBefore(LocalDate.now())) {
-                    String eolMsg = "End of life for current version " + ver + " is on " + endOfLifeDate;
-
-                    if (endOfLifeComment != null && !endOfLifeComment.isEmpty()) {
-                        eolMsg += " (" + endOfLifeComment + ")";
-                    }
-
-                    msg += ". " + eolMsg + ".";
+                if (endOfLifeMessage != null && !endOfLifeMessage.isEmpty()) {
+                    msg = endOfLifeMessage + " " + msg;
                 }
 
                 throttle(log, true, msg);
@@ -455,21 +439,7 @@ public class GridUpdateNotifier {
                         }
 
                         downloadUrl = updatesRes.get("download_url");
-
-                        String eol = updatesRes.get("eol_date");
-
-                        if (eol != null && !eol.isEmpty()) {
-                            try {
-                                endOfLifeDate = LocalDate.parse(eol, DateTimeFormatter.ISO_DATE);
-                            } catch (DateTimeParseException e) {
-                                if (log.isDebugEnabled())
-                                    log.debug("Failed to parse end of life date '" + eol + "': " + e.getMessage());
-
-                                endOfLifeDate = null;
-                            }
-                        }
-
-                        endOfLifeComment = updatesRes.get("eol_comment");
+                        endOfLifeMessage = updatesRes.get("eol_message");
 
                         err = null;
                     }
