@@ -192,8 +192,7 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         Map<String, String> updates = notifier.getUpdates();
 
         assertTrue(updates.containsKey("latest_version"));
-        assertTrue(updates.containsKey("eol_date"));
-        assertTrue(updates.containsKey("eol_comment"));
+        assertTrue(updates.containsKey("eol_message"));
 
         return updates;
     }
