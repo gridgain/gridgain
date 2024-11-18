@@ -58,8 +58,6 @@ public class HttpIgniteUpdatesChecker {
         conn.setDoOutput(true);
 
         conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Accept", "*/*");
-        conn.setRequestProperty("user-agent", "Foo");
 
         conn.setConnectTimeout(5000);
         conn.setReadTimeout(5000);
