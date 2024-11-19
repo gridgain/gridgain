@@ -16,17 +16,13 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
-import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridKernalGateway;
 import org.apache.ignite.internal.IgniteProperties;
+import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -37,7 +33,16 @@ import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import static org.mockito.Matchers.anyString;
+import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
 /**
  * Update notifier test.
@@ -87,8 +92,13 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         HttpIgniteUpdatesChecker updatesCheckerMock = Mockito.mock(HttpIgniteUpdatesChecker.class);
 
         // Return current node version and some other info
-        Mockito.when(updatesCheckerMock.getUpdates(anyString()))
-            .thenReturn("meta=meta" + "\n" + "version=" + nodeVer + "\n" + "downloadUrl=url");
+        Map<String, String> updates = new HashMap<>();
+        updates.put("meta", "meta");
+        updates.put("latest_version", "99.88.77");
+        updates.put("download_url", "http://example.com/gg");
+        updates.put("eol_message", "EOL MESSAGE");
+
+        Mockito.when(updatesCheckerMock.getUpdates(anyString(), any())).thenReturn(updates);
 
         GridKernalContext ctx = Mockito.mock(GridKernalContext.class);
         GridDiscoveryManager discovery = Mockito.mock(GridDiscoveryManager.class);
@@ -123,6 +133,8 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
             (nodeMaintenance == 0 && lastMaintenance == 0) || (nodeMaintenance > 0 && lastMaintenance > 0));
 
         ntf.reportStatus(log);
+
+        assertEquals("EOL MESSAGE", ntf.endOfLifeMessage());
     }
 
     /**
@@ -148,5 +160,45 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         vers.setAccessible(true);
         String versionsString = (String)vers.get(notifier);
         assertTrue(versionsString.contains("my-cool-name-plugin-version=UNKNOWN"));
+    }
+
+    @Test
+    public void testGetUpdatesCurrentVersion() throws Exception {
+        Map<String, String> updates = getUpdates(IgniteVersionUtils.VER_STR);
+
+        assertEquals("", updates.get("eol_message"));
+    }
+
+    @Test
+    public void testGetUpdatesOldVersion() throws Exception {
+        Map<String, String> updates = getUpdates("8.7.1");
+
+        assertEquals(
+                "The GridGain 8.7.x End of Life is approaching on 2025-01-31. " +
+                        "Test comment text. " +
+                        "Learn more on the Versioning, Support Lifecycle, and upgrade options: " +
+                        "https://www.gridgain.com/docs/latest/installation-guide/versioning-and-support-lifecycle",
+                updates.get("eol_message"));
+    }
+
+    private static Map<String, String> getUpdates(String ver) throws Exception {
+        HttpIgniteUpdatesChecker checker = new HttpIgniteUpdatesChecker(GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL, "UTF-8");
+
+        GridUpdateNotifier notifier = new GridUpdateNotifier(
+            "test-instance",
+            ver,
+            Mockito.mock(GridKernalGateway.class),
+            Mockito.mock(GridDiscoveryManager.class),
+            Collections.emptyList(),
+            true,
+            checker
+        );
+
+        Map<String, String> updates = notifier.getUpdates();
+
+        assertTrue(updates.containsKey("latest_version"));
+        assertTrue(updates.containsKey("eol_message"));
+
+        return updates;
     }
 }
