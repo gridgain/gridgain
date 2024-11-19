@@ -16,7 +16,6 @@
 
 package org.apache.ignite.util;
 
-import java.util.Random;
 import java.util.UUID;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -34,9 +33,6 @@ import static org.apache.ignite.testframework.GridTestUtils.assertContains;
  * Checks --checkpoint command.
  */
 public class GridCommandHandlerCheckpointingTest extends GridCommandHandlerClusterByClassAbstractTest {
-    /**  */
-    private static Random r = new Random();
-
     /** */
     @Before
     public void init() {
