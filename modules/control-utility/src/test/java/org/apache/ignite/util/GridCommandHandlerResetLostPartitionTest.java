@@ -16,9 +16,12 @@
 package org.apache.ignite.util;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -38,6 +41,8 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiPredicate;
@@ -52,27 +57,28 @@ import static org.apache.ignite.internal.TestRecordingCommunicationSpi.blockSupp
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheGroupId;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /** */
 public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandlerClusterByClassAbstractTest {
     /**
      * Cache name.
      * Cache group is explicitly specified via configuration.
-     * Cache group name do not equal to the cache name.
+     * Cache group name does not equal to the cache name.
      */
-    private static final String CACHE_WITH_CUSTOM_GROUP = "cacheCustomGroup";
+    private static final String CACHE_WITH_CUSTOM_GROUP = "cacheCustomGroupName";
 
     /**
      * Cache name.
      * Shared cache group is explicitly specified via configuration.
-     * Cache group name do not equal to the cache name.
+     * Cache group name does not equal to the cache name.
      */
     private static final String CACHE_WITH_SHARED_GROUP_I = "cacheSharedGroupI";
 
     /**
      * Cache name.
      * Shared cache group is explicitly specified via configuration.
-     * Cache group name do not equal to the cache name.
+     * Cache group name does not equal to the cache name.
      */
     private static final String CACHE_WITH_SHARED_GROUP_II = "cacheSharedGroupII";
 
@@ -116,7 +122,7 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        //super.afterTest();
+        super.afterTest();
 
         stopAllGrids();
 
@@ -147,9 +153,6 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
         }
 
         cfg.setCacheConfiguration(ccfg);
-
-        cfg.setFailureDetectionTimeout(600_000);
-        cfg.setClientFailureDetectionTimeout(600_000);
 
         return cfg;
     }
@@ -185,23 +188,64 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
 
         AffinityTopologyVersion initTopVer = grid(0).context().discovery().topologyVersionEx();
 
+        Map<AffinityTopologyVersion, Set<String>> cachesToResetLostParts = new ConcurrentHashMap<>();
+        grid(0)
+            .context()
+            .cache()
+            .context()
+            .exchange()
+            .registerExchangeAwareComponent(new PartitionsExchangeAware() {
+                @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+                    Set<String> res = fut.exchangeActions() != null ?
+                        fut.exchangeActions().cachesToResetLostPartitions() : Collections.emptySet();
+
+                    cachesToResetLostParts.put(fut.initialVersion(), res);
+                }
+            });
+
         assertEquals(EXIT_CODE_OK, execute("--cache", "reset_lost_partitions", "--all"));
 
-        AffinityTopologyVersion resTopVer = grid(0).context().discovery().topologyVersionEx();
+        // Topology version related to resetting lost partitions.
+        AffinityTopologyVersion resetLostPartsTopVer = initTopVer.nextMinorVersion();
 
-        assertEquals(
-        "Resetting lost partitions should trigger PME only one time [initialTopologyVersion="
-                + initTopVer + ", finalTopologyVersion=" + resTopVer + ']',
-            initTopVer.nextMinorVersion(),
-            resTopVer);
+        // Topology version related to late affinity assignment.
+        AffinityTopologyVersion lateAffAssignmentTopVer = resetLostPartsTopVer.nextMinorVersion();
+
+        assertTrue(
+            "Failed to wait for late affinity assignment message [" +
+                "currTopVer=" + grid(0).context().discovery().topologyVersionEx() +
+                ", expectedTopVer=" + lateAffAssignmentTopVer + ']',
+            waitForCondition(() -> {
+                AffinityTopologyVersion curTopVer = grid(0).context().discovery().topologyVersionEx();
+                return curTopVer.equals(lateAffAssignmentTopVer);
+            }, 10_000));
+
+        assertNotNull(
+            "Failed to find a collection of cache names to reset lost partitions [" +
+                "topVer=" + resetLostPartsTopVer + ']',
+            cachesToResetLostParts.get(resetLostPartsTopVer));
+
+        for (String cacheName : CACHE_NAMES) {
+            assertTrue(
+                "Failed to find a cache to reset lost partitions [name=" + cacheName + ']',
+                cachesToResetLostParts.get(resetLostPartsTopVer).contains(cacheName));
+        }
 
         final String out = testOut.toString();
 
-        assertContains(log, out, "The following caches have LOST partitions: [cacheTwo, cacheThree, cacheOne].");
+        assertContains(log, out, "The following caches have LOST partitions: " +
+            "[cacheTwo, cacheSharedGroupI, cacheThree, cacheSharedGroupII, cacheCustomGroupName, cacheOne].");
 
-        assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'cacheOne', id = -433504380), caches ([cacheOne]).");
-        assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'cacheTwo', id = -433499286), caches ([cacheTwo]).");
-        assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'cacheThree', id = 18573116), caches ([cacheThree]).");
+        assertContains(log, out, "Reset LOST-partitions performed successfully. " +
+            "Cache group (name = 'cacheOne', id = -433504380), caches ([cacheOne]).");
+        assertContains(log, out, "Reset LOST-partitions performed successfully. " +
+            "Cache group (name = 'cacheTwo', id = -433499286), caches ([cacheTwo]).");
+        assertContains(log, out, "Reset LOST-partitions performed successfully. " +
+            "Cache group (name = 'cacheThree', id = 18573116), caches ([cacheThree]).");
+        assertContains(log, out, "Reset LOST-partitions performed successfully. " +
+            "Cache group (name = 'sharedGroupName', id = 912335557), caches ([cacheSharedGroupI, cacheSharedGroupII]).");
+        assertContains(log, out, "Reset LOST-partitions performed successfully. " +
+            "Cache group (name = 'customGroupName', id = 1292595513), caches ([cacheCustomGroupName]).");
 
         // Check all nodes report same lost partitions.
         for (String cacheName : CACHE_NAMES) {
@@ -211,6 +255,8 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
 
         stopAllGrids();
         startGrids(3);
+
+        awaitPartitionMapExchange();
 
         crd = grid(0);
 
@@ -425,7 +471,7 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
                 if (msg instanceof GridDhtPartitionDemandMessage) {
                     GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage) msg;
 
-                    return msg0.groupId() != CU.cacheId("ignite-sys-cache");
+                    return msg0.groupId() != CU.cacheId(CU.UTILITY_CACHE_NAME);
                 }
 
                 return false;
