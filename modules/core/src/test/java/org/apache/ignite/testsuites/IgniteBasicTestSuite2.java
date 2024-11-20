@@ -36,6 +36,7 @@ import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesMultipleConne
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticPartitionReleaseFutureLimitTest;
 import org.apache.ignite.internal.managers.discovery.IncompleteDeserializationExceptionTest;
+import org.apache.ignite.internal.metric.PeriodicHistogramMetricImplTest;
 import org.apache.ignite.internal.mxbean.IgniteStandardMXBeanTest;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecordSerializationTest;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecordTest;
@@ -218,7 +219,8 @@ import org.junit.runners.Suite;
     ProgressSpeedCalculationTest.class,
     JvmConfigurationSuggestionsTest.class,
 
-    IgniteStandardMXBeanTest.class
+    IgniteStandardMXBeanTest.class,
+    PeriodicHistogramMetricImplTest.class,
 })
 public class IgniteBasicTestSuite2 {
 }
