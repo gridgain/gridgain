@@ -1999,8 +1999,10 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
             unregisterHandler(routineId, loc.hnd, false);
         }
 
-        if (log.isInfoEnabled())
-            log.info("Continuous query was unregistered [routineId=" + routineId + ", loc=" + loc + ", rmt=" + remote + ']');
+        if (log.isInfoEnabled()) {
+            if (remote != null)
+                log.info("Continuous query was unregistered for cache '" + remote.handler().cacheName() + "'");
+        }
     }
 
     /**
