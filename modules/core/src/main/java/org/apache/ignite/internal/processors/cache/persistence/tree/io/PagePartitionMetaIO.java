@@ -350,6 +350,6 @@ public class PagePartitionMetaIO extends PageMetaIO {
             .a(",\n\tupdateCounter=").a(getUpdateCounter(pageAddr))
             .a(",\n\tglobalRemoveId=").a(getGlobalRemoveId(pageAddr))
             .a(",\n\tpartitionState=").a(state).a("(").a(GridDhtPartitionState.fromOrdinal(state)).a(")")
-            .a(",\n\tcacheSizesPageId=").a(getCacheSizesPageId(pageAddr)).toString();
+            .a(",\n\tcacheSizesPageId=").a(getCacheSizesPageId(pageAddr));
     }
 }
