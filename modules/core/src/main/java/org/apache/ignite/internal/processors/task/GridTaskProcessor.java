@@ -223,6 +223,9 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) throws IgniteCheckedException {
+//        if (ctx.config().isClientMode()) {
+//            U.dumpStack(log, ">>>>> onKernalStart [active=" + active + ']');
+//        }
         if (!active)
             return;
 
@@ -254,6 +257,9 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
+//        if (ctx.config().isClientMode()) {
+//            U.dumpStack(log, ">>>>> onKernalStop [cancel=" + cancel + ']');
+//        }
         boolean interrupted = false;
 
         stopping = true;
@@ -1322,11 +1328,17 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
     /** {@inheritDoc} */
     @Override public void onActivate(GridKernalContext kctx) throws IgniteCheckedException {
+//        if (ctx.config().isClientMode()) {
+//            U.dumpStack(log, ">>>>> onActivate");
+//        }
         onKernalStart(true);
     }
 
     /** {@inheritDoc} */
     @Override public void onDeActivate(GridKernalContext kctx) {
+//        if (ctx.config().isClientMode()) {
+//            U.dumpStack(log, ">>>>> onDeActivate");
+//        }
         boolean interrupted = false;
 
         while (true) {
