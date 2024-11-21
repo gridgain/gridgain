@@ -26,6 +26,18 @@ import java.util.List;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.mapping.model.SimpleTypeHolder;
 
+/**
+ * Custom conversions implementation.
+ * An application can define its own converter by defining the following bean:
+ * <pre>
+ * {@code
+ *     @Bean
+ *     public CustomConversions customConversions() {
+ *         return new IgniteCustomConversions(Arrays.asList(new LocalDateTimeWriteConverter()));
+ *     }
+ * }
+ * </pre>
+ */
 public class IgniteCustomConversions extends org.springframework.data.convert.CustomConversions  {
 
     private static final List<Object> STORE_CONVERTERS;

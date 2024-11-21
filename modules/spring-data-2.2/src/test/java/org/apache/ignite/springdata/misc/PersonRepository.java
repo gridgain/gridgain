@@ -34,7 +34,7 @@ import org.springframework.data.repository.query.Param;
 public interface PersonRepository extends IgniteRepository<Person, Integer> {
 
     @Query("SELECT firstName, secondName, birthday, createdAt FROM Person WHERE firstName = ?")
-    List<Person> findWithCreatedAt(String name);
+    public List<Person> findWithCreatedAt(String name);
     /** */
     public List<Person> findByFirstName(String val);
 

@@ -24,6 +24,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.convert.CustomConversions;
 
+/**
+ *  Test configuration that overrides default converter for LocalDateTime type.
+ */
 public class CustomConvertersApplicationConfiguration extends ApplicationConfiguration {
 
     @Bean
