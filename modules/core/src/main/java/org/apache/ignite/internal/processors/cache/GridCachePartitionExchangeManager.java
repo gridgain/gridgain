@@ -346,8 +346,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                     if (stateFinishMsg.clusterActive()) {
                         for (PendingDiscoveryEvent pendingEvt : pendingEvts) {
-                            if (log.isDebugEnabled())
-                                log.debug("Process pending event: " + pendingEvt.event());
+//                            if (log.isDebugEnabled())
+                                log.warning(">>>>> Process pending event: " + pendingEvt.event());
 
                             onDiscoveryEvent(pendingEvt.event(), pendingEvt.discoCache());
                         }
@@ -357,6 +357,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             processEventInactive(pendingEvt.event(), pendingEvt.discoCache());
                     }
 
+                    log.warning(">>>>> clearing pending events...");
                     pendingEvts.clear();
 
                     return;
@@ -365,8 +366,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 if (cache.state().transition() &&
                     (evt.type() == EVT_NODE_LEFT || evt.type() == EVT_NODE_JOINED || evt.type() == EVT_NODE_FAILED)
                 ) {
-                    if (log.isDebugEnabled())
-                        log.debug("Adding pending event: " + evt);
+                    //if (log.isDebugEnabled())
+                        log.warning(">>>>> Adding pending event: " + evt);
 
                     pendingEvts.add(new PendingDiscoveryEvent(evt, cache));
                 }
@@ -405,8 +406,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         // Clear local join caches context.
         cctx.cache().localJoinCachesContext();
 
-        if (log.isDebugEnabled())
-            log.debug("Ignore event, cluster is inactive: " + evt);
+//        if (log.isDebugEnabled())
+            log.warning(">>>>> Ignore event, cluster is inactive: " + evt);
    }
 
     /** {@inheritDoc} */

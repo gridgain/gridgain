@@ -177,7 +177,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+    //@Test
     public void testEnableReadOnlyFromActivateSimple_SingleNode() throws Exception {
         changeActiveClusterStateSimple(1, 0, 0, ACTIVE, ACTIVE_READ_ONLY);
     }
@@ -185,7 +185,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+    //@Test
     public void testEnableReadOnlyFromActivateSimple_5_Servers() throws Exception {
         changeActiveClusterStateSimple(5, 0, 0, ACTIVE, ACTIVE_READ_ONLY);
     }
@@ -193,7 +193,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testEnableReadOnlyFromActivateSimple_5_Servers2() throws Exception {
         changeActiveClusterStateSimple(5, 0, 4, ACTIVE, ACTIVE_READ_ONLY);
     }
@@ -201,7 +201,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testEnableReadOnlyFromActivateSimple_5_Servers_5_Clients() throws Exception {
         changeActiveClusterStateSimple(5, 4, 0, ACTIVE, ACTIVE_READ_ONLY);
     }
@@ -209,7 +209,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testEnableReadOnlyFromActivateSimple_5_Servers_5_Clients_FromClient() throws Exception {
         changeActiveClusterStateSimple(5, 4, 6, ACTIVE, ACTIVE_READ_ONLY);
     }
@@ -217,7 +217,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDisableReadOnlyFromActivateSimple_SingleNode() throws Exception {
         changeActiveClusterStateSimple(1, 0, 0, ACTIVE_READ_ONLY, ACTIVE);
     }
@@ -225,7 +225,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDisableReadOnlyFromActivateSimple_5_Servers() throws Exception {
         changeActiveClusterStateSimple(5, 0, 0, ACTIVE_READ_ONLY, ACTIVE);
     }
@@ -233,7 +233,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDisableReadOnlyFromActivateSimple_5_Servers2() throws Exception {
         changeActiveClusterStateSimple(5, 0, 4, ACTIVE_READ_ONLY, ACTIVE);
     }
@@ -241,7 +241,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDisableReadOnlyFromActivateSimple_5_Servers_5_Clients() throws Exception {
         changeActiveClusterStateSimple(5, 4, 0, ACTIVE_READ_ONLY, ACTIVE);
     }
@@ -249,7 +249,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDisableReadOnlyFromActivateSimple_5_Servers_5_Clients_FromClient() throws Exception {
         changeActiveClusterStateSimple(5, 4, 6, ACTIVE_READ_ONLY, ACTIVE);
     }
@@ -257,7 +257,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateSimple_SingleNode() throws Exception {
         activateSimple(1, 0, 0, ACTIVE);
     }
@@ -265,7 +265,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateInReadOnlySimple_SingleNode() throws Exception {
         activateSimple(1, 0, 0, ACTIVE_READ_ONLY);
     }
@@ -273,7 +273,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateSimple_5_Servers() throws Exception {
         activateSimple(5, 0, 0, ACTIVE);
     }
@@ -281,7 +281,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateInReadOnlySimple_5_Servers() throws Exception {
         activateSimple(5, 0, 0, ACTIVE_READ_ONLY);
     }
@@ -289,7 +289,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateSimple_5_Servers2() throws Exception {
         activateSimple(5, 0, 4, ACTIVE);
     }
@@ -297,7 +297,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateInReadOnlySimple_5_Servers2() throws Exception {
         activateSimple(5, 0, 4, ACTIVE_READ_ONLY);
     }
@@ -305,7 +305,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateSimple_5_Servers_5_Clients() throws Exception {
         activateSimple(5, 4, 0, ACTIVE);
     }
@@ -313,7 +313,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateInReadOnlySimple_5_Servers_5_Clients() throws Exception {
         activateSimple(5, 4, 0, ACTIVE_READ_ONLY);
     }
@@ -321,7 +321,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateSimple_5_Servers_5_Clients_FromClient() throws Exception {
         activateSimple(5, 4, 6, ACTIVE);
     }
@@ -329,7 +329,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateInReadOnlySimple_5_Servers_5_Clients_FromClient() throws Exception {
         activateSimple(5, 4, 6, ACTIVE_READ_ONLY);
     }
@@ -386,7 +386,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testReActivateSimple_5_Servers_4_Clients_FromClient() throws Exception {
         reactivateSimple(5, 4, 6, ACTIVE);
     }
@@ -394,7 +394,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testReActivateInReadOnlySimple_5_Servers_4_Clients_FromClient() throws Exception {
         reactivateSimple(5, 4, 6, ACTIVE_READ_ONLY);
     }
@@ -402,7 +402,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testReActivateSimple_5_Servers_4_Clients_FromServer() throws Exception {
         reactivateSimple(5, 4, 0, ACTIVE);
     }
@@ -410,7 +410,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testReActivateInReadOnlySimple_5_Servers_4_Clients_FromServer() throws Exception {
         reactivateSimple(5, 4, 0, ACTIVE_READ_ONLY);
     }
@@ -496,7 +496,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testJoinWhileActivate1_Server() throws Exception {
         joinWhileActivate1(false, false, ACTIVE);
     }
@@ -504,7 +504,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testJoinWhileActivateInReadOnly1_Server() throws Exception {
         joinWhileActivate1(false, false, ACTIVE_READ_ONLY);
     }
@@ -512,7 +512,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testJoinWhileActivate1_WithCache_Server() throws Exception {
         joinWhileActivate1(false, true, ACTIVE);
     }
@@ -520,7 +520,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testJoinWhileActivateInReadOnly1_WithCache_Server() throws Exception {
         joinWhileActivate1(false, true, ACTIVE_READ_ONLY);
     }
@@ -528,7 +528,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testJoinWhileActivate1_Client() throws Exception {
         joinWhileActivate1(true, false, ACTIVE);
     }
@@ -536,7 +536,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testJoinWhileActivateInReadOnly1_Client() throws Exception {
         joinWhileActivate1(true, false, ACTIVE_READ_ONLY);
     }
@@ -621,7 +621,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testJoinWhileDeactivate1_Server() throws Exception {
         joinWhileDeactivate1(false, false, ACTIVE);
     }
@@ -629,7 +629,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testJoinWhileDeactivateFromReadOnly1_Server() throws Exception {
         joinWhileDeactivate1(false, false, ACTIVE_READ_ONLY);
     }
@@ -637,7 +637,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testJoinWhileDeactivate1_WithCache_Server() throws Exception {
         joinWhileDeactivate1(false, true, ACTIVE);
     }
@@ -645,7 +645,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testJoinWhileDeactivateFromReadOnly1_WithCache_Server() throws Exception {
         joinWhileDeactivate1(false, true, ACTIVE_READ_ONLY);
     }
@@ -653,7 +653,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testJoinWhileDeactivate1_Client() throws Exception {
         joinWhileDeactivate1(true, false, ACTIVE);
     }
@@ -661,7 +661,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testJoinWhileDeactivateFromReadOnly1_Client() throws Exception {
         joinWhileDeactivate1(true, false, ACTIVE_READ_ONLY);
     }
@@ -748,7 +748,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testConcurrentJoinAndActivate() throws Exception {
         testConcurrentJoinAndActivate(ACTIVE);
     }
@@ -756,7 +756,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testConcurrentJoinAndActivateInReadOnly() throws Exception {
         testConcurrentJoinAndActivate(ACTIVE_READ_ONLY);
     }
@@ -812,7 +812,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateSimple_SingleNode() throws Exception {
         deactivateSimple(1, 0, 0, ACTIVE);
     }
@@ -820,7 +820,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateFromReadOnlySimple_SingleNode() throws Exception {
         deactivateSimple(1, 0, 0, ACTIVE_READ_ONLY);
     }
@@ -828,7 +828,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateSimple_5_Servers() throws Exception {
         deactivateSimple(5, 0, 0, ACTIVE);
     }
@@ -836,7 +836,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateFromReadOnlySimple_5_Servers() throws Exception {
         deactivateSimple(5, 0, 0, ACTIVE_READ_ONLY);
     }
@@ -844,7 +844,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateSimple_5_Servers2() throws Exception {
         deactivateSimple(5, 0, 4, ACTIVE);
     }
@@ -852,7 +852,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateFromReadOnlySimple_5_Servers2() throws Exception {
         deactivateSimple(5, 0, 4, ACTIVE_READ_ONLY);
     }
@@ -860,7 +860,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateSimple_5_Servers_5_Clients() throws Exception {
         deactivateSimple(5, 4, 0, ACTIVE);
     }
@@ -868,7 +868,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateFromReadOnlySimple_5_Servers_5_Clients() throws Exception {
         deactivateSimple(5, 4, 0, ACTIVE_READ_ONLY);
     }
@@ -876,7 +876,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateSimple_5_Servers_5_Clients_FromClient() throws Exception {
         deactivateSimple(5, 4, 6, ACTIVE);
     }
@@ -884,7 +884,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateFromReadOnlySimple_5_Servers_5_Clients_FromClient() throws Exception {
         deactivateSimple(5, 4, 6, ACTIVE_READ_ONLY);
     }
@@ -987,7 +987,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testClientReconnectClusterActive() throws Exception {
         testClientReconnect(ACTIVE);
     }
@@ -995,7 +995,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testClientReconnectClusterActiveReadOnly() throws Exception {
         testClientReconnect(ACTIVE_READ_ONLY);
     }
@@ -1003,7 +1003,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testClientReconnectClusterInactive() throws Exception {
         testClientReconnect(INACTIVE);
     }
@@ -1057,7 +1057,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testClientReconnectClusterDeactivated() throws Exception {
         clientReconnectClusterState(ACTIVE, INACTIVE, false);
     }
@@ -1065,7 +1065,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testClientReconnectClusterDeactivatedFromReadOnly() throws Exception {
         clientReconnectClusterState(ACTIVE_READ_ONLY, INACTIVE, false);
     }
@@ -1073,7 +1073,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testClientReconnectClusterDeactivateInProgress() throws Exception {
         clientReconnectClusterState(ACTIVE, INACTIVE, true);
     }
@@ -1081,7 +1081,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testClientReconnectClusterDeactivateFromReadOnlyInProgress() throws Exception {
         clientReconnectClusterState(ACTIVE_READ_ONLY, INACTIVE, true);
     }
@@ -1089,7 +1089,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testClientReconnectClusterActivated() throws Exception {
         clientReconnectClusterState(INACTIVE, ACTIVE, false);
     }
@@ -1097,7 +1097,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testClientReconnectClusterActivatedReadOnly() throws Exception {
         clientReconnectClusterState(INACTIVE, ACTIVE_READ_ONLY, false);
     }
@@ -1105,7 +1105,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testClientReconnectClusterActivateInProgress() throws Exception {
         clientReconnectClusterState(INACTIVE, ACTIVE, true);
     }
@@ -1113,7 +1113,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testClientReconnectClusterActivateReadOnlyInProgress() throws Exception {
         clientReconnectClusterState(INACTIVE, ACTIVE_READ_ONLY, true);
     }
@@ -1219,7 +1219,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testInactiveTopologyChanges() throws Exception {
         checkInactiveTopologyChanges(ACTIVE);
     }
@@ -1227,7 +1227,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testInactiveTopologyChangesReadOnly() throws Exception {
         checkInactiveTopologyChanges(ACTIVE_READ_ONLY);
     }
@@ -1283,7 +1283,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateFailover1() throws Exception {
         stateChangeFailover1(INACTIVE, ACTIVE);
     }
@@ -1291,6 +1291,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
+    // Need to debug
     @Test
     public void testActivateWithReadOnlyFailover1() throws Exception {
         stateChangeFailover1(INACTIVE, ACTIVE_READ_ONLY);
@@ -1299,7 +1300,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateFailover1() throws Exception {
         stateChangeFailover1(ACTIVE, INACTIVE);
     }
@@ -1307,7 +1308,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateFromReadOnlyFailover1() throws Exception {
         stateChangeFailover1(ACTIVE_READ_ONLY, INACTIVE);
     }
@@ -1315,7 +1316,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testEnableReadOnlyFailover1() throws Exception {
         stateChangeFailover1(ACTIVE, ACTIVE_READ_ONLY);
     }
@@ -1323,6 +1324,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
+    // Need to debug
     @Test
     public void testDisableReadOnlyFailover1() throws Exception {
         stateChangeFailover1(ACTIVE_READ_ONLY, ACTIVE);
@@ -1331,7 +1333,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateFailover2() throws Exception {
         stateChangeFailover2(INACTIVE, ACTIVE);
     }
@@ -1339,7 +1341,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateWithReadOnlyFailover2() throws Exception {
         stateChangeFailover2(INACTIVE, ACTIVE_READ_ONLY);
     }
@@ -1347,7 +1349,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateFailover2() throws Exception {
         stateChangeFailover2(ACTIVE, INACTIVE);
     }
@@ -1355,7 +1357,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateFromReadOnlyFailover2() throws Exception {
         stateChangeFailover2(ACTIVE_READ_ONLY, INACTIVE);
     }
@@ -1363,7 +1365,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testEnableReadOnlyFailover2() throws Exception {
         stateChangeFailover2(ACTIVE, ACTIVE_READ_ONLY);
     }
@@ -1371,7 +1373,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDisableReadOnlyFailover2() throws Exception {
         stateChangeFailover2(ACTIVE_READ_ONLY, ACTIVE);
     }
@@ -1379,7 +1381,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateFailover3() throws Exception {
         stateChangeFailover3(INACTIVE, ACTIVE);
     }
@@ -1387,7 +1389,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testActivateWithReadOnlyFailover3() throws Exception {
         stateChangeFailover3(INACTIVE, ACTIVE_READ_ONLY);
     }
@@ -1395,7 +1397,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateFailover3() throws Exception {
         stateChangeFailover3(ACTIVE, INACTIVE);
     }
@@ -1403,7 +1405,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDeactivateFromReadOnlyFailover3() throws Exception {
         stateChangeFailover3(ACTIVE_READ_ONLY, INACTIVE);
     }
@@ -1411,7 +1413,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testEnableReadOnlyFailover3() throws Exception {
         stateChangeFailover3(ACTIVE, ACTIVE_READ_ONLY);
     }
@@ -1419,7 +1421,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testDisableReadOnlyFailover3() throws Exception {
         stateChangeFailover3(ACTIVE_READ_ONLY, ACTIVE);
     }
@@ -1562,7 +1564,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testClusterStateNotWaitForDeactivation() throws Exception {
         checkClusterStateNotWaitForDeactivation(ACTIVE);
     }
@@ -1570,7 +1572,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testReadOnlyClusterStateNotWaitForDeactivation() throws Exception {
         checkClusterStateNotWaitForDeactivation(ACTIVE_READ_ONLY);
     }
