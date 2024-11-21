@@ -38,7 +38,7 @@ import org.springframework.data.mapping.model.SimpleTypeHolder;
  * }
  * </pre>
  */
-public class IgniteCustomConversions extends org.springframework.data.convert.CustomConversions  {
+public class IgniteCustomConversions extends org.springframework.data.convert.CustomConversions {
 
     private static final List<Object> STORE_CONVERTERS;
 

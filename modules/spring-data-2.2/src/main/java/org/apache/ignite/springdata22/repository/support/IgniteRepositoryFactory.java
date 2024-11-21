@@ -105,8 +105,8 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
 
         beanExpressionContext = new BeanExpressionContext(beanFactory, null);
 
-        CustomConversions customConversions =  configurableCtx.getBean(CustomConversions.class);
-        DefaultConversionService defaultConversionService =  new DefaultConversionService();
+        CustomConversions customConversions = configurableCtx.getBean(CustomConversions.class);
+        DefaultConversionService defaultConversionService = new DefaultConversionService();
         if (defaultConversionService instanceof GenericConversionService) {
             customConversions.registerConvertersIn(defaultConversionService);
         }

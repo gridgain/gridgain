@@ -875,7 +875,6 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
         }
     }
 
-
     /**
      * Validates operations that requires Pageable parameter
      *

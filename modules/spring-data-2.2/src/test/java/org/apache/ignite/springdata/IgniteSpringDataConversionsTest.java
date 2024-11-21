@@ -33,8 +33,7 @@ public class IgniteSpringDataConversionsTest extends GridCommonAbstractTest {
     /** Context. */
     protected static AnnotationConfigApplicationContext ctx;
 
-    @Override
-    protected void beforeTest() {
+    @Override protected void beforeTest() {
         ctx = new AnnotationConfigApplicationContext();
     }
 
