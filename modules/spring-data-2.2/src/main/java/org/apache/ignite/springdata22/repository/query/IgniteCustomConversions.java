@@ -57,7 +57,6 @@ public class IgniteCustomConversions extends org.springframework.data.convert.Cu
         this(Collections.emptyList());
     }
 
-
     public IgniteCustomConversions(List<?> converters) {
         super(STORE_CONVERSIONS, converters);
     }
