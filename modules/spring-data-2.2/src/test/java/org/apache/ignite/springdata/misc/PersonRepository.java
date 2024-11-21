@@ -33,8 +33,6 @@ import org.springframework.data.repository.query.Param;
 @RepositoryConfig(cacheName = "PersonCache")
 public interface PersonRepository extends IgniteRepository<Person, Integer> {
 
-    @Query("SELECT firstName, secondName, birthday, createdAt FROM Person WHERE firstName = ?")
-    public List<Person> findWithCreatedAt(String name);
     /** */
     public List<Person> findByFirstName(String val);
 
@@ -120,6 +118,9 @@ public interface PersonRepository extends IgniteRepository<Person, Integer> {
     /** */
     @Query("SELECT _key, secondName FROM Person WHERE firstName REGEXP ?")
     public List<List> selectSeveralField(String val, Pageable pageable);
+
+    @Query("SELECT firstName, secondName, birthday, createdAt FROM Person WHERE firstName = ?")
+    public List<Person> selectByFirstNameWithCreatedAt(String name);
 
     /** */
     @Query("SELECT count(1) FROM (SELECT DISTINCT secondName FROM Person WHERE firstName REGEXP ?)")

@@ -53,7 +53,6 @@ public class IgniteCustomConversions extends org.springframework.data.convert.Cu
         STORE_CONVERSIONS = StoreConversions.of(SimpleTypeHolder.DEFAULT, STORE_CONVERTERS);
     }
 
-
     public IgniteCustomConversions() {
         this(Collections.emptyList());
     }
@@ -62,7 +61,6 @@ public class IgniteCustomConversions extends org.springframework.data.convert.Cu
     public IgniteCustomConversions(List<?> converters) {
         super(STORE_CONVERSIONS, converters);
     }
-
 
     static class LocalDateTimeWriteConverter implements Converter<Timestamp, LocalDateTime> {
 

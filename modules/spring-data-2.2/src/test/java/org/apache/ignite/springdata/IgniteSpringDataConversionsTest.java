@@ -69,7 +69,7 @@ public class IgniteSpringDataConversionsTest extends GridCommonAbstractTest {
         assertEquals(person, repo.save(id, person));
         assertTrue(repo.existsById(id));
 
-        return repo.findWithCreatedAt(person.getFirstName()).get(0);
+        return repo.selectByFirstNameWithCreatedAt(person.getFirstName()).get(0);
     }
 
     @Override protected void afterTest() {
