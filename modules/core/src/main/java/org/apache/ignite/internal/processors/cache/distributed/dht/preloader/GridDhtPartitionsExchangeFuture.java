@@ -27,6 +27,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -3527,8 +3528,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @param maxCntrs Max counter partiton map.
      * @param haveHist Set of partitions witch have historical supplier.
      */
-    private void resetOwnersByCounter(GridDhtPartitionTopology top,
-        Map<Integer, CounterWithNodes> maxCntrs, Set<Integer> haveHist) {
+    private void resetOwnersByCounter(
+        GridDhtPartitionTopology top,
+        Map<Integer, CounterWithNodes> maxCntrs, Set<Integer> haveHist
+    ) {
         Map<Integer, Set<UUID>> ownersByUpdCounters = U.newHashMap(maxCntrs.size());
         Map<Integer, Long> partSizes = U.newHashMap(maxCntrs.size());
 
@@ -3955,13 +3958,17 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         if (!F.isEmpty(caches))
                             resetLostPartitions(caches);
 
-                        Set<Integer> cacheGroupsToResetOwners = concat(exchActions.cacheGroupsToStart().stream()
-                                .map(grp -> grp.descriptor().groupId()),
-                            exchActions.cachesToResetLostPartitions().stream()
-                                .map(CU::cacheId))
+                        Set<Integer> cacheGrpsToResetOwners = concat(
+                            exchActions.cacheGroupsToStart().stream().map(grp -> grp.descriptor().groupId()),
+                            exchActions.cachesToResetLostPartitions().stream().map(
+                                cacheName -> {
+                                    DynamicCacheDescriptor desc = cctx.cache().cacheDescriptor(cacheName);
+
+                                    return (desc != null) ? desc.groupId() : null;
+                                }).filter(Objects::nonNull))
                             .collect(Collectors.toSet());
 
-                        assignPartitionsStates(cacheGroupsToResetOwners);
+                        assignPartitionsStates(cacheGrpsToResetOwners);
                     }
                 }
                 else if (discoveryCustomMessage instanceof SnapshotDiscoveryMessage
@@ -4271,10 +4278,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     }
 
     /**
-     * @param cacheGroupsToResetOwners Set of cache groups which need to reset partitions state,
+     * @param cacheGrpsToResetOwners Set of cache groups which need to reset partitions state,
      *                                 null if reset partitions state for all cache groups needed
      */
-    private void assignPartitionsStates(Set<Integer> cacheGroupsToResetOwners) {
+    private void assignPartitionsStates(Set<Integer> cacheGrpsToResetOwners) {
         Map<String, List<SupplyPartitionInfo>> supplyInfoMap = log.isInfoEnabled() ?
             new ConcurrentHashMap<>() : null;
 
@@ -4292,7 +4299,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     if (CU.isPersistentCache(grpDesc.config(), cctx.gridConfig().getDataStorageConfiguration())) {
                         List<SupplyPartitionInfo> list;
 
-                        if (cacheGroupsToResetOwners == null || cacheGroupsToResetOwners.contains(grpDesc.groupId()))
+                        if (cacheGrpsToResetOwners == null || cacheGrpsToResetOwners.contains(grpDesc.groupId()))
                             list = assignPartitionStates(top, true);
                         else
                             list = assignPartitionStates(top, false);
@@ -4300,7 +4307,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         if (supplyInfoMap != null && !F.isEmpty(list))
                             supplyInfoMap.put(grpDesc.cacheOrGroupName(), list);
                     }
-                    else if (cacheGroupsToResetOwners == null)
+                    else if (cacheGrpsToResetOwners == null)
                         assignPartitionSizes(top);
 
                     return null;
