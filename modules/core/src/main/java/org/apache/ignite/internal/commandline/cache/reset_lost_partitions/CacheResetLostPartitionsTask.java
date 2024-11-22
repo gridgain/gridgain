@@ -15,16 +15,6 @@
  */
 package org.apache.ignite.internal.commandline.cache.reset_lost_partitions;
 
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.task.GridInternal;
-import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.visor.VisorJob;
-import org.apache.ignite.internal.visor.VisorOneNodeTask;
-import org.jetbrains.annotations.Nullable;
-
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +22,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
+import org.apache.ignite.internal.processors.task.GridInternal;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.visor.VisorJob;
+import org.apache.ignite.internal.visor.VisorOneNodeTask;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Reset status of lost partitions.
@@ -43,7 +43,8 @@ public class CacheResetLostPartitionsTask extends VisorOneNodeTask<CacheResetLos
 
     /** {@inheritDoc} */
     @Override protected VisorJob<CacheResetLostPartitionsTaskArg, CacheResetLostPartitionsTaskResult> job(
-        CacheResetLostPartitionsTaskArg arg) {
+        CacheResetLostPartitionsTaskArg arg
+    ) {
         return new CacheResetLostPartitionsJob(arg, debug);
     }
 
@@ -69,28 +70,24 @@ public class CacheResetLostPartitionsTask extends VisorOneNodeTask<CacheResetLos
                 res.setMessageMap(new HashMap<>());
 
                 if (!F.isEmpty(arg.getCaches())) {
-                    Map<Integer, Set<String>> grpToCaches = new HashMap<>();
-                    Map<Integer, String> grpToName = new HashMap<>();
+                    Map<CacheGroupContext, Set<String>> grpToCaches = new HashMap<>();
 
-                    for (String groupName : arg.getCaches()) {
-                        int grpId = CU.cacheId(groupName);
+                    for (String cacheName : arg.getCaches()) {
+                        DynamicCacheDescriptor cacheDesc = ignite.context().cache().cacheDescriptor(cacheName);
 
-                        CacheGroupContext grp = ignite.context().cache().cacheGroup(grpId);
+                        if (cacheDesc != null) {
+                            CacheGroupContext grp = ignite.context().cache().cacheGroup(cacheDesc.groupId());
 
-                        if (grp != null) {
-                            Set<String> grpCaches = new TreeSet<>();
+                            Set<String> cacheNames = grpToCaches.computeIfAbsent(grp, grpCtx -> new TreeSet<>());
 
-                            grpToName.put(grpId, grp.cacheOrGroupName());
-                            grpToCaches.put(grpId, grpCaches);
-
-                            grp.caches().forEach(cctx -> grpCaches.add(cctx.name()));
+                            grp.caches().forEach(cctx -> cacheNames.add(cctx.name()));
                         }
                         else {
                             res.put(
-                                groupName,
-                                String.format("Cache group (name = '%s', id = %d) not found.",
-                                groupName,
-                                grpId));
+                                cacheName,
+                                String.format("Cache (name = '%s', id = %d) not found.",
+                                    cacheName,
+                                    CU.cacheId(cacheName)));
                         }
                     }
 
@@ -103,17 +100,16 @@ public class CacheResetLostPartitionsTask extends VisorOneNodeTask<CacheResetLos
 
                         ignite.resetLostPartitions(cachesToResetParts);
 
-                        grpToCaches.forEach((id, names) -> {
-                            String grpName = grpToName.get(id);
+                        grpToCaches.forEach((grp, names) -> {
+                            String grpName = grp.cacheOrGroupName();
 
                             res.put(
                                 grpName,
                                 String.format("Reset LOST-partitions performed successfully. " +
                                     "Cache group (name = '%s', id = %d), caches (%s).",
                                 grpName,
-                                id,
+                                grp.groupId(),
                                 names));
-
                         });
                     }
                 }
@@ -123,7 +119,6 @@ public class CacheResetLostPartitionsTask extends VisorOneNodeTask<CacheResetLos
             catch (Exception e) {
                 throw new IgniteException(e);
             }
-
         }
 
         /** {@inheritDoc} */

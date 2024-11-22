@@ -38,6 +38,9 @@ public class CacheDistributionGroup extends VisorDataTransferObject {
     /** List of partitions. */
     private List<CacheDistributionPartition> partitions;
 
+    /** list of cache names that belong to the cache group. */
+    private List<String> cacheNames;
+
     /** Default constructor. */
     public CacheDistributionGroup() {
     }
@@ -45,12 +48,19 @@ public class CacheDistributionGroup extends VisorDataTransferObject {
     /**
      * @param grpId Group identifier.
      * @param grpName Group name.
+     * @param cacheNames list of cache names that belong to the cache group.
      * @param partitions List of partitions.
      */
-    public CacheDistributionGroup(int grpId, String grpName, List<CacheDistributionPartition> partitions) {
+    public CacheDistributionGroup(
+        int grpId,
+        String grpName,
+        List<String> cacheNames,
+        List<CacheDistributionPartition> partitions
+    ) {
         this.grpId = grpId;
         this.grpName = grpName;
         this.partitions = partitions;
+        this.cacheNames = cacheNames;
     }
 
     /** */
@@ -84,18 +94,36 @@ public class CacheDistributionGroup extends VisorDataTransferObject {
         this.partitions = partitions;
     }
 
+    /**
+     * Returns a list of cache names that belong to the cache group.
+     * @return
+     */
+    public List<String> cacheNames() {
+        return cacheNames;
+    }
+
+    @Override public byte getProtocolVersion() {
+        return V2;
+    }
+
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeInt(grpId);
         U.writeString(out, grpName);
         U.writeCollection(out, partitions);
+        U.writeCollection(out, cacheNames);
     }
 
     /** {@inheritDoc} */
-    @Override protected void readExternalData(byte protoVer,
-        ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(
+        byte protoVer,
+        ObjectInput in
+    ) throws IOException, ClassNotFoundException {
         grpId = in.readInt();
         grpName = U.readString(in);
         partitions = U.readList(in);
+
+        if (protoVer > V1)
+            cacheNames = U.readList(in);
     }
 }
