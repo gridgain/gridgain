@@ -88,9 +88,9 @@ public class CacheDistributionTask extends VisorMultiNodeTask<CacheDistributionT
         /** {@inheritDoc} */
         @Override public CacheDistributionNode run(CacheDistributionTaskArg arg) throws IgniteException {
             try {
-                CacheDistributionNode info = new CacheDistributionNode();
+                final CacheDistributionNode info = new CacheDistributionNode();
 
-                ClusterNode node = ignite.localNode();
+                final ClusterNode node = ignite.localNode();
 
                 info.setNodeId(node.id());
                 info.setAddresses(node.addresses().toString());
@@ -107,7 +107,7 @@ public class CacheDistributionTask extends VisorMultiNodeTask<CacheDistributionT
                 Set<Integer> grpIds = new HashSet<>();
 
                 if (arg.getCaches() == null) {
-                    Collection<CacheGroupContext> ctxs = ignite.context().cache().cacheGroups();
+                    final Collection<CacheGroupContext> ctxs = ignite.context().cache().cacheGroups();
 
                     for (CacheGroupContext ctx : ctxs)
                         grpIds.add(ctx.groupId());
@@ -125,12 +125,12 @@ public class CacheDistributionTask extends VisorMultiNodeTask<CacheDistributionT
                     return info;
 
                 for (Integer grpId : grpIds) {
-                    CacheGroupContext grpCtx = ignite.context().cache().cacheGroup(grpId);
+                    final CacheGroupContext grpCtx = ignite.context().cache().cacheGroup(grpId);
 
                     if (grpCtx == null)
                         continue;
 
-                    GridDhtPartitionTopology top = grpCtx.topology();
+                    final GridDhtPartitionTopology top = grpCtx.topology();
 
                     AffinityAssignment assignment = grpCtx.affinity().readyAffinity(top.readyTopologyVersion());
 
@@ -144,7 +144,7 @@ public class CacheDistributionTask extends VisorMultiNodeTask<CacheDistributionT
                         if (part == null)
                             continue;
 
-                        CacheDistributionPartition partDto = new CacheDistributionPartition();
+                        final CacheDistributionPartition partDto = new CacheDistributionPartition();
 
                         parts.add(partDto);
 
