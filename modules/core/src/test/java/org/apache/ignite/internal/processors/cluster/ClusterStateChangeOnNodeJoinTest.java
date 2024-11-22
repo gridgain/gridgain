@@ -32,7 +32,6 @@ import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionExchangeId;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.processors.security.impl.TestSecurityPluginProvider;
 import org.apache.ignite.lifecycle.LifecycleBean;
@@ -40,23 +39,23 @@ import org.apache.ignite.lifecycle.LifecycleEventType;
 import org.apache.ignite.loadtests.colocation.GridTestLifecycleBean;
 import org.apache.ignite.plugin.security.SecurityPermissionSet;
 import org.apache.ignite.plugin.security.SecurityPermissionSetBuilder;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
+import static org.apache.ignite.lifecycle.LifecycleEventType.BEFORE_NODE_START;
 import static org.apache.ignite.plugin.security.SecurityPermission.JOIN_AS_SERVER;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
+/**
+ * Tests joining a new node to the cluster that is in transition state.
+ */
 public class ClusterStateChangeOnNodeJoinTest extends GridCommonAbstractTest {
     /** */
     private LifecycleBean lifecycleBean;
-
-    /** This flags indicates that security feature is enabled. */
-    private boolean securityEnabled;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -69,13 +68,12 @@ public class ClusterStateChangeOnNodeJoinTest extends GridCommonAbstractTest {
         if (lifecycleBean != null)
             cfg.setLifecycleBeans(lifecycleBean);
 
-        if (securityEnabled) {
-            SecurityPermissionSet secPermSet = SecurityPermissionSetBuilder.create()
-                .defaultAllowAll(true)
-                .appendSystemPermissions(JOIN_AS_SERVER)
-                .build();
-            cfg.setPluginProviders(new TestSecurityPluginProvider("login", "", secPermSet, true));
-        }
+        SecurityPermissionSet secPermSet = SecurityPermissionSetBuilder.create()
+            .defaultAllowAll(true)
+            .appendSystemPermissions(JOIN_AS_SERVER)
+            .build();
+
+        cfg.setPluginProviders(new TestSecurityPluginProvider("login", "", secPermSet, true));
 
         cfg.setFailureHandler(new StopNodeFailureHandler());
         cfg.setConsistentId(gridName);
@@ -101,17 +99,22 @@ public class ClusterStateChangeOnNodeJoinTest extends GridCommonAbstractTest {
 
     @Test
     public void testJoiningClientNodeToClusterInTransitionState() throws Exception {
-        joiningNodeToClusterInTransitionState();
+        joiningNodeToClusterInTransitionState(true);
     }
 
     @Test
-    public void testJoiningClientNodeToClusterInTransitionStateWithSecurityEnabled() throws Exception {
-        securityEnabled = true;
-
-        joiningNodeToClusterInTransitionState();
+    public void testJoiningServerNodeToClusterInTransitionState() throws Exception {
+        joiningNodeToClusterInTransitionState(false);
     }
 
-    public void joiningNodeToClusterInTransitionState() throws Exception {
+    /**
+     * Starts a cluster of 2 nodes and then tries to join a new node when the cluster is in transition state, i.e.
+     * the cluster is moved from INACTIVE to ACTIVE state.
+     *
+     * @param client If {@code true} then the test will start a client node, and server node in case of {@code false.}
+     * @throws Exception If failed.
+     */
+    public void joiningNodeToClusterInTransitionState(boolean client) throws Exception {
         IgniteEx g0 = startGrid(0);
         IgniteEx g1 = startGrid(1);
 
@@ -119,6 +122,7 @@ public class ClusterStateChangeOnNodeJoinTest extends GridCommonAbstractTest {
 
         TestRecordingCommunicationSpi spi1 = TestRecordingCommunicationSpi.spi(g1);
 
+        // Block PME that is related to cluster state change.
         spi1.blockMessages((node, msg) -> {
             if (msg instanceof GridDhtPartitionsSingleMessage) {
                 latch.countDown();
@@ -129,39 +133,32 @@ public class ClusterStateChangeOnNodeJoinTest extends GridCommonAbstractTest {
             return false;
         });
 
-        IgniteInternalFuture<?> actFut = runAsync(() -> {
-            g0.cluster().state(ACTIVE);
-        });
+        IgniteInternalFuture<?> activationFut = runAsync(() -> g0.cluster().state(ACTIVE));
 
         latch.await();
 
         AtomicReference<IgniteEx> clientRef = new AtomicReference<>();
         lifecycleBean = new GridTestLifecycleBean() {
+            /** {@inheritDoc}. */
             @Override public void onLifecycleEvent(LifecycleEventType evt) throws IgniteException {
-                if (evt == LifecycleEventType.BEFORE_NODE_START)
+                if (evt == BEFORE_NODE_START)
                     clientRef.set(g);
             }
         };
 
-        IgniteInternalFuture clientFut = runAsync(() -> {
-            try {
-                startClientGrid(2);
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
+        IgniteInternalFuture<?> clientFut = runAsync(() -> client ?  startClientGrid(2) : startGrid(2));
 
-        boolean res = waitForCondition(() -> {
-            return clientRef.get() != null
-                && clientRef.get().context().state() != null
-                && clientRef.get().context().state().clusterState().transitionRequestId() != null;
-        }, 30_000);
+        boolean res = waitForCondition(() ->
+            clientRef.get() != null
+            && clientRef.get().context().state() != null
+            && clientRef.get().context().state().clusterState().transitionRequestId() != null, 30_000);
 
-        assertTrue(res);
+        assertTrue("Failed to wait for transition state.", res);
 
         spi1.stopBlock();
-        actFut.get();
+
+        activationFut.get();
+
         clientFut.get();
 
         // Try to create a new data structure.
@@ -169,6 +166,14 @@ public class ClusterStateChangeOnNodeJoinTest extends GridCommonAbstractTest {
 
         // Check that the node is able to execute compute tasks as well.
         clientRef.get().compute().execute(new TestTask(), null);
+
+        g0.cluster().currentBaselineTopology().forEach(n -> {
+            log.warning(">>>>> BaselineNode [" + n + ']');
+        });
+
+        g0.cluster().nodes().forEach(n -> {
+            log.warning(">>>>> All nodes [" + n + ']');
+        });
     }
 
     /**
