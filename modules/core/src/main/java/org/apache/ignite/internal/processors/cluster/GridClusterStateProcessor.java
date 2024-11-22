@@ -643,11 +643,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         DiscoveryDataClusterState discoClusterState = globalState;
 
         if (msg.requestId().equals(discoClusterState.transitionRequestId())) {
-//            if (ctx.config().isClientMode()) {
-//                U.dumpStack(log, ">>>>> onStateFinishMessage");
-//            }
             if (log.isInfoEnabled())
-                log.info(">>>>> Received state change finish message: " + msg.state());
+                log.info("Received state change finish message: " + msg.state());
 
             globalState = discoClusterState.finish(msg.success());
 
@@ -661,19 +658,15 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 ctx.cache().context().readOnlyMode(readOnly(globalState.state()));
 
             if (log.isInfoEnabled())
-                log.info(">>>>> Cluster state was changed from " + discoClusterState.lastState() + " to " + globalState.state());
+                log.info("Cluster state was changed from " + discoClusterState.lastState() + " to " + globalState.state());
 
             if (!ClusterState.active(globalState.state()))
                 ctx.cache().context().readOnlyMode(false);
 
             TransitionOnJoinWaitFuture joinFut = this.joinFut;
 
-            if (joinFut != null) {
-//                log.info(">>>>> onStateFinishMessage finishing join future [reqId=" + msg.requestId() +
-//                    ", globalState=" + globalState.state() + ']');
-                //joinFut.onDone(discoClusterState.transitionResult() != null && discoClusterState.transitionResult().active());
+            if (joinFut != null)
                 joinFut.onDone(ClusterState.active(globalState.state()));
-            }
 
             GridFutureAdapter<Void> transitionFut = transitionFuts.get(discoClusterState.transitionRequestId());
 
@@ -686,7 +679,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             }
         }
         else
-            U.warn(log, ">>>>> Received state finish message with unexpected ID: " + msg);
+            U.warn(log, "Received state finish message with unexpected ID: " + msg);
     }
 
     /** */
@@ -1627,9 +1620,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * @param req State change request.
      */
     private void onFinalActivate(final StateChangeRequest req) {
-//        if (ctx.config().isClientMode()) {
-//            U.dumpStack(log, ">>>>> onFinalActivate [req=" + req + ']');
-//        }
         ctx.dataStructures().onBeforeActivate();
 
         checkLocalNodeInBaseline(globalState.baselineTopology());

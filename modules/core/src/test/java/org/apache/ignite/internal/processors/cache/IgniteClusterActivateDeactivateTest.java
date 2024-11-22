@@ -1291,7 +1291,6 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    // Need to debug
     @Test
     public void testActivateWithReadOnlyFailover1() throws Exception {
         stateChangeFailover1(INACTIVE, ACTIVE_READ_ONLY);
@@ -1324,7 +1323,6 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     /**
      * @throws Exception If failed.
      */
-    // Need to debug
     @Test
     public void testDisableReadOnlyFailover1() throws Exception {
         stateChangeFailover1(ACTIVE_READ_ONLY, ACTIVE);
