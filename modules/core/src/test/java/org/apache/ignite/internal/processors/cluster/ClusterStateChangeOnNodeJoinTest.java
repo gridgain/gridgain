@@ -146,7 +146,7 @@ public class ClusterStateChangeOnNodeJoinTest extends GridCommonAbstractTest {
             }
         };
 
-        IgniteInternalFuture<?> clientFut = runAsync(() -> client ?  startClientGrid(2) : startGrid(2));
+        IgniteInternalFuture<?> clientFut = runAsync(() -> client ? startClientGrid(2) : startGrid(2));
 
         boolean res = waitForCondition(() ->
             clientRef.get() != null
