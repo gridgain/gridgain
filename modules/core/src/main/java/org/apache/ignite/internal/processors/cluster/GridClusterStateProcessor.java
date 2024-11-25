@@ -666,7 +666,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             TransitionOnJoinWaitFuture joinFut = this.joinFut;
 
             if (joinFut != null)
-                joinFut.onDone(false);
+                joinFut.onDone(ClusterState.active(globalState.state()));
 
             GridFutureAdapter<Void> transitionFut = transitionFuts.get(discoClusterState.transitionRequestId());
 
