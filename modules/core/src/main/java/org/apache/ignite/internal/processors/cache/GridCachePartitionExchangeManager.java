@@ -873,12 +873,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             GridDhtPartitionExchangeId exchId = initialExchangeId();
 
             // exchId is enough to find the required exchange future.
-            fut = exchangeFuture(
-                exchId,
-                null,
-                null,
-                null,
-                null);
+            fut = exchangeFuture(exchId);
         }
         else if (reconnect)
             reconnectExchangeFut.onDone();
