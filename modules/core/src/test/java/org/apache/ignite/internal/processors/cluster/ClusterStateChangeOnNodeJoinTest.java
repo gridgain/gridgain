@@ -166,14 +166,6 @@ public class ClusterStateChangeOnNodeJoinTest extends GridCommonAbstractTest {
 
         // Check that the node is able to execute compute tasks as well.
         clientRef.get().compute().execute(new TestTask(), null);
-
-        g0.cluster().currentBaselineTopology().forEach(n -> {
-            log.warning(">>>>> BaselineNode [" + n + ']');
-        });
-
-        g0.cluster().nodes().forEach(n -> {
-            log.warning(">>>>> All nodes [" + n + ']');
-        });
     }
 
     /**
