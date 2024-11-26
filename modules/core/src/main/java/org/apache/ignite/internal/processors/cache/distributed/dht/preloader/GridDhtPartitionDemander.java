@@ -726,7 +726,7 @@ public class GridDhtPartitionDemander {
                             ", rebalanceFuture=" + fut + ']');
                 }
             }
-            catch (IgniteSpiException | IgniteCheckedException e) {
+            catch (IgniteSpiException | IgniteCheckedException | IllegalStateException e) {
                 fut.error(nodeId);
 
                 LT.error(log, e, "Error during rebalancing [" + demandRoutineInfo(nodeId, supplyMsg) +
