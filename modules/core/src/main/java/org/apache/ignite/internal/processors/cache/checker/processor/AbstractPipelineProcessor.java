@@ -31,10 +31,13 @@ import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.checker.objects.CachePartitionRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.util.DelayedHolder;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 
@@ -225,7 +228,15 @@ public class AbstractPipelineProcessor {
                 printStatistics();
         }
 
-        ClusterGroup grp = partOwners(workload.cacheName(), workload.partitionId());
+        ClusterGroup grp;
+        try {
+            grp = partOwners(workload.cacheName(), workload.partitionId());
+        }
+        catch (Throwable t) {
+            log.warning("Failed to calculate partition owners [lockAcquired=" + acquired + ", "
+                + workload.cacheName() + ", " + workload.partitionId() + ']');
+            throw t;
+        }
 
         if (grp == null) {
             // There are no owners for this partition.
@@ -320,7 +331,29 @@ public class AbstractPipelineProcessor {
      * @return Cluster group of owners.
      */
     private ClusterGroup partOwners(String cacheName, int partId) {
-        Collection<ClusterNode> nodes = ignite.cachex(cacheName).context().topology().owners(partId, startTopVer);
+        GridDhtPartitionTopology top;
+        try {
+            if (ignite == null)
+                throw new NullPointerException("Failed to get ignite instance");
+
+            IgniteInternalCache<?, ?> c = ignite.cachex(cacheName);
+            if (c == null)
+                throw new NullPointerException("Failed to get internal cache");
+
+            GridCacheContext<? ,?> cctx = c.context();
+            if (cctx == null)
+                throw new NullPointerException("Failed to get internal cache context");
+
+            top = cctx.topology();
+            if (top == null)
+                throw new NullPointerException("Failed to get internal cache topology");
+        }
+        catch (Exception e) {
+            throw new RuntimeException(
+                "Failed to get partition owners [cacheName=" + cacheName + ", partId=" + partId + ']',
+                e);
+        }
+        Collection<ClusterNode> nodes = top.owners(partId, startTopVer);
 
         return nodes.isEmpty() ? null : ignite.cluster().forNodes(nodes);
     }

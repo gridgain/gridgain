@@ -108,6 +108,8 @@ public abstract class PartitionReconciliationInterruptionTest extends PartitionR
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -129,6 +131,8 @@ public abstract class PartitionReconciliationInterruptionTest extends PartitionR
         cleanPersistenceDir();
 
         nodeToNodeId.clear();
+
+        super.afterTest();
     }
 
     /**
