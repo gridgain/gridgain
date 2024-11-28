@@ -36,6 +36,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.commandline.Command.usage;
 import static org.apache.ignite.internal.commandline.CommandList.CHECKPOINT;
+import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 
 /**
  * Command to run checkpoint on the cluster.
@@ -46,7 +47,10 @@ public class CheckpointCommand extends AbstractCommand<Void> {
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger log) {
-        usage(log, "Start checkpointing process:", CHECKPOINT);
+        usage(log, "Start checkpointing on a node with specified nodeId. " +
+            "If nodeId is not specified checkpoint is started on all nodes:",
+            CHECKPOINT,
+            optional(NODE_ID_ARG_NAME, "<nodeId>"));
     }
 
     /** {@inheritDoc} */
@@ -85,14 +89,14 @@ public class CheckpointCommand extends AbstractCommand<Void> {
             );
 
             if (res.isSuccess()) {
-                String nodeMsgPart = nodes.size() == 1 ? "1 node." : res.numberOfSuccessNodes() + " nodes.";
+                String nodesMsgPart = nodes.size() == 1 ? "1 node." : res.numberOfSuccessNodes() + " nodes.";
 
-                log.info("Checkpointing completed successfully on " + nodeMsgPart);
+                log.info("Checkpointing completed successfully on " + nodesMsgPart);
             }
             else {
-                String nodeMsgPart = nodes.size() == 1 ? "1 node." : res.numberOfFailedNodes() + " nodes.";
+                String nodesMsgPart = nodes.size() == 1 ? "1 node." : res.numberOfFailedNodes() + " nodes.";
 
-                log.info("Checkpointing completed with errors on " + nodeMsgPart);
+                log.info("Checkpointing completed with errors on " + nodesMsgPart);
             }
 
         }
@@ -118,7 +122,7 @@ public class CheckpointCommand extends AbstractCommand<Void> {
             String nextArg = argIter.nextArg("Unexpected error on parsing checkpoint command args");
 
             if (nextArg.equals(NODE_ID_ARG_NAME))
-                nodeId = UUID.fromString(argIter.nextArg("failed to read node ID"));
+                nodeId = UUID.fromString(argIter.nextArg("Failed to read node ID"));
         }
     }
 
@@ -126,10 +130,10 @@ public class CheckpointCommand extends AbstractCommand<Void> {
     private String collectNodesInfo(GridClientCompute compute) throws GridClientException {
         SB b = new SB();
 
-        b.a("Node with id=" + nodeId + " not found in the topology").nl()
+        b.a("Node with id=" + nodeId + " is not found in the topology").nl()
             .a("Available cluster nodes:").nl();
 
-        compute.nodes((n) -> n.connectable() && !n.isClient()).forEach(node1 -> b.a(node1.nodeId()).nl());
+        compute.nodes((node) -> node.connectable() && !node.isClient()).forEach(node -> b.a(node.nodeId()).nl());
 
         return b.toString();
     }
