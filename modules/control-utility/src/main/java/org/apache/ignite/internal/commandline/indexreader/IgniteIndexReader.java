@@ -574,6 +574,9 @@ public class IgniteIndexReader implements AutoCloseable {
 
         ProgressPrinter progressPrinter = new ProgressPrinter(System.out, "Checking partitions", partCnt);
 
+        // Map<partNum, partItemsCnt>
+        Map<Integer, Long> itemsCntMap = new HashMap<>();
+
         for (int i = 0; i < partCnt; i++) {
             progressPrinter.printProgress();
 
@@ -600,6 +603,10 @@ public class IgniteIndexReader implements AutoCloseable {
 
                     TreeTraversalInfo cacheDataTreeInfo =
                         horizontalTreeScan(partStore, cacheDataTreeRoot, "dataTree-" + partId, new ItemsListStorage());
+
+                    //print("Cache items number: " + cacheDataTreeInfo.itemStorage.size());
+
+                    itemsCntMap.put(partId, cacheDataTreeInfo.itemStorage.size());
 
                     for (Object dataTreeItem : cacheDataTreeInfo.itemStorage) {
                         CacheAwareLink cacheAwareLink = (CacheAwareLink)dataTreeItem;
@@ -637,6 +644,10 @@ public class IgniteIndexReader implements AutoCloseable {
             if (!errors.isEmpty())
                 res.put(partId, errors);
         }
+
+        long totalItemsCnt = itemsCntMap.values().stream().mapToLong(Long::longValue).sum();
+
+        print("Cache items number: " + totalItemsCnt);
 
         return res;
     }
@@ -896,7 +907,7 @@ public class IgniteIndexReader implements AutoCloseable {
         ProgressPrinter progressPrinter =
             new ProgressPrinter(System.out, traverseProcCaption, metaTreeTraversalInfo.itemStorage.size());
 
-        metaTreeTraversalInfo.itemStorage.forEach(item -> {
+        metaTreeTraversalInfo.itemStorage.forEach(item -> { //here we traverse through indexes
             progressPrinter.printProgress();
 
             IndexStorageImpl.IndexItem idxItem = (IndexStorageImpl.IndexItem)item;
@@ -904,7 +915,7 @@ public class IgniteIndexReader implements AutoCloseable {
             if (nonNull(idxFilter) && !idxFilter.test(idxItem.nameString()))
                 return;
 
-            TreeTraversalInfo treeTraversalInfo =
+            TreeTraversalInfo treeTraversalInfo = //here we traverse through one index
                 traverseProc.traverse(idxStore, normalizePageId(idxItem.pageId()), idxItem.nameString(), itemStorageFactory.get());
 
             treeInfos.put(idxItem.toString(), treeTraversalInfo);
@@ -1158,7 +1169,7 @@ public class IgniteIndexReader implements AutoCloseable {
                             pageContent.items.forEach(itemStorage::add);
                         }
 
-                        pageId = ((BPlusIO)pageIO).getForward(addr);
+                        pageId = ((BPlusIO)pageIO).getForward(addr); //check compareTo here???
                     }
                     catch (Throwable e) {
                         errors.computeIfAbsent(pageId, k -> new LinkedList<>()).add(e);
