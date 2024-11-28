@@ -232,7 +232,7 @@ If the file name isn't specified the output file name is: '<typeId>.bin'
   Cancel scheduled or active PDS defragmentation on underlying node:
     control.(sh|bat) --defragmentation cancel
 
-  Start checkpointing process on a node with specified nodeId. If nodeId is not specified checkpointing is started on all nodes:
+  Start checkpointing on a node with specified nodeId. If nodeId is not specified checkpoint is started on all nodes:
     control.(sh|bat) --checkpoint [--node-id <nodeId>]
 
   Kill sql query by query id:
