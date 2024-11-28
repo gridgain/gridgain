@@ -55,6 +55,7 @@ import org.apache.ignite.IgnitionListener;
 import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
@@ -2239,131 +2240,7 @@ public class IgnitionEx {
                 }
             }
 
-            if (shutdown == ShutdownPolicy.GRACEFUL && !grid.context().clientNode() && grid.cluster().active()) {
-                delayedShutdown = true;
-
-                if (log.isInfoEnabled())
-                    log.info("Ensuring that caches have sufficient backups and local rebalance completion...");
-
-                DistributedMetaStorage metaStorage = grid.context().distributedMetastorage();
-
-                while (delayedShutdown) {
-                    boolean safeToStop = true;
-
-                    long topVer = grid.cluster().topologyVersion();
-
-                    HashSet<UUID> originalNodesToExclude;
-
-                    HashSet<UUID> nodesToExclude;
-
-                    try {
-                        originalNodesToExclude = metaStorage.read(GRACEFUL_SHUTDOWN_METASTORE_KEY);
-
-                        nodesToExclude = originalNodesToExclude != null ? new HashSet<>(originalNodesToExclude) :
-                            new HashSet<>();
-                    }
-                    catch (IgniteCheckedException e) {
-                        U.error(log, "Unable to read " + GRACEFUL_SHUTDOWN_METASTORE_KEY +
-                            " value from metastore.", e);
-
-                        continue;
-                    }
-
-                    Map<UUID, Map<Integer, Set<Integer>>> proposedSuppliers = new HashMap<>();
-
-                    for (CacheGroupContext grpCtx : grid.context().cache().cacheGroups()) {
-                        if (grpCtx.isLocal() || grpCtx.systemCache())
-                            continue;
-
-                        if (grpCtx.config().getCacheMode() == PARTITIONED && grpCtx.config().getBackups() == 0) {
-                            LT.warn(log, "Ignoring potential data loss on cache without backups [name="
-                                + grpCtx.cacheOrGroupName() + "]");
-
-                            continue;
-                        }
-
-                        if (topVer != grpCtx.topology().readyTopologyVersion().topologyVersion()) {
-                            // At the moment, there is an exchange.
-                            safeToStop = false;
-
-                            break;
-                        }
-
-                        GridDhtPartitionFullMap fullMap = grpCtx.topology().partitionMap(false);
-
-                        if (fullMap == null) {
-                            safeToStop = false;
-
-                            break;
-                        }
-
-                        nodesToExclude.retainAll(fullMap.keySet());
-
-                        if (!haveCopyLocalPartitions(grpCtx, nodesToExclude, proposedSuppliers)) {
-                            safeToStop = false;
-
-                            if (log.isInfoEnabled()) {
-                                LT.info(log, "This node is waiting for backups of local partitions for group [id="
-                                    + grpCtx.groupId() + ", name=" + grpCtx.cacheOrGroupName() + "]");
-                            }
-
-                            break;
-                        }
-
-                        if (!isRebalanceCompleted(grpCtx)) {
-                            safeToStop = false;
-
-                            if (log.isInfoEnabled()) {
-                                LT.info(log, "This node is waiting for completion of rebalance for group [id="
-                                    + grpCtx.groupId() + ", name=" + grpCtx.cacheOrGroupName() + "]");
-                            }
-
-                            break;
-                        }
-                    }
-
-                    if (topVer != grid.cluster().topologyVersion())
-                        safeToStop = false;
-
-                    if (safeToStop && !proposedSuppliers.isEmpty()) {
-                        Set<UUID> supportedPolicyNodes = new HashSet<>();
-
-                        for (UUID nodeId : proposedSuppliers.keySet()) {
-                            if (IgniteFeatures.nodeSupports(grid0.context(), grid0.cluster().node(nodeId), IgniteFeatures.SHUTDOWN_POLICY))
-                                supportedPolicyNodes.add(nodeId);
-                        }
-
-                        if (!supportedPolicyNodes.isEmpty()) {
-                            safeToStop = grid0.compute(grid0.cluster().forNodeIds(supportedPolicyNodes))
-                                .execute(CheckCpHistTask.class, proposedSuppliers);
-                        }
-                    }
-
-                    if (safeToStop) {
-                        try {
-                            HashSet<UUID> newNodesToExclude = new HashSet<>(nodesToExclude);
-                            newNodesToExclude.add(grid.getLocalNodeId());
-
-                            if (metaStorage.compareAndSet(GRACEFUL_SHUTDOWN_METASTORE_KEY, originalNodesToExclude,
-                                newNodesToExclude))
-                                break;
-                        }
-                        catch (IgniteCheckedException e) {
-                            U.error(log, "Unable to write " + GRACEFUL_SHUTDOWN_METASTORE_KEY +
-                                " value from metastore.", e);
-
-                            continue;
-                        }
-                    }
-
-                    try {
-                        IgniteUtils.sleep(WAIT_FOR_BACKUPS_CHECK_INTERVAL);
-                    }
-                    catch (IgniteInterruptedCheckedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
-            }
+            handleShutdownPolicy(grid0, shutdown);
 
             // Unregister Ignite MBean.
             unregisterFactoryMBean();
@@ -2395,10 +2272,152 @@ public class IgnitionEx {
         }
 
         /**
+         * Handles {@link ShutdownPolicy#GRACEFUL} policy.
+         * Checks that all caches have sufficient number of backups and doesn't allow stopping the {@code grid0} node if
+         * that might lead to data unavailability.
+         *
+         * This method does nothing if one of the following conditions met:
+         *  - shutdown policy is not equal {@link ShutdownPolicy#GRACEFUL}
+         *  - the node is a client
+         *  - cluster is not active
+         *
+         * @param grid0 Kernal to be stopped.
+         * @param shutdown Shutdown policy.
+         */
+        private void handleShutdownPolicy(IgniteKernal grid0, ShutdownPolicy shutdown) {
+            if (shutdown != ShutdownPolicy.GRACEFUL || grid.context().clientNode() || !ClusterState.active(grid.cluster().state()))
+                return;
+
+            delayedShutdown = true;
+
+            if (log.isInfoEnabled())
+                log.info("Ensuring that caches have sufficient backups and local rebalance completion...");
+
+            DistributedMetaStorage metaStorage = grid0.context().distributedMetastorage();
+
+            while (delayedShutdown) {
+                boolean safeToStop = true;
+
+                long topVer = grid0.cluster().topologyVersion();
+
+                HashSet<UUID> originalNodesToExclude;
+
+                HashSet<UUID> nodesToExclude;
+
+                try {
+                    originalNodesToExclude = metaStorage.read(GRACEFUL_SHUTDOWN_METASTORE_KEY);
+
+                    nodesToExclude = originalNodesToExclude != null ? new HashSet<>(originalNodesToExclude) :
+                        new HashSet<>();
+                }
+                catch (IgniteCheckedException e) {
+                    U.error(log, "Unable to read " + GRACEFUL_SHUTDOWN_METASTORE_KEY +
+                        " value from metastore.", e);
+
+                    continue;
+                }
+
+                Map<UUID, Map<Integer, Set<Integer>>> proposedSuppliers = new HashMap<>();
+
+                for (CacheGroupContext grpCtx : grid0.context().cache().cacheGroups()) {
+                    if (grpCtx.isLocal() || grpCtx.systemCache())
+                        continue;
+
+                    if (grpCtx.config().getCacheMode() == PARTITIONED && grpCtx.config().getBackups() == 0) {
+                        LT.warn(log, "Ignoring potential data loss on cache without backups [name="
+                            + grpCtx.cacheOrGroupName() + "]");
+
+                        continue;
+                    }
+
+                    if (topVer != grpCtx.topology().readyTopologyVersion().topologyVersion()) {
+                        // At the moment, there is an exchange.
+                        safeToStop = false;
+
+                        break;
+                    }
+
+                    GridDhtPartitionFullMap fullMap = grpCtx.topology().partitionMap(false);
+
+                    if (fullMap == null) {
+                        safeToStop = false;
+
+                        break;
+                    }
+
+                    nodesToExclude.retainAll(fullMap.keySet());
+
+                    if (!haveCopyLocalPartitions(grpCtx, nodesToExclude, proposedSuppliers)) {
+                        safeToStop = false;
+
+                        if (log.isInfoEnabled()) {
+                            LT.info(log, "This node is waiting for backups of local partitions for group [id="
+                                + grpCtx.groupId() + ", name=" + grpCtx.cacheOrGroupName() + "]");
+                        }
+
+                        break;
+                    }
+
+                    if (!isRebalanceCompleted(grpCtx)) {
+                        safeToStop = false;
+
+                        if (log.isInfoEnabled()) {
+                            LT.info(log, "This node is waiting for completion of rebalance for group [id="
+                                + grpCtx.groupId() + ", name=" + grpCtx.cacheOrGroupName() + "]");
+                        }
+
+                        break;
+                    }
+                }
+
+                if (topVer != grid0.cluster().topologyVersion())
+                    safeToStop = false;
+
+                if (safeToStop && !proposedSuppliers.isEmpty()) {
+                    Set<UUID> supportedPolicyNodes = new HashSet<>();
+
+                    for (UUID nodeId : proposedSuppliers.keySet()) {
+                        if (IgniteFeatures.nodeSupports(grid0.context(), grid0.cluster().node(nodeId), IgniteFeatures.SHUTDOWN_POLICY))
+                            supportedPolicyNodes.add(nodeId);
+                    }
+
+                    if (!supportedPolicyNodes.isEmpty()) {
+                        safeToStop = grid0.compute(grid0.cluster().forNodeIds(supportedPolicyNodes))
+                            .execute(CheckCpHistTask.class, proposedSuppliers);
+                    }
+                }
+
+                if (safeToStop) {
+                    try {
+                        HashSet<UUID> newNodesToExclude = new HashSet<>(nodesToExclude);
+                        newNodesToExclude.add(grid0.getLocalNodeId());
+
+                        if (metaStorage.compareAndSet(GRACEFUL_SHUTDOWN_METASTORE_KEY, originalNodesToExclude,
+                            newNodesToExclude))
+                            break;
+                    }
+                    catch (IgniteCheckedException e) {
+                        U.error(log, "Unable to write " + GRACEFUL_SHUTDOWN_METASTORE_KEY +
+                            " value from metastore.", e);
+
+                        continue;
+                    }
+                }
+
+                try {
+                    IgniteUtils.sleep(WAIT_FOR_BACKUPS_CHECK_INTERVAL);
+                }
+                catch (IgniteInterruptedCheckedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+
+        /**
          * Checks, does the cluster have another copy of each local partition for specific group.
          * Also, the method collects all nodes with can supply a local partition into {@code proposedSuppliers}.
          *
-         * @param grpCtx Cahce group.
+         * @param grpCtx Cache group.
          * @param nodesToExclude Nodes to exclude from check.
          * @param proposedSuppliers Map of proposed suppliers for groups.
          * @return True if all local partition of group specified have a copy in cluster, false otherwise.
