@@ -142,7 +142,7 @@ public class GridCommandHandlerCheckpointingTest extends GridCommandHandlerClust
 
         String s = testOut.toString();
 
-        assertTrue(s.contains("Node with id=" + testIdStr + " not found in the topology"));
+        assertTrue(s.contains("Node with id=" + testIdStr + " is not found in the topology"));
         assertTrue(s.contains(ignite0.localNode().id().toString()));
         assertTrue(s.contains(ignite1.localNode().id().toString()));
     }
