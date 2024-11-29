@@ -17,7 +17,10 @@
 package org.apache.ignite.internal;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.management.ManagementFactory;
 import java.net.URL;
@@ -30,6 +33,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,6 +44,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Handler;
+import java.util.stream.Collectors;
 import javax.management.JMException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -71,7 +76,9 @@ import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
@@ -86,6 +93,7 @@ import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.TimeBag;
 import org.apache.ignite.internal.util.spring.IgniteSpringHelper;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CA;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
@@ -184,6 +192,10 @@ public class IgnitionEx {
     /** Key to store list of gracefully stopping nodes within metastore. */
     private static final String GRACEFUL_SHUTDOWN_METASTORE_KEY =
         DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown";
+
+    /** Metastorage key to store a list of server node Ids that are trying to stop. */
+    private static final String GRACEFUL_SHUTDOWN_METASTORE_KEY_II =
+        DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown.2";
 
     /** Map of named Ignite instances. */
     private static final ConcurrentMap<Object, IgniteNamedInstance> grids = new ConcurrentHashMap<>();
@@ -2272,6 +2284,75 @@ public class IgnitionEx {
         }
 
         /**
+         * Represents a list of server node Ids that are trying to stop.
+         * @see #GRACEFUL_SHUTDOWN_METASTORE_KEY_II
+         */
+        public static class ShutdownIntentions extends IgniteDataTransferObject {
+            /** Serial version UUID. */
+            private static final long serialVersionUID = 0L;
+
+            @GridToStringInclude
+            private Set<UUID> nodeIds;
+
+            /** */
+            public ShutdownIntentions() {}
+
+            /** Creates a copy of the given {@code other} instance. */
+            public ShutdownIntentions(ShutdownIntentions other) {
+                if (other != null)
+                    nodeIds = new HashSet<>(other.nodeIds);
+                else
+                    nodeIds = new HashSet<>();
+            }
+
+            /**
+             * Adds the given {@code nodeId} to the list.
+             * @param nodeId Node ID.
+             */
+            public void appendIntention(UUID nodeId) {
+                if (nodeIds == null)
+                    nodeIds = new HashSet<>();
+
+                nodeIds.add(nodeId);
+            }
+
+            public boolean checkIntentions(Set<UUID> nodeIds) {
+                return this.nodeIds.containsAll(nodeIds);
+            }
+
+            public boolean checkIntention(UUID nodeId) {
+                return nodeIds.contains(nodeId);
+            }
+
+            /** {@inheritDoc} */
+            @Override protected void writeExternalData(ObjectOutput out) throws IOException {
+                out.writeObject(nodeIds);
+            }
+
+            /** {@inheritDoc} */
+            @SuppressWarnings("unchecked")
+            @Override protected void readExternalData(
+                byte protoVer,
+                ObjectInput in
+            ) throws IOException, ClassNotFoundException {
+                nodeIds = (Set<UUID>)in.readObject();
+            }
+
+            /** {@inheritDoc} */
+            @Override public boolean equals(Object obj) {
+                if (!(obj instanceof ShutdownIntentions))
+                    return false;
+
+                return Objects.equals(nodeIds, ((ShutdownIntentions)obj).nodeIds);
+            }
+
+            /** {@inheritDoc} */
+            @Override public String toString() {
+                return S.toString(ShutdownIntentions.class, this);
+            }
+        }
+
+        /**
          * Handles {@link ShutdownPolicy#GRACEFUL} policy.
          * Checks that all caches have sufficient number of backups and doesn't allow stopping the {@code grid0} node if
          * that might lead to data unavailability.
@@ -2298,13 +2379,23 @@ public class IgnitionEx {
             while (delayedShutdown) {
                 boolean safeToStop = true;
 
+                // TODO Change topVer to extended topology version
+                AffinityTopologyVersion extendedTopVer = grid0.context().discovery().topologyVersionEx();
+
                 long topVer = grid0.cluster().topologyVersion();
 
                 HashSet<UUID> originalNodesToExclude;
 
                 HashSet<UUID> nodesToExclude;
 
+                ShutdownIntentions originalClusterShutdownIntention;
+                ShutdownIntentions clusterShutdownIntention;
+
                 try {
+                    // TODO it should be guarded by new Ignite Feature
+                    originalClusterShutdownIntention = metaStorage.read(GRACEFUL_SHUTDOWN_METASTORE_KEY_II);
+                    clusterShutdownIntention = new ShutdownIntentions(originalClusterShutdownIntention);
+
                     originalNodesToExclude = metaStorage.read(GRACEFUL_SHUTDOWN_METASTORE_KEY);
 
                     nodesToExclude = originalNodesToExclude != null ? new HashSet<>(originalNodesToExclude) :
@@ -2315,6 +2406,58 @@ public class IgnitionEx {
                         " value from metastore.", e);
 
                     continue;
+                }
+
+                if (!clusterShutdownIntention.checkIntention(grid0.getLocalNodeId())) {
+                    try {
+                        // TODO Clean up
+                        clusterShutdownIntention.appendIntention(grid0.getLocalNodeId());
+
+                        boolean updated = metaStorage.compareAndSet(
+                            GRACEFUL_SHUTDOWN_METASTORE_KEY_II,
+                            originalClusterShutdownIntention,
+                            clusterShutdownIntention);
+
+                        if (!updated) {
+                            if (log.isInfoEnabled()) {
+                                log.warning(">>>>> Metastorage key '" + GRACEFUL_SHUTDOWN_METASTORE_KEY_II + "' has not been updated [" +
+                                    "name=" + grid0.configuration().getIgniteInstanceName() +
+                                    ", id=" + grid0.context().discovery().localNode().id() +
+                                    "origin=" + originalClusterShutdownIntention +
+                                    ", new=" + clusterShutdownIntention + ']');
+                            }
+                            continue;
+                        }
+                    }
+                    catch (IgniteCheckedException e) {
+                        U.error(log, "Unable to write " + GRACEFUL_SHUTDOWN_METASTORE_KEY +
+                            " value from metastore.", e);
+
+                        continue;
+                    }
+                }
+
+                Set<UUID> actualIds = grid0
+                    .cluster()
+                    .forServers()
+                    .nodes()
+                    .stream()
+                    .map(ClusterNode::id)
+                    .collect(Collectors.toSet());
+
+                if (clusterShutdownIntention.checkIntentions(actualIds) && topVer == grid0.cluster().topologyVersion()) {
+                    //!extendedTopVer.equals(grid0.context().discovery().topologyVersionEx());
+                    // it is safe to stop
+                    break;
+                }
+                else {
+                    if (log.isDebugEnabled()) {
+                        log.debug(">>>>> node cannot be stopped right now [" +
+                            "id=" + grid0.context().discovery().localNode().id() +
+                            ", actualIds=" + actualIds +
+                            ", markers=" + clusterShutdownIntention.nodeIds +
+                            ']');
+                    }
                 }
 
                 Map<UUID, Map<Integer, Set<Integer>>> proposedSuppliers = new HashMap<>();
