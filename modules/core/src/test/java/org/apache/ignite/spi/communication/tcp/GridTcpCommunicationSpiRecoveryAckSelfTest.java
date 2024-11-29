@@ -79,7 +79,8 @@ public class GridTcpCommunicationSpiRecoveryAckSelfTest<T extends CommunicationS
     /** */
     private static final int SPI_CNT = 2;
 
-    private final AtomicReference<Exception> error = new AtomicReference<>();
+    /** To fail test on exceptions from {@link TestListener#onMessage(UUID, Message, IgniteRunnable)}. */
+    private final AtomicReference<Exception> exception = new AtomicReference<>();
 
     /**
      * Disable SPI auto-start.
@@ -88,8 +89,9 @@ public class GridTcpCommunicationSpiRecoveryAckSelfTest<T extends CommunicationS
         super(false);
     }
 
+    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        error.set(null);
+        exception.set(null);
 
         super.beforeTest();
     }
@@ -107,7 +109,7 @@ public class GridTcpCommunicationSpiRecoveryAckSelfTest<T extends CommunicationS
             info("Test listener received message: " + msg);
 
             if (!(msg instanceof GridTestMessage)) {
-                error.compareAndSet(null, new IgniteException("Unexpected message: " + msg));
+                exception.compareAndSet(null, new IgniteException("Unexpected message: " + msg));
 
                 return;
             }
@@ -115,7 +117,7 @@ public class GridTcpCommunicationSpiRecoveryAckSelfTest<T extends CommunicationS
             GridTestMessage msg0 = (GridTestMessage)msg;
 
             if (!msgIds.add(msg0.getMsgId())) {
-                error.compareAndSet(null, new IgniteException("Duplicated message received: " + msg0));
+                exception.compareAndSet(null, new IgniteException("Duplicated message received: " + msg0));
 
                 return;
             }
@@ -280,8 +282,8 @@ public class GridTcpCommunicationSpiRecoveryAckSelfTest<T extends CommunicationS
             finally {
                 stopSpis();
 
-                if (error.get() != null)
-                    throw error.get();
+                if (exception.get() != null)
+                    throw exception.get();
             }
         }
     }
