@@ -23,6 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -43,7 +45,9 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
+import static org.apache.ignite.testframework.GridTestUtils.runMultiThreaded;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
@@ -62,22 +66,22 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
     public static final int STOP_TIMEOUT_LIMIT = 30_000;
 
     /** */
-    private CacheMode cacheMode;
+    private CacheMode cacheMode = CacheMode.PARTITIONED;
 
     /** */
-    private CacheAtomicityMode atomicityMode;
+    private CacheAtomicityMode atomicityMode = CacheAtomicityMode.ATOMIC;
 
     /** */
-    private CacheWriteSynchronizationMode synchronizationMode;
+    private CacheWriteSynchronizationMode synchronizationMode = CacheWriteSynchronizationMode.FULL_SYNC;
 
     /** */
-    private CacheRebalanceMode rebalanceMode;
+    private CacheRebalanceMode rebalanceMode = CacheRebalanceMode.ASYNC;
 
     /** */
     private boolean clientNodes;
 
     /** */
-    protected int backups;
+    protected int backups = 1;
 
     /** */
     public GridCacheDhtPreloadWaitForBackupsTest() {
@@ -414,7 +418,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
      * @throws Exception If failed.
      */
     @Test
-    public void testThatItsNotPossibleToStopLastNodeInBaselineIfThereAreStilNonBaselineNodesInCluster()
+    public void testThatItsNotPossibleToStopLastNodeInBaselineIfThereAreStillNonBaselineNodesInCluster()
         throws Exception {
         cacheMode = CacheMode.PARTITIONED;
         atomicityMode = CacheAtomicityMode.ATOMIC;
@@ -656,6 +660,32 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         // Data shouldn't be lost.
         for (int i = 0; i < cacheSize(); i++)
             assertEquals(i, grid(2).cache("cache" + (1 + (i >> 3) % 3)).get(i));
+    }
+
+    @Test
+    public void testSimultaneousClusterShutdown() throws Exception {
+        int gridCnt = 5;
+
+        Ignite g0 = startGrids(gridCnt);
+
+        g0.cluster().state(ACTIVE);
+
+        AtomicInteger threadNum = new AtomicInteger(gridCnt);
+
+        CyclicBarrier stopBarrier = new CyclicBarrier(gridCnt);
+
+        runMultiThreaded(() -> {
+            try {
+                int idx = threadNum.decrementAndGet();
+
+                stopBarrier.await();
+
+                stopGrid(idx);
+            }
+            catch (Throwable t) {
+                throw new RuntimeException(t);
+            }
+        }, gridCnt, "parallel-stop");
     }
 
     /**
