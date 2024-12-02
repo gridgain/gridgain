@@ -383,16 +383,29 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
      * @param grpId Group id.
      */
     public static IgniteBiPredicate<ClusterNode, Message> blockDemandMessageForGroup(int grpId) {
-        return new IgniteBiPredicate<ClusterNode, Message>() {
-            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
-                if (msg instanceof GridDhtPartitionDemandMessage) {
-                    GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage) msg;
+        return (clusterNode, msg) -> {
+            if (msg instanceof GridDhtPartitionDemandMessage) {
+                GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage) msg;
 
-                    return msg0.groupId() == grpId;
-                }
-
-                return false;
+                return msg0.groupId() == grpId;
             }
+
+            return false;
+        };
+    }
+
+    /**
+     * @param grpIds Group ids.
+     */
+    public static IgniteBiPredicate<ClusterNode, Message> blockDemandMessageForGroups(Set<Integer> grpIds) {
+        return (clusterNode, msg) -> {
+            if (msg instanceof GridDhtPartitionDemandMessage) {
+                GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage) msg;
+
+                return grpIds.contains(msg0.groupId());
+            }
+
+            return false;
         };
     }
 
@@ -400,46 +413,55 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
      * @param grpId Group id.
      */
     public static IgniteBiPredicate<ClusterNode, Message> blockSupplyMessageForGroup(int grpId) {
-        return new IgniteBiPredicate<ClusterNode, Message>() {
-            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
-                if (msg instanceof GridDhtPartitionSupplyMessage) {
-                    GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage) msg;
+        return (clusterNode, msg) -> {
+            if (msg instanceof GridDhtPartitionSupplyMessage) {
+                GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage) msg;
 
-                    return msg0.groupId() == grpId;
-                }
-
-                return false;
+                return msg0.groupId() == grpId;
             }
+
+            return false;
+        };
+    }
+
+    /**
+     * @param grpIds Group ids.
+     */
+    public static IgniteBiPredicate<ClusterNode, Message> blockSupplyMessageForGroups(Set<Integer> grpIds) {
+        return (clusterNode, msg) -> {
+            if (msg instanceof GridDhtPartitionSupplyMessage) {
+                GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage) msg;
+
+                return grpIds.contains(msg0.groupId());
+            }
+
+            return false;
         };
     }
 
     /** */
-    public static IgniteBiPredicate<ClusterNode, Message> blockSingleExhangeMessage() {
-        return new IgniteBiPredicate<ClusterNode, Message>() {
-            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
-                if (msg instanceof GridDhtPartitionsSingleMessage) {
-                    GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
+    public static IgniteBiPredicate<ClusterNode, Message> blockSingleExchangeMessage() {
+        return (clusterNode, msg) -> {
+            if (msg instanceof GridDhtPartitionsSingleMessage) {
+                GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
 
-                    return msg0.exchangeId() != null;
-                }
-
-                return false;
+                return msg0.exchangeId() != null;
             }
+
+            return false;
         };
     }
 
     /** */
     public static IgniteBiPredicate<ClusterNode, Message> blockSinglePartitionStateMessage() {
-        return new IgniteBiPredicate<ClusterNode, Message>() {
-            @Override public boolean apply(ClusterNode clusterNode, Message msg) {
-                if (msg instanceof GridDhtPartitionsSingleMessage) {
-                    GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
+        return (clusterNode, msg) -> {
+            if (msg instanceof GridDhtPartitionsSingleMessage) {
+                GridDhtPartitionsSingleMessage msg0 = (GridDhtPartitionsSingleMessage) msg;
 
-                    return msg0.exchangeId() == null;
-                }
-
-                return false;
+                return msg0.exchangeId() == null;
             }
+
+            return false;
         };
     }
 

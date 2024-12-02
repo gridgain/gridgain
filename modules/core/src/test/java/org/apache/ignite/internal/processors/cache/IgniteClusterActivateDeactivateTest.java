@@ -586,7 +586,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
             spis.add(spi);
 
-            spi.blockMessages(TestRecordingCommunicationSpi.blockSingleExhangeMessage());
+            spi.blockMessages(TestRecordingCommunicationSpi.blockSingleExchangeMessage());
         }
 
         IgniteInternalFuture<?> stateChangeFut = runAsync(() -> ignite(stateChangeFrom).cluster().state(targetState));
