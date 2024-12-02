@@ -455,8 +455,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".DS_REENTRANTLOCKS",
                 sysSchemaName() + ".BINARY_METADATA",
                 sysSchemaName() + ".DISTRIBUTED_METASTORAGE",
-                sysSchemaName() + ".PARTITION_STATES",
-                sysSchemaName() + ".PAGES_TIMESTAMP_HISTOGRAM"
+                sysSchemaName() + ".PARTITION_STATES"
         ));
 
         testGetTables(new String[] {"VIEW"}, expViews);
@@ -1128,11 +1127,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".PARTITION_STATES.PARTITION_ID.null.10",
                 sysSchemaName() + ".PARTITION_STATES.NODE_ID.null.16",
                 sysSchemaName() + ".PARTITION_STATES.STATE.null.2147483647",
-                sysSchemaName() + ".PARTITION_STATES.IS_PRIMARY.null.1",
-                sysSchemaName() + ".PAGES_TIMESTAMP_HISTOGRAM.DATA_REGION_NAME.null.2147483647",
-                sysSchemaName() + ".PAGES_TIMESTAMP_HISTOGRAM.INTERVAL_START.null.29.9",
-                sysSchemaName() + ".PAGES_TIMESTAMP_HISTOGRAM.INTERVAL_END.null.29.9",
-                sysSchemaName() + ".PAGES_TIMESTAMP_HISTOGRAM.PAGES_COUNT.null.19"
+                sysSchemaName() + ".PARTITION_STATES.IS_PRIMARY.null.1"
             ));
 
             expectedCols.addAll(Arrays.asList(
