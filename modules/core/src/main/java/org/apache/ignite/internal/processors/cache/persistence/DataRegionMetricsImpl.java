@@ -15,10 +15,6 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataRegionMetricsProvider;
@@ -33,13 +29,10 @@ import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderWithDelegateMetric;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
-import org.apache.ignite.internal.processors.metric.impl.PeriodicHistogramMetricImpl;
 import org.apache.ignite.internal.util.collection.IntHashMap;
 import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.mxbean.MetricsMxBean;
-import org.apache.ignite.spi.systemview.view.PagesTimestampHistogramView;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.TestOnly;
 
@@ -166,9 +159,6 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
     /** Time interval (in milliseconds) when allocations/evictions are counted to calculate rate. */
     private volatile long rateTimeInterval;
 
-    /** Histogram of cold/hot pages. */
-    private final PeriodicHistogramMetricImpl pageTsHistogram;
-
     /**
      * Same as {@link #DataRegionMetricsImpl(DataRegionConfiguration, GridKernalContext, DataRegionMetricsProvider)}
      * but uses a no-op implementation for the {@link DataRegionMetricsProvider}.
@@ -265,20 +255,6 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
 
         mreg.longMetric("MaxSize", "Maximum memory region size in bytes defined by its data region.")
             .value(dataRegionCfg.getMaxSize());
-
-        if (persistenceEnabled) {
-            // Reserve 1 sec, page ts can be slightly lower than currentTimeMillis, due to applied to ts mask. This
-            // reservation mainly affects only tests (we can check buckets more predictevely).
-            long startTs = U.currentTimeMillis() - 1000L;
-            String name = MetricUtils.metricName(mreg.name(), "PageTimestampHistogram");
-            String desc = "Histogram of pages last access time";
-
-            pageTsHistogram = new PeriodicHistogramMetricImpl(startTs, name, desc);
-
-            mreg.register(pageTsHistogram);
-        }
-        else
-            pageTsHistogram = null;
 
         dataRegionPageMetrics = PageMetricsImpl.builder(mreg)
             .totalPagesCallback(new LongAdderWithDelegateMetric.Delegate() {
@@ -667,9 +643,6 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
      */
     public void enableMetrics() {
         metricsEnabled = true;
-
-        if (pageTsHistogram != null)
-            pageTsHistogram.reset(getPhysicalMemoryPages());
     }
 
     /**
@@ -677,9 +650,6 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
      */
     public void disableMetrics() {
         metricsEnabled = false;
-
-        if (pageTsHistogram != null)
-            pageTsHistogram.reset(0);
     }
 
     /**
@@ -800,48 +770,5 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
     public void addThrottlingTime(long time) {
         if (metricsEnabled)
             totalThrottlingTime.add(time);
-    }
-
-    /**
-     * Increment count of pages with given last access time.
-     *
-     * @param ts Last access timestamp.
-     */
-    public void incrementPagesWithTimestamp(long ts) {
-        if (metricsEnabled && pageTsHistogram != null)
-            pageTsHistogram.increment(ts);
-    }
-
-    /**
-     * Decrement count of pages with given last access time.
-     *
-     * @param ts Last access timestamp.
-     */
-    public void decrementPagesWithTimestamp(long ts) {
-        if (metricsEnabled && pageTsHistogram != null)
-            pageTsHistogram.decrement(ts);
-    }
-
-    /**
-     * Creates pages timestamp histogram view.
-     */
-    public Collection<PagesTimestampHistogramView> pagesTimestampHistogramView() {
-        if (!metricsEnabled || pageTsHistogram == null)
-            return Collections.emptyList();
-
-        IgniteBiTuple<long[], long[]> hist = pageTsHistogram.histogram();
-
-        long[] bounds = hist.get1();
-        long[] vals = hist.get2();
-
-        List<PagesTimestampHistogramView> list = new ArrayList<>(vals.length);
-
-        for (int i = 0; i < vals.length - 1; i++)
-            list.add(new PagesTimestampHistogramView(getName(), bounds[i], bounds[i + 1], vals[i]));
-
-        list.add(new PagesTimestampHistogramView(getName(), bounds[vals.length - 1],
-            U.currentTimeMillis(), vals[vals.length - 1]));
-
-        return list;
     }
 }
