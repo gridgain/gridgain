@@ -181,6 +181,44 @@ public class GridMapQueryExecutor {
     }
 
     /**
+     * Logs detailed information about a query that encountered an error during execution.
+     *
+     * @param reqId Request ID of the query.
+     * @param label Query label, if provided.
+     * @param schemaName Schema name under which the query was executed.
+     * @param queries Collection of SQL queries involved in the execution.
+     * @param params Query parameters, if any.
+     * @param error Exception that occurred during the query execution.
+     */
+    protected void logQueryDetails(
+            long reqId,
+            String label,
+            String schemaName,
+            Collection<GridCacheSqlQuery> queries,
+            Object[] params,
+            Throwable error
+    ) {
+        StringBuilder logMessage = new StringBuilder();
+
+        logMessage.append("Query Execution Failed:")
+                .append("\nRequest ID: ").append(reqId)
+                .append("\nLabel: ").append(label != null ? label : "N/A")
+                .append("\nSchema: ").append(schemaName != null ? schemaName : "N/A")
+                .append("\nQueries: ").append(
+                        queries != null
+                                ? queries.stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; "))
+                                : "N/A")
+                .append("\nParameters: ").append(params != null ? Arrays.toString(params) : "N/A");
+
+        if (error != null) {
+            logMessage.append("\nError: ").append(error.getMessage());
+        }
+
+        log.error(logMessage.toString(), error);
+    }
+
+
+    /**
      * @param nodeId Node ID.
      * @return Results for node.
      */
@@ -337,7 +375,7 @@ public class GridMapQueryExecutor {
      * @param maxMem Query memory limit.
      * @param runningQryId Running query id.
      */
-    private void onQueryRequest0(
+    protected void onQueryRequest0(
         final ClusterNode node,
         final long reqId,
         final String label,
@@ -556,6 +594,9 @@ public class GridMapQueryExecutor {
             }
             else
                 releaseReservations(qctx);
+
+            // Log detailed query information for debugging.
+            logQueryDetails(reqId, label, schemaName, qrys, params, e);
 
             if (e instanceof QueryCancelledException)
                 sendError(node, reqId, e);
@@ -992,8 +1033,7 @@ public class GridMapQueryExecutor {
         try {
             boolean loc = node.isLocal();
 
-            GridQueryNextPageResponse msg = new GridQueryNextPageResponse(reqId, segmentId,
-            /*qry*/0, /*page*/0, /*allRows*/0, /*cols*/1,
+            GridQueryNextPageResponse msg = new GridQueryNextPageResponse(reqId, segmentId,/*qry*/0, /*page*/0, /*allRows*/0, /*cols*/1,
                 loc ? null : Collections.emptyList(),
                 loc ? Collections.<Value[]>emptyList() : null,
                 false);
