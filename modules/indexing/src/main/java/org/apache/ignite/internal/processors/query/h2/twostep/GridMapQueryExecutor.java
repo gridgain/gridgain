@@ -16,6 +16,22 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -66,30 +82,18 @@ import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.cache.CacheException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_EXECUTED;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.QUERY_POOL;
 import static org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase.calculateSegment;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryRequest.isDataPageScanEnabled;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory.toMessages;
-import static org.apache.ignite.internal.processors.tracing.SpanTags.*;
-import static org.apache.ignite.internal.processors.tracing.SpanType.*;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.ERROR;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_PAGE_ROWS;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_TEXT;
+import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_NEXT_PAGE_REQ;
+import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_PAGE_PREPARE;
+import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_CANCEL_REQ;
+import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXEC_REQ;
 
 /**
  * Map query executor.
@@ -111,12 +115,6 @@ public class GridMapQueryExecutor {
     /** */
     private ConcurrentMap<UUID, MapNodeResults> qryRess = new ConcurrentHashMap<>();
 
-    /** Default logger initialization */
-    public GridMapQueryExecutor(GridKernalContext ctx) {
-        this.ctx = ctx;
-        this.log = ctx.log(GridMapQueryExecutor.class);
-    }
-
     /**
      * @param ctx Context.
      * @param h2 H2 Indexing.
@@ -132,7 +130,7 @@ public class GridMapQueryExecutor {
     }
 
     /**
-     * Node left event handling method.
+     * Node left event handling method..
      * @param evt Discovery event.
      */
     public void onNodeLeft(DiscoveryEvent evt) {
@@ -179,6 +177,44 @@ public class GridMapQueryExecutor {
     }
 
     /**
+     * Logs detailed information about a query that encountered an error during execution.
+     *
+     * @param reqId Request ID of the query.
+     * @param label Query label, if provided.
+     * @param schemaName Schema name under which the query was executed.
+     * @param queries Collection of SQL queries involved in the execution.
+     * @param params Query parameters, if any.
+     * @param error Exception that occurred during the query execution.
+     */
+    protected void logQueryDetails(
+            long reqId,
+            String label,
+            String schemaName,
+            Collection<GridCacheSqlQuery> queries,
+            Object[] params,
+            Throwable error
+    ) {
+        StringBuilder logMessage = new StringBuilder();
+
+        logMessage.append("Query Execution Failed:")
+                .append("\nRequest ID: ").append(reqId)
+                .append("\nLabel: ").append(label != null ? label : "N/A")
+                .append("\nSchema: ").append(schemaName != null ? schemaName : "N/A")
+                .append("\nQueries: ").append(
+                        queries != null
+                                ? queries.stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; "))
+                                : "N/A")
+                .append("\nParameters: ").append(params != null ? Arrays.toString(params) : "N/A");
+
+        if (error != null) {
+            logMessage.append("\nError: ").append(error.getMessage());
+        }
+
+        log.error(logMessage.toString(), error);
+    }
+
+
+    /**
      * @param nodeId Node ID.
      * @return Results for node.
      */
@@ -205,7 +241,7 @@ public class GridMapQueryExecutor {
     public void onQueryRequest(final ClusterNode node, final GridH2QueryRequest req) throws IgniteCheckedException {
         int[] qryParts = req.queryPartitions();
 
-        final Map<UUID, int[]> partsMap = req.partitions();
+        final Map<UUID,int[]> partsMap = req.partitions();
 
         final int[] parts = qryParts == null ? (partsMap == null ? null : partsMap.get(ctx.localNodeId())) : qryParts;
 
@@ -215,9 +251,6 @@ public class GridMapQueryExecutor {
         boolean replicated = req.isFlagSet(GridH2QueryRequest.FLAG_REPLICATED);
         final boolean lazy = req.isFlagSet(GridH2QueryRequest.FLAG_LAZY);
         boolean treatReplicatedAsPartitioned = req.isFlagSet(GridH2QueryRequest.FLAG_REPLICATED_AS_PARTITIONED);
-
-        PartitionReservation reserved = null;
-        TraceSurroundings trace = null;
 
         try {
             Boolean dataPageScanEnabled = req.isDataPageScanEnabled();
@@ -240,7 +273,7 @@ public class GridMapQueryExecutor {
 
             final int timeout = req.timeout() > 0 || req.explicitTimeout()
                     ? req.timeout()
-                    : (int) h2.distributedConfiguration().defaultQueryTimeout();
+                    : (int)h2.distributedConfiguration().defaultQueryTimeout();
 
             int firstSegment = segments.nextSetBit(0);
             int segment = firstSegment;
@@ -257,6 +290,7 @@ public class GridMapQueryExecutor {
                                 onQueryRequest0(
                                         node,
                                         req.requestId(),
+                                        req.label(),
                                         segment0,
                                         req.schemaName(),
                                         req.queries(),
@@ -288,6 +322,7 @@ public class GridMapQueryExecutor {
             onQueryRequest0(
                     node,
                     req.requestId(),
+                    req.label(),
                     firstSegment,
                     req.schemaName(),
                     req.queries(),
@@ -335,11 +370,11 @@ public class GridMapQueryExecutor {
      * @param dataPageScanEnabled If data page scan is enabled.
      * @param maxMem Query memory limit.
      * @param runningQryId Running query id.
-     * @param treatReplicatedAsPartitioned Treat replicated as partitioned flag.
      */
-    private void onQueryRequest0(
+    protected void onQueryRequest0(
             final ClusterNode node,
             final long reqId,
+            final String label,
             final int segmentId,
             final String schemaName,
             final Collection<GridCacheSqlQuery> qrys,
@@ -470,7 +505,7 @@ public class GridMapQueryExecutor {
 
                         H2Utils.bindParameters(stmt, params0);
 
-                        MapH2QueryInfo qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId, runningQryId);
+                        MapH2QueryInfo qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId, runningQryId, label);
 
                         ResultSet rs = h2.executeSqlQueryWithTimer(
                                 stmt,
@@ -556,18 +591,8 @@ public class GridMapQueryExecutor {
             else
                 releaseReservations(qctx);
 
-            // Enhanced error logging
-            if (qrys != null) {
-                U.error(log, "Failed to execute local query: " + qrys.stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; ")) + " with parameters: " + Arrays.toString(params) + ". Node ID: " + node.id(), e);
-            } else {
-                U.warn(log, "Failed to execute local query and query details are not available", e);
-                try {
-                    throw new IgniteCheckedException("Error executing query due to internal error.", e);
-                } catch (IgniteCheckedException ex) {
-                    sendError(node, reqId, ex);
-                }
-            }
-            sendError(node, reqId, e);
+            // Log detailed query information for debugging.
+            logQueryDetails(reqId, label, schemaName, qrys, params, e);
 
             if (e instanceof QueryCancelledException)
                 sendError(node, reqId, e);
@@ -587,7 +612,8 @@ public class GridMapQueryExecutor {
                         );
 
                         sendRetry(node, reqId, segmentId, retryCause);
-                    } else {
+                    }
+                    else {
                         QueryRetryException qryRetryErr = X.cause(e, QueryRetryException.class);
 
                         if (qryRetryErr != null)
@@ -801,10 +827,7 @@ public class GridMapQueryExecutor {
     }
 
     /**
-     * Sends update response for DMLContinuing the final part of the code:
-
-     ```java
-     request.
+     * Sends update response for DML request.
      *
      * @param node Node.
      * @param reqId Request id.

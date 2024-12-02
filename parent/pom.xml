@@ -110,7 +110,7 @@
         <jsonlib.bundle.version>2.4_1</jsonlib.bundle.version>
         <jsonlib.version>2.4</jsonlib.version>
         <jtidy.version>1.0.4</jtidy.version>
-        <junit.version>4.12</junit.version>
+        <junit.version>4.13.2</junit.version>
         <kafka.version>2.2.2</kafka.version>
         <karaf.version>4.0.2</karaf.version>
         <log4j2.version>2.20.0</log4j2.version>
@@ -597,9 +597,11 @@
                             <Export-Package>
                                 ${osgi.export.package}
                             </Export-Package>
+                            <!--suppress UnresolvedMavenProperty -->
                             <Private-Package>
                                 ${osgi.private.package}
                             </Private-Package>
+                            <!--suppress UnresolvedMavenProperty -->
                             <Embed-Dependency>${osgi.embed.dependency}</Embed-Dependency>
                             <Embed-Directory>lib</Embed-Directory>
                             <Embed-Transitive>${osgi.embed.transitive}</Embed-Transitive>
@@ -1004,8 +1006,8 @@
                 <dependency>
                     <groupId>com.sun</groupId>
                     <artifactId>tools</artifactId>
+                        <version>1.8</version>
                     <scope>system</scope>
-                    <version>${java.version}</version>
                     <systemPath>${java.home}/../lib/tools.jar</systemPath>
                 </dependency>
             </dependencies>
@@ -1156,7 +1158,7 @@
                                                 </goals>
                                             </pluginExecutionFilter>
                                             <action>
-                                                <ignore></ignore>
+                                                <ignore />
                                             </action>
                                         </pluginExecution>
                                         <pluginExecution>
@@ -1169,7 +1171,7 @@
                                                 </goals>
                                             </pluginExecutionFilter>
                                             <action>
-                                                <ignore></ignore>
+                                                <ignore />
                                             </action>
                                         </pluginExecution>
                                         <pluginExecution>
@@ -1183,7 +1185,7 @@
                                                 </goals>
                                             </pluginExecutionFilter>
                                             <action>
-                                                <ignore></ignore>
+                                                <ignore />
                                             </action>
                                         </pluginExecution>
                                     </pluginExecutions>

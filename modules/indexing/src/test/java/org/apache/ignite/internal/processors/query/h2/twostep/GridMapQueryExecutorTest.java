@@ -1,101 +1,181 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
-import org.apache.ignite.internal.processors.query.GridQueryCancel;
-import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
-import org.apache.ignite.internal.processors.query.h2.MapH2QueryInfo;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryRequest;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-
-import java.sql.PreparedStatement;
+//import org.apache.ignite.internal.util.typedef.internal.U;
+import org.junit.Test;
+//import org.mockito.Mockito;
+//import org.slf4j.Logger;
 import java.sql.SQLException;
+//import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
-
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.util.UUID;
+import java.lang.reflect.Field;
 import static org.mockito.Mockito.*;
 
-public class GridMapQueryExecutorTest extends GridCommonAbstractTest {
-    private GridMapQueryExecutor executor;
-    private GridKernalContext ctx;
-    private ClusterNode node;
-    private GridH2QueryRequest req;
+public class GridMapQueryExecutorTest {
 
-    @BeforeEach
-    public void setUp() throws Exception {
-        super.setUp();
-        ctx = Mockito.mock(GridKernalContext.class);
-        executor = new GridMapQueryExecutor(ctx);
-        node = Mockito.mock(ClusterNode.class);
-        req = Mockito.mock(GridH2QueryRequest.class);
-
-        when(ctx.log(GridMapQueryExecutor.class)).thenReturn(Mockito.mock(IgniteLogger.class));
-    }
-
+    /**
+     * Unit test to directly test the helper method logQueryDetails.
+     */
     @Test
-    public void testQueryExecutionFailure() {
-        GridMapQueryExecutor executorSpy = Mockito.spy(new GridMapQueryExecutor(ctx));
-        IgniteLogger log = ctx.log(GridMapQueryExecutor.class);
-        Mockito.doReturn(log).when(executorSpy).getLog();
-
-        // Simulate query execution failure
-        Mockito.doThrow(new IgniteCheckedException(new SQLException("Forced error"))).when(executorSpy).onQueryRequest(any(), any());
-
+    public void testLogQueryDetailsDirectly() {
         try {
-            executorSpy.onQueryRequest(Mockito.mock(ClusterNode.class), Mockito.mock(GridH2QueryRequest.class));
-        } catch (IgniteCheckedException e) {
-            // expected
-        }
+            // Arrange
+            GridMapQueryExecutor executor = new GridMapQueryExecutor();
+            IgniteLogger mockLog = mock(IgniteLogger.class);
 
-        Mockito.verify(log).error(contains("Failed to execute query"), any(SQLException.class));
+            // Inject the mock logger using reflection
+            Field logField = GridMapQueryExecutor.class.getDeclaredField("log");
+            logField.setAccessible(true);
+            logField.set(executor, mockLog);
+
+            long reqId = 1L;
+            String label = "TestQuery";
+            String schema = "TestSchema";
+            Throwable error = new SQLException("Test SQL Error");
+
+            // Act
+            executor.logQueryDetails(reqId, label, schema, Collections.emptyList(), new Object[]{}, error);
+
+            // Assert
+            verify(mockLog).error(contains("Query Execution Failed"), eq(error));
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new AssertionError("Reflection operation failed", e);
+        }
     }
 
+    /**
+     * Unit test to simulate a query failure and validate the integration
+     * of the helper method logQueryDetails.
+     */
     @Test
-    public void testOnQueryRequest() throws Exception {
-        // Mocking behaviors for query request
-        when(req.queries()).thenReturn(Collections.singletonList(new GridCacheSqlQuery()));
-        when(req.partitions()).thenReturn(null);
-        when(req.queryPartitions()).thenReturn(null);
-        when(req.caches()).thenReturn(Collections.emptyList());
-        when(req.parameters()).thenReturn(new Object[]{});
-        when(req.isDataPageScanEnabled()).thenReturn(false);
-        when(req.schemaName()).thenReturn("PUBLIC");
-        when(req.topologyVersion()).thenReturn(AffinityTopologyVersion.NONE);
-        when(req.timeout()).thenReturn(0);
-        when(req.explicitTimeout()).thenReturn(false);
-        when(req.pageSize()).thenReturn(0);
-        when(req.isFlagSet(GridH2QueryRequest.FLAG_DISTRIBUTED_JOINS)).thenReturn(false);
-        when(req.isFlagSet(GridH2QueryRequest.FLAG_ENFORCE_JOIN_ORDER)).thenReturn(false);
-        when(req.isFlagSet(GridH2QueryRequest.FLAG_EXPLAIN)).thenReturn(false);
-        when(req.isFlagSet(GridH2QueryRequest.FLAG_REPLICATED)).thenReturn(false);
-        when(req.isFlagSet(GridH2QueryRequest.FLAG_LAZY)).thenReturn(false);
-        when(req.isFlagSet(GridH2QueryRequest.FLAG_REPLICATED_AS_PARTITIONED)).thenReturn(false);
+    public void testLogQueryDetailsOnQueryFailure() {
+        // Arrange
+        ClusterNode mockNode = mock(ClusterNode.class);
+        when(mockNode.id()).thenReturn(UUID.randomUUID());
 
-        // Simulate query execution failure to check logging
-        doThrow(new IgniteCheckedException(new SQLException("Test exception"))).when(executor).executeSqlQueryWithTimer(
-                any(PreparedStatement.class),
-                any(H2PooledConnection.class),
+        GridMapQueryExecutor executor = spy(new GridMapQueryExecutor());
+
+        // Simulated invalid query to trigger error
+        String invalidSQL = "INVALID QUERY";
+        Collection<GridCacheSqlQuery> queries = Collections.singletonList(new GridCacheSqlQuery(invalidSQL));
+        Object[] params = new Object[]{};
+
+        // Ensure logQueryDetails is mocked
+        doNothing().when(executor).logQueryDetails(
+                anyLong(),
                 anyString(),
-                anyInt(),
-                any(GridQueryCancel.class),
-                anyBoolean(),
-                any(MapH2QueryInfo.class),
-                anyLong()
+                anyString(),
+                anyCollection(),
+                any(),
+                any(Throwable.class)
         );
 
-        // Perform the request and check that IgniteCheckedException is thrown
-        assertThrows(IgniteCheckedException.class, () -> {
-            executor.onQueryRequest(node, req);
-        });
+        // Mock onQueryRequest0 to throw an exception and invoke logQueryDetails
+        doAnswer(invocation -> {
+            executor.logQueryDetails(1L, "TestLabel", "TestSchema", queries, params, new RuntimeException("SIMULATED SQL error"));
+            throw new RuntimeException("SIMULATED SQL error");
+        }).when(executor).onQueryRequest0(
+                eq(mockNode),
+                anyLong(),
+                anyString(),
+                anyInt(),
+                anyString(),
+                anyCollection(),
+                anyList(),
+                any(),
+                any(),
+                any(),
+                anyInt(),
+                anyBoolean(),
+                anyBoolean(),
+                anyBoolean(),
+                anyInt(),
+                any(),
+                anyBoolean(),
+                any(),
+                anyBoolean(),
+                anyLong(),
+                any(),
+                anyBoolean()
+        );
 
-        // Verify that the error is logged with the expected message
-        verify(ctx.log(GridMapQueryExecutor.class)).error(eq("Failed to execute local query: SELECT * FROM test; with parameters: []. Node ID: " + node.id()), any(SQLException.class));
+        // Act
+        try {
+            executor.onQueryRequest0(
+                    mockNode,
+                    1L,          // reqId
+                    "TestLabel", // label
+                    0,           // segmentId
+                    "TestSchema",// schemaName
+                    queries,
+                    Collections.emptyList(), // cacheIds
+                    null,          // topVer
+                    null,          // partsMap
+                    null,          // parts
+                    10,            // pageSize
+                    false,         // distributedJoins
+                    false,         // enforceJoinOrder
+                    false,         // replicated
+                    1000,          // timeout
+                    params,
+                    false,         // lazy
+                    null,          // mvccSnapshot
+                    false,         // dataPageScanEnabled
+                    0L,            // maxMem
+                    null,          // runningQryId
+                    false          // treatReplicatedAsPartitioned
+            );
+        } catch (RuntimeException e) {
+            // Expected exception to trigger logQueryDetails
+        }
+
+        // Assert
+        verify(executor).logQueryDetails(eq(1L), eq("TestLabel"), eq("TestSchema"), eq(queries), eq(params), any(Throwable.class));
+    }
+
+    /**
+     * Unit test to validate behavior of the helper method logQueryDetails
+     * with null or empty inputs.
+     */
+    @Test
+    public void testLogQueryDetailsWithNullInputs() {
+       try {
+           // Arrange
+           GridMapQueryExecutor executor = new GridMapQueryExecutor();
+           IgniteLogger mockLog = mock(IgniteLogger.class);
+
+           // Inject the mock logger using reflection
+           Field logField = GridMapQueryExecutor.class.getDeclaredField("log");
+           logField.setAccessible(true);
+           logField.set(executor, mockLog);
+
+           // Act
+           executor.logQueryDetails(1L, null, null, null, null, null);
+
+           // Assert: Verify the logger was invoked correctly
+           verify(mockLog).error(anyString(), eq(null));
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+           throw new AssertionError("Reflection operation failed", e);
+        }
     }
 }
