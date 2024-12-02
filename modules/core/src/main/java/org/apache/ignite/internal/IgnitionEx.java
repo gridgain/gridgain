@@ -61,6 +61,7 @@ import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
@@ -2419,8 +2420,8 @@ public class IgnitionEx {
                             clusterShutdownIntention);
 
                         if (!updated) {
-                            if (log.isInfoEnabled()) {
-                                log.warning(">>>>> Metastorage key '" + GRACEFUL_SHUTDOWN_METASTORE_KEY_II + "' has not been updated [" +
+                            if (log.isDebugEnabled()) {
+                                log.debug(">>>>> Metastorage key '" + GRACEFUL_SHUTDOWN_METASTORE_KEY_II + "' has not been updated [" +
                                     "name=" + grid0.configuration().getIgniteInstanceName() +
                                     ", id=" + grid0.context().discovery().localNode().id() +
                                     "origin=" + originalClusterShutdownIntention +
@@ -2525,8 +2526,15 @@ public class IgnitionEx {
                     }
 
                     if (!supportedPolicyNodes.isEmpty()) {
-                        safeToStop = grid0.compute(grid0.cluster().forNodeIds(supportedPolicyNodes))
-                            .execute(CheckCpHistTask.class, proposedSuppliers);
+                        try {
+                            safeToStop = grid0
+                                .compute(grid0.cluster().forNodeIds(supportedPolicyNodes))
+                                .execute(CheckCpHistTask.class, proposedSuppliers);
+                        }
+                        catch (ClusterTopologyException cte) {
+                            // Topology has changed or cluster group is empty.
+                            safeToStop = false;
+                        }
                     }
                 }
 
