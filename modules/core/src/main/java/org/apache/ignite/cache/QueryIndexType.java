@@ -35,7 +35,12 @@ public enum QueryIndexType {
     /**
      * Geo-spatial index.
      */
-    GEOSPATIAL;
+    GEOSPATIAL,
+
+    /**
+     * Vector index.
+     */
+    VECTOR;
 
     /** Enum values. */
     private static final QueryIndexType[] VALS = values();
