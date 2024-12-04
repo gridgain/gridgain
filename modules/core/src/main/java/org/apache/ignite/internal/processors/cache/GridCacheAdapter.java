@@ -2110,6 +2110,12 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         if (F.isEmpty(drMap))
             return;
 
+        if (log.isDebugEnabled()) {
+            for (KeyCacheObject keyCacheObject : drMap.keySet()) {
+                log.debug("PutAllConflict invoked for the key = " + keyCacheObject.value(ctx.cacheObjectContext(), false));
+            }
+        }
+
         syncOp(new SyncInOp(drMap.size() == 1) {
             @Override public void inOp(GridNearTxLocal tx) throws IgniteCheckedException {
                 tx.putAllDrAsync(ctx, drMap).get();
