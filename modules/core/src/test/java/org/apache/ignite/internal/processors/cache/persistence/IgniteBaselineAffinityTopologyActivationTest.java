@@ -30,6 +30,7 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -378,6 +379,34 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
         awaitPartitionMapExchange();
 
         verifyBaselineTopologyOnNodes(verifier1, new Ignite[] {nodeA, nodeB, nodeC});
+    }
+
+    @Test
+    public void testNodeJoinsToActiveReadOnlyCluster() throws Exception {
+        startGridWithConsistentId("A");
+        startGridWithConsistentId("B");
+
+        IgniteEx grid = grid("A");
+
+        grid.cluster().state(ClusterState.ACTIVE_READ_ONLY);
+
+        startGridWithConsistentId("C");
+
+        assertEquals(ClusterState.ACTIVE_READ_ONLY, grid.cluster().state());
+    }
+
+    @Test
+    public void testNodeJoinsToActiveCluster() throws Exception {
+        startGridWithConsistentId("A");
+        startGridWithConsistentId("B");
+
+        IgniteEx grid = grid("A");
+
+        grid.cluster().state(ClusterState.ACTIVE);
+
+        startGridWithConsistentId("C");
+
+        assertEquals(ClusterState.ACTIVE, grid.cluster().state());
     }
 
     /**
