@@ -2119,6 +2119,12 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         return state == INACTIVE && ClusterState.active(newState);
     }
 
+    /**
+     * Get correct state to move cluster in to avoid transition from read_only to active on node added to baseline.
+     *
+     * @param activate If cluster is activated.
+     * @return State cluster should be in.
+     */
     private ClusterState findCorrectTargetState(boolean activate) {
         ClusterState finalState = INACTIVE;
 
