@@ -381,6 +381,12 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
         verifyBaselineTopologyOnNodes(verifier1, new Ignite[] {nodeA, nodeB, nodeC});
     }
 
+    /**
+     * Verifies that if the node is added to baseline to cluster in {@link ClusterState#ACTIVE_READ_ONLY} state, the cluster
+     * remains in this state.
+     *
+     * @throws Exception if failed.
+     */
     @Test
     public void testNodeJoinsToActiveReadOnlyCluster() throws Exception {
         startGridWithConsistentId("A");
@@ -392,9 +398,26 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
 
         startGridWithConsistentId("C");
 
+        long topologyVersion = grid.cluster().topologyVersion();
+
+        try {
+            GridTestUtils.runAsync(
+                    () -> grid.cluster().setBaselineTopology(topologyVersion)
+            ).get(10_000);
+        }
+        catch (Exception ignored) {
+            // timeout exception is expected here
+        }
+
         assertEquals(ClusterState.ACTIVE_READ_ONLY, grid.cluster().state());
     }
 
+    /**
+     * Verifies that if the node is added to baseline to cluster in {@link ClusterState#ACTIVE} state, the cluster
+     * remains in this state.
+     *
+     * @throws Exception if failed.
+     */
     @Test
     public void testNodeJoinsToActiveCluster() throws Exception {
         startGridWithConsistentId("A");
@@ -406,7 +429,49 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
 
         startGridWithConsistentId("C");
 
+        long topologyVersion = grid.cluster().topologyVersion();
+
+        try {
+            GridTestUtils.runAsync(
+                    () -> grid.cluster().setBaselineTopology(topologyVersion)
+            ).get(10_000);
+        }
+        catch (Exception ignored) {
+            // timeout exception is expected here
+        }
+
         assertEquals(ClusterState.ACTIVE, grid.cluster().state());
+    }
+
+    /**
+     * Verifies that if the node is added to baseline to cluster in {@link ClusterState#INACTIVE} state, the cluster
+     * remains in this state.
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testNodeJoinsToInactiveCluster() throws Exception {
+        startGridWithConsistentId("A");
+        startGridWithConsistentId("B");
+
+        IgniteEx grid = grid("A");
+
+        grid.cluster().state(ClusterState.INACTIVE);
+
+        startGridWithConsistentId("C");
+
+        long topologyVersion = grid.cluster().topologyVersion();
+
+        try {
+            GridTestUtils.runAsync(
+                    () -> grid.cluster().setBaselineTopology(topologyVersion)
+            ).get(10_000);
+        }
+        catch (Exception ignored) {
+            // timeout exception is expected here
+        }
+
+        assertEquals(ClusterState.INACTIVE, grid.cluster().state());
     }
 
     /**
