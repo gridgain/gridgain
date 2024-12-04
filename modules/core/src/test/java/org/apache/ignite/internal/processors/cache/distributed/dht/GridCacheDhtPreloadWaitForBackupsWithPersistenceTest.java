@@ -16,9 +16,14 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
+import org.apache.ignite.Ignite;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 
 /**
  * Tests for "wait for backups on shutdown" flag with persistence.
@@ -52,5 +57,57 @@ public class GridCacheDhtPreloadWaitForBackupsWithPersistenceTest extends GridCa
         super.afterTest();
 
         cleanPersistenceDir();
+    }
+
+    @Test
+    public void testSimultaneousClusterShutdownWithNonBaselineNodes() throws Exception {
+        int gridCnt = 3;
+
+        Ignite g0 = startGrids(gridCnt);
+
+        g0.cluster().state(ACTIVE);
+
+        // Start server nodes outside the current baseline.
+        startGrid(3);
+        startGrid(4);
+
+        gridCnt += 2;
+
+        // Start client node.
+        IgniteEx client = startClientGrid(gridCnt);
+
+        stopGridsInParallel(gridCnt, gridCnt);
+
+        assertEquals("Only 1 node should be alive.", 1, G.allGrids().size());
+
+        assertTrue("Only client node should be alive.", G.allGrids().get(0).configuration().isClientMode());
+
+        assertFalse("Client node is stopping.", client.context().isStopping());
+    }
+
+    @Test
+    public void testSimultaneousClusterShutdownWithOfflineBaselineNodes() throws Exception {
+        backups = 2;
+
+        int gridCnt = 5;
+
+        Ignite g0 = startGrids(gridCnt);
+
+        g0.cluster().state(ACTIVE);
+
+        // Stop 2 of 5 baseline nodes.
+        stopGrid(0);
+        stopGrid(1);
+
+        // Start client node.
+        IgniteEx client = startClientGrid(gridCnt);
+
+        stopGridsInParallel(gridCnt, 3);
+
+        assertEquals("Only 1 node should be alive.", 1, G.allGrids().size());
+
+        assertTrue("Only client node should be alive.", G.allGrids().get(0).configuration().isClientMode());
+
+        assertFalse("Client node is stopping.", client.context().isStopping());
     }
 }

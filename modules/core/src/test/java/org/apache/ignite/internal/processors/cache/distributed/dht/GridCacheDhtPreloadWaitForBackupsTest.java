@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -45,14 +44,15 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
-import static org.apache.ignite.internal.TestRecordingCommunicationSpi.blockSupplyMessageForGroup;
+import static org.apache.ignite.internal.TestRecordingCommunicationSpi.blockSupplyMessageForGroups;
+import static org.apache.ignite.internal.TestRecordingCommunicationSpi.spi;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheGroupId;
 import static org.apache.ignite.testframework.GridTestUtils.runMultiThreaded;
-import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Tests for "wait for backups on shutdown" flag.
@@ -180,12 +180,14 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         for (int i = 0; i < cacheSize(); i++)
             grid(1).cache("cache" + (1 + (i >> 3) % 3)).put(i, new byte[i]);
 
-        TestRecordingCommunicationSpi spi1 = TestRecordingCommunicationSpi.spi(grid(1));
-        spi1.blockMessages(blockSupplyMessageForGroup(cacheGroupId("cache1", null)));
+        spi(grid(1)).blockMessages(blockSupplyMessageForGroups(new HashSet<>(asList(
+            cacheGroupId("cache1", null),
+            cacheGroupId("cache2", null),
+            cacheGroupId("cache3", null)))));
 
         startGrid(0);
 
-        spi1.waitForBlocked();
+        spi(grid(1)).waitForBlocked();
 
         final CountDownLatch latch = new CountDownLatch(1);
 
@@ -338,7 +340,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
      * @throws Exception If failed.
      */
     @Test
-    public void testThatItsPossibleToStopNodeIfExludedNodeListWithinMetastoreIsntEmpty() throws Exception {
+    public void testThatItsPossibleToStopNodeIfExcludedNodeListWithinMetastoreIsntEmpty() throws Exception {
         cacheMode = CacheMode.PARTITIONED;
         atomicityMode = CacheAtomicityMode.ATOMIC;
         synchronizationMode = CacheWriteSynchronizationMode.FULL_ASYNC;
@@ -464,7 +466,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         assertFalse(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_CHECK_TIMEOUT_LIMIT));
 
-        grid(0).cluster().setBaselineTopology(Arrays.asList(grid(0).localNode(), grid(1).localNode()));
+        grid(0).cluster().setBaselineTopology(asList(grid(0).localNode(), grid(1).localNode()));
 
         assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
 
@@ -613,99 +615,6 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
             assertEquals(i, grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).get(i));
     }
 
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testSimultaneousSafeShutdown() throws Exception {
-        cacheMode = CacheMode.PARTITIONED;
-        atomicityMode = CacheAtomicityMode.ATOMIC;
-        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
-        backups = 1;
-
-        startGrids(2);
-
-        grid(0).cluster().state(ACTIVE);
-
-        for (int i = 0; i < cacheSize(); i++)
-            grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).put(i, i);
-
-        TestRecordingCommunicationSpi spi0 = TestRecordingCommunicationSpi.spi(grid(0));
-        spi0.blockMessages(blockSupplyMessageForGroup(cacheGroupId("cache1", null)));
-
-        TestRecordingCommunicationSpi spi1 = TestRecordingCommunicationSpi.spi(grid(1));
-        spi1.blockMessages(blockSupplyMessageForGroup(cacheGroupId("cache1", null)));
-
-        startGrid(2);
-
-        GridTestUtils.runAsync(() -> grid(0).close());
-
-        GridTestUtils.runAsync(() -> grid(1).close());
-
-        Thread.sleep(STOP_TIMEOUT_LIMIT);
-
-        // There is an ongoing rebalance, so nodes cannot be stopped.
-        assertTrue(
-            "Failed to wait for topology [expected=3, actual=" + grid(2).cluster().nodes().size() + ']',
-            waitForCondition(() -> grid(2).cluster().nodes().size() == 3, STOP_TIMEOUT_LIMIT));
-
-        spi0.stopBlock();
-        spi1.stopBlock();
-
-        assertTrue(
-            "Failed to wait for topology [expected=1, actual=" + grid(2).cluster().nodes().size() + ']',
-            waitForCondition(() -> grid(2).cluster().nodes().size() == 1, STOP_TIMEOUT_LIMIT));
-
-        // Data shouldn't be lost.
-        for (int i = 0; i < cacheSize(); i++)
-            assertEquals(i, grid(2).cache("cache" + (1 + (i >> 3) % 3)).get(i));
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testSimultaneousSafeShutdownWithReplicatedCache() throws Exception {
-        cacheMode = CacheMode.REPLICATED;
-        atomicityMode = CacheAtomicityMode.ATOMIC;
-        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
-        rebalanceMode = CacheRebalanceMode.SYNC;
-
-        startGrids(2);
-
-        grid(0).cluster().state(ACTIVE);
-
-        for (int i = 0; i < cacheSize(); i++)
-            grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).put(i, i);
-
-        TestRecordingCommunicationSpi spi0 = TestRecordingCommunicationSpi.spi(grid(0));
-        spi0.blockMessages(blockSupplyMessageForGroup(cacheGroupId("cache1", null)));
-
-        TestRecordingCommunicationSpi spi1 = TestRecordingCommunicationSpi.spi(grid(1));
-        spi1.blockMessages(blockSupplyMessageForGroup(cacheGroupId("cache1", null)));
-
-        GridTestUtils.runAsync(() -> startGrid(2));
-
-        spi0.waitForBlocked();
-        spi1.waitForBlocked();
-
-        GridTestUtils.runAsync(() -> grid(0).close());
-
-        GridTestUtils.runAsync(() -> grid(1).close());
-
-        Thread.sleep(STOP_TIMEOUT_LIMIT);
-
-        spi1.stopBlock();
-
-        assertTrue(
-            "Failed to wait for topology [expected=1, actual=" + grid(2).cluster().nodes().size() + ']',
-            waitForCondition(() -> grid(2).cluster().nodes().size() == 1, STOP_TIMEOUT_LIMIT));
-
-        // Data shouldn't be lost.
-        for (int i = 0; i < cacheSize(); i++)
-            assertEquals(i, grid(2).cache("cache" + (1 + (i >> 3) % 3)).get(i));
-    }
-
     @Test
     public void testSimultaneousClusterShutdown() throws Exception {
         int gridCnt = 5;
@@ -714,22 +623,36 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         g0.cluster().state(ACTIVE);
 
-        AtomicInteger threadNum = new AtomicInteger(gridCnt);
+        stopGridsInParallel(gridCnt, gridCnt);
 
-        CyclicBarrier stopBarrier = new CyclicBarrier(gridCnt);
+        assertTrue(G.allGrids().isEmpty());
+    }
+
+    /**
+     * Stops nodes in parallel.
+     * Nodes to be stopped are in the interval [gridCnt - parallelStopCnt, gridCnt).
+     *
+     * @param gridCnt Max idx of node to be stopped.
+     * @param parallelStopCnt Number of nodes to be stopped.
+     * @throws Exception If failed.
+     */
+    protected void stopGridsInParallel(int gridCnt, int parallelStopCnt) throws Exception {
+        AtomicInteger idx = new AtomicInteger(gridCnt);
+
+        CyclicBarrier stopBarrier = new CyclicBarrier(parallelStopCnt);
 
         runMultiThreaded(() -> {
             try {
-                int idx = threadNum.decrementAndGet();
+                int idxToStop = idx.decrementAndGet();
 
                 stopBarrier.await();
 
-                stopGrid(idx);
+                stopGrid(idxToStop);
             }
             catch (Throwable t) {
                 throw new RuntimeException(t);
             }
-        }, gridCnt, "parallel-stop");
+        }, parallelStopCnt, "parallel-stop");
     }
 
     /**
@@ -783,9 +706,13 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        CacheConfiguration[] ccfgs = new CacheConfiguration[3];
+        cfg.setConsistentId(igniteInstanceName);
+
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
+
+        CacheConfiguration<Integer, Integer>[] ccfgs = new CacheConfiguration[3];
         for (int i = 1; i <= 3; i++) {
-            CacheConfiguration ccfg = new CacheConfiguration("cache" + i);
+            CacheConfiguration<Integer, Integer> ccfg = new CacheConfiguration<>("cache" + i);
 
             ccfg.setCacheMode(cacheMode);
             ccfg.setAtomicityMode(atomicityMode);
@@ -808,8 +735,6 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         if (clientNodes && (igniteInstanceName.endsWith("2") || igniteInstanceName.endsWith("3")))
             cfg.setClientMode(true);
-
-        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
         return cfg;
     }

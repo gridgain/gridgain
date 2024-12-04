@@ -2358,10 +2358,12 @@ public class IgnitionEx {
          * Checks that all caches have sufficient number of backups and doesn't allow stopping the {@code grid0} node if
          * that might lead to data unavailability.
          *
-         * This method does nothing if one of the following conditions met:
-         *  - shutdown policy is not equal {@link ShutdownPolicy#GRACEFUL}
-         *  - the node is a client
-         *  - cluster is not active
+         * This method does nothing if one of the following conditions is met:
+         * <ul>
+         *     <li>shutdown policy does not equal to {@link ShutdownPolicy#GRACEFUL}</li>
+         *     <li>the node is a client</li>
+         *     <li>cluster is inactive</li>
+         *</ul>
          *
          * @param grid0 Kernal to be stopped.
          * @param shutdown Shutdown policy.
@@ -2565,13 +2567,14 @@ public class IgnitionEx {
         }
 
         /**
-         * Checks, does the cluster have another copy of each local partition for specific group.
-         * Also, the method collects all nodes with can supply a local partition into {@code proposedSuppliers}.
+         * Checks that the cluster has another copy of each local partition for the specified group.
+         * Also, this method collects all nodes that can be used as suppliers for local partitions.
          *
          * @param grpCtx Cache group.
          * @param nodesToExclude Nodes to exclude from check.
-         * @param proposedSuppliers Map of proposed suppliers for groups.
-         * @return True if all local partition of group specified have a copy in cluster, false otherwise.
+         * @param proposedSuppliers Map of proposed suppliers for cache groups.
+         * @return {@code true} if all local partitions of the specified cache group have a copy in the cluster,
+         *                      and {@code false} otherwise.
          */
         private boolean haveCopyLocalPartitions(
             CacheGroupContext grpCtx,
@@ -2601,13 +2604,15 @@ public class IgnitionEx {
                     if (localNodeId.equals(entry.getKey()) || nodesToExclude.contains(entry.getKey()))
                         continue;
 
-                    //This remote node does not present in ideal assignment.
+                    // This remote node does not present in ideal assignment.
                     if (!idealAssignment.get(p).stream().anyMatch(node -> node.id().equals(entry.getKey())))
                         continue;
 
-                    //Rebalance in this cache.
-                    if (entry.getValue().hasMovingPartitions())
+                    // Rebalance is in progress.
+                    if (entry.getValue().hasMovingPartitions()) {
+                        log.warning(">>>>> [part=" + p + ", node=" + entry.getKey() + ", hasMoving=" + entry.getValue().hasMovingPartitions() + ']');
                         continue;
+                    }
 
                     if (entry.getValue().get(p) == GridDhtPartitionState.OWNING) {
                         proposedSuppliers.computeIfAbsent(entry.getKey(), (nodeId) -> new HashMap<>())

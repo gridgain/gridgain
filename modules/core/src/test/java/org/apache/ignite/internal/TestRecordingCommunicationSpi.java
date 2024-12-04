@@ -383,11 +383,18 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
      * @param grpId Group id.
      */
     public static IgniteBiPredicate<ClusterNode, Message> blockDemandMessageForGroup(int grpId) {
+        return blockDemandMessageForGroups(Collections.singleton(grpId));
+    }
+
+    /**
+     * @param grpIds Group ids.
+     */
+    public static IgniteBiPredicate<ClusterNode, Message> blockDemandMessageForGroups(Set<Integer> grpIds) {
         return (clusterNode, msg) -> {
             if (msg instanceof GridDhtPartitionDemandMessage) {
                 GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage) msg;
 
-                return msg0.groupId() == grpId;
+                return grpIds.contains(msg0.groupId());
             }
 
             return false;
@@ -398,11 +405,18 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
      * @param grpId Group id.
      */
     public static IgniteBiPredicate<ClusterNode, Message> blockSupplyMessageForGroup(int grpId) {
+        return blockSupplyMessageForGroups(Collections.singleton(grpId));
+    }
+
+    /**
+     * @param grpIds Group ids.
+     */
+    public static IgniteBiPredicate<ClusterNode, Message> blockSupplyMessageForGroups(Set<Integer> grpIds) {
         return (clusterNode, msg) -> {
             if (msg instanceof GridDhtPartitionSupplyMessage) {
                 GridDhtPartitionSupplyMessage msg0 = (GridDhtPartitionSupplyMessage) msg;
 
-                return msg0.groupId() == grpId;
+                return grpIds.contains(msg0.groupId());
             }
 
             return false;
