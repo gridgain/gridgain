@@ -16,14 +16,10 @@
 
 package org.apache.ignite.internal;
 
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -34,7 +30,6 @@ import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.cluster.ClusterTopologyException;
-import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
@@ -43,9 +38,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.util.IgniteUtils;
-import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -105,7 +98,7 @@ public interface ShutdownPolicyHandler {
         static final String GRACEFUL_SHUTDOWN_METASTORE_KEY =
             DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown";
 
-        /** Metastorage key to store a list of server node Ids that are trying to stop. */
+        /** Meta storage key to store a list of server node Ids that are trying to stop. */
         static final String GRACEFUL_SHUTDOWN_METASTORE_KEY_II =
             DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown.intention";
 
@@ -125,6 +118,12 @@ public interface ShutdownPolicyHandler {
         /** Logger to use. */
         private final IgniteLogger log;
 
+        /**
+         * Creates a new instance of {@link GracefulShutdownPolicyHandler}.
+         *
+         * @param grid0 Node to stop.
+         * @param log Logger to use.
+         */
         GracefulShutdownPolicyHandler(
             IgniteKernal grid0,
             IgniteLogger log
@@ -293,7 +292,7 @@ public interface ShutdownPolicyHandler {
 
         /** Represents a result returned by {@link #handleClusterShutdownIntention(DistributedMetaStorage, long)}. */
         private enum ShutdownIntentionResult {
-            /** Metastorage key {@link #GRACEFUL_SHUTDOWN_METASTORE_KEY_II} cannot be read or wrote. */
+            /** Meta storage key {@link #GRACEFUL_SHUTDOWN_METASTORE_KEY_II} cannot be read or wrote. */
             RETRY,
 
             /** All server nodes wrote the intention and cluster can be stopped. */
@@ -306,7 +305,7 @@ public interface ShutdownPolicyHandler {
         /**
          * Handles cluster shutdown intention.
          *
-         * @param metaStorage Metastorage.
+         * @param metaStorage Meta storage.
          * @param topVer Current topology version.
          * @return Result of handling.
          */
@@ -314,13 +313,15 @@ public interface ShutdownPolicyHandler {
             DistributedMetaStorage metaStorage,
             long topVer
         ) {
-            ShutdownIntentions originalClusterShutdownIntention;
-            ShutdownIntentions clusterShutdownIntention;
+            HashSet<UUID> originalClusterShutdownIntention;
+            HashSet<UUID> clusterShutdownIntention;
 
             try {
                 originalClusterShutdownIntention = metaStorage.read(GRACEFUL_SHUTDOWN_METASTORE_KEY_II);
 
-                clusterShutdownIntention = new ShutdownIntentions(originalClusterShutdownIntention);
+                clusterShutdownIntention = originalClusterShutdownIntention == null ?
+                    new HashSet<>() :
+                    new HashSet(originalClusterShutdownIntention);
             }
             catch (IgniteCheckedException e) {
                 U.error(log, "Unable to read " + GRACEFUL_SHUTDOWN_METASTORE_KEY_II +
@@ -329,10 +330,10 @@ public interface ShutdownPolicyHandler {
                 return ShutdownIntentionResult.RETRY;
             }
 
-            if (!clusterShutdownIntention.checkIntention(grid0.getLocalNodeId())) {
+            if (!clusterShutdownIntention.contains(grid0.getLocalNodeId())) {
                 try {
                     // TODO Clean up
-                    clusterShutdownIntention.appendIntention(grid0.getLocalNodeId());
+                    clusterShutdownIntention.add(grid0.getLocalNodeId());
 
                     boolean updated = metaStorage.compareAndSet(
                         GRACEFUL_SHUTDOWN_METASTORE_KEY_II,
@@ -358,7 +359,7 @@ public interface ShutdownPolicyHandler {
                 .map(ClusterNode::id)
                 .collect(Collectors.toSet());
 
-            if (clusterShutdownIntention.checkIntentions(actualIds) && topVer == grid0.cluster().topologyVersion()) {
+            if (clusterShutdownIntention.containsAll(actualIds) && topVer == grid0.cluster().topologyVersion()) {
                 // it is safe to stop
                 return ShutdownIntentionResult.SAFE_TO_STOP;
             }
@@ -447,75 +448,6 @@ public interface ShutdownPolicyHandler {
             finally {
                 grpCtx.preloader().resume();
             }
-        }
-    }
-
-    /**
-     * Represents a list of server node Ids that are trying to stop.
-     * @see GracefulShutdownPolicyHandler#GRACEFUL_SHUTDOWN_METASTORE_KEY_II
-     */
-    public static class ShutdownIntentions extends IgniteDataTransferObject {
-        /** Serial version UUID. */
-        private static final long serialVersionUID = 0L;
-
-        @GridToStringInclude
-        private Set<UUID> nodeIds;
-
-        /** */
-        public ShutdownIntentions() {}
-
-        /** Creates a copy of the given {@code other} instance. */
-        public ShutdownIntentions(ShutdownIntentions other) {
-            if (other != null)
-                nodeIds = new HashSet<>(other.nodeIds);
-            else
-                nodeIds = new HashSet<>();
-        }
-
-        /**
-         * Adds the given {@code nodeId} to the list.
-         * @param nodeId Node ID.
-         */
-        public void appendIntention(UUID nodeId) {
-            if (nodeIds == null)
-                nodeIds = new HashSet<>();
-
-            nodeIds.add(nodeId);
-        }
-
-        public boolean checkIntentions(Set<UUID> nodeIds) {
-            return this.nodeIds.containsAll(nodeIds);
-        }
-
-        public boolean checkIntention(UUID nodeId) {
-            return nodeIds.contains(nodeId);
-        }
-
-        /** {@inheritDoc} */
-        @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-            out.writeObject(nodeIds);
-        }
-
-        /** {@inheritDoc} */
-        @SuppressWarnings("unchecked")
-        @Override protected void readExternalData(
-            byte protoVer,
-            ObjectInput in
-        ) throws IOException, ClassNotFoundException {
-            nodeIds = (Set<UUID>)in.readObject();
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean equals(Object obj) {
-            if (!(obj instanceof ShutdownIntentions))
-                return false;
-
-            return Objects.equals(nodeIds, ((ShutdownIntentions)obj).nodeIds);
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return S.toString(ShutdownIntentions.class, this);
         }
     }
 }
