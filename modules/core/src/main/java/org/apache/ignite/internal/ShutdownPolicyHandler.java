@@ -321,7 +321,7 @@ public interface ShutdownPolicyHandler {
 
                 clusterShutdownIntention = originalClusterShutdownIntention == null ?
                     new HashSet<>() :
-                    new HashSet(originalClusterShutdownIntention);
+                    new HashSet<>(originalClusterShutdownIntention);
             }
             catch (IgniteCheckedException e) {
                 U.error(log, "Unable to read " + GRACEFUL_SHUTDOWN_METASTORE_KEY_II +
