@@ -41,7 +41,10 @@ import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
+import static org.apache.ignite.ShutdownPolicy.GRACEFUL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.internal.ShutdownPolicyHandler.GracefulShutdownPolicyHandler.GRACEFUL_CLUSTER_SHUTDOWN_METASTORE_KEY;
+import static org.apache.ignite.internal.ShutdownPolicyHandler.GracefulShutdownPolicyHandler.GRACEFUL_SHUTDOWN_METASTORE_KEY;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
@@ -62,12 +65,17 @@ public interface ShutdownPolicyHandler {
     /**
      * Cleanup meta storage keys that are related to the shutdown policies.
      *
-     * @param metaStorage Distributed meta storage.
+     * @param ctx Grid context.
      */
-    static void cleanupOnActive(DistributedMetaStorage metaStorage) {
+    static void cleanupOnActive(GridKernalContext ctx) {
+        if (!isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE))
+            return;
+
         try {
-            metaStorage.remove(GracefulShutdownPolicyHandler.GRACEFUL_SHUTDOWN_METASTORE_KEY);
-            metaStorage.remove(GracefulShutdownPolicyHandler.GRACEFUL_CLUSTER_SHUTDOWN_METASTORE_KEY);
+            if (GRACEFUL == ctx.config().getShutdownPolicy()) {
+                ctx.distributedMetastorage().remove(GRACEFUL_SHUTDOWN_METASTORE_KEY);
+                ctx.distributedMetastorage().remove(GRACEFUL_CLUSTER_SHUTDOWN_METASTORE_KEY);
+            }
         }
         catch (IgniteException | IgniteCheckedException e) {
             // No-op.

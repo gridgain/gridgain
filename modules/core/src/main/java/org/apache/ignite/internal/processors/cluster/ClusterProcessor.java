@@ -665,12 +665,12 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             }
         }
 
-        if (active && isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE)) {
+        if (active) {
             ClusterNode loc = ctx.discovery().localNode();
             ClusterNode oldestSrv = ctx.discovery().discoCache().oldestAliveServerNode();
 
             if (!loc.isClient() && !loc.isDaemon() && (oldestSrv != null && oldestSrv.isLocal()))
-                ShutdownPolicyHandler.cleanupOnActive(ctx.distributedMetastorage());
+                ShutdownPolicyHandler.cleanupOnActive(ctx);
         }
     }
 
