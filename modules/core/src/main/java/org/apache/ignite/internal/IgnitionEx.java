@@ -1568,7 +1568,7 @@ public class IgnitionEx {
         /** Start latch. */
         private final CountDownLatch startLatch = new CountDownLatch(1);
 
-        /** TODO Raised if node is waiting graceful shutdown. Set to false to end wait. */
+        /** Shutdown handler that is used to properly handle {@link ShutdownPolicy}. */
         private volatile ShutdownPolicyHandler shutdownPlcHnd;
 
         /**
