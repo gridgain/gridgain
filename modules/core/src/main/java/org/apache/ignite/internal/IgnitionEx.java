@@ -2233,6 +2233,7 @@ public class IgnitionEx {
             //    - the node is a client
             //    - cluster is inactive
             shutdownPlcHnd = ShutdownPolicyHandler.create(shutdown, grid0, log);
+
             shutdownPlcHnd.handle();
 
             // Unregister Ignite MBean.

@@ -210,7 +210,7 @@ public interface ShutdownPolicyHandler {
 
                     if (grpCtx.config().getCacheMode() == PARTITIONED && grpCtx.config().getBackups() == 0) {
                         LT.warn(log, "Ignoring potential data loss on cache without backups [name="
-                            + grpCtx.cacheOrGroupName() + "]");
+                            + grpCtx.cacheOrGroupName() + ']');
 
                         continue;
                     }
@@ -237,7 +237,7 @@ public interface ShutdownPolicyHandler {
 
                         if (log.isInfoEnabled()) {
                             LT.info(log, "This node is waiting for backups of local partitions for group [id="
-                                + grpCtx.groupId() + ", name=" + grpCtx.cacheOrGroupName() + "]");
+                                + grpCtx.groupId() + ", name=" + grpCtx.cacheOrGroupName() + ']');
                         }
 
                         break;
@@ -248,7 +248,7 @@ public interface ShutdownPolicyHandler {
 
                         if (log.isInfoEnabled()) {
                             LT.info(log, "This node is waiting for completion of rebalance for group [id="
-                                + grpCtx.groupId() + ", name=" + grpCtx.cacheOrGroupName() + "]");
+                                + grpCtx.groupId() + ", name=" + grpCtx.cacheOrGroupName() + ']');
                         }
 
                         break;
