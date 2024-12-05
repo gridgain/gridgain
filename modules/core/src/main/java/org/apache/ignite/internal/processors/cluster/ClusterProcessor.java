@@ -16,6 +16,19 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
+import java.io.Serializable;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Timer;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import javax.management.JMException;
+import javax.management.ObjectName;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -32,6 +45,7 @@ import org.apache.ignite.internal.IgniteDiagnosticMessage;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.ShutdownPolicyHandler;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
@@ -69,22 +83,15 @@ import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
-import javax.management.JMException;
-import javax.management.ObjectName;
-import java.io.Serializable;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Timer;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-
-import static org.apache.ignite.IgniteSystemProperties.*;
-import static org.apache.ignite.events.EventType.*;
+import static org.apache.ignite.IgniteSystemProperties.GRIDGAIN_UPDATE_URL;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_ENABLED;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.events.EventType.EVT_CLUSTER_ID_UPDATED;
+import static org.apache.ignite.events.EventType.EVT_CLUSTER_TAG_UPDATED;
+import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
+import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CLUSTER_PROC;
 import static org.apache.ignite.internal.GridTopic.TOPIC_INTERNAL_DIAGNOSTIC;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
@@ -656,6 +663,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                 U.error(log, "Failed to register MBean for cluster: ", e);
             }
         }
+
+        if (active && ctx.discovery().discoCache().oldestAliveServerNode().isLocal())
+            ShutdownPolicyHandler.cleanupOnActive(ctx.distributedMetastorage());
     }
 
     /** {@inheritDoc} */

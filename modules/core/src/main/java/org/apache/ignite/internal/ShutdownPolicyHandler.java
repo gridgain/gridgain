@@ -58,6 +58,21 @@ public interface ShutdownPolicyHandler {
     void stopHandling();
 
     /**
+     * Cleanup meta storage keys that are related to the shutdown policies.
+     *
+     * @param metaStorage Distributed meta storage.
+     */
+    static void cleanupOnActive(DistributedMetaStorage metaStorage) {
+        try {
+            metaStorage.remove(GracefulShutdownPolicyHandler.GRACEFUL_SHUTDOWN_METASTORE_KEY);
+            metaStorage.remove(GracefulShutdownPolicyHandler.GRACEFUL_CLUSTER_SHUTDOWN_METASTORE_KEY);
+        }
+        catch (IgniteException | IgniteCheckedException e) {
+            // No-op.
+        }
+    }
+
+    /**
      *
      * @param shutdownPolicy Shutdown policy to create handler for.
      * @param grid0 Ignite instance to handle shutdown for.
@@ -99,7 +114,7 @@ public interface ShutdownPolicyHandler {
             DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown";
 
         /** Meta storage key to store a list of server node Ids that are trying to stop. */
-        static final String GRACEFUL_SHUTDOWN_METASTORE_KEY_II =
+        static final String GRACEFUL_CLUSTER_SHUTDOWN_METASTORE_KEY =
             DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown.intention";
 
         /** */
@@ -181,8 +196,8 @@ public interface ShutdownPolicyHandler {
                         new HashSet<>();
                 }
                 catch (IgniteCheckedException e) {
-                    U.error(log, "Unable to read " + GRACEFUL_SHUTDOWN_METASTORE_KEY +
-                        " value from metastore.", e);
+                    U.error(log, "Unable to read '" + GRACEFUL_SHUTDOWN_METASTORE_KEY +
+                        "' value from metastore.", e);
 
                     continue;
                 }
@@ -274,8 +289,8 @@ public interface ShutdownPolicyHandler {
                             break;
                     }
                     catch (IgniteCheckedException e) {
-                        U.error(log, "Unable to write " + GRACEFUL_SHUTDOWN_METASTORE_KEY +
-                            " value to metastore.", e);
+                        U.error(log, "Unable to write '" + GRACEFUL_SHUTDOWN_METASTORE_KEY +
+                            "' value to metastore.", e);
 
                         continue;
                     }
@@ -292,7 +307,7 @@ public interface ShutdownPolicyHandler {
 
         /** Represents a result returned by {@link #handleClusterShutdownIntention(DistributedMetaStorage, long)}. */
         private enum ShutdownIntentionResult {
-            /** Meta storage key {@link #GRACEFUL_SHUTDOWN_METASTORE_KEY_II} cannot be read or wrote. */
+            /** Meta storage key {@link #GRACEFUL_CLUSTER_SHUTDOWN_METASTORE_KEY} cannot be read or wrote. */
             RETRY,
 
             /** All server nodes wrote the intention and cluster can be stopped. */
@@ -317,26 +332,25 @@ public interface ShutdownPolicyHandler {
             HashSet<UUID> clusterShutdownIntention;
 
             try {
-                originalClusterShutdownIntention = metaStorage.read(GRACEFUL_SHUTDOWN_METASTORE_KEY_II);
+                originalClusterShutdownIntention = metaStorage.read(GRACEFUL_CLUSTER_SHUTDOWN_METASTORE_KEY);
 
                 clusterShutdownIntention = originalClusterShutdownIntention == null ?
                     new HashSet<>() :
                     new HashSet<>(originalClusterShutdownIntention);
             }
             catch (IgniteCheckedException e) {
-                U.error(log, "Unable to read " + GRACEFUL_SHUTDOWN_METASTORE_KEY_II +
-                    " value from metastore.", e);
+                U.error(log, "Unable to read '" + GRACEFUL_CLUSTER_SHUTDOWN_METASTORE_KEY +
+                    "' value from metastore.", e);
 
                 return ShutdownIntentionResult.RETRY;
             }
 
             if (!clusterShutdownIntention.contains(grid0.getLocalNodeId())) {
                 try {
-                    // TODO Clean up
                     clusterShutdownIntention.add(grid0.getLocalNodeId());
 
                     boolean updated = metaStorage.compareAndSet(
-                        GRACEFUL_SHUTDOWN_METASTORE_KEY_II,
+                        GRACEFUL_CLUSTER_SHUTDOWN_METASTORE_KEY,
                         originalClusterShutdownIntention,
                         clusterShutdownIntention);
 
@@ -344,8 +358,8 @@ public interface ShutdownPolicyHandler {
                         return ShutdownIntentionResult.RETRY;
                 }
                 catch (IgniteCheckedException e) {
-                    U.error(log, "Unable to write " + GRACEFUL_SHUTDOWN_METASTORE_KEY_II +
-                        " value to metastore.", e);
+                    U.error(log, "Unable to write '" + GRACEFUL_CLUSTER_SHUTDOWN_METASTORE_KEY +
+                        "' value to metastore.", e);
 
                     return ShutdownIntentionResult.RETRY;
                 }
