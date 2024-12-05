@@ -42,6 +42,8 @@ import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  * Base interface for handling {@link ShutdownPolicy}.
@@ -166,6 +168,13 @@ public interface ShutdownPolicyHandler {
         @Override public void handle() {
             if (grid0.context().clientNode() || !ClusterState.active(grid0.cluster().state()))
                 return;
+
+            if (!isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE)) {
+                LT.warn(log, "Graceful shutdown policy is skipped because '" +
+                    IGNITE_DISTRIBUTED_META_STORAGE_FEATURE + "' is disabled.");
+
+                return;
+            }
 
             if (log.isInfoEnabled())
                 log.info("Ensuring that caches have sufficient backups and local rebalance completion...");
