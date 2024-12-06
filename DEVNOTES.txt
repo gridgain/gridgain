@@ -24,7 +24,7 @@ Apache Ignite Maven Build Instructions
 
 Ignite C++ Build Instructions
 =============================
-Instructions can be found at modules/platforms/cpp/DEVNOTES.txt.
+Instructions can be found at modules/platforms/cpp/DEVNOTES.txt
 
 
 Apache Ignite RPM Package Build Instructions
