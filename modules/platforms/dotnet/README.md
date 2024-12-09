@@ -33,6 +33,7 @@ In-Memory Database (IMDB) and In-Memory Data Grid (IMDG) in one.
 On the other hand, when persistence is turned on, GidGain begins to function as a memory-centric system where most of
 the processing happens in memory, but the data and indexes get persisted to disk. The main difference here
 from the traditional disk-centric RDBMS or NoSQL system is that GridGain is strongly consistent, horizontally
+
 [Read More](https://www.gridgain.com/docs/latest/developers-guide/memory-centric-storage)
 
 ## Native Persistence
