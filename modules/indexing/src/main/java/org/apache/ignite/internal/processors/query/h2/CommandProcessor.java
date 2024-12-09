@@ -40,6 +40,7 @@ import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
@@ -939,11 +940,7 @@ public class CommandProcessor {
                 else {
                     assert tbl.rowDescriptor() != null;
 
-                    GridCacheContext cctx = tbl.cacheContext();
-
-                    assert cctx != null;
-
-                    if (cctx.mvccEnabled())
+                    if (isMvccEnabled(tbl))
                         throw new IgniteSQLException("Cannot drop column(s) with enabled MVCC. " +
                             "Operation is unsupported at the moment.", IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
 
@@ -999,6 +996,22 @@ public class CommandProcessor {
         catch (Exception e) {
             throw new IgniteSQLException(e.getMessage(), e);
         }
+    }
+
+    /**
+     * Check if table has MVCC enabled.
+     *
+     * @param tbl Table.
+     * @return True if MVCC is enabled.
+     */
+    private static boolean isMvccEnabled(GridH2Table tbl) {
+        GridCacheContext<?,?> cctx = tbl.cacheContext();
+
+        if (cctx != null) {
+            return cctx.mvccEnabled();
+        }
+
+        return tbl.cacheInfo().config().getAtomicityMode() == CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
     }
 
     /**
