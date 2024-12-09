@@ -349,7 +349,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                 long currPrimaryKeysCnt = 0;
                 long currBackupKeysCnt = 0;
-                //TODO
                 int cacheId = CU.cacheId(cacheDesc.cacheName);
 
                 GridCacheContext<?, ?> cctx = ignite.context().cache().context().cacheContext(cacheId);
@@ -357,8 +356,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     List<GridDhtLocalPartition> parts = cctx.group().topology().localPartitions();
 
                     for (GridDhtLocalPartition part : parts) {
-                        // TODO
-                        if (partsToValidate == null || partsToValidate.getOrDefault(cacheDesc.cacheName, emptySet()).contains(part.id())) {
+                        if (partsToValidate == null || partsToValidate.getOrDefault(cctx.group().groupId(), emptySet()).contains(part.id())) {
                             long partSize = part.dataStore().cacheSize(cacheId);
 
                             if (part.primary(startTopVer))
