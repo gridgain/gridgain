@@ -1,10 +1,10 @@
 # GridGain C++
 
-<a href="https://ci.ignite.apache.org/buildConfiguration/IgniteTests24Java8_PlatformCLinux&branch=<default>"><img src="http://ci.ignite.apache.org/app/rest/builds/buildType:(id:IgniteTests24Java8_PlatformCLinux)/statusIcon" /></a>
+<a href="https://ggtc.gridgain.com/buildConfiguration/GridGain8_Test_CommunityEdition_PlatformCCMakeLinux"><img src="https://ggtc.gridgain.com/app/rest/builds/buildType:id:GridGain8_Test_CommunityEdition_PlatformCCMakeLinux/statusIcon.svg" alt="TeamCity build status"></a>
 
 ## Getting Started
 
-For information on how to get started with GridGain, please visit: [Getting Started][getting-started].
+For information on how to get started with GridGain, please visit: [Getting Started](https://www.gridgain.com/docs/latest/getting-started/concepts).
 
 
 ## What is GridGain?
@@ -31,7 +31,7 @@ In-Memory Database (IMDB) and In-Memory Data Grid (IMDG) in one.
 On the other hand, when persistence is turned on, GidGain begins to function as a memory-centric system where most of
 the processing happens in memory, but the data and indexes get persisted to disk. The main difference here
 from the traditional disk-centric RDBMS or NoSQL system is that GridGain is strongly consistent, horizontally
-[Read More](https://apacheignite-net.readme.io/docs/durable-memory)
+[Read More](https://www.gridgain.com/docs/latest/developers-guide/memory-centric-storage)
 
 ## Native Persistence
 
@@ -45,38 +45,39 @@ it as a secondary memory tier. This implies that if a subset of data or an index
 the Durable Memory will take it from the disk.
 <p align="center">
     <a href="https://www.gridgain.com/docs/latest/developers-guide/persistence/native-persistence">
-        <img src="https://www.gridgain.com/docs/8.9.11/images/persistent_store_structure_1.png?renew" width="400px"/>
+        <img src="https://www.gridgain.com/docs/latest/images/persistent_store_structure_1.png?renew" width="400px"/>
     </a>
 </p>
 
-[Read More](https://apacheignite-net.readme.io/docs/ignite-persistent-store)
+[Read More](https://www.gridgain.com/docs/latest/developers-guide/persistence/native-persistence)
 
 ## ACID Compliance
 Data stored in GridGain is ACID-compliant both in memory and on disk, making GridGain a **strongly consistent** system. GridGain transactions work across the network and can span multiple servers.
 
-[Read More](https://apacheignite-net.readme.io/docs/transactions)
+[Read More](https://www.gridgain.com/docs/latest/developers-guide/key-value-api/transactions)
 
 ## Complete SQL Support
 GridGain provides full support for SQL, DDL and DML, allowing users to interact with GridGain using pure SQL without writing any code. This means that users can create tables and indexes as well as insert, update, and query data using only SQL. Having such complete SQL support makes GridGain a one-of-a-kind **distributed SQL database**.
 
-[Read More](https://apacheignite-net.readme.io/docs/sql-database)
+[Read More](https://www.gridgain.com/docs/latest/developers-guide/SQL/sql-introduction)
 
 ## Key-Value
 The in-memory data grid component in GridGain is a fully transactional **distributed key-value store** that can scale horizontally across 100s of servers in the cluster. When persistence is enabled, GridGain can also store more data than fits in memory and survive full cluster restarts.
 
-[Read More](https://apacheignite-net.readme.io/docs/data-grid)
+[Read More](https://www.gridgain.com/docs/latest/developers-guide/key-value-api/basic-cache-operations)
 
 ## Collocated Processing
 Most traditional databases work in a client-server fashion, meaning that data must be brought to the client side for processing. This approach requires lots of data movement from servers to clients and generally does not scale. GridGain, on the other hand, allows for sending light-weight computations to the data, i.e. **collocating** computations with data. As a result, GridGain scales better and minimizes data movement.
 
-[Read More](https://apacheignite-net.readme.io/docs/colocate-compute-and-data)
+[Read More](https://www.gridgain.com/docs/latest/developers-guide/collocated-computations)
 
 ## Scalability and Durability
 GridGain is an elastic, horizontally scalable distributed system that supports adding and removing cluster nodes on demand. GridGain also allows for storing multiple copies of the data, making it resilient to partial cluster failures. If the persistence is enabled, then data stored in GridGain will also survive full cluster failures. Cluster restarts in GridGain can be very fast, as the data becomes operational instantaneously directly from disk. As a result, the data does not need to be preloaded in-memory to begin processing, and GridGain caches will lazily warm up resuming the in memory performance.
 
-[Read More](https://apacheignite-net.readme.io/docs/cluster)
+[Read More](https://www.gridgain.com/docs/latest/developers-guide/clustering/clustering)
 
-## Ignite and Ignite C++
+## GridGain and GridGain.C++
+
 * Ignite C++ is built on top of Ignite.
 * Ignite C++ starts the JVM in the same process and communicates with it via JNI.
 * .NET, C++ and Java nodes can join the same cluster, use the same caches, and interoperate using common binary protocol.
@@ -91,7 +92,7 @@ You can view GridGain as a collection of independent, well-integrated components
  scalability of your application.
 
 Some of these components include:
-* [Data Grid](##data-grid-jcache)
+* [Data Grid](#data-grid-cache)
 * [SQL Database](#sql-database)
 * [Compute Grid](#compute-grid)
 
@@ -108,12 +109,6 @@ belongs to by plugging it into a hashing function, without a need for any specia
 GridGain data grid supports local, replicated, and partitioned data sets and allows to freely cross query between these data sets using standard SQL and LINQ syntax.
 GridGain supports standard SQL and LINQ for querying in-memory data including support for distributed joins.
 
-<p align="center">
-    <a href="https://www.gridgain.com/docs/latest/developers-guide/key-value-api/basic-cache-operations">
-        <img src="https://ignite.apache.org/images/data_grid.png" vspace="15" width="450px"/>
-    </a>
-</p>
-
 ## SQL Database
 
 GridGain incorporates [distributed SQL database](https://www.gridgain.com/docs/latest/developers-guide/SQL/sql-introduction) capabilities as a part of its platform. The database is horizontally
@@ -127,27 +122,9 @@ This allows executing distributed SQL operations across different memory layers 
 You can interact with GridGain using the SQL language via natively developed APIs for Java, .NET and C++, or via
 the GridGain JDBC or ODBC drivers. This provides a true cross-platform connectivity from languages such as PHP, Ruby and more.
 
-
-<p align="center">
-    <a href="https://www.gridgain.com/docs/latest/developers-guide/SQL/sql-introduction">
-        <img src="https://ignite.apache.org/images/sql_database.png" vspace="15" width="400px"/>
-    </a>
-</p>
-
 ## Compute Grid
 
 [Distributed computations](https://www.gridgain.com/docs/latest/developers-guide/distributed-computing/distributed-computing) are performed in parallel fashion to gain high performance, low latency, and linear scalability.
 GridGain compute grid provides a set of simple APIs that allow users distribute computations and data processing across multiple computers in the cluster.
 Distributed parallel processing is based on the ability to take any computation and execute it on any set of cluster nodes and return the results back.
 
-<p align="center">
-    <a href="https://www.gridgain.com/docs/latest/developers-guide/distributed-computing/distributed-computing">
-        <img src="https://ignite.apache.org/images/collocated_processing.png" vspace="15" width="400px"/>
-    </a>
-</p>
-
-
-[apache-ignite-homepage]: https://ignite.apache.org/
-[GridGain-homepage]: https://www.gridgain.com/
-[getting-started]: https://docs.gridgain.com/docs
-[docs]: https://docs.gridgain.com/docs
