@@ -672,7 +672,7 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
 
         IgniteConfiguration cfg1 = getConfiguration(getTestIgniteInstanceName(1));
         TestRecordingCommunicationSpi spi1 = (TestRecordingCommunicationSpi) cfg1.getCommunicationSpi();
-        spi1.blockMessages(TestRecordingCommunicationSpi.blockSingleExhangeMessage());
+        spi1.blockMessages(TestRecordingCommunicationSpi.blockSingleExchangeMessage());
 
         TrackingResolver rslvr = new TrackingResolver(testPart);
 
