@@ -103,7 +103,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
 import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.internal.TestRecordingCommunicationSpi.blockSingleExhangeMessage;
+import static org.apache.ignite.internal.TestRecordingCommunicationSpi.blockSingleExchangeMessage;
 import static org.apache.ignite.internal.processors.cache.ExchangeContext.IGNITE_EXCHANGE_COMPATIBILITY_VER_1;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -1608,7 +1608,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
         startServer(3, 4);
 
         TestRecordingCommunicationSpi clientSpi = new TestRecordingCommunicationSpi();
-        clientSpi.blockMessages(blockSingleExhangeMessage());
+        clientSpi.blockMessages(blockSingleExchangeMessage());
         spiC = igniteInstanceName -> clientSpi;
 
         IgniteInternalFuture<?> startClientFut = runAsync(() -> {

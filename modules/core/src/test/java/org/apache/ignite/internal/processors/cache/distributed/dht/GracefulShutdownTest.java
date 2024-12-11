@@ -44,7 +44,6 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTAN
  */
 @WithSystemProperty(key = IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN, value = "false")
 public class GracefulShutdownTest extends GridCacheDhtPreloadWaitForBackupsWithPersistenceTest {
-
     /** Shutdown policy of static configuration. */
     public ShutdownPolicy policy = ShutdownPolicy.GRACEFUL;
 
@@ -93,7 +92,7 @@ public class GracefulShutdownTest extends GridCacheDhtPreloadWaitForBackupsWithP
      * @throws Exception If failed.
      */
     @Test
-    public void testTwoNodesWithDifferentConfuguration() throws Exception {
+    public void testTwoNodesWithDifferentConfiguration() throws Exception {
         Ignite ignite0 = startGrid(0);
 
         ignite0.cluster().active(true);
@@ -103,7 +102,7 @@ public class GracefulShutdownTest extends GridCacheDhtPreloadWaitForBackupsWithP
         policy = ShutdownPolicy.IMMEDIATE;
 
         GridTestUtils.assertThrowsAnyCause(log, () -> startGrid(1), IgniteCheckedException.class,
-            "Remote node has shutdoun policy different from local local");
+            "Remote node has shutdown policy different from local local");
     }
 
     /**
