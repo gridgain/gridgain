@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
@@ -80,16 +81,21 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
 
     /** {@inheritDoc} */
     @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, RepairRequest arg) throws IgniteException {
-        Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
-
         repairReq = arg;
+
+        IgniteInternalCache<Object, Object> cache = ignite.cachex(repairReq.cacheName());
+
+        if (cache == null)
+            throw new IgniteException("Cache not found (was stopped) [name=" + repairReq.cacheName() + ']');
+
+        GridCacheContext<Object, Object> ctx = cache.context();
+
+        Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
         Map<UUID, Map<KeyCacheObject, Map<UUID, VersionedValue>>> targetNodesToData = new HashMap<>();
 
         for (Map.Entry<KeyCacheObject, Map<UUID, VersionedValue>> dataEntry : repairReq.data().entrySet()) {
             KeyCacheObject keyCacheObj;
-
-            GridCacheContext<Object, Object> ctx = ignite.cachex(repairReq.cacheName()).context();
 
             try {
                 keyCacheObj = unmarshalKey(dataEntry.getKey(), ctx);
@@ -250,12 +256,16 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
         /** {@inheritDoc} */
         @SuppressWarnings("unchecked")
         @Override public ExecutionResult<RepairResult> execute() throws IgniteException {
+            IgniteInternalCache<Object, Object> cache = ignite.cachex(cacheName);
+
+            if (cache == null)
+                return new ExecutionResult<>("Cache not found (was stopped) [name=" + cacheName + ']');
+
             Map<VersionedKey, Map<UUID, VersionedValue>> keysToRepairWithNextAttempt = new HashMap<>();
 
-            Map<VersionedKey, RepairMeta> repairedKeys =
-                new HashMap<>();
+            Map<VersionedKey, RepairMeta> repairedKeys = new HashMap<>();
 
-            GridCacheContext ctx = ignite.cachex(cacheName).context();
+            GridCacheContext ctx = cache.context();
             CacheObjectContext cacheObjCtx = ctx.cacheObjectContext();
 
             final int ownersNodesSize = owners(ctx);

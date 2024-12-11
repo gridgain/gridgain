@@ -32,10 +32,11 @@ import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.VersionedEntry;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.VersionedEntry;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -52,9 +53,7 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  */
 @GridInternal
 public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter<RecheckRequest, ExecutionResult<Map<KeyCacheObject, Map<UUID, VersionedValue>>>> {
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 0L;
 
     /** Injected logger. */
@@ -101,10 +100,16 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
 
     /** {@inheritDoc} */
     @Override public ExecutionResult<Map<KeyCacheObject, Map<UUID, VersionedValue>>> reduce(
-        List<ComputeJobResult> results) throws IgniteException {
+        List<ComputeJobResult> results
+    ) throws IgniteException {
+        IgniteInternalCache<Object, Object> cache = ignite.context().cache().cache(recheckReq.cacheName());
+
+        if (cache == null)
+            return new ExecutionResult<>("Cache not found (was stopped) [name=" + recheckReq.cacheName() + ']');
+
         Map<KeyCacheObject, Map<UUID, VersionedValue>> res = new HashMap<>();
 
-        GridCacheContext<Object, Object> ctx = ignite.cachex(recheckReq.cacheName()).context();
+        GridCacheContext<Object, Object> ctx = cache.context();
 
         for (ComputeJobResult result : results) {
             if (result.getException() != null)
@@ -140,9 +145,7 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
      *
      */
     public static class CollectRecheckJob extends ReconciliationResourceLimitedJob {
-        /**
-         *
-         */
+        /** */
         private static final long serialVersionUID = 0L;
 
         /** Partition key. */
@@ -162,7 +165,12 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
 
         /** {@inheritDoc} */
         @Override protected ExecutionResult<List<VersionedEntry>> execute0() {
-            GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(recheckReq.cacheName()).context();
+            IgniteInternalCache<Object, Object> cache = ignite.context().cache().cache(recheckReq.cacheName());
+
+            if (cache == null)
+                return new ExecutionResult<>("Cache not found (was stopped) [name=" + recheckReq.cacheName() + ']');
+
+            GridCacheContext<Object, Object> cctx = cache.context();
 
             CacheGroupContext grpCtx = cctx.group();
 
@@ -184,8 +192,15 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
 
                         CacheDataRow row = grpCtx.offheap().dataStore(part).find(cctx, key);
 
-                        if (row != null)
-                            recheckedKeys.add(new VersionedEntry(ignite.localNode().id(), row.key(), row.version(), row.value(), updateCntr, recheckStartTime));
+                        if (row != null) {
+                            recheckedKeys.add(new VersionedEntry(
+                                ignite.localNode().id(),
+                                row.key(),
+                                row.version(),
+                                row.value(),
+                                updateCntr,
+                                recheckStartTime));
+                        }
                     }
                     catch (IgniteCheckedException e) {
                         String errMsg = "Recheck key [key=" + recheckKey + "] was skipped.";

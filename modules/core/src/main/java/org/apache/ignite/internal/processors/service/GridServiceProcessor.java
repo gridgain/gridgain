@@ -133,7 +133,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
  * contains a similar block of code which also should be updated.
  *
  * @see IgniteServiceProcessor
- * @deprecated Here is improved, but uncompatible implementation {@link IgniteServiceProcessor}, see IEP-17 for details.
+ * @deprecated Here is improved, but incompatible implementation {@link IgniteServiceProcessor}, see IEP-17 for details.
  */
 @Deprecated
 @SuppressWarnings({"SynchronizationOnLocalVariableOrMethodParameter", "ConstantConditions"})
