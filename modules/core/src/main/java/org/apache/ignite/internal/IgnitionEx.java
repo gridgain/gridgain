@@ -38,6 +38,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Handler;
 import javax.management.JMException;
 import javax.management.MBeanServer;
@@ -1569,7 +1570,7 @@ public class IgnitionEx {
         private final CountDownLatch startLatch = new CountDownLatch(1);
 
         /** Shutdown handler that is used to properly handle {@link ShutdownPolicy}. */
-        private volatile ShutdownPolicyHandler shutdownPlcHnd;
+        private final AtomicReference<ShutdownPolicyHandler> shutdownPlcHnd = new AtomicReference<>();
 
         /**
          * Thread that starts this named instance. This field can be non-volatile since
@@ -2170,10 +2171,12 @@ public class IgnitionEx {
 
             // If waiting for backups due to earlier invocation of stop(), stop wait and proceed shutting down.
             if (shutdown == ShutdownPolicy.IMMEDIATE) {
-                ShutdownPolicyHandler plc0 = shutdownPlcHnd;
+                ShutdownPolicyHandler plc = ShutdownPolicyHandler.create(ShutdownPolicy.IMMEDIATE, grid, log);
 
-                if (plc0 != null)
-                    plc0.stopHandling();
+                if (!shutdownPlcHnd.compareAndSet(null, plc)) {
+                    // Shutdown policy handler is already set, so we just need to stop processing and stop the node.
+                    shutdownPlcHnd.get().stopHandling();
+                }
             }
 
             stop0(cancel, shutdown);
@@ -2225,9 +2228,9 @@ public class IgnitionEx {
                 }
             }
 
-            shutdownPlcHnd = ShutdownPolicyHandler.create(shutdown, grid0, log);
+            shutdownPlcHnd.compareAndSet(null, ShutdownPolicyHandler.create(shutdown, grid0, log));
 
-            shutdownPlcHnd.handle();
+            shutdownPlcHnd.get().handle();
 
             // Unregister Ignite MBean.
             unregisterFactoryMBean();
