@@ -2225,13 +2225,6 @@ public class IgnitionEx {
                 }
             }
 
-            // Handles {@link ShutdownPolicy#GRACEFUL} policy.
-            // Checks that all caches have sufficient number of backups and doesn't allow stopping the grid node if
-            // that might lead to data unavailability.
-            // shutdown policy handler does nothing if one of the following conditions is met:
-            //    - shutdown policy does not equal to {@link ShutdownPolicy#GRACEFUL}
-            //    - the node is a client
-            //    - cluster is inactive
             shutdownPlcHnd = ShutdownPolicyHandler.create(shutdown, grid0, log);
 
             shutdownPlcHnd.handle();

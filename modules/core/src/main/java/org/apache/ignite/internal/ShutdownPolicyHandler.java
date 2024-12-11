@@ -104,7 +104,11 @@ public interface ShutdownPolicyHandler {
         }
     }
 
-    /** Immediate policy handler. */
+    /**
+     * Immediate policy handler.
+     *
+     * {@link ShutdownPolicy#IMMEDIATE}
+     */
     class ImmediateShutdownPolicyHandler implements ShutdownPolicyHandler {
         /** {@inheritDoc} */
         @Override public void handle() {
@@ -117,7 +121,20 @@ public interface ShutdownPolicyHandler {
         }
     }
 
-    /** Graceful policy handler. */
+    /**
+     * Graceful policy handler.
+     *
+     * Checks that all caches have sufficient number of backups and doesn't allow stopping the {@code grid0} node if
+     * that might lead to data unavailability.
+     *
+     * This handler does nothing if one of the following conditions is met:
+     * <ul>
+     *     <li>the node is a client</li>
+     *     <li>cluster is inactive</li>
+     *</ul>
+     *
+     * {@link ShutdownPolicy#GRACEFUL}
+     */
     class GracefulShutdownPolicyHandler implements ShutdownPolicyHandler {
         /** Key to store list of gracefully stopping nodes within metastore. */
         static final String GRACEFUL_SHUTDOWN_METASTORE_KEY =
