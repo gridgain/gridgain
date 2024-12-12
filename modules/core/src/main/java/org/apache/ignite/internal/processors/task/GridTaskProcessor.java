@@ -143,7 +143,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
     private final ConcurrentMap<IgniteUuid, GridTaskWorker<?, ?>> tasks = GridConcurrentFactory.newMap();
 
     /** */
-    private volatile boolean stopping;
+    private boolean stopping;
 
     /** */
     private boolean waiting;
@@ -226,8 +226,6 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         if (!active)
             return;
 
-        stopping = false;
-
         tasksMetaCache = ctx.security().enabled() && !ctx.isDaemon() ?
             ctx.cache().<GridTaskNameHashKey, String>utilityCache() : null;
 
@@ -256,8 +254,6 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
     @Override public void onKernalStop(boolean cancel) {
         boolean interrupted = false;
 
-        stopping = true;
-
         while (true) {
             try {
                 if (lock.tryWriteLock(1, SECONDS))
@@ -276,7 +272,13 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         }
 
         try {
+            stopping = true;
+
             waiting = !cancel;
+
+            tasksMetaCache = null;
+
+            startLatch = new CountDownLatch(1);
         }
         finally {
             lock.writeUnlock();
@@ -284,10 +286,6 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             if (interrupted)
                 Thread.currentThread().interrupt();
         }
-
-        tasksMetaCache = null;
-
-        startLatch = new CountDownLatch(1);
 
         int size = tasks.size();
 
@@ -364,7 +362,12 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             while (true) {
                 try {
                     if (!startLatch.await(1, SECONDS)) {
-                        if (stopping)
+                        // It is not possible to use the `stopping` flag here because
+                        // in case of node stopping the {@link #onKernalStop(boolean)} method cannot acquire the write lock
+                        // and set the `stopping` flag to `true`.
+                        // Also, counting down the latch is not a good approach because
+                        // it will lead to weird exception later.
+                        if (ctx.isStopping())
                             throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
                         LT.info(log, "Executing a task on inactive cluster. Still waiting for the activation.");
@@ -1329,6 +1332,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
     @Override public void onDeActivate(GridKernalContext kctx) {
         boolean interrupted = false;
 
+        // Write lock is needed to block all new task executions.
         while (true) {
             try {
                 if (lock.tryWriteLock(1, SECONDS))
