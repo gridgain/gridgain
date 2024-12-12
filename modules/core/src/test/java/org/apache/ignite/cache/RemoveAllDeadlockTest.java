@@ -19,7 +19,6 @@ package org.apache.ignite.cache;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
@@ -39,14 +38,9 @@ public class RemoveAllDeadlockTest extends GridCommonAbstractTest {
     /** Threads number for reproducing deadlock. */
     private static final int THREADS = 4;
 
-    /** */
-    private ClusterState clusterStateOnStart = ACTIVE;
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        cfg.setClusterStateOnStart(ACTIVE);
 
         cfg.setConsistentId(igniteInstanceName);
 
