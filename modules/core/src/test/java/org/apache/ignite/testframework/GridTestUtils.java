@@ -1859,6 +1859,27 @@ public final class GridTestUtils {
     }
 
     /**
+     * Find method in provided class hierarchy
+     *
+     * @param cls Class to initiate method lookup.
+     * @param mtd Method to search for.
+     * @param params Parameters of the method.
+     * @return Method instance wrapped into Optional.
+     */
+    public static Optional<Method> methodLookup(Class<?> cls, String mtd, Class<?>... params) {
+        do {
+            try {
+                return Optional.of(cls.getDeclaredMethod(mtd, params));
+            }
+            catch (NoSuchMethodException ignored) {
+                // no-op
+            }
+        } while ((cls = cls.getSuperclass()) != Object.class);
+
+        return Optional.empty();
+    }
+
+    /**
      * Invoke method on an object.
      *
      * @param obj Object to call method on.
