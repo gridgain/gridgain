@@ -94,7 +94,7 @@ public class IgniteMarshallerCacheClientRequestsMappingTest extends GridCommonAb
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        if (cfg.isClientMode())
+        if (cfg.isClientMode() != null && cfg.isClientMode())
             cfg.setWorkDirectory(clntWorkDir);
 
         cfg.setClassLoader(extClsLdr);
