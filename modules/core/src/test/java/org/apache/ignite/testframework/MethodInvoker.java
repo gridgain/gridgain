@@ -23,23 +23,32 @@ import org.jetbrains.annotations.Nullable;
 /** Wrapper around class method that encapsulates invocation boilerplate */
 public abstract class MethodInvoker<SELF extends MethodInvoker<SELF>> {
 
-    protected Lookup lookup;
-    protected boolean accessible;
+    /** Method reference */
+    protected MethodRef methodRef;
 
-    protected MethodInvoker(Lookup lookup) {
-        this.lookup = lookup;
+    /** Marker of accessibility flag inversion. */
+    protected boolean accessFlipped = false;
+
+    /** Constructor */
+    protected MethodInvoker(MethodRef methodRef) {
+        this.methodRef = methodRef;
     }
 
+    /** Get method instance */
     protected Method method() {
-        return lookup.get();
+        return methodRef.get();
     }
 
+    /**  */
     @SuppressWarnings("unchecked")
     protected <T> T invoke0(@Nullable Object obj, Object... args) {
         try {
             return (T)method().invoke(obj, args);
         }
-        catch (IllegalAccessException | InvocationTargetException e) {
+        catch (IllegalAccessException e) {
+            throw new RuntimeException(e.getMessage() + "\nMake sure that you've called init()", e);
+        }
+        catch (InvocationTargetException e) {
             throw new RuntimeException(e);
         }
     }
@@ -47,8 +56,8 @@ public abstract class MethodInvoker<SELF extends MethodInvoker<SELF>> {
     /** Lookup the method instance and make it accessible if needed */
     @SuppressWarnings("unchecked")
     public SELF init() {
-        accessible = method().isAccessible();
-        if (!accessible) {
+        if (!method().isAccessible()) {
+            accessFlipped = true;
             method().setAccessible(true);
         }
 
@@ -58,13 +67,15 @@ public abstract class MethodInvoker<SELF extends MethodInvoker<SELF>> {
     /** Reset accessibility flag if it was changed */
     @SuppressWarnings("unchecked")
     public SELF release() {
-        method().setAccessible(accessible);
+        if (accessFlipped)
+            method().setAccessible(false);
+
         return (SELF)this;
     }
 
     /** Get an invoker for specified method */
-    public static Instance of(Class<?> cls, String name, Class<?>... params) {
-        return new Instance(new Lookup(cls, name, params));
+    public static Regular of(Class<?> cls, String name, Class<?>... params) {
+        return new Regular(new MethodRef(cls, name, params));
     }
 
     /**
@@ -72,17 +83,17 @@ public abstract class MethodInvoker<SELF extends MethodInvoker<SELF>> {
      * (all invocations will use provided object instance)
      */
     public static Bound bound(Object instance, String name, Class<?>... params) {
-        return new Bound(instance, new Lookup(instance.getClass(), name, params), false);
+        return new Bound(instance, new MethodRef(instance.getClass(), name, params), false);
     }
 
     /** Get an invoker for specified static method */
     public static Static ofStatic(Class<?> cls, String name, Class<?>... params) {
-        return new Static(new Lookup(cls, name, params));
+        return new Static(new MethodRef(cls, name, params));
     }
 
     /** Regular method invoker with variable instances */
-    public static class Instance extends MethodInvoker<Instance> {
-        private Instance(Lookup lookup) {
+    public static class Regular extends MethodInvoker<Regular> {
+        private Regular(MethodRef lookup) {
             super(lookup);
         }
 
@@ -94,7 +105,7 @@ public abstract class MethodInvoker<SELF extends MethodInvoker<SELF>> {
         }
 
         public Bound bindWith(@Nullable Object instance) {
-            return new Bound(instance, lookup, accessible);
+            return new Bound(instance, methodRef, accessFlipped);
         }
     }
 
@@ -102,10 +113,10 @@ public abstract class MethodInvoker<SELF extends MethodInvoker<SELF>> {
     public static class Bound extends MethodInvoker<Bound> {
         private final Object instance;
 
-        private Bound(@Nullable Object instance, Lookup lookup, boolean isAccessible) {
-            super(lookup);
+        private Bound(@Nullable Object instance, MethodRef methodRef, boolean isAccessible) {
+            super(methodRef);
             this.instance = instance;
-            this.accessible = isAccessible;
+            this.accessFlipped = isAccessible;
         }
 
         /**
@@ -118,8 +129,8 @@ public abstract class MethodInvoker<SELF extends MethodInvoker<SELF>> {
 
     /** Static method invoker */
     public static class Static extends MethodInvoker<Static> {
-        private Static(Lookup lookup) {
-            super(lookup);
+        private Static(MethodRef methodRef) {
+            super(methodRef);
         }
 
         /**
@@ -129,37 +140,4 @@ public abstract class MethodInvoker<SELF extends MethodInvoker<SELF>> {
             return invoke0(null, argsOnly);
         }
     }
-
-    private static class Lookup {
-        private final Class<?> cls;
-        private final String name;
-        private final Class<?>[] params;
-        private volatile Method method;
-
-        public Lookup(Class<?> cls, String name, Class<?>... params) {
-            this.cls = cls;
-            this.name = name;
-            this.params = params;
-        }
-
-        private Method get() {
-            if (method == null) {
-                synchronized (this) {
-                    if (method == null) {
-                        try {
-                            method = GridTestUtils.methodLookup(cls, name, params).orElseThrow(() -> new RuntimeException(
-                                "Method <" + method + "> not found in " + cls.getName() + " or it's ancestors"
-                            ));
-                        }
-                        catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                }
-            }
-
-            return method;
-        }
-    }
-
 }
