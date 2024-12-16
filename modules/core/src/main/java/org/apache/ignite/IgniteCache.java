@@ -1713,7 +1713,7 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V>, IgniteAsyncS
      * Updates the time to live value for the given {@code key}.
      *
      * @param key The key whose associated ttl value is to be updated in accordance with the specified {@link ExpiryPolicy}.
-     * @return {@code true} if the ttl value was updated, and {@code false} othewise.
+     * @return {@code true} if the ttl value was updated, and {@code false} otherwise.
      * @throws NullPointerException If key is {@code null}.
      * @see IgniteCache#withExpiryPolicy(ExpiryPolicy)
      */
