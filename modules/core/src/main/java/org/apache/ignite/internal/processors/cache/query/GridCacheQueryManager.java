@@ -120,7 +120,6 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteReducer;
 import org.apache.ignite.lang.IgniteUuid;
-import org.apache.ignite.lang.IgniteBiVectorTuple;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.IgniteSpiCloseableIterator;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
@@ -1326,18 +1325,8 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                             else
                                 continue;
                         }
-                        else {
-
-                            if (type == VECTOR && row instanceof IgniteBiVectorTuple) {
-                                Double score = ((IgniteBiVectorTuple<K, V>) row).getScore();
-                                Map<Object, Double> value = new HashMap<>();
-                                value.put(val,score);
-                                data.add(new T2<>(key, value));
-                            }
-                            else {
-                                data.add(new T2<>(key, val));
-                            }
-                        }
+                        else
+                            data.add(new T2<>(key, val));
                     }
 
                     if (!loc) {

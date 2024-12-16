@@ -94,7 +94,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     private QueryIndexDescriptorImpl fullTextIdx;
 
     /** */
-    private QueryVectorIndexDescriptorImpl vectorIdx;
+    private QueryIndexDescriptorImpl vectorIdx;
 
     /** */
     private Class<?> keyCls;
@@ -370,11 +370,11 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
      * @param field Field name.
      * @throws IgniteCheckedException If failed.
      */
-    public void addFieldToVectorIndex(String field, int similarityFunction) throws IgniteCheckedException {
+    public void addFieldToVectorIndex(String field) throws IgniteCheckedException {
         if (vectorIdx == null)
-            vectorIdx = new QueryVectorIndexDescriptorImpl(this, null);
+            vectorIdx = new QueryIndexDescriptorImpl(this, null, QueryIndexType.VECTOR, 0);
 
-        vectorIdx.addField(field, similarityFunction);
+        vectorIdx.addField(field, 0, false);
     }
 
     /** {@inheritDoc} */
