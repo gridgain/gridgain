@@ -47,8 +47,9 @@ public class ClientVectorQueryRequest extends ClientCacheRequest {
         String field = reader.readString();
         float[] clauseVector = reader.readFloatArray();
         int k = reader.readInt();
+        float threshold = reader.readFloat();
 
-        qry = new VectorQuery(type, field, clauseVector, k);
+        qry = new VectorQuery(type, field, clauseVector, k, threshold);
     }
 
     /** {@inheritDoc} */
