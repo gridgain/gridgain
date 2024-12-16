@@ -33,5 +33,5 @@ import org.apache.ignite.internal.processors.cache.query.CacheQuery;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.TYPE})
 public @interface QueryVectorField {
-    // No-op.
+    int similarity() default 1;
 }

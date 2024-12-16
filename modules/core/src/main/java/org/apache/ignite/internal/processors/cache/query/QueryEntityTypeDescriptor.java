@@ -66,7 +66,7 @@ public class QueryEntityTypeDescriptor {
     private QueryEntityIndexDescriptor fullTextIdx;
 
     /** */
-    private QueryEntityIndexDescriptor vectorIdx;
+    private QueryEntityVectorIndexDescriptor vectorIdx;
 
     /** */
     private final Class<?> keyCls;
@@ -153,14 +153,12 @@ public class QueryEntityTypeDescriptor {
      *
      * @param field Field name.
      */
-    public void addFieldToVectorIndex(String field) {
+    public void addFieldToVectorIndex(String field, int similarityFunction) {
         if (vectorIdx == null) {
-            vectorIdx = new QueryEntityIndexDescriptor(QueryIndexType.VECTOR);
-
+            vectorIdx = new QueryEntityVectorIndexDescriptor();
             indexes.put(QueryIndexType.VECTOR.name(), vectorIdx);
         }
-
-        vectorIdx.addField(field, 0, false);
+        vectorIdx.addField(field, similarityFunction);
     }
 
     /**
