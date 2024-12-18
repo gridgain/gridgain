@@ -136,10 +136,6 @@ public class TcpDiscoveryMulticastIpFinder extends TcpDiscoveryVmIpFinder {
     /** */
     private boolean mcastErr;
 
-    /** */
-    @GridToStringExclude
-    private Set<InetSocketAddress> locNodeAddrs;
-
     /**
      * Constructs new IP finder.
      */
@@ -332,8 +328,6 @@ public class TcpDiscoveryMulticastIpFinder extends TcpDiscoveryVmIpFinder {
                         ", err=" + e + ']');
             }
         }
-
-        locNodeAddrs = new HashSet<>(addrs);
 
         if (addrSnds.isEmpty()) {
             try {
