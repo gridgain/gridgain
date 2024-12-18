@@ -928,7 +928,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public GridDhtLocalPartition forceCreatePartition(int p) throws IgniteCheckedException {
+    @Override public GridDhtLocalPartition forceCreatePartition(int p) {
         lock.writeLock().lock();
 
         try {
