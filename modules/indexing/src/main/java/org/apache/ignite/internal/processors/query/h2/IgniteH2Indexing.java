@@ -232,6 +232,7 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.request
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.tx;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.txStart;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.TEXT;
+import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.VECTOR;
 import static org.apache.ignite.internal.processors.query.QueryUtils.matches;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.UPDATE_RESULT_META;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.generateFieldsQueryString;
@@ -552,6 +553,49 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             Throwable failReason = null;
             try {
                 return tbl.luceneIndex().query(qry.toUpperCase(), filters);
+            }
+            catch (Throwable t) {
+                failReason = t;
+
+                throw t;
+            }
+            finally {
+                runningQueryManager().unregister(qryId, failReason);
+            }
+        }
+
+        return new GridEmptyCloseableIterator<>();
+    }
+
+    /** {@inheritDoc} */
+    @Override public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryLocalVector(
+        String schemaName,
+        String cacheName,
+        String field,
+        float[] qryVector,
+        int k,
+        String typeName,
+        IndexingQueryFilter filter
+    ) throws IgniteCheckedException {
+        H2TableDescriptor tbl = schemaMgr.tableForType(schemaName, cacheName, typeName);
+
+        if (tbl != null && tbl.luceneIndex() != null) {
+            Long qryId = runningQueryManager().register(
+                null,
+                VECTOR,
+                schemaName,
+                true,
+                null,
+                null,
+                null,
+                false,
+                false,
+                false
+            );
+
+            Throwable failReason = null;
+            try {
+                return tbl.luceneIndex().queryVector(field.toUpperCase(), qryVector, k, filter);
             }
             catch (Throwable t) {
                 failReason = t;
@@ -2265,7 +2309,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         assert prevIntRebFut == null;
 
         // Rebuild text indexes for tables in cache.
-        SchemaIndexCacheVisitorClosure clo = new TextIndexRebuildClosure(ctx.query(), cctx, descriptors);
+        SchemaIndexCacheVisitorClosure clo = new LuceneIndexRebuildClosure(ctx.query(), cctx, descriptors);
 
         rebuildCacheIdxFut.listen(fut -> {
             Throwable err = fut.error();
