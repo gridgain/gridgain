@@ -53,6 +53,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import javax.cache.CacheException;
 import javax.management.JMException;
 import org.apache.ignite.DataRegionMetrics;
@@ -2308,6 +2309,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                     msg.nl().a("    ^-- ").a(createExecutorDescription(entry.getKey(), entry.getValue()));
             }
 
+            String pluginInfo = pluginInfoReport();
+
+            if (!F.isEmpty(pluginInfo))
+                msg.a(pluginInfo);
+
             log.info(msg.toString());
 
             ctx.cache().context().database().dumpStatistics(log);
@@ -2459,6 +2465,34 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             long pdsUsedMBytes = pdsUsedSummary / MEGABYTE;
 
             info.a("    ^-- Ignite persistence [used=").a(dblFmt.format(pdsUsedMBytes)).a("MB]").nl();
+        }
+
+        return info.toString();
+    }
+
+    /**
+     * Get plugin information.
+     */
+    private String pluginInfoReport() {
+        SB info = new SB();
+
+        for (PluginProvider plugin : ctx.plugins().allProviders()) {
+            Map<String, Object> metricsInfo = plugin.metricsInfo();
+
+            if (F.isEmpty(metricsInfo))
+                continue;
+
+            String metricsInfoFormatted = metricsInfo.entrySet().stream()
+                    .map((entry) -> String.format("%s=%s",
+                                    entry.getKey(),
+                                    entry.getValue() != null ? entry.getValue().toString() : null
+                            )
+                    )
+                    .collect(Collectors.joining(", "));
+
+            info.nl().a("    ^-- Plugin [name=").a(plugin.name())
+                    .a(", version=").a(plugin.version())
+                    .a(", info=[").a(metricsInfoFormatted).a("]");
         }
 
         return info.toString();
