@@ -33,17 +33,21 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFini
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicSingleUpdateRequest;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
+import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.processors.cache.GridCacheSharedTtlCleanupManager.DEFAULT_TOMBSTONE_TTL_PROP;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 
 @RunWith(Parameterized.class)
 public class PartitionReconciliationTombstonesWithIndicesTest extends PartitionReconciliationAbstractTest{
@@ -113,8 +117,7 @@ public class PartitionReconciliationTombstonesWithIndicesTest extends PartitionR
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
-        CacheAtomicityMode[] atomicityModes = new CacheAtomicityMode[] {
-            ATOMIC, CacheAtomicityMode.TRANSACTIONAL};
+        CacheAtomicityMode[] atomicityModes = new CacheAtomicityMode[] {ATOMIC, TRANSACTIONAL};
 
         for (CacheAtomicityMode atomicityMode : atomicityModes) {
             params.add(new Object[] {atomicityMode, false});
@@ -189,7 +192,18 @@ public class PartitionReconciliationTombstonesWithIndicesTest extends PartitionR
         if (fixMode) {
             // Check values after reconciliation.
             for (int i = 0; i < NODES_CNT; ++i) {
-                Object val = grid(i).cache(DEFAULT_CACHE_NAME).get(primaryKey);
+                Object val;
+
+                if (cacheAtomicityMode == ATOMIC) {
+                    val = grid(i).cache(DEFAULT_CACHE_NAME).get(primaryKey);
+                }
+                else {
+                    try (Transaction tx = grid(i).transactions().txStart(PESSIMISTIC, SERIALIZABLE)) {
+                        val = grid(i).cache(DEFAULT_CACHE_NAME).get(primaryKey);
+
+                        tx.commit();
+                    }
+                }
 
                 assertNull("Unexpected value on node [actualVal=" + val + ", nodeId=" + i + ']', val);
             }
@@ -203,7 +217,18 @@ public class PartitionReconciliationTombstonesWithIndicesTest extends PartitionR
 
         // Check that stale messages are ignored.
         for (int i = 0; i < NODES_CNT; ++i) {
-            Object val = grid(i).cache(DEFAULT_CACHE_NAME).get(primaryKey);
+            Object val;
+
+            if (cacheAtomicityMode == ATOMIC) {
+                val = grid(i).cache(DEFAULT_CACHE_NAME).get(primaryKey);
+            }
+            else {
+                try (Transaction tx = grid(i).transactions().txStart(PESSIMISTIC, SERIALIZABLE)) {
+                    val = grid(i).cache(DEFAULT_CACHE_NAME).get(primaryKey);
+
+                    tx.commit();
+                }
+            }
 
             assertNull("Unexpected value on node [actualVal=" + val + ", nodeId=" + i + ']', val);
         }

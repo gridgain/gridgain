@@ -185,14 +185,17 @@ public class ConsistencyCheckUtils {
         Map<UUID, VersionedValue> nodeToVersionedValues,
         UUID primaryNodeID,
         CacheObjectContext cacheObjCtx,
-        int affinityNodesCnt) throws IgniteCheckedException {
+        int affinityNodesCnt
+    ) throws IgniteCheckedException {
         CacheObject valToFixWith = null;
 
         switch (repairAlg) {
             case PRIMARY:
                 VersionedValue versionedVal = nodeToVersionedValues.get(primaryNodeID);
 
-                return versionedVal != null ? versionedVal.value() : null;
+                valToFixWith = versionedVal != null ? versionedVal.value() : null;
+
+                break;
 
             case REMOVE:
                 return null;
@@ -227,7 +230,7 @@ public class ConsistencyCheckUtils {
                     }
                 }
 
-                return valToFixWith;
+                break;
 
             case LATEST:
                 GridCacheVersion maxVer = new GridCacheVersion(0, 0, 0);
@@ -240,11 +243,16 @@ public class ConsistencyCheckUtils {
                     }
                 }
 
-                return valToFixWith;
+                break;
 
             default:
                 throw new IllegalArgumentException("Unsupported repair algorithm=[" + repairAlg + ']');
         }
+
+        if (valToFixWith != null && valToFixWith.cacheObjectType() == CacheObject.TOMBSTONE)
+            valToFixWith = null;
+
+        return valToFixWith;
     }
 
     /**
