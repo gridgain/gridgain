@@ -34,6 +34,7 @@ import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
@@ -112,7 +113,12 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
     ) throws IgniteException {
         assert partBatch != null;
 
-        GridCacheContext<Object, Object> ctx = ignite.context().cache().cache(partBatch.cacheName()).context();
+        IgniteInternalCache<Object, Object> cache = ignite.context().cache().cache(partBatch.cacheName());
+
+        if (cache == null)
+            return new ExecutionResult<>("Cache not found (was stopped) [name=" + partBatch.cacheName() + ']');
+
+        GridCacheContext<Object, Object> ctx = cache.context();
 
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> totalRes = new HashMap<>();
 
