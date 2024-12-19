@@ -50,7 +50,7 @@ import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 
 @RunWith(Parameterized.class)
-public class PartitionReconciliationTombstonesWithIndicesTest extends PartitionReconciliationAbstractTest{
+public class PartitionReconciliationTombstonesWithIndicesTest extends PartitionReconciliationAbstractTest {
     /** Nodes. */
     protected static final int NODES_CNT = 3;
 
@@ -146,7 +146,7 @@ public class PartitionReconciliationTombstonesWithIndicesTest extends PartitionR
         Object primaryKey = keyCtor.newInstance(42);
         Object primaryVal = customValCls.newInstance();
 
-        int primaryNodeIdx =  -1;
+        int primaryNodeIdx = -1;
         for (int i = 0; i < NODES_CNT; ++i) {
             if (grid(i).affinity(DEFAULT_CACHE_NAME).isPrimary(grid(i).localNode(), primaryKey)) {
                 primaryNodeIdx = i;
