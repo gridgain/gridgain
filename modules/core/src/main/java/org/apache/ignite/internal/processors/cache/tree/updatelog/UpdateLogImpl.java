@@ -17,7 +17,9 @@
 package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.Factory;
+import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.util.lang.GridCursor;
 
 /**
@@ -58,6 +60,19 @@ public class UpdateLogImpl implements UpdateLog {
     }
 
     /** {@inheritDoc} */
+    @Override public void put(UpdateLogRow row, IgniteLogger log, CacheObjectContext cctx) throws IgniteCheckedException {
+        init();
+
+        boolean treeUpdated = logTree.putx(row);
+
+        if (log.isDebugEnabled()) {
+            String rowKey = row.key() == null ? "null" : row.key().value(cctx, false);
+            log.debug("Attempt to update log tree for key " + rowKey + ", replaced existing="
+                    + treeUpdated + ", update counter=" + row.updateCounter());
+        }
+    }
+
+    /** {@inheritDoc} */
     @Override public PartitionLogTree tree() throws IgniteCheckedException {
         init();
 
@@ -82,6 +97,19 @@ public class UpdateLogImpl implements UpdateLog {
     @Override public void remove(UpdateLogRow row) throws IgniteCheckedException {
         if (hasTree()) {
             logTree.removex(row);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void remove(UpdateLogRow row, IgniteLogger log, CacheObjectContext cctx) throws IgniteCheckedException {
+        if (logTree != null) {
+            boolean removeUpdated = logTree.removex(row);
+
+            if (log.isDebugEnabled()) {
+                String rowKey = row.key() == null ? "null" : row.key().value(cctx, false);
+                log.debug("Attempt to remove from log tree for key " + rowKey + ", replaced existing="
+                        + removeUpdated + ", update counter=" + row.updateCounter());
+            }
         }
     }
 
