@@ -219,9 +219,9 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     }
 
     /**
-     * @return Tombstone TTL distibuted property.
+     * @return Tombstone TTL distributed property.
      */
-    public DistributedLongProperty tobmstoneTtlProperty() {
+    public DistributedLongProperty tombstoneTtlProperty() {
         return tsTtl;
     }
 

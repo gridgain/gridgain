@@ -284,7 +284,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 }
             }
 
-            return new ExecutionResult<>(collector.result());
+            // Check for possible errors.
+            String errMsg = error.get();
+
+            return errMsg == null ?
+                new ExecutionResult<>(collector.result()) :
+                new ExecutionResult<>(
+                    collector.result(),
+                    "Partition reconciliation finished with error. " + String.format(ERROR_REASON, errMsg, "N/A"));
         }
         catch (InterruptedException | IgniteException e) {
             String errMsg = "Partition reconciliation was interrupted.";

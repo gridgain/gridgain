@@ -43,6 +43,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheGroupsSqlTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheStarvationOnRebalanceTest;
 import org.apache.ignite.internal.processors.cache.IgniteClientReconnectQueriesTest;
 import org.apache.ignite.internal.processors.cache.WrongIndexedTypesTest;
+import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationTombstonesWithIndicesTest;
 import org.apache.ignite.internal.processors.cache.index.H2TreeCorruptedTreeExceptionTest;
 import org.apache.ignite.internal.processors.cache.index.IndexCorruptionRebuildTest;
 import org.apache.ignite.internal.processors.cache.persistence.RebuildIndexLogMessageTest;
@@ -125,7 +126,9 @@ import org.junit.runners.Suite;
 
     EnumClassImplementingIndexedInterfaceTest.class,
 
-    IndexCorruptionRebuildTest.class
+    IndexCorruptionRebuildTest.class,
+
+    PartitionReconciliationTombstonesWithIndicesTest.class
 })
 public class IgniteCacheWithIndexingTestSuite {
 }

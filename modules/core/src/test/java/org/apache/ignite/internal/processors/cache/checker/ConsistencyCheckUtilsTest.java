@@ -29,6 +29,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
+import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
@@ -38,9 +39,10 @@ import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProces
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.calculateValueToFixWith;
-import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRIMARY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRINT_ONLY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.REMOVE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -104,7 +106,7 @@ public class ConsistencyCheckUtilsTest {
         oldKey.put(NODE_4, version(2));
 
         {
-            Map<UUID, VersionedValue> actualKey = new HashMap<>(); // All keys was removed
+            Map<UUID, VersionedValue> actualKey = new HashMap<>(); // All keys were removed
 
             assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey, 4));
         }
@@ -259,7 +261,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     * Old key count less then owners, and one of old key was removed from actual key set.
+     * Old key count less than owners, and one of old key was removed from actual key set.
      */
     @Test
     public void testOldKeySizeLessThenOwnerAndAnyOldKeyIsMissingInActualKeysCheckSuccess() {
@@ -286,7 +288,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     * Old key count less then owners, and actual key is greater then old max.
+     * Old key count less than owners, and actual key is greater than old max.
      */
     @Test
     public void testOldKeySizeLessThenOwnerAndAnyActualKeyIsGreaterThenOldMax() {
@@ -313,7 +315,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     * Return value from primary node when {@link RepairAlgorithm.PRIMARY} selected and value exist.
+     * Return value from primary node when {@link RepairAlgorithm#PRIMARY} selected and value exist.
      */
     @Test
     public void testCalcValuePrimaryNodeHasValue() throws IgniteCheckedException {
@@ -327,7 +329,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     * Return null from primary node when {@link RepairAlgorithm.PRIMARY} selected and value doesn't exist.
+     * Return null from primary node when {@link RepairAlgorithm#PRIMARY} selected and value doesn't exist.
      */
     @Test
     public void testCalcValuePrimaryNodeDoesNotHaveValue() throws IgniteCheckedException {
@@ -337,7 +339,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     * Return null when {@link RepairAlgorithm.LATEST} selected and value doesn't exist.
+     * Return null when {@link RepairAlgorithm#LATEST} selected and value doesn't exist.
      */
     @Test
     public void testCalcValueMaxGridVersionNodeDoesNotHaveValue() throws IgniteCheckedException {
@@ -347,7 +349,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     * Return value with max {@link GridCacheVersion} when {@link RepairAlgorithm.LATEST} selected and value exist.
+     * Return value with max {@link GridCacheVersion} when {@link RepairAlgorithm#LATEST} selected and value exist.
      */
     @Test
     public void testCalcValueMaxGridVersionNodeFindMaxVersion() throws IgniteCheckedException {
@@ -367,7 +369,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     * Return null when {@link RepairAlgorithm.MAJORITY} selected and values doesn't exist.
+     * Return null when {@link RepairAlgorithm#MAJORITY} selected and values doesn't exist.
      */
     @Test
     public void testCalcValueMajorityNodeDoesNotHaveValue() throws IgniteCheckedException {
@@ -377,7 +379,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     * Return null when {@link RepairAlgorithm.MAJORITY} selected and quorum doesn't exist.
+     * Return null when {@link RepairAlgorithm#MAJORITY} selected and quorum doesn't exist.
      */
     @Test
     public void testCalcValueMajorityMajorityWithoutQuorum() throws IgniteCheckedException {
@@ -391,7 +393,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     * Return majority (null) value when {@link RepairAlgorithm.MAJORITY} selected and value exist.
+     * Return majority (null) value when {@link RepairAlgorithm#MAJORITY} selected and value exist.
      */
     @Test
     public void testCalcValueMajorityNullValuesMoreThenValued() throws IgniteCheckedException {
@@ -415,7 +417,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     * Return majority value when {@link RepairAlgorithm.MAJORITY} selected and value exist.
+     * Return majority value when {@link RepairAlgorithm#MAJORITY} selected and value exist.
      */
     @Test
     public void testCalcValueMajorityByValue() throws IgniteCheckedException {
@@ -444,6 +446,31 @@ public class ConsistencyCheckUtilsTest {
     @Test
     public void testCalcValueRemoveByValue() throws IgniteCheckedException {
         assertNull(calculateValueToFixWith(REMOVE, new HashMap<>(), UUID.randomUUID(), null, 8));
+    }
+
+    /**
+     * Return {@code null} value when calculated value is {@link TombstoneCacheObject}.
+     */
+    @Test
+    public void testCalcValueTombstoneValue() throws IgniteCheckedException {
+        Map<UUID, VersionedValue> nodeToVersionedValues = new HashMap<>();
+        VersionedValue ver1 = versionedValue(1, new CacheObjectImpl(644, "644".getBytes()));
+        VersionedValue ver2 = versionedValue(2, new CacheObjectImpl(331, "331".getBytes()));
+        VersionedValue ver3 = versionedValue(3, new TombstoneCacheObject());
+
+        nodeToVersionedValues.put(NODE_1, ver1);
+        nodeToVersionedValues.put(NODE_2, ver2);
+        nodeToVersionedValues.put(NODE_3, ver3);
+        nodeToVersionedValues.put(NODE_4, ver3);
+
+        for (RepairAlgorithm repairAlgorithm : RepairAlgorithm.values()) {
+            if (repairAlgorithm == PRINT_ONLY)
+                continue;
+
+            assertNull(
+                "Unexpected calculated value [repairAlg=" + repairAlgorithm + ']',
+                calculateValueToFixWith(repairAlgorithm, nodeToVersionedValues, NODE_3, cacheObjectContext(), 4));
+        }
     }
 
     /**
