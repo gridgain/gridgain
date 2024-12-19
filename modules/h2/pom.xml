@@ -94,9 +94,9 @@
          where to possibly find tools.jar and annoyingly its called classes.jar on OSX -->
     <profiles>
         <profile>
-            <id>java9+</id>
+            <id>java-11+</id>
             <activation>
-                <jdk>[1.9,)</jdk>
+                <jdk>[11,)</jdk>
             </activation>
             <dependencies/>
         </profile>
