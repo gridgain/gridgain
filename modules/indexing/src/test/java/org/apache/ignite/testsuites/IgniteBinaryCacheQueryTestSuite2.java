@@ -54,6 +54,7 @@ import org.apache.ignite.internal.processors.database.baseline.IgniteChangingBas
 import org.apache.ignite.internal.processors.database.baseline.IgniteStableBaselineCacheQueryNodeRestartsSelfTest;
 import org.apache.ignite.internal.processors.query.BasicSqlTest;
 import org.apache.ignite.internal.processors.query.CreateIndexOnInvalidDataTypeTest;
+import org.apache.ignite.internal.processors.query.DdlFromThickClientTest;
 import org.apache.ignite.internal.processors.query.DisabledSqlFunctionsTest;
 import org.apache.ignite.internal.processors.query.IgniteCacheGroupsCompareQueryTest;
 import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlDistributedJoinSelfTest;
@@ -89,6 +90,7 @@ import org.junit.runners.Suite;
 
     UseOneTimeZoneForClusterTest.class,
 
+    DdlFromThickClientTest.class,
     DisabledSqlFunctionsTest.class,
 
     StatementCacheTest.class,
