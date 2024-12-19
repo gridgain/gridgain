@@ -16,18 +16,36 @@
 
 package org.apache.ignite.cache;
 
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
  * This test is needed for reproducing possible deadlock on concurrent {@link IgniteCache#removeAll()}
  */
 public class RemoveAllDeadlockTest extends GridCommonAbstractTest {
     /** Threads number for reproducing deadlock. */
-    public static final int THREADS = 4;
+    private static final int THREADS = 4;
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setConsistentId(igniteInstanceName);
+
+        return cfg;
+    }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
@@ -138,6 +156,63 @@ public class RemoveAllDeadlockTest extends GridCommonAbstractTest {
         IgniteCache<Integer, Integer> cache = grid(1).getOrCreateCache(cacheCfg);
 
         removeAllConcurrent(cache);
+    }
+
+    /**
+     * Tests that removeAll works correctly when some partitions are lost.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRemoveAllLostPartitions() throws Exception {
+        startGrids(2);
+
+        grid(0).cluster().baselineAutoAdjustEnabled(false);
+
+        grid(0).cluster().state(ACTIVE);
+
+        for (PartitionLossPolicy plc : PartitionLossPolicy.values()) {
+            testRemoveAllLostPartitions(plc);
+
+            grid(0).destroyCache(DEFAULT_CACHE_NAME);
+        }
+    }
+
+    /**
+     * Tests that removeAll works correctly when some partitions are lost.
+     *
+     * @param lossPlc Partition loss policy.
+     * @throws Exception If failed.
+     */
+    private void testRemoveAllLostPartitions(PartitionLossPolicy lossPlc) throws Exception {
+        CacheConfiguration<Integer, Integer> cacheCfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
+
+        cacheCfg.setPartitionLossPolicy(lossPlc);
+
+        cacheCfg.setAffinity(new RendezvousAffinityFunction(false, 4));
+
+        cacheCfg.setWriteSynchronizationMode(FULL_SYNC);
+
+        IgniteCache<Integer, Integer> cache = grid(1).getOrCreateCache(cacheCfg);
+
+        for (int i = 0; i < 100; ++i)
+            cache.put(i, i);
+
+        // Restart one node to lose partitions.
+        stopGrid(0);
+
+        startGrid(0);
+
+        assertFalse(grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+
+        CacheException err = assertThrows(
+            log,
+            () -> grid(0).cache(DEFAULT_CACHE_NAME).removeAll(),
+            CacheException.class,
+            null
+        );
+
+        assertTrue(X.hasCause(err, CacheInvalidStateException.class));
     }
 
     /**

@@ -35,6 +35,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterGroupEmptyCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.CacheOperationContext;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheConcurrentMap;
@@ -44,6 +45,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxLocalEx;
@@ -465,6 +467,25 @@ public abstract class GridDistributedCacheAdapter<K, V> extends GridCacheAdapter
                 else
                     dht = (GridDhtCacheAdapter<K, V>) cache;
 
+                GridDhtTopologyFuture topFut = dht.topology().topologyVersionFuture();
+
+                if (topFut.isDone()) {
+                    CacheInvalidStateException err = topFut.validateCache(ctx, false, false, null, null);
+
+                    if (err != null)
+                        throw err;
+                }
+                else {
+                    topFut.listen((IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>)fut -> {
+                        if (fut.error() != null)
+                            locFut.onDone(fut.error());
+
+                        jobCtx.callcc();
+                    });
+
+                    return jobCtx.holdcc();
+                }
+
                 try (DataStreamerImpl dataLdr = (DataStreamerImpl) ignite.dataStreamer(cacheName)) {
                     dataLdr.maxRemapCount(0);
 
@@ -474,7 +495,7 @@ public abstract class GridDistributedCacheAdapter<K, V> extends GridCacheAdapter
                     dataLdr.receiver(DataStreamerCacheUpdaters.batched());
 
                     for (int part : ctx.affinity().primaryPartitions(ctx.localNodeId(), topVer)) {
-                        //Synchronization is needed for case when job hasn't completed removing for one partition yet
+                        // Synchronization is needed for case when job hasn't completed removing for one partition yet
                         // while concurrent job changed last job future and started removing
                         synchronized (refToLastFut) {
                             IgniteInternalFuture<Boolean> lastFut = ctx.lastRemoveAllJobFut().get();
