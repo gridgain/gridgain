@@ -158,7 +158,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             }
 
             // Choose the minimum key of all last observed keys from all nodes.
-            // This allows to fix the issue with non-processed keys under certian conditions.
+            // This allows to fix the issue with non-processed keys under certain conditions.
             // For example,
             // the primary partition contains all keys [1, ..., 200] and the backup only has half of the keys [100, ..., 200],
             // and the batch size is 50. In this case, the primary node will return [1, ..., 50] and backup will return [100, ..., 150].
