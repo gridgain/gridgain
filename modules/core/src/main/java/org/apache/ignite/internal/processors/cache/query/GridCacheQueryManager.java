@@ -120,6 +120,7 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteReducer;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.lang.IgniteBiVectorTuple;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.IgniteSpiCloseableIterator;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
@@ -648,7 +649,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                             taskName));
                     }
 
-                    iter = qryProc.queryVector(cacheName, qry.fieldName(), qry.queryVector(), qry.k(),
+                    iter = qryProc.queryVector(cacheName, qry.fieldName(), qry.queryVector(), qry.k(), qry.threshold(),
                         qry.queryClassName(), filter(qry));
 
                     break;
@@ -1325,8 +1326,18 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                             else
                                 continue;
                         }
-                        else
-                            data.add(new T2<>(key, val));
+                        else {
+
+                            if (type == VECTOR && row instanceof IgniteBiVectorTuple) {
+                                Double score = ((IgniteBiVectorTuple<K, V>) row).getScore();
+                                Map<Object, Double> value = new HashMap<>();
+                                value.put(val,score);
+                                data.add(new T2<>(key, value));
+                            }
+                            else {
+                                data.add(new T2<>(key, val));
+                            }
+                        }
                     }
 
                     if (!loc) {
@@ -2782,6 +2793,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
             null,
             null,
             -1,
+            0.5f,
             null,
             null,
             false,
@@ -2878,6 +2890,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                 search,
                 null,
                 -1,
+                0.5f,
                 null,
                 null,
                 false,
@@ -2894,7 +2907,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
      * @return Created query.
      */
     public CacheQuery<Map.Entry<K, V>> createVectorQuery(String clsName, String field, float[] vector,
-        int k, boolean keepBinary) {
+        int k, float threshold, boolean keepBinary) {
         A.notNull(clsName, "clsName");
         A.notNull(field, "field");
         A.notNull(vector, "vector");
@@ -2906,6 +2919,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
             null,
             vector,
             k,
+            threshold,
             null,
             null,
             false,

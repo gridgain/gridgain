@@ -67,5 +67,5 @@ public interface LuceneIndex extends AutoCloseable {
      * @throws IgniteCheckedException If failed.
      */
     public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryVector(String field, float[] qryVector,
-        int k, IndexingQueryFilter filters) throws IgniteCheckedException;
+        int k, float threshold, IndexingQueryFilter filters) throws IgniteCheckedException;
 }
