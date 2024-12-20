@@ -3642,11 +3642,13 @@ alter table s.test rename to testtab;
 alter table s.testtab rename to test;
 > ok
 
+-- Triggerns are not supported any more
 create trigger test_trigger before insert on s.test call "org.gridgain.internal.h2.test.db.TestTriggersConstraints";
-> ok
+> exception SYNTAX_ERROR_2
 
+-- Triggerns are not supported any more
 drop trigger s.test_trigger;
-> ok
+> exception SYNTAX_ERROR_2
 
 drop schema s cascade;
 > ok
