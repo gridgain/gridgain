@@ -69,7 +69,7 @@ public interface GridDhtTopologyFuture extends IgniteInternalFuture<AffinityTopo
     public boolean exchangeDone();
 
     /**
-     * Returns error is cache topology is not valid.
+     * Returns error if cache topology is not valid.
      *
      * @param cctx Cache context.
      * @param recovery {@code True} if cache operation is done in recovery mode. Then it will only check
