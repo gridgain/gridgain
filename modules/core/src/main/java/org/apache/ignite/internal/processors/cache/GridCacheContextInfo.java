@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.query.schema.operation.SchemaAddQueryEntityOperation;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
@@ -122,6 +123,15 @@ public class GridCacheContextInfo<K, V> {
     }
 
     /**
+     * @return {@code true} if MVCC is enabled for this cache.
+     */
+    public boolean mvccEnabled() {
+        return cctx != null
+            ? cctx.mvccEnabled()
+            : config.getAtomicityMode() == CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
+    }
+
+    /**
      * @return Cache context. {@code null} for not started cache.
      */
     @Nullable public GridCacheContext<K, V> cacheContext() {
@@ -143,9 +153,9 @@ public class GridCacheContextInfo<K, V> {
     }
 
     /**
-     * Set real cache context in case cache has been fully initted and start.
+     * Set real cache context in case cache has been fully initialized and started.
      *
-     * @param cctx Initted cache context.
+     * @param cctx Initialized cache context.
      */
     public void initCacheContext(GridCacheContext<K, V> cctx) {
         assert this.cctx == null : this.cctx;
@@ -170,7 +180,7 @@ public class GridCacheContextInfo<K, V> {
     }
 
     /**
-     * @return {@code true} If Cache context is initted.
+     * @return {@code true} If Cache context is initialized.
      */
     public boolean isCacheContextInited() {
         return cctx != null;
