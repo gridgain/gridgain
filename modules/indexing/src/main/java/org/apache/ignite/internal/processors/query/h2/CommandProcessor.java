@@ -40,7 +40,6 @@ import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
@@ -59,7 +58,6 @@ import org.apache.ignite.internal.QueryMXBeanImpl;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -1005,13 +1003,7 @@ public class CommandProcessor {
      * @return True if MVCC is enabled.
      */
     private static boolean isMvccEnabled(GridH2Table tbl) {
-        GridCacheContext<?,?> cctx = tbl.cacheContext();
-
-        if (cctx != null) {
-            return cctx.mvccEnabled();
-        }
-
-        return tbl.cacheInfo().config().getAtomicityMode() == CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
+        return tbl.cacheInfo().mvccEnabled();
     }
 
     /**
