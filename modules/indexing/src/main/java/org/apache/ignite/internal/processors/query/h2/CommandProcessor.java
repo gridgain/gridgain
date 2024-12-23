@@ -938,7 +938,7 @@ public class CommandProcessor {
                 else {
                     assert tbl.rowDescriptor() != null;
 
-                    if (isMvccEnabled(tbl))
+                    if (tbl.cacheInfo().mvccEnabled())
                         throw new IgniteSQLException("Cannot drop column(s) with enabled MVCC. " +
                             "Operation is unsupported at the moment.", IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
 
@@ -994,16 +994,6 @@ public class CommandProcessor {
         catch (Exception e) {
             throw new IgniteSQLException(e.getMessage(), e);
         }
-    }
-
-    /**
-     * Check if table has MVCC enabled.
-     *
-     * @param tbl Table.
-     * @return True if MVCC is enabled.
-     */
-    private static boolean isMvccEnabled(GridH2Table tbl) {
-        return tbl.cacheInfo().mvccEnabled();
     }
 
     /**
