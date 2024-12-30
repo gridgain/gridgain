@@ -76,6 +76,9 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     /** [K]NN, how many vectors to return. */
     private int k;
 
+    /** threshold, the threshold for cosine similarity. */
+    private float threshold;
+
     /**
      * Constructs query for the given search vector.
      *
@@ -83,12 +86,14 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
      * @param field Type.
      * @param clauseVector Search vector.
      * @param k The number of vectors to return.
+     * @param threshold The threshold for cosine similarity
      */
-    public VectorQuery(Class<?> type, String field, float[] clauseVector, int k) {
+    public VectorQuery(Class<?> type, String field, float[] clauseVector, int k, float threshold) {
         setType(type);
         setField(field);
         setClauseVector(clauseVector);
         setK(k);
+        setThreshold(threshold);
     }
 
     /**
@@ -97,12 +102,15 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
      * @param type Type.
      * @param field Type.
      * @param clauseVector Search string.
+     * @param k The number of vectors to return.
+     * @param threshold A threshold for cosine similarity
      */
-    public VectorQuery(String type, String field, float[] clauseVector, int k) {
+    public VectorQuery(String type, String field, float[] clauseVector, int k, float threshold) {
         setType(type);
         setField(field);
         setClauseVector(clauseVector);
         setK(k);
+        setThreshold(threshold);
     }
 
     /**
@@ -157,6 +165,27 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
      */
     public int getK() {
         return k;
+    }
+
+    /**
+     * Sets threshold for cosine similarity
+     *
+     * @param threshold threshold.
+     * @return {@code this} For chaining.
+     */
+    public VectorQuery<K, V> setThreshold(float threshold) {
+        this.threshold = threshold;
+
+        return this;
+    }
+
+    /**
+     * Gets threshold for cosine similarity
+     *
+     * @return threshold.
+     */
+    public float getThreshold() {
+        return threshold;
     }
 
     /**
