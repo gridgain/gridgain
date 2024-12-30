@@ -372,7 +372,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
      * @param similarityFunction Vector Similarity Function for VECTOR index.
      * @throws IgniteCheckedException If failed.
      */
-    public void addFieldToVectorIndex(String field, QueryVectorField.VectorSimilarityFunctionEnum similarityFunction) throws IgniteCheckedException {
+    public void addFieldToVectorIndex(String field, QueryVectorField.SimilarityFunction similarityFunction) throws IgniteCheckedException {
         if (vectorIdx == null)
             vectorIdx = new QueryIndexDescriptorImpl(this, null, QueryIndexType.VECTOR, 0, similarityFunction);
 

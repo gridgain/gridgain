@@ -59,7 +59,7 @@ public class QueryIndex implements Serializable {
     /**
      * Vector Similarity Function for VECTOR index.
      * */
-    private QueryVectorField.VectorSimilarityFunctionEnum similarityFunction;
+    private QueryVectorField.SimilarityFunction similarityFunction;
 
     /**
      * Creates an empty index. Should be populated via setters.
@@ -283,7 +283,7 @@ public class QueryIndex implements Serializable {
      *
      * @return Similarity Function.
      */
-    public QueryVectorField.VectorSimilarityFunctionEnum getSimilarityFunction() {
+    public QueryVectorField.SimilarityFunction getSimilarityFunction() {
         return similarityFunction;
     }
 
@@ -316,7 +316,7 @@ public class QueryIndex implements Serializable {
      * @param similarityFunction Vector Similarity Function.
      * @return {@code this} for chaining.
      */
-    public QueryIndex setSimilarityFunction(QueryVectorField.VectorSimilarityFunctionEnum similarityFunction) {
+    public QueryIndex setSimilarityFunction(QueryVectorField.SimilarityFunction similarityFunction) {
         this.similarityFunction = similarityFunction;
         return this;
     }

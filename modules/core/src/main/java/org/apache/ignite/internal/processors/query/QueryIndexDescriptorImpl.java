@@ -64,7 +64,7 @@ public class QueryIndexDescriptorImpl implements GridQueryIndexDescriptor {
     /**
      * Vector Similarity Function for VECTOR index.
      * */
-    private QueryVectorField.VectorSimilarityFunctionEnum similarityFunction;
+    private QueryVectorField.SimilarityFunction similarityFunction;
 
     /**
      * Constructor.
@@ -91,7 +91,7 @@ public class QueryIndexDescriptorImpl implements GridQueryIndexDescriptor {
      * @param inlineSize Inline size.
      * @param similarityFunction Vector Similarity Function for VECTOR index.
      */
-    public QueryIndexDescriptorImpl(QueryTypeDescriptorImpl typDesc, String name, QueryIndexType type, int inlineSize, QueryVectorField.VectorSimilarityFunctionEnum similarityFunction) {
+    public QueryIndexDescriptorImpl(QueryTypeDescriptorImpl typDesc, String name, QueryIndexType type, int inlineSize, QueryVectorField.SimilarityFunction similarityFunction) {
         this(typDesc,name,type,inlineSize);
         this.similarityFunction = similarityFunction;
     }
@@ -128,7 +128,7 @@ public class QueryIndexDescriptorImpl implements GridQueryIndexDescriptor {
      *
      * @return  similarityFunction Field name.
      */
-    @Override public QueryVectorField.VectorSimilarityFunctionEnum similarityFunction() {
+    @Override public QueryVectorField.SimilarityFunction similarityFunction() {
         return similarityFunction;
     }
 

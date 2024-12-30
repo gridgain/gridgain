@@ -67,5 +67,5 @@ public interface GridQueryIndexDescriptor {
      *
      * @return Vector Similarity Function.
      */
-    public QueryVectorField.VectorSimilarityFunctionEnum similarityFunction();
+    public QueryVectorField.SimilarityFunction similarityFunction();
 }

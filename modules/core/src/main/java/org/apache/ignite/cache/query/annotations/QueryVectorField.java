@@ -38,9 +38,9 @@ public @interface QueryVectorField {
      *
      * @return similarityFunction for a vector field.
      */
-    VectorSimilarityFunctionEnum similarityFunction() default VectorSimilarityFunctionEnum.COSINE;
+    SimilarityFunction similarityFunction() default SimilarityFunction.COSINE;
 
-    public static enum VectorSimilarityFunctionEnum{
+    public static enum SimilarityFunction {
         EUCLIDEAN,
         DOT_PRODUCT,
         COSINE,

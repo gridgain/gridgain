@@ -155,7 +155,7 @@ public class QueryEntityTypeDescriptor {
      * @param field Field name.
      * @param similarityFunction Vector Similarity Function for VECTOR index.
      */
-    public void addFieldToVectorIndex(String field, QueryVectorField.VectorSimilarityFunctionEnum similarityFunction) {
+    public void addFieldToVectorIndex(String field, QueryVectorField.SimilarityFunction similarityFunction) {
         if (vectorIdx == null) {
             vectorIdx = new QueryEntityIndexDescriptor(QueryIndexType.VECTOR, similarityFunction);
             indexes.put(QueryIndexType.VECTOR.name(), vectorIdx);

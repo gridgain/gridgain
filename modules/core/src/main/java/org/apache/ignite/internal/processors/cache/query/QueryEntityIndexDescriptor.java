@@ -51,7 +51,7 @@ public class QueryEntityIndexDescriptor implements GridQueryIndexDescriptor {
     /**
      * Vector Similarity Function for VECTOR Indexes.
      */
-    private QueryVectorField.VectorSimilarityFunctionEnum similarityFunction;
+    private QueryVectorField.SimilarityFunction similarityFunction;
 
     /** Fields which should be indexed in descending order. */
     private Collection<String> descendings;
@@ -71,7 +71,7 @@ public class QueryEntityIndexDescriptor implements GridQueryIndexDescriptor {
      * @param type Type.
      * @param similarityFunction Vector Similarity Function for VECTOR Indexes.
      */
-    QueryEntityIndexDescriptor(QueryIndexType type, QueryVectorField.VectorSimilarityFunctionEnum similarityFunction) {
+    QueryEntityIndexDescriptor(QueryIndexType type, QueryVectorField.SimilarityFunction similarityFunction) {
         this(type, -1);
         this.similarityFunction = similarityFunction;
     }
@@ -132,7 +132,7 @@ public class QueryEntityIndexDescriptor implements GridQueryIndexDescriptor {
     }
 
     /** {@inheritDoc} */
-    @Override public QueryVectorField.VectorSimilarityFunctionEnum  similarityFunction() {
+    @Override public QueryVectorField.SimilarityFunction similarityFunction() {
         return similarityFunction;
     }
 
