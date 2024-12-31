@@ -191,29 +191,30 @@ public class GridMapQueryExecutor {
      * @param error Exception that occurred during the query execution.
      */
     protected void logQueryDetails(
-            long reqId,
-            String label,
-            String schemaName,
-            Collection<GridCacheSqlQuery> queries,
-            Object[] params,
-            Throwable error
+        long reqId,
+        String label,
+        String schemaName,
+        Collection<GridCacheSqlQuery> queries,
+        Object[] params,
+        Throwable error
     ) {
         StringBuilder logMessage = new StringBuilder();
 
         logMessage.append("Query Execution Failed:")
-                .append("\nRequest ID: ").append(reqId)
-                .append("\nLabel: ").append(label != null ? label : "N/A")
-                .append("\nSchema: ").append(schemaName != null ? schemaName : "N/A")
-                .append("\nQueries: ").append(
-                        queries != null
-                                ? queries.stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; "))
-                                : "N/A")
-                .append("\nParameters: ").append(params != null ? Arrays.toString(params) : "N/A");
+            .append("\nRequest ID: ").append(reqId)
+            .append("\nLabel: ").append(label != null ? label : "N/A")
+            .append("\nSchema: ").append(schemaName != null ? schemaName : "N/A")
+            .append("\nQueries: ").append(
+                queries != null
+                    ? queries.stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; "))
+                    : "N/A")
+            .append("\nParameters: ").append(params != null ? Arrays.toString(params) : "N/A");
 
         if (error != null) {
             logMessage.append("\nError: ").append(error.getMessage());
         }
 
+        // Log the error with the constructed message
         log.error(logMessage.toString(), error);
     }
 

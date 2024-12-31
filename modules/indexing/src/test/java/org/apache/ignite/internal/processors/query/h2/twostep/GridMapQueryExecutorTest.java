@@ -21,6 +21,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 //import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 //import org.mockito.Mockito;
 //import org.slf4j.Logger;
 import java.sql.SQLException;
@@ -29,6 +30,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
 import java.lang.reflect.Field;
+
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class GridMapQueryExecutorTest {
@@ -82,12 +85,12 @@ public class GridMapQueryExecutorTest {
 
         // Ensure logQueryDetails is mocked
         doNothing().when(executor).logQueryDetails(
-                anyLong(),
-                anyString(),
-                anyString(),
-                anyCollection(),
-                any(),
-                any(Throwable.class)
+            anyLong(),
+            anyString(),
+            anyString(),
+            anyCollection(),
+            any(),
+            any(Throwable.class)
         );
 
         // Mock onQueryRequest0 to throw an exception and invoke logQueryDetails
@@ -95,55 +98,55 @@ public class GridMapQueryExecutorTest {
             executor.logQueryDetails(1L, "TestLabel", "TestSchema", queries, params, new RuntimeException("SIMULATED SQL error"));
             throw new RuntimeException("SIMULATED SQL error");
         }).when(executor).onQueryRequest0(
-                eq(mockNode),
-                anyLong(),
-                anyString(),
-                anyInt(),
-                anyString(),
-                anyCollection(),
-                anyList(),
-                any(),
-                any(),
-                any(),
-                anyInt(),
-                anyBoolean(),
-                anyBoolean(),
-                anyBoolean(),
-                anyInt(),
-                any(),
-                anyBoolean(),
-                any(),
-                anyBoolean(),
-                anyLong(),
-                any(),
-                anyBoolean()
+            eq(mockNode),
+            anyLong(),
+            anyString(),
+            anyInt(),
+            anyString(),
+            anyCollection(),
+            anyList(),
+            any(),
+            any(),
+            any(),
+            anyInt(),
+            anyBoolean(),
+            anyBoolean(),
+            anyBoolean(),
+            anyInt(),
+            any(),
+            anyBoolean(),
+            any(),
+            anyBoolean(),
+            anyLong(),
+            any(),
+            anyBoolean()
         );
 
         // Act
         try {
             executor.onQueryRequest0(
-                    mockNode,
-                    1L,          // reqId
-                    "TestLabel", // label
-                    0,           // segmentId
-                    "TestSchema",// schemaName
-                    queries,
-                    Collections.emptyList(), // cacheIds
-                    null,          // topVer
-                    null,          // partsMap
-                    null,          // parts
-                    10,            // pageSize
-                    false,         // distributedJoins
-                    false,         // enforceJoinOrder
-                    false,         // replicated
-                    1000,          // timeout
-                    params,
-                    false,         // lazy
-                    null,          // mvccSnapshot
-                    false,         // dataPageScanEnabled
-                    0L,            // maxMem
-                    null,          // runningQryId
-                    false          // treatReplicatedAsPartitioned
+                mockNode,
+                1L,          // reqId
+                "TestLabel", // label
+                0,           // segmentId
+                "TestSchema",// schemaName
+                queries,
+                Collections.emptyList(), // cacheIds
+                null,          // topVer
+                null,          // partsMap
+                null,          // parts
+                10,            // pageSize
+                false,         // distributedJoins
+                false,         // enforceJoinOrder
+                false,         // replicated
+                1000,          // timeout
+                params,
+                false,         // lazy
+                null,          // mvccSnapshot
+                false,         // dataPageScanEnabled
+                0L,            // maxMem
+                null,          // runningQryId
+                false          // treatReplicatedAsPartitioned
             );
         } catch (RuntimeException e) {
             // Expected exception to trigger logQueryDetails
@@ -159,23 +162,59 @@ public class GridMapQueryExecutorTest {
      */
     @Test
     public void testLogQueryDetailsWithNullInputs() {
-       try {
-           // Arrange
-           GridMapQueryExecutor executor = new GridMapQueryExecutor();
-           IgniteLogger mockLog = mock(IgniteLogger.class);
+        try {
+            // Arrange
+            GridMapQueryExecutor executor = new GridMapQueryExecutor();
+            IgniteLogger mockLog = mock(IgniteLogger.class);
 
-           // Inject the mock logger using reflection
-           Field logField = GridMapQueryExecutor.class.getDeclaredField("log");
-           logField.setAccessible(true);
-           logField.set(executor, mockLog);
+            // Inject the mock logger using reflection
+            Field logField = GridMapQueryExecutor.class.getDeclaredField("log");
+            logField.setAccessible(true);
+            logField.set(executor, mockLog);
 
-           // Act
-           executor.logQueryDetails(1L, null, null, null, null, null);
+            // Act
+            executor.logQueryDetails(1L, null, null, null, null, null);
 
-           // Assert: Verify the logger was invoked correctly
-           verify(mockLog).error(anyString(), eq(null));
+            // Assert: Verify the logger was invoked correctly
+            verify(mockLog).error(anyString(), eq(null));
         } catch (NoSuchFieldException | IllegalAccessException e) {
-           throw new AssertionError("Reflection operation failed", e);
+            throw new AssertionError("Reflection operation failed", e);
+        }
+    }
+
+    /**
+     * Unit test to verify log content and avoid duplicate logs
+     *  of the helper method logQueryDetails.
+     */
+    @Test
+    public void testLogQueryDetailsAvoidsDuplicateLogs() {
+        try {
+            GridMapQueryExecutor executor = new GridMapQueryExecutor();
+            IgniteLogger mockLog = mock(IgniteLogger.class);
+
+            // Inject the mock logger
+            Field logField = GridMapQueryExecutor.class.getDeclaredField("log");
+            logField.setAccessible(true);
+            logField.set(executor, mockLog);
+
+            Throwable error = new RuntimeException("Test Exception");
+
+            // Invoke the helper method
+            executor.logQueryDetails(123L, "Label", "Schema", Collections.emptyList(), new Object[]{}, error);
+
+            //  Capture and verify the log message
+            ArgumentCaptor<String> logMessageCaptor = ArgumentCaptor.forClass(String.class);
+            verify(mockLog, times(1)).error(logMessageCaptor.capture(), eq(error));
+
+            String logContent = logMessageCaptor.getValue();
+            assertTrue(logContent.contains("Request ID: 123"));
+            assertTrue(logContent.contains("Label: Label"));
+            assertTrue(logContent.contains("Schema: Schema"));
+
+            // Verify no duplicate logs
+            verifyNoMoreInteractions(mockLog);
+        } catch (Exception e) {
+            throw new AssertionError("Test setup failed", e);
         }
     }
 }
