@@ -2311,8 +2311,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             String pluginInfo = pluginInfoReport();
 
-            if (!F.isEmpty(pluginInfo))
-                msg.a(pluginInfo);
+            msg.nl().a(F.isEmpty(pluginInfo) ? "    ^-- No plugins found" : pluginInfo);
 
             log.info(msg.toString());
 
@@ -2474,28 +2473,20 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      * Get plugin information.
      */
     private String pluginInfoReport() {
-        SB info = new SB();
+        return ctx.plugins().allProviders().stream()
+                .filter(plugin -> !F.isEmpty(plugin.metricsInfo()))
+                .map(plugin -> {
+                    Map<String, Object> metricsInfo = plugin.metricsInfo();
 
-        for (PluginProvider plugin : ctx.plugins().allProviders()) {
-            Map<String, Object> metricsInfo = plugin.metricsInfo();
+                    String infoFormatted = metricsInfo.entrySet().stream()
+                            .map(info -> info.getKey() + "=" +
+                                    (info.getValue() != null ? info.getValue().toString() : null))
+                            .collect(Collectors.joining(", "));
 
-            if (F.isEmpty(metricsInfo))
-                continue;
-
-            String metricsInfoFormatted = metricsInfo.entrySet().stream()
-                    .map((entry) -> String.format("%s=%s",
-                                    entry.getKey(),
-                                    entry.getValue() != null ? entry.getValue().toString() : null
-                            )
-                    )
-                    .collect(Collectors.joining(", "));
-
-            info.nl().a("    ^-- Plugin [name=").a(plugin.name())
-                    .a(", version=").a(plugin.version())
-                    .a(", info=[").a(metricsInfoFormatted).a("]");
-        }
-
-        return info.toString();
+                    return "    ^-- Plugin [name=" + plugin.name() + ", version=" + plugin.version() +
+                            ", info=[" + infoFormatted + "]";
+                })
+                .collect(Collectors.joining(NL));
     }
 
     /**
