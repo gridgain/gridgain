@@ -141,7 +141,6 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
         setClauseVector(clauseVector);
         setK(k);
         setThreshold(threshold);
-
     }
 
     /**
