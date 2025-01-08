@@ -53,6 +53,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import javax.cache.CacheException;
 import javax.management.JMException;
 import org.apache.ignite.DataRegionMetrics;
@@ -2308,6 +2309,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                     msg.nl().a("    ^-- ").a(createExecutorDescription(entry.getKey(), entry.getValue()));
             }
 
+            String pluginInfo = pluginInfoReport();
+
+            msg.nl().a(F.isEmpty(pluginInfo) ? "    ^-- No plugins found" : pluginInfo);
+
             log.info(msg.toString());
 
             ctx.cache().context().database().dumpStatistics(log);
@@ -2462,6 +2467,26 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         }
 
         return info.toString();
+    }
+
+    /**
+     * Get plugin information.
+     */
+    private String pluginInfoReport() {
+        return ctx.plugins().allProviders().stream()
+                .filter(plugin -> !F.isEmpty(plugin.metricsInfo()))
+                .map(plugin -> {
+                    Map<String, Object> metricsInfo = plugin.metricsInfo();
+
+                    String infoFormatted = metricsInfo.entrySet().stream()
+                            .map(info -> info.getKey() + "=" +
+                                    (info.getValue() != null ? info.getValue().toString() : null))
+                            .collect(Collectors.joining(", "));
+
+                    return "    ^-- Plugin [name=" + plugin.name() + ", version=" + plugin.version() +
+                            ", info=[" + infoFormatted + "]";
+                })
+                .collect(Collectors.joining(NL));
     }
 
     /**

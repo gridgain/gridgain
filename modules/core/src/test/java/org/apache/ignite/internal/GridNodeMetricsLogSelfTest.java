@@ -204,6 +204,7 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
         assertTrue(msg, fullLog.matches("(?s).*Striped thread pool \\[active=.*, idle=.*, qSize=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*" + CUSTOM_EXECUTOR_0 + " \\[active=.*, idle=.*, qSize=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*" + CUSTOM_EXECUTOR_1 + " \\[active=.*, idle=.*, qSize=.*].*"));
+        assertTrue(msg, fullLog.matches("(?s).*No plugins found.*"));
     }
 
     /**
