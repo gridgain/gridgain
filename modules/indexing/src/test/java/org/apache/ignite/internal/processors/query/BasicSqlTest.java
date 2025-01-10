@@ -17,8 +17,6 @@
 package org.apache.ignite.internal.processors.query;
 
 import java.sql.Timestamp;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
