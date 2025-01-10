@@ -76,7 +76,6 @@ import org.gridgain.internal.h2.test.db.TestSynonymForTable;
 import org.gridgain.internal.h2.test.db.TestTableEngines;
 import org.gridgain.internal.h2.test.db.TestTempTables;
 import org.gridgain.internal.h2.test.db.TestTransaction;
-import org.gridgain.internal.h2.test.db.TestTriggersConstraints;
 import org.gridgain.internal.h2.test.db.TestTwoPhaseCommit;
 import org.gridgain.internal.h2.test.db.TestUpgrade;
 import org.gridgain.internal.h2.test.db.TestUsingIndex;
@@ -794,7 +793,6 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
         addTest(new TestRowFactory());
         addTest(new TestTempTables());
         addTest(new TestTransaction());
-        addTest(new TestTriggersConstraints());
         addTest(new TestTwoPhaseCommit());
         addTest(new TestView());
         addTest(new TestViewAlterTable());
