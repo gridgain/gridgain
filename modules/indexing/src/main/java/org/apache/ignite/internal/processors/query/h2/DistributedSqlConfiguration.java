@@ -37,6 +37,8 @@ import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.gridgain.internal.h2.util.DateTimeUtils;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.makeUpdateListener;
 import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.setDefaultValue;
 
@@ -64,6 +66,10 @@ public class DistributedSqlConfiguration {
 
     /** Default value of the query timeout. */
     public static final int DFLT_QRY_TIMEOUT = 0;
+
+    /** Default value of {@link #disableCreateLuceneIndexForStringValueType}. */
+    private final boolean dfltDisableCreateLuceneIndexForString =
+        getBoolean(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING, false);
 
     /** Disabled SQL functions. */
     private final SimpleDistributedProperty<HashSet<String>> disabledSqlFuncs = new SimpleDistributedProperty<>(
@@ -133,7 +139,7 @@ public class DistributedSqlConfiguration {
 
                         setDefaultValue(
                             disableCreateLuceneIndexForStringValueType,
-                            false,
+                            dfltDisableCreateLuceneIndexForString,
                             log);
                     }
                     else {
@@ -143,7 +149,7 @@ public class DistributedSqlConfiguration {
                         // Set properties to default.
                         disabledSqlFuncs.localUpdate(null);
                         dfltQueryTimeout.localUpdate((int)ctx.config().getSqlConfiguration().getDefaultQueryTimeout());
-                        disableCreateLuceneIndexForStringValueType.localUpdate(false);
+                        disableCreateLuceneIndexForStringValueType.localUpdate(dfltDisableCreateLuceneIndexForString);
                     }
                 }
             }

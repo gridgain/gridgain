@@ -2270,6 +2270,10 @@ public final class IgniteSystemProperties {
     @IgniteExperimental
     public static final String IGNITE_CONFIGURATION_VIEW_PACKAGES = "IGNITE_CONFIGURATION_VIEW_PACKAGES";
 
+    @SystemProperty(value = "Disable creation Lucene TEXT index for String by default", defaults = "false")
+    public static final String IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING =
+        "IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING";
+
     /**
      * Enforces singleton.
      */
