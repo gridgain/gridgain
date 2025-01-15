@@ -28,6 +28,7 @@ import java.sql.SQLException;
 //import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.lang.reflect.Field;
 
@@ -55,12 +56,17 @@ public class GridMapQueryExecutorTest {
             String label = "TestQuery";
             String schema = "TestSchema";
             Throwable error = new SQLException("Test SQL Error");
+            UUID remoteNodeId = UUID.randomUUID();
 
             // Act
-            executor.logQueryDetails(reqId, label, schema, Collections.emptyList(), new Object[]{}, error);
+            executor.logQueryDetails(reqId, label, schema, Collections.emptyList(), new Object[]{}, error, remoteNodeId);
 
             // Assert
             verify(mockLog).error(contains("Query Execution Failed"), eq(error));
+            verify(mockLog).error(contains("Remote Node ID: " + remoteNodeId), eq(error));
+            verify(mockLog).error(contains("Label: TestQuery"), eq(error));
+            verify(mockLog).error(contains("Schema: TestSchema"), eq(error));
+            verify(mockLog).error(contains("Remote Node ID: " + remoteNodeId), eq(error));
         } catch (NoSuchFieldException | IllegalAccessException e) {
             throw new AssertionError("Reflection operation failed", e);
         }
@@ -83,19 +89,20 @@ public class GridMapQueryExecutorTest {
         Collection<GridCacheSqlQuery> queries = Collections.singletonList(new GridCacheSqlQuery(invalidSQL));
         Object[] params = new Object[]{};
 
-        // Ensure logQueryDetails is mocked
-        doNothing().when(executor).logQueryDetails(
-            anyLong(),
-            anyString(),
-            anyString(),
-            anyCollection(),
-            any(),
-            any(Throwable.class)
-        );
+//        // Ensure logQueryDetails is mocked
+//        doNothing().when(executor).logQueryDetails(
+//            anyLong(),
+//            anyString(),
+//            anyString(),
+//            anyCollection(),
+//            any(),
+//            any(Throwable.class),
+//            any()
+//        );
 
         // Mock onQueryRequest0 to throw an exception and invoke logQueryDetails
         doAnswer(invocation -> {
-            executor.logQueryDetails(1L, "TestLabel", "TestSchema", queries, params, new RuntimeException("SIMULATED SQL error"));
+            executor.logQueryDetails(1L, "TestLabel", "TestSchema", queries, params, new RuntimeException("SIMULATED SQL error"), UUID.randomUUID());
             throw new RuntimeException("SIMULATED SQL error");
         }).when(executor).onQueryRequest0(
             eq(mockNode),
@@ -153,7 +160,7 @@ public class GridMapQueryExecutorTest {
         }
 
         // Assert
-        verify(executor).logQueryDetails(eq(1L), eq("TestLabel"), eq("TestSchema"), eq(queries), eq(params), any(Throwable.class));
+        verify(executor).logQueryDetails(eq(1L), eq("TestLabel"), eq("TestSchema"), eq(queries), eq(params), any(Throwable.class), any(UUID.class));
     }
 
     /**
@@ -173,48 +180,95 @@ public class GridMapQueryExecutorTest {
             logField.set(executor, mockLog);
 
             // Act
-            executor.logQueryDetails(1L, null, null, null, null, null);
+            executor.logQueryDetails(1L, null, null, null, null, null, UUID.randomUUID());
 
             // Assert: Verify the logger was invoked correctly
-            verify(mockLog).error(anyString(), eq(null));
+            ArgumentCaptor<String> logMessageCaptor = ArgumentCaptor.forClass(String.class);
+            verify(mockLog).error(logMessageCaptor.capture(), eq(null));
+
+            String logContent = logMessageCaptor.getValue();
+
+            assertTrue(logContent.contains("Label: N/A"));
+            assertTrue(logContent.contains("Schema: N/A"));
+            assertTrue(logContent.contains("Remote Node ID: " + UUID.randomUUID()));
         } catch (NoSuchFieldException | IllegalAccessException e) {
             throw new AssertionError("Reflection operation failed", e);
         }
     }
 
     /**
-     * Unit test to verify log content and avoid duplicate logs
-     *  of the helper method logQueryDetails.
+     * Integration test to validate query execution error logging through the full
+     * query execution flow.
      */
     @Test
-    public void testLogQueryDetailsAvoidsDuplicateLogs() {
+    public void testQueryExecutionErrorLoggingIntegration() {
         try {
+            // Arrange
             GridMapQueryExecutor executor = new GridMapQueryExecutor();
             IgniteLogger mockLog = mock(IgniteLogger.class);
 
-            // Inject the mock logger
             Field logField = GridMapQueryExecutor.class.getDeclaredField("log");
             logField.setAccessible(true);
             logField.set(executor, mockLog);
 
-            Throwable error = new RuntimeException("Test Exception");
+            ClusterNode mockNode = mock(ClusterNode.class);
+            UUID remoteNodeId = UUID.randomUUID();
+            when(mockNode.id()).thenReturn(remoteNodeId);
 
-            // Invoke the helper method
-            executor.logQueryDetails(123L, "Label", "Schema", Collections.emptyList(), new Object[]{}, error);
+            Throwable simulatedError = new RuntimeException("Test Exception");
 
-            //  Capture and verify the log message
-            ArgumentCaptor<String> logMessageCaptor = ArgumentCaptor.forClass(String.class);
-            verify(mockLog, times(1)).error(logMessageCaptor.capture(), eq(error));
+            Collection<GridCacheSqlQuery> queries = Collections.emptyList();
+            List<Integer> cacheIds = Collections.emptyList();
+            Object[] params = {};
 
-            String logContent = logMessageCaptor.getValue();
-            assertTrue(logContent.contains("Request ID: 123"));
-            assertTrue(logContent.contains("Label: Label"));
-            assertTrue(logContent.contains("Schema: Schema"));
+            // Act
+            try {
+                executor.onQueryRequest0(
+                    mockNode,
+                    123L,          // reqId
+                    "IntegrationTestQuery", // label
+                    0,             // segmentId
+                    "TestSchema",  // schemaName
+                    queries,       // queries
+                    cacheIds,      // cacheIds
+                    null,          // topVer
+                    null,          // partsMap
+                    null,          // parts
+                    10,            // pageSize
+                    false,         // distributedJoins
+                    false,         // enforceJoinOrder
+                    false,         // replicated
+                    1000,          // timeout
+                    params,        // params
+                    false,         // lazy
+                    null,          // mvccSnapshot
+                    false,         // dataPageScanEnabled
+                    0L,            // maxMem
+                    null,          // runningQryId
+                    false          // treatReplicatedAsPartitioned
+                );
 
-            // Verify no duplicate logs
-            verifyNoMoreInteractions(mockLog);
-        } catch (Exception e) {
-            throw new AssertionError("Test setup failed", e);
+                // Assert
+                ArgumentCaptor<String> logCaptor = ArgumentCaptor.forClass(String.class);
+                verify(mockLog).error(logCaptor.capture(), eq(simulatedError));
+                String logContent = logCaptor.getValue();
+                assertTrue(logContent.contains("Query Execution Failed"));
+                assertTrue(logContent.contains("Request ID: 123"));
+                assertTrue(logContent.contains("Label: IntegrationTestQuery"));
+                assertTrue(logContent.contains("Schema: TestSchema"));
+                assertTrue(logContent.contains("Remote Node ID: " + remoteNodeId));
+            } catch (Exception e) {
+                throw new AssertionError("Test setup failed", e);
+            }
+
+            verify(mockLog, times(1)).error(anyString(), eq(simulatedError));
+            verifyNoMoreInteractions(mockLog); // Ensures no duplicate logging
+
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
         }
+
     }
 }
