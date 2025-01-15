@@ -196,7 +196,8 @@ public class GridMapQueryExecutor {
         String schemaName,
         Collection<GridCacheSqlQuery> queries,
         Object[] params,
-        Throwable error
+        Throwable error,
+        UUID remoteNodeId
     ) {
         StringBuilder logMessage = new StringBuilder();
 
@@ -208,7 +209,11 @@ public class GridMapQueryExecutor {
                 queries != null
                     ? queries.stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; "))
                     : "N/A")
-            .append("\nParameters: ").append(params != null ? Arrays.toString(params) : "N/A");
+            .append("\nParameters: ").append(params != null ? Arrays.toString(params) : "N/A")
+            .append("\nTimestamp: ").append(System.currentTimeMillis())
+            .append("\nLocal Node ID: ").append(ctx.localNodeId())
+            .append("\nRemote Node ID: ").append(remoteNodeId);
+
 
         if (error != null) {
             logMessage.append("\nError: ").append(error.getMessage());
@@ -586,18 +591,14 @@ public class GridMapQueryExecutor {
         catch (Throwable e) {
             if (qryResults != null) {
                 nodeRess.remove(reqId, segmentId, qryResults);
-
                 qryResults.close();
 
                 // If a query is cancelled before execution is started partitions have to be released.
                 if (!lazy || !qryResults.isAllClosed())
                     qryResults.releaseQueryContext();
-            }
-            else
+            } else {
                 releaseReservations(qctx);
-
-            // Log detailed query information for debugging.
-            logQueryDetails(reqId, label, schemaName, qrys, params, e);
+            }
 
             if (e instanceof QueryCancelledException)
                 sendError(node, reqId, e);
@@ -625,20 +626,20 @@ public class GridMapQueryExecutor {
                             sendError(node, reqId, qryRetryErr);
                         else {
                             if (e instanceof Error) {
-                                U.error(log, "Failed to execute local query.", e);
-
+                                // Log detailed query information for debugging.
+                                logQueryDetails(reqId, label, schemaName, qrys, params, e, node.id());
                                 throw (Error)e;
+                            } else {
+                                //Log only once for recoverable errors.
+                                logQueryDetails(reqId, label, schemaName, qrys, params, e,node.id());
+                                U.warn(log, "Failed to execute local query.", e);
                             }
-
-                            U.warn(log, "Failed to execute local query.", e);
-
                             sendError(node, reqId, e);
                         }
                     }
                 }
             }
-        }
-        finally {
+        } finally {
             if (reserved != null)
                 reserved.release();
 
