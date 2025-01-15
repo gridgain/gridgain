@@ -149,7 +149,7 @@ public class PartitionReservationManager implements PartitionsExchangeAware {
 
                         reserved.add(r);
 
-                        MTC.span().addLog(() -> "Cache partitions were reserved " + r);
+                        MTC.span().addLog(() -> "Cache partitions were reserved.");
                     }
                 }
                 else { // Try to reserve partitions one by one.
