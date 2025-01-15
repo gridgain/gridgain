@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -35,7 +34,6 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.LuceneIndex;
-import org.apache.ignite.internal.processors.query.h2.opt.LuceneIndexFactory;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.index.Index;
@@ -43,9 +41,6 @@ import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
-import static java.util.Objects.nonNull;
 
 /**
  * Information about table in database.
@@ -248,11 +243,11 @@ public class H2TableDescriptor {
 
         if (type().valueClass() == String.class
             && !idx.distributedConfiguration().isDisableCreateLuceneIndexForStringValueType()) {
-            luceneIdx = createLuceneIndex(tbl.cacheName(), log);
+            luceneIdx = idx.createLuceneIndex(tbl.cacheName(), type);
         }
 
         if (type.textIndex() != null || type.vectorIndex() != null)
-            this.luceneIdx = createLuceneIndex(tbl.cacheName(), log);
+            this.luceneIdx = idx.createLuceneIndex(tbl.cacheName(), type);
 
         // Locate index where affinity column is first (if any).
         if (affCol != null) {
@@ -454,29 +449,6 @@ public class H2TableDescriptor {
         }
 
         return null;
-    }
-
-    /**
-     * Create Lucene index.
-     *
-     * @param cacheName Cache name.
-     * @param log Logger.
-     * @return Index.
-     */
-    private LuceneIndex createLuceneIndex(@Nullable String cacheName, IgniteLogger log) {
-        LuceneIndexFactory[] ext = idx.kernalContext().plugins().extensions(LuceneIndexFactory.class);
-
-        if (nonNull(ext)) {
-            if (ext.length > 1)
-                log.info("More than one LuceneIndexFactory extension is defined.");
-
-            LuceneIndexFactory factory = ext[0];
-
-            return factory.create(idx.kernalContext(), cacheName, type);
-        }
-
-        throw new IgniteException("Failed to create index because Lucene module is disabled (consider adding module " +
-            "gridgain-lucene to classpath or moving it from 'optional' to 'libs' folder).");
     }
 
     /**

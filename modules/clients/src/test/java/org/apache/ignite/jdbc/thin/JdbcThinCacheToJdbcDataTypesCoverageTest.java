@@ -53,6 +53,8 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheDataTypesCoverageTest;
+import org.apache.ignite.internal.processors.query.h2.DistributedSqlConfiguration;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.lang.GridAbsPredicateX;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -421,6 +423,11 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
             (cacheMode == CacheMode.LOCAL || writeSyncMode == CacheWriteSynchronizationMode.PRIMARY_SYNC) ?
                 grid(0) :
                 grid(new Random().nextInt(NODES_CNT));
+
+        DistributedSqlConfiguration cliSqlDistrCfg = ((IgniteH2Indexing)ignite.context().query().getIndexing())
+            .distributedConfiguration();
+
+        cliSqlDistrCfg.disableCreateLuceneIndexForStringValueType(true);
 
         IgniteCache<Object, Object> cache = ignite.createCache(
             new CacheConfiguration<>()

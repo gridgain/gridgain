@@ -27,6 +27,8 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.query.h2.DistributedSqlConfiguration;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.sqltests.SqlDataTypesCoverageTests;
 import org.junit.After;
 import org.junit.Before;
@@ -140,6 +142,11 @@ public class JdbcThinJdbcToCacheDataTypesCoverageTest extends SqlDataTypesCovera
             (cacheMode == CacheMode.LOCAL || writeSyncMode == CacheWriteSynchronizationMode.PRIMARY_SYNC) ?
                 grid(0) :
                 grid(new Random().nextInt(NODES_CNT));
+
+        DistributedSqlConfiguration cliSqlDistrCfg = ((IgniteH2Indexing)ignite.context().query().getIndexing())
+            .distributedConfiguration();
+
+        cliSqlDistrCfg.disableCreateLuceneIndexForStringValueType(true);
 
         String uuidPostfix = UUID.randomUUID().toString().replaceAll("-", "_");
 

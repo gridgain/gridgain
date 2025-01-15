@@ -17,16 +17,24 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
+import org.apache.ignite.plugin.Extension;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Factory for {@link LuceneIndex} implementations.
+ * Extention for LuceneIndex implementations.
  */
-public interface LuceneIndexFactory {
-    /** {@inheritDoc} */
-    public LuceneIndex createIndex(
-        @Nullable String cacheName,
-        GridQueryTypeDescriptor type
-    ) throws IgniteCheckedException;
+public interface LuceneIndexExtension extends Extension {
+    /**
+     * Starts indexing.
+     *
+     * @param ctx Kernal context.
+     * @param cacheName Cache name.
+     * @param type Type descriptor.
+     * @throws IgniteCheckedException If failed.
+     */
+    public LuceneIndex createIndex(GridKernalContext ctx, @Nullable String cacheName,
+        GridQueryTypeDescriptor type) throws IgniteException;
 }

@@ -20,6 +20,9 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.query.h2.DistributedSqlConfiguration;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
 /**
@@ -40,7 +43,12 @@ public abstract class AbstractRestProcessorSelfTest extends GridCommonAbstractTe
 
         cleanPersistenceDir();
 
-        startGrids(gridCount());
+        IgniteEx ignite = startGrids(gridCount());
+
+        DistributedSqlConfiguration cliSqlDistrCfg = ((IgniteH2Indexing)ignite.context().query().getIndexing())
+            .distributedConfiguration();
+
+        cliSqlDistrCfg.disableCreateLuceneIndexForStringValueType(true);
     }
 
     /** {@inheritDoc} */
