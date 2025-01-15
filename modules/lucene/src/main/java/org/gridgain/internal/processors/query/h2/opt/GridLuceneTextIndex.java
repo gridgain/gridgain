@@ -290,7 +290,8 @@ public class GridLuceneTextIndex implements LuceneIndex {
     /** {@inheritDoc} */
     @Override public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> vectorQuery(String field,
         float[] qryVector, int k, float threshold, IndexingQueryFilter filters) throws IgniteCheckedException {
-        throw new IgniteCheckedException("Not implemented yet");
+        throw new IllegalStateException("To use vector query feature, enable gridgain-vector-search module" +
+            " (requires Enterprise or Ultimate Edition)");
     }
 
     /** {@inheritDoc} */
