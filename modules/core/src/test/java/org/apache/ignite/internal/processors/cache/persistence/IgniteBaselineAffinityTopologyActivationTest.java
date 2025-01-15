@@ -400,14 +400,7 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
 
         long topologyVersion = grid.cluster().topologyVersion();
 
-        try {
-            GridTestUtils.runAsync(
-                    () -> grid.cluster().setBaselineTopology(topologyVersion)
-            ).get(10_000);
-        }
-        catch (Exception ignored) {
-            // timeout exception is expected here
-        }
+        GridTestUtils.runAsync(() -> grid.cluster().setBaselineTopology(topologyVersion)).get(10_000);
 
         assertEquals(ClusterState.ACTIVE_READ_ONLY, grid.cluster().state());
     }
@@ -431,14 +424,7 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
 
         long topologyVersion = grid.cluster().topologyVersion();
 
-        try {
-            GridTestUtils.runAsync(
-                    () -> grid.cluster().setBaselineTopology(topologyVersion)
-            ).get(10_000);
-        }
-        catch (Exception ignored) {
-            // timeout exception is expected here
-        }
+        GridTestUtils.runAsync(() -> grid.cluster().setBaselineTopology(topologyVersion)).get(10_000);
 
         assertEquals(ClusterState.ACTIVE, grid.cluster().state());
     }
@@ -463,12 +449,10 @@ public class IgniteBaselineAffinityTopologyActivationTest extends GridCommonAbst
         long topologyVersion = grid.cluster().topologyVersion();
 
         try {
-            GridTestUtils.runAsync(
-                    () -> grid.cluster().setBaselineTopology(topologyVersion)
-            ).get(10_000);
+            GridTestUtils.runAsync(() -> grid.cluster().setBaselineTopology(topologyVersion)).get(10_000);
         }
         catch (Exception ignored) {
-            // timeout exception is expected here
+            assertTrue(ignored.getMessage().contains("Changing BaselineTopology on inactive cluster is not allowed"));
         }
 
         assertEquals(ClusterState.INACTIVE, grid.cluster().state());
