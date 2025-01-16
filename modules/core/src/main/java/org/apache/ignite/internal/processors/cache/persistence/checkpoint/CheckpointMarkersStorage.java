@@ -82,8 +82,11 @@ public class CheckpointMarkersStorage {
     /** Earliest checkpoint map snapshot temporary file name. */
     private static final String EARLIEST_CP_SNAPSHOT_TMP_FILE = EARLIEST_CP_SNAPSHOT_FILE + ".tmp";
 
+    /** Ignite instance name. */
+    private final String instanceName;
+
     /** Checkpoint map snapshot executor. */
-    private final ExecutorService checkpointMapSnapshotExecutor;
+    private volatile ExecutorService checkpointMapSnapshotExecutor;
 
     /** Logger. */
     protected IgniteLogger log;
@@ -130,6 +133,7 @@ public class CheckpointMarkersStorage {
         cpHistory = history;
         ioFactory = factory;
         this.lock = lock;
+        instanceName = igniteInstanceName;
 
         cpDir = Paths.get(absoluteWorkDir, "cp").toFile();
 
@@ -238,6 +242,11 @@ public class CheckpointMarkersStorage {
      */
     void start() {
         cpHistory.start();
+
+        if (checkpointMapSnapshotExecutor == null || checkpointMapSnapshotExecutor.isTerminated())
+        this.checkpointMapSnapshotExecutor = Executors.newSingleThreadExecutor(
+                new IgniteThreadFactory(instanceName, "cp-map-snapshot-executor-")
+        );
     }
 
     /**
