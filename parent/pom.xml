@@ -873,9 +873,20 @@
         </profile>
 
         <profile>
+            <id>java-11+</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <properties>
+                <maven.compiler.release>8</maven.compiler.release>
+            </properties>
+        </profile>
+
+        <profile>
             <id>target-java-11+</id>
             <properties>
                 <maven.compiler.target>11</maven.compiler.target>
+                <maven.compiler.release>11</maven.compiler.release>
             </properties>
             <dependencies/>
             <build>
