@@ -35,6 +35,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
@@ -54,6 +55,20 @@ public class JdbcThinJdbcToCacheDataTypesCoverageTest extends SqlDataTypesCovera
 
     /** Statement. */
     private Statement stmt;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        System.setProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING, "true");
+
+        super.beforeTestsStarted();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
+
+        System.clearProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING);
+    }
 
     /** @inheritDoc */
     @SuppressWarnings("RedundantMethodOverride")
@@ -142,11 +157,6 @@ public class JdbcThinJdbcToCacheDataTypesCoverageTest extends SqlDataTypesCovera
             (cacheMode == CacheMode.LOCAL || writeSyncMode == CacheWriteSynchronizationMode.PRIMARY_SYNC) ?
                 grid(0) :
                 grid(new Random().nextInt(NODES_CNT));
-
-        DistributedSqlConfiguration cliSqlDistrCfg = ((IgniteH2Indexing)ignite.context().query().getIndexing())
-            .distributedConfiguration();
-
-        cliSqlDistrCfg.disableCreateLuceneIndexForStringValueType(true);
 
         String uuidPostfix = UUID.randomUUID().toString().replaceAll("-", "_");
 

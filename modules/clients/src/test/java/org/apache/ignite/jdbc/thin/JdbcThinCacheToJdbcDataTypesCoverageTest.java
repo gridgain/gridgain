@@ -65,6 +65,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
@@ -123,7 +124,19 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     @Rule
     public ExpectedException expEx = ExpectedException.none();
 
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        System.setProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING, "true");
 
+        super.beforeTestsStarted();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
+
+        System.clearProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING);
+    }
 
     /** @inheritDoc */
     @Before
@@ -423,11 +436,6 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
             (cacheMode == CacheMode.LOCAL || writeSyncMode == CacheWriteSynchronizationMode.PRIMARY_SYNC) ?
                 grid(0) :
                 grid(new Random().nextInt(NODES_CNT));
-
-        DistributedSqlConfiguration cliSqlDistrCfg = ((IgniteH2Indexing)ignite.context().query().getIndexing())
-            .distributedConfiguration();
-
-        cliSqlDistrCfg.disableCreateLuceneIndexForStringValueType(true);
 
         IgniteCache<Object, Object> cache = ignite.createCache(
             new CacheConfiguration<>()

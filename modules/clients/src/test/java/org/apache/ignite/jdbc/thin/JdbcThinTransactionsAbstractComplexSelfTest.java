@@ -49,6 +49,8 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING;
+
 /**
  * Test to check various transactional scenarios.
  */
@@ -188,12 +190,16 @@ public abstract class JdbcThinTransactionsAbstractComplexSelfTest extends JdbcTh
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        IgniteEx ignite = (IgniteEx)startGridsMultiThreaded(4);
+        System.setProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING, "true");
 
-        DistributedSqlConfiguration cliSqlDistrCfg = ((IgniteH2Indexing)ignite.context().query().getIndexing())
-            .distributedConfiguration();
+        startGridsMultiThreaded(4);
+    }
 
-        cliSqlDistrCfg.disableCreateLuceneIndexForStringValueType(true);
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
+
+        System.clearProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING);
     }
 
     /** {@inheritDoc} */

@@ -25,6 +25,8 @@ import org.apache.ignite.internal.processors.query.h2.DistributedSqlConfiguratio
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING;
+
 /**
  * Abstract class for REST protocols tests.
  */
@@ -43,12 +45,9 @@ public abstract class AbstractRestProcessorSelfTest extends GridCommonAbstractTe
 
         cleanPersistenceDir();
 
-        IgniteEx ignite = startGrids(gridCount());
+        System.setProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING, "true");
 
-        DistributedSqlConfiguration cliSqlDistrCfg = ((IgniteH2Indexing)ignite.context().query().getIndexing())
-            .distributedConfiguration();
-
-        cliSqlDistrCfg.disableCreateLuceneIndexForStringValueType(true);
+        startGrids(gridCount());
     }
 
     /** {@inheritDoc} */
@@ -70,6 +69,8 @@ public abstract class AbstractRestProcessorSelfTest extends GridCommonAbstractTe
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         stopAllGrids();
+
+        System.clearProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING);
 
         cleanPersistenceDir();
 
