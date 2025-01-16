@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
- Copyright 2019 GridGain Systems, Inc. and Contributors.
+ Copyright 2024 GridGain Systems, Inc. and Contributors.
 
  Licensed under the GridGain Community Edition License (the "License");
  you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.release>11</maven.compiler.release>
     </properties>
 
     <dependencies>
