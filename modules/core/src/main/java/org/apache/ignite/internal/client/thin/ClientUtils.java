@@ -514,6 +514,14 @@ public final class ClientUtils {
                                     String name = reader.readString();
                                     QueryIndexType type = QueryIndexType.fromOrdinal(reader.readByte());
                                     int inlineSize = reader.readInt();
+                                    int similarityFunctionInt = -1;
+
+                                    //check if similarity function feature is supported
+                                    boolean isVectorSimilaritySupported =
+                                            protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY);
+                                    if(isVectorSimilaritySupported){
+                                        similarityFunctionInt = reader.readInt();
+                                    }
 
                                     LinkedHashMap<String, Boolean> fields = ClientUtils.collection(
                                         in,
@@ -524,8 +532,11 @@ public final class ClientUtils {
                                             (a, b) -> a,
                                             LinkedHashMap::new
                                     ));
-
-                                    return new QueryIndex(fields, type).setName(name).setInlineSize(inlineSize);
+                                    QueryIndex queryIndex = new QueryIndex(fields, type).setName(name).setInlineSize(inlineSize);
+                                    if(isVectorSimilaritySupported){
+                                        queryIndex.setSimilarityFunction(similarityFunctionInt);
+                                    }
+                                    return queryIndex;
                                 }
                             ));
                     }

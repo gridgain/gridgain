@@ -311,6 +311,32 @@ public class QueryIndex implements Serializable {
     }
 
     /**
+     * Sets the Vector Similarity Function for VECTOR Index based on the int value received.
+     *
+     * @param similarityFunctionInt Vector Similarity Function as integer.
+     * @return {@code this} for chaining.
+     */
+    public QueryIndex setSimilarityFunction(int similarityFunctionInt) {
+        QueryVectorField.SimilarityFunction similarityFunction = QueryVectorField.SimilarityFunction.COSINE;
+        switch (similarityFunctionInt){
+            case 1:
+                similarityFunction = QueryVectorField.SimilarityFunction.EUCLIDEAN;
+                break;
+            case 2:
+                similarityFunction = QueryVectorField.SimilarityFunction.DOT_PRODUCT;
+                break;
+            case 3:
+                similarityFunction = QueryVectorField.SimilarityFunction.MAXIMUM_INNER_PRODUCT;
+                break;
+            default:
+                similarityFunction = QueryVectorField.SimilarityFunction.COSINE;
+                break;
+        }
+        this.similarityFunction = similarityFunction;
+        return this;
+    }
+
+    /**
      * Sets the Vector Similarity Function for VECTOR Index
      *
      * @param similarityFunction Vector Similarity Function.
