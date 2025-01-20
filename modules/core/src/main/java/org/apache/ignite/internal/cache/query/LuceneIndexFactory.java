@@ -40,7 +40,12 @@ import org.jetbrains.annotations.Nullable;
  * Factory for {@link LuceneIndex} implementations.
  */
 public interface LuceneIndexFactory {
-    /** {@inheritDoc} */
+    /**
+     * @param cacheName Cache name.
+     * @param type Type name.
+     * @return Lucene index.
+     * @throws IgniteCheckedException In case of an error in creating the index.
+     */
     public LuceneIndex createIndex(
         @Nullable String cacheName,
         GridQueryTypeDescriptor type
