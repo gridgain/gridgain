@@ -393,7 +393,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed.
      */
     protected void afterTestsStopped() throws Exception {
-        System.setProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING, "true");
+        System.clearProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING);
     }
 
     /**

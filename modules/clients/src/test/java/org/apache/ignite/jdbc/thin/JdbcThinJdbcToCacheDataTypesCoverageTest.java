@@ -63,13 +63,6 @@ public class JdbcThinJdbcToCacheDataTypesCoverageTest extends SqlDataTypesCovera
         super.beforeTestsStarted();
     }
 
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING);
-    }
-
     /** @inheritDoc */
     @SuppressWarnings("RedundantMethodOverride")
     @Before

@@ -53,8 +53,6 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheDataTypesCoverageTest;
-import org.apache.ignite.internal.processors.query.h2.DistributedSqlConfiguration;
-import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.lang.GridAbsPredicateX;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -65,7 +63,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
@@ -123,20 +120,6 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     /** Expected ex. */
     @Rule
     public ExpectedException expEx = ExpectedException.none();
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING, "true");
-
-        super.beforeTestsStarted();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING);
-    }
 
     /** @inheritDoc */
     @Before

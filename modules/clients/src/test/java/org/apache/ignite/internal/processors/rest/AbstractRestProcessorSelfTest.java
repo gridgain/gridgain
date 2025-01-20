@@ -20,12 +20,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.query.h2.DistributedSqlConfiguration;
-import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING;
 
 /**
  * Abstract class for REST protocols tests.
@@ -44,8 +39,6 @@ public abstract class AbstractRestProcessorSelfTest extends GridCommonAbstractTe
         super.beforeTestsStarted();
 
         cleanPersistenceDir();
-
-        System.setProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING, "true");
 
         startGrids(gridCount());
     }
@@ -69,8 +62,6 @@ public abstract class AbstractRestProcessorSelfTest extends GridCommonAbstractTe
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         stopAllGrids();
-
-        System.clearProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING);
 
         cleanPersistenceDir();
 

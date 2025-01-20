@@ -39,8 +39,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
-import org.apache.ignite.internal.processors.query.h2.DistributedSqlConfiguration;
-import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -48,8 +46,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
-
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING;
 
 /**
  * Test to check various transactional scenarios.
@@ -190,16 +186,7 @@ public abstract class JdbcThinTransactionsAbstractComplexSelfTest extends JdbcTh
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        System.setProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING, "true");
-
         startGridsMultiThreaded(4);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        System.clearProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING);
     }
 
     /** {@inheritDoc} */
