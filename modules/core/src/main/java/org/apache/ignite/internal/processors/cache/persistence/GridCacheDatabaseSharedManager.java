@@ -943,12 +943,12 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         snapshotMgr = cctx.snapshot();
 
-        checkpointManager.init();
-
         super.onActivate(ctx);
 
         if (!cctx.kernalContext().clientNode())
             finishRecovery();
+
+        checkpointManager.init();
     }
 
     /** {@inheritDoc} */

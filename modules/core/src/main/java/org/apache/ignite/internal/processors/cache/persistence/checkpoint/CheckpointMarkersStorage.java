@@ -243,10 +243,11 @@ public class CheckpointMarkersStorage {
     void start() {
         cpHistory.start();
 
-        if (checkpointMapSnapshotExecutor == null || checkpointMapSnapshotExecutor.isTerminated())
-        this.checkpointMapSnapshotExecutor = Executors.newSingleThreadExecutor(
-                new IgniteThreadFactory(instanceName, "cp-map-snapshot-executor-")
-        );
+        if (checkpointMapSnapshotExecutor == null || checkpointMapSnapshotExecutor.isTerminated()) {
+            this.checkpointMapSnapshotExecutor = Executors.newSingleThreadExecutor(
+                    new IgniteThreadFactory(instanceName, "cp-map-snapshot-executor-")
+            );
+        }
     }
 
     /**
