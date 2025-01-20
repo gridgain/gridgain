@@ -198,7 +198,7 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     }
 
     /**
-     * Sets k (the number of vectors to return).
+     * Sets threshold for cosine similarity
      *
      * @param threshold threshold.
      * @return {@code this} For chaining.
@@ -210,9 +210,9 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     }
 
     /**
-     * Gets k (the number of vectors to return).
+     * Gets threshold for cosine similarity
      *
-     * @return K.
+     * @return threshold.
      */
     public float getThreshold() {
         return threshold;
