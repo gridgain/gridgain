@@ -20,9 +20,9 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
-import org.apache.ignite.internal.processors.query.h2.opt.LuceneIndex;
-import org.apache.ignite.internal.processors.query.h2.opt.LuceneIndexExtension;
-import org.apache.ignite.internal.processors.query.h2.opt.LuceneIndexFactory;
+import org.apache.ignite.internal.cache.query.LuceneIndex;
+import org.apache.ignite.internal.cache.query.LuceneIndexExtension;
+import org.apache.ignite.internal.cache.query.LuceneIndexFactory;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.nonNull;
