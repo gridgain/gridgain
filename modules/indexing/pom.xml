@@ -140,6 +140,7 @@
                     <groupId>org.gridgain</groupId>
                     <artifactId>ignite-lucene</artifactId>
                     <version>${project.version}</version>
+                    <scope>test</scope>
                 </dependency>
             </dependencies>
 
