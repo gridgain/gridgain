@@ -71,7 +71,7 @@ namespace Apache.Ignite.Core.Impl.Common
 
             if (log != null)
             {
-                log.Debug("Classpath resolved to: {0}", cpStr);
+                log.Warn("Classpath resolved to: {0}", cpStr);
             }
 
             var res = cpStr.ToString();
@@ -110,10 +110,6 @@ namespace Apache.Ignite.Core.Impl.Common
                     if (!dir.EndsWith("optional", StringComparison.Ordinal))
                         AppendJars(dir, cpStr);
                 }
-            }
-
-            if (log != null) {
-                log.Debug(">>>>>> AppendHomeClasspath resolved to: {0}", cpStr);
             }
         }
 
