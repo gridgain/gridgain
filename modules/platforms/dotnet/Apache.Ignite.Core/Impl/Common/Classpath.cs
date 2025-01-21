@@ -71,7 +71,7 @@ namespace Apache.Ignite.Core.Impl.Common
 
             if (log != null)
             {
-                log.Warn("Classpath resolved to: {0}", cpStr);
+                log.Debug("Classpath resolved to: {0}", cpStr);
             }
 
             var res = cpStr.ToString();
