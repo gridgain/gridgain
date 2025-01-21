@@ -78,7 +78,7 @@ namespace Apache.Ignite.Core.Tests
         {
             "-XX:+HeapDumpOnOutOfMemoryError",
             "-ea",
-            "-DIGNITE_QUIET=false",
+            "-DIGNITE_QUIET=true",
             "-Duser.timezone=UTC",
             "-DIGNITE_UPDATE_NOTIFIER=false",
             "-DIGNITE_SENSITIVE_DATA_LOGGING=plain",
@@ -93,7 +93,7 @@ namespace Apache.Ignite.Core.Tests
 
         /** */
         private static readonly IList<string> JvmDebugOpts =
-            new List<string> { "-Xdebug", "-Xnoagent", "-Djava.compiler=NONE", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005", "-DIGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP=true" };
+            new List<string> { "-Xdebug", "-Xnoagent", "-Djava.compiler=NONE", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005", "-DIGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP=false" };
 
         /** */
         public static bool JvmDebug = true;

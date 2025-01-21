@@ -118,15 +118,8 @@ public class GridLuceneTextIndex implements LuceneIndex {
 
         dir = new GridLuceneDirectory(new GridUnsafeMemory(0));
 
-        Lucene99Codec knnVectorsCodec = new Lucene99Codec(Lucene99Codec.Mode.BEST_SPEED) {
-            @Override public KnnVectorsFormat getKnnVectorsFormatForField(String field) {
-                return new HighDimensionKnnVectorsFormat(new Lucene99HnswVectorsFormat(), 1536);
-            }
-        };
-
         try {
-            writer = new IndexWriter(dir, new IndexWriterConfig(new StandardAnalyzer())
-                    .setCodec(knnVectorsCodec));
+            writer = new IndexWriter(dir, new IndexWriterConfig(new StandardAnalyzer()));
         }
         catch (IOException e) {
             throw new IgniteException(e);
@@ -161,7 +154,8 @@ public class GridLuceneTextIndex implements LuceneIndex {
     }
 
     /** {@inheritDoc} */
-    public void store(CacheObject k, CacheObject v, GridCacheVersion ver, long expires) throws IgniteCheckedException {
+    @Override public void store(CacheObject k, CacheObject v, GridCacheVersion ver, long expires)
+        throws IgniteCheckedException {
         CacheObjectContext coctx = objectContext();
 
         Object key = k.isPlatformType() ? k.value(coctx, false) : k;
@@ -219,7 +213,7 @@ public class GridLuceneTextIndex implements LuceneIndex {
     }
 
     /** {@inheritDoc} */
-    public void remove(CacheObject key) throws IgniteCheckedException {
+    @Override public void remove(CacheObject key) throws IgniteCheckedException {
         try {
             writer.deleteDocuments(new Term(KEY_FIELD_NAME,
                 new BytesRef(key.valueBytes(objectContext()))));
@@ -233,7 +227,7 @@ public class GridLuceneTextIndex implements LuceneIndex {
     }
 
     /** {@inheritDoc} */
-    public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> textQuery(String qry,
+    @Override public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> textQuery(String qry,
         IndexingQueryFilter filters) throws IgniteCheckedException {
         IndexReader reader;
 
@@ -421,32 +415,6 @@ public class GridLuceneTextIndex implements LuceneIndex {
         /** {@inheritDoc} */
         @Override protected void onClose() throws IgniteCheckedException {
             U.closeQuiet(reader);
-        }
-    }
-
-    private static class HighDimensionKnnVectorsFormat extends KnnVectorsFormat {
-        private final KnnVectorsFormat knnFormat;
-        private final int maxDimensions;
-
-        public HighDimensionKnnVectorsFormat(KnnVectorsFormat knnFormat, int maxDimensions) {
-            super(knnFormat.getName());
-            this.knnFormat = knnFormat;
-            this.maxDimensions = maxDimensions;
-        }
-
-        @Override
-        public KnnVectorsWriter fieldsWriter(SegmentWriteState state) throws IOException {
-            return knnFormat.fieldsWriter(state);
-        }
-
-        @Override
-        public KnnVectorsReader fieldsReader(SegmentReadState state) throws IOException {
-            return knnFormat.fieldsReader(state);
-        }
-
-        @Override
-        public int getMaxDimensions(String fieldName) {
-            return maxDimensions;
         }
     }
 }
