@@ -28,6 +28,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.cache.persistence.DataStorageMetricsImpl;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.nio.ByteBuffer.allocate;
 import static java.nio.ByteBuffer.allocateDirect;
@@ -398,8 +399,8 @@ public class SegmentedRingByteBuffer {
         ByteBuffer bb = readOnly ? buf.asReadOnlyBuffer() : buf.duplicate();
 
         bb.order(ByteOrder.nativeOrder());
-        bb.limit(off + len);
-        bb.position(off);
+        U.limit(bb, off + len);
+        U.position(bb, off);
 
         return bb;
     }
@@ -424,12 +425,12 @@ public class SegmentedRingByteBuffer {
 
         if (buf.isDirect()) {
             ByteBuffer src0 = src.duplicate();
-            src0.limit(srcPos + len);
-            src0.position(srcPos);
+            U.limit(src0, srcPos + len);
+            U.position(src0, srcPos);
 
             ByteBuffer dest0 = dest.duplicate();
-            dest0.limit(destPos + len);
-            dest0.position(destPos);
+            U.limit(dest0, destPos + len);
+            U.position(dest0, destPos);
 
             dest0.put(src0);
         }

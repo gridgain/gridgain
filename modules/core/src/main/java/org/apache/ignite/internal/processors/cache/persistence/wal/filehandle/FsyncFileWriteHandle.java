@@ -498,10 +498,10 @@ class FsyncFileWriteHandle extends AbstractFileHandle implements FileWriteHandle
         assert limit <= buf.capacity();
 
         buf.rewind();
-        buf.limit(limit);
+        U.limit(buf, limit);
 
         do {
-            buf.position(head.chainSize() - head.size());
+            U.position(buf, head.chainSize() - head.size());
             buf.limit(head.chainSize()); // Just to make sure that serializer works in bounds.
 
             try {
@@ -520,7 +520,7 @@ class FsyncFileWriteHandle extends AbstractFileHandle implements FileWriteHandle
         assert head instanceof FakeRecord : head.getClass();
 
         buf.rewind();
-        buf.limit(limit);
+        U.limit(buf, limit);
 
         return recordOffset(head);
     }

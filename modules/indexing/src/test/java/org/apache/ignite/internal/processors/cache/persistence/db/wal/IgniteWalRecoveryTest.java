@@ -1457,7 +1457,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
 
                         pageData = new byte[realPageSize];
 
-                        buf.position(0);
+                        U.position(buf, 0);
 
                         buf.get(pageData);
                     }

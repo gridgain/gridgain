@@ -7,6 +7,7 @@ package org.gridgain.internal.h2.dev.util;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * An ANS (Asymmetric Numeral Systems) compression tool.
@@ -149,7 +150,7 @@ public class AnsCompression {
         }
         b -= 8;
         buff.putLong(b, state);
-        buff.position(b);
+        Utils.position(buff, b);
         return buff.slice();
     }
 

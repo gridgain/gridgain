@@ -25,6 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.direct.stream.DirectByteBufferStream;
 import org.apache.ignite.internal.util.GridUnsafe;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.jetbrains.annotations.Nullable;
@@ -400,7 +401,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
         int typeSize = 1 << lenShift;
         long baseOff = baseOffset(srcArr);
 
-        buff.limit(outBytes);
+        U.limit(buff, outBytes);
         buff.rewind();
 
         boolean writeRes;
@@ -446,7 +447,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
         int typeSize = 1 << lenShift;
         long baseOff = baseOffset(srcArr);
 
-        buff.limit(outBytes - 1);
+        U.limit(buff, outBytes - 1);
         buff.rewind();
 
         // Write and read the first part.
@@ -473,7 +474,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
 
         assertEquals(null, resArr);
 
-        buff.limit(outBytes);
+        U.limit(buff, outBytes);
         buff.rewind();
 
         // Write and read the second part.

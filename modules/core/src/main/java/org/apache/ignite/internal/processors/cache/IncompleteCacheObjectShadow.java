@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.nio.ByteBuffer;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Cache object container that only accumulates type of the object without its data.
@@ -93,7 +94,7 @@ public class IncompleteCacheObjectShadow extends IncompleteCacheObject {
         if (headerReady) {
             int len = Math.min(valLen - off, buf.remaining());
 
-            buf.position(buf.position() + len);
+            U.position(buf, buf.position() + len);
 
             off += len;
         }

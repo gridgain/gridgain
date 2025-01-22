@@ -139,7 +139,7 @@ public class GridClientZipOptimizedMarshaller extends GridClientOptimizedMarshal
 
             ByteBuffer buf = ByteBuffer.allocate(off + bytes.length + 1);
 
-            buf.position(off);
+            U.position(buf, off);
             buf.put((byte)(zip ? 1 : 0));
             buf.put(bytes);
             U.flip(buf);

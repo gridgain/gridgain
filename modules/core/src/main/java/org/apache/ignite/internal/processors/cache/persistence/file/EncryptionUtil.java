@@ -22,6 +22,7 @@ import org.apache.ignite.internal.managers.encryption.GroupKey;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.FastCrc;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
 
 /** Encryption utililty class. */
@@ -73,8 +74,8 @@ public class EncryptionUtil {
 
         res.put(grpKey.id());
 
-        srcBuf.limit(srcLimit);
-        srcBuf.position(srcBuf.position() + encryptionOverhead);
+        U.limit(srcBuf, srcLimit);
+        U.position(srcBuf, srcBuf.position() + encryptionOverhead);
     }
 
     /**
@@ -103,7 +104,7 @@ public class EncryptionUtil {
                 ", calculatedCrc=" + crc + "]");
         }
 
-        encrypted.position(encrypted.position() - (encryptedDataSize() + 4 /* CRC size. */));
+        U.position(encrypted, encrypted.position() - (encryptedDataSize() + 4 /* CRC size. */));
 
         encrypted.limit(encryptedDataSize());
 
@@ -125,7 +126,7 @@ public class EncryptionUtil {
 
         // Avoid junk explicitly.
         res.put(zeroes, 0, encSpi.blockSize());
-        res.position(encryptedDataSize);
+        U.position(res, encryptedDataSize);
 
         res.put((byte) (crc >> 24));
         res.put((byte) (crc >> 16));
@@ -157,12 +158,12 @@ public class EncryptionUtil {
     private boolean tailIsEmpty(ByteBuffer src, int pageType) {
         int srcPos = src.position();
 
-        src.position(srcPos + plainDataSize());
+        U.position(src, srcPos + plainDataSize());
 
         for (int i = 0; i < encryptionOverhead; i++)
             assert src.get() == 0 : "Tail of src should be empty [i=" + i + ", pageType=" + pageType + "]";
 
-        src.position(srcPos);
+        U.position(src, srcPos);
 
         return true;
     }

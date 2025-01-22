@@ -163,10 +163,10 @@ public class RecordV2Serializer implements RecordSerializer {
                 buf.putInt(ptr.length());
 
                 in.readFully(buf.array(), buf.position(), ptr.length() - buf.position());
-                buf.position(ptr.length());
+                U.position(buf, ptr.length());
 
                 // Unwind reading CRC.
-                in.buffer().position(in.buffer().position() - CRC_SIZE);
+                U.position(in.buffer(), in.buffer().position() - CRC_SIZE);
 
                 U.flip(buf);
 

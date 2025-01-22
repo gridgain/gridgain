@@ -253,7 +253,7 @@ public class StreamStore {
             case 0:
                 // in-place: 0, len (int), data
                 int len = DataUtils.readVarInt(idBuffer);
-                idBuffer.position(idBuffer.position() + len);
+                Utils.position(idBuffer, idBuffer.position() + len);
                 break;
             case 1:
                 // block: 1, len (int), blockId (long)
@@ -293,7 +293,7 @@ public class StreamStore {
             case 0:
                 // in-place: 0, len (int), data
                 int len = DataUtils.readVarInt(idBuffer);
-                idBuffer.position(idBuffer.position() + len);
+                Utils.position(idBuffer, idBuffer.position() + len);
                 break;
             case 1:
                 // block: 1, len (int), blockId (long)
@@ -333,7 +333,7 @@ public class StreamStore {
             case 0:
                 // in-place: 0, len (int), data
                 len = DataUtils.readVarInt(idBuffer);
-                idBuffer.position(idBuffer.position() + len);
+                Utils.position(idBuffer, idBuffer.position() + len);
                 buff.append("data len=").append(len);
                 length += len;
                 break;
@@ -375,7 +375,7 @@ public class StreamStore {
             case 0:
                 // in-place: 0, len (int), data
                 int len = DataUtils.readVarInt(idBuffer);
-                idBuffer.position(idBuffer.position() + len);
+                Utils.position(idBuffer, idBuffer.position() + len);
                 length += len;
                 break;
             case 1:
@@ -410,7 +410,7 @@ public class StreamStore {
                 return false;
             }
             int len = DataUtils.readVarInt(idBuffer);
-            idBuffer.position(idBuffer.position() + len);
+            Utils.position(idBuffer, idBuffer.position() + len);
         }
         return true;
     }
@@ -494,7 +494,7 @@ public class StreamStore {
         @Override
         public void close() {
             buffer = null;
-            idBuffer.position(idBuffer.limit());
+            Utils.position(idBuffer, idBuffer.limit());
             pos = length;
         }
 
@@ -534,12 +534,12 @@ public class StreamStore {
                     int len = DataUtils.readVarInt(idBuffer);
                     if (skip >= len) {
                         skip -= len;
-                        idBuffer.position(idBuffer.position() + len);
+                        Utils.position(idBuffer, idBuffer.position() + len);
                         continue;
                     }
                     int p = (int) (idBuffer.position() + skip);
                     int l = (int) (len - skip);
-                    idBuffer.position(p + l);
+                    Utils.position(idBuffer, p + l);
                     return new ByteArrayInputStream(idBuffer.array(), p, l);
                 }
                 case 1: {

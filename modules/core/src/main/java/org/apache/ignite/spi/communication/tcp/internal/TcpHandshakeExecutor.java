@@ -351,7 +351,7 @@ public class TcpHandshakeExecutor {
 
                 dst.put(src);
 
-                src.limit(oldLimit);
+                U.limit(src, oldLimit);
             }
 
             src.compact();

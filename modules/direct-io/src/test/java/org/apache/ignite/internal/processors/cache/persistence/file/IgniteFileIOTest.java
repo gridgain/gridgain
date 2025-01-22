@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
@@ -207,7 +208,7 @@ public class IgniteFileIOTest {
                     return super.read(destBuf);
                 }
                 finally {
-                    destBuf.limit(oldLimit);
+                    U.limit(destBuf, oldLimit);
                 }
             }
         };
@@ -265,7 +266,7 @@ public class IgniteFileIOTest {
                     return super.write(destBuf);
                 }
                 finally {
-                    destBuf.limit(oldLimit);
+                    U.limit(destBuf, oldLimit);
                 }
             }
         };

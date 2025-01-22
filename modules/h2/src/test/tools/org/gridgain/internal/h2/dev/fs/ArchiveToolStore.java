@@ -108,7 +108,7 @@ public class ArchiveToolStore {
                     while (!eof && buff.remaining() < 512 * 1024) {
                         int remaining = buff.remaining();
                         buff.compact();
-                        buff.position(remaining);
+                        Utils.position(buff, remaining);
                         int l = fc.read(buff);
                         if (l < 0) {
                             eof = true;
@@ -122,7 +122,7 @@ public class ArchiveToolStore {
                     int c = getChunkLength(buff.array(), position,
                             buff.limit()) - position;
                     byte[] bytes = Arrays.copyOfRange(buff.array(), position, position + c);
-                    buff.position(position + c);
+                    Utils.position(buff, position + c);
                     int[] key = getKey(bucket, bytes);
                     key[3] = segmentId;
                     while (true) {

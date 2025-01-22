@@ -258,8 +258,8 @@ public class FilePathEncrypt extends FilePathWrapper {
                 ByteBuffer temp = ByteBuffer.allocate(l);
                 readInternal(temp, p, l);
                 Utils.flip(temp);
-                temp.limit(offset + len);
-                temp.position(offset);
+                Utils.limit(temp, offset + len);
+                Utils.position(temp, offset);
                 dst.put(temp);
                 return len;
             }
@@ -308,10 +308,10 @@ public class FilePathEncrypt extends FilePathWrapper {
                     readInternal(temp, p, readLen);
                     temp.rewind();
                 }
-                temp.limit(offset + len);
-                temp.position(offset);
+                Utils.limit(temp, offset + len);
+                Utils.position(temp, offset);
                 temp.put(src);
-                temp.limit(l);
+                Utils.limit(temp, l);
                 temp.rewind();
                 writeInternal(temp, p, l);
                 long p2 = position + len;

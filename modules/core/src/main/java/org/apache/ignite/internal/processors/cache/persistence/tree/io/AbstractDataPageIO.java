@@ -31,6 +31,7 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetri
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.util.GridUnsafe.bufferAddress;
@@ -1168,7 +1169,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         if (payload == null) {
             ByteBuffer buf = pageMem.pageBuffer(pageAddr);
 
-            buf.position(dataOff);
+            U.position(buf, dataOff);
 
             short p = (short)(payloadSize | FRAGMENTED_FLAG);
 
@@ -1286,7 +1287,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
             moveBytes(pageAddr, firstOff, pageSize - firstOff, -freeSpace, pageSize);
         }
 
-        out.limit(pageSize - freeSpace); // Here we have only meaningful data of this page.
+        U.limit(out, pageSize - freeSpace); // Here we have only meaningful data of this page.
     }
 
     /** {@inheritDoc} */
@@ -1314,7 +1315,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
             }
         }
 
-        page.limit(pageSize);
+        U.limit(page, pageSize);
     }
 
     /**

@@ -180,8 +180,8 @@ public class GridNioSslHandler extends ReentrantLock {
         }
 
         // Initially buffer is empty.
-        outNetBuf.position(0);
-        outNetBuf.limit(0);
+        U.position(outNetBuf, 0);
+        U.limit(outNetBuf, 0);
 
         int appBufSize = Math.max(sslEngine.getSession().getApplicationBufferSize() + 50, netBufSize * 2);
 
@@ -366,7 +366,7 @@ public class GridNioSslHandler extends ReentrantLock {
             int newPosition = buf.position() - inNetBuf.position();
 
             if (newPosition >= 0) {
-                buf.position(newPosition);
+                U.position(buf, newPosition);
 
                 // If we received close_notify but not all bytes has been read by SSL engine, print a warning.
                 if (buf.hasRemaining())

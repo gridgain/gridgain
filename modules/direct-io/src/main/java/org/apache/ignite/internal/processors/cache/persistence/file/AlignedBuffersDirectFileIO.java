@@ -313,7 +313,7 @@ public class AlignedBuffersDirectFileIO extends AbstractFileIO {
             if (written > len)
                 written = len;
 
-            srcBuf.position(initPos + written);
+            U.position(srcBuf, initPos + written);
 
             return written;
         }
@@ -424,7 +424,7 @@ public class AlignedBuffersDirectFileIO extends AbstractFileIO {
             throw new IOException(String.format("Error during reading file [%s] from position [%s] : %s",
                 file, filePos == FILE_POS_USE_CURRENT ? "current" : Long.toString(filePos), getLastError()));
 
-        destBuf.position(pos + rd);
+        U.position(destBuf, pos + rd);
 
         return rd;
     }
@@ -464,7 +464,7 @@ public class AlignedBuffersDirectFileIO extends AbstractFileIO {
                 file, pos, wr, limit));
         }
 
-        srcBuf.position(pos + wr);
+        U.position(srcBuf, pos + wr);
 
         return wr;
     }

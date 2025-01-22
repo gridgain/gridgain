@@ -253,7 +253,7 @@ public abstract class CacheObjectAdapter implements CacheObject, Externalizable 
             head.putInt(dataLen);
             head.put(cacheObjType);
 
-            head.position(off);
+            U.position(buf, off);
 
             if (len < head.capacity())
                 head.limit(off + Math.min(len, head.capacity() - off));

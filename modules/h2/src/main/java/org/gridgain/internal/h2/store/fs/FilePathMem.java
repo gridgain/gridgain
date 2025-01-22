@@ -24,6 +24,7 @@ import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.compress.CompressLZF;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.util.MathUtils;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * This file system keeps files fully in memory. There is an option to compress
@@ -318,7 +319,7 @@ class FileMem extends FileBase {
         data.touch(readOnly);
         data.readWrite(position, src.array(),
                 src.arrayOffset() + src.position(), len, true);
-        src.position(src.position() + len);
+        Utils.position(src, src.position() + len);
         return len;
     }
 
@@ -334,7 +335,7 @@ class FileMem extends FileBase {
         data.touch(readOnly);
         pos = data.readWrite(pos, src.array(),
                 src.arrayOffset() + src.position(), len, true);
-        src.position(src.position() + len);
+        Utils.position(src, src.position() + len);
         return len;
     }
 
@@ -353,7 +354,7 @@ class FileMem extends FileBase {
         if (len <= 0) {
             return -1;
         }
-        dst.position(dst.position() + len);
+        Utils.position(dst, dst.position() + len);
         return len;
     }
 
@@ -372,7 +373,7 @@ class FileMem extends FileBase {
         if (len <= 0) {
             return -1;
         }
-        dst.position(dst.position() + len);
+        Utils.position(dst, dst.position() + len);
         pos = newPos;
         return len;
     }

@@ -428,7 +428,7 @@ public class FilePageStore implements PageStore {
 
             PageIO.setCrc(pageBuf, 0);
 
-            pageBuf.position(0);
+            U.position(pageBuf, 0);
 
             if (!skipCrc) {
                 int curCrc32 = FastCrc.calcCrc(pageBuf, getCrcSize(pageId, pageBuf));
@@ -663,7 +663,7 @@ public class FilePageStore implements PageStore {
 
                         reinit(fileIO);
 
-                        pageBuf.position(0);
+                        U.position(pageBuf, 0);
 
                         PageIO.setCrc(pageBuf, 0);
 
@@ -688,12 +688,12 @@ public class FilePageStore implements PageStore {
      */
     private static int calcCrc32(ByteBuffer pageBuf, int pageSize) {
         try {
-            pageBuf.position(0);
+            U.position(pageBuf, 0);
 
             return FastCrc.calcCrc(pageBuf, pageSize);
         }
         finally {
-            pageBuf.position(0);
+            U.position(pageBuf, 0);
         }
     }
 
@@ -806,7 +806,7 @@ public class FilePageStore implements PageStore {
                 return bytesRead;
             }
             catch (ClosedChannelException e) {
-                destBuf.position(bufPos);
+                U.position(destBuf, bufPos);
 
                 if (e instanceof ClosedByInterruptException) {
                     interrupted = true;

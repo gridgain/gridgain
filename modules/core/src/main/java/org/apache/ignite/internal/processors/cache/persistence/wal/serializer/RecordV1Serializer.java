@@ -419,7 +419,7 @@ public class RecordV1Serializer implements RecordSerializer {
         if (!skipCrc) {
             int curPos = buf.position();
 
-            buf.position(startPos);
+            U.position(buf, startPos);
 
             // This call will move buffer position to the end of the record again.
             int crcVal = FastCrc.calcCrc(buf, curPos - startPos);

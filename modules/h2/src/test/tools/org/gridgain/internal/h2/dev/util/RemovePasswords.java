@@ -44,7 +44,7 @@ public class RemovePasswords {
                     buff.get(i + 7) != 'U' || buff.get(i + 8) != 'S') {
                 continue;
             }
-            buff.position(i);
+            Utils.position(buff, i);
             buff.get(data);
             String s = new String(data, StandardCharsets.UTF_8);
             if (!s.startsWith("CREATE USER ")) {
@@ -76,7 +76,7 @@ public class RemovePasswords {
                     .append(StringUtils.convertBytesToHex(passwordHash))
                     .append('\'');
             byte[] replacement = b.toString().getBytes();
-            buff.position(i + saltIndex);
+            Utils.position(buff, i + saltIndex);
             buff.put(replacement, 0, replacement.length);
         }
         f.close();

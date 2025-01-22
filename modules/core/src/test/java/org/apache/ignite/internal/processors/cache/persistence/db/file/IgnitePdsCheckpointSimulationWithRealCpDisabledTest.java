@@ -634,7 +634,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
                     mem.checkpointWritePage(fullId, buf, (fullPageId, buffer, tag) -> {
                     }, null);
 
-                    buf.position(PageIO.COMMON_HEADER_END);
+                    U.position(buf, PageIO.COMMON_HEADER_END);
 
                     while (buf.hasRemaining())
                         assertEquals((byte)0, buf.get());

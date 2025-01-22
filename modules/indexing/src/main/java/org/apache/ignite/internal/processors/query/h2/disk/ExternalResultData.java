@@ -381,7 +381,7 @@ public class ExternalResultData<T> implements AutoCloseable {
             readBuff = ByteBuffer.allocate(size * 2);
 
         U.clear(readBuff);
-        readBuff.limit(size);
+        U.limit(readBuff, size);
 
         readFromFile(readBuff);
 

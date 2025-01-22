@@ -780,10 +780,10 @@ public class TestFileSystem extends TestBase {
     private static ByteBuffer createSlicedBuffer(byte[] buffer, int offset,
             int len) {
         ByteBuffer byteBuff = ByteBuffer.wrap(buffer);
-        byteBuff.position(offset);
+        Utils.position(byteBuff, offset);
         // force the arrayOffset to be non-0
         byteBuff = byteBuff.slice();
-        byteBuff.limit(len);
+        Utils.limit(byteBuff, len);
         return byteBuff;
     }
 
@@ -828,7 +828,7 @@ public class TestFileSystem extends TestBase {
                     for (int pos = 0; pos < size; pos++) {
                         Utils.clear(byteBuff);
                         f.read(byteBuff, pos * 64 * 1024);
-                        byteBuff.position(0);
+                        Utils.position(byteBuff, 0);
                         int x = byteBuff.getInt();
                         int y = byteBuff.getInt();
                         assertEquals(x, y);
@@ -843,7 +843,7 @@ public class TestFileSystem extends TestBase {
             ByteBuffer byteBuff = ByteBuffer.allocate(16);
             int operations = 10000;
             for (int i = 0; i < operations; i++) {
-                byteBuff.position(0);
+                Utils.position(byteBuff, 0);
                 byteBuff.putInt(i);
                 byteBuff.putInt(i);
                 Utils.flip(byteBuff);
@@ -853,8 +853,8 @@ public class TestFileSystem extends TestBase {
                 pos = random.nextInt(size);
                 Utils.clear(byteBuff);
                 f.read(byteBuff, pos * 64 * 1024);
-                byteBuff.limit(16);
-                byteBuff.position(0);
+                Utils.limit(byteBuff, 16);
+                Utils.position(byteBuff, 0);
                 int x = byteBuff.getInt();
                 int y = byteBuff.getInt();
                 assertEquals(x, y);

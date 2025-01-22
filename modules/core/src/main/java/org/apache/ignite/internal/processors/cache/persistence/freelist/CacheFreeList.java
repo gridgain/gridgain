@@ -258,7 +258,7 @@ public class CacheFreeList extends AbstractFreeList<CacheDataRow> {
 
                         DataPagePayload data = io.readPayload(curPageAddr, cutItemId, pageSize());
 
-                        buf.position(data.offset());
+                        U.position(buf, data.offset());
                         buf.limit(data.offset() + data.payloadSize());
 
                         // This variable contains the number of bytes that were updated on the current page.

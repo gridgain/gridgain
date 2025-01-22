@@ -71,7 +71,7 @@ public class SimpleFileInput implements FileInput {
      */
     private void clearBuffer() {
         U.clear(buf);
-        buf.limit(0);
+        U.limit(buf, 0);
 
         assert buf.remaining() == 0; // Buffer is empty.
     }
@@ -159,7 +159,7 @@ public class SimpleFileInput implements FileInput {
      */
     @Override public int skipBytes(int n) throws IOException {
         if (buf.remaining() >= n)
-            buf.position(buf.position() + n);
+            U.position(buf, buf.position() + n);
         else
             seek(pos + n);
 

@@ -24,6 +24,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 
 /**
@@ -121,7 +122,7 @@ public class GridNioCodecFilter extends GridNioFilterAdapter {
                         LT.warn(log, "Parser returned null but there are still unread data in input buffer (bug in " +
                             "parser code?) [parser=" + parser + ", ses=" + ses + ']');
 
-                        input.position(input.limit());
+                        U.position(input, input.limit());
                     }
                 }
             }

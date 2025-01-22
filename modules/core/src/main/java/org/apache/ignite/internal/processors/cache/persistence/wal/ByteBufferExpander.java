@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.persistence.wal;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import org.apache.ignite.internal.util.GridUnsafe;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * ByteBuffer wrapper for dynamically expand buffer size.
@@ -61,8 +62,8 @@ public class ByteBufferExpander implements AutoCloseable {
         ByteBuffer newBuf = GridUnsafe.reallocateBuffer(buf, size);
 
         newBuf.order(buf.order());
-        newBuf.position(pos);
-        newBuf.limit(lim);
+        U.position(newBuf, pos);
+        U.limit(newBuf, lim);
 
         buf = newBuf;
 

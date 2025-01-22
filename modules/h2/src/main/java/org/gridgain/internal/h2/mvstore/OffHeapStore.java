@@ -9,6 +9,7 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.TreeMap;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * A storage mechanism that "persists" data in the off-heap area of the main
@@ -42,8 +43,8 @@ public class OffHeapStore extends FileStore {
         ByteBuffer buff = memEntry.getValue();
         ByteBuffer read = buff.duplicate();
         int offset = (int) (pos - memEntry.getKey());
-        read.position(offset);
-        read.limit(len + offset);
+        Utils.position(read, offset);
+        Utils.limit(read, len + offset);
         return read.slice();
     }
 

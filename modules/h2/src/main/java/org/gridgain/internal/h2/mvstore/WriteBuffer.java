@@ -217,7 +217,7 @@ public class WriteBuffer {
      * @return the new position
      */
     public WriteBuffer position(int newPosition) {
-        buff.position(newPosition);
+        Utils.position(buff, newPosition);
         return this;
     }
 

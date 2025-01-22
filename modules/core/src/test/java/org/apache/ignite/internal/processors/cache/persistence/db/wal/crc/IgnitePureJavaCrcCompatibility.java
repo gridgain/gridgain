@@ -16,11 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.db.wal.crc;
 
-import org.apache.ignite.internal.processors.cache.persistence.wal.crc.FastCrc;
-import org.apache.ignite.internal.processors.cache.persistence.wal.crc.PureJavaCrc32;
-
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
+import org.apache.ignite.internal.processors.cache.persistence.wal.crc.FastCrc;
+import org.apache.ignite.internal.processors.cache.persistence.wal.crc.PureJavaCrc32;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -43,12 +43,12 @@ public class IgnitePureJavaCrcCompatibility {
             buf.putInt(curr.nextInt());
             buf.putInt(curr.nextInt());
             buf.putInt(curr.nextInt());
-            buf.position(i);
+            U.position(buf, i);
 
-            buf.position(i);
+            U.position(buf, i);
             int crc0 = FastCrc.calcCrc(buf, 12);
 
-            buf.position(i);
+            U.position(buf, i);
             int crc1 = PureJavaCrc32.calcCrc32(buf, 12);
 
             assertEquals(crc0, crc1);

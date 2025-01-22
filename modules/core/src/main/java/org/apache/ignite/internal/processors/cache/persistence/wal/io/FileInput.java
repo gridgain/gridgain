@@ -23,6 +23,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.ByteBufferBackedDataInput;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.FastCrc;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.HEADER_RECORD_SIZE;
@@ -125,7 +126,7 @@ public interface FileInput extends ByteBufferBackedDataInput {
 
             int oldPos = buffer().position();
 
-            buffer().position(lastCalcPosition);
+            U.position(buffer(), lastCalcPosition);
 
             crc.update(delegate.buffer(), oldPos - lastCalcPosition);
 
@@ -140,7 +141,7 @@ public interface FileInput extends ByteBufferBackedDataInput {
 
             int skipped = Math.min(buffer().remaining(), n);
 
-            buffer().position(buffer().position() + skipped);
+            U.position(buffer(), buffer().position() + skipped);
 
             return skipped;
         }

@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.util.MemoryUnmapper;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * This file system stores files on disk and uses java.nio to access the files.
@@ -165,9 +166,9 @@ class FileNioMapped extends FileBase {
             if (len <= 0) {
                 return -1;
             }
-            mapped.position(pos);
+            Utils.position(mapped, pos);
             mapped.get(dst.array(), dst.arrayOffset() + dst.position(), len);
-            dst.position(dst.position() + len);
+            Utils.position(dst, dst.position() + len);
             pos += len;
             return len;
         } catch (IllegalArgumentException | BufferUnderflowException e) {
@@ -228,7 +229,7 @@ class FileNioMapped extends FileBase {
         if (mapped.capacity() < pos + len) {
             setFileLength(pos + len);
         }
-        mapped.position(pos);
+        Utils.position(mapped, pos);
         mapped.put(src);
         pos += len;
         return len;

@@ -342,7 +342,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
 
             GridUnsafe.putByte(heapArr, baseOff + pos, val);
 
-            buf.position(pos + 1);
+            U.position(buf, pos + 1);
         }
     }
 
@@ -360,7 +360,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
             else
                 GridUnsafe.putShort(heapArr, off, val);
 
-            buf.position(pos + 2);
+            U.position(buf, pos + 2);
         }
     }
 
@@ -386,7 +386,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
 
             GridUnsafe.putByte(heapArr, baseOff + pos++, (byte)val);
 
-            buf.position(pos);
+            U.position(buf, pos);
         }
     }
 
@@ -412,7 +412,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
 
             GridUnsafe.putByte(heapArr, baseOff + pos++, (byte)val);
 
-            buf.position(pos);
+            U.position(buf, pos);
         }
     }
 
@@ -430,7 +430,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
             else
                 GridUnsafe.putFloat(heapArr, off, val);
 
-            buf.position(pos + 4);
+            U.position(buf, pos + 4);
         }
     }
 
@@ -448,7 +448,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
             else
                 GridUnsafe.putDouble(heapArr, off, val);
 
-            buf.position(pos + 8);
+            U.position(buf, pos + 8);
         }
     }
 
@@ -466,7 +466,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
             else
                 GridUnsafe.putChar(heapArr, off, val);
 
-            buf.position(pos + 2);
+            U.position(buf, pos + 2);
         }
     }
 
@@ -479,7 +479,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
 
             GridUnsafe.putBoolean(heapArr, baseOff + pos, val);
 
-            buf.position(pos + 1);
+            U.position(buf, pos + 1);
         }
     }
 
@@ -852,7 +852,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
         if (lastFinished) {
             int pos = buf.position();
 
-            buf.position(pos + 1);
+            U.position(buf, pos + 1);
 
             return GridUnsafe.getByte(heapArr, baseOff + pos);
         }
@@ -867,7 +867,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
         if (lastFinished) {
             int pos = buf.position();
 
-            buf.position(pos + 2);
+            U.position(buf, pos + 2);
 
             long off = baseOff + pos;
 
@@ -888,7 +888,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
 
             byte b = GridUnsafe.getByte(heapArr, baseOff + pos);
 
-            buf.position(pos + 1);
+            U.position(buf, pos + 1);
 
             prim |= ((long)b & 0x7F) << (7 * primShift);
 
@@ -925,7 +925,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
 
             byte b = GridUnsafe.getByte(heapArr, baseOff + pos);
 
-            buf.position(pos + 1);
+            U.position(buf, pos + 1);
 
             prim |= ((long)b & 0x7F) << (7 * primShift);
 
@@ -958,7 +958,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
         if (lastFinished) {
             int pos = buf.position();
 
-            buf.position(pos + 4);
+            U.position(buf, pos + 4);
 
             long off = baseOff + pos;
 
@@ -975,7 +975,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
         if (lastFinished) {
             int pos = buf.position();
 
-            buf.position(pos + 8);
+            U.position(buf, pos + 8);
 
             long off = baseOff + pos;
 
@@ -992,7 +992,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
         if (lastFinished) {
             int pos = buf.position();
 
-            buf.position(pos + 2);
+            U.position(buf, pos + 2);
 
             long off = baseOff + pos;
 
@@ -1009,7 +1009,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
         if (lastFinished) {
             int pos = buf.position();
 
-            buf.position(pos + 1);
+            U.position(buf, pos + 1);
 
             return GridUnsafe.getBoolean(heapArr, baseOff + pos);
         }
@@ -1373,7 +1373,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
             if (toWrite > 0) {
                 GridUnsafe.copyMemory(arr, off + arrOff, heapArr, baseOff + pos, toWrite);
 
-                buf.position(pos + toWrite);
+                U.position(buf, pos + toWrite);
             }
 
             arrOff = -1;
@@ -1384,7 +1384,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
             if (remaining > 0) {
                 GridUnsafe.copyMemory(arr, off + arrOff, heapArr, baseOff + pos, remaining);
 
-                buf.position(pos + remaining);
+                U.position(buf, pos+ remaining);
 
                 arrOff += remaining;
             }
@@ -1448,7 +1448,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
                 GridUnsafe.putByte(heapArr, baseOff + pos++, b);
             }
 
-            buf.position(pos);
+            U.position(buf, pos);
             arrOff += typeSize;
         }
     }
@@ -1509,7 +1509,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
         if (lastFinished) {
             GridUnsafe.copyMemory(heapArr, baseOff + pos, tmpArr, off + tmpArrOff, toRead);
 
-            buf.position(pos + toRead);
+            U.position(buf, pos + toRead);
 
             T arr = (T)tmpArr;
 
@@ -1522,7 +1522,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
         else {
             GridUnsafe.copyMemory(heapArr, baseOff + pos, tmpArr, off + tmpArrOff, remaining);
 
-            buf.position(pos + remaining);
+            U.position(buf, pos + remaining);
 
             tmpArrOff += remaining;
 
@@ -1584,7 +1584,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
             }
         }
 
-        buf.position(pos + toRead);
+        U.position(buf, pos + toRead);
 
         if (lastFinished) {
             T arr = (T)tmpArr;

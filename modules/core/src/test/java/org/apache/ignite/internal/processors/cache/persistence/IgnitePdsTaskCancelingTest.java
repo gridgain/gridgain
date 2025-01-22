@@ -226,7 +226,7 @@ public class IgnitePdsTaskCancelingTest extends GridCommonAbstractTest {
                         Random random = new Random();
 
                         while (!stopThreads.get()) {
-                            buf.position(0);
+                            U.position(buf, 0);
 
                             try {
                                 if (random.nextBoolean()) {

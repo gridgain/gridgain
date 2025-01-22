@@ -217,7 +217,7 @@ public class TestDataUtils extends TestBase {
         len = buff.position();
         assertEquals(data.length, len);
         byte[] data2 = new byte[len];
-        buff.position(0);
+        Utils.position(buff, 0);
         buff.get(data2);
         assertEquals(data2, data);
         Utils.flip(buff);
@@ -239,7 +239,7 @@ public class TestDataUtils extends TestBase {
         len = buff.position();
         assertEquals(data.length, len);
         data2 = new byte[len];
-        buff.position(0);
+        Utils.position(buff, 0);
         buff.get(data2);
         assertEquals(data2, data);
         Utils.flip(buff);

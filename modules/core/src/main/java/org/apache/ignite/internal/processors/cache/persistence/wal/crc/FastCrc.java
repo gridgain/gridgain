@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence.wal.crc;
 
 import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * This CRC calculation implementation workf much faster then {@link PureJavaCrc32}
@@ -93,7 +94,7 @@ public final class FastCrc {
 
         crcAlgo.update(buf);
 
-        buf.limit(initLimit);
+        U.limit(buf, initLimit);
 
         return (int)crcAlgo.getValue() ^ 0xFFFFFFFF;
     }

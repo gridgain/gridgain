@@ -88,7 +88,7 @@ public class GridClientOptimizedMarshaller implements GridClientMarshaller {
 
             ByteBuffer buf = ByteBuffer.allocate(off + bytes.length);
 
-            buf.position(off);
+            U.position(buf, off);
 
             buf.put(bytes);
 

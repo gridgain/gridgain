@@ -923,7 +923,7 @@ public class MVStore implements AutoCloseable {
         bytes = buff.toString().getBytes(StandardCharsets.ISO_8859_1);
         ByteBuffer header = ByteBuffer.allocate(2 * BLOCK_SIZE);
         header.put(bytes);
-        header.position(BLOCK_SIZE);
+        Utils.position(header, BLOCK_SIZE);
         header.put(bytes);
         header.rewind();
         write(0, header);
@@ -1055,7 +1055,7 @@ public class MVStore implements AutoCloseable {
                     "File corrupted in chunk {0}, expected page length 4..{1}, got {2}", chunkId, remaining,
                     pageLength);
         }
-        buff.limit(start + pageLength);
+        Utils.limit(buff, start + pageLength);
 
         short check = buff.getShort();
         int mapId = DataUtils.readVarInt(buff);

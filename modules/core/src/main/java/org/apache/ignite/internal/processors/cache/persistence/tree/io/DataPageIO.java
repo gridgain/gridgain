@@ -25,6 +25,7 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccUpdateResult;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridStringBuilder;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_CRD_COUNTER_NA;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_HINTS_BIT_OFF;
@@ -214,7 +215,7 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
         // Payload contains bytes that should be updated. Move buffer position to the start of payload.
         int expirationTimeOffset = ((startPos > scannedBytes) ? startPos - scannedBytes : 0);
 
-        buf.position(buf.position() + expirationTimeOffset);
+        U.position(buf, buf.position() + expirationTimeOffset);
 
         // Minimum available size of bytes to update.
         int len = Math.min(finishPos - startPos - updatedBytes, payloadSize - expirationTimeOffset);

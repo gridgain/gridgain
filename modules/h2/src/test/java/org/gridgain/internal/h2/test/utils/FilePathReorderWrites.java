@@ -280,11 +280,11 @@ class FileReorderWrites extends FileBase {
             int len1 = src.remaining() / 2;
             int len2 = src.remaining() - len1;
             buf1.limit(buf1.limit() - len2);
-            buf2.position(buf2.position() + len1);
+            Utils.position(buf2, buf2.position() + len1);
             int x = addOperation(new FileWriteOperation(id++, position, buf1));
             x += addOperation(
                     new FileWriteOperation(id++, position + len1, buf2));
-            src.position( src.position() + x );
+            Utils.position(src, src.position() + x);
             return x;
         }
         return addOperation(new FileWriteOperation(id++, position, src));

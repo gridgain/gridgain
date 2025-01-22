@@ -425,8 +425,8 @@ public class CacheDataRowAdapter implements CacheDataRow {
         int off = data.offset() + hdrLen;
         int payloadSize = data.payloadSize() - hdrLen;
 
-        buf.position(off);
-        buf.limit(off + payloadSize);
+        U.position(buf, off);
+        U.limit(buf, off + payloadSize);
 
         incomplete = readFragment(sharedCtx, coctx, buf, rowData, readCacheId, incomplete, skipVer);
 
@@ -781,7 +781,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
             if (remaining >= size) {
                 // If the whole version is on a single page, just read it.
                 if (skip)
-                    buf.position(buf.position() + size);
+                    U.position(buf, buf.position() + size);
                 else {
                     ver = CacheVersionIO.read(buf, false);
 

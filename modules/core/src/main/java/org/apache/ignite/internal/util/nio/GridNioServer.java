@@ -1526,7 +1526,7 @@ public class GridNioServer<T> {
 
                         ses.addMeta(WRITE_BUF_LIMIT, limit);
 
-                        sesBuf.limit(limit);
+                        U.limit(sesBuf, limit);
                     }
 
                     assert buf.hasRemaining();

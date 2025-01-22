@@ -399,7 +399,7 @@ public class CheckpointMarkersStorage {
      * @throws IgniteCheckedException If failed to read mignite-put-get-exampleark file.
      */
     private WALPointer readPointer(File cpMarkerFile, ByteBuffer buf) throws IgniteCheckedException {
-        buf.position(0);
+        U.position(buf, 0);
 
         try (FileIO io = ioFactory.create(cpMarkerFile, READ)) {
             io.readFully(buf);

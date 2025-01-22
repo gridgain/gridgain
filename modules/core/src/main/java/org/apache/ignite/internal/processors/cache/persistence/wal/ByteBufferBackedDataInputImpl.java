@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence.wal;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -67,7 +68,7 @@ public class ByteBufferBackedDataInputImpl implements ByteBufferBackedDataInput 
     @Override public int skipBytes(int n) throws IOException {
         ensure(n);
 
-        buf.position(buf.position() + n);
+        U.position(buf, buf.position() + n);
 
         return n;
     }

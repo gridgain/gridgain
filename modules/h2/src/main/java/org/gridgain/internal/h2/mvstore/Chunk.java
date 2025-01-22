@@ -8,6 +8,7 @@ package org.gridgain.internal.h2.mvstore;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * A chunk of data, containing one or multiple pages.
@@ -127,7 +128,7 @@ public class Chunk {
             for (int i = 0; i < data.length; i++) {
                 if (data[i] == '\n') {
                     // set the position to the start of the first page
-                    buff.position(pos + i + 1);
+                    Utils.position(buff, pos + i + 1);
                     String s = new String(data, 0, i, StandardCharsets.ISO_8859_1).trim();
                     return fromString(s);
                 }

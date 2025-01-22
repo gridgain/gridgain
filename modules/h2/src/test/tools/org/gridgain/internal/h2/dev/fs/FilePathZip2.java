@@ -24,6 +24,7 @@ import org.gridgain.internal.h2.store.fs.FilePath;
 import org.gridgain.internal.h2.store.fs.FilePathDisk;
 import org.gridgain.internal.h2.store.fs.FileUtils;
 import org.gridgain.internal.h2.util.IOUtils;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * This is a read-only file system that allows to access databases stored in a
@@ -360,7 +361,7 @@ class FileZip2 extends FileBase {
         int len = in.read(dst.array(), dst.arrayOffset() + dst.position(),
                 dst.remaining());
         if (len > 0) {
-            dst.position(dst.position() + len);
+            Utils.position(dst, dst.position() + len);
             pos += len;
             inPos += len;
         }

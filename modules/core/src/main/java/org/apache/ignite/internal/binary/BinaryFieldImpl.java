@@ -31,6 +31,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryField;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.nonNull;
@@ -260,7 +261,7 @@ public class BinaryFieldImpl implements BinaryFieldEx {
 
                 default:
                     // Restore buffer position.
-                    buf.position(pos);
+                    U.position(buf, pos);
 
                     val = BinaryUtils.unmarshal(BinaryByteBufferInputStream.create(buf), ctx, null);
 

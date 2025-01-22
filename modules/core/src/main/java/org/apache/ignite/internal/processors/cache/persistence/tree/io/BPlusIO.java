@@ -23,6 +23,7 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetri
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.GridUnsafe;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 
 /**
@@ -497,6 +498,6 @@ public abstract class BPlusIO<L> extends PageIO implements CompactablePageIO {
         assert compactPage.position() == 0;
         assert compactPage.limit() <= pageSize;
 
-        compactPage.limit(pageSize); // Just add garbage to the end.
+        U.limit(compactPage, pageSize); // Just add garbage to the end.
     }
 }

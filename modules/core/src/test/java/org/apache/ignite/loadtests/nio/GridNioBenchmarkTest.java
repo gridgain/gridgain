@@ -68,7 +68,7 @@ public class GridNioBenchmarkTest {
 
             @Override public void onMessage(GridNioSession ses, ByteBuffer msg) {
                 ByteBuffer buf = ByteBuffer.allocate(msg.remaining()).put(msg);
-                buf.position(0);
+                U.position(buf, 0);
                 ses.send(buf);
             }
 

@@ -573,10 +573,14 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
             for (int j = 0; j < bufs.length - 1; j++) {
                 int size = x == n ? 0 : rnd.nextInt(n - x);
 
-                bufs[j] = (ByteBuffer)ByteBuffer.wrap(bytes).position(x).limit(x += size);
+                bufs[j] = ByteBuffer.wrap(bytes);
+                U.position(bufs[j], x);
+                U.limit(bufs[j],x += size);
             }
 
-            bufs[bufs.length - 1] = (ByteBuffer)ByteBuffer.wrap(bytes).position(x).limit(n);
+            bufs[bufs.length - 1] = ByteBuffer.wrap(bytes);
+            U.position(bufs[bufs.length - 1], x);
+            U.limit(bufs[bufs.length - 1],x);
 
             assertTrue(Arrays.equals(bytes, U.readByteArray(bufs)));
         }

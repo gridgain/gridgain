@@ -101,8 +101,8 @@ public class BlockingSslHandler {
         outNetBuf.order(order);
 
         // Initially buffer is empty.
-        outNetBuf.position(0);
-        outNetBuf.limit(0);
+        U.position(outNetBuf, 0);
+        U.limit(outNetBuf, 0);
 
         inNetBuf = directBuf ? ByteBuffer.allocateDirect(netBufSize) : ByteBuffer.allocate(netBufSize);
         inNetBuf.order(order);
@@ -296,7 +296,7 @@ public class BlockingSslHandler {
             int newPosition = buf.position() - inNetBuf.position();
 
             if (newPosition >= 0) {
-                buf.position(newPosition);
+                U.position(buf, newPosition);
 
                 // If we received close_notify but not all bytes has been read by SSL engine, print a warning.
                 if (buf.hasRemaining())

@@ -36,6 +36,7 @@ import org.xerial.snappy.Snappy;
 
 import static org.apache.ignite.configuration.DataStorageConfiguration.MAX_PAGE_SIZE;
 import static org.apache.ignite.configuration.DiskPageCompression.SKIP_GARBAGE;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.CRC_SIZE;
 import static org.apache.ignite.internal.util.GridUnsafe.NATIVE_BYTE_ORDER;
 
 /**
@@ -108,7 +109,7 @@ public class CompressionProcessorImpl extends CompressionProcessor {
         try {
             // Page size will be less than page limit when TDE is enabled. To make compaction and compression work
             // correctly we need to set limit to real page size.
-            page.limit(pageSize);
+            U.limit(page, pageSize);
 
             ByteBuffer compactPage = doCompactPage(page, pageSize);
 
@@ -138,7 +139,7 @@ public class CompressionProcessorImpl extends CompressionProcessor {
             return setCompressionInfo(compressedPage, compression, compressedSize, compactSize);
         }
         finally {
-            page.limit(oldPageLimit);
+            U.limit(page, oldPageLimit);
         }
     }
 
@@ -163,7 +164,7 @@ public class CompressionProcessorImpl extends CompressionProcessor {
 
             PageUtils.putBytes(GridUnsafe.bufferAddress(compactPage), 0, page.array());
 
-            compactPage.limit(pageSize);
+            U.limit(compactPage, pageSize);
         }
 
         return compactPage;
@@ -273,8 +274,8 @@ public class CompressionProcessorImpl extends CompressionProcessor {
             throw new IgniteException("Failed to compress page with Snappy.", e);
         }
 
-        compactPage.position(0);
-        compressedPage.position(0);
+        U.position(compactPage, 0);
+        U.position(compressedPage, 0);
 
         return compressedPage;
     }
@@ -285,9 +286,9 @@ public class CompressionProcessorImpl extends CompressionProcessor {
      * @param compactSize Compacted page size.
      */
     private static void copyPageHeader(ByteBuffer compactPage, ByteBuffer compressedPage, int compactSize) {
-        compactPage.limit(PageIO.COMMON_HEADER_END);
+        U.limit(compactPage, PageIO.COMMON_HEADER_END);
         compressedPage.put(compactPage);
-        compactPage.limit(compactSize);
+        U.limit(compactPage, compactSize);
     }
 
     /**
@@ -330,17 +331,18 @@ public class CompressionProcessorImpl extends CompressionProcessor {
 
         if (compressType == COMPACTED_PAGE) {
             // Just setup bounds before restoring the page.
-            page.position(0).limit(compactSize);
+            U.position(page, 0);
+            U.limit(page, compactSize);
         }
         else {
             ByteBuffer dst = compressBuf.get();
 
             // Position on a part that needs to be decompressed.
-            page.limit(compressedSize)
-                .position(PageIO.COMMON_HEADER_END);
+            U.limit(page, compressedSize);
+            U.position(page, PageIO.COMMON_HEADER_END);
 
             // LZ4 needs this limit to be exact.
-            dst.limit(compactSize - PageIO.COMMON_HEADER_END);
+            U.limit(dst, compactSize - PageIO.COMMON_HEADER_END);
 
             switch (compressType) {
                 case ZSTD_COMPRESSED_PAGE:
@@ -368,7 +370,8 @@ public class CompressionProcessorImpl extends CompressionProcessor {
                     throw new IgniteException("Unknown compression: " + compressType);
             }
 
-            page.position(PageIO.COMMON_HEADER_END).limit(compactSize);
+            U.position(page, PageIO.COMMON_HEADER_END);
+            U.limit(page, compactSize);
             page.put(dst).flip();
             assert page.limit() == compactSize;
         }

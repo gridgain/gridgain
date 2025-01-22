@@ -18,6 +18,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.util.IOUtils;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * This is a read-only file system that allows
@@ -287,7 +288,7 @@ class FileZip extends FileBase {
         int len = in.read(dst.array(), dst.arrayOffset() + dst.position(),
                 dst.remaining());
         if (len > 0) {
-            dst.position(dst.position() + len);
+            Utils.position(dst, dst.position() + len);
             pos += len;
             inPos += len;
         }

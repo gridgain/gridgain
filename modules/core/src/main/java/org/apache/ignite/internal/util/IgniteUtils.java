@@ -5864,7 +5864,7 @@ public abstract class IgniteUtils {
             while (buf.hasRemaining())
                 res = 31 * res + buf.get();
 
-            buf.position(pos);
+            position(buf, pos);
         }
 
         return res;
@@ -13015,6 +13015,32 @@ public abstract class IgniteUtils {
      */
     public static void flip(Buffer buf) {
         buf.flip();
+    }
+
+    /**
+     * Sets this buffer's position. If the mark is defined and larger than the new position then it is discarded.
+     *
+     * @param buf Byte buffer.
+     * @param newPosition The new position value; must be non-negative and no larger than the current limit.
+     *
+     * @throws  IllegalArgumentException If the preconditions on {@code newPosition} do not hold.
+     */
+    public static void position(Buffer buf, int newPosition) {
+        buf.position(newPosition);
+    }
+
+    /**
+     * Sets this buffer's limit. If the position is larger than the new limit
+     * then it is set to the new limit.  If the mark is defined and larger than
+     * the new limit then it is discarded.
+     *
+     * @param buf Byte buffer.
+     * @param newLimit The new limit value; must be non-negative and no larger than this buffer's capacity.
+     *
+     * @throws IllegalArgumentException If the preconditions on {@code newLimit} do not hold.
+     */
+    public static void limit(Buffer buf, int newLimit) {
+        buf.limit(newLimit);
     }
 
     /**

@@ -92,7 +92,7 @@ public class CountingReaderInputStream extends InputStream {
         Utils.flip(byteBuffer);
         charBuffer.compact();
         Utils.flip(charBuffer);
-        charBuffer.position(charBuffer.limit());
+        Utils.position(charBuffer, charBuffer.limit());
     }
 
     /**

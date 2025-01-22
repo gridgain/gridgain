@@ -24,6 +24,7 @@ import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.compress.CompressLZF;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.util.MathUtils;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * This file system keeps files fully in memory. There is an option to compress
@@ -327,7 +328,7 @@ class FileNioMem extends FileBase {
         data.touch(readOnly);
         // offset is 0 because we start writing from src.position()
         pos = data.readWrite(pos, src, 0, len, true);
-        src.position(src.position() + len);
+        Utils.position(src, src.position() + len);
         return len;
     }
 
@@ -345,7 +346,7 @@ class FileNioMem extends FileBase {
         if (len <= 0) {
             return -1;
         }
-        dst.position(dst.position() + len);
+        Utils.position(dst, dst.position() + len);
         pos = newPos;
         return len;
     }
@@ -365,7 +366,7 @@ class FileNioMem extends FileBase {
         if (len <= 0) {
             return -1;
         }
-        dst.position(dst.position() + len);
+        Utils.position(dst, dst.position() + len);
         return len;
     }
 
@@ -611,7 +612,7 @@ class FileNioMemData {
             }
             ByteBuffer out = ByteBuffer.allocateDirect(BLOCK_SIZE);
             if (d != COMPRESSED_EMPTY_BLOCK) {
-                d.position(0);
+                Utils.position(d, 0);
                 CompressLZF.expand(d, out);
             }
             buffers[page].compareAndSet(d, out);
@@ -735,20 +736,20 @@ class FileNioMemData {
                 if (write) {
                     final ByteBuffer srcTmp = b.slice();
                     final ByteBuffer dstTmp = block.duplicate();
-                    srcTmp.position(off);
-                    srcTmp.limit(off + l);
-                    dstTmp.position(blockOffset);
+                    Utils.position(srcTmp, off);
+                    Utils.limit(srcTmp, off + l);
+                    Utils.position(dstTmp, blockOffset);
                     dstTmp.put(srcTmp);
                 } else {
                     // duplicate, so this can be done concurrently
                     final ByteBuffer tmp = block.duplicate();
-                    tmp.position(blockOffset);
-                    tmp.limit(l + blockOffset);
+                    Utils.position(tmp, blockOffset);
+                    Utils.limit(tmp, l + blockOffset);
                     int oldPosition = b.position();
-                    b.position(off);
+                    Utils.position(b, off);
                     b.put(tmp);
                     // restore old position
-                    b.position(oldPosition);
+                    Utils.position(b, oldPosition);
                 }
                 if (compress) {
                     addToCompressLaterCache(page);

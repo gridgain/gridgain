@@ -130,8 +130,8 @@ public class IpcToNioAdapter<T> {
                 if (read > 0) {
                     rcvdBytesCntMetric.add(read);
 
-                    readBuf.position(0);
-                    readBuf.limit(pos + read);
+                    U.position(readBuf, 0);
+                    U.limit(readBuf, pos + read);
 
                     chain.onMessageReceived(ses, readBuf);
 

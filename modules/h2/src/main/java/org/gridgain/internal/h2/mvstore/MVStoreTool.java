@@ -136,7 +136,7 @@ public class MVStoreTool {
                     pos += blockSize;
                     continue;
                 }
-                block.position(0);
+                Utils.position(block, 0);
                 Chunk c = null;
                 try {
                     c = Chunk.readChunkHeader(block, pos);
@@ -164,7 +164,7 @@ public class MVStoreTool {
                 while (remaining > 0) {
                     int start = p;
                     try {
-                        chunk.position(p);
+                        Utils.position(chunk, p);
                     } catch (IllegalArgumentException e) {
                         // too far
                         pw.printf("ERROR illegal position %d%n", p);
@@ -289,7 +289,7 @@ public class MVStoreTool {
                 }
                 int footerPos = chunk.limit() - Chunk.FOOTER_LENGTH;
                 try {
-                    chunk.position(footerPos);
+                    Utils.position(chunk, footerPos);
                     pw.printf(
                             "+%0" + len + "x chunkFooter %s%n",
                             footerPos,

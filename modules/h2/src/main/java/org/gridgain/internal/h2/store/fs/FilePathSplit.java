@@ -14,9 +14,9 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * A file system that may split files into multiple smaller files.
@@ -396,7 +396,7 @@ class FileSplit extends FileBase {
             int oldLimit = src.limit();
             src.limit(src.position() + l);
             l = channel.write(src, offset);
-            src.limit(oldLimit);
+            Utils.limit(src, oldLimit);
         }
         length = Math.max(length, position + l);
         return l;
@@ -428,7 +428,7 @@ class FileSplit extends FileBase {
             int oldLimit = src.limit();
             src.limit(src.position() + l);
             l = channel.write(src);
-            src.limit(oldLimit);
+            Utils.limit(src, oldLimit);
         }
         filePointer += l;
         length = Math.max(length, filePointer);

@@ -54,6 +54,7 @@ import org.apache.ignite.internal.processors.cache.tree.updatelog.CacheIdAwareUp
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogInnerIO;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogLeafIO;
 import org.apache.ignite.internal.util.GridStringBuilder;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
 import org.jetbrains.annotations.Nullable;
 
@@ -950,7 +951,7 @@ public abstract class PageIO {
         assert pageSize == page.remaining();
 
         PageHandler.copyMemory(page, 0, out, 0, pageSize);
-        out.limit(pageSize);
+        U.limit(out, pageSize);
     }
 
     /**

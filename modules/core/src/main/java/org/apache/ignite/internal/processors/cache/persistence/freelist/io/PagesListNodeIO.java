@@ -26,6 +26,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersion
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.GridUnsafe;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler.copyMemory;
 
@@ -266,7 +267,7 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
         assert compactPage.limit() <= pageSize;
         assertPageType(compactPage);
 
-        compactPage.limit(pageSize); // Just add garbage to the end.
+        U.limit(compactPage, pageSize); // Just add garbage to the end.
     }
 
     /** {@inheritDoc} */

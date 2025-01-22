@@ -70,7 +70,7 @@ public class IgniteDataIntegrityTests {
             buf.putInt(curr.nextInt());
             buf.putInt(curr.nextInt());
             buf.putInt(curr.nextInt());
-            buf.position(i);
+            U.position(buf, i);
             buf.putInt(FastCrc.calcCrc(buf, 12));
         }
 

@@ -2688,7 +2688,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         if (!RecordV1Serializer.skipCrc) {
             int curPos = buf.position();
 
-            buf.position(0);
+            U.position(buf, 0);
 
             // This call will move buffer position to the end of the record again.
             int crcVal = FastCrc.calcCrc(buf, curPos);
@@ -2699,7 +2699,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             buf.putInt(0);
 
         // Write header record through io.
-        buf.position(0);
+        U.position(buf, 0);
 
         return buf;
     }

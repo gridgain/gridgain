@@ -66,7 +66,7 @@ public class GridClientJdkMarshaller implements GridClientMarshaller {
 
         ByteBuffer buf = ByteBuffer.allocate(off + bOut.size());
 
-        buf.position(off);
+        U.position(buf, off);
 
         buf.put(bOut.internalArray(), 0, bOut.size());
 

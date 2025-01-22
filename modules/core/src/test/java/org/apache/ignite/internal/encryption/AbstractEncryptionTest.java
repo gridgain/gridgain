@@ -56,6 +56,7 @@ import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionKey;
 import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -443,19 +444,19 @@ public abstract class AbstractEncryptionTest extends GridCommonAbstractTest {
                         long pageId = startPageId + n;
                         long pageOff = pageStore.pageOffset(pageId);
 
-                        pageBuf.position(0);
+                        U.position(pageBuf, 0);
 
                         ch.position(pageOff);
                         ch.read(pageBuf);
 
-                        pageBuf.position(realPageSize + encryptionBlockSize);
+                        U.position(pageBuf, realPageSize + encryptionBlockSize);
 
                         int pageCrc = pageBuf.getInt();
                         int pageKeyId = pageBuf.get() & 0xff;
 
                         // If this page is empty we can skip it.
                         if (pageCrc == 0 && pageKeyId == 0) {
-                            pageBuf.position(0);
+                            U.position(pageBuf, 0);
 
                             boolean emptyPage = false;
 

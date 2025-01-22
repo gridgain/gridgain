@@ -31,6 +31,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractD
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPagePayload;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.pagemem.PageIdUtils.itemId;
@@ -119,7 +120,7 @@ public class PartitionMetaStorageImpl<T extends Storable> extends AbstractFreeLi
 
                     ByteBuffer buf = pageMem.pageBuffer(pageAddr);
 
-                    buf.position(data.offset());
+                    U.position(buf, data.offset());
                     buf.limit(data.offset() + data.payloadSize());
 
                     if (size == 0) {

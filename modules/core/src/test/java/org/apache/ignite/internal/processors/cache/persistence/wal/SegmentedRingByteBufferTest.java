@@ -274,7 +274,7 @@ public class SegmentedRingByteBufferTest extends GridCommonAbstractTest {
 
         byte[] arr = new byte[bbuf.capacity()];
 
-        bbuf.position(0);
+        U.position(bbuf, 0);
 
         bbuf.limit(bbuf.capacity());
 
@@ -287,7 +287,7 @@ public class SegmentedRingByteBufferTest extends GridCommonAbstractTest {
 
         assertEquals(4, bbuf.remaining());
 
-        bbuf.position(0);
+        U.position(bbuf, 0);
 
         bbuf.limit(bbuf.capacity());
 

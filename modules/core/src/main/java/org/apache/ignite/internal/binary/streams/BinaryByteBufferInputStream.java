@@ -18,6 +18,7 @@ package org.apache.ignite.internal.binary.streams;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Input stream over {@link ByteBuffer}.
@@ -192,7 +193,7 @@ public class BinaryByteBufferInputStream implements BinaryInputStream {
 
     /** {@inheritDoc} */
     @Override public void position(int pos) {
-        buf.position(pos);
+        U.position(buf, pos);
     }
 
     /** {@inheritDoc} */
