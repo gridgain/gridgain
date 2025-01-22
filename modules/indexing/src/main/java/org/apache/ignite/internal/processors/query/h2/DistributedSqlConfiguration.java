@@ -253,7 +253,7 @@ public class DistributedSqlConfiguration {
     public boolean isDisableCreateLuceneIndexForStringValueType() {
         Boolean ret = disableCreateLuceneIndexForStringValueType.get();
 
-        return ret != null ? ret :dfltDisableCreateLuceneIndexForString;
+        return ret != null ? ret : dfltDisableCreateLuceneIndexForString;
     }
 
     /** */
