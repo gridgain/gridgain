@@ -242,7 +242,12 @@ public class CheckpointMarkersStorage {
      */
     void start() {
         cpHistory.start();
+    }
 
+    /**
+     * Starts executor on re-activation.
+     */
+    void onActivate() {
         if (checkpointMapSnapshotExecutor == null || checkpointMapSnapshotExecutor.isTerminated()) {
             this.checkpointMapSnapshotExecutor = Executors.newSingleThreadExecutor(
                     new IgniteThreadFactory(instanceName, "cp-map-snapshot-executor-")
