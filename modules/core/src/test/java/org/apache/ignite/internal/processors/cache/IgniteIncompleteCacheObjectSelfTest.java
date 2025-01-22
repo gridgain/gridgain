@@ -88,7 +88,7 @@ public class IgniteIncompleteCacheObjectSelfTest extends GridCommonAbstractTest 
         assertThat("Data were read incorrectly.", !dataBuf.hasRemaining(), is(true));
 
         // Make rest data available.
-        dataBuf.limit(dataBuf.capacity());
+        U.limit(dataBuf, dataBuf.capacity());
 
         incompleteObj.readData(dataBuf);
 

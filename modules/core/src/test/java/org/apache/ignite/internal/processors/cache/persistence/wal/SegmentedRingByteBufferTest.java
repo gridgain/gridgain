@@ -276,7 +276,7 @@ public class SegmentedRingByteBufferTest extends GridCommonAbstractTest {
 
         U.position(bbuf, 0);
 
-        bbuf.limit(bbuf.capacity());
+        U.limit(bbuf, bbuf.capacity());
 
         bbuf.get(arr);
 
@@ -289,7 +289,7 @@ public class SegmentedRingByteBufferTest extends GridCommonAbstractTest {
 
         U.position(bbuf, 0);
 
-        bbuf.limit(bbuf.capacity());
+        U.limit(bbuf, bbuf.capacity());
 
         bbuf.get(arr);
 

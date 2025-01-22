@@ -28,6 +28,7 @@ import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
+import org.gridgain.internal.h2.util.Utils;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Before;
 import org.junit.Test;
@@ -460,7 +461,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
 
         assertFalse(writeRes);
 
-        buff.limit(buff.position());
+        U.limit(buff, buff.position());
         buff.rewind();
 
         DirectByteBufferStreamImplV2.ArrayCreator<T> arrCreator = arrayCreator(srcArr);
@@ -485,7 +486,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
 
         assertTrue(writeRes);
 
-        buff.limit(buff.position());
+        U.limit(buff, buff.position());
         buff.rewind();
 
         if (readBigEndian)

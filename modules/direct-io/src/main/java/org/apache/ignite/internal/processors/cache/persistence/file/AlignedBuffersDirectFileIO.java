@@ -333,7 +333,7 @@ public class AlignedBuffersDirectFileIO extends AbstractFileIO {
 
         int alignedLen = (len / ioBlockSize + 1) * ioBlockSize;
 
-        buf.limit(buf.limit() + alignedLen - len);
+        U.limit(buf, buf.limit() + alignedLen - len);
     }
 
     /**

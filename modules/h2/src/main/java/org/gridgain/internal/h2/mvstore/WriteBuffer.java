@@ -197,7 +197,8 @@ public class WriteBuffer {
      * @return this
      */
     public WriteBuffer limit(int newLimit) {
-        ensureCapacity(newLimit - buff.position()).limit(newLimit);
+        ensureCapacity(newLimit - buff.position());
+        Utils.limit(buff, newLimit);
         return this;
     }
 

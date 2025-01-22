@@ -202,7 +202,7 @@ public class IgniteFileIOTest {
 
                 int oldLimit = destBuf.limit();
 
-                destBuf.limit(destBuf.position() + (destBuf.remaining() >> 1));
+                U.limit(destBuf, destBuf.position() + (destBuf.remaining() >> 1));
 
                 try {
                     return super.read(destBuf);
@@ -260,7 +260,7 @@ public class IgniteFileIOTest {
 
                 int oldLimit = destBuf.limit();
 
-                destBuf.limit(destBuf.position() + (destBuf.remaining() >> 1));
+                U.limit(destBuf, destBuf.position() + (destBuf.remaining() >> 1));
 
                 try {
                     return super.write(destBuf);

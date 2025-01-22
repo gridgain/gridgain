@@ -487,7 +487,7 @@ public abstract class BPlusIO<L> extends PageIO implements CompactablePageIO {
         long pageAddr = GridUnsafe.bufferAddress(out);
 
         // Just drop all the extra garbage at the end.
-        out.limit(getItemsEnd(pageAddr));
+        U.limit(out, getItemsEnd(pageAddr));
     }
 
     /** {@inheritDoc} */

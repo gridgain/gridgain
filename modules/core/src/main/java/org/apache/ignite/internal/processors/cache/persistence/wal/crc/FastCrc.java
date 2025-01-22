@@ -90,7 +90,7 @@ public final class FastCrc {
     private static int calcCrc(CRC32 crcAlgo, ByteBuffer buf, int len) {
         int initLimit = buf.limit();
 
-        buf.limit(buf.position() + len);
+        U.limit(buf, buf.position() + len);
 
         crcAlgo.update(buf);
 

@@ -440,7 +440,7 @@ public class ExternalResultData<T> implements AutoCloseable {
 
             ByteBuffer byteBuff = ByteBuffer.wrap(buff.getBytes());
 
-            byteBuff.limit(buff.length());
+            U.limit(byteBuff, buff.length());
 
             fileIo.writeFully(byteBuff);
 

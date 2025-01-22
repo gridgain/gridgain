@@ -158,7 +158,7 @@ public class IgniteDataIntegrityTests {
         assertEquals(24, b2.limit());
         assertEquals(32, b2.capacity());
 
-        b2.limit(b2.capacity());
+        U.limit(b2, b2.capacity());
 
         b2.putInt(4);
         b2.putInt(5);

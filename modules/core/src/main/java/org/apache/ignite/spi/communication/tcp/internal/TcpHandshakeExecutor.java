@@ -347,7 +347,7 @@ public class TcpHandshakeExecutor {
             if (remaining > 0) {
                 int oldLimit = src.limit();
 
-                src.limit(src.position() + remaining);
+                U.limit(src, src.position() + remaining);
 
                 dst.put(src);
 

@@ -394,7 +394,7 @@ class FileSplit extends FileBase {
             l = channel.write(src, offset);
         } else {
             int oldLimit = src.limit();
-            src.limit(src.position() + l);
+            Utils.limit(src, src.position() + l);
             l = channel.write(src, offset);
             Utils.limit(src, oldLimit);
         }
@@ -426,7 +426,7 @@ class FileSplit extends FileBase {
             l = channel.write(src);
         } else {
             int oldLimit = src.limit();
-            src.limit(src.position() + l);
+            Utils.limit(src, src.position() + l);
             l = channel.write(src);
             Utils.limit(src, oldLimit);
         }

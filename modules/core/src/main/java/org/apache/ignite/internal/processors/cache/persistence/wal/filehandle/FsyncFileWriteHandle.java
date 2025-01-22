@@ -502,7 +502,7 @@ class FsyncFileWriteHandle extends AbstractFileHandle implements FileWriteHandle
 
         do {
             U.position(buf, head.chainSize() - head.size());
-            buf.limit(head.chainSize()); // Just to make sure that serializer works in bounds.
+            U.limit(buf, head.chainSize()); // Just to make sure that serializer works in bounds.
 
             try {
                 serializer.writeRecord(head, buf);

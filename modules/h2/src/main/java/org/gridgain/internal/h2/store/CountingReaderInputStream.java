@@ -79,7 +79,7 @@ public class CountingReaderInputStream extends InputStream {
             remaining = 0;
         }
         length += len;
-        charBuffer.limit(charBuffer.position() + len);
+        Utils.limit(charBuffer, charBuffer.position() + len);
         charBuffer.rewind();
         byteBuffer = ByteBuffer.allocate(Constants.IO_BUFFER_SIZE);
         boolean end = remaining == 0;

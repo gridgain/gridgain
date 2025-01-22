@@ -1471,7 +1471,7 @@ public class GridNioServer<T> {
                 ByteBuffer buf = ses.writeBuffer();
 
                 if (ses.meta(WRITE_BUF_LIMIT) != null)
-                    buf.limit(ses.meta(WRITE_BUF_LIMIT));
+                    U.limit(buf, ses.meta(WRITE_BUF_LIMIT));
 
                 SessionWriteRequest req = ses.removeMeta(NIO_OPERATION.ordinal());
 
@@ -1567,7 +1567,7 @@ public class GridNioServer<T> {
                         buf = ses.writeBuffer();
 
                         if (ses.meta(WRITE_BUF_LIMIT) != null)
-                            buf.limit(ses.meta(WRITE_BUF_LIMIT));
+                            U.limit(buf, ses.meta(WRITE_BUF_LIMIT));
                     }
                 }
             }

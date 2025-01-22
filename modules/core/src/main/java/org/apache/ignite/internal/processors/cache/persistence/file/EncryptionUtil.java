@@ -64,7 +64,7 @@ public class EncryptionUtil {
 
         int srcLimit = srcBuf.limit();
 
-        srcBuf.limit(srcBuf.position() + plainDataSize());
+        U.limit(srcBuf, srcBuf.position() + plainDataSize());
 
         encSpi.encryptNoPadding(srcBuf, grpKey.key(), res);
 
@@ -106,7 +106,7 @@ public class EncryptionUtil {
 
         U.position(encrypted, encrypted.position() - (encryptedDataSize() + 4 /* CRC size. */));
 
-        encrypted.limit(encryptedDataSize());
+        U.limit(encrypted, encryptedDataSize());
 
         encSpi.decryptNoPadding(encrypted, grpKey.key(), destBuf);
 

@@ -121,7 +121,7 @@ public class PartitionMetaStorageImpl<T extends Storable> extends AbstractFreeLi
                     ByteBuffer buf = pageMem.pageBuffer(pageAddr);
 
                     U.position(buf, data.offset());
-                    buf.limit(data.offset() + data.payloadSize());
+                    U.limit(buf, data.offset() + data.payloadSize());
 
                     if (size == 0) {
                         if (buf.remaining() >= 4 && incomplete == null) {

@@ -257,7 +257,7 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
         long pageAddr = GridUnsafe.bufferAddress(out);
 
         // Just drop all the extra garbage at the end.
-        out.limit(offset(getCount(pageAddr)));
+        U.limit(out, offset(getCount(pageAddr)));
     }
 
     /** {@inheritDoc} */
