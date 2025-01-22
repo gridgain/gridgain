@@ -414,6 +414,8 @@ public class CheckpointManager {
 
             this.checkpointer = checkpointerProvider.get();
         }
+
+        checkpointMarkersStorage.onActivate();
     }
 
     /**
