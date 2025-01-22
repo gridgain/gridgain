@@ -28,7 +28,6 @@ import org.gridgain.internal.h2.store.fs.FileChannelInputStream;
 import org.gridgain.internal.h2.store.fs.FileUtils;
 import org.gridgain.internal.h2.test.TestBase;
 import org.gridgain.internal.h2.util.Task;
-import org.gridgain.internal.h2.util.Utils;
 
 /**
  * Tests concurrently accessing a tree map store.
