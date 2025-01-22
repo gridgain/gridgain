@@ -19,7 +19,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.gridgain.internal.h2.mvstore.DataUtils;
 import org.gridgain.internal.h2.mvstore.MVMap;
 import org.gridgain.internal.h2.mvstore.MVStore;
@@ -29,6 +28,7 @@ import org.gridgain.internal.h2.store.fs.FileChannelInputStream;
 import org.gridgain.internal.h2.store.fs.FileUtils;
 import org.gridgain.internal.h2.test.TestBase;
 import org.gridgain.internal.h2.util.Task;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * Tests concurrently accessing a tree map store.

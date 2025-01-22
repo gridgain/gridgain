@@ -360,11 +360,11 @@ public class ExternalResultData<T> implements AutoCloseable {
         // 1. Read header.
         setFilePosition(pos);
 
-        headReadBuff.clear();
+        U.clear(headReadBuff);
 
         readFromFile(headReadBuff);
 
-        headReadBuff.flip();
+        U.flip(headReadBuff);
 
         int size = headReadBuff.getInt();
         int colCnt = headReadBuff.getInt();
@@ -380,12 +380,12 @@ public class ExternalResultData<T> implements AutoCloseable {
         if (readBuff == null || readBuff.capacity() < size)
             readBuff = ByteBuffer.allocate(size * 2);
 
-        readBuff.clear();
+        U.clear(readBuff);
         readBuff.limit(size);
 
         readFromFile(readBuff);
 
-        readBuff.flip();
+        U.flip(readBuff);
 
         Data buff = Data.create(hnd, readBuff.array(), true);
 

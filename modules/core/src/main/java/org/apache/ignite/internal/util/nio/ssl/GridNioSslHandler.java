@@ -174,7 +174,7 @@ public class GridNioSslHandler extends ReentrantLock {
         inNetBuf.order(order);
 
         if (encBuf != null) {
-            encBuf.flip();
+            U.flip(encBuf);
 
             inNetBuf.put(encBuf); // Buffer contains bytes read but not handled by sslEngine at BlockingSslHandler.
         }
@@ -289,11 +289,11 @@ public class GridNioSslHandler extends ReentrantLock {
                         if (outNetBuf.hasRemaining())
                             U.warn(log, "Output net buffer has unsent bytes during handshake (will clear): " + ses);
 
-                        outNetBuf.clear();
+                        U.clear(outNetBuf);
 
                         SSLEngineResult res = sslEngine.wrap(handshakeBuf, outNetBuf);
 
-                        outNetBuf.flip();
+                        U.flip(outNetBuf);
 
                         handshakeStatus = res.getHandshakeStatus();
 
@@ -373,7 +373,7 @@ public class GridNioSslHandler extends ReentrantLock {
                     U.warn(log, "Got unread bytes after receiving close_notify message (will ignore): " + ses);
             }
 
-            inNetBuf.clear();
+            U.clear(inNetBuf);
         }
     }
 
@@ -390,7 +390,7 @@ public class GridNioSslHandler extends ReentrantLock {
 
         // The data buffer is (must be) empty, we can reuse the entire
         // buffer.
-        outNetBuf.clear();
+        U.clear(outNetBuf);
 
         // Loop until there is no more data in src
         while (src.hasRemaining()) {
@@ -420,7 +420,7 @@ public class GridNioSslHandler extends ReentrantLock {
                     ", handshakeStatus=" + res.getHandshakeStatus() + ", ses=" + ses + ']');
         }
 
-        outNetBuf.flip();
+        U.flip(outNetBuf);
 
         return outNetBuf;
     }
@@ -498,7 +498,7 @@ public class GridNioSslHandler extends ReentrantLock {
         if (!sslEngine.isOutboundDone()) {
             sslEngine.closeOutbound();
 
-            outNetBuf.clear();
+            U.clear(outNetBuf);
 
             SSLEngineResult res = sslEngine.wrap(handshakeBuf, outNetBuf);
 
@@ -506,7 +506,7 @@ public class GridNioSslHandler extends ReentrantLock {
                 throw new SSLException("Incorrect SSL engine status after closeOutbound call [status=" +
                     res.getStatus() + ", handshakeStatus=" + res.getHandshakeStatus() + ", ses=" + ses + ']');
 
-            outNetBuf.flip();
+            U.flip(outNetBuf);
 
             return true;
         }
@@ -540,7 +540,7 @@ public class GridNioSslHandler extends ReentrantLock {
             log.debug("Unwrapping received data: " + ses);
 
         // Flip buffer so we can read it.
-        inNetBuf.flip();
+        U.flip(inNetBuf);
 
         SSLEngineResult res = unwrap0();
 
@@ -561,7 +561,7 @@ public class GridNioSslHandler extends ReentrantLock {
      */
     private Status unwrapHandshake() throws SSLException, IgniteCheckedException {
         // Flip input buffer so we can read the collected data.
-        inNetBuf.flip();
+        U.flip(inNetBuf);
 
         SSLEngineResult res = unwrap0();
         handshakeStatus = res.getHandshakeStatus();
@@ -694,7 +694,7 @@ public class GridNioSslHandler extends ReentrantLock {
 
         res.order(order);
 
-        original.flip();
+        U.flip(original);
 
         res.put(original);
 
@@ -715,7 +715,7 @@ public class GridNioSslHandler extends ReentrantLock {
 
         cp.put(original);
 
-        cp.flip();
+        U.flip(cp);
 
         return cp;
     }

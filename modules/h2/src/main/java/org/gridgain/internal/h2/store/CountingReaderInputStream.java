@@ -15,6 +15,7 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 
 import org.gridgain.internal.h2.engine.Constants;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * An input stream that reads the data from a reader and limits the number of
@@ -88,9 +89,9 @@ public class CountingReaderInputStream extends InputStream {
             byteBuffer = null;
             return;
         }
-        byteBuffer.flip();
+        Utils.flip(byteBuffer);
         charBuffer.compact();
-        charBuffer.flip();
+        Utils.flip(charBuffer);
         charBuffer.position(charBuffer.limit());
     }
 

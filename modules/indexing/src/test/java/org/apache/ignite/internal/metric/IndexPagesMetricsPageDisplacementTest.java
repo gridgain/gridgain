@@ -44,6 +44,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -198,7 +199,7 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
             if (PageIO.isIndexPage(PageIO.getType(buf)))
                 result.add(PageIO.getPageId(buf));
 
-            buf.clear();
+            U.clear(buf);
         }
 
         return result;

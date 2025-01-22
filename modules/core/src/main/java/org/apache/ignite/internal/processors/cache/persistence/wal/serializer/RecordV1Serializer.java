@@ -153,11 +153,11 @@ public class RecordV1Serializer implements RecordSerializer {
                 if (buf.capacity() < recordSize)
                     heapTlb.set(buf = ByteBuffer.allocate(recordSize * 3 / 2).order(ByteOrder.nativeOrder()));
                 else
-                    buf.clear();
+                    U.clear(buf);
 
                 writeRecord(rec, buf);
 
-                buf.flip();
+                U.flip(buf);
 
                 assert buf.remaining() == recordSize;
 

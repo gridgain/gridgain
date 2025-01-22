@@ -34,6 +34,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.io.FileInput;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.io.RecordIO;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType;
@@ -153,7 +154,7 @@ public class RecordV2Serializer implements RecordSerializer {
                 if (buf.capacity() < ptr.length())
                     heapTlb.set(buf = ByteBuffer.allocate(ptr.length() * 3 / 2).order(ByteOrder.nativeOrder()));
                 else
-                    buf.clear();
+                    U.clear(buf);
 
                 buf.put((byte)(recType.index() + 1));
 
@@ -167,7 +168,7 @@ public class RecordV2Serializer implements RecordSerializer {
                 // Unwind reading CRC.
                 in.buffer().position(in.buffer().position() - CRC_SIZE);
 
-                buf.flip();
+                U.flip(buf);
 
                 assert buf.remaining() == ptr.length();
 

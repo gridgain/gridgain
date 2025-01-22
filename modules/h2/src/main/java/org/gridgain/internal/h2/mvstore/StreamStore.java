@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * A facility to store streams in a map. Streams are split into blocks, which
@@ -565,7 +566,7 @@ public class StreamStore {
                             + idBuffer.limit() - idBuffer.position());
                     newBuffer.put(k);
                     newBuffer.put(idBuffer);
-                    newBuffer.flip();
+                    Utils.flip(newBuffer);
                     idBuffer = newBuffer;
                     return nextBuffer();
                 }

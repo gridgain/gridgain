@@ -75,7 +75,7 @@ class GridTcpRouterNioParser extends GridTcpRestParser {
             res.put(U.uuidToBytes(resp.destinationId()));
             res.put(resp.body());
 
-            res.flip();
+            U.flip(res);
 
             return res;
         }

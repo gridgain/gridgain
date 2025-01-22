@@ -16,6 +16,7 @@ import org.gridgain.internal.h2.mvstore.Chunk;
 import org.gridgain.internal.h2.mvstore.DataUtils;
 import org.gridgain.internal.h2.mvstore.WriteBuffer;
 import org.gridgain.internal.h2.test.TestBase;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * Test utility classes.
@@ -188,14 +189,14 @@ public class TestDataUtils extends TestBase {
         for (int i = 0; i < 50; i++) {
             buff.put((byte) 255);
         }
-        buff.flip();
+        Utils.flip(buff);
         assertEquals(-1, DataUtils.readVarInt(buff));
         assertEquals(5, buff.position());
         buff.rewind();
         assertEquals(-1, DataUtils.readVarLong(buff));
         assertEquals(10, buff.position());
 
-        buff.clear();
+        Utils.clear(buff);
         testVarIntVarLong(buff, DataUtils.COMPRESSED_VAR_INT_MAX);
         testVarIntVarLong(buff, DataUtils.COMPRESSED_VAR_INT_MAX + 1);
         testVarIntVarLong(buff, DataUtils.COMPRESSED_VAR_LONG_MAX);
@@ -219,12 +220,12 @@ public class TestDataUtils extends TestBase {
         buff.position(0);
         buff.get(data2);
         assertEquals(data2, data);
-        buff.flip();
+        Utils.flip(buff);
         long y = DataUtils.readVarLong(buff);
         assertEquals(y, x);
         assertEquals(len, buff.position());
         assertEquals(len, DataUtils.getVarLongLen(x));
-        buff.clear();
+        Utils.clear(buff);
 
         int intX = (int) x;
         try {
@@ -241,12 +242,12 @@ public class TestDataUtils extends TestBase {
         buff.position(0);
         buff.get(data2);
         assertEquals(data2, data);
-        buff.flip();
+        Utils.flip(buff);
         int intY = DataUtils.readVarInt(buff);
         assertEquals(intY, intX);
         assertEquals(len, buff.position());
         assertEquals(len, DataUtils.getVarIntLen(intX));
-        buff.clear();
+        Utils.clear(buff);
     }
 
     private void testCheckValue() {

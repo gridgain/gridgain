@@ -23,6 +23,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -85,7 +86,7 @@ public class IgniteCacheObjectPutSelfTest extends GridCommonAbstractTest {
             assertTrue(entry.valueBytes().putValue(buf));
         }
 
-        buf.flip();
+        U.flip(buf);
 
         for (int i = 0; i < 10; i++) {
             CacheObject co1 = co.toCacheObject(coCtx, buf);
@@ -128,7 +129,7 @@ public class IgniteCacheObjectPutSelfTest extends GridCommonAbstractTest {
             assertTrue(entry.valueBytes().putValue(buf));
         }
 
-        buf.flip();
+        U.flip(buf);
 
         for (int i = 0; i < 10; i++) {
             CacheObject co1 = co.toCacheObject(coCtx, buf);

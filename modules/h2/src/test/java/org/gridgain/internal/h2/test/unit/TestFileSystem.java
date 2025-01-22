@@ -42,6 +42,7 @@ import org.gridgain.internal.h2.tools.Backup;
 import org.gridgain.internal.h2.tools.DeleteDbFiles;
 import org.gridgain.internal.h2.util.IOUtils;
 import org.gridgain.internal.h2.util.Task;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * Tests various file system.
@@ -642,14 +643,14 @@ public class TestFileSystem extends TestBase {
         for (int i = 0; i < 4000; i++) {
             buff.put((byte) i);
         }
-        buff.flip();
+        Utils.flip(buff);
         fc.write(buff, 96);
         assertEquals(0, fc.position());
         assertEquals(4096, fc.size());
         buff = ByteBuffer.allocate(4000);
         assertEquals(4000, fc.read(buff, 96));
         assertEquals(0, fc.position());
-        buff.flip();
+        Utils.flip(buff);
         for (int i = 0; i < 4000; i++) {
             assertEquals((byte) i, buff.get());
         }
@@ -663,7 +664,7 @@ public class TestFileSystem extends TestBase {
         buff = ByteBuffer.allocate(1);
         assertEquals(-1, fc.read(buff, 8000));
         assertEquals(1, fc.read(buff, 4000));
-        buff.flip();
+        Utils.flip(buff);
         assertEquals(1, fc.read(buff, 2000));
         fc.close();
     }
@@ -825,7 +826,7 @@ public class TestFileSystem extends TestBase {
                 ByteBuffer byteBuff = ByteBuffer.allocate(16);
                 while (!stop) {
                     for (int pos = 0; pos < size; pos++) {
-                        byteBuff.clear();
+                        Utils.clear(byteBuff);
                         f.read(byteBuff, pos * 64 * 1024);
                         byteBuff.position(0);
                         int x = byteBuff.getInt();
@@ -845,12 +846,12 @@ public class TestFileSystem extends TestBase {
                 byteBuff.position(0);
                 byteBuff.putInt(i);
                 byteBuff.putInt(i);
-                byteBuff.flip();
+                Utils.flip(byteBuff);
                 int pos = random.nextInt(size);
                 f.write(byteBuff, pos * 64 * 1024);
                 data[pos] = i;
                 pos = random.nextInt(size);
-                byteBuff.clear();
+                Utils.clear(byteBuff);
                 f.read(byteBuff, pos * 64 * 1024);
                 byteBuff.limit(16);
                 byteBuff.position(0);

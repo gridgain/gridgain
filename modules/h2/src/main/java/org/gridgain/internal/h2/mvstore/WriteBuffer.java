@@ -6,6 +6,7 @@
 package org.gridgain.internal.h2.mvstore;
 
 import java.nio.ByteBuffer;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * An auto-resize buffer to write data into a ByteBuffer.
@@ -284,7 +285,7 @@ public class WriteBuffer {
         } else if (buff != reuse) {
             reuse = buff;
         }
-        buff.clear();
+        Utils.clear(buff);
         return this;
     }
 
@@ -321,7 +322,7 @@ public class WriteBuffer {
         } catch (OutOfMemoryError e) {
             throw new OutOfMemoryError("Capacity: " + newCapacity);
         }
-        temp.flip();
+        Utils.flip(temp);
         buff.put(temp);
         if (newCapacity <= MAX_REUSE_CAPACITY) {
             reuse = buff;

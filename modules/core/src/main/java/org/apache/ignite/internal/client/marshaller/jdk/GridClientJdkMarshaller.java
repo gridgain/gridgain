@@ -27,6 +27,7 @@ import java.io.ObjectStreamClass;
 import java.nio.ByteBuffer;
 import org.apache.ignite.internal.client.marshaller.GridClientMarshaller;
 import org.apache.ignite.internal.util.io.GridByteArrayOutputStream;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 
 /**
@@ -69,7 +70,7 @@ public class GridClientJdkMarshaller implements GridClientMarshaller {
 
         buf.put(bOut.internalArray(), 0, bOut.size());
 
-        buf.flip();
+        U.flip(buf);
 
         return buf;
     }

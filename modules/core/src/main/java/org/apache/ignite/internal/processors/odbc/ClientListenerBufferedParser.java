@@ -23,6 +23,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.util.nio.GridNioParser;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.CONN_CTX_HANDSHAKE_TIMEOUT_TASK;
 
@@ -83,7 +84,7 @@ public class ClientListenerBufferedParser implements GridNioParser {
         res.putInt(msg0.length);
         res.put(msg0);
 
-        res.flip();
+        U.flip(res);
 
         return res;
     }

@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.Nullable;
 
@@ -95,7 +96,7 @@ public class IdleVerifyUtility {
         buf.order(ByteOrder.nativeOrder());
 
         for (int pageNo = 0; pageNo < pageStore.pages(); pageId++, pageNo++) {
-            buf.clear();
+            U.clear(buf);
 
             pageStore.read(pageId, buf, true);
         }

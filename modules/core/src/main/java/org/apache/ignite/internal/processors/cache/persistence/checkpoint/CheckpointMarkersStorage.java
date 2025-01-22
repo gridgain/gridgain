@@ -404,7 +404,7 @@ public class CheckpointMarkersStorage {
         try (FileIO io = ioFactory.create(cpMarkerFile, READ)) {
             io.readFully(buf);
 
-            buf.flip();
+            U.flip(buf);
 
             return new FileWALPointer(buf.getLong(), buf.getInt(), buf.getInt());
         }
@@ -488,7 +488,7 @@ public class CheckpointMarkersStorage {
 
                 io.writeFully(entryBuf);
 
-                entryBuf.clear();
+                U.clear(entryBuf);
 
                 if (!skipSync)
                     io.force(true);
@@ -611,7 +611,7 @@ public class CheckpointMarkersStorage {
 
         entryBuf.putInt(filePtr.length());
 
-        entryBuf.flip();
+        U.flip(entryBuf);
 
         return createCheckPointEntry(cpTs, ptr, cpId, rec, type);
     }

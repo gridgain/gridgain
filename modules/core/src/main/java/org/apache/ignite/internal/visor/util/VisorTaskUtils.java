@@ -670,7 +670,7 @@ public class VisorTaskUtils {
 
             ch.read(buf);
 
-            buf.flip();
+            U.flip(buf);
 
             for (Charset charset : orderedCharsets) {
                 CharsetDecoder decoder = charset.newDecoder();

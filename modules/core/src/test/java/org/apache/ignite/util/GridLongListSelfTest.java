@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.internal.direct.DirectMessageWriter;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.util.GridLongList;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -209,7 +210,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.add(2L);
             ll.add(4L);
@@ -221,7 +222,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.remove();
 
@@ -232,7 +233,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.remove();
 
@@ -243,7 +244,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             for (int i = 0; i < 300; i++)
                 ll.add(i);
@@ -257,7 +258,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.clear();
 
@@ -284,7 +285,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.add(2L);
             ll.add(4L);
@@ -296,7 +297,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.remove();
 
@@ -307,7 +308,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.remove();
 
@@ -318,7 +319,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             for (int i = 0; i < 300; i++)
                 ll.add(i);
@@ -332,7 +333,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.clear();
 
@@ -360,7 +361,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.add(2L);
             ll.add(4L);
@@ -372,7 +373,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.remove();
 
@@ -383,7 +384,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.remove();
 
@@ -394,7 +395,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             for (int i = 0; i < 300; i++)
                 ll.add(i);
@@ -408,7 +409,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.clear();
 
@@ -435,7 +436,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.add(2L);
             ll.add(4L);
@@ -447,7 +448,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.remove();
 
@@ -458,7 +459,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             for (int i = 0; i < 300; i++)
                 ll.add(i);
@@ -470,7 +471,7 @@ public class GridLongListSelfTest {
 
         {
             writer.reset();
-            buf.clear();
+            U.clear(buf);
 
             ll.clear();
 

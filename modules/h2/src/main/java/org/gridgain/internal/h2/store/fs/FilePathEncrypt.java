@@ -19,6 +19,7 @@ import org.gridgain.internal.h2.security.AES;
 import org.gridgain.internal.h2.security.BlockCipher;
 import org.gridgain.internal.h2.security.SHA256;
 import org.gridgain.internal.h2.util.MathUtils;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * An encrypted file.
@@ -256,7 +257,7 @@ public class FilePathEncrypt extends FilePathWrapper {
                 int l = (len + offset + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE;
                 ByteBuffer temp = ByteBuffer.allocate(l);
                 readInternal(temp, p, l);
-                temp.flip();
+                Utils.flip(temp);
                 temp.limit(offset + len);
                 temp.position(offset);
                 dst.put(temp);
@@ -332,7 +333,7 @@ public class FilePathEncrypt extends FilePathWrapper {
                 throws IOException {
             ByteBuffer crypt = ByteBuffer.allocate(len);
             crypt.put(src);
-            crypt.flip();
+            Utils.flip(crypt);
             long block = position / BLOCK_SIZE;
             int x = 0, l = len;
             while (l > 0) {

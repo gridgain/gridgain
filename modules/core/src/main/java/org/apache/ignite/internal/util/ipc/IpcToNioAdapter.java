@@ -138,7 +138,7 @@ public class IpcToNioAdapter<T> {
                     if (readBuf.hasRemaining())
                         readBuf.compact();
                     else
-                        readBuf.clear();
+                        U.clear(readBuf);
 
                     CountDownLatch latch = latchRef.get();
 

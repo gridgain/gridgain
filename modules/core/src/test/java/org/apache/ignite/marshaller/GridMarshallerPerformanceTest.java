@@ -143,7 +143,7 @@ public class GridMarshallerPerformanceTest extends GridCommonAbstractTest {
 
         IgniteInClosure<TestObject> writer = new CI1<TestObject>() {
             @Override public void apply(TestObject obj) {
-                buf.clear();
+                U.clear(buf);
 
                 obj.write(buf);
             }
@@ -151,7 +151,7 @@ public class GridMarshallerPerformanceTest extends GridCommonAbstractTest {
 
         IgniteOutClosure<TestObject> reader = new CO<TestObject>() {
             @Override public TestObject apply() {
-                buf.flip();
+                U.flip(buf);
 
                 return TestObject.read(buf);
             }

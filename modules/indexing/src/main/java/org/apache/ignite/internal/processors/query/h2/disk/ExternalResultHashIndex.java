@@ -307,7 +307,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             else
                 slot = fileCh.position() / Entry.ENTRY_BYTES;
 
-            reusableBuff.clear();
+            U.clear(reusableBuff);
 
             synchronized (this) {
                 checkCancelled();
@@ -315,7 +315,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
                 fileCh.readFully(reusableBuff);
             }
 
-            reusableBuff.flip();
+            U.flip(reusableBuff);
 
             int hashCode = reusableBuff.getInt();
 
@@ -343,13 +343,13 @@ public class ExternalResultHashIndex implements AutoCloseable {
         try {
             gotoSlot(slot);
 
-            reusableBuff.clear();
+            U.clear(reusableBuff);
             reusableBuff.putInt(hashCode);
 
             // We store addr value incremented by 1 to distinguish 0 address from the empty address field.
             // On the disk 0 means empty, 1 means zero, y means y-1.
             reusableBuff.putLong(addr + 1);
-            reusableBuff.flip();
+            U.flip(reusableBuff);
 
             synchronized (this) {
                 checkCancelled();
@@ -461,7 +461,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
                 fileIo = fileIOFactory.create(idxFile, memTracker, CREATE_NEW, READ, WRITE);
 
                 // Write empty data to the end of the file to extend it.
-                reusableBuff.clear();
+                U.clear(reusableBuff);
                 fileIo.write(reusableBuff, cap * Entry.ENTRY_BYTES);
             }
         }

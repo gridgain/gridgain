@@ -728,8 +728,9 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
                     byte[] pageData = page.pageData();
 
                     if (page.pageDataSize() < realPageSize) {
-                        buf.clear();
-                        buf.put(pageData).flip();
+                        U.clear(buf);
+                        buf.put(pageData);
+                        U.flip(buf);
 
                         ctx.compress().decompressPage(buf, realPageSize);
 

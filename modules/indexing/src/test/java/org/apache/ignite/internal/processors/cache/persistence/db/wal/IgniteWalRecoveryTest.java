@@ -1449,9 +1449,9 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
                     byte[] pageData = page.pageData();
 
                     if (pageData.length < realPageSize) {
-                        buf.clear();
+                        U.clear(buf);
                         buf.put(pageData);
-                        buf.flip();
+                        U.flip(buf);
 
                         sharedCtx.kernalContext().compress().decompressPage(buf, realPageSize);
 
@@ -1479,9 +1479,9 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
 
                     assertNotNull("Missing page snapshot [page=" + fullId + ", delta=" + delta + ']', pageData);
 
-                    buf.clear();
+                    U.clear(buf);
                     buf.put(pageData);
-                    buf.flip();
+                    U.flip(buf);
 
                     delta.applyDelta(sharedCtx.database().dataRegion(null).pageMemory(),
                         GridUnsafe.bufferAddress(buf));
@@ -1520,8 +1520,8 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
                         if (walPageCompression != null && PageIO.getPageIO(bufPtr) instanceof CompactablePageIO) {
                             CompactablePageIO pageIO = PageIO.getPageIO(bufPtr);
 
-                            buf.clear();
-                            bufWal.clear();
+                            U.clear(buf);
+                            U.clear(bufWal);
 
                             int realPageSize = data.length;
 

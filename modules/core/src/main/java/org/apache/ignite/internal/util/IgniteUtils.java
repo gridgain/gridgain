@@ -74,6 +74,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileLock;
@@ -10954,7 +10955,7 @@ public abstract class IgniteUtils {
 
             cnt += buf.position();
 
-            buf.clear();
+            clear(buf);
         }
 
         return cnt;
@@ -12995,6 +12996,25 @@ public abstract class IgniteUtils {
         catch (ClassNotFoundException e) {
             return true;
         }
+    }
+
+    /**
+     * Clears this buffer. The position is set to zero, the limit is set to the capacity, and the mark is discarded.
+     *
+     * @param buf Byte buffer which should be cleared.
+     */
+    public static void clear(Buffer buf) {
+        buf.clear();
+    }
+
+    /**
+     * Flips this buffer. The limit is set to the current position and then the position is set to zero.
+     * If the mark is defined then it is discarded.
+     *
+     * @param buf Byte buffer which should be flipped.
+     */
+    public static void flip(Buffer buf) {
+        buf.flip();
     }
 
     /**

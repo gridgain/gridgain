@@ -145,7 +145,7 @@ public abstract class FileLockHolder implements AutoCloseable {
         ByteBuffer buf = ByteBuffer.allocate(bytes.length);
         buf.put(bytes);
 
-        buf.flip();
+        U.flip(buf);
 
         ch.write(buf, 1);
 
@@ -164,7 +164,7 @@ public abstract class FileLockHolder implements AutoCloseable {
 
         String content = new String(buf.array());
 
-        buf.clear();
+        U.clear(buf);
 
         return content;
     }

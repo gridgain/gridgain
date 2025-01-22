@@ -142,7 +142,7 @@ public class GridClientZipOptimizedMarshaller extends GridClientOptimizedMarshal
             buf.position(off);
             buf.put((byte)(zip ? 1 : 0));
             buf.put(bytes);
-            buf.flip();
+            U.flip(buf);
 
             return buf;
         }

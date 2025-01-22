@@ -23,6 +23,7 @@ import org.gridgain.internal.h2.mvstore.DataUtils;
 import org.gridgain.internal.h2.mvstore.MVMap;
 import org.gridgain.internal.h2.mvstore.MVStore;
 import org.gridgain.internal.h2.store.fs.FileUtils;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * An archive tool to compress directories, using the MVStore backend.
@@ -98,8 +99,8 @@ public class ArchiveToolStore {
                 filesTemp.put(name, new int[1]);
                 continue;
             }
-            buff.clear();
-            buff.flip();
+            Utils.clear(buff);
+            Utils.flip(buff);
             ArrayList<Integer> posList = new ArrayList<>();
             try (FileChannel fc = FileUtils.open(s, "r")) {
                 boolean eof = false;
@@ -112,7 +113,7 @@ public class ArchiveToolStore {
                         if (l < 0) {
                             eof = true;
                         }
-                        buff.flip();
+                        Utils.flip(buff);
                     }
                     if (buff.remaining() == 0) {
                         break;

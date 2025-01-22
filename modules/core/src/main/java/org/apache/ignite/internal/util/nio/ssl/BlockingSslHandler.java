@@ -172,17 +172,17 @@ public class BlockingSslHandler {
                     if (outNetBuf.hasRemaining())
                         U.warn(log, "Output net buffer has unsent bytes during handshake (will clear). ");
 
-                    outNetBuf.clear();
+                    U.clear(outNetBuf);
 
                     SSLEngineResult res = sslEngine.wrap(handshakeBuf, outNetBuf);
 
                     if (res.getStatus() == BUFFER_OVERFLOW) {
                         outNetBuf = expandBuffer(outNetBuf, outNetBuf.capacity() * 2);
 
-                        outNetBuf.flip();
+                        U.flip(outNetBuf);
                     }
                     else {
-                        outNetBuf.flip();
+                        U.flip(outNetBuf);
 
                         writeNetBuffer();
                     }
@@ -213,7 +213,7 @@ public class BlockingSslHandler {
      * @return Application buffer with decoded data.
      */
     public ByteBuffer applicationBuffer() {
-        appBuf.flip();
+        U.flip(appBuf);
 
         return appBuf;
     }
@@ -230,7 +230,7 @@ public class BlockingSslHandler {
 
         // The data buffer is (must be) empty, we can reuse the entire
         // buffer.
-        outNetBuf.clear();
+        U.clear(outNetBuf);
 
         // Loop until there is no more data in src
         while (src.hasRemaining()) {
@@ -259,7 +259,7 @@ public class BlockingSslHandler {
                     ", handshakeStatus=" + res.getHandshakeStatus() + ']');
         }
 
-        outNetBuf.flip();
+        U.flip(outNetBuf);
 
         return outNetBuf;
     }
@@ -272,7 +272,7 @@ public class BlockingSslHandler {
      * @throws SSLException If failed to process SSL data.
      */
     public ByteBuffer decode(ByteBuffer buf) throws IgniteCheckedException, SSLException {
-        appBuf.clear();
+        U.clear(appBuf);
 
         if (buf.limit() > inNetBuf.remaining()) {
             inNetBuf = expandBuffer(inNetBuf, inNetBuf.capacity() + buf.limit() * 2);
@@ -303,10 +303,10 @@ public class BlockingSslHandler {
                     U.warn(log, "Got unread bytes after receiving close_notify message (will ignore).");
             }
 
-            inNetBuf.clear();
+            U.clear(inNetBuf);
         }
 
-        appBuf.flip();
+        U.flip(appBuf);
 
         return appBuf;
     }
@@ -330,7 +330,7 @@ public class BlockingSslHandler {
             log.debug("Unwrapping received data.");
 
         // Flip buffer so we can read it.
-        inNetBuf.flip();
+        U.flip(inNetBuf);
 
         SSLEngineResult res = unwrap0();
 
@@ -352,11 +352,11 @@ public class BlockingSslHandler {
     private SSLEngineResult postHandshakeIfNeded(SSLEngineResult res) throws SSLException, IgniteCheckedException {
         while (res.getHandshakeStatus() == FINISHED && res.getStatus() == OK) {
             if (!inNetBuf.hasRemaining()) {
-                inNetBuf.clear();
+                U.clear(inNetBuf);
 
                 readFromNet();
 
-                inNetBuf.flip();
+                U.flip(inNetBuf);
             }
 
             res = unwrap0();
@@ -404,7 +404,7 @@ public class BlockingSslHandler {
             readFromNet();
 
         // Flip input buffer so we can read the collected data.
-        inNetBuf.flip();
+        U.flip(inNetBuf);
 
         SSLEngineResult res = unwrap0();
 
@@ -557,7 +557,7 @@ public class BlockingSslHandler {
 
         res.order(original.order());
 
-        original.flip();
+        U.flip(original);
 
         res.put(original);
 

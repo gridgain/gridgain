@@ -114,7 +114,7 @@ public class TcpCommunicationHandshakeCheckTest extends GridCommonAbstractTest {
 
             assert written;
 
-            buf.flip();
+            U.flip(buf);
 
             U.writeFully(ch, buf);
 

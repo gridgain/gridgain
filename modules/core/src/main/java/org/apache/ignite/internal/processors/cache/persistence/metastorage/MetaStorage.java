@@ -745,7 +745,7 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
 
         /** {@inheritDoc} */
         @Override public Stream<IgniteBiTuple<String, byte[]>> stream() {
-            buf.flip();
+            U.flip(buf);
 
             return Stream.generate(() -> {
                 int keyLen = buf.getInt();
@@ -861,7 +861,7 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
             while (len > 0)
                 len -= file.getChannel().read(cache);
 
-            cache.flip();
+            U.flip(cache);
         }
 
         /**
@@ -871,12 +871,12 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
          */
         private void flushCache(boolean force) throws IOException {
             if (cache.position() > 0) {
-                cache.flip();
+                U.flip(cache);
 
                 while (cache.remaining() > 0)
                     file.getChannel().write(cache);
 
-                cache.clear();
+                U.clear(cache);
             }
 
             file.getChannel().force(force);

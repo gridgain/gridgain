@@ -1278,7 +1278,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (!pageSingleAcquire)
                 PageHeader.releasePage(absPtr);
 
-            buf.clear();
+            U.clear(buf);
 
             if (isInCheckpoint(fullId))
                 pageStoreWriter.writePage(fullId, buf, TRY_AGAIN_TAG);

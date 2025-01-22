@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Parser to decode/encode Redis protocol (RESP) requests.
@@ -159,7 +160,7 @@ public class GridRedisProtocolParser {
         buf.put(b);
         buf.put(CRLF);
 
-        buf.flip();
+        U.flip(buf);
 
         return buf;
     }
@@ -207,7 +208,7 @@ public class GridRedisProtocolParser {
         buf.put(b);
         buf.put(CRLF);
 
-        buf.flip();
+        U.flip(buf);
 
         return buf;
     }
@@ -226,7 +227,7 @@ public class GridRedisProtocolParser {
         buf.put(b);
         buf.put(CRLF);
 
-        buf.flip();
+        U.flip(buf);
 
         return buf;
     }
@@ -250,7 +251,7 @@ public class GridRedisProtocolParser {
         ByteBuffer buf = ByteBuffer.allocate(NIL.length);
         buf.put(NIL);
 
-        buf.flip();
+        U.flip(buf);
 
         return buf;
     }
@@ -274,7 +275,7 @@ public class GridRedisProtocolParser {
         buf.put(b);
         buf.put(CRLF);
 
-        buf.flip();
+        U.flip(buf);
 
         return buf;
     }
@@ -322,7 +323,7 @@ public class GridRedisProtocolParser {
         buf.put(CRLF);
         res.forEach(o -> buf.put(o));
 
-        buf.flip();
+        U.flip(buf);
 
         return buf;
     }
@@ -346,7 +347,7 @@ public class GridRedisProtocolParser {
         for (Object val : vals)
             buf.put(toBulkString(val));
 
-        buf.flip();
+        U.flip(buf);
 
         return buf;
     }

@@ -1180,7 +1180,7 @@ public class GridNioServer<T> {
             final GridSelectorNioSessionImpl ses = (GridSelectorNioSessionImpl)key.attachment();
 
             // Reset buffer to read bytes up to its capacity.
-            readBuf.clear();
+            U.clear(readBuf);
 
             // Attempt to read off the channel
             int cnt = sockCh.read(readBuf);
@@ -1206,7 +1206,7 @@ public class GridNioServer<T> {
 
             // Sets limit to current position and
             // resets position to 0.
-            readBuf.flip();
+            U.flip(readBuf);
 
             try {
                 assert readBuf.hasRemaining();
@@ -1217,7 +1217,7 @@ public class GridNioServer<T> {
                     LT.warn(log, "Read buffer contains data after filter chain processing (will discard " +
                         "remaining bytes) [ses=" + ses + ", remainingCnt=" + readBuf.remaining() + ']');
 
-                    readBuf.clear();
+                    U.clear(readBuf);
                 }
             }
             catch (IgniteCheckedException e) {
@@ -1374,7 +1374,7 @@ public class GridNioServer<T> {
             ses.bytesReceived(cnt);
             onRead(cnt);
 
-            readBuf.flip();
+            U.flip(readBuf);
 
             assert readBuf.hasRemaining();
 
@@ -1384,7 +1384,7 @@ public class GridNioServer<T> {
                 if (readBuf.hasRemaining())
                     readBuf.compact();
                 else
-                    readBuf.clear();
+                    U.clear(readBuf);
 
                 if (ses.hasSystemMessage() && !ses.procWrite.get()) {
                     ses.procWrite.set(true);
@@ -1513,13 +1513,13 @@ public class GridNioServer<T> {
                     int sesBufLimit = buf.limit();
                     int sesCap = buf.capacity();
 
-                    buf.flip();
+                    U.flip(buf);
 
                     buf = sslFilter.encrypt(ses, buf);
 
                     ByteBuffer sesBuf = ses.writeBuffer();
 
-                    sesBuf.clear();
+                    U.clear(sesBuf);
 
                     if (sesCap - buf.limit() < 0) {
                         int limit = sesBufLimit + (sesCap - buf.limit()) - 100;
@@ -1728,7 +1728,7 @@ public class GridNioServer<T> {
                 finished = writeToBuffer(ses, buf, req, writer);
             }
 
-            buf.flip();
+            U.flip(buf);
 
             assert buf.hasRemaining();
 
@@ -1760,7 +1760,7 @@ public class GridNioServer<T> {
                 ses.addMeta(NIO_OPERATION.ordinal(), req);
             }
             else
-                buf.clear();
+                U.clear(buf);
         }
 
         /**

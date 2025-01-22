@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -72,7 +73,7 @@ public class IgniteIncompleteCacheObjectSelfTest extends GridCommonAbstractTest 
 
         assertThat("Not all data were written.", !dataBuf.hasRemaining(), is(true));
 
-        dataBuf.clear();
+        U.clear(dataBuf);
 
         // Cut on header for reading.
         dataBuf.limit(3);

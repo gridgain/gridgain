@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * This class implements stream parser based on {@link GridNioServerBuffer}.
@@ -79,7 +80,7 @@ public class GridBufferedParser implements GridNioParser {
         res.putInt(msg0.length);
         res.put(msg0);
 
-        res.flip();
+        U.flip(res);
 
         return res;
     }

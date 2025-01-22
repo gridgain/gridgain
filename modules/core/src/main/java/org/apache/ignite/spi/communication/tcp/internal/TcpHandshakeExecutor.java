@@ -159,7 +159,7 @@ public class TcpHandshakeExecutor {
                     .put(U.IGNITE_HEADER);
 
             msg.writeTo(buf, null);
-            buf.flip();
+            U.flip(buf);
 
             write(buf);
         }
@@ -289,12 +289,12 @@ public class TcpHandshakeExecutor {
 
             try {
                 while (read == 0) {
-                    readBuf.clear();
+                    U.clear(readBuf);
 
                     if (ch.read(readBuf) < 0)
                         return -1;
 
-                    readBuf.flip();
+                    U.flip(readBuf);
 
                     handler.decode(readBuf);
 

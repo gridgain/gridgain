@@ -231,8 +231,8 @@ public class CompressionProcessorImpl extends CompressionProcessor {
         copyPageHeader(compactPage, compressedPage, compactSize);
         compressor.compress(compactPage, compressedPage);
 
-        compactPage.flip();
-        compressedPage.flip();
+        U.flip(compactPage);
+        U.flip(compressedPage);
 
         return compressedPage;
     }
@@ -249,8 +249,8 @@ public class CompressionProcessorImpl extends CompressionProcessor {
         copyPageHeader(compactPage, compressedPage, compactSize);
         Zstd.compress(compressedPage, compactPage, compressLevel);
 
-        compactPage.flip();
-        compressedPage.flip();
+        U.flip(compactPage);
+        U.flip(compressedPage);
 
         return compressedPage;
     }
@@ -345,13 +345,13 @@ public class CompressionProcessorImpl extends CompressionProcessor {
             switch (compressType) {
                 case ZSTD_COMPRESSED_PAGE:
                     Zstd.decompress(dst, page);
-                    dst.flip();
+                    U.flip(dst);
 
                     break;
 
                 case LZ4_COMPRESSED_PAGE:
                     Lz4.decompress(page, dst);
-                    dst.flip();
+                    U.flip(dst);
 
                     break;
 
@@ -435,7 +435,7 @@ public class CompressionProcessorImpl extends CompressionProcessor {
         /** {@inheritDoc} */
         @Override public ByteBuffer get() {
             ByteBuffer buf = super.get();
-            buf.clear();
+            U.clear(buf);
             return buf;
         }
     }

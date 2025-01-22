@@ -700,8 +700,8 @@ public class PageMemoryTracker implements IgnitePlugin {
 
         // Compare only meaningful data.
         if (pageIo instanceof CompactablePageIO) {
-            tmpBuf1.clear();
-            tmpBuf2.clear();
+            U.clear(tmpBuf1);
+            U.clear(tmpBuf2);
 
             ((CompactablePageIO)pageIo).compactPage(locBuf, tmpBuf1, pageSize);
             ((CompactablePageIO)pageIo).compactPage(rmtBuf, tmpBuf2, pageSize);

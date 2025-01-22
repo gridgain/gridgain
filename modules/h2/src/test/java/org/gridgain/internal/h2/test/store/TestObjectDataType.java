@@ -16,6 +16,7 @@ import java.util.UUID;
 import org.gridgain.internal.h2.mvstore.WriteBuffer;
 import org.gridgain.internal.h2.mvstore.type.ObjectDataType;
 import org.gridgain.internal.h2.test.TestBase;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * Test the ObjectType class.
@@ -147,7 +148,7 @@ public class TestObjectDataType extends TestBase {
         ot.write(buff, x);
         buff.put((byte) 123);
         ByteBuffer bb = buff.getBuffer();
-        bb.flip();
+        Utils.flip(bb);
 
         ot.getMemory(last);
         Object y = ot.read(bb);

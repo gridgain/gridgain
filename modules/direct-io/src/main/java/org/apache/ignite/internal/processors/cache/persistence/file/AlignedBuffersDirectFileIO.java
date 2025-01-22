@@ -247,7 +247,7 @@ public class AlignedBuffersDirectFileIO extends AbstractFileIO {
 
             int loaded = readIntoAlignedBuffer(alignedBuf, filePosition);
 
-            alignedBuf.flip();
+            U.flip(alignedBuf);
 
             if (loaded > 0)
                   destBuf.put(alignedBuf);
@@ -255,7 +255,7 @@ public class AlignedBuffersDirectFileIO extends AbstractFileIO {
             return loaded;
         }
         finally {
-            alignedBuf.clear();
+            U.clear(alignedBuf);
 
             if (!useTlb)
                 AlignedBuffers.free(alignedBuf);
@@ -298,7 +298,7 @@ public class AlignedBuffersDirectFileIO extends AbstractFileIO {
             int initPos = srcBuf.position();
 
             alignedBuf.put(srcBuf);
-            alignedBuf.flip();
+            U.flip(alignedBuf);
 
             int len = alignedBuf.remaining();
 
@@ -318,7 +318,7 @@ public class AlignedBuffersDirectFileIO extends AbstractFileIO {
             return written;
         }
         finally {
-            alignedBuf.clear();
+            U.clear(alignedBuf);
 
             if (!useTlb)
                 AlignedBuffers.free(alignedBuf);

@@ -94,12 +94,12 @@ public class BinaryFieldExtractionSelfTest extends GridCommonAbstractTest {
             for (BinaryFieldEx field : fields)
                 field.writeField(bObj, buf);
 
-            buf.flip();
+            U.flip(buf);
 
             for (BinaryFieldEx field : fields)
                 assertEquals((Object)field.value(bObj), field.readField(buf));
 
-            buf.flip();
+            U.flip(buf);
         }
     }
 
@@ -120,7 +120,7 @@ public class BinaryFieldExtractionSelfTest extends GridCommonAbstractTest {
 
         field.writeField(binObj, buf);
 
-        buf.flip();
+        U.flip(buf);
 
         assertEquals(field.value(binObj), field.<Time>readField(buf));
     }
@@ -261,11 +261,11 @@ public class BinaryFieldExtractionSelfTest extends GridCommonAbstractTest {
 
             field.writeField(binObj, buf);
 
-            buf.flip();
+            U.flip(buf);
 
             assertEquals((Object)field.value(binObj), field.readField(buf));
 
-            buf.clear();
+            U.clear(buf);
         }
     }
 

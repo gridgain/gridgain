@@ -341,7 +341,7 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
 
             ByteBuffer appBuf = hnd.getApplicationBuffer();
 
-            appBuf.flip();
+            U.flip(appBuf);
 
             if (appBuf.hasRemaining())
                 proceedMessageReceived(ses, appBuf);

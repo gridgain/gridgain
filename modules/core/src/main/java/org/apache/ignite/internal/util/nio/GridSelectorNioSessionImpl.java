@@ -33,6 +33,7 @@ import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.util.deque.FastSizeDeque;
 import org.jetbrains.annotations.Nullable;
 
@@ -129,13 +130,13 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
         sem = sndQueueLimit > 0 ? new Semaphore(sndQueueLimit) : null;
 
         if (writeBuf != null) {
-            writeBuf.clear();
+            U.clear(writeBuf);
 
             this.writeBuf = writeBuf;
         }
 
         if (readBuf != null) {
-            readBuf.clear();
+            U.clear(readBuf);
 
             this.readBuf = readBuf;
         }

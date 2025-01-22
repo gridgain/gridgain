@@ -203,7 +203,7 @@ public class GridTcpRestParser implements GridNioParser {
             buf.put(IGNITE_HANDSHAKE_FLAG);
             buf.put(bytes);
 
-            buf.flip();
+            U.flip(buf);
 
             return buf;
         }
@@ -224,7 +224,7 @@ public class GridTcpRestParser implements GridNioParser {
             buf.put(U.uuidToBytes(msg.destinationId()));
             buf.put(body);
 
-            buf.flip();
+            U.flip(buf);
 
             return buf;
         }

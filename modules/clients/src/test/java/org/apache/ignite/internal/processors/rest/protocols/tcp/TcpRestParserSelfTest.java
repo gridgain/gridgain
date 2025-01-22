@@ -132,7 +132,7 @@ public class TcpRestParserSelfTest extends GridCommonAbstractTest {
                 fake.put(U.longToBytes(0));
                 fake.put(U.longToBytes(0));
 
-                fake.flip();
+                U.flip(fake);
 
                 parser.decode(ses, fake);
 
@@ -265,12 +265,12 @@ public class TcpRestParserSelfTest extends GridCommonAbstractTest {
         for (int i = 0; i < 5; i++)
             tmp.put(clientRequestPacket(req));
 
-        tmp.flip();
+        U.flip(tmp);
 
         for (int splitPos = 0; splitPos < tmp.remaining(); splitPos++) {
             ByteBuffer[] split = split(tmp, splitPos);
 
-            tmp.flip();
+            U.flip(tmp);
 
             GridNioSession ses = new MockNioSession();
 
@@ -400,7 +400,7 @@ public class TcpRestParserSelfTest extends GridCommonAbstractTest {
             IGNITE_HANDSHAKE_FLAG, 5, 0, 0, 0, 0
         });
 
-        res.flip();
+        U.flip(res);
 
         return res;
     }
@@ -455,7 +455,7 @@ public class TcpRestParserSelfTest extends GridCommonAbstractTest {
         if (valLen > 0)
             res.put(val);
 
-        res.flip();
+        U.flip(res);
 
         return res;
     }

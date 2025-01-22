@@ -22,6 +22,7 @@ import org.apache.ignite.internal.direct.DirectMessageWriter;
 import org.apache.ignite.internal.managers.communication.GridIoMessageFactory;
 import org.apache.ignite.internal.managers.communication.IgniteMessageFactoryImpl;
 import org.apache.ignite.internal.util.UUIDCollectionMessage;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
@@ -110,7 +111,7 @@ public class GridMessageCollectionTest {
 
         m.writeTo(buf, writer(proto));
 
-        buf.flip();
+        U.flip(buf);
 
         byte b0 = buf.get();
         byte b1 = buf.get();

@@ -92,7 +92,7 @@ public class GridClientOptimizedMarshaller implements GridClientMarshaller {
 
             buf.put(bytes);
 
-            buf.flip();
+            U.flip(buf);
 
             return buf;
         }

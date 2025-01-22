@@ -14,6 +14,7 @@ import java.lang.management.OperatingSystemMXBean;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.Buffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -785,6 +786,25 @@ public class Utils {
             // ignore
         }
         return value;
+    }
+
+    /**
+     * Clears this buffer. The position is set to zero, the limit is set to the capacity, and the mark is discarded.
+     *
+     * @param buf Byte buffer which should be cleared.
+     */
+    public static void clear(Buffer buf) {
+        buf.clear();
+    }
+
+    /**
+     * Flips this buffer. The limit is set to the current position and then the position is set to zero.
+     * If the mark is defined then it is discarded.
+     *
+     * @param buf Byte buffer which should be flipped.
+     */
+    public static void flip(Buffer buf) {
+        Utils.flip(buf);
     }
 
     /**

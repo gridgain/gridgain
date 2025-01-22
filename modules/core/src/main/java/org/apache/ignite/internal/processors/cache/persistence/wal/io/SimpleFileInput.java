@@ -19,9 +19,9 @@ package org.apache.ignite.internal.processors.cache.persistence.wal.io;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.ByteBufferExpander;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -70,7 +70,7 @@ public class SimpleFileInput implements FileInput {
      * Clear buffer.
      */
     private void clearBuffer() {
-        buf.clear();
+        U.clear(buf);
         buf.limit(0);
 
         assert buf.remaining() == 0; // Buffer is empty.
@@ -126,7 +126,7 @@ public class SimpleFileInput implements FileInput {
         }
         while (available < requested);
 
-        buf.flip();
+        U.flip(buf);
     }
 
     /**

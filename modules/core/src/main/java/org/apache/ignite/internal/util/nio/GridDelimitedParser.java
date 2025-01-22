@@ -19,6 +19,7 @@ package org.apache.ignite.internal.util.nio;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * This class implements stream parser based on {@link GridNioDelimitedBuffer}.
@@ -77,7 +78,7 @@ public class GridDelimitedParser implements GridNioParser {
         res.put(msg0);
         res.put(delim);
 
-        res.flip();
+        U.flip(res);
 
         return res;
     }

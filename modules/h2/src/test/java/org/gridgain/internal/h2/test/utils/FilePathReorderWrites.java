@@ -17,6 +17,7 @@ import org.gridgain.internal.h2.store.fs.FileBase;
 import org.gridgain.internal.h2.store.fs.FilePath;
 import org.gridgain.internal.h2.store.fs.FilePathWrapper;
 import org.gridgain.internal.h2.util.IOUtils;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * An unstable file system. It is used to simulate file system problems (for
@@ -332,7 +333,7 @@ class FileReorderWrites extends FileBase {
                 int len = src.limit() - src.position();
                 this.buffer = ByteBuffer.allocate(len);
                 buffer.put(src);
-                buffer.flip();
+                Utils.flip(buffer);
             }
             this.position = position;
         }
@@ -386,7 +387,7 @@ class FileReorderWrites extends FileBase {
                 return -1;
             }
             int len = channel.write(buffer, position);
-            buffer.flip();
+            Utils.flip(buffer);
             return len;
         }
 

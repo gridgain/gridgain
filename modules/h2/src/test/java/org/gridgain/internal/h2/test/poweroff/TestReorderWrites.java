@@ -17,6 +17,7 @@ import org.gridgain.internal.h2.store.fs.FilePath;
 import org.gridgain.internal.h2.store.fs.FileUtils;
 import org.gridgain.internal.h2.test.TestBase;
 import org.gridgain.internal.h2.test.utils.FilePathReorderWrites;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * Tests that the MVStore recovers from a power failure if the file system or
@@ -153,7 +154,7 @@ public class TestReorderWrites extends TestBase {
             FileChannel fc = FilePath.get(fileName).open("rw");
             for (int j = 0; j < 20; j++) {
                 fc.write(empty, j * 1024);
-                empty.flip();
+                Utils.flip(empty);
             }
             fs.setPowerOffCountdown(4 + r.nextInt(20), i);
             int lastWritten = 0;
@@ -184,7 +185,7 @@ public class TestReorderWrites extends TestBase {
             fc = FilePath.get(fileName).open("rw");
             ByteBuffer data = ByteBuffer.allocate(1024);
             fc.read(data, 0);
-            data.flip();
+            Utils.flip(data);
             int got = data.get();
             long size = fc.size();
             minSize = Math.min(minSize, size);
