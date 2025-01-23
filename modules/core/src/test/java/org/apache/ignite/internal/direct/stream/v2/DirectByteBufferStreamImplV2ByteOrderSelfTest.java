@@ -28,7 +28,6 @@ import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
-import org.gridgain.internal.h2.util.Utils;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Before;
 import org.junit.Test;

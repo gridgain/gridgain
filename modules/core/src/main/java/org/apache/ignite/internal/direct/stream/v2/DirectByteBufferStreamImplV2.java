@@ -1384,7 +1384,7 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
             if (remaining > 0) {
                 GridUnsafe.copyMemory(arr, off + arrOff, heapArr, baseOff + pos, remaining);
 
-                U.position(buf, pos+ remaining);
+                U.position(buf, pos + remaining);
 
                 arrOff += remaining;
             }
