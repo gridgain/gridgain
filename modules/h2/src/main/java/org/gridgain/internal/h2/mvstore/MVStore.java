@@ -925,7 +925,7 @@ public class MVStore implements AutoCloseable {
         header.put(bytes);
         Utils.position(header, BLOCK_SIZE);
         header.put(bytes);
-        header.rewind();
+        Utils.rewind(header);
         write(0, header);
     }
 

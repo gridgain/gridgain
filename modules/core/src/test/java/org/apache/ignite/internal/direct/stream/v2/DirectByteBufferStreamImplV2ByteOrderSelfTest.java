@@ -107,7 +107,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
 
         stream.writeShortArray(arr);
 
-        buff.rewind();
+        U.rewind(buff);
 
         for (int i = 0; i < ARR_LEN; i++)
             assertEquals(arr[i], getShortByByteLE(outArr, i * 2 + LEN_BYTES));
@@ -127,7 +127,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
 
         stream.writeCharArray(arr);
 
-        buff.rewind();
+        U.rewind(buff);
 
         for (int i = 0; i < ARR_LEN; i++)
             assertEquals(arr[i], getCharByByteLE(outArr, i * 2 + LEN_BYTES));
@@ -147,7 +147,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
 
         stream.writeIntArray(arr);
 
-        buff.rewind();
+        U.rewind(buff);
 
         for (int i = 0; i < ARR_LEN; i++)
             assertEquals(arr[i], getIntByByteLE(outArr, i * 4 + LEN_BYTES));
@@ -167,7 +167,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
 
         stream.writeLongArray(arr);
 
-        buff.rewind();
+        U.rewind(buff);
 
         for (int i = 0; i < ARR_LEN; i++)
             assertEquals(arr[i], getLongByByteLE(outArr, i * 8 + LEN_BYTES));
@@ -187,7 +187,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
 
         stream.writeFloatArray(arr);
 
-        buff.rewind();
+        U.rewind(buff);
 
         for (int i = 0; i < ARR_LEN; i++)
             assertEquals(arr[i], getFloatByByteLE(outArr, i * 4 + LEN_BYTES), 0);
@@ -207,7 +207,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
 
         stream.writeDoubleArray(arr);
 
-        buff.rewind();
+        U.rewind(buff);
 
         for (int i = 0; i < ARR_LEN; i++)
             assertEquals(arr[i], getDoubleByByteLE(outArr, i * 8 + LEN_BYTES), 0);
@@ -372,7 +372,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
     private long getWriteStringExecutionTime(int len) {
         String s = StringUtils.leftPad("1", len, "_");
 
-        buff.rewind();
+        U.rewind(buff);
 
         DirectByteBufferStreamImplV2 stream = createStream(buff);
 
@@ -380,7 +380,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
         while (!stream.lastFinished()) {
             stream.writeString(s);
 
-            buff.rewind();
+            U.rewind(buff);
         }
         long d2 = System.currentTimeMillis();
 
@@ -403,7 +403,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
         long baseOff = baseOffset(srcArr);
 
         U.limit(buff, outBytes);
-        buff.rewind();
+        U.rewind(buff);
 
         boolean writeRes;
 
@@ -414,7 +414,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
 
         assertTrue(writeRes);
 
-        buff.rewind();
+        U.rewind(buff);
 
         DirectByteBufferStreamImplV2.ArrayCreator<T> arrCreator = arrayCreator(srcArr);
 
@@ -449,7 +449,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
         long baseOff = baseOffset(srcArr);
 
         U.limit(buff, outBytes - 1);
-        buff.rewind();
+        U.rewind(buff);
 
         // Write and read the first part.
         boolean writeRes;
@@ -462,7 +462,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
         assertFalse(writeRes);
 
         U.limit(buff, buff.position());
-        buff.rewind();
+        U.rewind(buff);
 
         DirectByteBufferStreamImplV2.ArrayCreator<T> arrCreator = arrayCreator(srcArr);
 
@@ -476,7 +476,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
         assertEquals(null, resArr);
 
         U.limit(buff, outBytes);
-        buff.rewind();
+        U.rewind(buff);
 
         // Write and read the second part.
         if (writeBigEndian)
@@ -487,7 +487,7 @@ public class DirectByteBufferStreamImplV2ByteOrderSelfTest {
         assertTrue(writeRes);
 
         U.limit(buff, buff.position());
-        buff.rewind();
+        U.rewind(buff);
 
         if (readBigEndian)
             resArr = readStream.readArrayLE(arrCreator, typeSize, lenShift, baseOff);

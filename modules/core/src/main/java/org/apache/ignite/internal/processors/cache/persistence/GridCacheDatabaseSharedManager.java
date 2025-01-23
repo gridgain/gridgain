@@ -1426,7 +1426,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             fileIO.readFully(hdr);
 
-            hdr.rewind();
+            U.rewind(hdr);
 
             hdr.getLong(); // Read signature.
 

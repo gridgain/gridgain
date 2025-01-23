@@ -808,6 +808,15 @@ public class Utils {
     }
 
     /**
+     * Rewinds this buffer. The position is set to zero and the mark is discarded.
+     *
+     * @param buf Byte buffer.
+     */
+    public static void rewind(Buffer buf) {
+        buf.rewind();
+    }
+
+    /**
      * Sets this buffer's position. If the mark is defined and larger than the new position then it is discarded.
      *
      * @param buf Byte buffer.

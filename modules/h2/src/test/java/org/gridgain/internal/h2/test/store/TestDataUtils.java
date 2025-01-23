@@ -154,16 +154,16 @@ public class TestDataUtils extends TestBase {
         ByteBuffer buff = ByteBuffer.allocate(100);
         DataUtils.writeVarInt(buff, DataUtils.COMPRESSED_VAR_INT_MAX);
         assertEquals(3, buff.position());
-        buff.rewind();
+        Utils.rewind(buff);
         DataUtils.writeVarInt(buff, DataUtils.COMPRESSED_VAR_INT_MAX + 1);
         assertEquals(4, buff.position());
-        buff.rewind();
+        Utils.rewind(buff);
         DataUtils.writeVarLong(buff, DataUtils.COMPRESSED_VAR_LONG_MAX);
         assertEquals(7, buff.position());
-        buff.rewind();
+        Utils.rewind(buff);
         DataUtils.writeVarLong(buff, DataUtils.COMPRESSED_VAR_LONG_MAX + 1);
         assertEquals(8, buff.position());
-        buff.rewind();
+        Utils.rewind(buff);
     }
 
     private void testVarIntVarLong() {
@@ -192,7 +192,7 @@ public class TestDataUtils extends TestBase {
         Utils.flip(buff);
         assertEquals(-1, DataUtils.readVarInt(buff));
         assertEquals(5, buff.position());
-        buff.rewind();
+        Utils.rewind(buff);
         assertEquals(-1, DataUtils.readVarLong(buff));
         assertEquals(10, buff.position());
 

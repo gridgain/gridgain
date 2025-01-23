@@ -80,7 +80,7 @@ public class CountingReaderInputStream extends InputStream {
         }
         length += len;
         Utils.limit(charBuffer, charBuffer.position() + len);
-        charBuffer.rewind();
+        Utils.rewind(charBuffer);
         byteBuffer = ByteBuffer.allocate(Constants.IO_BUFFER_SIZE);
         boolean end = remaining == 0;
         encoder.encode(charBuffer, byteBuffer, end);

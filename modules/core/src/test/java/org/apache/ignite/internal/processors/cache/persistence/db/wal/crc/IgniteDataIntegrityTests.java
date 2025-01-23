@@ -74,7 +74,7 @@ public class IgniteDataIntegrityTests {
             buf.putInt(FastCrc.calcCrc(buf, 12));
         }
 
-        buf.rewind();
+        U.rewind(buf);
 
         fileInput.io().writeFully(buf);
         fileInput.io().force();
@@ -148,7 +148,7 @@ public class IgniteDataIntegrityTests {
         assertEquals(13, b2.position());
         assertEquals(24, b2.limit());
 
-        b2.rewind();
+        U.rewind(b2);
 
         assertEquals(0, b2.position());
         assertEquals((byte)1, b2.get());

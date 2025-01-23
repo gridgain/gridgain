@@ -241,7 +241,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
             writePlainRecord(rec, clData);
 
-            clData.rewind();
+            U.rewind(clData);
 
             writeEncryptedData(((WalRecordCacheGroupAware)rec).groupId(), rec.type(), clData, buf);
 
@@ -2042,7 +2042,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
             putPlainDataEntry(clData, entry);
 
-            clData.rewind();
+            U.rewind(clData);
 
             buf.put(ENCRYPTED);
 

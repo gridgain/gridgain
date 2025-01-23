@@ -25,6 +25,7 @@ import java.util.function.LongConsumer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.pagemem.store.PageStore;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteOutClosure;
 
 /**
@@ -102,7 +103,7 @@ public class FileVersionCheckingFactory implements FilePageStoreFactory {
 
             fileIO.readFully(hdr);
 
-            hdr.rewind();
+            U.rewind(hdr);
 
             hdr.getLong(); // Read signature
 

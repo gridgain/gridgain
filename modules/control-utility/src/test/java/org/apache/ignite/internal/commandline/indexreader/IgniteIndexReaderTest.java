@@ -282,14 +282,14 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
             int pageCnt = 0;
 
             while (true) {
-                buf.rewind();
+                U.rewind(buf);
 
                 if (c.read(buf) == -1)
                     break;
 
                 pageCnt++;
 
-                buf.rewind();
+                U.rewind(buf);
 
                 long pageId = PageIO.getPageId(addr);
                 int pageIdx = PageIdUtils.pageIndex(pageId);
@@ -298,7 +298,7 @@ public class IgniteIndexReaderTest extends GridCommonAbstractTest {
                     continue;
 
                 buf.put(trash);
-                buf.rewind();
+                U.rewind(buf);
 
                 c.write(buf, (pageCnt - 1) * PAGE_SIZE);
 

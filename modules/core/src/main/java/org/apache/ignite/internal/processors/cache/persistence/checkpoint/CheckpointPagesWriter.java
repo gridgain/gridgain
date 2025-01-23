@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.util.GridConcurrentMultiPairQueue;
 import org.apache.ignite.internal.util.future.CountDownFuture;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getType;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getVersion;
@@ -213,7 +214,7 @@ public class CheckpointPagesWriter implements Runnable {
 
             snapshotMgr.beforePageWrite(fullId);
 
-            tmpWriteBuf.rewind();
+            U.rewind(tmpWriteBuf);
 
             PageStoreWriter pageStoreWriter = pageStoreWriters.computeIfAbsent(pageMem, pageMemEx -> createPageStoreWriter(pageMemEx, pagesToRetry));
 
@@ -228,7 +229,7 @@ public class CheckpointPagesWriter implements Runnable {
 
                     snapshotMgr.beforePageWrite(cpPageId);
 
-                    tmpWriteBuf.rewind();
+                    U.rewind(tmpWriteBuf);
 
                     pageMem.checkpointWritePage(cpPageId, tmpWriteBuf, pageStoreWriter, tracker);
                 }

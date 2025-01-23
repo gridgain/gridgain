@@ -1531,7 +1531,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
 
                             bufPtr = GridUnsafe.bufferAddress(buf);
                             data = new byte[bufWal.limit()];
-                            bufWal.rewind();
+                            U.rewind(bufWal);
                             bufWal.get(data);
                         }
 

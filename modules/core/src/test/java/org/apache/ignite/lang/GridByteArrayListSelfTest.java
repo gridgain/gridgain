@@ -154,7 +154,7 @@ public class GridByteArrayListSelfTest extends GridCommonAbstractTest {
 
         buf.put(new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 });
 
-        buf.rewind();
+        U.rewind(buf);
 
         list.add(buf, 5);
 

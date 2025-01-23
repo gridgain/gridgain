@@ -15,9 +15,9 @@ import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.gridgain.internal.h2.engine.Constants;
 import org.gridgain.internal.h2.util.StringUtils;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * Utility methods
@@ -409,7 +409,7 @@ public final class DataUtils {
                 }
                 pos += len;
             } while (dst.remaining() > 0);
-            dst.rewind();
+            Utils.rewind(dst);
         } catch (IOException e) {
             long size;
             try {

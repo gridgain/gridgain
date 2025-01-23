@@ -306,13 +306,13 @@ public class FilePathEncrypt extends FilePathWrapper {
                 int readLen = Math.min(l, available);
                 if (readLen > 0) {
                     readInternal(temp, p, readLen);
-                    temp.rewind();
+                    Utils.rewind(temp);
                 }
                 Utils.limit(temp, offset + len);
                 Utils.position(temp, offset);
                 temp.put(src);
                 Utils.limit(temp, l);
-                temp.rewind();
+                Utils.rewind(temp);
                 writeInternal(temp, p, l);
                 long p2 = position + len;
                 size = Math.max(size, p2);

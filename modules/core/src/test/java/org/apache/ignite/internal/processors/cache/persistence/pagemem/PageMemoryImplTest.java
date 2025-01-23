@@ -376,7 +376,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
 
                 tmpWriteBuf.order(ByteOrder.nativeOrder());
 
-                tmpWriteBuf.rewind();
+                U.rewind(tmpWriteBuf);
 
                 memory.checkpointWritePage(cpPageId, tmpWriteBuf, pageStoreWriter, null);
             }

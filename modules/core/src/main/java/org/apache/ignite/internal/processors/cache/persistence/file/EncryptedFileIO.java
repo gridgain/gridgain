@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.managers.encryption.GroupKey;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
 
 /**
@@ -136,7 +137,7 @@ public class EncryptedFileIO implements FileIO {
                 "but read only " + res + " bytes");
         }
 
-        encrypted.rewind();
+        U.rewind(encrypted);
 
         decrypt(encrypted, destBuf);
 
@@ -160,7 +161,7 @@ public class EncryptedFileIO implements FileIO {
                 "but read only " + res + " bytes");
         }
 
-        encrypted.rewind();
+        U.rewind(encrypted);
 
         decrypt(encrypted, destBuf);
 
@@ -196,7 +197,7 @@ public class EncryptedFileIO implements FileIO {
 
         encrypt(srcBuf, encrypted);
 
-        encrypted.rewind();
+        U.rewind(encrypted);
 
         return plainFileIO.write(encrypted, position);
     }
@@ -207,7 +208,7 @@ public class EncryptedFileIO implements FileIO {
 
         encrypt(srcBuf, encrypted);
 
-        encrypted.rewind();
+        U.rewind(encrypted);
 
         return plainFileIO.writeFully(encrypted, position);
     }

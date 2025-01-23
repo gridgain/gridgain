@@ -603,7 +603,7 @@ public class CheckpointMarkersStorage {
 
         FileWALPointer filePtr = (FileWALPointer)ptr;
 
-        entryBuf.rewind();
+        U.rewind(entryBuf);
 
         entryBuf.putLong(filePtr.index());
 

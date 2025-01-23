@@ -629,7 +629,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
 
                     assertTrue(mem.isDirty(fullId.groupId(), fullId.pageId(), page));
 
-                    buf.rewind();
+                    U.rewind(buf);
 
                     mem.checkpointWritePage(fullId, buf, (fullPageId, buffer, tag) -> {
                     }, null);
@@ -990,7 +990,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
                     Integer state = snapshot.get(fullId);
 
                     if (allocated.contains(fullId) && state != -1) {
-                        tmpBuf.rewind();
+                        U.rewind(tmpBuf);
 
                         Integer first = null;
 
@@ -1012,7 +1012,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
                         }
                     }
 
-                    tmpBuf.rewind();
+                    U.rewind(tmpBuf);
 
                     long writeStart = System.nanoTime();
 
@@ -1022,7 +1022,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
 
                     write += writeEnd - writeStart;
 
-                    tmpBuf.rewind();
+                    U.rewind(tmpBuf);
                 }
 
                 long syncStart = System.currentTimeMillis();

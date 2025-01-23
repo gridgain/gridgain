@@ -21,6 +21,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.util.GridUnsafe;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -74,7 +75,7 @@ public class DelayedDirtyPageStoreWrite implements PageStoreWriter {
 
         ByteBuffer tlb = byteBufThreadLoc.get();
 
-        tlb.rewind();
+        U.rewind(tlb);
 
         long writeAddr = GridUnsafe.bufferAddress(tlb);
         long origBufAddr = GridUnsafe.bufferAddress(byteBuf);

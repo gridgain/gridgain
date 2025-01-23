@@ -170,7 +170,7 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
         });
 
         // Add modified page to WAL so it won't be restored to previous (valid) state.
-        pageBuf.rewind();
+        U.rewind(pageBuf);
         ByteBuffer cpBuf = ByteBuffer.allocate(pageBuf.capacity());
         cpBuf.put(pageBuf);
 
@@ -296,11 +296,11 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
             // Recalculate CRC.
             PageIO.setCrc(pageAddr, 0);
 
-            pageBuf.rewind();
+            U.rewind(pageBuf);
             PageIO.setCrc(pageAddr, FastCrc.calcCrc(pageBuf, pageSize));
 
             // Write it back.
-            pageBuf.rewind();
+            U.rewind(pageBuf);
             fileIO.position(pageOff);
             fileIO.writeFully(pageBuf);
         }
@@ -340,7 +340,7 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
                         fileRef.set(file);
                     }
 
-                    srcBuf.rewind();
+                    U.rewind(srcBuf);
 
                     return super.write(srcBuf, position);
                 }

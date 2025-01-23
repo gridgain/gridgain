@@ -23,6 +23,7 @@ import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  *
@@ -108,7 +109,7 @@ public class PageSnapshot extends WALRecord implements WalRecordCacheGroupAware 
     public ByteBuffer pageDataBuffer() {
         ByteBuffer buf = ByteBuffer.wrap(pageDataBytes).order(ByteOrder.nativeOrder());
 
-        buf.rewind();
+        U.rewind(buf);
 
         return buf;
     }

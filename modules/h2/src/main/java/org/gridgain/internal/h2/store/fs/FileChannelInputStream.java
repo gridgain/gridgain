@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * Allows to read from a file channel like an input stream.
@@ -37,7 +38,7 @@ public class FileChannelInputStream extends InputStream {
         if (buffer == null) {
             buffer = ByteBuffer.allocate(1);
         }
-        buffer.rewind();
+        Utils.rewind(buffer);
         int len = channel.read(buffer, pos++);
         if (len < 0) {
             return -1;

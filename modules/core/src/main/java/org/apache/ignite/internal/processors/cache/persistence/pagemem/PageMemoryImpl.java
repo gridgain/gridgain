@@ -911,7 +911,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                     U.warn(log, "Failed to read page (data integrity violation encountered, will try to " +
                         "restore using existing WAL) [fullPageId=" + fullId + ']', e);
 
-                    buf.rewind();
+                    U.rewind(buf);
 
                     tryToRestorePage(fullId, buf);
 
@@ -1335,13 +1335,13 @@ public class PageMemoryImpl implements PageMemoryEx {
             rwLock.writeUnlock(absPtr + PAGE_LOCK_OFFSET, OffheapReadWriteLock.TAG_LOCK_ALWAYS);
 
             if (canWrite) {
-                buf.rewind();
+                U.rewind(buf);
 
                 pageStoreWriter.writePage(fullId, buf, tag);
 
                 dataRegionMetrics.onPageWritten();
 
-                buf.rewind();
+                U.rewind(buf);
             }
 
             // We pinned the page either when allocated the temp buffer, or when resolved abs pointer.

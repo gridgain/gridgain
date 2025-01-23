@@ -121,9 +121,9 @@ public class MVStoreTool {
             ByteBuffer block = ByteBuffer.allocate(4096);
             long pageCount = 0;
             for (long pos = 0; pos < fileSize;) {
-                block.rewind();
+                Utils.rewind(block);
                 DataUtils.readFully(file, pos, block);
-                block.rewind();
+                Utils.rewind(block);
                 int headerType = block.get();
                 if (headerType == 'H') {
                     String header = new String(block.array(), StandardCharsets.ISO_8859_1).trim();
@@ -604,12 +604,12 @@ public class MVStoreTool {
             ByteBuffer block = ByteBuffer.allocate(4096);
             Chunk newestChunk = null;
             for (long pos = 0; pos < fileSize;) {
-                block.rewind();
+                Utils.rewind(block);
                 DataUtils.readFully(file, pos, block);
-                block.rewind();
+                Utils.rewind(block);
                 int headerType = block.get();
                 if (headerType == 'H') {
-                    block.rewind();
+                    Utils.rewind(block);
                     target.write(block, pos);
                     pos += blockSize;
                     continue;
@@ -638,7 +638,7 @@ public class MVStoreTool {
                     pos += length;
                     continue;
                 }
-                chunk.rewind();
+                Utils.rewind(chunk);
                 target.write(chunk, pos);
                 if (newestChunk == null || c.version > newestChunk.version) {
                     newestChunk = c;
@@ -649,7 +649,7 @@ public class MVStoreTool {
             int length = newestChunk.len * MVStore.BLOCK_SIZE;
             ByteBuffer chunk = ByteBuffer.allocate(length);
             DataUtils.readFully(file, newestChunk.block * MVStore.BLOCK_SIZE, chunk);
-            chunk.rewind();
+            Utils.rewind(chunk);
             target.write(chunk, fileSize);
         } catch (IOException e) {
             pw.println("ERROR: " + e);

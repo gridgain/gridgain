@@ -369,7 +369,7 @@ public class IgnitePdsRecoveryAfterFileCorruptionTest extends GridCommonAbstract
                 for (int j = PageIO.COMMON_HEADER_END; j < mem.realPageSize(groupId); j += 4)
                     assertEquals(j + (int)pageId, buf.getInt(j));
 
-                buf.rewind();
+                U.rewind(buf);
 
                 long writeStart = System.nanoTime();
 

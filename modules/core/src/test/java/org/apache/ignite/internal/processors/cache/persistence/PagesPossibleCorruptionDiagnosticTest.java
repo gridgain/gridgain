@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.cache.persistence.freelist.Abstract
 import org.apache.ignite.internal.processors.cache.persistence.freelist.CorruptedFreeListException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.LongListReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -228,7 +229,7 @@ public class PagesPossibleCorruptionDiagnosticTest extends GridCommonAbstractTes
 
         buf.putLong(val);
 
-        buf.rewind();
+        U.rewind(buf);
 
         try (FileChannel c = new RandomAccessFile(new File(path), "rw").getChannel()) {
             c.position(offset);

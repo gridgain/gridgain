@@ -68,7 +68,7 @@ public class EncryptionUtil {
 
         encSpi.encryptNoPadding(srcBuf, grpKey.key(), res);
 
-        res.rewind();
+        U.rewind(res);
 
         storeCRC(res);
 

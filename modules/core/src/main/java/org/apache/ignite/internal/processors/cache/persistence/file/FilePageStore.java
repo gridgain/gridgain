@@ -186,7 +186,7 @@ public class FilePageStore implements PageStore {
 
         hdr.putInt(pageSize);
 
-        hdr.rewind();
+        U.rewind(hdr);
 
         return hdr;
     }
@@ -225,7 +225,7 @@ public class FilePageStore implements PageStore {
 
         fileIO.readFully(hdr);
 
-        hdr.rewind();
+        U.rewind(hdr);
 
         long signature = hdr.getLong();
 

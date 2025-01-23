@@ -83,7 +83,7 @@ public class OffHeapStore extends FileStore {
             }
             writeCount.incrementAndGet();
             writeBytes.addAndGet(length);
-            buff.rewind();
+            Utils.rewind(buff);
             buff.put(src);
             return;
         }
@@ -102,7 +102,7 @@ public class OffHeapStore extends FileStore {
         writeBytes.addAndGet(length);
         ByteBuffer buff = ByteBuffer.allocateDirect(length);
         buff.put(src);
-        buff.rewind();
+        Utils.rewind(buff);
         memory.put(pos, buff);
     }
 

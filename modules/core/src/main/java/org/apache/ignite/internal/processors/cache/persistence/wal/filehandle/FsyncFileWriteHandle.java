@@ -497,7 +497,7 @@ class FsyncFileWriteHandle extends AbstractFileHandle implements FileWriteHandle
 
         assert limit <= buf.capacity();
 
-        buf.rewind();
+        U.rewind(buf);
         U.limit(buf, limit);
 
         do {
@@ -519,7 +519,7 @@ class FsyncFileWriteHandle extends AbstractFileHandle implements FileWriteHandle
 
         assert head instanceof FakeRecord : head.getClass();
 
-        buf.rewind();
+        U.rewind(buf);
         U.limit(buf, limit);
 
         return recordOffset(head);
@@ -645,7 +645,7 @@ class FsyncFileWriteHandle extends AbstractFileHandle implements FileWriteHandle
                             segmentRecord.position(new FileWALPointer(getSegmentId(), (int)written, switchSegmentRecSize));
                             backwardSerializer.writeRecord(segmentRecord, buf);
 
-                            buf.rewind();
+                            U.rewind(buf);
 
                             written += fileIO.writeFully(buf, written);
 

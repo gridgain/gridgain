@@ -32,6 +32,7 @@ import org.gridgain.internal.h2.store.fs.FilePath;
 import org.gridgain.internal.h2.store.fs.FileUtils;
 import org.gridgain.internal.h2.test.TestBase;
 import org.gridgain.internal.h2.test.utils.AssertThrows;
+import org.gridgain.internal.h2.util.Utils;
 
 /**
  * Tests the MVStore.
@@ -988,7 +989,7 @@ public class TestMVStore extends TestBase {
             int bad = (old + 1) & 15;
             buff.put(idx + "fletcher:".length(),
                     (byte) Character.forDigit(bad, 16));
-            buff.rewind();
+            Utils.rewind(buff);
             fc.write(buff, i);
             fc.close();
 

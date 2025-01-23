@@ -83,6 +83,7 @@ import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.lang.GridClosure3;
 import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
@@ -533,7 +534,7 @@ public class IgniteIndexReader implements AutoCloseable {
             long pagesNum = isNull(store) ? 0 : (store.size() - store.headerSize()) / pageSize;
 
             for (int i = 0; i < pagesNum; i++) {
-                buf.rewind();
+                U.rewind(buf);
 
                 try {
                     long pageId = PageIdUtils.pageId(partId, flag, i);
@@ -779,7 +780,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                 while (nextMetaId != 0) {
                     try {
-                        buf.rewind();
+                        U.rewind(buf);
 
                         readPage(idxStore, nextMetaId, buf);
 
@@ -839,14 +840,14 @@ public class IgniteIndexReader implements AutoCloseable {
         try {
             while (nextNodeId != 0) {
                 try {
-                    nodeBuf.rewind();
+                    U.rewind(nodeBuf);
 
                     readPage(idxStore, nextNodeId, nodeBuf);
 
                     PagesListNodeIO io = PageIO.getPageIO(nodeAddr);
 
                     for (int i = 0; i < io.getCount(nodeAddr); i++) {
-                        pageBuf.rewind();
+                        U.rewind(pageBuf);
 
                         long pageId = normalizePageId(io.getAt(nodeAddr, i));
 
@@ -1136,7 +1137,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                 while (pageId > 0) {
                     try {
-                        buf.rewind();
+                        U.rewind(buf);
 
                         readPage(store, pageId, buf);
 
