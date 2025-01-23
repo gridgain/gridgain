@@ -118,6 +118,12 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
             partitions = null;
             updateBatchSize = null;
         }
+
+        if (protocolCtx.isFeatureSupported(ClientBitmaskFeature.QRY_LABEL)) {
+            String label = reader.readString();
+
+            qry.setLabel(label);
+        }
     }
 
     /** {@inheritDoc} */

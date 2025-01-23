@@ -252,6 +252,7 @@ public class GridMapQueryExecutor {
                             onQueryRequest0(
                                 node,
                                 req.requestId(),
+                                req.label(),
                                 segment0,
                                 req.schemaName(),
                                 req.queries(),
@@ -283,6 +284,7 @@ public class GridMapQueryExecutor {
             onQueryRequest0(
                 node,
                 req.requestId(),
+                req.label(),
                 firstSegment,
                 req.schemaName(),
                 req.queries(),
@@ -334,6 +336,7 @@ public class GridMapQueryExecutor {
     private void onQueryRequest0(
         final ClusterNode node,
         final long reqId,
+        final String label,
         final int segmentId,
         final String schemaName,
         final Collection<GridCacheSqlQuery> qrys,
@@ -464,7 +467,7 @@ public class GridMapQueryExecutor {
 
                         H2Utils.bindParameters(stmt, params0);
 
-                        MapH2QueryInfo qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId, runningQryId);
+                        MapH2QueryInfo qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId, runningQryId, label);
 
                         ResultSet rs = h2.executeSqlQueryWithTimer(
                             stmt,

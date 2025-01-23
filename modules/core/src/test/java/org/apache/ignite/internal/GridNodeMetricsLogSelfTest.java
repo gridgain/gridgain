@@ -186,8 +186,10 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
 
         // Don't check the format strictly, but check that all expected metrics are present.
         assertTrue(msg, fullLog.contains("Metrics for local node (to disable set 'metricsLogFrequency' to 0)"));
-        assertTrue(msg, fullLog.matches("(?s).*Node \\[id=.*, consistentId=.*, name=.*, uptime=.*].*"));
-        assertTrue(msg, fullLog.matches("(?s).*Cluster \\[hosts=.*, CPUs=.*, servers=.*, clients=.*, topVer=.*, minorTopVer=.*].*"));
+        assertTrue(msg, fullLog.matches("(?s).*Node \\[id=.*, consistentId=.*, name=.*, version=.*, uptime=.*].*"));
+        assertTrue(msg, fullLog.matches("(?s).*Coordinator \\[id=.*, consistentId=.*, version=.*].*"));
+        assertTrue(msg, fullLog.matches("(?s).*Cluster \\[hosts=.*, CPUs=.*, servers=.*, clients=.*, topVer=.*, " +
+            "minorTopVer=.*, state=.*, clusterId=.*, clusterTag=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*Network \\[addrs=\\[.*], localHost=.*, discoPort=.*, commPort=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*CPU \\[CPUs=.*, curLoad=.*, avgLoad=.*, GC=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*Page memory \\[pages=.*].*"));
@@ -202,6 +204,7 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
         assertTrue(msg, fullLog.matches("(?s).*Striped thread pool \\[active=.*, idle=.*, qSize=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*" + CUSTOM_EXECUTOR_0 + " \\[active=.*, idle=.*, qSize=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*" + CUSTOM_EXECUTOR_1 + " \\[active=.*, idle=.*, qSize=.*].*"));
+        assertTrue(msg, fullLog.matches("(?s).*No plugins found.*"));
     }
 
     /**

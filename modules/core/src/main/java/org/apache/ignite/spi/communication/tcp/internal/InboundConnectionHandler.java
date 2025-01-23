@@ -54,11 +54,11 @@ import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.AttributeNames;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
+import org.apache.ignite.spi.communication.tcp.messages.ConnectionCheckMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
 import org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage;
-import org.apache.ignite.spi.communication.tcp.messages.ConnectionCheckMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
@@ -325,13 +325,6 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
                 return;
             }
-            else if (msg instanceof ConnectionCheckMessage) {
-                if (log.isDebugEnabled())
-                    log.debug("Heartbeat message received [rmtNode=" + connKey.nodeId() +
-                            ", connIdx=" + connKey.connectionIndex() + "]");
-
-                return;
-            }
             else {
                 GridNioRecoveryDescriptor recovery = ses.inRecoveryDescriptor();
 
@@ -365,6 +358,14 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                     fut.onConnected(U.bytesToUuid(((NodeIdMessage)msg).nodeIdBytes(), 0));
 
                     nioSrvWrapper.nio().closeFromWorkerThread(ses);
+
+                    return;
+                }
+
+                if (msg instanceof ConnectionCheckMessage) {
+                    if (log.isDebugEnabled())
+                        log.debug("Heartbeat message received [rmtNode=" + connKey.nodeId() +
+                            ", connIdx=" + connKey.connectionIndex() + "]");
 
                     return;
                 }

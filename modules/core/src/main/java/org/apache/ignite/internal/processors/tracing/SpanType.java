@@ -349,18 +349,18 @@ public enum SpanType {
     SQL_QRY_MAP_END(Scope.SQL, "sql.query.map.end", 104);
 
     /** Scope */
-    private Scope scope;
+    private final Scope scope;
 
     /** Trace name. */
-    private String spanName;
+    private final String spanName;
 
     /** Index. */
-    private int idx;
+    private final int idx;
 
     /** Values. */
     private static final SpanType[] VALS;
 
-    /** {@code true} if given span is a root span within it's scope. */
+    /** {@code true} if given span is a root span within its scope. */
     private boolean rootSpan;
 
     /**
@@ -382,7 +382,7 @@ public enum SpanType {
      * @param scope Scope.
      * @param spanName Span name.
      * @param idx Index.
-     * @param rootSpan Boolean flag, that indicates whether given span is root within it's scope or not.
+     * @param rootSpan Boolean flag, that indicates whether given span is root within its scope or not.
      */
     SpanType(Scope scope, String spanName, int idx, boolean rootSpan) {
         this(scope, spanName, idx);

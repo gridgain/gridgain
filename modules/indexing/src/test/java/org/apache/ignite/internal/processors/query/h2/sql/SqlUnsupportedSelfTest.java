@@ -210,9 +210,6 @@ public class SqlUnsupportedSelfTest extends AbstractIndexingCommonTest {
         assertSqlUnsupported("ALTER SEQUENCE SEQ_ID RESTART WITH 1000");
         assertSqlUnsupported("DROP SEQUENCE SEQ_0");
 
-        assertSqlUnsupported("CREATE TRIGGER trig_0 BEFORE INSERT ON TEST FOR EACH ROW CALL \"MyTrigger\"");
-        assertSqlUnsupported("DROP TRIGGER trig_0");
-
         assertSqlUnsupported("CREATE ROLE newRole");
         assertSqlUnsupported("DROP ROLE newRole");
 

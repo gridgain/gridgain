@@ -1308,7 +1308,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                 ShutdownPolicy.fromOrdinal(n.attribute(ATTR_SHUTDOWN_POLICY));
 
             if (rmtShutdownPolicy != null && !F.eq(locShutdownPolicy, rmtShutdownPolicy)) {
-                throw new IgniteCheckedException("Remote node has shutdoun policy different from local" +
+                throw new IgniteCheckedException("Remote node has shutdown policy different from local" +
                     " local [locId8=" + U.id8(locNode.id()) + ", locShutdownPolicy=" + locShutdownPolicy +
                     ", rmtId8=" + U.id8(n.id()) + ", rmtShutdownPolicy=" + rmtShutdownPolicy +
                     ", rmtAddrs=" + U.addressesAsString(n) + ", rmtNode=" + U.toShortString(n) + "]");
@@ -2000,6 +2000,18 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
      */
     public Collection<ClusterNode> cacheGroupAffinityNodes(int grpId, AffinityTopologyVersion topVer) {
         return resolveDiscoCache(grpId, topVer).cacheGroupAffinityNodes(grpId);
+    }
+
+    /**
+     * Return {@code true} when all baseline nodes are on-line for the given topology version,
+     * and {@code false} otherwise.
+     *
+     * @param topVer Topology version.
+     * @return Return {@code true} when all baseline nodes are on-line for the given topology version,
+     * and {@code false} otherwise.
+     */
+    public boolean fullBaseline(AffinityTopologyVersion topVer) {
+        return resolveDiscoCache(CU.cacheId(null), topVer).fullBaseline();
     }
 
     /**

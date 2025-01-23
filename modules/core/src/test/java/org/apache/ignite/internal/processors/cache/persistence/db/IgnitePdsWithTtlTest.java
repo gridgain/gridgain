@@ -65,6 +65,7 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.IgniteWalIteratorFactory;
+import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.ReentrantReadWriteLockWithTracking;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
@@ -76,6 +77,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.logger.NullLogger;
+import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -90,10 +92,12 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
+import static org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl.DATAREGION_METRICS_PREFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntryType.END;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.testframework.GridTestUtils.runMultiThreadedAsync;
 import static org.apache.ignite.testframework.GridTestUtils.waitForAllFutures;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Test TTL worker with persistence enabled
@@ -141,6 +145,9 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
     /** Fail. */
     private volatile boolean fail;
 
+    /** Checkpoint frequency. */
+    private long checkpointFreq = DataStorageConfiguration.DFLT_CHECKPOINT_FREQ;
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
@@ -187,7 +194,8 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
             new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(dfltRegion)
                 .setDataRegionConfigurations(nonPersistentRegion)
-                .setWalMode(WALMode.LOG_ONLY));
+                .setWalMode(WALMode.LOG_ONLY)
+                .setCheckpointFrequency(checkpointFreq));
 
         cfg.setCacheConfiguration(
             getCacheConfiguration(CACHE_NAME_ATOMIC).setAtomicityMode(ATOMIC),
@@ -219,8 +227,8 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
      * @param name Cache name.
      * @return Cache configuration.
      */
-    private CacheConfiguration<?, ?> getCacheConfiguration(String name) {
-        CacheConfiguration<?, ?> ccfg = new CacheConfiguration<>();
+    private CacheConfiguration<Integer, Object> getCacheConfiguration(String name) {
+        CacheConfiguration<Integer, Object> ccfg = new CacheConfiguration<>();
 
         ccfg.setName(name);
         ccfg.setAffinity(new RendezvousAffinityFunction(false, PART_SIZE));
@@ -594,6 +602,78 @@ public class IgnitePdsWithTtlTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         assertFalse("Failure handler should not be triggered.", fail);
+    }
+
+    /**
+     * Tests that reading a large entry does not cause the whole entry to be rewritten to hte PDS.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testReadingLargeEntriesDoNotRewriteEntry() throws Exception {
+        // Disable checkpoints on timeout.
+        checkpointFreq = 600_000;
+
+        Ignite crd = startGridsMultiThreaded(2);
+
+        crd.cluster().state(ACTIVE);
+
+        String cacheName = CACHE_NAME_ATOMIC + "-dirty-pages-test";
+        CacheConfiguration<Integer, Object> ccfg = getCacheConfiguration(cacheName)
+            .setAtomicityMode(ATOMIC)
+            .setBackups(1)
+            .setExpiryPolicyFactory(AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.MILLISECONDS, 600_000)));
+
+        IgniteCache<Integer, Object> cache = crd.getOrCreateCache(ccfg);
+
+        awaitPartitionMapExchange();
+
+        Integer pk = 12;
+
+        log.info("Put entry and set expiration time on access [key=" + pk + ']');
+
+        // Put large value (more than 10 pages, for instance).
+        cache.put(pk, new byte[12 * DataStorageConfiguration.DFLT_PAGE_SIZE]);
+
+        // Force checkpoint to write all pages to disk and clean dirty flag.
+        grid(0).context().cache().context().database().forceCheckpoint("test-checkpoint").futureFor(FINISHED).get();
+        grid(1).context().cache().context().database().forceCheckpoint("test-checkpoint").futureFor(FINISHED).get();
+
+        LongMetric dirtyPages0 = grid(0)
+            .context()
+            .metric()
+            .registry(MetricUtils.metricName(DATAREGION_METRICS_PREFIX, "default"))
+            .findMetric("DirtyPages");
+
+        LongMetric dirtyPages1 = grid(1)
+            .context()
+            .metric()
+            .registry(MetricUtils.metricName(DATAREGION_METRICS_PREFIX, "default"))
+            .findMetric("DirtyPages");
+
+        assertEquals(0, dirtyPages0.value());
+        assertEquals(0, dirtyPages1.value());
+
+        // Set expiration time on access.
+        cache.get(pk);
+
+        boolean success = waitForCondition(() -> {
+            long dirtyPagesVal0 = dirtyPages0.value();
+            long dirtyPagesVal1 = dirtyPages1.value();
+
+            // Check that dirty pages must be greater than 0 and
+            // less than or equal to 3 (1 page - head, and 2 pages at maximum that hold ttl value).
+            boolean res = dirtyPagesVal0 > 0 && dirtyPagesVal0 <= 3
+                && dirtyPagesVal1 > 0 && dirtyPagesVal1 <= 3;
+
+            if (!res)
+                log.info("[dirtyPages0=" + dirtyPages0.value() + ", dirtyPages1=" + dirtyPages1.value() + ']');
+
+            return res;
+        }, 10_000);
+
+        assertTrue("Number of dirty pages should be greater than 0 and less than or equal to 3 [" +
+            "dirtyPages0=" + dirtyPages0.value() + ", dirtyPages1=" + dirtyPages1.value() + ']', success);
     }
 
     /**

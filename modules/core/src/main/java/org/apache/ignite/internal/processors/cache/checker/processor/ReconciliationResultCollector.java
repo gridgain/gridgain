@@ -43,11 +43,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntriesExtended;
@@ -82,8 +84,9 @@ public interface ReconciliationResultCollector {
      * @param cacheName Cache name.
      * @param partId Partition id.
      * @param keys Skipped entries
+     * @throws IgniteException If cache with the given name does not exist.
      */
-    void appendSkippedEntries(String cacheName, int partId, Map<VersionedKey, Map<UUID, VersionedValue>> keys);
+    void appendSkippedEntries(String cacheName, int partId, Map<VersionedKey, Map<UUID, VersionedValue>> keys) throws IgniteException;
 
     /**
      * Appends skipped partition.
@@ -101,12 +104,13 @@ public interface ReconciliationResultCollector {
      * @param partId Partition id.
      * @param conflicts Conflicted entries.
      * @param actualKeys Actual values.
+     * @throws IgniteException If cache with the given name does not exist.
      */
     void appendConflictedEntries(
         String cacheName,
         int partId,
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> conflicts,
-        Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys);
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys) throws IgniteException;
 
     /**
      * Returns the total number of conflicts.
@@ -239,7 +243,12 @@ public interface ReconciliationResultCollector {
             int partId,
             Map<VersionedKey, Map<UUID, VersionedValue>> keys
         ) {
-            CacheObjectContext ctx = ignite.cachex(cacheName).context().cacheObjectContext();
+            IgniteInternalCache<?, ?> cachex = ignite.cachex(cacheName);
+
+            if (cachex == null)
+                throw new IgniteException("Cache not found (was stopped) [name=" + cacheName + ']');
+
+            CacheObjectContext ctx = cachex.context().cacheObjectContext();
 
             synchronized (skippedEntries) {
                 Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>> data = new HashSet<>();
@@ -293,7 +302,12 @@ public interface ReconciliationResultCollector {
             Map<KeyCacheObject, Map<UUID, GridCacheVersion>> conflicts,
             Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys
         ) {
-            CacheObjectContext ctx = ignite.cachex(cacheName).context().cacheObjectContext();
+            IgniteInternalCache<?, ?> cachex = ignite.cachex(cacheName);
+
+            if (cachex == null)
+                throw new IgniteException("Cache not found (was stopped) [name=" + cacheName + ']');
+
+            CacheObjectContext ctx = cachex.context().cacheObjectContext();
 
             synchronized (inconsistentKeys) {
                 try {
@@ -360,7 +374,12 @@ public interface ReconciliationResultCollector {
             int partId,
             Map<VersionedKey, RepairMeta> repairedKeys
         ) {
-            CacheObjectContext ctx = ignite.cachex(cacheName).context().cacheObjectContext();
+            IgniteInternalCache<?, ?> cachex = ignite.cachex(cacheName);
+
+            if (cachex == null)
+                throw new IgniteException("Cache not found (was stopped) [name=" + cacheName + ']');
+
+            CacheObjectContext ctx = cachex.context().cacheObjectContext();
 
             synchronized (inconsistentKeys) {
                 try {

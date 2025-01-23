@@ -996,6 +996,9 @@ public class GridAffinityAssignmentCache {
             while (it.hasNext()) {
                 HistoryAffinityAssignment aff0 = it.next();
 
+                if (firstVer == null)
+                    firstVer = aff0.topologyVersion();
+
                 if (aff0.requiresHistoryCleanup()) {
                     // We can stop cleanup only on non-shallow item.
                     // Keeping part of shallow items chain if corresponding real item is missing makes no sense.
@@ -1011,17 +1014,15 @@ public class GridAffinityAssignmentCache {
                                 cacheOrGrpName, originNonShallowSize, originTotalSize
                             );
 
-                            if (lastVer == null) {
+                            if (lastVer == null || lastVer.equals(firstVer)) {
                                 msg += String.format(", version=[topVer=%s, minorTopVer=%s]]",
-                                    firstVer.topologyVersion(), firstVer.minorTopologyVersion()
-                                );
+                                    firstVer.topologyVersion(), firstVer.minorTopologyVersion());
                             }
                             else {
                                 msg += String.format(", from=[topVer=%s, minorTopVer=%s], " +
                                         "to=[topVer=%s, minorTopVer=%s]]",
                                     firstVer.topologyVersion(), firstVer.minorTopologyVersion(),
-                                    lastVer.topologyVersion(), lastVer.minorTopologyVersion()
-                                );
+                                    lastVer.topologyVersion(), lastVer.minorTopologyVersion());
                             }
 
                             log.debug(msg);
@@ -1037,12 +1038,7 @@ public class GridAffinityAssignmentCache {
 
                 it.remove();
 
-                if (log.isDebugEnabled()) {
-                    if (firstVer == null)
-                        firstVer = aff0.topologyVersion();
-                    else
-                        lastVer = aff0.topologyVersion();
-                }
+                lastVer = aff0.topologyVersion();
             }
 
             assert false : "All elements have been removed from affinity cache during cleanup";
@@ -1052,7 +1048,7 @@ public class GridAffinityAssignmentCache {
     /**
      * Checks whether affinity cache size conditions are still unsatisfied.
      *
-     * @param nonShallowSize Non shallow size.
+     * @param nonShallowSize Non-shallow size.
      * @param totalSize Total size.
      * @return <code>true</code> if affinity cache cleanup is not finished yet.
      */

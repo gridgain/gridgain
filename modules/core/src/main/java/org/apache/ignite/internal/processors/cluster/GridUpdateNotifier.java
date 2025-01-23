@@ -21,7 +21,9 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
@@ -34,12 +36,10 @@ import org.apache.ignite.internal.GridKernalGateway;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgniteProperties;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.plugin.PluginProvider;
-import org.jetbrains.annotations.Nullable;
 
 import static java.net.URLEncoder.encode;
 
@@ -74,7 +74,7 @@ public class GridUpdateNotifier {
     private static final int WORKER_THREAD_SLEEP_TIME = 5000;
 
     /** Default url for request GridGain updates. */
-    public static final String DEFAULT_GRIDGAIN_UPDATES_URL = "https://www.gridgain.com/notifier/update";
+    public static final String DEFAULT_GRIDGAIN_UPDATES_URL = "https://www.gridgain.com/notifier/update/v2";
 
     /** Grid version. */
     private final String ver;
@@ -90,6 +90,9 @@ public class GridUpdateNotifier {
 
     /** Download url for latest version. */
     private volatile String downloadUrl;
+
+    /** End of life message. */
+    private volatile String endOfLifeMessage;
 
     /** Ignite instance name. */
     private final String igniteInstanceName;
@@ -286,6 +289,10 @@ public class GridUpdateNotifier {
         return latestVer;
     }
 
+    String endOfLifeMessage() {
+        return endOfLifeMessage;
+    }
+
     /**
      * @return Error.
      */
@@ -332,8 +339,15 @@ public class GridUpdateNotifier {
                 if (!reportOnlyNew)
                     throttle(log, false, "Your version is up to date.");
             }
-            else
-                throttle(log, true, "New version is available at " + downloadUrl + ": " + latestVer);
+            else {
+                String msg = "New version is available at " + downloadUrl + ": " + latestVer + ".";
+
+                if (endOfLifeMessage != null && !endOfLifeMessage.isEmpty()) {
+                    msg = endOfLifeMessage + " " + msg;
+                }
+
+                throttle(log, true, msg);
+            }
         else if (!reportOnlyNew)
             throttle(log, false, "Update status is not available.");
     }
@@ -370,6 +384,30 @@ public class GridUpdateNotifier {
         workerThread.interrupt();
     }
 
+    private Map<String, Object> getUpdateCheckerParams() {
+        String stackTrace = gw != null ? gw.userStackTrace() : null;
+
+        srvNodes = discoSpi.serverNodes(discoSpi.topologyVersionEx()).size();
+
+        Map<String, Object> params = new HashMap<>();
+
+        params.put("igniteInstanceName", igniteInstanceName);
+        params.put("params", updStatusParams);
+        params.put("srvNodes", srvNodes);
+        params.put("product", product);
+        params.put("stackTrace", stackTrace);
+        params.put("vmProps", vmProps);
+        params.put("pluginsVers", pluginsVers);
+
+        return params;
+    }
+
+    Map<String, String> getUpdates() throws IOException {
+        Map<String, Object> params = getUpdateCheckerParams();
+
+        return updatesChecker.getUpdates(ver, params);
+    }
+
     /**
      * Asynchronous checker of the latest version available.
      */
@@ -389,33 +427,19 @@ public class GridUpdateNotifier {
         }
 
         /** {@inheritDoc} */
-        @Override protected void body() throws InterruptedException {
+        @Override protected void body() {
             try {
-                String stackTrace = gw != null ? gw.userStackTrace() : null;
-
-                srvNodes = discoSpi.serverNodes(discoSpi.topologyVersionEx()).size();
-
-                String postParams =
-                    "igniteInstanceName=" + encode(igniteInstanceName, CHARSET) +
-                        (!F.isEmpty(updStatusParams) ? "&" + updStatusParams : "") +
-                        "&srvNodes=" + srvNodes +
-                        "&product=" + product +
-                        (!F.isEmpty(stackTrace) ? "&stackTrace=" + encode(stackTrace, CHARSET) : "") +
-                        (!F.isEmpty(vmProps) ? "&vmProps=" + encode(vmProps, CHARSET) : "") +
-                        pluginsVers;
-
                 if (!isCancelled()) {
                     try {
-                        String updatesRes = updatesChecker.getUpdates(postParams);
+                        Map<String, String> updatesRes = getUpdates();
 
-                        String[] lines = updatesRes.split("\n");
-
-                        for (String line : lines) {
-                            if (line.contains("version"))
-                                latestVer = regularize(obtainVersionFrom(line));
-                            else if (line.contains("downloadUrl"))
-                                downloadUrl = obtainDownloadUrlFrom(line);
+                        String ver = updatesRes.get("latest_version");
+                        if (ver != null) {
+                            latestVer = regularize(ver);
                         }
+
+                        downloadUrl = updatesRes.get("download_url");
+                        endOfLifeMessage = updatesRes.get("eol_message");
 
                         err = null;
                     }
@@ -433,40 +457,6 @@ public class GridUpdateNotifier {
                 if (log.isDebugEnabled())
                     log.debug("Unexpected exception in update checker. " + e.getMessage());
             }
-        }
-
-        /**
-         * Gets the version from the current {@code node}, if one exists.
-         *
-         * @param line Line which contains value for extract.
-         * @param metaName Name for extract.
-         * @return Version or {@code null} if one's not found.
-         */
-        @Nullable private String obtainMeta(String metaName, String line) {
-            assert line.contains(metaName);
-
-            return line.substring(line.indexOf(metaName) + metaName.length()).trim();
-
-        }
-
-        /**
-         * Gets the version from the current {@code node}, if one exists.
-         *
-         * @param line Line which contains value for extract.
-         * @return Version or {@code null} if one's not found.
-         */
-        @Nullable private String obtainVersionFrom(String line) {
-            return obtainMeta("version=", line);
-        }
-
-        /**
-         * Gets the download url from the current {@code node}, if one exists.
-         *
-         * @param line Which contains value for extract.
-         * @return download url or {@code null} if one's not found.
-         */
-        @Nullable private String obtainDownloadUrlFrom(String line) {
-            return obtainMeta("downloadUrl=", line);
         }
     }
 }

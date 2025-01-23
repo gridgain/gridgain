@@ -63,7 +63,7 @@ public class WarningOnBigQueryResultsBaseTest extends AbstractIndexingCommonTest
 
     /** Log message pattern. */
     private static final Pattern logPtrn = Pattern.compile(
-        "fetched=([0-9]+), duration=([0-9]+)ms, type=(MAP|LOCAL|REDUCE), distributedJoin=(true|false), enforceJoinOrder=(true|false), lazy=(true|false), schema=(\\S+), sql");
+        "(label=([-\\w]+),)? fetched=([0-9]+), duration=([0-9]+)ms, type=(MAP|LOCAL|REDUCE), distributedJoin=(true|false), enforceJoinOrder=(true|false), lazy=(true|false), schema=(\\S+), sql");
 
     /** Test log. */
     private static Map<String, BigResultsLogListener> logListeners = new HashMap<>();
@@ -225,6 +225,9 @@ public class WarningOnBigQueryResultsBaseTest extends AbstractIndexingCommonTest
         /** Duration. */
         ArrayList<Long> duration = new ArrayList<>();
 
+        /** Query label. */
+        String label;
+
         /** Lazy flag. */
         boolean lazy;
 
@@ -264,13 +267,16 @@ public class WarningOnBigQueryResultsBaseTest extends AbstractIndexingCommonTest
 
                 assertTrue(m.find());
 
-                fetched.add(Long.parseLong(m.group(1)));
-                duration.add(Long.parseLong(m.group(2)));
-                type = m.group(3);
-                distributedJoin = Boolean.parseBoolean(m.group(4));
-                enforceJoinOrder = Boolean.parseBoolean(m.group(5));
-                lazy = Boolean.parseBoolean(m.group(6));
-                schema = m.group(7);
+                int idx = 2;
+
+                label = m.group(idx++);
+                fetched.add(Long.parseLong(m.group(idx++)));
+                duration.add(Long.parseLong(m.group(idx++)));
+                type = m.group(idx++);
+                distributedJoin = Boolean.parseBoolean(m.group(idx++));
+                enforceJoinOrder = Boolean.parseBoolean(m.group(idx++));
+                lazy = Boolean.parseBoolean(m.group(idx++));
+                schema = m.group(idx++);
 
                 sql = s.substring(s.indexOf(", sql='") + 7, s.indexOf("', plan="));
                 plan = s.substring(s.indexOf("', plan=") + 8, s.indexOf(", reqId="));
