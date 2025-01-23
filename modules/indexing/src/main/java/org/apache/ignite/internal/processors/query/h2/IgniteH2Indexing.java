@@ -628,7 +628,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null,
                 false,
                 false,
-                false
+                false,
+                null
             );
 
             Throwable failReason = null;
