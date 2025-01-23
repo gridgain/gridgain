@@ -113,6 +113,9 @@ public class SpanTags {
     /** Query identifier. */
     public static final String SQL_QRY_ID = "sql.query.id";
 
+    /** Query label. */
+    public static final String SQL_QRY_LABEL = "sql.query.label";
+
     /** */
     private SpanTags() {}
 

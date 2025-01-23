@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,11 +24,19 @@ import org.apache.ignite.internal.util.GridUnsafe;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Not thread safe and stateful class for page replacement of one page with write() delay. This allows to write page
- * content without holding segment lock. Page data is copied into temp buffer during {@link #writePage(FullPageId,
- * ByteBuffer, int)} and then sent to real implementation by {@link #finishReplacement()}.
+ * Stateful class for page replacement of one page with write() delay. This allows to write page content without holding
+ * segment write lock, which allows for a long time not to block the segment read lock due to IO writes when reading pages or writing dirty
+ * pages at a checkpoint.
+ *
+ * <p>Usage:</p>
+ * <ul>
+ *     <li>On page replacement, invoke {@link #copyPageToTemporaryBuffer}.</li>
+ *     <li>After releasing the segment write lock, invoke {@link #flushCopiedPageIfExists}.</li>
+ * </ul>
+ *
+ * <p>Not thread safe.</p>
  */
-public class DelayedDirtyPageStoreWrite implements PageStoreWriter {
+public class DelayedDirtyPageStoreWrite {
     /** Real flush dirty page implementation. */
     private final PageStoreWriter flushDirtyPage;
 
@@ -41,14 +49,17 @@ public class DelayedDirtyPageStoreWrite implements PageStoreWriter {
     /** Replacing pages tracker, used to register & unregister pages being written. */
     private final DelayedPageReplacementTracker tracker;
 
-    /** Full page id to be written on {@link #finishReplacement()} or null if nothing to write. */
+    /** Full page id to be written on {@link #flushCopiedPageIfExists()} or null if nothing to write. */
     @Nullable private FullPageId fullPageId;
 
-    /** Byte buffer with page data to be written on {@link #finishReplacement()} or null if nothing to write. */
-    @Nullable private ByteBuffer byteBuf;
-
-    /** Partition update tag to be used in{@link #finishReplacement()} or null if -1 to write. */
+    /** Partition update tag to be used in{@link #flushCopiedPageIfExists()} or null if -1 to write. */
     private int tag = -1;
+
+    /**
+     * Dirty pages of the segment that need to be written at the current checkpoint or page replacement, {@code null}
+     * if nothing to write.
+     */
+    private @Nullable CheckpointPages checkpointPages;
 
     /**
      * @param flushDirtyPage real writer to save page to store.
@@ -68,8 +79,22 @@ public class DelayedDirtyPageStoreWrite implements PageStoreWriter {
         this.tracker = tracker;
     }
 
-    /** {@inheritDoc} */
-    @Override public void writePage(FullPageId fullPageId, ByteBuffer byteBuf, int tag) {
+    /**
+     * Copies a page to a temporary buffer on page replacement.
+     *
+     * @param fullPageId ID of the copied page.
+     * @param originPageBuf Buffer with the full contents of the page being copied (from which we will copy).
+     * @param tag Partition generation.
+     * @param checkpointPages Dirty pages of the segment that need to be written at the current checkpoint or page
+     *      replacement.
+     * @see #flushCopiedPageIfExists()
+     */
+    public void copyPageToTemporaryBuffer(
+        FullPageId fullPageId,
+        ByteBuffer originPageBuf,
+        int tag,
+        CheckpointPages checkpointPages
+    ) {
         tracker.lock(fullPageId);
 
         ByteBuffer tlb = byteBufThreadLoc.get();
@@ -77,31 +102,43 @@ public class DelayedDirtyPageStoreWrite implements PageStoreWriter {
         tlb.rewind();
 
         long writeAddr = GridUnsafe.bufferAddress(tlb);
-        long origBufAddr = GridUnsafe.bufferAddress(byteBuf);
+        long origBufAddr = GridUnsafe.bufferAddress(originPageBuf);
 
         GridUnsafe.copyMemory(origBufAddr, writeAddr, pageSize);
 
         this.fullPageId = fullPageId;
-        this.byteBuf = tlb;
         this.tag = tag;
+        this.checkpointPages = checkpointPages;
     }
 
     /**
-     * Runs actual write if required. Method is 'no op' if there was no page selected for replacement.
-     * @throws IgniteCheckedException if write failed.
+     * Flushes a previously copied page to disk if it was copied.
+     *
+     * @throws IgniteCheckedException If write failed.
+     * @see #copyPageToTemporaryBuffer(FullPageId, ByteBuffer, int, CheckpointPages)
      */
-    public void finishReplacement() throws IgniteCheckedException {
-        if (byteBuf == null && fullPageId == null)
+    public void flushCopiedPageIfExists() throws IgniteCheckedException {
+        if (fullPageId == null)
             return;
 
+        assert checkpointPages != null : fullPageId;
+
+        Throwable errorOnWrite = null;
+
         try {
-            flushDirtyPage.writePage(fullPageId, byteBuf, tag);
+            flushDirtyPage.writePage(fullPageId, byteBufThreadLoc.get(), tag);
+        }
+        catch (Throwable t) {
+            errorOnWrite = t;
+
+            throw t;
         }
         finally {
+            checkpointPages.unblockFsyncOnPageReplacement(fullPageId, errorOnWrite);
+
             tracker.unlock(fullPageId);
 
             fullPageId = null;
-            byteBuf = null;
             tag = -1;
         }
     }

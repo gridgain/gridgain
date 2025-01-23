@@ -26,6 +26,8 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.junit.Test;
 
+import static java.util.Arrays.asList;
+
 /**
  * Basic simple tests for SQL.
  */
@@ -213,14 +215,37 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
         assertEquals(2, res.size());
     }
 
+    @Test
+    public void testOuterJoinAfterAddColumn() {
+        sql("CREATE TABLE t2 (col1 INTEGER PRIMARY KEY, col2 INTEGER)");
+        sql("CREATE TABLE t1( col1 INTEGER PRIMARY KEY, col2 INTEGER)");
+        sql("INSERT INTO t2(col1, col2) VALUES (1,2), (2,3)");
+        sql("INSERT INTO t1(col1, col2) VALUES (1,2)");
+
+        //need to do this exucute before alteration of table to warm up all caches.
+        sql("SELECT t1.col1, t2.col1 FROM t2 LEFT OUTER JOIN t1 ON t1.col1 = t2.col1 ORDER BY t2.col1").getAll();
+
+        for (int i = 0; i < 5; i++) {
+            sql("ALTER TABLE t1 ADD COLUMN col3 INTEGER");
+
+            String query = "SELECT t1.col1, t1.col2, t1.col3, t2.col1, t2.col2 FROM t2 LEFT OUTER JOIN t1 "
+                    + "ON t1.col1 = t2.col1 ORDER BY t2.col1";
+            List<List<?>> all = sql(query).getAll();
+            assertEquals(2, all.size());
+            assertEqualsCollections(asList(1, 2, null, 1, 2), all.get(0));
+            assertEqualsCollections(asList(null, null, null, 2, 3), all.get(1));
+
+            sql("ALTER TABLE t1 DROP COLUMN col3");
+        }
+    }
+
     /**
      * @param sql SQL query.
      * @param args Query parameters.
      * @return Results cursor.
      */
     private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
-        return grid(0).context().query().querySqlFields(new SqlFieldsQuery(sql)
-            .setArgs(args), false);
+        return execute(new SqlFieldsQuery(sql).setArgs(args));
     }
 
     /**

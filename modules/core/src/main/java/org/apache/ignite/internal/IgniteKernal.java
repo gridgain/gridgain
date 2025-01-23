@@ -53,6 +53,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import javax.cache.CacheException;
 import javax.management.JMException;
 import org.apache.ignite.DataRegionMetrics;
@@ -2251,7 +2252,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             String dataStorageInfo = dataStorageReport(ctx.cache().context().database(), dblFmt, true);
 
-            String id = U.id8(localNode().id());
+            String id = localNode().id().toString();
 
             AffinityTopologyVersion topVer = ctx.discovery().topologyVersionEx();
 
@@ -2270,14 +2271,27 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             SB msg = new SB();
 
+            final ClusterNode crdNode = ctx.discovery().discoCache().oldestAliveServerNode();
+
+            String crdInfoStr;
+
+            if (crdNode != null) {
+                crdInfoStr = "    ^-- Coordinator [id=" + crdNode.id() + ", consistentId=" + crdNode.consistentId() +
+                    ", version=" + crdNode.version().toString() + "]";
+            }
+            else
+                crdInfoStr = "    ^-- Coordinator [id=null]";
+
             msg.nl()
                 .a("Metrics for local node (to disable set 'metricsLogFrequency' to 0)").nl()
-                .a("    ^-- Node [id=").a(id).a(", consistentId=").a(locNode.consistentId()).a(name() != null ? ", name=" + name() : "").a(", uptime=")
-                .a(getUpTimeFormatted()).a("]").nl()
+                .a("    ^-- Node [id=").a(id).a(", consistentId=").a(locNode.consistentId()).a(name() != null ? ", name=" + name() : "")
+                    .a(", version=").a(ACK_VER_STR).a(", uptime=").a(getUpTimeFormatted()).a("]").nl()
+                .a(crdInfoStr).nl()
                 .a("    ^-- Cluster [hosts=").a(hosts).a(", CPUs=").a(cpus).a(", servers=").a(servers)
-                .a(", clients=").a(clients).a(", topVer=").a(topVer.topologyVersion())
-                .a(", minorTopVer=").a(topVer.minorTopologyVersion()).a(", state=")
-                    .a(ctx.state().clusterState().state().name()).a("]").nl()
+                    .a(", clients=").a(clients).a(", topVer=").a(topVer.topologyVersion())
+                    .a(", minorTopVer=").a(topVer.minorTopologyVersion()).a(", state=")
+                    .a(ctx.state().clusterState().state().name())
+                    .a(", clusterId=").a(ctx.cluster().getId()).a(", clusterTag=").a(ctx.cluster().getTag()).a("]").nl()
                 .a("    ^-- Network [addrs=").a(locNode.addresses()).a(networkDetails).a("]").nl()
                 .a("    ^-- CPU [CPUs=").a(localCpus).a(", curLoad=").a(dblFmt.format(cpuLoadPct))
                 .a("%, avgLoad=").a(dblFmt.format(avgCpuLoadPct)).a("%, GC=").a(dblFmt.format(gcPct)).a("%]").nl()
@@ -2294,6 +2308,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 for (Map.Entry<String, ? extends ExecutorService> entry : customExecSvcs.entrySet())
                     msg.nl().a("    ^-- ").a(createExecutorDescription(entry.getKey(), entry.getValue()));
             }
+
+            String pluginInfo = pluginInfoReport();
+
+            msg.nl().a(F.isEmpty(pluginInfo) ? "    ^-- No plugins found" : pluginInfo);
 
             log.info(msg.toString());
 
@@ -2449,6 +2467,26 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         }
 
         return info.toString();
+    }
+
+    /**
+     * Get plugin information.
+     */
+    private String pluginInfoReport() {
+        return ctx.plugins().allProviders().stream()
+                .filter(plugin -> !F.isEmpty(plugin.metricsInfo()))
+                .map(plugin -> {
+                    Map<String, Object> metricsInfo = plugin.metricsInfo();
+
+                    String infoFormatted = metricsInfo.entrySet().stream()
+                            .map(info -> info.getKey() + "=" +
+                                    (info.getValue() != null ? info.getValue().toString() : null))
+                            .collect(Collectors.joining(", "));
+
+                    return "    ^-- Plugin [name=" + plugin.name() + ", version=" + plugin.version() +
+                            ", info=[" + infoFormatted + "]";
+                })
+                .collect(Collectors.joining(NL));
     }
 
     /**

@@ -25,34 +25,33 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
 import org.apache.ignite.internal.processors.tracing.DeferredSpan;
-import org.apache.ignite.internal.processors.tracing.NoopTracing;
-import org.apache.ignite.internal.processors.tracing.SpanImpl;
-import org.apache.ignite.internal.processors.tracing.configuration.GridTracingConfigurationManager;
 import org.apache.ignite.internal.processors.tracing.NoopSpan;
-import org.apache.ignite.spi.tracing.NoopTracingSpi;
-import org.apache.ignite.spi.tracing.Scope;
+import org.apache.ignite.internal.processors.tracing.NoopTracing;
 import org.apache.ignite.internal.processors.tracing.Span;
+import org.apache.ignite.internal.processors.tracing.SpanImpl;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.internal.processors.tracing.Tracing;
-import org.apache.ignite.spi.tracing.SpiSpecificSpan;
-import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
-import org.apache.ignite.spi.tracing.TracingConfigurationManager;
-import org.apache.ignite.spi.tracing.TracingSpi;
-import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
+import org.apache.ignite.internal.processors.tracing.configuration.GridTracingConfigurationManager;
 import org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesHandler;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.spi.IgniteSpiException;
+import org.apache.ignite.spi.tracing.NoopTracingSpi;
+import org.apache.ignite.spi.tracing.Scope;
+import org.apache.ignite.spi.tracing.SpiSpecificSpan;
+import org.apache.ignite.spi.tracing.TracingConfigurationManager;
+import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
+import org.apache.ignite.spi.tracing.TracingSpi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.tracing.SpanTags.NODE;
-import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_NEVER;
 import static org.apache.ignite.internal.util.GridClientByteUtils.bytesToInt;
 import static org.apache.ignite.internal.util.GridClientByteUtils.bytesToShort;
 import static org.apache.ignite.internal.util.GridClientByteUtils.intToBytes;
 import static org.apache.ignite.internal.util.GridClientByteUtils.shortToBytes;
+import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_NEVER;
 
 /**
  * Tracing Manager.
@@ -184,8 +183,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
         // Optimization for zero sampling rate == 0.
         if ((parentSpan == NoopSpan.INSTANCE || parentSpan == null) &&
-            tracingConfiguration.get(new TracingConfigurationCoordinates.Builder(spanType.scope()).build()).
-                samplingRate() == SAMPLING_RATE_NEVER)
+            tracingConfiguration.get(spanType.scope().coordinates()).samplingRate() == SAMPLING_RATE_NEVER)
             return NoopSpan.INSTANCE;
 
         return enrichWithLocalNodeParameters(
@@ -202,10 +200,10 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
         if (noop)
             return NoopSpan.INSTANCE;
 
+        boolean isEmptySpan = serializedParentSpan == null || serializedParentSpan.length == 0;
         // Optimization for zero sampling rate == 0.
-        if ((serializedParentSpan.length == 0 || serializedParentSpan == null) &&
-            tracingConfiguration.get(new TracingConfigurationCoordinates.Builder(spanType.scope()).build()).
-                samplingRate() == SAMPLING_RATE_NEVER)
+        if (isEmptySpan &&
+            tracingConfiguration.get(spanType.scope().coordinates()).samplingRate() == SAMPLING_RATE_NEVER)
             return NoopSpan.INSTANCE;
 
         // 1 byte: special flags;
@@ -221,7 +219,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
         Span span;
 
         try {
-            if (serializedParentSpan == null || serializedParentSpan.length == 0)
+            if (isEmptySpan)
                 return create(spanType, NoopSpan.INSTANCE);
 
             // First byte of the serializedSpan is reserved for special flags - it's not used right now.
@@ -295,7 +293,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
             assert parentSpanType != null;
 
-            // If there's is parent span and parent span supports given scope then...
+            // If there is parent span and parent span supports given scope then...
             if (parentSpanType.scope() == spanType.scope() || includedScopes.contains(spanType.scope())) {
                 // create new span as child span for parent span, using parents span included scopes.
 
@@ -352,9 +350,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
         // Optimization for zero sampling rate == 0.
         if ((parentSpan == NoopSpan.INSTANCE || parentSpan == null) &&
-            tracingConfiguration.get(
-                new TracingConfigurationCoordinates.Builder(spanType.scope()).withLabel(lb).build()).
-                samplingRate() == SAMPLING_RATE_NEVER)
+            tracingConfiguration.get(spanType.scope().coordinates().withLabel(lb)).samplingRate() == SAMPLING_RATE_NEVER)
             return NoopSpan.INSTANCE;
 
         return enrichWithLocalNodeParameters(
@@ -493,7 +489,8 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
 
                     // Get tracing configuration.
                     TracingConfigurationParameters tracingConfigurationParameters = tracingConfiguration.get(
-                        new TracingConfigurationCoordinates.Builder(spanTypeToCreate.scope()).withLabel(lb).build());
+                        spanTypeToCreate.scope().coordinates().withLabel(lb)
+                    );
 
                     return shouldSample(tracingConfigurationParameters.samplingRate()) ?
                         new SpanImpl(
@@ -508,7 +505,7 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
                     return NoopSpan.INSTANCE;
             }
             else {
-                // If there's is parent span and parent span supports given scope then...
+                // If there is parent span and parent span supports given scope then...
                 if (parentSpan.isChainable(spanTypeToCreate.scope())) {
                     // create new span as child span for parent span, using parents span included scopes.
 
@@ -552,13 +549,13 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     }
 
     /**
-     * @param samlingRate Sampling rate.
+     * @param samplingRate Sampling rate.
      * @return {@code true} if according to given sampling-rate span should be sampled.
      */
-    private boolean shouldSample(double samlingRate) {
-        if (samlingRate == SAMPLING_RATE_NEVER)
+    private boolean shouldSample(double samplingRate) {
+        if (samplingRate == SAMPLING_RATE_NEVER)
             return false;
 
-        return Math.random() <= samlingRate;
+        return Math.random() <= samplingRate;
     }
 }

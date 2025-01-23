@@ -49,6 +49,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
+import org.apache.ignite.internal.processors.cache.GridCacheMvccManager;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -124,6 +125,7 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRA
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry.SER_READ_EMPTY_ENTRY_VER;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry.SER_READ_NOT_EMPTY_VER;
+import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.IGNITE_DISABLE_ONE_PHASE_COMMIT;
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_NEAR_ENLIST_READ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_NEAR_ENLIST_WRITE;
@@ -246,6 +248,9 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
     /** */
     private long crdVer;
+
+    /** One-phase commit is enabled. */
+    private boolean onePhaseCommitEnabled = true;
 
     /**
      * Empty constructor required for {@link Externalizable}.
@@ -4316,7 +4321,12 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             userPrepare((serializable() && optimistic()) ? F.concat(false, req.writes(), req.reads()) : req.writes());
 
             // Make sure to add future before calling prepare on it.
-            cctx.mvcc().addFuture(fut);
+            GridCacheMvccManager mvcc = cctx.mvcc();
+
+            if (mvcc == null)
+                throw stoppingException();
+            else
+                mvcc.addFuture(fut);
 
             if (isSystemInvalidate())
                 fut.complete();
@@ -4333,6 +4343,15 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         }
 
         return chainOnePhasePrepare(fut);
+    }
+
+    /**
+     * Returns stopping exception.
+     *
+     * @return Returns stopping exception.
+     */
+    private IgniteCheckedException stoppingException() {
+        return new IgniteCheckedException("Locking manager is not available (probably disconnected from the cluster)");
     }
 
     /**
@@ -4360,7 +4379,14 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
         final GridDhtTxFinishFuture fut = new GridDhtTxFinishFuture<>(cctx, this, true);
 
-        cctx.mvcc().addFuture(fut, fut.futureId());
+        GridCacheMvccManager mvcc = cctx.mvcc();
+
+        if (mvcc == null) {
+            fut.rollbackOnError(stoppingException());
+
+            return fut;
+        } else
+            mvcc.addFuture(fut, fut.futureId());
 
         if (prep == null || prep.isDone()) {
             assert prep != null || optimistic();
@@ -4427,7 +4453,10 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
         final GridDhtTxFinishFuture fut = new GridDhtTxFinishFuture<>(cctx, this, false);
 
-        cctx.mvcc().addFuture(fut, fut.futureId());
+        GridCacheMvccManager mvcc = cctx.mvcc();
+
+        if (mvcc != null)
+            mvcc.addFuture(fut, fut.futureId());
 
         IgniteInternalFuture<?> prep = prepFut;
 
@@ -5093,6 +5122,20 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
         if (systemStartTime0 > 0)
             systemTime.addAndGet(System.nanoTime() - systemStartTime0);
+    }
+
+    /**
+     * @param onePhaseCommitEnabled {@code True} if one-phase commit is enabled.
+     */
+    public void onePhaseCommitEnabled(boolean onePhaseCommitEnabled) {
+        this.onePhaseCommitEnabled = onePhaseCommitEnabled;
+    }
+
+    /**
+     * @return One-phase commit is enabled.
+     */
+    public boolean onePhaseCommitEnabled() {
+        return !IGNITE_DISABLE_ONE_PHASE_COMMIT && onePhaseCommitEnabled;
     }
 
     /**

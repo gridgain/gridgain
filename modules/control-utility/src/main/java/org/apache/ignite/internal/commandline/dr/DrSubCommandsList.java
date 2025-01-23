@@ -18,6 +18,7 @@ package org.apache.ignite.internal.commandline.dr;
 
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCacheCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrCleanupPartitionLogCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrHelpCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrNodeCommand;
@@ -53,7 +54,9 @@ public enum DrSubCommandsList {
     /** */
     REBUILD_TREES("rebuild-partition-tree", new DrRebuildPartitionLogCommand()),
     /** */
-    FULL_STATE_TRANSFER("full-state-transfer", new DrFSTCommand());
+    FULL_STATE_TRANSFER("full-state-transfer", new DrFSTCommand()),
+    /** */
+    CLEANUP_TREES("cleanup-partition-tree", new DrCleanupPartitionLogCommand());
 
     /** */
     private final String name;

@@ -18,6 +18,7 @@ package org.apache.ignite.configuration;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Objects;
 import javax.cache.configuration.Factory;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.internal.util.TransientSerializable;
@@ -466,5 +467,45 @@ public class TransactionConfiguration implements Serializable {
             transients.add("deadlockTimeout");
 
         return transients.isEmpty() ? null : transients.toArray(new String[transients.size()]);
+    }
+
+    /**
+     * TX configuration is used in node attributes, thus we must be able to compare it.
+     * {@inheritDoc}
+     */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        TransactionConfiguration that = (TransactionConfiguration)o;
+        return txSerEnabled == that.txSerEnabled
+            && dfltTxTimeout == that.dfltTxTimeout
+            && txTimeoutOnPartitionMapExchange == that.txTimeoutOnPartitionMapExchange
+            && deadlockTimeout == that.deadlockTimeout
+            && pessimisticTxLogSize == that.pessimisticTxLogSize
+            && pessimisticTxLogLinger == that.pessimisticTxLogLinger
+            && useJtaSync == that.useJtaSync
+            && dfltIsolation == that.dfltIsolation
+            && dfltConcurrency == that.dfltConcurrency
+            && Objects.equals(tmLookupClsName, that.tmLookupClsName)
+            && Objects.equals(txManagerFactory, that.txManagerFactory);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        int result = Boolean.hashCode(txSerEnabled);
+        result = 31 * result + Objects.hashCode(dfltIsolation);
+        result = 31 * result + Objects.hashCode(dfltConcurrency);
+        result = 31 * result + Long.hashCode(dfltTxTimeout);
+        result = 31 * result + Long.hashCode(txTimeoutOnPartitionMapExchange);
+        result = 31 * result + Long.hashCode(deadlockTimeout);
+        result = 31 * result + pessimisticTxLogSize;
+        result = 31 * result + pessimisticTxLogLinger;
+        result = 31 * result + Objects.hashCode(tmLookupClsName);
+        result = 31 * result + Objects.hashCode(txManagerFactory);
+        result = 31 * result + Boolean.hashCode(useJtaSync);
+        return result;
     }
 }

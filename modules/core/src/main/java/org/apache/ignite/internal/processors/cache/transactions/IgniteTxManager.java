@@ -95,30 +95,30 @@ import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.transactions.TxDeadlockDetection.TxDeadlockFuture;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
-import org.apache.ignite.internal.util.GridIntList;
-import org.apache.ignite.internal.util.lang.gridfunc.ReadOnlyCollectionView2X;
-import org.apache.ignite.lang.IgniteFuture;
-import org.apache.ignite.lang.IgniteOutClosure;
-import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.lang.IgniteReducer;
-import org.apache.ignite.lang.IgniteRunnable;
-import org.apache.ignite.spi.systemview.view.TransactionView;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.GridBoundedConcurrentOrderedMap;
+import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgnitePair;
+import org.apache.ignite.internal.util.lang.gridfunc.ReadOnlyCollectionView2X;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.lang.IgniteOutClosure;
+import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.lang.IgniteReducer;
+import org.apache.ignite.lang.IgniteRunnable;
+import org.apache.ignite.spi.systemview.view.TransactionView;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.apache.ignite.transactions.TransactionState;
@@ -2785,9 +2785,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * Enables pending transactions tracker.
+     * Enables pending transactions' tracker.
      */
-    public void trackPendingTxs(boolean logTxRecords) {
+    public void trackPendingTxs() {
         pendingTracker.enable();
     }
 
@@ -2845,16 +2845,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * @return WALPointer or {@code null} if nothing was logged.
      */
     @Nullable WALPointer logTxRecord(IgniteTxAdapter tx) {
-        BaselineTopology baselineTop;
-
         // Skip logging tx state change to WAL if required.
-        if (cctx.wal() == null
-            || !containsCacheWithEnabledWal(tx)
-            || (baselineTop = cctx.kernalContext().state().clusterState().baselineTopology()) == null
-            || !baselineTop.consistentIds().contains(cctx.localNode().consistentId()))
+        if (cctx.wal() == null || !txRecordLoggingNeeded(tx))
             return null;
 
-        Map<Short, Collection<Short>> nodes = tx.consistentIdMapper.mapToCompactIds(tx.topVer, tx.txNodes, baselineTop);
+        // This collection is used by point-in-time feature and WalStat for debugging/analyzing purposes.
+        Map<Short, Collection<Short>> nodes = tx.consistentIdMapper.mapToCompactIds(tx.topVer, tx.txNodes);
 
         TxRecord record;
 
@@ -2873,27 +2869,63 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         }
     }
 
-    /** Checks if a record belongs to a persistent cache with WAL enabled. */
-    private boolean containsCacheWithEnabledWal(IgniteTxAdapter tx) {
+    /**
+     * Returns {@code true} if the given transaction should be logged in WAL and {@code false} otherwise.
+     * Transaction marker should be logged if the following conditions are met:
+     * <ul>
+     *     <li>local node is a part of baseline topology.</li>
+     *     <li>point-in-time recovery is enabled,
+     *     or there is a write-entry enlisted in the transaction with persistence and WAL enabled for the corresponding cache group.</li>
+     * </ul>
+     * @param tx Transaction.
+     * @return {@code true} if the given transaction should be logged in WAL.
+     */
+    private boolean txRecordLoggingNeeded(IgniteTxAdapter tx) {
+        BaselineTopology baselineTop = cctx.kernalContext().state().clusterState().baselineTopology();
+
+        if (baselineTop == null || !baselineTop.consistentIds().contains(cctx.localNode().consistentId()))
+            return false;
+
+        // Point-in-time recovery is enabled, so we have to log all transaction markers.
+        if (cctx.snapshot().needTxReadLogging())
+            return true;
+
+        if (tx.writeEntries().isEmpty())
+            return false;
+
         IgniteTxState state = tx.txState();
         GridIntList cacheIds = state.cacheIds();
 
         assert cacheIds != null;
 
         if (!cacheIds.isEmpty()) {
-            for (int i = 0; i < cacheIds.size(); i++) {
-                int cacheId = cacheIds.get(i);
+            if (cacheIds.size() == 1) {
+                GridCacheContext<?, ?> ctx = cctx.cacheContext(cacheIds.get(0));
+                return ctx.group().persistenceEnabled() && ctx.group().walEnabled();
+            }
 
-                GridCacheContext cctx = this.cctx.cacheContext(cacheId);
-                if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
-                    return true;
+            Set<Integer> checkedCacheIds = new HashSet<>(cacheIds.size());
+
+            for (IgniteTxEntry txEntry : state.writeEntries()) {
+                GridCacheContext<?, ?> cctx = txEntry.context();
+
+                if (checkedCacheIds.add(cctx.cacheId())) {
+                    if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
+                        return true;
+
+                    if (checkedCacheIds.size() == cacheIds.size()) {
+                        // All cache groups are checked, no need to continue.
+                        break;
+                    }
+                }
             }
         }
-        else if (!state.allEntries().isEmpty()) {
+        else if (!state.writeEntries().isEmpty()) {
             // There can be a transaction with no #activeCaches specified, let's check entries individually.
             // TODO https://ggsystems.atlassian.net/browse/GG-36536
-            for (IgniteTxEntry txEntry : state.allEntries()) {
-                GridCacheContext cctx = txEntry.context();
+            for (IgniteTxEntry txEntry : state.writeEntries()) {
+                GridCacheContext<?, ?> cctx = txEntry.context();
+
                 if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
                     return true;
             }

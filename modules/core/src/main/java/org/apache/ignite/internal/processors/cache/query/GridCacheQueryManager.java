@@ -1368,7 +1368,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                     LT.warn(log, "  ^-- Server node need to load definition of data classes. " +
                         "It can be reason of ClassNotFoundException(consider IgniteCache.withKeepBinary to fix)");
                     LT.warn(log, "Refer this page for detailed information: " +
-                        "https://apacheignite.readme.io/docs/binary-marshaller");
+                        "https://www.gridgain.com/docs/latest/developers-guide/key-value-api/binary-objects");
                 }
 
                 if (!X.hasCause(e, GridDhtUnreservedPartitionException.class))

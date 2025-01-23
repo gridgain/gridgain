@@ -10,4 +10,4 @@ Shell scripts to spin up GridGain, Cassandra and Load tests clusters in AWS.
 
 For more details please look at the documentation:
 
-    https://apacheignite.readme.io/docs/aws-infrastructure-deployment
+    https://apacheignite.readme.io/docs/aws-deployment

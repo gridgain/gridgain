@@ -24,7 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.managers.communication.GridIoMessageFactory;
 import org.apache.ignite.internal.managers.communication.IgniteMessageFactoryImpl;
@@ -46,6 +48,7 @@ import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.GridTestMessage;
 import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
+import org.apache.ignite.spi.communication.tcp.messages.ConnectionCheckMessage;
 import org.apache.ignite.testframework.GridSpiTestContext;
 import org.apache.ignite.testframework.GridTestNode;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -76,11 +79,21 @@ public class GridTcpCommunicationSpiRecoveryAckSelfTest<T extends CommunicationS
     /** */
     private static final int SPI_CNT = 2;
 
+    /** To fail test on exceptions from {@link TestListener#onMessage(UUID, Message, IgniteRunnable)}. */
+    private final AtomicReference<Exception> exception = new AtomicReference<>();
+
     /**
      * Disable SPI auto-start.
      */
     public GridTcpCommunicationSpiRecoveryAckSelfTest() {
         super(false);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        exception.set(null);
+
+        super.beforeTest();
     }
 
     /** */
@@ -95,11 +108,19 @@ public class GridTcpCommunicationSpiRecoveryAckSelfTest<T extends CommunicationS
         @Override public void onMessage(UUID nodeId, Message msg, IgniteRunnable msgC) {
             info("Test listener received message: " + msg);
 
-            assertTrue("Unexpected message: " + msg, msg instanceof GridTestMessage);
+            if (!(msg instanceof GridTestMessage)) {
+                exception.compareAndSet(null, new IgniteException("Unexpected message: " + msg));
+
+                return;
+            }
 
             GridTestMessage msg0 = (GridTestMessage)msg;
 
-            assertTrue("Duplicated message received: " + msg0, msgIds.add(msg0.getMsgId()));
+            if (!msgIds.add(msg0.getMsgId())) {
+                exception.compareAndSet(null, new IgniteException("Duplicated message received: " + msg0));
+
+                return;
+            }
 
             rcvCnt.incrementAndGet();
 
@@ -260,6 +281,9 @@ public class GridTcpCommunicationSpiRecoveryAckSelfTest<T extends CommunicationS
             }
             finally {
                 stopSpis();
+
+                if (exception.get() != null)
+                    throw exception.get();
             }
         }
     }
@@ -290,6 +314,9 @@ public class GridTcpCommunicationSpiRecoveryAckSelfTest<T extends CommunicationS
 
         for (int i = 0; i < 1280; i++) {
             try {
+                if (i % 100 == 0)
+                    spi0.sendMessage(node1, new ConnectionCheckMessage());
+
                 spi0.sendMessage(node1, new GridTestMessage(node0.id(), ++msgId, 0));
 
                 sentMsgs++;

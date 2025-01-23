@@ -762,7 +762,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
 
             final boolean storeEnabled = !skipVals && readThrough && ctx.readThrough();
 
-            boolean readNoEntry = ctx.readNoEntry(expiry, readerArgs != null);
+            boolean readNoEntry = !touchTtl && ctx.readNoEntry(expiry, readerArgs != null);
 
             for (KeyCacheObject key : keys) {
                 while (true) {

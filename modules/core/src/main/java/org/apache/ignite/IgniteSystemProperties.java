@@ -2274,6 +2274,10 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING =
         "IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING";
 
+    /** Nodes will send messages with compacted topology history. */
+    @SystemProperty(value = "Nodes will send messages with compacted topology history", defaults = "true")
+    public static final String IGNITE_COMPACTED_TOPOLOGY_HISTORY = "IGNITE_COMPACTED_TOPOLOGY_HISTORY";
+
     /**
      * Enforces singleton.
      */

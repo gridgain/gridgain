@@ -25,15 +25,17 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopologyImpl;
-import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorMultiNodeTask;
@@ -42,6 +44,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Collect information on the distribution of partitions.
  */
+@GridInternal
 public class CacheDistributionTask extends VisorMultiNodeTask<CacheDistributionTaskArg,
     CacheDistributionTaskResult, CacheDistributionNode> {
     /** */
@@ -49,7 +52,8 @@ public class CacheDistributionTask extends VisorMultiNodeTask<CacheDistributionT
 
     /** {@inheritDoc} */
     @Nullable @Override protected CacheDistributionTaskResult reduce0(
-        List<ComputeJobResult> list) throws IgniteException {
+        List<ComputeJobResult> list
+    ) throws IgniteException {
         Map<UUID, Exception> exceptions = new HashMap<>();
         List<CacheDistributionNode> infos = new ArrayList<>();
 
@@ -109,33 +113,30 @@ public class CacheDistributionTask extends VisorMultiNodeTask<CacheDistributionT
                         grpIds.add(ctx.groupId());
                 }
                 else {
-                    for (String cacheName : arg.getCaches())
-                        grpIds.add(CU.cacheId(cacheName));
+                    for (String cacheName : arg.getCaches()) {
+                        DynamicCacheDescriptor cacheDesc = ignite.context().cache().cacheDescriptor(cacheName);
+
+                        if (cacheDesc != null && !cacheDesc.template())
+                            grpIds.add(cacheDesc.groupId());
+                    }
                 }
 
                 if (grpIds.isEmpty())
                     return info;
 
-                for (Integer id : grpIds) {
-                    final CacheDistributionGroup grp = new CacheDistributionGroup();
+                for (Integer grpId : grpIds) {
+                    final CacheGroupContext grpCtx = ignite.context().cache().cacheGroup(grpId);
 
-                    info.getGroups().add(grp);
+                    if (grpCtx == null)
+                        continue;
 
-                    grp.setGroupId(id);
+                    final GridDhtPartitionTopology top = grpCtx.topology();
 
-                    final DynamicCacheDescriptor desc = ignite.context().cache().cacheDescriptor(id);
-
-                    final CacheGroupContext grpCtx = ignite.context().cache().cacheGroup(desc == null ? id : desc.groupId());
-
-                    grp.setGroupName(grpCtx.cacheOrGroupName());
-
-                    grp.setPartitions(new ArrayList<>());
-
-                    GridDhtPartitionTopologyImpl top = (GridDhtPartitionTopologyImpl)grpCtx.topology();
-
-                    final AffinityAssignment assignment = grpCtx.affinity().readyAffinity(top.readyTopologyVersion());
+                    AffinityAssignment assignment = grpCtx.affinity().readyAffinity(top.readyTopologyVersion());
 
                     List<GridDhtLocalPartition> locParts = top.localPartitions();
+
+                    List<CacheDistributionPartition> parts = new ArrayList<>(locParts.size());
 
                     for (int i = 0; i < locParts.size(); i++) {
                         GridDhtLocalPartition part = locParts.get(i);
@@ -145,15 +146,21 @@ public class CacheDistributionTask extends VisorMultiNodeTask<CacheDistributionT
 
                         final CacheDistributionPartition partDto = new CacheDistributionPartition();
 
-                        grp.getPartitions().add(partDto);
+                        parts.add(partDto);
 
                         int p = part.id();
                         partDto.setPartition(p);
                         partDto.setPrimary(assignment.primaryPartitions(node.id()).contains(p));
                         partDto.setState(part.state());
                         partDto.setUpdateCounter(part.updateCounter());
-                        partDto.setSize(desc == null ? part.dataStore().fullSize() : part.dataStore().cacheSize(id));
+                        partDto.setSize(part.dataStore().fullSize());
                     }
+
+                    info.getGroups().add(new CacheDistributionGroup(
+                        grpId,
+                        grpCtx.cacheOrGroupName(),
+                        grpCtx.caches().stream().map(GridCacheContext::name).collect(Collectors.toList()),
+                        parts));
                 }
                 return info;
             }

@@ -218,4 +218,10 @@ public class OpenCensusSqlJdbcTracingTest extends OpenCensusSqlNativeTracingTest
     @Override protected int mapNodesCount() {
         return GRID_CNT - 1;
     }
+
+    /** {@inheritDoc} */
+    @Override protected boolean queryLabelSupported() {
+        // Query labels are not supported in JDBC.
+        return false;
+    }
 }

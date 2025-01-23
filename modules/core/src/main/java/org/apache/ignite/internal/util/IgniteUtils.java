@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -346,6 +346,9 @@ public abstract class IgniteUtils {
      * {@link DataInput#readUTF()}, that use "Modified UTF-8".
      */
     public static final int UTF_BYTE_LIMIT = 65_535;
+
+    /** Maximum number of character bytes for {@link DataOutput#writeUTF}. */
+    public static final int MAX_UTF_BYTES = 3;
 
     /** Minimum checkpointing page buffer size (may be adjusted by Ignite). */
     public static final Long DFLT_MIN_CHECKPOINTING_PAGE_BUFFER_SIZE = GB / 4;
@@ -12543,6 +12546,20 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Heuristically checks whether a string is long (greater than {@link #UTF_BYTE_LIMIT}) for
+     * {@link DataOutput#writeUTF} (or {@link #writeString(DataOutput, String)}).
+     *
+     * <p>Long string can be written using {@link #writeLongString(DataOutput, String)}
+     * or {@link #writeCutString(DataOutput, String)}.</p>
+     *
+     * @param s String to check.
+     * @return {@code True} if the string is heuristically long.
+     */
+    public static boolean isStringTooLongForWriteHeuristically(String s) {
+        return s.length() > UTF_BYTE_LIMIT / MAX_UTF_BYTES;
+    }
+
+    /**
      * Reads string from input stream accounting for {@code null} values. <br/>
      *
      * This method can read string of any length, no {@link #UTF_BYTE_LIMIT} limits are applied.
@@ -12659,7 +12676,7 @@ public abstract class IgniteUtils {
      * @return Number of bytes.
      */
     public static int utfBytes(char c) {
-        return (c >= 0x0001 && c <= 0x007F) ? 1 : (c > 0x07FF) ? 3 : 2;
+        return (c >= 0x0001 && c <= 0x007F) ? 1 : (c > 0x07FF) ? MAX_UTF_BYTES : 2;
     }
 
     /**

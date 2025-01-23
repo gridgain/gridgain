@@ -419,7 +419,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
             Future<Object> fut1 = compute.executeAsync(TestLatchTask.class.getName(), null);
 
             // Wait for the task to start, then drop connections.
-            TestLatchTask.startLatch.await(3, TimeUnit.MILLISECONDS);
+            TestLatchTask.startLatch.await(3000, TimeUnit.MILLISECONDS);
             dropAllThinClientConnections();
 
             TestLatchTask.startLatch = new CountDownLatch(1);
