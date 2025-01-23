@@ -143,6 +143,18 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
     /** */
     private Boolean dataPageScanEnabled;
 
+    /** Field name in case of vector query. */
+    private final String fieldName;
+
+    /** Vector for query in case of vector query. */
+    private final float[] qryVector;
+
+    /** Number of vectors to return in case of vector query. */
+    private final int k;
+
+    /** Threshold for cosine similarity in case of vector query. */
+    private final float threshold;
+
     /**
      * @param cctx Context.
      * @param type Query type.
@@ -180,6 +192,10 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         incMeta = false;
         clsName = null;
         clause = null;
+        fieldName = null;
+        qryVector = null;
+        k = -1;
+        threshold = 0.5f;
     }
 
     /**
@@ -222,13 +238,20 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         incMeta = false;
         clsName = null;
         clause = null;
+        fieldName = null;
+        qryVector = null;
+        k = -1;
+        threshold = 0.5f;
     }
 
     /**
      * @param cctx Context.
      * @param type Query type.
      * @param clsName Class name.
+     * @param fieldName Field name.
      * @param clause Clause.
+     * @param qryVector Query vector.
+     * @param k Number of vectors to return.
      * @param filter Scan filter.
      * @param part Partition.
      * @param incMeta Include metadata flag.
@@ -239,7 +262,11 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         GridCacheContext<?, ?> cctx,
         GridCacheQueryType type,
         @Nullable String clsName,
+        @Nullable String fieldName,
         @Nullable String clause,
+        @Nullable float[] qryVector,
+        int k,
+        float threshold,
         @Nullable IgniteBiPredicate<Object, Object> filter,
         @Nullable Integer part,
         boolean incMeta,
@@ -253,7 +280,11 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         this.cctx = cctx;
         this.type = type;
         this.clsName = clsName;
+        this.fieldName = fieldName;
         this.clause = clause;
+        this.qryVector = qryVector;
+        this.k = k;
+        this.threshold = threshold;
         this.filter = filter;
         this.part = part;
         this.incMeta = incMeta;
@@ -321,6 +352,39 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         this.taskHash = taskHash;
         this.mvccSnapshot = mvccSnapshot;
         this.dataPageScanEnabled = dataPageScanEnabled;
+
+        fieldName = null;
+        qryVector = null;
+        k = -1;
+        threshold = 0.5f;
+    }
+
+    /**
+     * @return Field name in case of vector query.
+     */
+    public String fieldName() {
+        return fieldName;
+    }
+
+    /**
+     * @return Field name in case of vector query.
+     */
+    public float[] queryVector() {
+        return qryVector;
+    }
+
+    /**
+     * @return Number of vectors to return in case of vector query.
+     */
+    public int k() {
+        return k;
+    }
+
+    /**
+     * @return Threshold for cosine similarity in case of vector query.
+     */
+    public float threshold() {
+        return threshold;
     }
 
     /**

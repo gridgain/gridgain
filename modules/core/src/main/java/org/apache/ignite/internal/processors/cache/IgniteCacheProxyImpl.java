@@ -71,6 +71,7 @@ import org.apache.ignite.cache.query.SpiQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.cache.query.TextQuery;
+import org.apache.ignite.cache.query.VectorQuery;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -538,7 +539,22 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
 
         final CacheQueryFuture fut;
 
-        if (filter instanceof TextQuery) {
+        if (filter instanceof VectorQuery) {
+            VectorQuery p = (VectorQuery)filter;
+
+            qry = ctx.queries().createVectorQuery(p.getType(), p.getField(), p.getClauseVector(), p.getK(), p.getThreshold(), isKeepBinary);
+
+            if (grp != null)
+                qry.projection(grp);
+
+            fut = ctx.kernalContext().query().executeQuery(GridCacheQueryType.VECTOR, null, ctx,
+                new IgniteOutClosureX<CacheQueryFuture<Map.Entry<K, V>>>() {
+                    @Override public CacheQueryFuture<Map.Entry<K, V>> applyx() {
+                        return qry.execute();
+                    }
+                }, false);
+        }
+        else if (filter instanceof TextQuery) {
             TextQuery p = (TextQuery)filter;
 
             qry = ctx.queries().createFullTextQuery(p.getType(), p.getText(), isKeepBinary);
@@ -930,8 +946,8 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
             throw new CacheException("Indexing is disabled for cache: " + cacheName +
                     ". Use setIndexedTypes or setTypeMetadata methods on CacheConfiguration to enable.");
 
-        if (!ctx.kernalContext().query().moduleEnabled() &&
-            (qry instanceof SqlQuery || qry instanceof SqlFieldsQuery || qry instanceof TextQuery))
+        if (!ctx.kernalContext().query().moduleEnabled() && (qry instanceof SqlQuery || qry instanceof SqlFieldsQuery ||
+            qry instanceof TextQuery || qry instanceof VectorQuery))
             throw new CacheException("Failed to execute query. Add module 'ignite-indexing' to the classpath " +
                     "of all Ignite nodes.");
     }

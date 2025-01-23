@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.h2.opt;
+package org.gridgain.internal.processors.query.h2.opt;
 
 import java.io.IOException;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;

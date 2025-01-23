@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.h2.opt;
+package org.gridgain.internal.processors.query.h2.opt;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.cache.query.LuceneIndex;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -32,8 +34,8 @@ import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.offheap.unsafe.GridUnsafeMemory;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
+import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -61,9 +63,9 @@ import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_FIELD_N
 import static org.apache.ignite.internal.processors.query.QueryUtils.VAL_FIELD_NAME;
 
 /**
- * Lucene fulltext index.
+ * Lucene index implementation that supports only TEXT queries.
  */
-public class GridLuceneIndex implements AutoCloseable {
+public class GridLuceneTextIndex implements LuceneIndex {
     /** Field name for string representation of value. */
     public static final String VAL_STR_FIELD_NAME = "_gg_val_str__";
 
@@ -74,25 +76,25 @@ public class GridLuceneIndex implements AutoCloseable {
     public static final String EXPIRATION_TIME_FIELD_NAME = "_gg_expires__";
 
     /** */
-    private final String cacheName;
+    private GridKernalContext ctx;
 
     /** */
-    private final GridQueryTypeDescriptor type;
+    private String cacheName;
 
     /** */
-    private final IndexWriter writer;
+    private GridQueryTypeDescriptor type;
 
     /** */
-    private final String[] idxdFields;
+    private IndexWriter writer;
 
     /** */
-    private final AtomicLong updateCntr = new GridAtomicLong();
+    private String[] idxdFields;
 
     /** */
-    private final GridLuceneDirectory dir;
+    private AtomicLong updateCntr = new GridAtomicLong();
 
     /** */
-    private final GridKernalContext ctx;
+    private GridLuceneDirectory dir;
 
     /**
      * Constructor.
@@ -100,10 +102,9 @@ public class GridLuceneIndex implements AutoCloseable {
      * @param ctx Kernal context.
      * @param cacheName Cache name.
      * @param type Type descriptor.
-     * @throws IgniteCheckedException If failed.
      */
-    public GridLuceneIndex(GridKernalContext ctx, @Nullable String cacheName, GridQueryTypeDescriptor type)
-        throws IgniteCheckedException {
+    public GridLuceneTextIndex(GridKernalContext ctx, @Nullable String cacheName,
+        GridQueryTypeDescriptor type) {
         this.ctx = ctx;
         this.cacheName = cacheName;
         this.type = type;
@@ -114,7 +115,7 @@ public class GridLuceneIndex implements AutoCloseable {
             writer = new IndexWriter(dir, new IndexWriterConfig(new StandardAnalyzer()));
         }
         catch (IOException e) {
-            throw new IgniteCheckedException(e);
+            throw new IgniteException(e);
         }
 
         GridQueryIndexDescriptor idx = type.textIndex();
@@ -145,17 +146,9 @@ public class GridLuceneIndex implements AutoCloseable {
         return ctx.cache().internalCache(cacheName).context().cacheObjectContext();
     }
 
-    /**
-     * Stores given data in this fulltext index.
-     *
-     * @param k Key.
-     * @param v Value.
-     * @param ver Version.
-     * @param expires Expiration time.
-     * @throws IgniteCheckedException If failed.
-     */
-    @SuppressWarnings("ConstantConditions")
-    public void store(CacheObject k, CacheObject v, GridCacheVersion ver, long expires) throws IgniteCheckedException {
+    /** {@inheritDoc} */
+    @Override public void store(CacheObject k, CacheObject v, GridCacheVersion ver, long expires)
+        throws IgniteCheckedException {
         CacheObjectContext coctx = objectContext();
 
         Object key = k.isPlatformType() ? k.value(coctx, false) : k;
@@ -212,13 +205,8 @@ public class GridLuceneIndex implements AutoCloseable {
         }
     }
 
-    /**
-     * Removes entry for given key from this index.
-     *
-     * @param key Key.
-     * @throws IgniteCheckedException If failed.
-     */
-    public void remove(CacheObject key) throws IgniteCheckedException {
+    /** {@inheritDoc} */
+    @Override public void remove(CacheObject key) throws IgniteCheckedException {
         try {
             writer.deleteDocuments(new Term(KEY_FIELD_NAME,
                 new BytesRef(key.valueBytes(objectContext()))));
@@ -231,15 +219,8 @@ public class GridLuceneIndex implements AutoCloseable {
         }
     }
 
-    /**
-     * Runs lucene fulltext query over this index.
-     *
-     * @param qry Query.
-     * @param filters Filters over result.
-     * @return Query result.
-     * @throws IgniteCheckedException If failed.
-     */
-    public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> query(String qry,
+    /** {@inheritDoc} */
+    @Override public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> textQuery(String qry,
         IndexingQueryFilter filters) throws IgniteCheckedException {
         IndexReader reader;
 
@@ -269,8 +250,6 @@ public class GridLuceneIndex implements AutoCloseable {
             MultiFieldQueryParser parser = new MultiFieldQueryParser(idxdFields,
                 writer.getAnalyzer());
 
-//            parser.setAllowLeadingWildcard(true);
-
             // Filter expired items.
             Query filter = LongPoint.newRangeQuery(EXPIRATION_TIME_FIELD_NAME, U.currentTimeMillis(), Long.MAX_VALUE);
 
@@ -296,9 +275,16 @@ public class GridLuceneIndex implements AutoCloseable {
     }
 
     /** {@inheritDoc} */
+    @Override public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> vectorQuery(String field,
+        float[] qryVector, int k, float threshold, IndexingQueryFilter filters) throws IgniteCheckedException {
+        throw new IllegalStateException("To use vector query feature, enable gridgain-vector-query module" +
+            " (requires Enterprise or Ultimate Edition)");
+    }
+
+    /** {@inheritDoc} */
     @Override public void close() {
         U.closeQuiet(writer);
-        U.close(dir, ctx.log(GridLuceneIndex.class));
+        U.close(dir, ctx.log(GridLuceneTextIndex.class));
     }
 
     /**

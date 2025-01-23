@@ -219,7 +219,7 @@ public class GridH2Table extends TableBase {
         identifierStr = identifier.schema() + "." + identifier.table();
 
         // Indexes must be created in the end when everything is ready.
-        idxs = tblDesc.createSystemIndexes(this);
+        idxs = tblDesc.createSystemIndexes(this, log);
 
         assert idxs != null;
 

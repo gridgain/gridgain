@@ -20,9 +20,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.QueryIndexType;
+import org.apache.ignite.internal.cache.query.LuceneIndex;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
@@ -34,7 +34,6 @@ import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneIndex;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.index.Index;
@@ -75,7 +74,7 @@ public class H2TableDescriptor {
     private GridH2Table tbl;
 
     /** */
-    private GridLuceneIndex luceneIdx;
+    private LuceneIndex luceneIdx;
 
     /** */
     private H2PkHashIndex pkHashIdx;
@@ -190,7 +189,7 @@ public class H2TableDescriptor {
     /**
      * @return Lucene index.
      */
-    GridLuceneIndex luceneIndex() {
+    LuceneIndex luceneIndex() {
         return luceneIdx;
     }
 
@@ -204,9 +203,10 @@ public class H2TableDescriptor {
      * indexes. All indexes must be subtypes of {@link H2TreeIndexBase}.
      *
      * @param tbl Table to create indexes for.
+     * @param log Logger.
      * @return List of indexes.
      */
-    public ArrayList<Index> createSystemIndexes(GridH2Table tbl) {
+    public ArrayList<Index> createSystemIndexes(GridH2Table tbl, IgniteLogger log) {
         ArrayList<Index> idxs = new ArrayList<>();
 
         IndexColumn keyCol = tbl.indexColumn(QueryUtils.KEY_COL, SortOrder.ASCENDING);
@@ -243,24 +243,11 @@ public class H2TableDescriptor {
 
         if (type().valueClass() == String.class
             && !idx.distributedConfiguration().isDisableCreateLuceneIndexForStringValueType()) {
-            try {
-                luceneIdx = new GridLuceneIndex(idx.kernalContext(), tbl.cacheName(), type);
-            }
-            catch (IgniteCheckedException e1) {
-                throw new IgniteException(e1);
-            }
+            luceneIdx = idx.createLuceneIndex(tbl.cacheName(), type);
         }
 
-        GridQueryIndexDescriptor textIdx = type.textIndex();
-
-        if (textIdx != null) {
-            try {
-                luceneIdx = new GridLuceneIndex(idx.kernalContext(), tbl.cacheName(), type);
-            }
-            catch (IgniteCheckedException e1) {
-                throw new IgniteException(e1);
-            }
-        }
+        if (type.textIndex() != null || type.vectorIndex() != null)
+            this.luceneIdx = idx.createLuceneIndex(tbl.cacheName(), type);
 
         // Locate index where affinity column is first (if any).
         if (affCol != null) {

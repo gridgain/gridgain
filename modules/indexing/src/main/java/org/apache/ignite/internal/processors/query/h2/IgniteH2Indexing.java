@@ -57,6 +57,8 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.cache.query.LuceneIndex;
+import org.apache.ignite.internal.cache.query.LuceneIndexFactory;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.managers.IgniteMBeansManager;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
@@ -225,6 +227,7 @@ import static java.util.Collections.singletonList;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MVCC_TX_SIZE_CACHING_THRESHOLD;
+import static org.apache.ignite.internal.IgniteComponentType.LUCENE;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.TX_SIZE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.checkActive;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccEnabled;
@@ -232,6 +235,7 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.request
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.tx;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.txStart;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.TEXT;
+import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.VECTOR;
 import static org.apache.ignite.internal.processors.query.QueryUtils.matches;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.UPDATE_RESULT_META;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.generateFieldsQueryString;
@@ -249,6 +253,8 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_DML_QRY
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_ITER_OPEN;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXECUTE;
+import static org.apache.ignite.internal.util.IgniteUtils.jdkVersion;
+import static org.apache.ignite.internal.util.IgniteUtils.majorJavaVersion;
 
 /**
  * Indexing implementation based on H2 database engine. In this implementation main query language is SQL,
@@ -330,6 +336,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     private DistributedSqlConfiguration distrCfg;
 
     private IndexingDefragmentation defragmentation = new IndexingDefragmentation(this);
+
+    private @Nullable LuceneIndexFactory luceneIdxFactory;
 
     /** */
     private final IgniteInClosure<? super IgniteInternalFuture<?>> logger = new IgniteInClosure<IgniteInternalFuture<?>>() {
@@ -529,6 +537,36 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
     }
 
+    /**
+     * Create Lucene index.
+     *
+     * @param cacheName Cache name
+     * @return Index.
+     */
+    @SuppressWarnings("ConstantConditions")
+    LuceneIndex createLuceneIndex(String cacheName, GridQueryTypeDescriptor type) {
+        try {
+            if (luceneIdxFactory == null) {
+                int javaVer = majorJavaVersion(jdkVersion());
+
+                if (javaVer < 11)
+                    throw new IgniteException("Failed to load Lucene module to create index. Use Java 11 or higher.");
+
+                if (!LUCENE.inClassPath()) {
+                    throw new IgniteException("Failed to create index because Lucene module is disabled (consider" +
+                        " adding module ignite-lucene to classpath or moving it from 'optional' to 'libs' folder).");
+                }
+
+                luceneIdxFactory = LUCENE.create(ctx, false);
+            }
+
+            return luceneIdxFactory.createIndex(cacheName, type);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+    }
+
     /** {@inheritDoc} */
     @Override public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryLocalText(String schemaName,
         String cacheName, String qry, String typeName, IndexingQueryFilter filters) throws IgniteCheckedException {
@@ -551,7 +589,51 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             Throwable failReason = null;
             try {
-                return tbl.luceneIndex().query(qry.toUpperCase(), filters);
+                return tbl.luceneIndex().textQuery(qry.toUpperCase(), filters);
+            }
+            catch (Throwable t) {
+                failReason = t;
+
+                throw t;
+            }
+            finally {
+                runningQueryManager().unregister(qryId, failReason);
+            }
+        }
+
+        return new GridEmptyCloseableIterator<>();
+    }
+
+    /** {@inheritDoc} */
+    @Override public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryLocalVector(
+        String schemaName,
+        String cacheName,
+        String field,
+        float[] qryVector,
+        int k,
+        float threshold,
+        String typeName,
+        IndexingQueryFilter filter
+    ) throws IgniteCheckedException {
+        H2TableDescriptor tbl = schemaMgr.tableForType(schemaName, cacheName, typeName);
+
+        if (tbl != null && tbl.luceneIndex() != null) {
+            Long qryId = runningQueryManager().register(
+                null,
+                VECTOR,
+                schemaName,
+                true,
+                null,
+                null,
+                null,
+                false,
+                false,
+                false
+            );
+
+            Throwable failReason = null;
+            try {
+                return tbl.luceneIndex().vectorQuery(field.toUpperCase(), qryVector, k, threshold, filter);
             }
             catch (Throwable t) {
                 failReason = t;
@@ -2265,7 +2347,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         assert prevIntRebFut == null;
 
         // Rebuild text indexes for tables in cache.
-        SchemaIndexCacheVisitorClosure clo = new TextIndexRebuildClosure(ctx.query(), cctx, descriptors);
+        SchemaIndexCacheVisitorClosure clo = new LuceneIndexRebuildClosure(ctx.query(), cctx, descriptors);
 
         rebuildCacheIdxFut.listen(fut -> {
             Throwable err = fut.error();

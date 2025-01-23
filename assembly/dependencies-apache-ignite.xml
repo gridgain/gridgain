@@ -33,6 +33,7 @@
             <includes>
                 <include>org.gridgain:ignite-spring</include>
                 <include>org.gridgain:ignite-indexing</include>
+                <include>org.gridgain:ignite-lucene</include>
                 <include>org.gridgain:ignite-opencensus</include>
                 <include>org.gridgain:ignite-control-utility</include>
             </includes>

@@ -96,6 +96,16 @@
 
     <profiles>
         <profile>
+            <id>java-11+</id>
+            <activation>
+                <jdk>[11,)</jdk>
+            </activation>
+            <modules>
+                <module>modules/lucene</module>
+            </modules>
+        </profile>
+
+        <profile>
             <id>all-java</id> <!-- used to update project versions and check all modules compilation -->
             <modules> <!-- sorted alphabetically -->
                 <module>examples</module>
@@ -636,7 +646,9 @@
                                 <phase>validate</phase>
                                 <configuration>
                                     <target>
-                                        <script language="javascript">
+                                        <property name="plugin_classpath" refid="maven.plugin.classpath"/>
+
+                                        <script language="javascript" classpath="${plugin_classpath}">
                                             function setClientVersion(ggVer, clientVer) {
                                                 var p = project.getProperty(ggVer);
 
@@ -729,7 +741,7 @@
                                             </fileset>
                                         </replaceregexp>
 
-                                        <script language="javascript">
+                                        <script language="javascript" classpath="${plugin_classpath}">
                                             function setBinVersion(clientVer, binVer) {
                                             var p = project.getProperty(clientVer).replace(".", ",");
 

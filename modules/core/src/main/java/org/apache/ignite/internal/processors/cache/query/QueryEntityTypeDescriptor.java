@@ -66,6 +66,9 @@ public class QueryEntityTypeDescriptor {
     private QueryEntityIndexDescriptor fullTextIdx;
 
     /** */
+    private QueryEntityIndexDescriptor vectorIdx;
+
+    /** */
     private final Class<?> keyCls;
 
     /** */
@@ -139,10 +142,25 @@ public class QueryEntityTypeDescriptor {
         if (fullTextIdx == null) {
             fullTextIdx = new QueryEntityIndexDescriptor(QueryIndexType.FULLTEXT);
 
-            indexes.put(null, fullTextIdx);
+            indexes.put(QueryIndexType.FULLTEXT.name(), fullTextIdx);
         }
 
         fullTextIdx.addField(field, 0, false);
+    }
+
+    /**
+     * Adds field to text index.
+     *
+     * @param field Field name.
+     */
+    public void addFieldToVectorIndex(String field) {
+        if (vectorIdx == null) {
+            vectorIdx = new QueryEntityIndexDescriptor(QueryIndexType.VECTOR);
+
+            indexes.put(QueryIndexType.VECTOR.name(), vectorIdx);
+        }
+
+        vectorIdx.addField(field, 0, false);
     }
 
     /**

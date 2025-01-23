@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.h2.opt;
+package org.gridgain.internal.processors.query.h2.opt;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.ignite.internal.util.offheap.unsafe.GridUnsafeMemory;
+import org.apache.ignite.testframework.junits.JUnitAssertAware;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexOutput;
@@ -27,7 +28,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class GridLuceneDirectoryTest extends GridCommonAbstractTest {
-
     private GridLuceneDirectory dir;
 
     @Before
@@ -41,11 +41,11 @@ public class GridLuceneDirectoryTest extends GridCommonAbstractTest {
 
         assertNoFilenames();
         IndexOutput indexOutput = dir.createOutput(fileName, IOContext.DEFAULT);
-        assertTrue("Missing created file: " + fileName, dirFileNames().contains(fileName));
+        JUnitAssertAware.assertTrue("Missing created file: " + fileName, dirFileNames().contains(fileName));
 
         dir.deleteFile(fileName);
         assertNoFilenames();
-        assertTrue(dir.getPendingDeletions().contains(fileName));
+        JUnitAssertAware.assertTrue(dir.getPendingDeletions().contains(fileName));
 
         // releasing pending file ref by closing IndexOutput
         indexOutput.close();
@@ -58,10 +58,10 @@ public class GridLuceneDirectoryTest extends GridCommonAbstractTest {
     }
 
     private void assertNoFilenames() {
-        assertTrue("Lucene Directory is not empty", dirFileNames().isEmpty());
+        JUnitAssertAware.assertTrue("Lucene Directory is not empty", dirFileNames().isEmpty());
     }
 
     private void assertNoPendingDeletions() throws IOException {
-        assertTrue("Pending deletions is not empty", dir.getPendingDeletions().isEmpty());
+        JUnitAssertAware.assertTrue("Pending deletions is not empty", dir.getPendingDeletions().isEmpty());
     }
 }

@@ -19,11 +19,11 @@ package org.apache.ignite.internal.processors.query.h2;
 import java.util.Collection;
 import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.cache.query.LuceneIndex;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
-import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneIndex;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.Nullable;
@@ -32,9 +32,9 @@ import static java.util.Collections.unmodifiableMap;
 import static java.util.stream.Collectors.toMap;
 
 /**
- * Closure to rebuild text index.
+ * Closure to rebuild Lucene index.
  */
-public class TextIndexRebuildClosure implements SchemaIndexCacheVisitorClosure {
+public class LuceneIndexRebuildClosure implements SchemaIndexCacheVisitorClosure {
     /** Query processor. */
     private final GridQueryProcessor qryProc;
 
@@ -42,17 +42,17 @@ public class TextIndexRebuildClosure implements SchemaIndexCacheVisitorClosure {
     private final GridCacheContext cctx;
 
     /** Map of lucene fulltext index by table name. */
-    private final Map<String, GridLuceneIndex> luceneIdxByTblName;
+    private final Map<String, LuceneIndex> luceneIdxByTblName;
 
     /** Lucene fulltext index. */
-    private final GridLuceneIndex luceneIdx;
+    private final LuceneIndex luceneIdx;
 
     /**
      * @param qryProc Query processor.
      * @param cctx Cache context.
      * @param descriptors Collection of table descriptors.
      */
-    public TextIndexRebuildClosure(
+    public LuceneIndexRebuildClosure(
         GridQueryProcessor qryProc,
         GridCacheContext cctx,
         Collection<H2TableDescriptor> descriptors
@@ -75,7 +75,7 @@ public class TextIndexRebuildClosure implements SchemaIndexCacheVisitorClosure {
 
     /** {@inheritDoc} */
     @Override public void apply(CacheDataRow row) throws IgniteCheckedException {
-        GridLuceneIndex luceneIndex0;
+        LuceneIndex luceneIndex0;
 
         if (luceneIdx != null)
             luceneIndex0 = luceneIdx;
