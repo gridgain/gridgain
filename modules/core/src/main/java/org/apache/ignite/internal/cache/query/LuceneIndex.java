@@ -1,4 +1,20 @@
 /*
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,7 +30,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.h2.opt;
+package org.apache.ignite.internal.cache.query;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.CacheObject;
@@ -55,17 +71,17 @@ public interface LuceneIndex extends AutoCloseable {
      * @return Query result.
      * @throws IgniteCheckedException If failed.
      */
-    public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> query(String qry, IndexingQueryFilter filters)
+    public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> textQuery(String qry, IndexingQueryFilter filters)
         throws IgniteCheckedException;
 
     /**
-     * Runs lucene fulltext query over this index.
+     * Runs lucene vector query over this index.
      *
      * @param qryVector Query as vector.
      * @param filters Filters over result.
      * @return Query result.
      * @throws IgniteCheckedException If failed.
      */
-    public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryVector(String field, float[] qryVector,
+    public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> vectorQuery(String field, float[] qryVector,
         int k, float threshold, IndexingQueryFilter filters) throws IgniteCheckedException;
 }

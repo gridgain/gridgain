@@ -150,7 +150,7 @@
         <zkclient.version>0.5</zkclient.version>
         <zookeeper.version>3.8.4</zookeeper.version>
         <zstd.version>1.5.0-4</zstd.version>
-
+        <lucene.version>9.10.0</lucene.version>
 
         <!-- Maven plugins versions -->
         <maven.javadoc.plugin.version>2.10.4</maven.javadoc.plugin.version>
@@ -873,13 +873,20 @@
         </profile>
 
         <profile>
-            <id>target-java-11+</id>
+            <id>java-11+</id>
             <activation>
-                <jdk>[11,15)</jdk>
+                <jdk>[9,)</jdk>
             </activation>
             <properties>
-                <maven.compiler.source>1.8</maven.compiler.source>
+                <maven.compiler.release>8</maven.compiler.release>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>target-java-11+</id>
+            <properties>
                 <maven.compiler.target>11</maven.compiler.target>
+                <maven.compiler.release>11</maven.compiler.release>
             </properties>
             <dependencies/>
             <build>
@@ -915,11 +922,7 @@
 
         <profile>
             <id>target-java-15+</id>
-            <activation>
-                <jdk>[15,)</jdk>
-            </activation>
             <properties>
-                <maven.compiler.source>1.8</maven.compiler.source>
                 <maven.compiler.target>15</maven.compiler.target>
                 <scala.library.version>2.12.15</scala.library.version>
             </properties>
