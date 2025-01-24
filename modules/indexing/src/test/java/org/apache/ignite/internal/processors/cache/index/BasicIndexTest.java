@@ -74,6 +74,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.ByteArrayed;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Dated;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.SqlStrConvertedValHolder;
@@ -178,6 +179,12 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         return igniteCfg
             .setFailureHandler(new StopNodeFailureHandler());
+    }
+
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        System.clearProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING);
     }
 
     /** {@inheritDoc} */
