@@ -34,6 +34,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
 /**
@@ -45,6 +46,13 @@ public abstract class CacheAbstractQueryMetricsSelfTest extends GridCommonAbstra
 
     /** Cache mode. */
     protected CacheMode cacheMode;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        System.clearProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING);
+    }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
