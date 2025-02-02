@@ -214,13 +214,14 @@ public class GridMapQueryExecutor {
             .append("\nLocal Node ID: ").append(ctx.localNodeId())
             .append("\nRemote Node ID: ").append(remoteNodeId);
 
-
         if (error != null) {
             logMessage.append("\nError: ").append(error.getMessage());
         }
 
         // Log the error with the constructed message
+        System.out.println("🔥 ACTUAL LOGGER CALL: " + logMessage);// Jan 31 - Debugging statement
         log.error(logMessage.toString(), error);
+
     }
 
 
