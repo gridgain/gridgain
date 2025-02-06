@@ -711,6 +711,8 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             assert G.allGrids().isEmpty() : "Not all Ignite instances stopped before tests execution:" + G.allGrids();
 
         if (startGrid) {
+            System.setProperty(IGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING, "true");
+
             IgniteConfiguration cfg = optimize(getConfiguration());
 
             G.start(cfg);
