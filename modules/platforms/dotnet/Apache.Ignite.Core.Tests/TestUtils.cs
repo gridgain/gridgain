@@ -81,8 +81,7 @@ namespace Apache.Ignite.Core.Tests
             "-DIGNITE_QUIET=true",
             "-Duser.timezone=UTC",
             "-DIGNITE_UPDATE_NOTIFIER=false",
-            "-DIGNITE_SENSITIVE_DATA_LOGGING=plain",
-            "-DIGNITE_DISABLE_CREATE_LUCENE_INDEX_FOR_STRING=true"
+            "-DIGNITE_SENSITIVE_DATA_LOGGING=plain"
         };
 
         /** */

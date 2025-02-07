@@ -693,6 +693,8 @@ public class QueryEntity implements Serializable {
             GridQueryIndexDescriptor idx = idxEntry.getValue();
 
             if (idx.type() == QueryIndexType.FULLTEXT) {
+                assert txtIdx == null;
+
                 txtIdx = new QueryIndex();
 
                 txtIdx.setIndexType(idx.type());
