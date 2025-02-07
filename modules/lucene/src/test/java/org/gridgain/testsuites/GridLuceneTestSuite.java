@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,6 @@
 
 package org.gridgain.testsuites;
 
-import org.gridgain.internal.processors.cache.GridCacheFullTextQueryMultithreadedSelfTest;
-import org.gridgain.internal.processors.cache.GridCacheFullTextQuerySelfTest;
-import org.gridgain.internal.processors.cache.IgniteCacheFullTextQueryNodeJoiningSelfTest;
-import org.gridgain.internal.processors.cache.IgniteCacheFullTextQueryRebuildSelfTest;
 import org.gridgain.internal.processors.query.h2.opt.GridLuceneDirectoryTest;
 import org.gridgain.internal.processors.query.h2.opt.GridLuceneTextIndex;
 import org.junit.runner.RunWith;
@@ -30,11 +26,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    GridLuceneDirectoryTest.class,
-    GridCacheFullTextQuerySelfTest.class,
-    GridCacheFullTextQueryMultithreadedSelfTest.class,
-    IgniteCacheFullTextQueryNodeJoiningSelfTest.class,
-    IgniteCacheFullTextQueryRebuildSelfTest.class,
+    GridLuceneDirectoryTest.class
 })
-public class TextQueryTestSuite {
+public class GridLuceneTestSuite {
 }
