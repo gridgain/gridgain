@@ -802,6 +802,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             // TODO: Wireshark - check what's going on.
             // TODO: .NET bug in recent update? Check .NET core, check different versions. - fails on .NET core.
             // TODO: Check Java versions too - see TC history, it worked then failed, what changed?
+            // Worked on Java 8, fails on Java 11. This must be the reason.
 
             GetCache<string>().Put(1, "foo");
 
