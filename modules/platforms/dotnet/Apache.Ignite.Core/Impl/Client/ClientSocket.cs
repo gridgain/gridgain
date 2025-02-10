@@ -743,7 +743,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 {
                     // Disconnected.
                     _logger.Debug("Connection lost on {0} (failed to read data from socket)", _socket.RemoteEndPoint);
-                    _exception = _exception ?? new SocketException((int) SocketError.ConnectionAborted);
+                    _exception = _exception ?? new IgniteClientException("Connection lost (failed to read data from socket)", new SocketException((int) SocketError.ConnectionAborted));
                     Dispose();
                     CheckException();
                 }
@@ -842,7 +842,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 // Send.
                 SocketWrite(reqMsg.Buffer, reqMsg.Length);
                 req.Sent = true;
-                Console.WriteLine("Sent: " + reqMsg.Id);
+                Console.WriteLine("Sent: " + reqMsg.Id + ", time: " + DateTime.Now);
 
                 _listenerEvent.Set();
                 return req.CompletionSource.Task;
@@ -1018,7 +1018,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
                         req.CompletionSource.TrySetException(
                             new IgniteClientException(
-                                $"Client request {pair.Key} (sent = {req.Sent}) timed out: {req.Duration} > {_timeout}",
+                                $"Client request {pair.Key} (sent = {req.Sent}) timed out: {req.Duration} > {_timeout}, connected: {_socket.Connected}, time: {DateTime.Now}",
                                 new SocketException((int)SocketError.TimedOut)));
                     }
                 }
