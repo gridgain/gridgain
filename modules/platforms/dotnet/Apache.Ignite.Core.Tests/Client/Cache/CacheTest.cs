@@ -793,6 +793,11 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [Category(TestUtils.CategoryIntensive)]
         public void TestGetMultithreadedSingleClient()
         {
+            // Notes:
+            // - Request processing is very quick - not a perf issue (~0.1ms)
+            // - Some requests are missing, while the following ones are processed correctly
+            //   Is that a .NET client issue? Race condition?
+
             GetCache<string>().Put(1, "foo");
 
             using (var client = GetClient())
