@@ -223,9 +223,9 @@ namespace Apache.Ignite.Core.Tests
 
             foreach (Thread thread in threads)
                 thread.Join();
-            //
-            // foreach (var ex in errors)
-            //     Assert.Fail("Unexpected exception: " + ex);
+
+            foreach (var ex in errors)
+                Assert.Fail("Unexpected exception: " + ex);
         }
 
         /// <summary>

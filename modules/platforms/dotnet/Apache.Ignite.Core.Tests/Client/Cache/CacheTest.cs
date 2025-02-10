@@ -798,6 +798,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             // - Some requests are missing, while the following ones are processed correctly
             // - Is that a .NET client issue? Race condition?
             // - OR multiplexing issues in Java
+            // The server stops responding altogether, the channel becomes broken, so it seems like a Java-side problem?
 
             GetCache<string>().Put(1, "foo");
 
@@ -806,14 +807,31 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             try
             {
                 TestUtils.RunMultiThreaded(() => Assert.AreEqual("foo", clientCache.Get(1)),
-                    Environment.ProcessorCount, 15);
+                    Environment.ProcessorCount, 35);
             }
             catch (Exception e)
             {
                 Console.WriteLine("FAIL: " + e.Message);
+
+                while (true)
+                {
+                    try
+                    {
+                        Client.GetBinary().GetBinaryTypes();
+                        Thread.Sleep(100);
+
+                        Console.WriteLine("GetBinaryTypes OK");
+                        return;
+                    }
+                    catch (Exception exception)
+                    {
+                        Console.WriteLine("GetBinaryTypes FAIL: " + exception.Message);
+                    }
+                }
             }
 
-            Client.GetBinary().GetBinaryTypes();
+
+
             Console.WriteLine("OK");
         }
 
