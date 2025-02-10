@@ -192,7 +192,7 @@ namespace Apache.Ignite.Core.Tests.Client
             return new IgniteClientConfiguration
             {
                 Endpoints = new List<string> {IPAddress.Loopback + ":" + port},
-                SocketTimeout = TimeSpan.FromSeconds(45),
+                SocketTimeout = TimeSpan.FromSeconds(5),
                 Logger = new ListLogger(new ConsoleLogger {MinLevel = LogLevel.Trace}),
                 SslStreamFactory = _enableSsl
                     ? new SslStreamFactory

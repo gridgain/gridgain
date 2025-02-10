@@ -219,6 +219,8 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
 
         try {
             req = parser.decode(msg);
+
+            log.info("Request decoded: " + req.requestId());
         }
         catch (Exception e) {
             try {
