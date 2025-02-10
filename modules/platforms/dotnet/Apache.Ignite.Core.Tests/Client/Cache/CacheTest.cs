@@ -799,8 +799,17 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             {
                 var clientCache = client.GetCache<int, string>(CacheName);
 
-                TestUtils.RunMultiThreaded(() => Assert.AreEqual("foo", clientCache.Get(1)),
-                    Environment.ProcessorCount, 5);
+                try
+                {
+                    TestUtils.RunMultiThreaded(() => Assert.AreEqual("foo", clientCache.Get(1)),
+                        Environment.ProcessorCount, 5);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    // Thread.Sleep(-1);
+                    throw;
+                }
             }
         }
 

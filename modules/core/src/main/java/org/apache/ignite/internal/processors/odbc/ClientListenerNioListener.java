@@ -299,6 +299,8 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
                 ", resp=" + resp.status() + ']');
         }
 
+        System.out.println("Client request processed: " + req.requestId());
+
         GridNioFuture<?> fut = ses.send(parser.encode(resp));
 
         fut.listen(f -> {

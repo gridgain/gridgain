@@ -37,7 +37,11 @@ public class ClientCacheGetRequest extends ClientCacheKeyRequest {
 
     /** {@inheritDoc} */
     @Override public ClientResponse process(ClientConnectionContext ctx) {
+        System.out.println("ClientCacheGetRequest start: " + requestId());
+
         Object val = cache(ctx).get(key());
+
+        System.out.println("ClientCacheGetRequest sending response: " + requestId());
 
         return new ClientObjectResponse(requestId(), val);
     }
