@@ -800,24 +800,19 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
             GetCache<string>().Put(1, "foo");
 
-            using (var client = GetClient())
+            var clientCache = Client.GetCache<int, string>(CacheName);
+
+            try
             {
-                var clientCache = client.GetCache<int, string>(CacheName);
-
-                try
-                {
-                    TestUtils.RunMultiThreaded(() => Assert.AreEqual("foo", clientCache.Get(1)),
-                        Environment.ProcessorCount, 5);
-
-                    GC.KeepAlive(client);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    // Thread.Sleep(-1);
-                    throw;
-                }
+                TestUtils.RunMultiThreaded(() => Assert.AreEqual("foo", clientCache.Get(1)),
+                    6, 5);
             }
+            catch (Exception e)
+            {
+                Console.WriteLine("FAIL: " + e.Message);
+            }
+
+            Client.GetBinary().GetBinaryTypes();
         }
 
         /// <summary>

@@ -742,7 +742,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 if (res == 0)
                 {
                     // Disconnected.
-                    _logger.Debug("Connection lost on {0} (failed to read data from socket)", _socket.RemoteEndPoint);
+                    _logger.Debug("Connection lost on {0} -> {1} (failed to read data from socket)", _socket.LocalEndPoint, _socket.RemoteEndPoint);
                     _exception = _exception ?? new IgniteClientException("Connection lost (failed to read data from socket)", new SocketException((int) SocketError.ConnectionAborted));
                     Dispose();
                     CheckException();
