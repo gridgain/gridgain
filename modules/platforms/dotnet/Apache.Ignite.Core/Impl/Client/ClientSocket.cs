@@ -1018,7 +1018,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
                         req.CompletionSource.TrySetException(
                             new IgniteClientException(
-                                $"Client request {pair.Key} (sent = {req.Sent}) timed out: {req.Duration} > {_timeout}, connected: {_socket.Connected}, time: {DateTime.Now}",
+                                $"Client request {pair.Key} (sent = {req.Sent}) timed out: {req.Duration} > {_timeout}, connected: {_socket.Connected}, time: {DateTime.Now}, available: {_socket.Available}",
                                 new SocketException((int)SocketError.TimedOut)));
                     }
                 }

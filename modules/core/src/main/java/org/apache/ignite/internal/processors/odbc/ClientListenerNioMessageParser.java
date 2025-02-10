@@ -64,6 +64,8 @@ public class ClientListenerNioMessageParser implements GridNioParser {
             if (buf.hasRemaining())
                 finished = msg.readFrom(buf);
 
+            log.info("Reading message [finished=" + finished + "]");
+
             if (finished) {
                 ses.addMeta(FIRST_MESSAGE_RECEIVED_KEY, true);
 
