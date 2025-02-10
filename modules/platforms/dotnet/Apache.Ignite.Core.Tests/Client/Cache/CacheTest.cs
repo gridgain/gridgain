@@ -796,7 +796,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             // Notes:
             // - Request processing is very quick - not a perf issue (~0.1ms)
             // - Some requests are missing, while the following ones are processed correctly
-            //   Is that a .NET client issue? Race condition?
+            // - Is that a .NET client issue? Race condition?
+            // - OR multiplexing issues in Java
 
             GetCache<string>().Put(1, "foo");
 
@@ -805,7 +806,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             try
             {
                 TestUtils.RunMultiThreaded(() => Assert.AreEqual("foo", clientCache.Get(1)),
-                    6, 5);
+                    Environment.ProcessorCount, 15);
             }
             catch (Exception e)
             {
@@ -813,6 +814,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             }
 
             Client.GetBinary().GetBinaryTypes();
+            Console.WriteLine("OK");
         }
 
         /// <summary>
