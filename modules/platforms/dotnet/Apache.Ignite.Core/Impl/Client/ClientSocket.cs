@@ -422,7 +422,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         private bool IsAsyncMode
         {
-            get { return !_requests.IsEmpty || Interlocked.Read(ref _expectedNotifications) > 0; }
+            get { return _requests != null; }
         }
 
         /// <summary>
