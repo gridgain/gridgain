@@ -1003,13 +1003,13 @@ namespace Apache.Ignite.Core.Impl.Client
 
             try
             {
-                if (_exception != null)
-                {
-                    _timeoutCheckTimer.Dispose();
-                }
-
                 foreach (var pair in _requests)
                 {
+                    if (_exception != null)
+                    {
+                        _timeoutCheckTimer.Dispose();
+                    }
+
                     var req = pair.Value;
 
                     if (req != null && req.Duration > _timeout)
