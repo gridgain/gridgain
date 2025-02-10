@@ -800,6 +800,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             // - OR multiplexing issues in Java
             // The server stops responding altogether, the channel becomes broken, so it seems like a Java-side problem?
             // TODO: Wireshark - check what's going on.
+            // TODO: .NET bug in recent update? Check .NET core, check different versions.
 
             GetCache<string>().Put(1, "foo");
 
