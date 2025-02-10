@@ -1007,7 +1007,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
                         req.CompletionSource.TrySetException(
                             new IgniteClientException(
-                                $"Client request timed out: {req.Duration} > {_timeout}",
+                                $"Client request {pair.Key} timed out: {req.Duration} > {_timeout}",
                                 new SocketException((int)SocketError.TimedOut)));
                     }
                 }
