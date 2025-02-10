@@ -834,6 +834,8 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 // Send.
                 SocketWrite(reqMsg.Buffer, reqMsg.Length);
+                req.Sent = true;
+
                 _listenerEvent.Set();
                 return req.CompletionSource.Task;
             }
@@ -1007,7 +1009,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
                         req.CompletionSource.TrySetException(
                             new IgniteClientException(
-                                $"Client request {pair.Key} timed out: {req.Duration} > {_timeout}",
+                                $"Client request {pair.Key} (sent = {req.Sent}) timed out: {req.Duration} > {_timeout}",
                                 new SocketException((int)SocketError.TimedOut)));
                     }
                 }
@@ -1143,6 +1145,8 @@ namespace Apache.Ignite.Core.Impl.Client
             /** */
             private readonly DateTime _startTime;
 
+            private volatile bool _sent;
+
             /// <summary>
             /// Initializes a new instance of the <see cref="Request"/> class.
             /// </summary>
@@ -1166,6 +1170,11 @@ namespace Apache.Ignite.Core.Impl.Client
             public TimeSpan Duration
             {
                 get { return DateTime.Now - _startTime; }
+            }
+
+            public bool Sent {
+                get => _sent;
+                set => _sent = value;
             }
         }
 
