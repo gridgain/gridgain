@@ -194,6 +194,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                             .writerFactory(ses -> new DirectMessageWriter((byte)1))
                             .idleTimeout(idleTimeout > 0 ? idleTimeout : Long.MAX_VALUE)
                             .metricRegistry(mreg)
+                            .sendQueueLimit(0)
                             .build();
 
                         ctx.ports().registerPort(port, IgnitePortProtocol.TCP, getClass());
