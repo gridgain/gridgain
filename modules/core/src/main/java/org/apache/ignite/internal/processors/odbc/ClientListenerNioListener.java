@@ -240,16 +240,12 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
         assert req != null;
 
         try {
-            long startTime;
+            long startTime = System.nanoTime();
 
             if (log.isTraceEnabled()) {
-                startTime = System.nanoTime();
-
                 log.trace("Client request received [reqId=" + req.requestId() + ", addr=" +
                     ses.remoteAddress() + ", req=" + req + ']');
             }
-            else
-                startTime = 0;
 
             AuthorizationContext authCtx = connCtx.authorizationContext();
 

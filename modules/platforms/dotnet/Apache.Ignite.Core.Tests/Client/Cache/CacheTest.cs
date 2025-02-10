@@ -803,6 +803,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 {
                     TestUtils.RunMultiThreaded(() => Assert.AreEqual("foo", clientCache.Get(1)),
                         Environment.ProcessorCount, 5);
+
+                    GC.KeepAlive(client);
                 }
                 catch (Exception e)
                 {
