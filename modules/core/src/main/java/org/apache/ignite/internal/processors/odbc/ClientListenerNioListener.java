@@ -292,14 +292,12 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
         GridNioSession ses,
         ClientListenerMessageParser parser
     ) {
-        if (log.isTraceEnabled()) {
+        if (log.isInfoEnabled()) {
             long dur = (System.nanoTime() - startTime) / 1000;
 
-            log.trace("Client request processed [reqId=" + req.requestId() + ", dur(mcs)=" + dur +
+            log.info("Client request processed [reqId=" + req.requestId() + ", dur(mcs)=" + dur +
                 ", resp=" + resp.status() + ']');
         }
-
-        System.out.println("Client request processed: " + req.requestId());
 
         GridNioFuture<?> fut = ses.send(parser.encode(resp));
 
