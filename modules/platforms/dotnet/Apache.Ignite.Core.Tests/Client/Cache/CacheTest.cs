@@ -800,39 +800,17 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             // - OR multiplexing issues in Java
             // The server stops responding altogether, the channel becomes broken, so it seems like a Java-side problem?
             // TODO: Wireshark - check what's going on.
-            // TODO: .NET bug in recent update? Check .NET core, check different versions.
+            // TODO: .NET bug in recent update? Check .NET core, check different versions. - fails on .NET core.
+            // TODO: Check Java versions too - see TC history, it worked then failed, what changed?
 
             GetCache<string>().Put(1, "foo");
 
             var clientCache = Client.GetCache<int, string>(CacheName);
 
-            try
             {
                 TestUtils.RunMultiThreaded(() => Assert.AreEqual("foo", clientCache.Get(1)),
                     Environment.ProcessorCount, 15);
             }
-            catch (Exception e)
-            {
-                Console.WriteLine("FAIL: " + e.Message);
-
-                while (true)
-                {
-                    try
-                    {
-                        Client.GetBinary().GetBinaryTypes();
-                        Thread.Sleep(100);
-
-                        Console.WriteLine("GetBinaryTypes OK");
-                        return;
-                    }
-                    catch (Exception exception)
-                    {
-                        Console.WriteLine("GetBinaryTypes FAIL: " + exception.Message);
-                    }
-                }
-            }
-
-            Console.WriteLine("OK");
         }
 
         /// <summary>
