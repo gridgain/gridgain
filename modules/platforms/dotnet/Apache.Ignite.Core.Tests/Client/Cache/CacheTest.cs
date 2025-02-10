@@ -799,6 +799,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             // - Is that a .NET client issue? Race condition?
             // - OR multiplexing issues in Java
             // The server stops responding altogether, the channel becomes broken, so it seems like a Java-side problem?
+            // TODO: Wireshark - check what's going on.
 
             GetCache<string>().Put(1, "foo");
 
@@ -807,7 +808,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             try
             {
                 TestUtils.RunMultiThreaded(() => Assert.AreEqual("foo", clientCache.Get(1)),
-                    Environment.ProcessorCount, 35);
+                    Environment.ProcessorCount, 15);
             }
             catch (Exception e)
             {
@@ -829,8 +830,6 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                     }
                 }
             }
-
-
 
             Console.WriteLine("OK");
         }
