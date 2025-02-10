@@ -283,11 +283,18 @@ namespace Apache.Ignite.Core.Impl.Client
         public T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
             Func<ClientResponseContext, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
         {
-            // Encode.
-            var reqMsg = WriteMessage(writeAction, opId);
+            Task<BinaryHeapStream> sendRequestAsync;
 
-            // Send.
-            var response = SendRequest(ref reqMsg) ?? SendRequestAsync(ref  reqMsg).Result;
+            lock (_sendRequestSyncRoot)
+            {
+                // Encode.
+                var reqMsg = WriteMessage(writeAction, opId);
+
+                // Send.
+                sendRequestAsync = SendRequestAsync(ref reqMsg);
+            }
+
+            var response = sendRequestAsync.Result;
 
             // Decode.
             return DecodeResponse(response, readFunc, errorFunc);
@@ -835,6 +842,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 // Send.
                 SocketWrite(reqMsg.Buffer, reqMsg.Length);
                 req.Sent = true;
+                Console.WriteLine("Sent: " + reqMsg.Id);
 
                 _listenerEvent.Set();
                 return req.CompletionSource.Task;
@@ -898,7 +906,7 @@ namespace Apache.Ignite.Core.Impl.Client
             try
             {
                 _stream.Write(buf, 0, len);
-                _stream.Flush();
+                _stream.Flush(); // No-op.
 
                 // Reset heartbeat timer - don't sent heartbeats when connection is active anyway.
                 _heartbeatTimer?.Change(dueTime: _heartbeatInterval, period: TimeSpan.FromMilliseconds(-1));
@@ -939,7 +947,7 @@ namespace Apache.Ignite.Core.Impl.Client
             {
                 NoDelay = cfg.TcpNoDelay,
                 Blocking = true,
-                SendTimeout = (int) cfg.SocketTimeout.TotalMilliseconds
+                SendTimeout = (int) cfg.SocketTimeout.TotalMilliseconds,
             };
 
             if (cfg.SocketSendBufferSize != IgniteClientConfiguration.DefaultSocketBufferSize)
@@ -970,7 +978,7 @@ namespace Apache.Ignite.Core.Impl.Client
         {
             var stream = new NetworkStream(socket, ownsSocket: true)
             {
-                WriteTimeout = (int) cfg.SocketTimeout.TotalMilliseconds
+                WriteTimeout = (int) cfg.SocketTimeout.TotalMilliseconds,
             };
 
             if (cfg.SslStreamFactory == null)
