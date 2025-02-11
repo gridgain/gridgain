@@ -37,7 +37,7 @@ import org.junit.Test;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
-import static org.apache.ignite.cache.CacheMode.REPLICATED;
+import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 
@@ -69,7 +69,7 @@ public class IgniteCacheFullTextQueryRebuildSelfTest extends GridCommonAbstractT
 
         CacheConfiguration cache = new CacheConfiguration(DEFAULT_CACHE_NAME);
 
-        cache.setCacheMode(REPLICATED);
+        cache.setCacheMode(PARTITIONED);
         cache.setBackups(1);
 
         cache.setQueryEntities(asList(

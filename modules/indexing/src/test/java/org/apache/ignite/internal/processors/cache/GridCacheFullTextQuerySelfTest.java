@@ -47,7 +47,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.apache.ignite.cache.CacheMode.REPLICATED;
+import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
 /**
@@ -71,7 +71,7 @@ public class GridCacheFullTextQuerySelfTest extends GridCommonAbstractTest {
         CacheConfiguration<Integer, Person> cacheCfg = defaultCacheConfiguration();
 
         cacheCfg.setName(PERSON_CACHE)
-            .setCacheMode(REPLICATED)
+            .setCacheMode(PARTITIONED)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
             .setWriteSynchronizationMode(FULL_SYNC)
             .setBackups(0)
