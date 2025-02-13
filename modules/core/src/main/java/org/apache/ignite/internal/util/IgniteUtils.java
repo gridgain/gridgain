@@ -1690,17 +1690,27 @@ public abstract class IgniteUtils {
                 .a(", ownerId=").a(threadInfo.getLockOwnerId()).a("]").a(NL);
         }
 
-        MonitorInfo[] monitors = threadInfo.getLockedMonitors();
-        StackTraceElement[] elements = threadInfo.getStackTrace();
+        printStackTraceElements(sb, threadInfo.getStackTrace(), threadInfo.getLockedMonitors());
+    }
 
+    /**
+     * Print stack trace elements into a string builder. Optionally writes acquired locks.
+     *
+     * @param sb Output string builder.
+     * @param elements Stack trace elements.
+     * @param monitors Monitors.
+     */
+    public static void printStackTraceElements(GridStringBuilder sb, StackTraceElement[] elements, MonitorInfo[] monitors) {
         for (int i = 0; i < elements.length; i++) {
             StackTraceElement e = elements[i];
 
             sb.a("        at ").a(e.toString());
 
-            for (MonitorInfo monitor : monitors) {
-                if (monitor.getLockedStackDepth() == i)
-                    sb.a(NL).a("        - locked ").a(monitor);
+            if (monitors != null) {
+                for (MonitorInfo monitor : monitors) {
+                    if (monitor.getLockedStackDepth() == i)
+                        sb.a(NL).a("        - locked ").a(monitor);
+                }
             }
 
             sb.a(NL);
