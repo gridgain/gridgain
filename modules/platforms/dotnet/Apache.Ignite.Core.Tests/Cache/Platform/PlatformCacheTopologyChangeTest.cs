@@ -24,6 +24,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
     using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Communication.Tcp;
     using Apache.Ignite.Core.Lifecycle;
     using NUnit.Framework;
@@ -419,7 +420,23 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             clientCache[1] = new Foo(2);
             Assert.AreEqual(2, clientCache.LocalPeek(1, CachePeekMode.Platform).Bar);
 
-            PerformClientReconnect(client);
+            try
+            {
+                PerformClientReconnect(client);
+            }
+            catch (JavaException e)
+            {
+                if (e.JavaClassName == "java.lang.UnsupportedOperationException" &&
+                    e.Message.Contains("java.lang.Thread.suspend"))
+                {
+                    // Not supported on JDK 21+
+                    Console.WriteLine($"Thread.suspend not supported - skipping the test: {e}");
+
+                    return;
+                }
+
+                throw;
+            }
 
             // Platform cache data is removed after disconnect.
             Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.Platform));

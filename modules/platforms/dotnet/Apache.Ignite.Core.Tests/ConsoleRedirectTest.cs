@@ -310,7 +310,7 @@ namespace Apache.Ignite.Core.Tests
 
                 if (!string.IsNullOrWhiteSpace(value) && value.StartsWith(Prefix))
                 {
-                    LastValue = value.Substring(Prefix.Length);
+                    LastValue = value.Substring(Prefix.Length).TrimEnd();
                 }
             }
         }
