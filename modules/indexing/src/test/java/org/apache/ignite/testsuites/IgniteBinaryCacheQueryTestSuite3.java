@@ -39,6 +39,8 @@ import org.apache.ignite.internal.processors.cache.CacheSqlQueryValueCopySelfTes
 import org.apache.ignite.internal.processors.cache.CheckIndexesInlineSizeOnNodeJoinMultiJvmTest;
 import org.apache.ignite.internal.processors.cache.GridCacheDynamicLoadOnClientPersistentTest;
 import org.apache.ignite.internal.processors.cache.GridCacheDynamicLoadOnClientTest;
+import org.apache.ignite.internal.processors.cache.GridCacheFullTextQueryMultithreadedSelfTest;
+import org.apache.ignite.internal.processors.cache.GridCacheFullTextQuerySelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheQueryIndexingDisabledSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheQuerySqlFieldInlineSizeSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheBinaryObjectsScanSelfTest;
@@ -50,6 +52,8 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheDistributedJoinPar
 import org.apache.ignite.internal.processors.cache.IgniteCacheDistributedJoinQueryConditionsTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheDistributedJoinTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheFieldsQueryNoDataSelfTest;
+import org.apache.ignite.internal.processors.cache.IgniteCacheFullTextQueryNodeJoiningSelfTest;
+import org.apache.ignite.internal.processors.cache.IgniteCacheFullTextQueryRebuildSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheNoClassQuerySelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheP2pUnmarshallingQueryErrorTest;
 import org.apache.ignite.internal.processors.cache.IgniteCheckClusterStateBeforeExecuteQueryTest;
@@ -179,6 +183,12 @@ import org.junit.runners.Suite;
     GridCacheQueryIndexingDisabledSelfTest.class,
     GridOrderedMessageCancelSelfTest.class,
     CacheQueryEvictDataLostTest.class,
+
+    // Full text queries.
+    GridCacheFullTextQuerySelfTest.class,
+    GridCacheFullTextQueryMultithreadedSelfTest.class,
+    IgniteCacheFullTextQueryNodeJoiningSelfTest.class,
+    IgniteCacheFullTextQueryRebuildSelfTest.class,
 
     // Ignite cache and H2 comparison.
     BaseH2CompareQueryTest.class,

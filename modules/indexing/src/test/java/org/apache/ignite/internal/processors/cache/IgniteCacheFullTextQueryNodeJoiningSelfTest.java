@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.gridgain.internal.processors.cache;
+package org.apache.ignite.internal.processors.cache;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
