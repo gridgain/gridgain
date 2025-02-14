@@ -275,20 +275,23 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
                 evictionGroupsMap.values().forEach(GroupEvictionContext::showProgress);
 
-                if (!logEvictPartByGrps.isEmpty()) {
-                    StringJoiner evictPartJoiner = new StringJoiner(", ");
+                // Access to "logEvictPartByGrps" must be protected with a mutex.
+                synchronized (mux) {
+                    if (!logEvictPartByGrps.isEmpty()) {
+                        StringJoiner evictPartJoiner = new StringJoiner(", ");
 
-                    logEvictPartByGrps.forEach((grpId, map) -> {
-                        CacheGroupContext grpCtx = cctx.cache().cacheGroup(grpId);
+                        logEvictPartByGrps.forEach((grpId, map) -> {
+                            CacheGroupContext grpCtx = cctx.cache().cacheGroup(grpId);
 
-                        String grpName = (nonNull(grpCtx) ? grpCtx.cacheOrGroupName() : null);
+                            String grpName = (nonNull(grpCtx) ? grpCtx.cacheOrGroupName() : null);
 
-                        evictPartJoiner.add("[grpId=" + grpId + ", grpName=" + grpName + ", " + toString(map) + ']');
-                    });
+                            evictPartJoiner.add("[grpId=" + grpId + ", grpName=" + grpName + ", " + toString(map) + ']');
+                        });
 
-                    log.info("Partitions have been scheduled for eviction: " + evictPartJoiner);
+                        log.info("Partitions have been scheduled for eviction: " + evictPartJoiner);
 
-                    logEvictPartByGrps.clear();
+                        logEvictPartByGrps.clear();
+                    }
                 }
             }
 
