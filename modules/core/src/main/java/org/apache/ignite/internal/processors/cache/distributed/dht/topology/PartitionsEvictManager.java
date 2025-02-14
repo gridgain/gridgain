@@ -245,11 +245,10 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             return task;
         }
 
-        if (log.isInfoEnabled()) {
-            log.info("The partition has been scheduled for clearing [grp=" + grp.cacheOrGroupName()
+        if (log.isDebugEnabled())
+            log.debug("The partition has been scheduled for clearing [grp=" + grp.cacheOrGroupName()
                 + ", topVer=" + (grp.topology().initialized() ? grp.topology().readyTopologyVersion() : "NA")
                 + ", task" + task + ']');
-        }
 
         return task;
     }
@@ -679,8 +678,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             try {
                 long clearedEntities = part.clearAll(stopClo, this);
 
-                if (log.isInfoEnabled()) {
-                    log.info("The partition clearing has been finished [grp=" + part.group().cacheOrGroupName() +
+                if (log.isDebugEnabled()) {
+                    log.debug("The partition clearing has been finished [grp=" + part.group().cacheOrGroupName() +
                         ", topVer=" + part.group().topology().readyTopologyVersion() +
                         ", cleared=" + clearedEntities +
                         ", task" + this + ']');
