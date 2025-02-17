@@ -26,7 +26,7 @@
     <parent>
         <groupId>org.gridgain</groupId>
         <artifactId>ignite-parent-internal</artifactId>
-        <version>8.9.127-SNAPSHOT</version>
+        <version>8.9.16-p1</version>
         <relativePath>../../../parent-internal/pom.xml</relativePath>
     </parent>
 
