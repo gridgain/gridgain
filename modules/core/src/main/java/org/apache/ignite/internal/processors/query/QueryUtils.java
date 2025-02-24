@@ -845,7 +845,7 @@ public class QueryUtils {
                 if (idxTyp == QueryIndexType.FULLTEXT)
                     d.addFieldToTextIndex(field);
                 else
-                    d.addFieldToVectorIndex(field);
+                    d.addFieldToVectorIndex(field, idx.getSimilarityFunction());
             }
         }
         else if (idxTyp != null)

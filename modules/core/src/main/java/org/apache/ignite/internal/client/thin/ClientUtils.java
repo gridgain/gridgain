@@ -526,7 +526,13 @@ public final class ClientUtils {
                                             LinkedHashMap::new
                                     ));
 
-                                    return new QueryIndex(fields, type).setName(name).setInlineSize(inlineSize);
+                                    QueryIndex queryIndex = new QueryIndex(fields, type).setName(name).setInlineSize(inlineSize);
+                                    if(protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY)){
+                                        int similarityFunctionInt = reader.readInt();
+                                        queryIndex.setSimilarityFunction(similarityFunctionInt);
+                                    }
+
+                                    return queryIndex;
                                 }
                             ));
                     }

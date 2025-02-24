@@ -905,7 +905,7 @@ public class QueryEntity implements Serializable {
             desc.addFieldToTextIndex(prop.fullName());
 
         if (vecAnn != null)
-            desc.addFieldToVectorIndex(prop.fullName());
+            desc.addFieldToVectorIndex(prop.fullName(), vecAnn.similarityFunction());
     }
 
     /** {@inheritDoc} */
