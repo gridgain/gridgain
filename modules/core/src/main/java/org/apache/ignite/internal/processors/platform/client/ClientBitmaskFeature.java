@@ -68,10 +68,7 @@ public enum ClientBitmaskFeature implements ThinProtocolFeature {
     INDEX_QUERY_LIMIT(15),
 
     /** Cache plugin configurations. GG-specific, use higher id to avoid conflicts. */
-    CACHE_PLUGIN_CONFIGURATIONS(32),
-
-    /** Vector Similarty function for VECTOR INDEX. */
-    QUERY_INDEX_VECTOR_SIMILARITY(47);
+    CACHE_PLUGIN_CONFIGURATIONS(32);
 
     /** */
     private static final EnumSet<ClientBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =
