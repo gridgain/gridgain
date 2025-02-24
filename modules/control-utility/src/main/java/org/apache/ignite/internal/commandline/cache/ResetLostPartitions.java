@@ -90,14 +90,23 @@ public class ResetLostPartitions extends AbstractCommand<Set<String>> {
         logger.info("Looking for the caches with LOST partitions first...");
 
         caches = new HashSet<>();
+
         CacheDistributionTaskArg taskArg = new CacheDistributionTaskArg(null, null);
+
         try (GridClient client = Command.startClient(clientCfg)) {
-            CacheDistributionTaskResult res = executeTaskByNameOnNode(client, CacheDistributionTask.class.getName(), taskArg, BROADCAST_UUID, clientCfg);
+            CacheDistributionTaskResult res = executeTaskByNameOnNode(
+                client,
+                CacheDistributionTask.class.getName(),
+                taskArg,
+                BROADCAST_UUID,
+                clientCfg);
+
             for (CacheDistributionNode node : res.jobResults()) {
                 for (CacheDistributionGroup group : node.getGroups()) {
                     for (CacheDistributionPartition partition : group.getPartitions()) {
                         if (partition.getState() == GridDhtPartitionState.LOST) {
-                            caches.add(group.getGroupName());
+                            caches.addAll(group.cacheNames());
+
                             break;
                         }
                     }

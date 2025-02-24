@@ -142,7 +142,7 @@ public class IgniteSqlParameterizedQueryTest extends AbstractIndexingCommonTest 
 
     /**
      * Object with all predefined SQL Data Types
-     * @see <a href="https://apacheignite.readme.io/docs/dml#section-advanced-configuration">SQL Data Types</a>
+     * @see <a href="https://www.gridgain.com/docs/latest/developers-guide/SQL/indexes#custom-keys">Custom Keys</a>
      */
     private static class Bookmark implements Serializable {
         /** */

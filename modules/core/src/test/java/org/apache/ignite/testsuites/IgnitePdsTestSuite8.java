@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragme
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragmentationRandomLruEvictionTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragmentationTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsRecoveryAfterFileCorruptionTest;
+import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsTxRecordLoggingTest;
 import org.apache.ignite.internal.processors.cache.persistence.MaintenanceAutoRecoveryTest;
 import org.apache.ignite.internal.processors.cache.persistence.MaintenanceClearCacheFolderTest;
 import org.apache.ignite.internal.processors.cache.persistence.MaintenancePersistenceTaskTest;
@@ -100,6 +101,9 @@ public class IgnitePdsTestSuite8 {
         GridTestUtils.addTestIfNeeded(suite, MaintenancePersistenceTaskTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, MaintenanceClearCacheFolderTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, MaintenanceAutoRecoveryTest.class, ignoredTests);
+
+        // Tx record logging tests.
+        GridTestUtils.addTestIfNeeded(suite, IgnitePdsTxRecordLoggingTest.class, ignoredTests);
 
         return suite;
     }

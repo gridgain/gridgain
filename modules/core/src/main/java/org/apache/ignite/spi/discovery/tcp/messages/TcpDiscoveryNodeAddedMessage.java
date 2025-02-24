@@ -23,9 +23,16 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.spi.discovery.tcp.internal.CompactedTopologyHistory;
 import org.apache.ignite.spi.discovery.tcp.internal.DiscoveryDataPacket;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_COMPACTED_TOPOLOGY_HISTORY;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.internal.IgniteFeatures.TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
+import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 
 /**
  * Message telling nodes that new node should be added to topology.
@@ -35,8 +42,12 @@ import org.jetbrains.annotations.Nullable;
 @TcpDiscoveryEnsureDelivery
 @TcpDiscoveryRedirectToClient
 public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableMessage {
+
     /** */
     private static final long serialVersionUID = 0L;
+
+    /** Feature flag for compacted topology history. */
+    private static final boolean COMPACTED_TOPOLOGY_HISTORY = getBoolean(IGNITE_COMPACTED_TOPOLOGY_HISTORY, true);
 
     /** Added node. */
     private final TcpDiscoveryNode node;
@@ -63,6 +74,8 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
 
     /** Topology snapshots history. */
     private Map<Long, Collection<ClusterNode>> topHist;
+
+    private CompactedTopologyHistory compactedTopHist;
 
     /** Start time of the first grid node. */
     private final long gridStartTime;
@@ -200,6 +213,12 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
      * @return Map with topology snapshots history.
      */
     public Map<Long, Collection<ClusterNode>> topologyHistory() {
+        if (topHist == null && compactedTopHist != null) {
+            topHist = compactedTopHist.asMap();
+
+            compactedTopHist = null;
+        }
+
         return topHist;
     }
 
@@ -209,7 +228,10 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
      * @param topHist Map with topology snapshots history.
      */
     public void topologyHistory(@Nullable Map<Long, Collection<ClusterNode>> topHist) {
-        this.topHist = topHist;
+        if (topHist != null && useCompactedTopologyHistory())
+            this.compactedTopHist = new CompactedTopologyHistory(topHist);
+        else
+            this.topHist = topHist;
     }
 
     /**
@@ -240,6 +262,15 @@ public class TcpDiscoveryNodeAddedMessage extends TcpDiscoveryAbstractTraceableM
      */
     public long gridStartTime() {
         return gridStartTime;
+    }
+
+    /**
+     * @return {@code True} if node should use message with compacted topology history.
+     */
+    private boolean useCompactedTopologyHistory() {
+        return COMPACTED_TOPOLOGY_HISTORY
+            && nodeSupports(null, node, TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY)
+            && allNodesSupports(null, top, TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY);
     }
 
     /** {@inheritDoc} */

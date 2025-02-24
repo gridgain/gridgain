@@ -160,4 +160,12 @@ public class SqlQueryView {
     public boolean lazy() {
         return qry.lazy();
     }
+
+    /**
+     * @return Query label.
+     */
+    @Order(16)
+    public String label() {
+        return qry.label();
+    }
 }

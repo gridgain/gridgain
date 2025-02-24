@@ -293,7 +293,7 @@ public class GridCacheContext<K, V> implements Externalizable {
         Boolean.parseBoolean(System.getProperty(IGNITE_DISABLE_TRIGGERING_CACHE_INTERCEPTOR_ON_CONFLICT, "false"));
 
     /** Last remove all job future. */
-    private AtomicReference<IgniteInternalFuture<Boolean>> lastRmvAllJobFut = new AtomicReference<>();
+    private final AtomicReference<IgniteInternalFuture<Boolean>> lastRmvAllJobFut = new AtomicReference<>();
 
     /**
      * Empty constructor required for {@link Externalizable}.

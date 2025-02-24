@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Impl.Common
         /** Classpath separator. */
         [SuppressMessage("Microsoft.Performance", "CA1802:UseLiteralsWhereAppropriate")]
         private static readonly string ClasspathSeparator = Os.IsWindows ? ";" : ":";
-        
+
         /** Excluded modules from test classpath */
         private static readonly string[] TestExcludedModules = { "rest-http", "spring-data" };
 
@@ -138,9 +138,9 @@ namespace Apache.Ignite.Core.Impl.Common
             Justification = "Not supported on all platforms.")]
         private static void AppendTestClasses0(string path, StringBuilder cp)
         {
-            var shouldExcluded = TestExcludedModules.Any(excl => 
+            var shouldExcluded = TestExcludedModules.Any(excl =>
                 path.IndexOf(excl, StringComparison.OrdinalIgnoreCase) >= 0);
-            
+
             if (shouldExcluded)
                 return;
 

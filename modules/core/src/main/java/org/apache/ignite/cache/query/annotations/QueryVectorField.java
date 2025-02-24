@@ -33,17 +33,5 @@ import org.apache.ignite.internal.processors.cache.query.CacheQuery;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.TYPE})
 public @interface QueryVectorField {
-    /**
-     * Specifies similarityFunction for a vector field.
-     *
-     * @return similarityFunction for a vector field.
-     */
-    SimilarityFunction similarityFunction() default SimilarityFunction.COSINE;
-
-    public static enum SimilarityFunction {
-        EUCLIDEAN,
-        DOT_PRODUCT,
-        COSINE,
-        MAXIMUM_INNER_PRODUCT
-    }
+    // No-op.
 }

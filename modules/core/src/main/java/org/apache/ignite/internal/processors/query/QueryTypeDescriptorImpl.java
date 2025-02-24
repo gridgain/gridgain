@@ -30,7 +30,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.QueryIndexType;
-import org.apache.ignite.cache.query.annotations.QueryVectorField;
+import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
@@ -42,6 +42,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.binary.BinaryUtils.typeName;
 import static org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode.KEY_SCALE_OUT_OF_RANGE;
 import static org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode.NULL_KEY;
 import static org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode.NULL_VALUE;
@@ -366,15 +367,14 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     }
 
     /**
-     * Adds field to VECTOR index.
+     * Adds field to vector index.
      *
      * @param field Field name.
-     * @param similarityFunction Vector Similarity Function for VECTOR index.
      * @throws IgniteCheckedException If failed.
      */
-    public void addFieldToVectorIndex(String field, QueryVectorField.SimilarityFunction similarityFunction) throws IgniteCheckedException {
+    public void addFieldToVectorIndex(String field) throws IgniteCheckedException {
         if (vectorIdx == null)
-            vectorIdx = new QueryIndexDescriptorImpl(this, null, QueryIndexType.VECTOR, 0, similarityFunction);
+            vectorIdx = new QueryIndexDescriptorImpl(this, null, QueryIndexType.VECTOR, 0);
 
         vectorIdx.addField(field, 0, false);
     }
@@ -702,7 +702,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
                 Class<?> propType;
 
                 if (F.eq(idxField, keyFieldAlias()) || F.eq(idxField, KEY_FIELD_NAME)) {
-                    propVal = key instanceof KeyCacheObject ? ((CacheObject) key).value(coCtx, true) : key;
+                    propVal = key instanceof KeyCacheObject ? ((CacheObject)key).value(coCtx, true) : key;
 
                     propType = propVal == null ? null : propVal.getClass();
                 }
@@ -720,42 +720,45 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
                 if (propVal == null)
                     continue;
 
-                if (!(propVal instanceof BinaryObject)) {
-                    if (!U.box(propType).isAssignableFrom(U.box(propVal.getClass()))) {
-                        // Some reference type arrays end up being converted to Object[]
-                        if (!(propType.isArray() && Object[].class == propVal.getClass() &&
-                            Arrays.stream((Object[]) propVal).
-                                noneMatch(x -> x != null && !U.box(propType.getComponentType()).isAssignableFrom(U.box(x.getClass())))))
-                        {
-                            throw new IgniteSQLException("Type for a column '" + idxField +
-                                "' is not compatible with index definition. Expected '" +
-                                propType.getSimpleName() + "', actual type '" +
-                                propVal.getClass().getSimpleName() + "'");
-                        }
-                    }
-                }
-                else if (U.classForName(((BinaryObject)propVal).type().typeName(), Object.class, true)
-                        != propType && coCtx.kernalContext().cacheObjects().typeId(propType.getName()) !=
-                        ((BinaryObject)propVal).type().typeId()) {
-
-                    // Check for classes/enums implementing indexed interfaces.
-                    String clsName = ((BinaryObject) propVal).type().typeName();
-                    try {
-                        final Class<?> cls = Class.forName(clsName);
-
-                        if (propType.isAssignableFrom(cls))
-                            continue;
-                    } catch (ClassNotFoundException e) {
-                        if (log.isDebugEnabled())
-                            U.error(log, "Failed to find child class: " + clsName, e);
-                    }
-                    throw new IgniteSQLException("Type for a column '" + idxField +
-                        "' is not compatible with index definition. Expected '" +
-                        propType.getSimpleName() + "', actual type '" +
-                        ((BinaryObject)propVal).type().typeName() + "'");
+                if (!isCompatibleWithPropertyType(propVal, idxField, propType)) {
+                    throw new IgniteSQLException("Type for a column '" + idxField + "' is not compatible with index definition." +
+                        " Expected '" + prop.type().getSimpleName() + "', actual type '" + typeName(propVal) + "'");
                 }
             }
         }
+    }
+
+    /**
+     * Checks if the specified object is compatible with the type of the column through which this object will be accessed.
+     *
+     * @param val Object to check.
+     * @param colName Name of the column to which current property corresponds.
+     * @param expColType Type of the column based on Query Property info.
+     */
+    private boolean isCompatibleWithPropertyType(Object val, String colName, Class<?> expColType) {
+        if (!(val instanceof BinaryObject)) {
+            if (U.box(expColType).isAssignableFrom(U.box(val.getClass())))
+                return true;
+
+            GridQueryIndexing indexing = coCtx.kernalContext().query().getIndexing();
+
+            assert indexing != null;
+
+            if (indexing.isConvertibleToColumnType(schemaName, tableName(), colName, val.getClass()))
+                return true;
+
+            return expColType.isArray()
+                && BinaryUtils.isObjectArray(val.getClass())
+                && Arrays.stream((Object[]) val)
+                .allMatch(x -> x == null || U.box(expColType.getComponentType()).isAssignableFrom(U.box(x.getClass())));
+        }
+        else if (coCtx.kernalContext().cacheObjects().typeId(expColType.getName()) != ((BinaryObject)val).type().typeId()) {
+            final Class<?> cls = U.classForName(((BinaryObject)val).type().typeName(), null, true);
+
+            return (cls == null && expColType == Object.class) || (cls != null && expColType.isAssignableFrom(cls));
+        }
+
+        return true;
     }
 
     /** {@inheritDoc} */

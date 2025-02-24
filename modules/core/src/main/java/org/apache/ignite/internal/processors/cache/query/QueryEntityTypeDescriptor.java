@@ -150,16 +150,17 @@ public class QueryEntityTypeDescriptor {
     }
 
     /**
-     * Adds field to VECTOR index.
+     * Adds field to text index.
      *
      * @param field Field name.
-     * @param similarityFunction Vector Similarity Function for VECTOR index.
      */
-    public void addFieldToVectorIndex(String field, QueryVectorField.SimilarityFunction similarityFunction) {
+    public void addFieldToVectorIndex(String field) {
         if (vectorIdx == null) {
-            vectorIdx = new QueryEntityIndexDescriptor(QueryIndexType.VECTOR, similarityFunction);
+            vectorIdx = new QueryEntityIndexDescriptor(QueryIndexType.VECTOR);
+
             indexes.put(QueryIndexType.VECTOR.name(), vectorIdx);
         }
+
         vectorIdx.addField(field, 0, false);
     }
 

@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
@@ -92,13 +91,13 @@ public class ConsistentIdMapper {
      */
     public Map<Short, Collection<Short>> mapToCompactIds(
         AffinityTopologyVersion topVer,
-        @Nullable Map<UUID, Collection<UUID>> txNodes,
-        BaselineTopology baselineTop
+        @Nullable Map<UUID, Collection<UUID>> txNodes
     ) {
         if (txNodes == null)
             return null;
 
         Map<UUID, Short> m = discoveryMgr.consistentId(topVer);
+        boolean fullBaseline = discoveryMgr.fullBaseline(topVer);
 
         int bltNodes = m.size();
 
@@ -125,7 +124,7 @@ public class ConsistentIdMapper {
             }
 
             // Optimization for short store full nodes set.
-            if (backups.size() == nodeCnt && nodeCnt == (bltNodes - 1))
+            if (fullBaseline && backups.size() == nodeCnt && nodeCnt == (bltNodes - 1))
                 backups = Collections.singletonList(Short.MAX_VALUE);
 
             consistentMap.put(mapToCompactId(topVer, node), backups);

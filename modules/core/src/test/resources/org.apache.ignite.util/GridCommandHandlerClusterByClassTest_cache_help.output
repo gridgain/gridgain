@@ -1,5 +1,5 @@
 Control utility [ver. <!any!>
-2024 Copyright(C) GridGain Systems, Inc. and Contributors
+2025 Copyright(C) GridGain Systems, Inc. and Contributors
 User: <!any!>
 Time: <!any!>
 Command [CACHE] started
@@ -49,6 +49,12 @@ Arguments: --cache help --yes
     Parameters:
       --caches cache1,...,cacheN  - specifies a comma-separated list of cache names to be destroyed.
       --destroy-all-caches        - permanently destroy all user-created caches.
+
+  --cache clear
+    Clear specified caches.
+
+    Parameters:
+      --caches  - specifies a comma-separated list of cache names to be cleared.
 
   --cache validate_indexes [cacheName1,...,cacheNameN] [nodeId] [--check-first N|--check-through K|--check-crc|--check-sizes]
     Verify counters and hash sums of primary and backup partitions for the specified caches/cache groups on an idle cluster and print out the differences, if any. Cache filtering options configure the set of caches that will be processed by idle_verify command. Default value for the set of cache names (or cache group names) is all cache groups. Default value for --exclude-caches is empty set. Default value for --cache-filter is no filtering. Therefore, the set of all caches is sequently filtered by cache name regexps, by cache type and after all by exclude regexps.

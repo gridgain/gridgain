@@ -26,7 +26,9 @@ import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.util.GridMultiCollectionWrapper;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Page memory with some persistence related additions.
@@ -114,11 +116,12 @@ public interface PageMemoryEx extends PageMemory {
      * be flushed to the main memory after the checkpointing finished. This method must be called when no
      * concurrent operations on pages are performed.
      *
+     * @param checkpointProgress Progress of the current checkpoint at which the object was created, {@code null} on
+     *      binary recovery, it is expected that there will be no parallel writes on page replacement.
      * @return Collection of dirty page IDs.
      * @throws IgniteException If checkpoint has been already started and was not finished.
-     * @param allowToReplace The sign which allows to replace pages from a checkpoint by page replacer.
      */
-    public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(IgniteInternalFuture allowToReplace)
+    public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(@Nullable CheckpointProgress checkpointProgress)
             throws IgniteException;
 
     /**
@@ -131,7 +134,7 @@ public interface PageMemoryEx extends PageMemory {
      *{@link PageStoreWriter} will be called when the page will be ready to write.
      *
      * @param pageId Page ID to get byte buffer for. The page ID must be present in the collection returned by
-     *      the {@link #beginCheckpoint(IgniteInternalFuture)} method call.
+     *      the {@link #beginCheckpoint} method call.
      * @param buf Temporary buffer to write changes into.
      * @param pageWriter Checkpoint page write context.
      * @param tracker Checkpoint metrics tracker.

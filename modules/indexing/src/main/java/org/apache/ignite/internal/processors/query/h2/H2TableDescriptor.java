@@ -20,9 +20,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.QueryIndexType;
+import org.apache.ignite.internal.cache.query.LuceneIndex;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
@@ -34,8 +34,6 @@ import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.h2.opt.LuceneIndex;
-import org.apache.ignite.internal.processors.query.h2.opt.LuceneIndexFactory;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.index.Index;
@@ -248,11 +246,11 @@ public class H2TableDescriptor {
 
         if (type().valueClass() == String.class
             && !idx.distributedConfiguration().isDisableCreateLuceneIndexForStringValueType()) {
-            luceneIdx = createLuceneIndex(tbl.cacheName(), log);
+            luceneIdx = idx.createLuceneIndex(tbl.cacheName(), type);
         }
 
         if (type.textIndex() != null || type.vectorIndex() != null)
-            this.luceneIdx = createLuceneIndex(tbl.cacheName(), log);
+            this.luceneIdx = idx.createLuceneIndex(tbl.cacheName(), type);
 
         // Locate index where affinity column is first (if any).
         if (affCol != null) {

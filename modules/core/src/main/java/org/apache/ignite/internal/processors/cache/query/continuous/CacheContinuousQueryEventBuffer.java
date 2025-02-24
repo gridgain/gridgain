@@ -311,6 +311,11 @@ public class CacheContinuousQueryEventBuffer {
         return res;
     }
 
+    /** */
+    int backupQueueSize() {
+        return backupQ.size();
+    }
+
     /**
      *
      */

@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +44,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
+import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -393,5 +395,24 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
         catch (CacheException ignore) {
             // No op.
         }
+    }
+
+    @Test
+    public void cleanupCacheDirectory() throws Exception {
+        IgniteEx ignite = startGrids(1);
+        ignite.cluster().state(ClusterState.ACTIVE);
+
+        ignite.createCache(new CacheConfiguration(DEFAULT_CACHE_NAME));
+        IgniteCache cache = ignite.cache(DEFAULT_CACHE_NAME);
+        cache.put(30000, 30000);
+
+        assertTrue(resolveCacheDir(ignite, DEFAULT_CACHE_NAME).exists());
+        cache.destroy();
+        assertFalse(resolveCacheDir(ignite, DEFAULT_CACHE_NAME).exists());
+    }
+
+    private File resolveCacheDir(IgniteEx ignite, String cacheName) {
+        File workDir = ((FilePageStoreManager)ignite.context().cache().context().pageStore()).workDir();
+        return new File(workDir, "cache-" + DEFAULT_CACHE_NAME);
     }
 }

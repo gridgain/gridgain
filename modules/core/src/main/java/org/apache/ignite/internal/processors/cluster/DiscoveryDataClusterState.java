@@ -46,7 +46,7 @@ public class DiscoveryDataClusterState implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Flag indicating if the cluster in in active state. */
+    /** Flag indicating if the cluster in active state. */
     @Deprecated
     private final boolean active;
 

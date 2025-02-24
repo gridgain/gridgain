@@ -28,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
@@ -97,6 +96,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptyMap;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.events.EventType.EVT_MANAGEMENT_TASK_STARTED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -164,7 +164,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
     private volatile IgniteInternalCache<GridTaskNameHashKey, String> tasksMetaCache;
 
     /** */
-    private final CountDownLatch startLatch = new CountDownLatch(1);
+    private volatile CountDownLatch startLatch = new CountDownLatch(1);
 
     /**
      * {@code true} if local node has persistent region in configuration and is not a client.
@@ -256,7 +256,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
         while (true) {
             try {
-                if (lock.tryWriteLock(1, TimeUnit.SECONDS))
+                if (lock.tryWriteLock(1, SECONDS))
                     break;
                 else {
                     LT.warn(log, "Still waiting to acquire write lock on stop");
@@ -275,6 +275,10 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             stopping = true;
 
             waiting = !cancel;
+
+            tasksMetaCache = null;
+
+            startLatch = new CountDownLatch(1);
         }
         finally {
             lock.writeUnlock();
@@ -282,8 +286,6 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             if (interrupted)
                 Thread.currentThread().interrupt();
         }
-
-        startLatch.countDown();
 
         int size = tasks.size();
 
@@ -330,7 +332,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         ctx.io().removeMessageListener(TOPIC_TASK_CANCEL);
 
         // Set waiting flag to false to make sure that we do not get
-        // listener notifications any more.
+        // listener notifications anymore.
         if (!cancel) {
             lock.writeLock();
 
@@ -351,11 +353,38 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
     /**
      * @return Task metadata cache.
      */
-    private IgniteInternalCache<GridTaskNameHashKey, String> taskMetaCache() {
+    private IgniteInternalCache<GridTaskNameHashKey, String> taskMetaCache() throws NodeStoppingException {
         assert ctx.security().enabled();
 
-        if (tasksMetaCache == null)
-            U.awaitQuiet(startLatch);
+        if (tasksMetaCache == null) {
+            boolean interrupted = false;
+
+            while (true) {
+                try {
+                    if (!startLatch.await(1, SECONDS)) {
+                        // It is not possible to use the `stopping` flag here because
+                        // in case of node stopping the {@link #onKernalStop(boolean)} method cannot acquire the write lock
+                        // and set the `stopping` flag to `true`.
+                        // Also, counting down the latch is not a good approach because
+                        // it will lead to weird exception later.
+                        if (ctx.isStopping())
+                            throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+
+                        LT.info(log, "Executing a task on inactive cluster. Still waiting for the activation.");
+
+                        continue;
+                    }
+
+                    break;
+                }
+                catch (InterruptedException ignored) {
+                    interrupted = true;
+                }
+            }
+
+            if (interrupted)
+                Thread.currentThread().interrupt();
+        }
 
         return tasksMetaCache;
     }
@@ -1301,7 +1330,40 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
     /** {@inheritDoc} */
     @Override public void onDeActivate(GridKernalContext kctx) {
-        onKernalStop(true);
+        boolean interrupted = false;
+
+        // Write lock is needed to block all new task executions.
+        while (true) {
+            try {
+                if (lock.tryWriteLock(1, SECONDS))
+                    break;
+                else {
+                    LT.info(log, "Still waiting to acquire write lock on deactivation.");
+
+                    U.sleep(50);
+                }
+            }
+            catch (IgniteInterruptedCheckedException | InterruptedException e) {
+                LT.warn(log, "Stopping thread was interrupted while waiting for write lock (will wait anyway)");
+
+                interrupted = true;
+            }
+        }
+
+        try {
+            tasksMetaCache = null;
+
+            startLatch = new CountDownLatch(1);
+        }
+        finally {
+            lock.writeUnlock();
+
+            if (interrupted)
+                Thread.currentThread().interrupt();
+        }
+
+        if (log.isDebugEnabled())
+            log.debug("Finished executing task processor onDeactivate() callback.");
     }
 
     /**

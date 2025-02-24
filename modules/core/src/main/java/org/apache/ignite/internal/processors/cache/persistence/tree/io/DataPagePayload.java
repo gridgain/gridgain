@@ -29,7 +29,7 @@ public class DataPagePayload {
     /** Available size of the payload. */
     private final int payloadSize;
 
-    /** Link to the next fragmet. If it is the last fragment or the data row is not fragmented then it is {@code null} value. */
+    /** Link to the next fragmet. If it is the last fragment or the data row is not fragmented then it is {@code 0} value. */
     private final long nextLink;
 
     /**

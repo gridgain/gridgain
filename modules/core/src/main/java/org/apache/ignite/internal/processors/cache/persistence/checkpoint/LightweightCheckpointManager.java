@@ -147,6 +147,7 @@ public class LightweightCheckpointManager {
             checkpointThreadName,
             workersRegistry,
             logger,
+            persistenceCfg,
             longJvmPauseDetector,
             failureProcessor,
             snapshotMgr,
@@ -162,9 +163,7 @@ public class LightweightCheckpointManager {
 
         checkpointer = checkpointerProvider.get();
 
-        Long cfgCheckpointReadLockTimeout = persistenceCfg != null
-            ? persistenceCfg.getCheckpointReadLockTimeout()
-            : null;
+        Long cfgCheckpointReadLockTimeout = persistenceCfg.getCheckpointReadLockTimeout();
 
         long checkpointReadLockTimeout = IgniteSystemProperties.getLong(IGNITE_CHECKPOINT_READ_LOCK_TIMEOUT,
             cfgCheckpointReadLockTimeout != null

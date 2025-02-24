@@ -67,6 +67,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION;
+
 /** */
 public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest implements Serializable {
     /** */
@@ -210,7 +212,7 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = "IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION", value = "true")
+    @WithSystemProperty(key = IGNITE_DUMP_PERSISTENCE_FILES_ON_DATA_CORRUPTION, value = "true")
     public void testDumpPersistenceFilesOnCorruptedPage() throws Exception {
         IgniteEx srv = startGrid(0);
 
@@ -254,9 +256,11 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
 
         assertTrue(GridTestUtils.waitForCondition(() -> G.allGrids().isEmpty(), 10_000L));
 
+        String consistentIdStr = U.maskForFileName(srv.configuration().getConsistentId().toString());
+
         File partDir = U.resolveWorkDirectory(
                 srv.configuration().getWorkDirectory(),
-                "db/dump/" + srv.configuration().getConsistentId() + "/" + grpId,
+                "db/dump/" + consistentIdStr + "/" + grpId,
                 false
         );
 
@@ -267,7 +271,7 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
 
         File walDir = U.resolveWorkDirectory(
                 srv.configuration().getWorkDirectory(),
-                "db/dump/" + srv.configuration().getConsistentId() + "/wal",
+                "db/dump/" + consistentIdStr + "/wal",
                 false
         );
 

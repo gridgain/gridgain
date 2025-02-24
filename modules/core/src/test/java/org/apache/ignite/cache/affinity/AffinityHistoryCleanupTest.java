@@ -16,21 +16,32 @@
 
 package org.apache.ignite.cache.affinity;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.AbstractFailureHandler;
+import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache;
 import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -39,8 +50,11 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MIN_AFFINITY_HISTORY_SIZE;
+import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
+import static org.apache.ignite.internal.TestRecordingCommunicationSpi.blockSupplyMessageForGroup;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 
 /**
@@ -57,10 +71,14 @@ public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        CacheConfiguration[] ccfgs = new CacheConfiguration[4];
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
+
+        cfg.setFailureHandler(new TestFailureHandler());
+
+        CacheConfiguration<?, ?>[] ccfgs = new CacheConfiguration[4];
 
         for (int i = 0; i < ccfgs.length; i++) {
-            CacheConfiguration ccfg = new CacheConfiguration(DEFAULT_CACHE_NAME);
+            CacheConfiguration<?, ?> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
             ccfg.setName("static-cache-" + i);
             ccfg.setAffinity(new RendezvousAffinityFunction());
@@ -220,7 +238,7 @@ public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
 
         int cnt = 0;
 
-        for (GridCacheContext cctx : proc.context().cacheContexts()) {
+        for (GridCacheContext<?, ?> cctx : proc.context().cacheContexts()) {
             GridAffinityAssignmentCache aff = GridTestUtils.getFieldValue(cctx.affinity(), "aff");
 
             AtomicInteger fullHistSize = GridTestUtils.getFieldValue(aff, "nonShallowHistSize");
@@ -258,6 +276,80 @@ public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_MIN_AFFINITY_HISTORY_SIZE, value = "3")
     public void testNonShallowAffinityHistoryIsNotRemoved() throws Exception {
         testNonShallowAffinityHistory(false);
+    }
+
+    @Test
+    @WithSystemProperty(key = IGNITE_AFFINITY_HISTORY_SIZE, value = "2")
+    public void testRebalanceTinyAffinityHistory() throws Exception {
+        IgniteEx ignite = startGrids(2);
+
+        // Number of caches with zero backups and READ_WRITE_SAFE partition loss policy.
+        int cacheCntr = 2;
+        for (int i = 0; i < cacheCntr; ++i) {
+            CacheConfiguration<Integer, Integer> ccfg0 = new CacheConfiguration<>(DEFAULT_CACHE_NAME + '-' + i);
+            ccfg0.setAffinity(new RendezvousAffinityFunction(false, 32));
+            ccfg0.setBackups(0);
+            ccfg0.setPartitionLossPolicy(READ_WRITE_SAFE);
+
+            ignite.getOrCreateCache(ccfg0);
+        }
+
+        CacheConfiguration<Integer, Integer> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, 32));
+        ccfg.setBackups(1);
+
+        IgniteCache<Integer, Integer> c = ignite.getOrCreateCache(ccfg);
+
+        for (int i = 0; i < 100; ++i)
+            c.put(i, i);
+
+        // Stopping the node should lead to lost partitions for caches with zero backups.
+        stopGrid(1);
+
+        // Upload new data in order to trigger rebalance after node restarting.
+        for (int i = 0; i < 100; ++i)
+            c.put(i, i);
+
+        // Block supply messages for the "default" cache.
+        TestRecordingCommunicationSpi spi0 = TestRecordingCommunicationSpi.spi(ignite);
+        spi0.blockMessages(blockSupplyMessageForGroup(CU.cacheGroupId(DEFAULT_CACHE_NAME, null)));
+
+        IgniteEx g1 = startGrid(1);
+
+        // Need to freeze PME related to resetting lost partitions when affinity history is cleaned,
+        // but a new rebalance is not started.
+        g1.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
+            @Override public void onDoneBeforeTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
+                if (fut.initialVersion().equals(new AffinityTopologyVersion(4, cacheCntr))) {
+                    IgniteInternalFuture<Boolean> rebFut = ignite
+                        .context()
+                        .cache()
+                        .cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME))
+                        .preloader()
+                        .rebalanceFuture();
+
+                    spi0.stopBlock();
+
+                    try {
+                        rebFut.get(5, SECONDS);
+                    }
+                    catch (IgniteCheckedException e) {
+                        throw new IgniteException("Failed to wait rebalance future.");
+                    }
+                }
+            }
+        });
+
+        for (int i = 0; i < cacheCntr; ++i)
+            ignite.resetLostPartitions(Collections.singletonList(DEFAULT_CACHE_NAME + '-' + i));
+
+        awaitPartitionMapExchange();
+
+        for (Ignite g : G.allGrids()) {
+            TestFailureHandler fh = (TestFailureHandler) g.configuration().getFailureHandler();
+
+            assertNull("Unexpected critical error detected [failureCtx=" + fh.failureCtx + ']', fh.failureCtx);
+        }
     }
 
     private void testNonShallowAffinityHistory(boolean isRemoved) throws Exception {
@@ -339,5 +431,18 @@ public class AffinityHistoryCleanupTest extends GridCommonAbstractTest {
      */
     private static AffinityTopologyVersion topVer(int major, int minor) {
         return new AffinityTopologyVersion(major, minor);
+    }
+
+    /** Test failure handler. */
+    private static class TestFailureHandler extends AbstractFailureHandler {
+        /** Failure context related to triggering this handler. */
+        private volatile FailureContext failureCtx;
+
+        /** {@inheritDoc}. */
+        @Override protected boolean handle(Ignite ignite, FailureContext failureCtx) {
+            this.failureCtx = failureCtx;
+
+            return true;
+        }
     }
 }

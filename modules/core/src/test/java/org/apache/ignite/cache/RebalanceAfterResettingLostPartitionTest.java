@@ -43,10 +43,13 @@ import org.junit.Test;
  */
 public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstractTest {
     /** Cache name. */
-    private static final String CACHE_NAME = "cache" + UUID.randomUUID().toString();
+    private static final String CACHE_NAME = "cache-" + UUID.randomUUID();
 
     /** Cache size */
     public static final int CACHE_SIZE = 10_000;
+
+    /** Cache group name. */
+    private String cacheGrpName;
 
     /** Stop all grids and cleanup persistence directory. */
     @Before
@@ -82,11 +85,13 @@ public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstract
 
         cfg.setDataStorageConfiguration(storageCfg);
 
-        cfg.setCacheConfiguration(new CacheConfiguration()
+        cfg.setCacheConfiguration(new CacheConfiguration<Integer, String>()
             .setName(CACHE_NAME)
+            .setGroupName(cacheGrpName)
             .setCacheMode(CacheMode.PARTITIONED)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
             .setAffinity(new RendezvousAffinityFunction(false, 32))
+            .setReadFromBackup(true)
             .setBackups(1));
 
         return cfg;
@@ -97,9 +102,28 @@ public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstract
      *
      * @throws Exception if fail.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testRebalanceAfterPartitionsWereLost() throws Exception {
+        cacheGrpName = null;
+
+        rebalanceAfterPartitionsWereLost();
+    }
+
+    /**
+     * Test to restore lost partitions and rebalance data on working grid with two nodes.
+     * Cache group name explicitly specified and does not match the cache name.
+     *
+     * @throws Exception if fail.
+     */
+    @Test
+    public void testRebalanceAfterPartitionsWereLostCustomCacheGroup() throws Exception {
+        cacheGrpName = "cache-group-" + UUID.randomUUID();
+
+        rebalanceAfterPartitionsWereLost();
+    }
+
+    @SuppressWarnings("unchecked")
+    public void rebalanceAfterPartitionsWereLost() throws Exception {
         startGrids(2);
 
         grid(0).cluster().active(true);
@@ -109,7 +133,7 @@ public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstract
 
         String g1Name = grid(1).name();
 
-        // Stopping the the second node.
+        // Stopping the second node.
         stopGrid(1);
 
         // Cleaning the persistence for second node.
@@ -120,7 +144,7 @@ public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstract
         TestRecordingCommunicationSpi.spi(ignite(0)).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
             @Override public boolean apply(ClusterNode clusterNode, Message msg) {
                 if (msg instanceof GridDhtPartitionSupplyMessage &&
-                    ((GridCacheGroupIdMessage)msg).groupId() == CU.cacheId(CACHE_NAME)) {
+                    ((GridCacheGroupIdMessage)msg).groupId() == CU.cacheGroupId(CACHE_NAME, cacheGrpName)) {
                     if (msgCntr.get() > 3)
                         return true;
                     else
@@ -134,7 +158,7 @@ public class RebalanceAfterResettingLostPartitionTest extends GridCommonAbstract
         // Starting second node again(with the same consistent id).
         startGrid(1);
 
-        // Waitting for rebalance.
+        // Waiting for rebalance.
         TestRecordingCommunicationSpi.spi(ignite(0)).waitForBlocked();
 
         // Killing the first node at the moment of rebalancing.
