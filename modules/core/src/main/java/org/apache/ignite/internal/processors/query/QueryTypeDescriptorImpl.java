@@ -31,6 +31,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.query.annotations.QueryVectorField;
+import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
@@ -42,6 +43,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.binary.BinaryUtils.typeName;
 import static org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode.KEY_SCALE_OUT_OF_RANGE;
 import static org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode.NULL_KEY;
 import static org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode.NULL_VALUE;
@@ -245,7 +247,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
 
     /** {@inheritDoc} */
     @Override public void setValue(String field, Object key, Object val, Object propVal)
-        throws IgniteCheckedException {
+            throws IgniteCheckedException {
         assert field != null;
 
         GridQueryProperty prop = property(field);
@@ -456,7 +458,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
      * @throws IgniteCheckedException In case of error.
      */
     public void addProperty(GridQueryProperty prop, boolean failOnDuplicate, boolean isField)
-        throws IgniteCheckedException {
+            throws IgniteCheckedException {
         String name = prop.name();
 
         if (props.put(name, prop) != null && failOnDuplicate)
@@ -659,31 +661,31 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
 
             if (propVal == null && prop.notNull()) {
                 throw new IgniteSQLException("Null value is not allowed for column '" + prop.name() + "'",
-                    isKey ? NULL_KEY : NULL_VALUE);
+                        isKey ? NULL_KEY : NULL_VALUE);
             }
 
             if (propVal == null || prop.precision() == -1)
                 continue;
 
             if (String.class == propVal.getClass() &&
-                ((String)propVal).length() > prop.precision()) {
+                    ((String)propVal).length() > prop.precision()) {
                 throw new IgniteSQLException("Value for a column '" + prop.name() + "' is too long. " +
-                    "Maximum length: " + prop.precision() + ", actual length: " + ((CharSequence)propVal).length(),
-                    isKey ? TOO_LONG_KEY : TOO_LONG_VALUE);
+                        "Maximum length: " + prop.precision() + ", actual length: " + ((CharSequence)propVal).length(),
+                        isKey ? TOO_LONG_KEY : TOO_LONG_VALUE);
             }
             else if (BigDecimal.class == propVal.getClass()) {
                 BigDecimal dec = (BigDecimal)propVal;
 
                 if (dec.precision() > prop.precision()) {
                     throw new IgniteSQLException("Value for a column '" + prop.name() + "' is out of range. " +
-                        "Maximum precision: " + prop.precision() + ", actual precision: " + dec.precision(),
-                        isKey ? TOO_LONG_KEY : TOO_LONG_VALUE);
+                            "Maximum precision: " + prop.precision() + ", actual precision: " + dec.precision(),
+                            isKey ? TOO_LONG_KEY : TOO_LONG_VALUE);
                 }
                 else if (prop.scale() != -1 &&
-                    dec.scale() > prop.scale()) {
+                        dec.scale() > prop.scale()) {
                     throw new IgniteSQLException("Value for a column '" + prop.name() + "' is out of range. " +
-                        "Maximum scale : " + prop.scale() + ", actual scale: " + dec.scale(),
-                        isKey ? KEY_SCALE_OUT_OF_RANGE : VALUE_SCALE_OUT_OF_RANGE);
+                            "Maximum scale : " + prop.scale() + ", actual scale: " + dec.scale(),
+                            isKey ? KEY_SCALE_OUT_OF_RANGE : VALUE_SCALE_OUT_OF_RANGE);
                 }
             }
         }
@@ -702,7 +704,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
                 Class<?> propType;
 
                 if (F.eq(idxField, keyFieldAlias()) || F.eq(idxField, KEY_FIELD_NAME)) {
-                    propVal = key instanceof KeyCacheObject ? ((CacheObject) key).value(coCtx, true) : key;
+                    propVal = key instanceof KeyCacheObject ? ((CacheObject)key).value(coCtx, true) : key;
 
                     propType = propVal == null ? null : propVal.getClass();
                 }
@@ -720,42 +722,45 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
                 if (propVal == null)
                     continue;
 
-                if (!(propVal instanceof BinaryObject)) {
-                    if (!U.box(propType).isAssignableFrom(U.box(propVal.getClass()))) {
-                        // Some reference type arrays end up being converted to Object[]
-                        if (!(propType.isArray() && Object[].class == propVal.getClass() &&
-                            Arrays.stream((Object[]) propVal).
-                                noneMatch(x -> x != null && !U.box(propType.getComponentType()).isAssignableFrom(U.box(x.getClass())))))
-                        {
-                            throw new IgniteSQLException("Type for a column '" + idxField +
-                                "' is not compatible with index definition. Expected '" +
-                                propType.getSimpleName() + "', actual type '" +
-                                propVal.getClass().getSimpleName() + "'");
-                        }
-                    }
-                }
-                else if (U.classForName(((BinaryObject)propVal).type().typeName(), Object.class, true)
-                        != propType && coCtx.kernalContext().cacheObjects().typeId(propType.getName()) !=
-                        ((BinaryObject)propVal).type().typeId()) {
-
-                    // Check for classes/enums implementing indexed interfaces.
-                    String clsName = ((BinaryObject) propVal).type().typeName();
-                    try {
-                        final Class<?> cls = Class.forName(clsName);
-
-                        if (propType.isAssignableFrom(cls))
-                            continue;
-                    } catch (ClassNotFoundException e) {
-                        if (log.isDebugEnabled())
-                            U.error(log, "Failed to find child class: " + clsName, e);
-                    }
-                    throw new IgniteSQLException("Type for a column '" + idxField +
-                        "' is not compatible with index definition. Expected '" +
-                        propType.getSimpleName() + "', actual type '" +
-                        ((BinaryObject)propVal).type().typeName() + "'");
+                if (!isCompatibleWithPropertyType(propVal, idxField, propType)) {
+                    throw new IgniteSQLException("Type for a column '" + idxField + "' is not compatible with index definition." +
+                            " Expected '" + prop.type().getSimpleName() + "', actual type '" + typeName(propVal) + "'");
                 }
             }
         }
+    }
+
+    /**
+     * Checks if the specified object is compatible with the type of the column through which this object will be accessed.
+     *
+     * @param val Object to check.
+     * @param colName Name of the column to which current property corresponds.
+     * @param expColType Type of the column based on Query Property info.
+     */
+    private boolean isCompatibleWithPropertyType(Object val, String colName, Class<?> expColType) {
+        if (!(val instanceof BinaryObject)) {
+            if (U.box(expColType).isAssignableFrom(U.box(val.getClass())))
+                return true;
+
+            GridQueryIndexing indexing = coCtx.kernalContext().query().getIndexing();
+
+            assert indexing != null;
+
+            if (indexing.isConvertibleToColumnType(schemaName, tableName(), colName, val.getClass()))
+                return true;
+
+            return expColType.isArray()
+                    && BinaryUtils.isObjectArray(val.getClass())
+                    && Arrays.stream((Object[]) val)
+                    .allMatch(x -> x == null || U.box(expColType.getComponentType()).isAssignableFrom(U.box(x.getClass())));
+        }
+        else if (coCtx.kernalContext().cacheObjects().typeId(expColType.getName()) != ((BinaryObject)val).type().typeId()) {
+            final Class<?> cls = U.classForName(((BinaryObject)val).type().typeName(), null, true);
+
+            return (cls == null && expColType == Object.class) || (cls != null && expColType.isAssignableFrom(cls));
+        }
+
+        return true;
     }
 
     /** {@inheritDoc} */

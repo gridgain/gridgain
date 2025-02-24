@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.pagemem.store;
 
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 
@@ -163,4 +164,9 @@ public interface PageStore {
      * @param usefulBytes Number of meaningful bytes from the beginning of the page.
      */
     void punchHole(long pageId, int usefulBytes);
+
+    /**
+     * @return Path to the file.
+     */
+    Path getPath();
 }

@@ -53,9 +53,12 @@ public class CacheDistributionNode extends VisorDataTransferObject {
      * @param userAttrs Map node user attribute.
      * @param groups Information about groups.
      */
-    public CacheDistributionNode(UUID nodeId, String addrs,
+    public CacheDistributionNode(
+        UUID nodeId,
+        String addrs,
         Map<String, String> userAttrs,
-        List<CacheDistributionGroup> groups) {
+        List<CacheDistributionGroup> groups
+    ) {
         this.nodeId = nodeId;
         this.addrs = addrs;
         this.userAttrs = userAttrs;

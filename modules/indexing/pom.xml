@@ -126,8 +126,24 @@
             <version>${hamcrest.version}</version>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
+
+    <profiles>
+        <profile>
+            <id>java-11+</id>
+            <activation>
+                <jdk>[11,)</jdk>
+            </activation>
+
+            <dependencies>
+                <dependency>
+                    <groupId>org.gridgain</groupId>
+                    <artifactId>ignite-lucene</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 
     <build>
         <plugins>

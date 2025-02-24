@@ -57,6 +57,8 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.cache.query.LuceneIndex;
+import org.apache.ignite.internal.cache.query.LuceneIndexFactory;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.managers.IgniteMBeansManager;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
@@ -210,6 +212,7 @@ import org.gridgain.internal.h2.engine.Constants;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.store.DataHandler;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
@@ -224,6 +227,7 @@ import static java.util.Collections.singletonList;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MVCC_TX_SIZE_CACHING_THRESHOLD;
+import static org.apache.ignite.internal.IgniteComponentType.LUCENE;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.TX_SIZE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.checkActive;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccEnabled;
@@ -240,6 +244,7 @@ import static org.apache.ignite.internal.processors.query.h2.H2Utils.validateTyp
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.zeroCursor;
 import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.parseMaintenanceTaskParameters;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.ERROR;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_LABEL;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_TEXT;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_SCHEMA;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_CMD_QRY_EXECUTE;
@@ -248,6 +253,8 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_DML_QRY
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_ITER_OPEN;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXECUTE;
+import static org.apache.ignite.internal.util.IgniteUtils.jdkVersion;
+import static org.apache.ignite.internal.util.IgniteUtils.majorJavaVersion;
 
 /**
  * Indexing implementation based on H2 database engine. In this implementation main query language is SQL,
@@ -329,6 +336,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     private DistributedSqlConfiguration distrCfg;
 
     private IndexingDefragmentation defragmentation = new IndexingDefragmentation(this);
+
+    private @Nullable LuceneIndexFactory luceneIdxFactory;
 
     /** */
     private final IgniteInClosure<? super IgniteInternalFuture<?>> logger = new IgniteInClosure<IgniteInternalFuture<?>>() {
@@ -528,6 +537,36 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
     }
 
+    /**
+     * Create Lucene index.
+     *
+     * @param cacheName Cache name
+     * @return Index.
+     */
+    @SuppressWarnings("ConstantConditions")
+    LuceneIndex createLuceneIndex(String cacheName, GridQueryTypeDescriptor type) {
+        try {
+            if (luceneIdxFactory == null) {
+                int javaVer = majorJavaVersion(jdkVersion());
+
+                if (javaVer < 11)
+                    throw new IgniteException("Failed to load Lucene module to create index. Use Java 11 or higher.");
+
+                if (!LUCENE.inClassPath()) {
+                    throw new IgniteException("Failed to create index because Lucene module is disabled (consider" +
+                        " adding module ignite-lucene to classpath or moving it from 'optional' to 'libs' folder).");
+                }
+
+                luceneIdxFactory = LUCENE.create(ctx, false);
+            }
+
+            return luceneIdxFactory.createIndex(cacheName, type);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+    }
+
     /** {@inheritDoc} */
     @Override public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryLocalText(String schemaName,
         String cacheName, String qry, String typeName, IndexingQueryFilter filters) throws IgniteCheckedException {
@@ -544,12 +583,58 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null,
                 false,
                 false,
-                false
+                false,
+                null
             );
 
             Throwable failReason = null;
             try {
-                return tbl.luceneIndex().query(qry.toUpperCase(), filters);
+                return tbl.luceneIndex().textQuery(qry.toUpperCase(), filters);
+            }
+            catch (Throwable t) {
+                failReason = t;
+
+                throw t;
+            }
+            finally {
+                runningQueryManager().unregister(qryId, failReason);
+            }
+        }
+
+        return new GridEmptyCloseableIterator<>();
+    }
+
+    /** {@inheritDoc} */
+    @Override public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryLocalVector(
+        String schemaName,
+        String cacheName,
+        String field,
+        float[] qryVector,
+        int k,
+        float threshold,
+        String typeName,
+        IndexingQueryFilter filter
+    ) throws IgniteCheckedException {
+        H2TableDescriptor tbl = schemaMgr.tableForType(schemaName, cacheName, typeName);
+
+        if (tbl != null && tbl.luceneIndex() != null) {
+            Long qryId = runningQueryManager().register(
+                null,
+                VECTOR,
+                schemaName,
+                true,
+                null,
+                null,
+                null,
+                false,
+                false,
+                false,
+                null
+            );
+
+            Throwable failReason = null;
+            try {
+                return tbl.luceneIndex().vectorQuery(field.toUpperCase(), qryVector, k, threshold, filter);
             }
             catch (Throwable t) {
                 failReason = t;
@@ -684,7 +769,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         H2Utils.bindParameters(stmt, F.asList(params));
 
-                        H2QueryInfo qryInfo = new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry, ctx.discovery().localNode(), qryId);
+                        H2QueryInfo qryInfo = new H2QueryInfo(
+                            H2QueryInfo.QueryType.LOCAL,
+                            stmt,
+                            qry,
+                            ctx.discovery().localNode(),
+                            qryId,
+                            qryDesc.label()
+                        );
 
                         ResultSet rs = executeSqlQueryWithTimer(
                             stmt,
@@ -818,7 +910,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             qryInitiatorId,
             false,
             false,
-            false
+            false,
+            null
         );
 
         Exception failReason = null;
@@ -1170,6 +1263,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         fieldsQuery.setLocal(qry.isLocal());
         fieldsQuery.setPageSize(qry.getPageSize());
         fieldsQuery.setSchema(schemaName);
+        fieldsQuery.setLabel(qry.getLabel());
 
         if (qry.getPartition() != null) {
             fieldsQuery.setPartitions(qry.getPartition());
@@ -1269,6 +1363,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         try {
             List<FieldsQueryCursor<List<?>>> res = new ArrayList<>(1);
 
+            String label = qry.getLabel();
+
             SqlFieldsQuery remainingQry = qry;
 
             if (!failOnMultipleStmts) {
@@ -1278,6 +1374,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             while (remainingQry != null) {
                 Span qrySpan = ctx.tracing().create(SQL_QRY, MTC.span())
                     .addTag(SQL_SCHEMA, () -> schemaName);
+
+                if (label != null)
+                    qrySpan.addTag(SQL_QRY_LABEL, () -> label);
 
                 try (TraceSurroundings ignored = MTC.supportContinual(qrySpan)) {
                     // Parse.
@@ -1765,7 +1864,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             qryDesc.queryInitiatorId(),
             qryDesc.enforceJoinOrder(),
             qryParams.lazy(),
-            qryDesc.distributedJoins()
+            qryDesc.distributedJoins(),
+            qryDesc.label()
         );
     }
 
@@ -1988,6 +2088,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     try (TraceSurroundings ignored = MTC.support(ctx.tracing().create(SQL_ITER_OPEN, MTC.span()))) {
                         return rdcQryExec.query(
                             qryId,
+                            qryDesc.label(),
                             qryDesc.schemaName(),
                             twoStepQry,
                             keepBinary,
@@ -2219,6 +2320,22 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
 
         return infos;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isConvertibleToColumnType(String schemaName, String tblName, String colName, Class<?> cls) {
+        GridH2Table table = schemaMgr.dataTable(schemaName, tblName);
+
+        if (table == null)
+            throw new IgniteSQLException("Table was not found [schemaName=" + schemaName + ", tableName=" + tblName + ']');
+
+        try {
+            return H2Utils.isConvertableToColumnType(cls, table.getColumn(colName).getType().getValueType());
+        }
+        catch (DbException e) {
+            throw new IgniteSQLException("Colum with specified name was not found for the table [schemaName=" + schemaName +
+                ", tableName=" + tblName + ", colName=" + colName + ']', e);
+        }
     }
 
     /** {@inheritDoc} */
@@ -3362,7 +3479,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             // in WHERE condition because it may be cause of update one entry several times
             // (when index for such columns is selected for scan):
             // e.g. : UPDATE test SET val = val + 1 WHERE val >= ?
-            .setLazy(qryParams.lazy() && plan.canSelectBeLazy());
+            .setLazy(qryParams.lazy() && plan.canSelectBeLazy())
+            .setLabel(qryDesc.label());
 
         Iterable<List<?>> cur;
 

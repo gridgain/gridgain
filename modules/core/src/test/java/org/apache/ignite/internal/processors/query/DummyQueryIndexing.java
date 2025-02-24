@@ -387,4 +387,9 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     @Override public void markIndexRenamed(GridCacheContext<?, ?> cacheCtx, String indexTreeName) {
         // No-op.
     }
+
+    /** {@inheritDoc} */
+    @Override public boolean isConvertibleToColumnType(String schemaName, String tblName, String colName, Class<?> cls) {
+        return false;
+    }
 }

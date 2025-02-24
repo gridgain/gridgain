@@ -132,7 +132,7 @@ public class QueryEntity implements Serializable {
         _notNullFields = other._notNullFields != null ? new HashSet<>(other._notNullFields) : null;
 
         defaultFieldValues = other.defaultFieldValues != null ? new HashMap<>(other.defaultFieldValues)
-            : new HashMap<String, Object>();
+                : new HashMap<String, Object>();
 
         fieldsPrecision = other.fieldsPrecision != null ? new HashMap<>(other.fieldsPrecision) : new HashMap<>();
 
@@ -190,25 +190,25 @@ public class QueryEntity implements Serializable {
 
         if (!queryFieldsToAdd.isEmpty())
             patchOperations.add(new SchemaAlterTableAddColumnOperation(
-                UUID.randomUUID(),
-                null,
-                null,
-                tableName,
-                queryFieldsToAdd,
-                true,
-                true
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    tableName,
+                    queryFieldsToAdd,
+                    true,
+                    true
             ));
 
         if (!indexesToAdd.isEmpty()) {
             for (QueryIndex index : indexesToAdd) {
                 patchOperations.add(new SchemaIndexCreateOperation(
-                    UUID.randomUUID(),
-                    null,
-                    null,
-                    tableName,
-                    index,
-                    true,
-                    0
+                        UUID.randomUUID(),
+                        null,
+                        null,
+                        tableName,
+                        index,
+                        true,
+                        0
                 ));
             }
         }
@@ -236,10 +236,10 @@ public class QueryEntity implements Serializable {
         for (QueryIndex queryIndex : target.getIndexes()) {
             if (currentIndexes.containsKey(queryIndex.getName())) {
                 checkEquals(
-                    conflicts,
-                    "index " + queryIndex.getName(),
-                    currentIndexes.get(queryIndex.getName()),
-                    queryIndex
+                        conflicts,
+                        "index " + queryIndex.getName(),
+                        currentIndexes.get(queryIndex.getName()),
+                        queryIndex
                 );
             }
             else
@@ -264,48 +264,48 @@ public class QueryEntity implements Serializable {
 
             if (getFields().containsKey(targetFieldName)) {
                 checkEquals(
-                    conflicts,
-                    "fieldType of " + targetFieldName,
-                    getFields().get(targetFieldName),
-                    targetFieldType
+                        conflicts,
+                        "fieldType of " + targetFieldName,
+                        getFields().get(targetFieldName),
+                        targetFieldType
                 );
 
                 checkEquals(
-                    conflicts,
-                    "nullable of " + targetFieldName,
-                    contains(getNotNullFields(), targetFieldName),
-                    contains(target.getNotNullFields(), targetFieldName)
+                        conflicts,
+                        "nullable of " + targetFieldName,
+                        contains(getNotNullFields(), targetFieldName),
+                        contains(target.getNotNullFields(), targetFieldName)
                 );
 
                 checkEquals(
-                    conflicts,
-                    "default value of " + targetFieldName,
-                    getFromMap(getDefaultFieldValues(), targetFieldName),
-                    getFromMap(target.getDefaultFieldValues(), targetFieldName)
+                        conflicts,
+                        "default value of " + targetFieldName,
+                        getFromMap(getDefaultFieldValues(), targetFieldName),
+                        getFromMap(target.getDefaultFieldValues(), targetFieldName)
                 );
 
                 checkEquals(conflicts,
-                    "precision of " + targetFieldName,
-                    getFromMap(getFieldsPrecision(), targetFieldName),
-                    getFromMap(target.getFieldsPrecision(), targetFieldName));
+                        "precision of " + targetFieldName,
+                        getFromMap(getFieldsPrecision(), targetFieldName),
+                        getFromMap(target.getFieldsPrecision(), targetFieldName));
 
                 checkEquals(
-                    conflicts,
-                    "scale of " + targetFieldName,
-                    getFromMap(getFieldsScale(), targetFieldName),
-                    getFromMap(target.getFieldsScale(), targetFieldName));
+                        conflicts,
+                        "scale of " + targetFieldName,
+                        getFromMap(getFieldsScale(), targetFieldName),
+                        getFromMap(target.getFieldsScale(), targetFieldName));
             }
             else {
                 Integer precision = getFromMap(target.getFieldsPrecision(), targetFieldName);
                 Integer scale = getFromMap(target.getFieldsScale(), targetFieldName);
 
                 queryFieldsToAdd.add(new QueryField(
-                    targetFieldName,
-                    targetFieldType,
-                    !contains(target.getNotNullFields(),targetFieldName),
-                    getFromMap(target.getDefaultFieldValues(), targetFieldName),
-                    precision == null ? -1 : precision,
-                    scale == null ? -1 : scale
+                        targetFieldName,
+                        targetFieldType,
+                        !contains(target.getNotNullFields(),targetFieldName),
+                        getFromMap(target.getDefaultFieldValues(), targetFieldName),
+                        precision == null ? -1 : precision,
+                        scale == null ? -1 : scale
                 ));
             }
         }
@@ -705,7 +705,6 @@ public class QueryEntity implements Serializable {
                 vectIdx.setIndexType(idx.type());
                 vectIdx.setFieldNames(idx.fields(), true);
                 vectIdx.setSimilarityFunction(idx.similarityFunction());
-
                 idxs.add(vectIdx);
             }
             else {
@@ -764,8 +763,8 @@ public class QueryEntity implements Serializable {
      * @return Type descriptor.
      */
     private static QueryEntityTypeDescriptor processKeyAndValueClasses(
-        @NotNull Class<?> keyCls,
-        @NotNull Class<?> valCls
+            @NotNull Class<?> keyCls,
+            @NotNull Class<?> valCls
     ) {
         QueryEntityTypeDescriptor d = new QueryEntityTypeDescriptor(keyCls, valCls);
 
@@ -784,13 +783,13 @@ public class QueryEntity implements Serializable {
      * @param parent Parent in case of embeddable.
      */
     private static void processAnnotationsInClass(boolean key, Class<?> cls, QueryEntityTypeDescriptor type,
-        QueryEntityClassProperty parent) {
+                                                  QueryEntityClassProperty parent) {
         if (U.isJdk(cls) || QueryUtils.isGeometryClass(cls)) {
             if (parent == null && !key && QueryUtils.isSqlType(cls)) { // We have to index primitive _val.
                 String idxName = cls.getSimpleName() + "_" + QueryUtils.VAL_FIELD_NAME + "_idx";
 
                 type.addIndex(idxName, QueryUtils.isGeometryClass(cls) ?
-                    QueryIndexType.GEOSPATIAL : QueryIndexType.SORTED, QueryIndex.DFLT_INLINE_SIZE);
+                        QueryIndexType.GEOSPATIAL : QueryIndexType.SORTED, QueryIndex.DFLT_INLINE_SIZE);
 
                 type.addFieldToIndex(idxName, QueryUtils.VAL_FIELD_NAME, 0, false);
             }
@@ -856,7 +855,7 @@ public class QueryEntity implements Serializable {
      * @param desc Class description.
      */
     private static void processAnnotation(boolean key, QuerySqlField sqlAnn, QueryTextField txtAnn, QueryVectorField vecAnn,
-        Class<?> cls, Class<?> curCls, Class<?> fldCls, QueryEntityClassProperty prop, QueryEntityTypeDescriptor desc) {
+                                          Class<?> cls, Class<?> curCls, Class<?> fldCls, QueryEntityClassProperty prop, QueryEntityTypeDescriptor desc) {
         if (sqlAnn != null) {
             processAnnotationsInClass(key, fldCls, desc, prop);
 
@@ -870,7 +869,7 @@ public class QueryEntity implements Serializable {
                     idxName = cls.getSimpleName() + "_" + idxName;
 
                 desc.addIndex(idxName, QueryUtils.isGeometryClass(prop.type()) ?
-                    QueryIndexType.GEOSPATIAL : QueryIndexType.SORTED, sqlAnn.inlineSize());
+                        QueryIndexType.GEOSPATIAL : QueryIndexType.SORTED, sqlAnn.inlineSize());
 
                 desc.addFieldToIndex(idxName, prop.fullName(), 0, sqlAnn.descending());
             }
@@ -885,9 +884,9 @@ public class QueryEntity implements Serializable {
                 desc.addScale(prop.fullName(), sqlAnn.scale());
 
             if ((!F.isEmpty(sqlAnn.groups()) || !F.isEmpty(sqlAnn.orderedGroups()))
-                && sqlAnn.inlineSize() != QueryIndex.DFLT_INLINE_SIZE) {
+                    && sqlAnn.inlineSize() != QueryIndex.DFLT_INLINE_SIZE) {
                 throw new CacheException("Inline size cannot be set on a field with group index [" +
-                    "type=" + cls.getName() + ", property=" + prop.fullName() + ']');
+                        "type=" + cls.getName() + ", property=" + prop.fullName() + ']');
             }
 
             if (!F.isEmpty(sqlAnn.groups())) {
@@ -906,6 +905,7 @@ public class QueryEntity implements Serializable {
 
         if (vecAnn != null)
             desc.addFieldToVectorIndex(prop.fullName(), vecAnn.similarityFunction());
+
     }
 
     /** {@inheritDoc} */
@@ -919,24 +919,24 @@ public class QueryEntity implements Serializable {
         QueryEntity entity = (QueryEntity)o;
 
         return F.eq(keyType, entity.keyType) &&
-            F.eq(valType, entity.valType) &&
-            F.eq(keyFieldName, entity.keyFieldName) &&
-            F.eq(valueFieldName, entity.valueFieldName) &&
-            F.eq(fields, entity.fields) &&
-            F.eq(keyFields, entity.keyFields) &&
-            F.eq(aliases, entity.aliases) &&
-            F.eqNotOrdered(idxs, entity.idxs) &&
-            F.eq(tableName, entity.tableName) &&
-            F.eq(_notNullFields, entity._notNullFields) &&
-            F.eq(defaultFieldValues, entity.defaultFieldValues) &&
-            F.eq(fieldsPrecision, entity.fieldsPrecision) &&
-            F.eq(fieldsScale, entity.fieldsScale);
+                F.eq(valType, entity.valType) &&
+                F.eq(keyFieldName, entity.keyFieldName) &&
+                F.eq(valueFieldName, entity.valueFieldName) &&
+                F.eq(fields, entity.fields) &&
+                F.eq(keyFields, entity.keyFields) &&
+                F.eq(aliases, entity.aliases) &&
+                F.eqNotOrdered(idxs, entity.idxs) &&
+                F.eq(tableName, entity.tableName) &&
+                F.eq(_notNullFields, entity._notNullFields) &&
+                F.eq(defaultFieldValues, entity.defaultFieldValues) &&
+                F.eq(fieldsPrecision, entity.fieldsPrecision) &&
+                F.eq(fieldsScale, entity.fieldsScale);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
         return Objects.hash(keyType, valType, keyFieldName, valueFieldName, fields, keyFields, aliases, idxs,
-            tableName, _notNullFields, defaultFieldValues, fieldsPrecision, fieldsScale);
+                tableName, _notNullFields, defaultFieldValues, fieldsPrecision, fieldsScale);
     }
 
     /** {@inheritDoc} */

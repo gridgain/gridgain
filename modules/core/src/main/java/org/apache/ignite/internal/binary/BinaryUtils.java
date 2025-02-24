@@ -2553,6 +2553,18 @@ public class BinaryUtils {
         return mergedMap;
     }
 
+    /** */
+    public static boolean isObjectArray(Class<?> cls) {
+        return Object[].class == cls;
+    }
+
+    /** @return Type name of the specified object. If {@link BinaryObject} was specified its type will be returned. */
+    public static String typeName(Object obj) {
+        return obj instanceof BinaryObject
+            ? ((BinaryObject)obj).type().typeName()
+            : obj == null ? null : obj.getClass().getSimpleName();
+    }
+
     /**
      * Enum type.
      */

@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CachePeekMode;
@@ -234,6 +235,15 @@ public class CacheMetricsImpl implements CacheMetrics {
     /** Cache size. */
     private final LongGauge cacheSize;
 
+    /** Number of touch requests. */
+    private final AtomicLongMetric cacheTouches;
+
+    /** Number of touch hits. */
+    private final AtomicLongMetric cacheTouchHits;
+
+    /** Number of touch misses. */
+    private final AtomicLongMetric cacheTouchMisses;
+
     /**
      * Creates cache metrics.
      *
@@ -263,6 +273,10 @@ public class CacheMetricsImpl implements CacheMetrics {
         delegate = null;
 
         MetricRegistry mreg = cctx.kernalContext().metric().registry(cacheMetricsRegistryName(cctx.name(), isNear));
+
+        cacheTouches = mreg.longMetric("CacheTouches", "Total number of touch requests to the cache.");
+        cacheTouchHits = mreg.longMetric("CacheTouchHits", "Number of touch requests that were satisfied by the cache.");
+        cacheTouchMisses = mreg.longMetric("CacheTouchMisses", "Number of touch requests that were not satisfied by the cache.");
 
         reads = mreg.longMetric("CacheGets",
             "The total number of gets to the cache.");
@@ -511,6 +525,61 @@ public class CacheMetricsImpl implements CacheMetrics {
     /** {@inheritDoc} */
     @Override public long getCacheSize() {
         return cacheSize.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getCacheTouchHits() {
+        return cacheTouchHits.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getCacheTouchMisses() {
+        return cacheTouchMisses.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getCacheTouches() {
+        return cacheTouches.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public float getCacheTouchHitPercentage() {
+        long hits = cacheTouchHits.value();
+        long touches = cacheTouches.value();
+
+        if (touches == 0)
+            return 0;
+
+        return (float) hits / touches * 100.0f;
+    }
+
+    /** {@inheritDoc} */
+    @Override public float getCacheTouchMissPercentage() {
+        long misses = cacheTouchMisses.value();
+        long touches = cacheTouches.value();
+
+        if (touches == 0)
+            return 0;
+
+        return (float) misses / touches * 100.0f;
+    }
+
+    /**
+     * Increments the number of times the {@link IgniteCache#touch(Object)} method is called and
+     * increments the number of cache hits or misses depending on the {@code isHit} parameter.
+     *
+     * @param isHit {@code true} if the key is found in the cache and {@code false} otherwise.
+     */
+    public void onCacheTouch(boolean isHit) {
+        cacheTouches.increment();
+
+        if (isHit)
+            cacheTouchHits.increment();
+        else
+            cacheTouchMisses.increment();
+
+        if (delegate != null)
+            delegate.onCacheTouch(isHit);
     }
 
     /** {@inheritDoc} */

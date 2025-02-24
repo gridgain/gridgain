@@ -125,7 +125,7 @@ public class QueryEntityTypeDescriptor {
      * @param descending Sorting order.
      */
     public void addFieldToIndex(String idxName, String field, int orderNum,
-        boolean descending) {
+                                boolean descending) {
         QueryEntityIndexDescriptor desc = indexes.get(idxName);
 
         if (desc == null)
@@ -193,8 +193,8 @@ public class QueryEntityTypeDescriptor {
 
         if (props.put(propName, prop) != null && failOnDuplicate) {
             throw new CacheException("Property with name '" + propName + "' already exists for " +
-                (key ? "key" : "value") + ": " +
-                "QueryEntity [key=" + keyCls.getName() + ", value=" + valCls.getName() + ']');
+                    (key ? "key" : "value") + ": " +
+                    "QueryEntity [key=" + keyCls.getName() + ", value=" + valCls.getName() + ']');
         }
 
         fields.put(prop.fullName(), prop.type());

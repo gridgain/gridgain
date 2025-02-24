@@ -2939,7 +2939,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         long ttl = CU.toTtl(expiryPlc.getExpiryForAccess());
 
         if (ttl != CU.TTL_NOT_CHANGED)
-            updateTtl(ttl);
+            updateTtl(ttl, false);
     }
 
     /**
@@ -2953,7 +2953,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         long ttl = expiryPlc.forAccess();
 
         if (ttl != CU.TTL_NOT_CHANGED) {
-            updateTtl(ttl);
+            updateTtl(ttl, isFastUpdateTtlPossible());
 
             expiryPlc.ttlUpdated(key(), version(), hasReaders() ? ((GridDhtCacheEntry)this).readers() : null);
         }
@@ -2961,8 +2961,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /**
      * @param ttl Time to live.
+     * @param fastUpdate If {@code true} then implementation uses a fast way to update the time-to-live value in the persistence store,
+     *                   it updates only pages that store ttl instead of rewriting the whole entry.
+     * @see #isFastUpdateTtlPossible()
      */
-    private void updateTtl(long ttl) throws IgniteCheckedException, GridCacheEntryRemovedException {
+    private void updateTtl(long ttl, boolean fastUpdate) throws IgniteCheckedException, GridCacheEntryRemovedException {
         assert ttl >= 0 || ttl == CU.TTL_ZERO : ttl;
         assert lock.isHeldByCurrentThread();
 
@@ -2980,11 +2983,38 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         cctx.shared().database().checkpointReadLock();
 
         try {
-            storeValue(val, expireTime, ver);
+            if (fastUpdate)
+                storeTtlValue(val, expireTime, ver);
+            else
+                storeValue(val, expireTime, ver);
         }
         finally {
             cctx.shared().database().checkpointReadUnlock();
         }
+    }
+
+    /**
+     * Returns {@code true} if fast update of TTL is possible for this entry and {@code false} otherwise.
+     * For now, fast update is not possible if any of the following conditions are met:
+     * <ul>
+     *     <li>SQL indexes are enabled.</li>
+     *     <li>MVCC is enabled.</li>
+     *     <li>Compression is enabled.</li>
+     *     <li>Entry is near.</li>
+     * </ul>
+     * @return {@code true} if fast update of TTL is possible for this entry and {@code false} otherwise.
+     */
+    private boolean isFastUpdateTtlPossible() {
+        if (cctx.queries().enabled() || cctx.mvccEnabled() || cctx.cacheObjectContext().compressionStrategy() != null || isNear()) {
+            // Fast update is not possible for this entry. Need to fall back to writing the whole entry.
+            //  - in general, enabling sql indices should not prevent from using fast update. Can be improved later.
+            //  - mvcc and compression are not supported for fast update yet.
+            //  - near entries only require update on the entry itself.
+            return false;
+
+        }
+
+        return true;
     }
 
     /**
@@ -4127,7 +4157,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             if (hasValueUnlocked()) {
                 try {
-                    updateTtl(ttl);
+                    updateTtl(ttl, false);
                 }
                 catch (IgniteCheckedException e) {
                     U.error(log, "Failed to update TTL: " + e, e);
@@ -4155,8 +4185,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         assert cctx.shared().database().checkpointLockIsHeldByThread() :
             "Checkpoint lock must be held by the thread before acquiring entry lock";
 
-        if (cctx.queries().enabled() || cctx.mvccEnabled() || cctx.cacheObjectContext().compressionStrategy() != null || isNear()) {
-            // Fast update is not possible for this entry. Need to fallback to writing the whole entry.
+        if (!isFastUpdateTtlPossible()) {
+            // Fast update is not possible for this entry. Need to fall back to writing the whole entry.
             //  - in general, enabling sql indices should not prevent from using fast update. Can be improved later.
             //  - mvcc and compression are not supported for fast update yet.
             //  - near entries only require update on the entry itself.
@@ -4196,20 +4226,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (val == null || isExpired)
                 return null;
 
-            long expireTime;
-
-            if (ttl == CU.TTL_ZERO) {
-                ttl = CU.TTL_MINIMUM;
-                expireTime = CU.expireTimeInPast();
-            }
-            else
-                expireTime = CU.toExpireTime(ttl);
-
-            ttlAndExpireTimeExtras(ttl, expireTime);
-
             // TODO IGNITE-305
             // TTL messages are not ordered, so the version cannot be used to properly handle a new ttl value.
-            storeTtlValue(val, expireTime, ver);
+            updateTtl(ttl, true);
 
             return val;
         }
@@ -4224,7 +4243,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public CacheObject touchTtl(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException {
+    @Override public CacheObject touchTtl(
+        @Nullable IgniteCacheExpiryPolicy expiryPlc,
+        boolean updateMetrics
+    ) throws GridCacheEntryRemovedException {
         CacheObject res = null;
 
         if (expiryPlc != null) {
@@ -4237,12 +4259,15 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
         }
 
+        if (updateMetrics && cctx.statisticsEnabled())
+            cctx.cache().metrics0().onCacheTouch(res != null);
+
         return res;
     }
 
     /** {@inheritDoc} */
     @Override public EntryGetResult touchTtlVersioned(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException {
-        CacheObject v = touchTtl(expiryPlc);
+        CacheObject v = touchTtl(expiryPlc, true);
 
         return v != null ? new EntryGetResult(v, version()) : null;
     }

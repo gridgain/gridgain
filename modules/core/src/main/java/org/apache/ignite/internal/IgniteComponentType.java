@@ -108,6 +108,13 @@ public enum IgniteComponentType {
         null,
         "org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi",
         "ignite-opencensus"
+    ),
+
+    /** Lucene index implementation. */
+    LUCENE(
+        null,
+        "org.gridgain.internal.processors.query.h2.opt.GridLuceneIndexFactory",
+        "ignite-lucene"
     );
 
     /** No-op class name. */

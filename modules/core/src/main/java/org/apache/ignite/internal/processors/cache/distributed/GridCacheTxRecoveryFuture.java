@@ -28,6 +28,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheCompoundIdentityFuture;
+import org.apache.ignite.internal.processors.cache.GridCacheMvccManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.util.GridLeanMap;
@@ -489,7 +490,10 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
     /** {@inheritDoc} */
     @Override public boolean onDone(@Nullable Boolean res, @Nullable Throwable err) {
         if (super.onDone(res, err)) {
-            cctx.mvcc().removeFuture(futId);
+            GridCacheMvccManager mvcc = cctx.mvcc();
+
+            if (mvcc != null)
+                mvcc.removeFuture(futId);
 
             if (err == null) {
                 assert res != null;

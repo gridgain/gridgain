@@ -26,10 +26,10 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryCancelledException;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.LongRunningQueryManager;
 import org.apache.ignite.internal.util.worker.GridWorker;
@@ -47,6 +47,12 @@ import static org.apache.ignite.internal.processors.query.h2.LongRunningQueryMan
 public class LongRunningQueryTest extends AbstractIndexingCommonTest {
     /** Keys count. */
     private static final int KEY_CNT = 1000;
+
+    /** Query label. */
+    private static final String LRQ_LABEL = "test-label";
+
+    /** Query label substring pattern. */
+    private static final Pattern LABEL_PATTERN = Pattern.compile(", label=" + LRQ_LABEL + ',');
 
     /** Local query mode. */
     private boolean local;
@@ -100,11 +106,35 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
      *
      */
     @Test
+    public void testLongDmlDistributed() {
+        local = false;
+        lazy = false;
+
+        checkLongRunningDml();
+        checkFastQueries();
+    }
+
+    /**
+     *
+     */
+    @Test
     public void testLongLocal() {
         local = true;
         lazy = false;
 
         checkLongRunning();
+        checkFastQueries();
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testLongDmlLocal() {
+        local = true;
+        lazy = false;
+
+        checkLongRunningDml();
         checkFastQueries();
     }
 
@@ -141,6 +171,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
         LogListener logLsnr = LogListener
             .matches(LONG_QUERY_EXEC_MSG)
             .andMatches(logStr -> currentThread().getName().startsWith(checkWorker.name()))
+            .andMatches(LABEL_PATTERN)
             .build();
 
         testLog().registerListener(logLsnr);
@@ -159,6 +190,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
 
         LogListener lsnr = LogListener
             .matches(Pattern.compile(LONG_QUERY_EXEC_MSG))
+            .andMatches(LABEL_PATTERN)
             .build();
 
         testLog.registerListener(lsnr);
@@ -171,19 +203,32 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     * Do long running query canceled by timeout and check log output.
+     * Do long running SELECT query canceled by timeout and check log output.
      * Log messages must contain info about long query.
      */
     private void checkLongRunning() {
+        checkLongRunning(false);
+    }
+
+    /**
+     * Do long running DML query canceled by timeout and check log output.
+     * Log messages must contain info about long query.
+     */
+    private void checkLongRunningDml() {
+        checkLongRunning(true);
+    }
+
+    private void checkLongRunning(boolean dml) {
         ListeningTestLogger testLog = testLog();
 
         LogListener lsnr = LogListener
             .matches(LONG_QUERY_EXEC_MSG)
+            .andMatches(LABEL_PATTERN)
             .build();
 
         testLog.registerListener(lsnr);
 
-        sqlCheckLongRunning();
+        sqlCheckLongRunning(dml);
 
         assertTrue(lsnr.check());
     }
@@ -195,6 +240,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
 
         LogListener lsnr = LogListener
             .matches("Query produced big result set")
+            .andMatches(LABEL_PATTERN)
             .build();
 
         testLog.registerListener(lsnr);
@@ -217,11 +263,18 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
         GridTestUtils.assertThrowsAnyCause(log, () -> sql(sql, args).getAll(), QueryCancelledException.class, "");
     }
 
+    private void sqlCheckLongRunning() {
+        sqlCheckLongRunning(false);
+    }
+
     /**
      * Execute long running sql with a check for errors.
      */
-    private void sqlCheckLongRunning() {
-        sqlCheckLongRunning("SELECT T0.id FROM test AS T0, test AS T1, test AS T2 where T0.id > ?", 0);
+    private void sqlCheckLongRunning(boolean dml) {
+        String sql = dml
+            ? "DELETE FROM test WHERE id not in (SELECT T0.id FROM test AS T0, test AS T1, test AS T2 where T0.id > ?)"
+            : "SELECT T0.id FROM test AS T0, test AS T1, test AS T2 where T0.id > ?";
+        sqlCheckLongRunning(sql, 0);
     }
 
     /**
@@ -230,11 +283,12 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
      * @return Results cursor.
      */
     private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
-        return grid().context().query().querySqlFields(new SqlFieldsQueryEx(sql, true)
+        return grid().context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setTimeout(10, TimeUnit.SECONDS)
             .setLocal(local)
             .setLazy(lazy)
             .setSchema("TEST")
+            .setLabel(LRQ_LABEL)
             .setArgs(args), false);
     }
 

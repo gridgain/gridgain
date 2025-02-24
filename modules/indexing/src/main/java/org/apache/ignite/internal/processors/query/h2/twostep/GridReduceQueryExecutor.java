@@ -62,6 +62,7 @@ import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.IgniteSQLMapStepException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.H2FieldsIterator;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
@@ -341,6 +342,8 @@ public class GridReduceQueryExecutor {
 
     /**
      * @param schemaName Schema name.
+     * @param qryId Query id assigned by {@link RunningQueryManager}.
+     * @param label Query label.
      * @param qry Query.
      * @param keepBinary Keep binary.
      * @param enforceJoinOrder Enforce join order of tables.
@@ -357,6 +360,7 @@ public class GridReduceQueryExecutor {
      */
     public Iterator<List<?>> query(
         @Nullable final Long qryId,
+        @Nullable String label,
         String schemaName,
         final GridCacheTwoStepQuery qry,
         boolean keepBinary,
@@ -465,7 +469,8 @@ public class GridReduceQueryExecutor {
                         .explicitTimeout(true)
                         .schemaName(schemaName)
                         .maxMemory(maxMem)
-                        .runningQryId(qryId);
+                        .runningQryId(qryId)
+                        .label(label);
 
                     if (mvccTracker != null)
                         req.mvccSnapshot(mvccTracker.snapshot());
@@ -544,7 +549,7 @@ public class GridReduceQueryExecutor {
 
                         H2Utils.bindParameters(stmt, F.asList(rdc.parameters(params)));
 
-                        ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), ctx.discovery().localNode(), qryReqId, qryId);
+                        ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), ctx.discovery().localNode(), qryReqId, qryId, label);
 
                         r.reducers().forEach(reducer -> reducer.memoryTracker(h2.memTracker(qryInfo)));
 

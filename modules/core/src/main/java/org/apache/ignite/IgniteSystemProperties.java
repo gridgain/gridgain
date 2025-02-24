@@ -2270,6 +2270,10 @@ public final class IgniteSystemProperties {
     @IgniteExperimental
     public static final String IGNITE_CONFIGURATION_VIEW_PACKAGES = "IGNITE_CONFIGURATION_VIEW_PACKAGES";
 
+    /** Nodes will send messages with compacted topology history. */
+    @SystemProperty(value = "Nodes will send messages with compacted topology history", defaults = "true")
+    public static final String IGNITE_COMPACTED_TOPOLOGY_HISTORY = "IGNITE_COMPACTED_TOPOLOGY_HISTORY";
+
     /**
      * Enforces singleton.
      */

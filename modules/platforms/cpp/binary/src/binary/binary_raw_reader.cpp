@@ -27,7 +27,12 @@ namespace ignite
         {
             // No-op.
         }
-        
+
+        bool BinaryRawReader::SkipIfNull()
+        {
+            return impl->SkipIfNull();
+        }
+
         int8_t BinaryRawReader::ReadInt8()
         {
             return impl->ReadInt8();

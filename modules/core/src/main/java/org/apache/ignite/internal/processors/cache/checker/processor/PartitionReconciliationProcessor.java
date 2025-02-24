@@ -151,7 +151,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      * @param ignite Local Ignite instance to be used as an entry point for the execution of the utility.
      * @param caches Collection of cache names to be checked.
      * @param repair Flag indicates that inconsistencies should be repaired.
-     * @param partsToValidate Optional collection of partition which shoulb be validated.
+     * @param partsToValidate Optional collection of partition which should be validated.
      *                        If value is {@code null} all partitions will be validated.
      * @param parallelismLevel Number of batches that can be handled simultaneously.
      * @param batchSize Amount of keys to retrieve within one job.
@@ -284,7 +284,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 }
             }
 
-            return new ExecutionResult<>(collector.result());
+            // Check for possible errors.
+            String errMsg = error.get();
+
+            return errMsg == null ?
+                new ExecutionResult<>(collector.result()) :
+                new ExecutionResult<>(
+                    collector.result(),
+                    "Partition reconciliation finished with error. " + String.format(ERROR_REASON, errMsg, "N/A"));
         }
         catch (InterruptedException | IgniteException e) {
             String errMsg = "Partition reconciliation was interrupted.";
@@ -356,7 +363,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     List<GridDhtLocalPartition> parts = cctx.group().topology().localPartitions();
 
                     for (GridDhtLocalPartition part : parts) {
-                        if (partsToValidate == null || partsToValidate.getOrDefault(cacheDesc.cacheName, emptySet()).contains(part.id())) {
+                        if (partsToValidate == null || partsToValidate.getOrDefault(cctx.group().groupId(), emptySet()).contains(part.id())) {
                             long partSize = part.dataStore().cacheSize(cacheId);
 
                             if (part.primary(startTopVer))
@@ -461,9 +468,13 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             new RecheckRequest(workload.sessionId(), workload.workloadChainId(), new ArrayList<>(workload.recheckKeys().keySet()), workload.cacheName(),
                 workload.partitionId(), startTopVer),
             actualKeys -> {
+                IgniteInternalCache<?, ?> cachex = ignite.cachex(workload.cacheName());
+
+                if (cachex == null)
+                    throw new IgniteException("Cache not found (was stopped) [name=" + workload.cacheName() + ']');
+
                 Map<KeyCacheObject, Map<UUID, GridCacheVersion>> conflicts
-                    = checkConflicts(workload.recheckKeys(), actualKeys,
-                    ignite.cachex(workload.cacheName()).context(), startTopVer);
+                    = checkConflicts(workload.recheckKeys(), actualKeys, cachex.context(), startTopVer);
 
                 if (!conflicts.isEmpty()) {
                     if (workload.recheckAttempt() < recheckAttempts) {
@@ -481,8 +492,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                         );
                     }
                     else if (repair) {
-                        scheduleHighPriority(repair(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), conflicts,
-                            actualKeys, workload.repairAttempt()));
+                        scheduleHighPriority(repair(
+                            workload.sessionId(),
+                            workload.workloadChainId(),
+                            workload.cacheName(),
+                            workload.partitionId(),
+                            conflicts,
+                            actualKeys,
+                            workload.repairAttempt()));
                     }
                     else {
                         collector.appendConflictedEntries(
@@ -508,6 +525,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     collector.appendRepairedEntries(workload.cacheName(), workload.partitionId(), repairRes.repairedKeys());
 
                 if (!repairRes.keysToRepair().isEmpty()) {
+                    IgniteInternalCache<Object, Object> cachex = ignite.cachex(workload.cacheName());
+
+                    if (cachex == null)
+                        throw new IgniteException("Cache not found (was stopped) [name=" + workload.cacheName() + ']');
+
                     // Repack recheck keys.
                     Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys = new HashMap<>();
 
@@ -516,9 +538,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                         KeyCacheObject keyCacheObj;
 
                         try {
-                            keyCacheObj = unmarshalKey(
-                                dataEntry.getKey().key(),
-                                ignite.cachex(workload.cacheName()).context());
+                            keyCacheObj = unmarshalKey(dataEntry.getKey().key(), cachex.context());
                         }
                         catch (IgniteCheckedException e) {
                             U.error(log, "Unable to unmarshal key=[" + dataEntry.getKey().key() +
@@ -664,7 +684,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         }
 
         /**
-         * Incremets the number of workloads for the corresponding chain if it is trackable.
+         * Increments the number of workloads for the corresponding chain if it is trackable.
          *
          * @param workload Workload to add.
          */
@@ -715,7 +735,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         }
 
         /**
-         * Callback that is triggered when the partition completelly processed.
+         * Callback that is triggered when the partition completely processed.
          *
          * @param chainId Chain id.
          * @param cacheName Cache name.
@@ -762,16 +782,16 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             /** Cache name. */
             final String cacheName;
 
-            /** Number of primary partitions that are onwned by this node. */
+            /** Number of primary partitions that are owned by this node. */
             final AtomicInteger chainsCnt = new AtomicInteger();
 
             /** This field indicates that cache processing is completed. */
             final AtomicInteger processedChainsCnt = new AtomicInteger();
 
-            /** Number of scanned primary keys that are onwned by this node. */
+            /** Number of scanned primary keys that are owned by this node. */
             final AtomicLong scannedPrimaryKeysCnt = new AtomicLong();
 
-            /** Number of scanned backup keys that are onwned by this node. */
+            /** Number of scanned backup keys that are owned by this node. */
             final AtomicLong scannedBackupKeysCnt = new AtomicLong();
 
             /**

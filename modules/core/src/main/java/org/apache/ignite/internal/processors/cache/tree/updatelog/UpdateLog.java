@@ -46,7 +46,7 @@ public interface UpdateLog {
     /**
      * Returns the tree or {@code null} if not initialized.
      */
-    PartitionLogTree tree();
+    PartitionLogTree tree() throws IgniteCheckedException;
 
     /**
      * Returns {@code true} if the tree structure was initialized, {@code false} otherwise.

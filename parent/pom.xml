@@ -71,7 +71,7 @@
         <commons.collections.version>3.2.2</commons.collections.version>
         <commons.compress.version>1.26.1</commons.compress.version>
         <commons.dbcp.version>1.4</commons.dbcp.version>
-        <commons.io.version>2.6</commons.io.version>
+        <commons.io.version>2.17.0</commons.io.version>
         <commons.lang3.version>3.12.0</commons.lang3.version>
         <cron4j.version>2.2.5</cron4j.version>
         <curator.version>5.5.0</curator.version>
@@ -98,10 +98,11 @@
         <jaxb.impl.version>2.1.14</jaxb.impl.version>
         <jboss.rmi.version>1.0.6.Final</jboss.rmi.version>
         <jetbrains.annotations.version>16.0.3</jetbrains.annotations.version>
-        <jetty.version>9.4.53.v20231009</jetty.version>
+        <!-- Can't go higher without Java 11 compiler. -->
+        <jetty.version>9.4.56.v20240826</jetty.version>
         <jmh.version>1.13</jmh.version>
         <jms.spec.version>1.1.1</jms.spec.version>
-        <jna.version>4.5.2</jna.version>
+        <jna.version>5.14.0</jna.version>
         <jnr.posix.version>3.1.15</jnr.posix.version>
         <jotm.version>2.2.3</jotm.version>
         <jsch.bundle.version>0.1.54_1</jsch.bundle.version>
@@ -119,7 +120,7 @@
         <mockito.version>3.4.6</mockito.version>
         <mysql.connector.version>8.0.13</mysql.connector.version>
         <netlibjava.version>1.1.2</netlibjava.version>
-        <netty.version>4.1.108.Final</netty.version>
+        <netty.version>4.1.115.Final</netty.version>
         <opencensus.version>0.31.1</opencensus.version>
         <org.testcontainers.testcontainers>1.12.3</org.testcontainers.testcontainers>
         <oro.bundle.version>2.0.8_6</oro.bundle.version>
@@ -137,7 +138,7 @@
         <slf4j16.version>1.6.4</slf4j16.version>
         <snappy.version>1.1.10.4</snappy.version>
         <spring.data-2.2.version>2.2.13.RELEASE</spring.data-2.2.version> <!-- don't forget to update spring version -->
-        <spring.version>5.3.34</spring.version>
+        <spring.version>5.3.39</spring.version>
         <spring41.osgi.feature.version>4.1.7.RELEASE_1</spring41.osgi.feature.version>
         <storm.version>1.2.3</storm.version>
         <surefire.version>3.0.0-M4</surefire.version>
@@ -150,7 +151,7 @@
         <zkclient.version>0.5</zkclient.version>
         <zookeeper.version>3.8.4</zookeeper.version>
         <zstd.version>1.5.0-4</zstd.version>
-
+        <lucene.version>9.10.0</lucene.version>
 
         <!-- Maven plugins versions -->
         <maven.javadoc.plugin.version>2.10.4</maven.javadoc.plugin.version>
@@ -873,13 +874,20 @@
         </profile>
 
         <profile>
-            <id>target-java-11+</id>
+            <id>java-11+</id>
             <activation>
-                <jdk>[11,15)</jdk>
+                <jdk>[9,)</jdk>
             </activation>
             <properties>
-                <maven.compiler.source>1.8</maven.compiler.source>
+                <maven.compiler.release>8</maven.compiler.release>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>target-java-11+</id>
+            <properties>
                 <maven.compiler.target>11</maven.compiler.target>
+                <maven.compiler.release>11</maven.compiler.release>
             </properties>
             <dependencies/>
             <build>
@@ -915,11 +923,7 @@
 
         <profile>
             <id>target-java-15+</id>
-            <activation>
-                <jdk>[15,)</jdk>
-            </activation>
             <properties>
-                <maven.compiler.source>1.8</maven.compiler.source>
                 <maven.compiler.target>15</maven.compiler.target>
                 <scala.library.version>2.12.15</scala.library.version>
             </properties>

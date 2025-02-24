@@ -26,6 +26,7 @@ import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -88,6 +89,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /** Eviction progress frequency in ms. */
     private final long evictionProgressFreqMs = getLong(SHOW_EVICTION_PROGRESS_FREQ,
         DEFAULT_SHOW_EVICTION_PROGRESS_FREQ_MS);
+
+    /** Flag to choose a single thread that would print {@link #showProgress()} message after the timeout. */
+    private final AtomicBoolean showProgressGuard = new AtomicBoolean();
 
     /** */
     private static final int MAX_EVICT_QUEUE_SIZE = getInteger("MAX_EVICT_QUEUE_SIZE", 10_000);
@@ -241,10 +245,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             return task;
         }
 
-        if (log.isDebugEnabled())
+        if (log.isDebugEnabled()) {
             log.debug("The partition has been scheduled for clearing [grp=" + grp.cacheOrGroupName()
                 + ", topVer=" + (grp.topology().initialized() ? grp.topology().readyTopologyVersion() : "NA")
                 + ", task" + task + ']');
+        }
 
         return task;
     }
@@ -261,7 +266,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      * Shows progress of eviction.
      */
     private void showProgress() {
-        if (U.millisSinceNanos(lastShowProgressTimeNanos) >= evictionProgressFreqMs) {
+        if (U.millisSinceNanos(lastShowProgressTimeNanos) >= evictionProgressFreqMs && showProgressGuard.compareAndSet(false, true)) {
             int size = executor.getQueue().size();
 
             if (log.isInfoEnabled()) {
@@ -270,24 +275,29 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
                 evictionGroupsMap.values().forEach(GroupEvictionContext::showProgress);
 
-                if (!logEvictPartByGrps.isEmpty()) {
-                    StringJoiner evictPartJoiner = new StringJoiner(", ");
+                // Access to "logEvictPartByGrps" must be protected with a mutex.
+                synchronized (mux) {
+                    if (!logEvictPartByGrps.isEmpty()) {
+                        StringJoiner evictPartJoiner = new StringJoiner(", ");
 
-                    logEvictPartByGrps.forEach((grpId, map) -> {
-                        CacheGroupContext grpCtx = cctx.cache().cacheGroup(grpId);
+                        logEvictPartByGrps.forEach((grpId, map) -> {
+                            CacheGroupContext grpCtx = cctx.cache().cacheGroup(grpId);
 
-                        String grpName = (nonNull(grpCtx) ? grpCtx.cacheOrGroupName() : null);
+                            String grpName = (nonNull(grpCtx) ? grpCtx.cacheOrGroupName() : null);
 
-                        evictPartJoiner.add("[grpId=" + grpId + ", grpName=" + grpName + ", " + toString(map) + ']');
-                    });
+                            evictPartJoiner.add("[grpId=" + grpId + ", grpName=" + grpName + ", " + toString(map) + ']');
+                        });
 
-                    log.info("Partitions have been scheduled for eviction: " + evictPartJoiner);
+                        log.info("Partitions have been scheduled for eviction: " + evictPartJoiner);
 
-                    logEvictPartByGrps.clear();
+                        logEvictPartByGrps.clear();
+                    }
                 }
             }
 
             lastShowProgressTimeNanos = System.nanoTime();
+
+            showProgressGuard.set(false);
         }
     }
 
@@ -657,7 +667,14 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 return;
             }
 
-            BooleanSupplier stopClo = () -> grpEvictionCtx.shouldStop() || (state.get() == Boolean.FALSE);
+            BooleanSupplier stopClo = () -> {
+                boolean stop = grpEvictionCtx.shouldStop() || (state.get() == Boolean.FALSE);
+
+                if (!stop)
+                    showProgress();
+
+                return stop;
+            };
 
             try {
                 long clearedEntities = part.clearAll(stopClo, this);

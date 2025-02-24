@@ -132,6 +132,23 @@
         </dependency>
     </dependencies>
 
+    <profiles>
+        <profile>
+            <id>java-11+</id>
+            <activation>
+                <jdk>[11,)</jdk>
+            </activation>
+
+            <dependencies>
+                <dependency>
+                    <groupId>org.gridgain</groupId>
+                    <artifactId>ignite-lucene</artifactId>
+                    <version>to_be_replaced_by_ignite_version</version>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
+
     <build>
         <resources>
             <resource>

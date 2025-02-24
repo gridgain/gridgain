@@ -1012,6 +1012,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".DATA_REGION_PAGE_LISTS.CACHED_PAGES_COUNT.null.10",
                 sysSchemaName() + ".SQL_QUERIES_HISTORY.ENFORCE_JOIN_ORDER.null.1",
                 sysSchemaName() + ".SQL_QUERIES.LAZY.null.1",
+                sysSchemaName() + ".SQL_QUERIES.LABEL.null.2147483647",
                 sysSchemaName() + ".SQL_QUERIES_HISTORY.DISTRIBUTED_JOINS.null.1",
                 sysSchemaName() + ".SQL_QUERIES.DISTRIBUTED_JOINS.null.1",
                 sysSchemaName() + ".SQL_QUERIES_HISTORY.LAZY.null.1",

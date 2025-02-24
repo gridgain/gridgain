@@ -71,12 +71,13 @@ import org.apache.ignite.internal.processors.cache.persistence.DummyPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgressImpl;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
-import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridFilteredClosableIterator;
 import org.apache.ignite.internal.util.typedef.F;
@@ -85,6 +86,8 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.MARKER_STORED_TO_DISK;
 
 /**
  * Test simulated checkpoints, Disables integrated check pointer thread
@@ -600,7 +603,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
             ig.context().cache().context().database().checkpointReadUnlock();
         }
 
-        Collection<FullPageId> cpPages = mem.beginCheckpoint(new GridFinishedFuture());
+        Collection<FullPageId> cpPages = mem.beginCheckpoint(createCheckpointProgressForBeginCheckpoint());
 
         ig.context().cache().context().database().checkpointReadLock();
 
@@ -930,7 +933,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
             try {
                 snapshot = new HashMap<>(resMap);
 
-                pageIds = mem.beginCheckpoint(new GridFinishedFuture());
+                pageIds = mem.beginCheckpoint(createCheckpointProgressForBeginCheckpoint());
 
                 checkpoints--;
 
@@ -1119,5 +1122,14 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
         @Override protected boolean accept(IgniteBiTuple<WALPointer, WALRecord> tup) {
             return !(tup.get2() instanceof PartitionMetaStateRecord);
         }
+    }
+
+    /** */
+    private static CheckpointProgress createCheckpointProgressForBeginCheckpoint() {
+        CheckpointProgress checkpointProgress = new CheckpointProgressImpl(0);
+
+        checkpointProgress.transitTo(MARKER_STORED_TO_DISK);
+
+        return checkpointProgress;
     }
 }

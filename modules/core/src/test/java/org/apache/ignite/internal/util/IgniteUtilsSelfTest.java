@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,7 +99,12 @@ import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
+import static org.apache.ignite.internal.util.IgniteUtils.MAX_UTF_BYTES;
+import static org.apache.ignite.internal.util.IgniteUtils.UTF_BYTE_LIMIT;
+import static org.apache.ignite.internal.util.IgniteUtils.isStringTooLongForWriteHeuristically;
+import static org.apache.ignite.internal.util.IgniteUtils.utfBytes;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
+import static org.apache.ignite.testframework.GridTestUtils.nCopiesOfChar;
 import static org.apache.ignite.testframework.GridTestUtils.readResource;
 import static org.junit.Assert.assertArrayEquals;
 
@@ -1659,6 +1664,71 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
 
         Class<?> innerCls = clsLdr.loadClass(TestInnerClass.class.getName());
         assertFalse(IgniteUtils.isLambda(innerCls));
+    }
+
+    /** */
+    @Test
+    public void testIsStringTooLongForWriteHeuristically() {
+        // Simple checks.
+        assertFalse(isStringTooLongForWriteHeuristically(""));
+        assertFalse(isStringTooLongForWriteHeuristically("a"));
+
+        int maxLenShortStr = UTF_BYTE_LIMIT / MAX_UTF_BYTES;
+
+        // Checks for strings with 1-byte characters.
+        char oneByteC = 0x0001;
+        assertEquals(1, utfBytes(oneByteC));
+
+        assertFalse(isStringTooLongForWriteHeuristically(nCopiesOfChar(1, oneByteC)));
+        assertFalse(isStringTooLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr, oneByteC)));
+
+        assertTrue(isStringTooLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr + 1, oneByteC)));
+        assertTrue(isStringTooLongForWriteHeuristically(nCopiesOfChar(UTF_BYTE_LIMIT, oneByteC)));
+
+        // Checks for strings with 2-byte characters.
+        char twoByteC = 0x0080;
+        assertEquals(2, utfBytes(twoByteC));
+
+        assertFalse(isStringTooLongForWriteHeuristically(nCopiesOfChar(1, twoByteC)));
+        assertFalse(isStringTooLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr, twoByteC)));
+
+        assertTrue(isStringTooLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr + 1, twoByteC)));
+        assertTrue(isStringTooLongForWriteHeuristically(nCopiesOfChar(UTF_BYTE_LIMIT, twoByteC)));
+
+        // Checks for strings with 3-byte characters.
+        char threeByteC = 0x0800;
+        assertEquals(3, utfBytes(threeByteC));
+
+        assertFalse(isStringTooLongForWriteHeuristically(nCopiesOfChar(1, threeByteC)));
+        assertFalse(isStringTooLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr, threeByteC)));
+
+        assertTrue(isStringTooLongForWriteHeuristically(nCopiesOfChar(maxLenShortStr + 1, threeByteC)));
+        assertTrue(isStringTooLongForWriteHeuristically(nCopiesOfChar(UTF_BYTE_LIMIT, threeByteC)));
+
+        // Checks for strings with characters of different numbers of bytes.
+        assertFalse(isStringTooLongForWriteHeuristically(
+            nCopiesOfChar(1, oneByteC) +
+                nCopiesOfChar(1, twoByteC) +
+                nCopiesOfChar(1, threeByteC)
+        ));
+
+        assertFalse(isStringTooLongForWriteHeuristically(
+            nCopiesOfChar(maxLenShortStr / 3, oneByteC) +
+                nCopiesOfChar(maxLenShortStr / 3, twoByteC) +
+                nCopiesOfChar(maxLenShortStr - ((maxLenShortStr / 3) * 2), threeByteC)
+        ));
+
+        assertTrue(isStringTooLongForWriteHeuristically(
+            nCopiesOfChar(maxLenShortStr / 3, oneByteC) +
+                nCopiesOfChar(maxLenShortStr / 3, twoByteC) +
+                nCopiesOfChar(maxLenShortStr - ((maxLenShortStr / 3) * 2) + 1, threeByteC)
+        ));
+
+        assertTrue(isStringTooLongForWriteHeuristically(
+            nCopiesOfChar(UTF_BYTE_LIMIT / 3, oneByteC) +
+                nCopiesOfChar(UTF_BYTE_LIMIT / 3, twoByteC) +
+                nCopiesOfChar(UTF_BYTE_LIMIT / 3, threeByteC)
+        ));
     }
 
     /**

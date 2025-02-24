@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,9 +35,12 @@ import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsWithT
 import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsWithTtlTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsWithTtlTest2;
 import org.apache.ignite.internal.processors.cache.persistence.db.file.DefaultPageSizeBackwardsCompatibilityTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.file.IgniteClockPageReplacementTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.file.IgnitePdsCheckpointSimpleTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.file.IgnitePdsCheckpointSimulationWithRealCpDisabledTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.file.IgnitePdsPageReplacementTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.file.IgniteRandomLruPageReplacementTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.file.IgniteSegmentLruPageReplacementTest;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.IgniteMetaStorageBasicTest;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationPersistentTest;
 import org.apache.ignite.internal.processors.database.IgniteDbDynamicCacheSelfTest;
@@ -85,6 +88,10 @@ public class IgnitePdsTestSuite {
     private static void addRealPageStoreTestsLongRunning(List<Class<?>> suite, Collection<Class> ignoredTests) {
         // Basic PageMemory tests.
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsPageReplacementTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, IgniteClockPageReplacementTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, IgniteRandomLruPageReplacementTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, IgniteSegmentLruPageReplacementTest.class, ignoredTests);
     }
 
     /**

@@ -80,6 +80,7 @@ import org.apache.ignite.internal.managers.communication.GridCommunicationManage
 import org.apache.ignite.internal.processors.compute.ComputeGridMonitorTest;
 import org.apache.ignite.internal.processors.compute.ComputeJobChangePriorityTest;
 import org.apache.ignite.internal.processors.compute.ComputeJobStatusTest;
+import org.apache.ignite.internal.processors.compute.ComputeTaskExecutionOnInactiveClusterTest;
 import org.apache.ignite.internal.processors.compute.ComputeTaskWithWithoutFullSupportTest;
 import org.apache.ignite.internal.processors.compute.IgniteComputeCustomExecutorConfigurationSelfTest;
 import org.apache.ignite.internal.processors.compute.IgniteComputeCustomExecutorSelfTest;
@@ -189,7 +190,9 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVI
     ComputeJobChangePriorityTest.class,
     ComputeJobStatusTest.class,
     ComputeTaskWithWithoutFullSupportTest.class,
-    InterruptComputeJobTest.class
+    InterruptComputeJobTest.class,
+
+    ComputeTaskExecutionOnInactiveClusterTest.class
 })
 public class IgniteComputeGridTestSuite {
     /** Activate service grid for test it. */

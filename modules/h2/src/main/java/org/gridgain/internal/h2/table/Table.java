@@ -456,6 +456,8 @@ public abstract class Table extends SchemaObjectBase {
             }
             columnMap.put(columnName, col);
         }
+
+        nullRow = null;
     }
 
     /**
