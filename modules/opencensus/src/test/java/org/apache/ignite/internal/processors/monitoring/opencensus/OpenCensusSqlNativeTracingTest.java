@@ -76,6 +76,7 @@ import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_IDX_RAN
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_PAGE_ROWS;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_PARSER_CACHE_HIT;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_ID;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_LABEL;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_TEXT;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_SCHEMA;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.tag;
@@ -120,6 +121,9 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
 
     /** Test schema name. */
     protected static final String TEST_SCHEMA = "TEST_SCHEMA";
+
+    /** Test query label. */
+    private static final String TEST_LABEL = "test-label";
 
     /** Key counter. */
     private final AtomicInteger keyCntr = new AtomicInteger();
@@ -775,7 +779,8 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
             .setDistributedJoins(distributedJoins)
             .setPageSize(PAGE_SIZE)
             .setLazy(false)
-            .setSchema(schema);
+            .setSchema(schema)
+            .setLabel(TEST_LABEL);
 
         reducer().context().query().querySqlFields(qry, false).getAll();
     }
@@ -802,17 +807,21 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
 
         checkDroppedSpans();
 
+        ImmutableMap.Builder<String, String> expAttrsBuilder = ImmutableMap.<String, String>builder()
+            .put(NODE_ID, reducer().localNode().id().toString())
+            .put(tag(NODE, CONSISTENT_ID), reducer().localNode().consistentId().toString())
+            .put(tag(NODE, NAME), reducer().name())
+            .put(SQL_QRY_TEXT, sql)
+            .put(SQL_SCHEMA, schema);
+
+        if (queryLabelSupported())
+            expAttrsBuilder.put(SQL_QRY_LABEL, TEST_LABEL);
+
         return checkSpan(
             SQL_QRY,
             null,
             1,
-            ImmutableMap.<String, String>builder()
-                .put(NODE_ID, reducer().localNode().id().toString())
-                .put(tag(NODE, CONSISTENT_ID), reducer().localNode().consistentId().toString())
-                .put(tag(NODE, NAME), reducer().name())
-                .put(SQL_QRY_TEXT, sql)
-                .put(SQL_SCHEMA, schema)
-                .build(),
+            expAttrsBuilder.build(),
             CheckAttributes.CONTAINS
         ).get(0);
     }
@@ -859,6 +868,11 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
      */
     protected int mapNodesCount() {
         return GRID_CNT;
+    }
+
+    /** Returns flag indicating whether query label is supported by client. */
+    protected boolean queryLabelSupported() {
+        return true;
     }
 
     /** */

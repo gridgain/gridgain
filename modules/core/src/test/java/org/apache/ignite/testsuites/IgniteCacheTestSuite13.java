@@ -47,6 +47,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.His
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.ConcurrentTombstonesCleanupTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.TombstoneClearingCountersTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.TombstonesManagementTest;
+import org.apache.ignite.internal.processors.cache.transactions.TransactionCommitTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxRecoveryOnCoordniatorFailTest;
 import org.apache.ignite.internal.processors.cluster.ClusterNameBeforeActivation;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -124,6 +125,8 @@ public class IgniteCacheTestSuite13 {
         GridTestUtils.addTestIfNeeded(suite, ClusterNameBeforeActivation.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, CacheClearAsyncDeadlockTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, TransactionCommitTest.class, ignoredTests);
 
         return suite;
     }

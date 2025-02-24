@@ -49,6 +49,7 @@ import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.client.ClientCacheConfiguration;
 import org.apache.ignite.client.ClientCachePluginConfiguration;
+import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryFieldMetadata;
 import org.apache.ignite.internal.binary.BinaryMetadata;
@@ -580,6 +581,13 @@ public final class ClientUtils {
             out.writeInt(-1);
 
         out.writeInt(qry.getUpdateBatchSize());
+
+        if (protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.QRY_LABEL)) {
+            writeObject(out, qry.getLabel());
+        }
+        else if (qry.getLabel() != null) {
+            throw new ClientFeatureNotSupportedByServerException(ProtocolBitmaskFeature.QRY_LABEL);
+        }
     }
 
     /** Write Ignite binary object to output stream. */

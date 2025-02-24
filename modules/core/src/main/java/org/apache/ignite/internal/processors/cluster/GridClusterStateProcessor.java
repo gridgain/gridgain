@@ -666,7 +666,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             TransitionOnJoinWaitFuture joinFut = this.joinFut;
 
             if (joinFut != null)
-                joinFut.onDone(false);
+                joinFut.onDone(ClusterState.active(globalState.state()));
 
             GridFutureAdapter<Void> transitionFut = transitionFuts.get(discoClusterState.transitionRequestId());
 
@@ -1130,7 +1130,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         boolean forceChangeBaselineTopology,
         boolean isAutoAdjust
     ) {
-        return changeGlobalState(activate ? ACTIVE : INACTIVE, baselineNodes, forceChangeBaselineTopology, isAutoAdjust);
+        return changeGlobalState(findCorrectTargetState(activate), baselineNodes, forceChangeBaselineTopology, isAutoAdjust);
     }
 
     /**
@@ -2117,6 +2117,25 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         GridArgumentCheck.notNull(newState, "newState");
 
         return state == INACTIVE && ClusterState.active(newState);
+    }
+
+    /**
+     * Get correct state to move cluster in to avoid transition from read_only to active on node added to baseline.
+     *
+     * @param activate If cluster is activated.
+     * @return State cluster should be in.
+     */
+    private ClusterState findCorrectTargetState(boolean activate) {
+        ClusterState finalState = INACTIVE;
+
+        if (activate) {
+            if (ACTIVE_READ_ONLY.equals(globalState.state()))
+                finalState = ACTIVE_READ_ONLY;
+            else
+                finalState = ACTIVE;
+        }
+
+        return finalState;
     }
 
     /**

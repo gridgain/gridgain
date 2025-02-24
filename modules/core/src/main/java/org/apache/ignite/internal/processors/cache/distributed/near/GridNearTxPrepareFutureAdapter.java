@@ -43,7 +43,6 @@ import org.apache.ignite.lang.IgniteReducer;
 import org.apache.ignite.lang.IgniteUuid;
 
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.NOOP;
-import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.IGNITE_DISABLE_ONE_PHASE_COMMIT;
 
 /**
  * Common code for tx prepare in optimistic and pessimistic modes.
@@ -185,7 +184,7 @@ public abstract class GridNearTxPrepareFutureAdapter extends
 
             Collection<UUID> backups = entry.getValue();
 
-            if (backups.size() <= 1 && !IGNITE_DISABLE_ONE_PHASE_COMMIT)
+            if (backups.size() <= 1 && tx.onePhaseCommitEnabled())
                 tx.onePhaseCommit(true);
         }
     }

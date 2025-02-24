@@ -17,6 +17,7 @@
 package org.apache.ignite.plugin;
 
 import java.io.Serializable;
+import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
@@ -58,6 +59,13 @@ public interface PluginProvider<C extends PluginConfiguration> {
      * @return Plugin API.
      */
     public <T extends IgnitePlugin> T plugin();
+
+    /**
+     * @return Plugin info to be printed in the metrics message.
+     */
+    public default Map<String, Object> metricsInfo() {
+        return null;
+    }
 
     /**
      * Registers extensions.

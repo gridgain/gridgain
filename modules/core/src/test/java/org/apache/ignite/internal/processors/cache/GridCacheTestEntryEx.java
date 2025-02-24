@@ -893,12 +893,12 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     }
 
     /** @inheritDoc */
-    @Override public CacheObject touchTtl(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException {
+    @Override public CacheObject touchTtl(@Nullable IgniteCacheExpiryPolicy expiryPlc, boolean updateMetrics) {
         throw new UnsupportedOperationException();
     }
 
     /** @inheritDoc */
-    @Override public EntryGetResult touchTtlVersioned(@Nullable IgniteCacheExpiryPolicy expiryPlc) throws GridCacheEntryRemovedException {
+    @Override public EntryGetResult touchTtlVersioned(@Nullable IgniteCacheExpiryPolicy expiryPlc) {
         throw new UnsupportedOperationException();
     }
 

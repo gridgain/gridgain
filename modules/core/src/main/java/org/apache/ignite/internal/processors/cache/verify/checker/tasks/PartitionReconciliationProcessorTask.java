@@ -107,7 +107,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             if (lastFut == null) {
                 if (log.isInfoEnabled()) {
                     log.info("PartitionReconciliationProcessorTask has nothing to check, " +
-                        "the initial exchnage has not completed yet.");
+                        "the initial exchange has not completed yet.");
                 }
             }
             else
@@ -162,7 +162,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
         if (e != null) {
             log.warning("PartitionReconciliationProcessorTask failed on node " +
-                "[consistentId=" + res.getNode().consistentId() + ", e=" + e.getMessage() + "]", res.getException());
+                "[consistentId=" + res.getNode().consistentId() + ", err=" + e.getMessage() + "]", res.getException());
         }
 
         return ComputeJobResultPolicy.WAIT;

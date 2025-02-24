@@ -101,10 +101,13 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(-1, proc.ExitCode);
 
             // Check error message.
-            Assert.AreEqual("ERROR: Apache.Ignite.Core.Common.IgniteException: Java class is not found " +
-                            "(did you set IGNITE_HOME environment variable?): " +
-                            "org/apache/ignite/internal/processors/platform/utils/PlatformUtils",
-                reader.GetOutput().First());
+            var output = reader.GetOutput();
+            var expected =
+                "ERROR: Apache.Ignite.Core.Common.IgniteException: Java class is not found " +
+                "(did you set IGNITE_HOME environment variable?): " +
+                "org/apache/ignite/internal/processors/platform/utils/PlatformUtils";
+
+            CollectionAssert.Contains(output, expected);
         }
 
         /// <summary>

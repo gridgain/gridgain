@@ -1585,6 +1585,11 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         return metadata(clsDesc.typeId());
     }
 
+    /** Dumps all binary meta files. */
+    public void dumpMetadata(File baseDumpDir) {
+        metadataFileStore.dumpMeta(baseDumpDir);
+    }
+
     /** */
     @SuppressWarnings("PublicInnerClass")
     public static class TestBinaryContext extends BinaryContext {

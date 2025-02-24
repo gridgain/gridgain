@@ -48,8 +48,10 @@ public class CacheDistributionTaskResult extends VisorDataTransferObject {
      * @param nodeResList Cluster infos.
      * @param exceptions Exceptions.
      */
-    public CacheDistributionTaskResult(List<CacheDistributionNode> nodeResList,
-        Map<UUID, Exception> exceptions) {
+    public CacheDistributionTaskResult(
+        List<CacheDistributionNode> nodeResList,
+        Map<UUID, Exception> exceptions
+    ) {
         this.nodeResList = nodeResList;
         this.exceptions = exceptions;
     }
@@ -81,7 +83,9 @@ public class CacheDistributionTaskResult extends VisorDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override protected void readExternalData(byte protoVer, ObjectInput in
+    @Override protected void readExternalData(
+        byte protoVer,
+        ObjectInput in
     ) throws IOException, ClassNotFoundException {
         nodeResList = U.readList(in);
         exceptions = U.readMap(in);

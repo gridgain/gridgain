@@ -45,7 +45,7 @@ public class UpdateLogImpl implements UpdateLog {
 
     /** {@inheritDoc} */
     @Override public void destroy() throws IgniteCheckedException {
-        if (logTree != null) {
+        if (hasTree()) {
             logTree.destroy();
         }
     }
@@ -58,7 +58,9 @@ public class UpdateLogImpl implements UpdateLog {
     }
 
     /** {@inheritDoc} */
-    @Override public PartitionLogTree tree() {
+    @Override public PartitionLogTree tree() throws IgniteCheckedException {
+        init();
+
         return logTree;
     }
 
@@ -69,7 +71,7 @@ public class UpdateLogImpl implements UpdateLog {
 
     /** {@inheritDoc} */
     @Override public GridCursor<UpdateLogRow> find(UpdateLogRow lower, UpdateLogRow upper) throws IgniteCheckedException {
-        if (logTree != null) {
+        if (hasTree()) {
             return logTree.find(lower, upper);
         }
 
@@ -78,7 +80,7 @@ public class UpdateLogImpl implements UpdateLog {
 
     /** {@inheritDoc} */
     @Override public void remove(UpdateLogRow row) throws IgniteCheckedException {
-        if (logTree != null) {
+        if (hasTree()) {
             logTree.removex(row);
         }
     }
@@ -87,12 +89,12 @@ public class UpdateLogImpl implements UpdateLog {
      * Initialize the storage if needed.
      */
     private void init() throws IgniteCheckedException {
-        if (logTree != null) {
+        if (hasTree()) {
             return;
         }
 
         synchronized (this) {
-            if (logTree == null) {
+            if (!hasTree()) {
                 assert factory != null;
 
                 logTree = factory.create();

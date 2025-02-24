@@ -46,6 +46,7 @@ public class SqlQueryViewWalker implements SystemViewRowAttributeWalker<SqlQuery
         v.accept(13, "distributedJoins", boolean.class);
         v.accept(14, "enforceJoinOrder", boolean.class);
         v.accept(15, "lazy", boolean.class);
+        v.accept(16, "label", String.class);
     }
 
     /** {@inheritDoc} */
@@ -66,10 +67,11 @@ public class SqlQueryViewWalker implements SystemViewRowAttributeWalker<SqlQuery
         v.acceptBoolean(13, "distributedJoins", row.distributedJoins());
         v.acceptBoolean(14, "enforceJoinOrder", row.enforceJoinOrder());
         v.acceptBoolean(15, "lazy", row.lazy());
+        v.accept(16, "label", String.class, row.label());
     }
 
     /** {@inheritDoc} */
     @Override public int count() {
-        return 16;
+        return 17;
     }
 }

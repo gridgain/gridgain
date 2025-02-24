@@ -188,6 +188,7 @@ public class CheckpointManager {
             checkpointThreadName,
             workersRegistry,
             logger,
+            persistenceCfg,
             longJvmPauseDetector,
             failureProcessor,
             snapshotMgr,
@@ -203,9 +204,7 @@ public class CheckpointManager {
 
         checkpointer = checkpointerProvider.get();
 
-        Long cfgCheckpointReadLockTimeout = persistenceCfg != null
-            ? persistenceCfg.getCheckpointReadLockTimeout()
-            : null;
+        Long cfgCheckpointReadLockTimeout = persistenceCfg.getCheckpointReadLockTimeout();
 
         long checkpointReadLockTimeout = IgniteSystemProperties.getLong(IGNITE_CHECKPOINT_READ_LOCK_TIMEOUT,
             cfgCheckpointReadLockTimeout != null
@@ -415,6 +414,8 @@ public class CheckpointManager {
 
             this.checkpointer = checkpointerProvider.get();
         }
+
+        checkpointMarkersStorage.onActivate();
     }
 
     /**

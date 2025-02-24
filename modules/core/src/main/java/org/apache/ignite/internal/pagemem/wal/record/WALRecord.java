@@ -278,20 +278,35 @@ public abstract class WALRecord {
         /** Ecnrypted out-of-order update which is used by atomic caches on backup nodes. */
         ENCRYPTED_OUT_OF_ORDER_UPDATE(74, LOGICAL),
 
-        /** ClusterSnapshot start. */
+        /**
+         * ClusterSnapshot start.
+         * GridGain does not use this type of records. This is a placeholder to provide PDS compatibility with Apache Ignite.
+         */
         CLUSTER_SNAPSHOT(75, LOGICAL),
 
-        /** Incremental snapshot start record. */
+        /**
+         * Incremental snapshot start record.
+         * GridGain does not use this type of records. This is a placeholder to provide PDS compatibility with Apache Ignite.
+         */
         INCREMENTAL_SNAPSHOT_START_RECORD(76, LOGICAL),
 
-        /** Incremental snapshot finish record. */
+        /**
+         * Incremental snapshot finish record.
+         * GridGain does not use this type of records. This is a placeholder to provide PDS compatibility with Apache Ignite.
+         */
         INCREMENTAL_SNAPSHOT_FINISH_RECORD(77, LOGICAL),
 
-        /** CDC data record. */
+        /**
+         * CDC data record.
+         * GridGain does not use this type of records. This is a placeholder to provide PDS compatibility with Apache Ignite.
+         */
         CDC_DATA_RECORD(78, CUSTOM),
 
         /** Physical WAL record that represents a fragment of an entry update. */
-        DATA_PAGE_FRAGMENTED_UPDATE_RECORD(81, PHYSICAL);
+        DATA_PAGE_FRAGMENTED_UPDATE_RECORD(81, PHYSICAL),
+
+        /** Consistent cut record with a timestamp. */
+        TIME_STAMPED_CONSISTENT_CUT(82);
 
         /** Index for serialization. Should be consistent throughout all versions. */
         private final int idx;

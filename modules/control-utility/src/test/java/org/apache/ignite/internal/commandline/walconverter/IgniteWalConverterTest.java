@@ -173,7 +173,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
      * Checking utility IgniteWalConverter
      * <ul>
      *     <li>Start node</li>
-     *     <li>Create cache with <a href="https://apacheignite.readme.io/docs/indexes#section-registering-indexed-types">Registering Indexed Types</a></li>
+     *     <li>Create cache with <a href="https://www.gridgain.com/docs/latest/developers-guide/SQL/indexes#registering-indexed-types">Registering Indexed Types</a></li>
      *     <li>Put several entity</li>
      *     <li>Stop node</li>
      *     <li>Read wal with specifying binaryMetadata</li>
@@ -266,7 +266,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
      * Checking utility IgniteWalConverter with out binary_meta
      * <ul>
      *     <li>Start node</li>
-     *     <li>Create cache with <a href="https://apacheignite.readme.io/docs/indexes#section-registering-indexed-types">Registering Indexed Types</a></li>
+     *     <li>Create cache with <a href="https://www.gridgain.com/docs/latest/developers-guide/SQL/indexes#registering-indexed-types">Registering Indexed Types</a></li>
      *     <li>Put several entity</li>
      *     <li>Stop node</li>
      *     <li>Read wal with <b>out</b> specifying binaryMetadata</li>
@@ -331,7 +331,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
      * Checking utility IgniteWalConverter on broken WAL
      * <ul>
      *     <li>Start node</li>
-     *     <li>Create cache with <a href="https://apacheignite.readme.io/docs/indexes#section-registering-indexed-types">Registering Indexed Types</a></li>
+     *     <li>Create cache with <a href="https://www.gridgain.com/docs/latest/developers-guide/SQL/indexes#registering-indexed-types">Registering Indexed Types</a></li>
      *     <li>Put several entity</li>
      *     <li>Stop node</li>
      *     <li>Change byte in DataRecord value</li>
@@ -457,7 +457,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
      * Checking utility IgniteWalConverter on unreadable WAL
      * <ul>
      *     <li>Start node</li>
-     *     <li>Create cache with <a href="https://apacheignite.readme.io/docs/indexes#section-registering-indexed-types">Registering Indexed Types</a></li>
+     *     <li>Create cache with <a href="https://www.gridgain.com/docs/latest/developers-guide/SQL/indexes#registering-indexed-types">Registering Indexed Types</a></li>
      *     <li>Put several entity</li>
      *     <li>Stop node</li>
      *     <li>Change byte RecordType in second DataRecord</li>
@@ -618,7 +618,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
      * Common part
      * <ul>
      *    <li>Start node</li>
-     *    <li>Create cache with <a href="https://apacheignite.readme.io/docs/indexes#section-registering-indexed-types">Registering Indexed Types</a></li>
+     *    <li>Create cache with <a href="https://www.gridgain.com/docs/latest/developers-guide/SQL/indexes#registering-indexed-types">Registering Indexed Types</a></li>
      *    <li>Put several entity</li>
      * </ul>
      *

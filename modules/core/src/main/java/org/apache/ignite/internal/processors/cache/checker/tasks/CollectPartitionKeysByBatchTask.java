@@ -34,6 +34,7 @@ import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
@@ -112,7 +113,12 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
     ) throws IgniteException {
         assert partBatch != null;
 
-        GridCacheContext<Object, Object> ctx = ignite.context().cache().cache(partBatch.cacheName()).context();
+        IgniteInternalCache<Object, Object> cache = ignite.context().cache().cache(partBatch.cacheName());
+
+        if (cache == null)
+            return new ExecutionResult<>("Cache not found (was stopped) [name=" + partBatch.cacheName() + ']');
+
+        GridCacheContext<Object, Object> ctx = cache.context();
 
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> totalRes = new HashMap<>();
 
@@ -152,7 +158,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             }
 
             // Choose the minimum key of all last observed keys from all nodes.
-            // This allows to fix the issue with non-processed keys under certian conditions.
+            // This allows to fix the issue with non-processed keys under certain conditions.
             // For example,
             // the primary partition contains all keys [1, ..., 200] and the backup only has half of the keys [100, ..., 200],
             // and the batch size is 50. In this case, the primary node will return [1, ..., 50] and backup will return [100, ..., 150].

@@ -34,14 +34,13 @@ getJavaSpecificOpts() {
   current_value=$2
   value=""
 
-  if [ $version -eq 8 ] ; then
-      value="\
-          -XX:+AggressiveOpts \
-           ${current_value}"
+  if [ "$version" -eq 8 ]; then
+      # Keep options minimal and avoid deprecated ones for Java 8
+      value="-XX:+AggressiveOpts $current_value"
 
-  elif [ $version -gt 8 ] && [ $version -lt 11 ]; then
-      value="\
-          -XX:+AggressiveOpts \
+  elif [ "$version" -ge 9 ] && [ "$version" -lt 11 ]; then
+      # Java 9 and 10 require additional modules due to removed Java EE modules
+      value="-XX:+AggressiveOpts \
           --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
           --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
           --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
@@ -49,34 +48,15 @@ getJavaSpecificOpts() {
           --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
           --illegal-access=permit \
           --add-modules=java.xml.bind \
-          ${current_value}"
+          $current_value"
 
-  elif [ "${version}" -ge 11 ] && [ "${version}" -lt 14 ]; then
-      value="\
-          --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
+  elif [ "$version" -ge 11 ]; then
+      # From Java 11 onwards, reduce the use of aggressive exports and opens, focusing on necessary access only
+      value="--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
           --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
           --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
           --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
           --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
-          --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
-          --illegal-access=permit \
-          ${current_value}"
-
-  elif [ "${version}" -ge 14 ] && [ "${version}" -lt 15 ]; then
-        value="\
-            --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
-            --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
-            --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
-            --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
-            --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
-            --add-opens=java.base/jdk.internal.access=ALL-UNNAMED \
-            --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
-            --illegal-access=permit \
-            ${current_value}"
-
-  elif [ "${version}" -ge 15 ] ; then
-      value="\
-          --add-opens=java.base/jdk.internal.access=ALL-UNNAMED \
           --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED \
           --add-opens=java.base/sun.nio.ch=ALL-UNNAMED \
           --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \

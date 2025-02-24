@@ -24,6 +24,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
@@ -32,6 +33,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.checker.objects.CachePartitionRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.util.DelayedHolder;
@@ -210,12 +212,14 @@ public class AbstractPipelineProcessor {
      * @param taskCls Task class.
      * @param workload Argument.
      * @param lsnr Listener.
+     * @throws InterruptedException If task was interrupted.
+     * @throws IgniteException If failed to execute the task.
      */
     protected <T extends CachePartitionRequest, R> void compute(
         Class<? extends ComputeTask<T, ExecutionResult<R>>> taskCls,
         T workload,
         IgniteInClosure<? super R> lsnr
-    ) throws InterruptedException {
+    ) throws InterruptedException, IgniteException {
         boolean acquired = false;
 
         while (!acquired) {
@@ -225,7 +229,17 @@ public class AbstractPipelineProcessor {
                 printStatistics();
         }
 
-        ClusterGroup grp = partOwners(workload.cacheName(), workload.partitionId());
+        ClusterGroup grp;
+
+        try {
+            grp = partOwners(workload.cacheName(), workload.partitionId());
+        }
+        catch (Exception e) {
+            liveListeners.release();
+
+            throw new IgniteException("Cannot calculate partition owners [cacheName="
+                + workload.cacheName() + ", part=" + workload.partitionId() + ']', e);
+        }
 
         if (grp == null) {
             // There are no owners for this partition.
@@ -317,10 +331,16 @@ public class AbstractPipelineProcessor {
      * Returns a cluster group represents a set od nodes that own the given partition.
      * Returned group can be {@code null} in case of there are no owners for the given partition.
      *
+     * @throws IgniteException If failed to get partition owners.
      * @return Cluster group of owners.
      */
-    private ClusterGroup partOwners(String cacheName, int partId) {
-        Collection<ClusterNode> nodes = ignite.cachex(cacheName).context().topology().owners(partId, startTopVer);
+    private ClusterGroup partOwners(String cacheName, int partId) throws IgniteException {
+        IgniteInternalCache<?, ?> cachex = ignite.cachex(cacheName);
+
+        if (cachex == null)
+            throw new IgniteException("Cache not found (was stopped) [name=" + cacheName + ']');
+
+        Collection<ClusterNode> nodes = cachex.context().topology().owners(partId, startTopVer);
 
         return nodes.isEmpty() ? null : ignite.cluster().forNodes(nodes);
     }

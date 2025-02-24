@@ -121,8 +121,6 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
     @Rule
     public ExpectedException expEx = ExpectedException.none();
 
-
-
     /** @inheritDoc */
     @Before
     @Override public void init() throws Exception {

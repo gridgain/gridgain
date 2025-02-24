@@ -30,7 +30,7 @@ import org.locationtech.jts.io.WKTReader;
 /**
  * This examples shows the usage of geospatial queries and indexes in Apache Ignite.
  * For more information please refer to the following technical documentation:
- * http://apacheignite.readme.io/docs/geospatial-queries
+ * https://www.gridgain.com/docs/extensions/geospatial/geospatial-sql
  * <p>
  * Remote nodes should be started using {@link ExampleNodeStartup} which will
  * start node with {@code examples/config/example-ignite.xml} configuration.
