@@ -706,6 +706,7 @@ public class QueryEntity implements Serializable {
 
                 vectIdx.setIndexType(idx.type());
                 vectIdx.setFieldNames(idx.fields(), true);
+                vectIdx.setSimilarityFunction(idx.similarityFunction());
 
                 idxs.add(vectIdx);
             }
