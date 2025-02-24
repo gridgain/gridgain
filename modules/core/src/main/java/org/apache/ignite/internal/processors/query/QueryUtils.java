@@ -364,6 +364,7 @@ public class QueryUtils {
             normalIdx.setFields(idx.getFields());
             normalIdx.setIndexType(idx.getIndexType());
             normalIdx.setInlineSize(idx.getInlineSize());
+            normalIdx.setSimilarityFunction(idx.getSimilarityFunction());
 
             normalIdx.setName(normalizeObjectName(indexName(normalTblName, idx), false));
 
