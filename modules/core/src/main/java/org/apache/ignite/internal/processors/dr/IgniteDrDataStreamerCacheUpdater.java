@@ -22,6 +22,7 @@ import java.util.Map;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.CacheObject;
@@ -48,6 +49,9 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
+    /** Logger. */
+    protected IgniteLogger log;
+
     /** {@inheritDoc} */
     @Override public void receive(IgniteCache<KeyCacheObject, CacheObject> cache0,
         Collection<Map.Entry<KeyCacheObject, CacheObject>> col) {
@@ -69,6 +73,8 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
 
             CacheObjectContext cacheObjCtx = cache.context().cacheObjectContext();
 
+            IgniteLogger log = cache0.unwrap(Ignite.class).log();
+
             for (Map.Entry<KeyCacheObject, CacheObject> entry0 : col) {
                 GridCacheRawVersionedEntry<KeyCacheObject, CacheObject> entry = (GridCacheRawVersionedEntry<KeyCacheObject, CacheObject>)entry0;
 
@@ -86,10 +92,15 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
                     new GridCacheDrExpirationInfo(cacheVal, entry.version(), entry.ttl(), entry.expireTime()) :
                     new GridCacheDrInfo(cacheVal, entry.version()) : null;
 
-                if (val == null)
+                if (val == null) {
                     cache.removeAllConflict(Collections.singletonMap(key, entry.version()));
-                else
+                } else {
                     cache.putAllConflict(Collections.singletonMap(key, val));
+
+                    if (log.isTraceEnabled()) {
+                        log.trace("PutAllConflict invoked for the key = " + key);
+                    }
+                }
             }
         }
         catch (IgniteCheckedException e) {

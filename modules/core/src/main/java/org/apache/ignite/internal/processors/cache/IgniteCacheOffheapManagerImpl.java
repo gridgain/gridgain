@@ -2427,10 +2427,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             CacheObject oldVal = oldRow == null ? null : oldRow.value();
 
-            if (log.isDebugEnabled())
-                log.debug("EntryProcessor.apply created detached entry for key="
-                        + key.value(cctx.cacheObjectContext(), false));
-
             CacheInvokeEntry invokeEntry = new CacheInvokeEntry<>(key, oldVal, ver, keepBinary,
                 new GridDhtDetachedCacheEntry(cctx, key));
 
@@ -2891,12 +2887,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (oldRow != null && oldRow.version().updateCounter() != 0)
-                removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()), cctx.cacheObjectContext());
+                removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
 
             if (isIncrementalDrEnabled(cctx)) {
                 // Ignore entry initial value.
                 if (newRow.version().updateCounter() != 0 && replicationRequire(newRow.version()))
-                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()), cctx.cacheObjectContext());
+                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
             }
 
             if (oldRow != null) {
@@ -2944,11 +2940,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (oldRow.version().updateCounter() != 0)
-                removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()), cctx.cacheObjectContext());
+                removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
 
             if (isIncrementalDrEnabled(cctx)) {
                 if (newRow.version().updateCounter() != 0)
-                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()), cctx.cacheObjectContext());
+                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
             }
         }
 
@@ -3141,14 +3137,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (isIncrementalDrEnabled(cctx)) {
                 if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0 &&
                     replicationRequire(tombstoneRow.version()))
-                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()), cctx.cacheObjectContext());
+                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
             }
 
             if (oldRow != null && oldRow.version().updateCounter() != 0) {
                 if (isIncrementalDrEnabled(cctx) && oldTombstone && tombstoneRow == null)
                     cctx.dr().onTombstoneCleaned(partId, oldRow.version().updateCounter());
 
-                removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()), cctx.cacheObjectContext());
+                removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
             }
 
             if (oldRow != null && (tombstoneRow == null || tombstoneRow.link() != oldRow.link()))
@@ -3526,10 +3522,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          * @param row Log row.
          * @throws IgniteCheckedException If failed.
          */
-        private void removeFromLog(UpdateLogRow row, CacheObjectContext cctx) throws IgniteCheckedException {
+        private void removeFromLog(UpdateLogRow row) throws IgniteCheckedException {
             assert row.updateCounter() > 0;
 
-            logTree.remove(row, log, cctx);
+            logTree.remove(row);
         }
 
         /**
@@ -3538,10 +3534,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          * @param row Log row.
          * @throws IgniteCheckedException If failed.
          */
-        private void addUpdateToLog(UpdateLogRow row, CacheObjectContext cctx) throws IgniteCheckedException {
+        private void addUpdateToLog(UpdateLogRow row) throws IgniteCheckedException {
             assert row.updateCounter() > 0;
 
-            logTree.put(row, log, cctx);
+            logTree.put(row);
         }
 
         /** {@inheritDoc} */
