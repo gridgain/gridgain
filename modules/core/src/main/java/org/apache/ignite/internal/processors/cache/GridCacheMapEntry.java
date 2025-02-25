@@ -1457,11 +1457,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 assert dhtVer != null;
 
                 // It is possible that 'get' could load more recent value.
-                if (!((GridNearCacheEntry)this).recordDhtVersion(dhtVer)) {
-                    logOnMoreRecent();
-
+                if (!((GridNearCacheEntry)this).recordDhtVersion(dhtVer))
                     return new GridCacheUpdateTxResult(false, logPtr);
-                }
             }
 
             assert tx == null || (!tx.local() && tx.onePhaseCommit()) || tx.ownsLock(this) :
@@ -1537,8 +1534,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 logPtr = logTxUpdate(tx, val, expireTime, newVer, cctx.group().walEnabled());
 
             update(val, expireTime, ttl, newVer, true);
-
-            debugReplicate("innerSet", newVer, updateCntr0);
 
             drReplicate(drType, val, newVer, topVer);
 
@@ -1725,8 +1720,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             if (tx != null && cctx.group().persistenceEnabled())
                 logPtr = logTxUpdate(tx, null, 0, newVer, cctx.group().walEnabled());
-
-            debugReplicate("innerRemove", newVer, updateCntr0);
 
             drReplicate(drType, null, newVer, topVer);
 
@@ -2270,10 +2263,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (isNear()) {
                 CacheDataRow dataRow = val != null ? new CacheDataRowAdapter(key, val, ver, expireTimeExtras()) : null;
 
-                if (log.isDebugEnabled())
-                    log.debug("Operation op=" + op.name() + " is executed on near=" + cctx.isNear()
-                            + "cache, key=" + keyValue(false));
-
                 c.call(dataRow);
             }
             else {
@@ -2409,8 +2398,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 assert updateVal != null : c;
 
-                debugReplicate("innerUpdate / op = UPDATE", newVer, updateCntr == null ? 0L : updateCntr);
-
                 drReplicate(drType, updateVal, updateVer, topVer);
 
                 recordNodeId(affNodeId, topVer);
@@ -2440,8 +2427,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 assert c.op == DELETE : c.op;
 
                 clearReaders();
-
-                debugReplicate("innerUpdate / op = DELETE", updateVer, updateCntr);
 
                 drReplicate(drType, null, updateVer, topVer);
 
@@ -2615,15 +2600,33 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     private void drReplicate(GridDrType drType, @Nullable CacheObject val, GridCacheVersion ver, AffinityTopologyVersion topVer)
         throws IgniteCheckedException {
+        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
+
+        String keyValue = "nil";
+
+        if (log.isTraceEnabled()) {
+            if (sensitiveDataLogging == PLAIN) {
+                keyValue = keyValue(false).toString();
+            } else if (sensitiveDataLogging == HASH) {
+                keyValue = String.valueOf(IgniteUtils.hash(keyValue(false)));
+            }
+
+            if (!((GridNearCacheEntry) this).recordDhtVersion(ver)) {
+                logOnMoreRecent();
+            }
+        }
+
+        traceReplicate(ver, keyValue);
+
         if (cctx.isDrEnabled() && drType != DR_NONE && !isInternal()) {
-            if (log.isDebugEnabled())
-                log.debug("Key replication, key=" + keyValue(false) + ", dr=" + cctx.isDrEnabled()
+            if (log.isTraceEnabled())
+                log.trace("Key replication, key=" + keyValue + ", dr=" + cctx.isDrEnabled()
                         + ", drType=" + drType);
 
             cctx.dr().replicate(key, val, rawTtl(), rawExpireTime(), ver.conflictVersion(), drType, topVer);
         } else {
-            if (log.isDebugEnabled())
-                log.debug("Skipping key replication, key=" + keyValue(false) + ", dr=" + cctx.isDrEnabled()
+            if (log.isTraceEnabled())
+                log.trace("Skipping key replication, key=" + keyValue + ", dr=" + cctx.isDrEnabled()
                         + ", drType=" + drType);
         }
     }
@@ -3459,8 +3462,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         )));
                     }
                 }
-
-                debugReplicate("initialValue / op = UPDATE", ver, updateCntr);
 
                 drReplicate(drType, val, ver, topVer);
 
@@ -7300,16 +7301,15 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
-     * Debug replication calls.
-     * @param methodCalled Method name.
+     * Trace replication calls.
      */
-    private void debugReplicate(String methodCalled, GridCacheVersion ver, long updateCntr) {
+    private void traceReplicate(GridCacheVersion ver, String keyValue) {
         // log version here
 
-        if (log.isDebugEnabled()) {
-            log.debug("Invoking replication from " + methodCalled + ", key=" + keyValue(false) +
+        if (log.isTraceEnabled()) {
+            log.trace("Invoking replication, key=" + keyValue +
                     ", near=" + cctx.isNear() + ", detached=" + detached()
-                    + ", ver=" + ver + ", updateCounter=" + updateCntr);
+                    + ", ver=" + ver + ", updateCounter=" + ver.updateCounter());
         }
     }
 
