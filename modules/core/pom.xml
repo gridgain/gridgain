@@ -83,7 +83,7 @@
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-tools</artifactId>
             <version>${project.version}</version>
-            <scope>test</scope>
+            <scope>compile</scope>
         </dependency>
 
         <dependency>

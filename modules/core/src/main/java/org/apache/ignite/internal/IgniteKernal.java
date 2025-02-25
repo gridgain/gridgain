@@ -218,6 +218,7 @@ import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lifecycle.LifecycleAware;
 import org.apache.ignite.lifecycle.LifecycleBean;
 import org.apache.ignite.lifecycle.LifecycleEventType;
+import org.apache.ignite.marshaller.IgniteMarshallerClassFilter;
 import org.apache.ignite.marshaller.MarshallerExclusions;
 import org.apache.ignite.marshaller.MarshallerUtils;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
@@ -977,6 +978,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         validateCommon(cfg);
 
         igniteInstanceName = cfg.getIgniteInstanceName();
+
+        IgniteMarshallerClassFilter clsFilter = MarshallerUtils.classNameFilter(getClass().getClassLoader());
+
+        MarshallerUtils.autoconfigureObjectInputFilter(clsFilter);
 
         this.cfg = cfg;
 
