@@ -36,19 +36,9 @@ public interface UpdateLog {
     void put(UpdateLogRow row) throws IgniteCheckedException;
 
     /**
-     * Put a row to the log.
-     */
-    void put(UpdateLogRow row, IgniteLogger log, CacheObjectContext cctx) throws IgniteCheckedException;
-
-    /**
      * Removes a row from the log.
      */
     void remove(UpdateLogRow row) throws IgniteCheckedException;
-
-    /**
-     * Removes a row from the log.
-     */
-    void remove(UpdateLogRow row, IgniteLogger log, CacheObjectContext cctx) throws IgniteCheckedException;
 
     /**
      * Destroys the log.
