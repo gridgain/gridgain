@@ -1673,8 +1673,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 assert dhtVer != null;
 
                 // It is possible that 'get' could load more recent value.
-                if (!((GridNearCacheEntry)this).recordDhtVersion(dhtVer))
+                if (!((GridNearCacheEntry)this).recordDhtVersion(dhtVer)) {
+                    logOnMoreRecent();
+
                     return new GridCacheUpdateTxResult(false, logPtr);
+                }
             }
 
             assert tx == null || (!tx.local() && tx.onePhaseCommit()) || tx.ownsLock(this) :
@@ -2597,8 +2600,35 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     private void drReplicate(GridDrType drType, @Nullable CacheObject val, GridCacheVersion ver, AffinityTopologyVersion topVer)
         throws IgniteCheckedException {
-        if (cctx.isDrEnabled() && drType != DR_NONE && !isInternal())
+        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
+
+        String keyValue = "nil";
+
+        if (log.isTraceEnabled()) {
+            if (sensitiveDataLogging == PLAIN) {
+                keyValue = keyValue(false).toString();
+            } else if (sensitiveDataLogging == HASH) {
+                keyValue = String.valueOf(IgniteUtils.hash(keyValue(false)));
+            }
+
+            if (!((GridNearCacheEntry) this).recordDhtVersion(ver)) {
+                logOnMoreRecent();
+            }
+        }
+
+        traceReplicate(ver, keyValue);
+
+        if (cctx.isDrEnabled() && drType != DR_NONE && !isInternal()) {
+            if (log.isTraceEnabled())
+                log.trace("Key replication, key=" + keyValue + ", dr=" + cctx.isDrEnabled()
+                        + ", drType=" + drType);
+
             cctx.dr().replicate(key, val, rawTtl(), rawExpireTime(), ver.conflictVersion(), drType, topVer);
+        } else {
+            if (log.isTraceEnabled())
+                log.trace("Skipping key replication, key=" + keyValue + ", dr=" + cctx.isDrEnabled()
+                        + ", drType=" + drType);
+        }
     }
 
     /**
@@ -7268,5 +7298,24 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         GridCacheAdapter cache = cctx.cache();
 
         return cache != null && cache.cacheCfg.getPlatformCacheConfiguration() != null;
+    }
+
+    /**
+     * Trace replication calls.
+     */
+    private void traceReplicate(GridCacheVersion ver, String keyValue) {
+        // log version here
+
+        if (log.isTraceEnabled()) {
+            log.trace("Invoking replication, key=" + keyValue +
+                    ", near=" + cctx.isNear() + ", detached=" + detached()
+                    + ", ver=" + ver + ", updateCounter=" + ver.updateCounter());
+        }
+    }
+
+    /** */
+    private void logOnMoreRecent(){
+        if (log.isDebugEnabled())
+            log.debug("recordDhtVersion is more recent, skipping cache op for key=" + keyValue(false));
     }
 }
