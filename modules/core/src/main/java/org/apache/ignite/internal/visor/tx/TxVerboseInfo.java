@@ -276,4 +276,8 @@ public class TxVerboseInfo extends IgniteDataTransferObject {
     @Override public String toString() {
         return S.toString(TxVerboseInfo.class, this);
     }
+
+    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        super.readExternal(in);
+    }
 }

@@ -32,4 +32,6 @@
               files="modules[\/\\]indexing[\/\\].*[\/\\]hll[\/\\].*\.java"/>
 
     <suppress checks="NoWhitespaceBefore" files="ConcurrentLinkedHashMap\.java"/>
+
+    <suppress checks="LineLength" files="classnames\.properties"/>
 </suppressions>

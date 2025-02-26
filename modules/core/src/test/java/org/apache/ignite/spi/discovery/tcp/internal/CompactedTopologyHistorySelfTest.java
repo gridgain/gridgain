@@ -150,8 +150,10 @@ public class CompactedTopologyHistorySelfTest {
 
         CompactedTopologyHistory compacted = new CompactedTopologyHistory(history);
 
-        byte[] bytes = JdkMarshaller.DEFAULT.marshal(compacted);
-        compacted = JdkMarshaller.DEFAULT.unmarshal(bytes, Thread.currentThread().getContextClassLoader());
+        JdkMarshaller marshaller = new JdkMarshaller();
+
+        byte[] bytes = marshaller.marshal(compacted);
+        compacted = marshaller.unmarshal(bytes, Thread.currentThread().getContextClassLoader());
 
         assertTopologyHistoryEquals(history, compacted.asMap());
     }
@@ -231,8 +233,10 @@ public class CompactedTopologyHistorySelfTest {
 
         CompactedTopologyHistory compacted = new CompactedTopologyHistory(history);
 
-        byte[] bytes = JdkMarshaller.DEFAULT.marshal(compacted);
-        compacted = JdkMarshaller.DEFAULT.unmarshal(bytes, Thread.currentThread().getContextClassLoader());
+        JdkMarshaller marshaller = new JdkMarshaller();
+
+        byte[] bytes = marshaller.marshal(compacted);
+        compacted = marshaller.unmarshal(bytes, Thread.currentThread().getContextClassLoader());
 
         assertTopologyHistoryEquals(history, compacted.asMap());
     }

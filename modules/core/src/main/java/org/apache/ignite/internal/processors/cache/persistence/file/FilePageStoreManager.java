@@ -90,7 +90,6 @@ import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.maintenance.MaintenanceTask;
 import org.apache.ignite.marshaller.Marshaller;
-import org.apache.ignite.marshaller.MarshallerUtils;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -222,7 +221,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
         pageStoreV1FileIoFactory = pageStoreFileIoFactory = dsCfg.getFileIOFactory();
 
-        marshaller = MarshallerUtils.jdkMarshaller(ctx.igniteInstanceName());
+        marshaller = ctx.marshallerContext().jdkMarshaller();
 
         pmPageMgr = new PageReadWriteManagerImpl(ctx, this, FilePageStoreManager.class.getSimpleName());
     }
