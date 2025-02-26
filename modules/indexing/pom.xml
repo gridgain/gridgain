@@ -46,7 +46,7 @@
         </dependency>
 
         <dependency>
-            <groupId>org.gridgain</groupId>
+        <groupId>org.gridgain</groupId>
             <artifactId>ignite-h2</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -130,6 +130,20 @@
 
     <profiles>
         <profile>
+            <id>java-8</id>
+            <activation>
+                <jdk>1.8</jdk>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>org.gridgain</groupId>
+                    <artifactId>ignite-lucene-8</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <profile>
             <id>java-11+</id>
             <activation>
                 <jdk>[11,)</jdk>
@@ -138,7 +152,7 @@
             <dependencies>
                 <dependency>
                     <groupId>org.gridgain</groupId>
-                    <artifactId>ignite-lucene</artifactId>
+                    <artifactId>gridgain-lucene-9</artifactId>
                     <version>${project.version}</version>
                 </dependency>
             </dependencies>

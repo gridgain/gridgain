@@ -148,11 +148,7 @@ import org.apache.ignite.internal.processors.query.h2.dml.UpdateMode;
 import org.apache.ignite.internal.processors.query.h2.dml.UpdatePlan;
 import org.apache.ignite.internal.processors.query.h2.extension.SqlPluginExtension;
 import org.apache.ignite.internal.processors.query.h2.maintenance.RebuildIndexWorkflowCallback;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
-import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
-import org.apache.ignite.internal.processors.query.h2.opt.QueryContextRegistry;
+import org.apache.ignite.internal.processors.query.h2.opt.*;
 import org.apache.ignite.internal.processors.query.h2.sql.GridFirstValueFunction;
 import org.apache.ignite.internal.processors.query.h2.sql.GridLastValueFunction;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlStatement;
@@ -227,7 +223,6 @@ import static java.util.Collections.singletonList;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MVCC_TX_SIZE_CACHING_THRESHOLD;
-import static org.apache.ignite.internal.IgniteComponentType.LUCENE;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.TX_SIZE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.checkActive;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccEnabled;
@@ -253,8 +248,6 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_DML_QRY
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_ITER_OPEN;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXECUTE;
-import static org.apache.ignite.internal.util.IgniteUtils.jdkVersion;
-import static org.apache.ignite.internal.util.IgniteUtils.majorJavaVersion;
 
 /**
  * Indexing implementation based on H2 database engine. In this implementation main query language is SQL,
@@ -547,17 +540,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     LuceneIndex createLuceneIndex(String cacheName, GridQueryTypeDescriptor type) {
         try {
             if (luceneIdxFactory == null) {
-                int javaVer = majorJavaVersion(jdkVersion());
-
-                if (javaVer < 11)
-                    throw new IgniteException("Failed to load Lucene module to create index. Use Java 11 or higher.");
-
-                if (!LUCENE.inClassPath()) {
-                    throw new IgniteException("Failed to create index because Lucene module is disabled (consider" +
-                        " adding module ignite-lucene to classpath or moving it from 'optional' to 'libs' folder).");
-                }
-
-                luceneIdxFactory = LUCENE.create(ctx, false);
+                luceneIdxFactory = new GridLuceneIndexFactory(ctx);
             }
 
             return luceneIdxFactory.createIndex(cacheName, type);

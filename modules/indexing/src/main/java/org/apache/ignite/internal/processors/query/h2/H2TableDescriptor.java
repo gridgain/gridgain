@@ -244,10 +244,10 @@ public class H2TableDescriptor {
         if (type().valueClass() == String.class
             && !idx.distributedConfiguration().isDisableCreateLuceneIndexForStringValueType()) {
             luceneIdx = idx.createLuceneIndex(tbl.cacheName(), type);
+        } else if (type.textIndex() != null || type.vectorIndex() != null) {
+            luceneIdx = idx.createLuceneIndex(tbl.cacheName(), type);
         }
 
-        if (type.textIndex() != null || type.vectorIndex() != null)
-            this.luceneIdx = idx.createLuceneIndex(tbl.cacheName(), type);
 
         // Locate index where affinity column is first (if any).
         if (affCol != null) {
