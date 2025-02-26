@@ -71,8 +71,7 @@ public class GridLuceneIndexFactory implements LuceneIndexFactory {
     /**
      * {@inheritDoc}
      */
-    @Override
-    public LuceneIndex createIndex(
+    @Override public LuceneIndex createIndex(
             @Nullable String cacheName,
             GridQueryTypeDescriptor type
     ) throws IgniteException {
