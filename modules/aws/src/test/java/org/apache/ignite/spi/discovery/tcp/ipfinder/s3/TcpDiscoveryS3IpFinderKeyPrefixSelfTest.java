@@ -60,7 +60,7 @@ public class TcpDiscoveryS3IpFinderKeyPrefixSelfTest extends TcpDiscoveryS3IpFin
     /** {@inheritDoc} */
     @Test
     @Override public void testIpFinder() throws Exception {
-        injectLogger(finder);
+        resources.inject(finder);
 
         assert finder.isShared() : "Ip finder should be shared by default.";
 

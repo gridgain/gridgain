@@ -90,7 +90,7 @@ public class TcpDiscoveryCloudIpFinderSelfTest extends
 
         TcpDiscoveryCloudIpFinder ipFinder = new TcpDiscoveryCloudIpFinder();
 
-        injectLogger(ipFinder);
+        resources.inject(ipFinder);
 
         ipFinder.setProvider(provider);
         ipFinder.setIdentity(IgniteCloudTestSuite.getAccessKey(provider));

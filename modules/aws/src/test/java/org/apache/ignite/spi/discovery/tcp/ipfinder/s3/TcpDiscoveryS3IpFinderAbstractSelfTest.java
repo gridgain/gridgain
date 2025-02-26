@@ -58,7 +58,7 @@ public abstract class TcpDiscoveryS3IpFinderAbstractSelfTest
     @Override protected TcpDiscoveryS3IpFinder ipFinder() throws Exception {
         TcpDiscoveryS3IpFinder finder = new TcpDiscoveryS3IpFinder();
 
-        injectLogger(finder);
+        resources.inject(finder);
 
         assert finder.isShared() : "Ip finder should be shared by default.";
 
