@@ -24,7 +24,7 @@ interested in):
         ...
         <dependency>
             <groupId>org.gridgain</groupId>
-            <artifactId>ignite-lucene</artifactId>
+            <artifactId>ignite-lucene-8</artifactId>
             <version>${ignite.version}</version>
         </dependency>
         ...

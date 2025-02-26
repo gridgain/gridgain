@@ -29,7 +29,7 @@
         <relativePath>../../parent-internal/pom.xml</relativePath>
     </parent>
 
-    <artifactId>gridgain-lucene-9</artifactId>
+    <artifactId>ignite-lucene-9</artifactId>
     <version>8.9.127-SNAPSHOT</version>
 
     <properties>
