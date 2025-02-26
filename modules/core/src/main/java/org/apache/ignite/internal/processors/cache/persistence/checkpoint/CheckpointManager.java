@@ -47,6 +47,7 @@ import org.apache.ignite.internal.util.lang.IgniteThrowableBiPredicate;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
 import org.apache.ignite.internal.worker.WorkersRegistry;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_READ_LOCK_TIMEOUT;
@@ -108,6 +109,7 @@ public class CheckpointManager {
      * @param cpFreqOverride Override of checkpoint frequency (ms) via a distributed property.
      * @param cpFreqDeviation Distributed checkpoint frequency deviation.
      * @throws IgniteCheckedException if fail.
+     * @param marsh JDK marshaller.
      */
     public CheckpointManager(
         Function<Class<?>, IgniteLogger> logger,
@@ -128,7 +130,8 @@ public class CheckpointManager {
         FailureProcessor failureProcessor,
         GridCacheProcessor cacheProcessor,
         Supplier<Long> cpFreqOverride,
-        Supplier<Integer> cpFreqDeviation
+        Supplier<Integer> cpFreqDeviation,
+        JdkMarshaller marsh
     ) throws IgniteCheckedException {
         CheckpointHistory cpHistory = new CheckpointHistory(
             persistenceCfg,
@@ -148,7 +151,8 @@ public class CheckpointManager {
             cpHistory,
             ioFactory,
             pageStoreManager.workDir().getAbsolutePath(),
-            lock
+            lock,
+            marsh
         );
 
         checkpointWorkflow = new CheckpointWorkflow(

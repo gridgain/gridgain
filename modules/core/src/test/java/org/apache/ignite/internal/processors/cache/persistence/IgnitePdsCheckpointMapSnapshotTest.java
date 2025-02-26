@@ -42,7 +42,6 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Earlie
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.lang.IgniteBiPredicate;
-import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.plugin.AbstractTestPluginProvider;
 import org.apache.ignite.plugin.PluginContext;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -204,7 +203,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
                 try {
                     byte[] bytes = Files.readAllBytes(cpSnapshotMap.toPath());
 
-                    EarliestCheckpointMapSnapshot snap = JdkMarshaller.DEFAULT.unmarshal(bytes, null);
+                    EarliestCheckpointMapSnapshot snap = TEST_JDK_MARSHALLER.unmarshal(bytes, null);
 
                     // Manual checkpoint count + one checkpoint on node start.
                     return snap.checkpointIds().size() >= (cnt + 1);

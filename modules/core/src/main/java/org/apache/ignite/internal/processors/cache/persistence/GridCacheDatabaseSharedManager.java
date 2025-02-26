@@ -604,7 +604,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 kernalCtx.failure(),
                 kernalCtx.cache(),
                 cpFreq::get,
-                cpFreqDeviation::get
+                cpFreqDeviation::get,
+                kernalCtx.marshallerContext().jdkMarshaller()
             );
 
             final NodeFileLockHolder preLocked = kernalCtx.pdsFolderResolver()

@@ -62,7 +62,7 @@ public class TcpDiscoveryS3IpFinderClientSideEncryptionSelfTest extends TcpDisco
 
     /** {@inheritDoc} */
     @Override public void testIpFinder() throws Exception {
-        injectLogger(finder);
+        resources.inject(finder);
 
         assert finder.isShared() : "Ip finder should be shared by default.";
 

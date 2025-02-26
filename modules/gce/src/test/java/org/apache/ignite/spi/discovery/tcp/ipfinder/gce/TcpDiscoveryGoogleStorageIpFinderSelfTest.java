@@ -66,7 +66,7 @@ public class TcpDiscoveryGoogleStorageIpFinderSelfTest
     @Override protected TcpDiscoveryGoogleStorageIpFinder ipFinder() throws Exception {
         TcpDiscoveryGoogleStorageIpFinder finder = new TcpDiscoveryGoogleStorageIpFinder();
 
-        injectLogger(finder);
+        resources.inject(finder);
 
         assert finder.isShared() : "Ip finder must be shared by default.";
 

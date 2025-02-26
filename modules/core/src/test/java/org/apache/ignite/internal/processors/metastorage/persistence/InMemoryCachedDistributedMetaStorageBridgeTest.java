@@ -31,6 +31,7 @@ import static org.apache.ignite.internal.processors.metastorage.persistence.Dist
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.versionKey;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageVersion.INITIAL_VERSION;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DmsDataWriterWorker.DUMMY_VALUE;
+import static org.apache.ignite.testframework.junits.common.GridCommonAbstractTest.TEST_JDK_MARSHALLER;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertArrayEquals;
@@ -49,7 +50,7 @@ public class InMemoryCachedDistributedMetaStorageBridgeTest {
     /** */
     @Before
     public void before() {
-        marshaller = JdkMarshaller.DEFAULT;
+        marshaller = TEST_JDK_MARSHALLER;
 
         bridge = new InMemoryCachedDistributedMetaStorageBridge(marshaller);
     }

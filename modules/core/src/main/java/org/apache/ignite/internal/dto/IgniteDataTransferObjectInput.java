@@ -21,6 +21,9 @@ import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import org.apache.ignite.internal.util.io.GridByteArrayInputStream;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.marshaller.MarshallerContext;
+import org.apache.ignite.marshaller.ObjectInputStreamWrapper;
+import org.apache.ignite.marshaller.jdk.JdkMarshallerObjectInputStream;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -32,14 +35,30 @@ public class IgniteDataTransferObjectInput implements ObjectInput {
 
     /**
      * @param in Target input.
+     * @param ctx Marshaller context.
+     * @throws IOException If an I/O error occurs.
+     */
+    public IgniteDataTransferObjectInput(ObjectInput in, MarshallerContext ctx) throws IOException {
+        byte[] buf = U.readByteArray(in);
+
+        /* */
+        GridByteArrayInputStream bis = new GridByteArrayInputStream(buf);
+        ois = new JdkMarshallerObjectInputStream(bis, getClass().getClassLoader(), ctx.classNameFilter());
+    }
+
+    /**
+     * @param in Target input.
      * @throws IOException If an I/O error occurs.
      */
     public IgniteDataTransferObjectInput(ObjectInput in) throws IOException {
         byte[] buf = U.readByteArray(in);
 
-        /* */
         GridByteArrayInputStream bis = new GridByteArrayInputStream(buf);
-        ois = new ObjectInputStream(bis);
+
+        if (in instanceof ObjectInputStreamWrapper)
+            ois = ((ObjectInputStreamWrapper)in).wrap(bis);
+        else
+            ois = new ObjectInputStream(bis);
     }
 
 

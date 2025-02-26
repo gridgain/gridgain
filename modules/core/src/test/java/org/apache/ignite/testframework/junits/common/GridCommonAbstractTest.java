@@ -145,6 +145,7 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
+import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.mxbean.MXBeanDescription;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
@@ -185,6 +186,9 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
     /** Service deployment wait timeout. */
     protected static final int SERVICE_DEPLOYMENT_WAIT_TIMEOUT = 10_000;
+
+    /** */
+    public static final JdkMarshaller TEST_JDK_MARSHALLER = new JdkMarshaller();
 
     /**
      * @param startGrid If {@code true}, then grid node will be auto-started.

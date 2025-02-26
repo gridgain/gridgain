@@ -67,9 +67,9 @@ import org.apache.ignite.internal.processors.datastreamer.DataStreamProcessor;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
-import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
+import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -82,6 +82,8 @@ import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.rest.GridRestProcessor;
 import org.apache.ignite.internal.processors.ru.RollingUpgrade;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteScheduleProcessorAdapter;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.segmentation.GridSegmentationProcessor;
@@ -98,8 +100,10 @@ import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.worker.WorkersRegistry;
+import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.marshaller.Marshaller;
+import org.apache.ignite.marshaller.MarshallerUtils;
 import org.apache.ignite.plugin.PluginNotFoundException;
 import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
@@ -135,18 +139,38 @@ public class StandaloneGridKernalContext implements GridKernalContext {
     private MarshallerContextImpl marshallerCtx;
 
     /**
+     * The constructor is based on the full one, but all components are started immediately.
+     *
      * @param log Logger.
      * @param binaryMetadataFileStoreDir folder specifying location of metadata File Store.
-     * {@code null} means no specific folder is configured. <br>
-     *
+     * {@code null} means no specific folder is configured.
      * @param marshallerMappingFileStoreDir folder specifying location of marshaller mapping file store.
      * {@code null} means no specific folder is configured.
-     * Providing {@code null} will disable unmarshall for non primitive objects, BinaryObjects will be provided <br>
+     * Providing {@code null} will disable unmarshall for non primitive objects, BinaryObjects will be provided.
      */
     public StandaloneGridKernalContext(
         IgniteLogger log,
         @Nullable File binaryMetadataFileStoreDir,
         @Nullable File marshallerMappingFileStoreDir
+    ) throws IgniteCheckedException {
+        this(log, binaryMetadataFileStoreDir, marshallerMappingFileStoreDir, true);
+    }
+
+    /**
+     * @param log Logger.
+     * @param binaryMetadataFileStoreDir folder specifying location of metadata File Store.
+     * {@code null} means no specific folder is configured.
+     * @param marshallerMappingFileStoreDir folder specifying location of marshaller mapping file store.
+     * {@code null} means no specific folder is configured.
+     * Providing {@code null} will disable unmarshall for non primitive objects, BinaryObjects will be provided.
+     * @param startComponents If the value is true, components start in the constructor.
+     * Otherwise, the components will be able to be started manually after.
+     */
+    public StandaloneGridKernalContext(
+        IgniteLogger log,
+        @Nullable File binaryMetadataFileStoreDir,
+        @Nullable File marshallerMappingFileStoreDir,
+        boolean startComponents
     ) throws IgniteCheckedException {
         this.log = log;
 
@@ -157,7 +181,7 @@ public class StandaloneGridKernalContext implements GridKernalContext {
             throw new IllegalStateException("Must not fail on empty providers list.", e);
         }
 
-        this.marshallerCtx = new MarshallerContextImpl(null, null);
+        this.marshallerCtx = new MarshallerContextImpl(null, MarshallerUtils.classNameFilter(getClass().getClassLoader()));
         this.cfg = prepareIgniteConfiguration();
         this.metricMgr = new GridMetricManager(this);
         this.sysViewMgr = new GridSystemViewManager(this);
@@ -167,6 +191,10 @@ public class StandaloneGridKernalContext implements GridKernalContext {
             binaryMetadataFileStoreDir = new File(DataStorageConfiguration.DFLT_BINARY_METADATA_PATH).getAbsoluteFile();
 
         this.cacheObjProcessor = binaryProcessor(this, binaryMetadataFileStoreDir);
+
+        if (startComponents) {
+            cacheObjProcessor.start();
+        }
 
         if (marshallerMappingFileStoreDir != null) {
             marshallerCtx.setMarshallerMappingFileStoreDir(marshallerMappingFileStoreDir);
@@ -191,7 +219,6 @@ public class StandaloneGridKernalContext implements GridKernalContext {
 
         final CacheObjectBinaryProcessorImpl processor = new CacheObjectBinaryProcessorImpl(ctx);
         processor.setBinaryMetadataFileStoreDir(binaryMetadataFileStoreDir);
-        processor.start();
         return processor;
     }
 
@@ -647,7 +674,35 @@ public class StandaloneGridKernalContext implements GridKernalContext {
 
     /** {@inheritDoc} */
     @Override public RollingUpgrade rollingUpgrade() {
-        return null;
+        return new RollingUpgrade() {
+            @Override public RollingUpgradeModeChangeResult setMode(boolean enable) {
+                return RollingUpgrade.super.setMode(enable);
+            }
+
+            @Override public RollingUpgradeStatus getStatus() {
+                return new RollingUpgradeStatus() {
+                    @Override public boolean enabled() {
+                        return false;
+                    }
+
+                    @Override public boolean forcedModeEnabled() {
+                        return false;
+                    }
+
+                    @Override public IgniteProductVersion initialVersion() {
+                        return null;
+                    }
+
+                    @Override public IgniteProductVersion targetVersion() {
+                        return null;
+                    }
+                };
+            }
+
+            @Override public RollingUpgradeModeChangeResult enableForcedMode() {
+                return RollingUpgrade.super.enableForcedMode();
+            }
+        };
     }
 
     /** {@inheritDoc} */

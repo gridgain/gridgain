@@ -18,6 +18,7 @@ package org.apache.ignite.internal.marshaller.optimized;
 
 import java.io.Externalizable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.NotActiveException;
 import java.io.ObjectInputStream;
 import java.io.ObjectInputValidation;
@@ -48,6 +49,8 @@ import org.apache.ignite.internal.util.io.GridDataInput;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.MarshallerContext;
+import org.apache.ignite.marshaller.ObjectInputStreamWrapper;
+import org.apache.ignite.marshaller.jdk.JdkMarshallerObjectInputStream;
 
 import static org.apache.ignite.internal.marshaller.optimized.OptimizedMarshallerUtils.ARRAY_LIST;
 import static org.apache.ignite.internal.marshaller.optimized.OptimizedMarshallerUtils.BOOLEAN;
@@ -99,7 +102,7 @@ import static org.apache.ignite.internal.marshaller.optimized.OptimizedMarshalle
 /**
  * Optimized object input stream.
  */
-class OptimizedObjectInputStream extends ObjectInputStream {
+class OptimizedObjectInputStream extends ObjectInputStream implements ObjectInputStreamWrapper {
     /** Dummy object for HashSet. */
     private static final Object DUMMY = new Object();
 
@@ -540,6 +543,20 @@ class OptimizedObjectInputStream extends ObjectInputStream {
                 throw new IOException("Failed to deserialize field [name=" + t.name() + ']', e);
             }
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override protected Class<?> resolveClass(ObjectStreamClass desc) throws ClassNotFoundException {
+        // NOTE: DO NOT CHANGE TO 'clsLoader.loadClass()'
+        // Must have 'Class.forName()' instead of clsLoader.loadClass()
+        // due to weird ClassNotFoundExceptions for arrays of classes
+        // in certain cases.
+        return U.forName(desc.getName(), clsLdr, ctx.classNameFilter());
+    }
+
+    /** {@inheritDoc} */
+    @Override public ObjectInputStream wrap(InputStream inputStream) throws IOException {
+        return new JdkMarshallerObjectInputStream(inputStream, clsLdr, ctx.classNameFilter());
     }
 
     /**
