@@ -32,6 +32,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.ClassSet;
 import org.apache.ignite.lang.IgniteProductVersion;
+import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.plugin.PluginProvider;
 import org.jetbrains.annotations.Nullable;
 
@@ -123,6 +124,22 @@ public class MarshallerUtils {
      */
     public static IgniteMarshallerClassFilter classNameFilter(ClassLoader clsLdr) throws IgniteCheckedException {
         return new IgniteMarshallerClassFilter(classWhiteList(clsLdr), classBlackList(clsLdr));
+    }
+
+    /**
+     * Create JDK marshaller with provided node name.
+     * Use a marshaller from the node context or create a new one.
+     *
+     * @param nodeName Node name.
+     * @return JDK marshaller.
+     */
+    @Deprecated
+    public static JdkMarshaller jdkMarshaller(@Nullable String nodeName) {
+        JdkMarshaller marsh = new JdkMarshaller();
+
+        setNodeName(marsh, nodeName);
+
+        return marsh;
     }
 
     /**
