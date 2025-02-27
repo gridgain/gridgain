@@ -20,7 +20,9 @@ import java.util.UUID;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.MarshallerContextImpl;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
+import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -45,6 +47,11 @@ public class IgniteSecurityProcessorTest {
         when(ctx.config()).thenReturn(new IgniteConfiguration());
         when(ctx.discovery()).thenReturn(mock(GridDiscoveryManager.class));
         when(ctx.log(any(Class.class))).thenReturn(mock(IgniteLogger.class));
+
+        MarshallerContextImpl mockMarshallerContext = mock(MarshallerContextImpl.class);
+        when(mockMarshallerContext.jdkMarshaller()).thenReturn(new JdkMarshaller());
+
+        when(ctx.marshallerContext()).thenReturn(mockMarshallerContext);
 
         GridSecurityProcessor secPrc = mock(GridSecurityProcessor.class);
 
