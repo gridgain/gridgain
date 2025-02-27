@@ -17,7 +17,6 @@
 package org.apache.ignite.marshaller;
 
 import java.util.Objects;
-import org.apache.ignite.Ignition;
 import org.apache.ignite.internal.ClassSet;
 import org.apache.ignite.lang.IgnitePredicate;
 
