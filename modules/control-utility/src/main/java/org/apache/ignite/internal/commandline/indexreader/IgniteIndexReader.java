@@ -611,8 +611,6 @@ public class IgniteIndexReader implements AutoCloseable {
                     TreeTraversalInfo cacheDataTreeInfo =
                         horizontalTreeScan(partStore, cacheDataTreeRoot, "dataTree-" + partId, new ItemsListStorage());
 
-                    //print("Cache items number: " + cacheDataTreeInfo.itemStorage.size());
-
                     itemsCntMap.put(partId, cacheDataTreeInfo.itemStorage.size());
 
                     for (Object dataTreeItem : cacheDataTreeInfo.itemStorage) {
@@ -914,7 +912,7 @@ public class IgniteIndexReader implements AutoCloseable {
         ProgressPrinter progressPrinter =
             new ProgressPrinter(System.out, traverseProcCaption, metaTreeTraversalInfo.itemStorage.size());
 
-        metaTreeTraversalInfo.itemStorage.forEach(item -> { //here we traverse through indexes
+        metaTreeTraversalInfo.itemStorage.forEach(item -> {
             progressPrinter.printProgress();
 
             IndexStorageImpl.IndexItem idxItem = (IndexStorageImpl.IndexItem)item;
@@ -922,7 +920,7 @@ public class IgniteIndexReader implements AutoCloseable {
             if (nonNull(idxFilter) && !idxFilter.test(idxItem.nameString()))
                 return;
 
-            TreeTraversalInfo treeTraversalInfo = //here we traverse through one index
+            TreeTraversalInfo treeTraversalInfo =
                 traverseProc.traverse(idxStore, normalizePageId(idxItem.pageId()), idxItem.nameString(), itemStorageFactory.get());
 
             treeInfos.put(idxItem.toString(), treeTraversalInfo);
@@ -1176,11 +1174,7 @@ public class IgniteIndexReader implements AutoCloseable {
                             pageContent.items.forEach(itemStorage::add);
                         }
 
-                        pageId = ((BPlusIO)pageIO).getForward(addr); //check compareTo here???
-                        if (pageIO instanceof BPlusInnerIO) {
-                            //TODO: implement
-                            //((BPlusInnerIO)pageIO).getLeft(addr, )
-                        }
+                        pageId = ((BPlusIO)pageIO).getForward(addr);
                     }
                     catch (Throwable e) {
                         errors.computeIfAbsent(pageId, k -> new LinkedList<>()).add(e);
@@ -1228,42 +1222,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                 pageContent = ioProcessor.getContent(io, addr, pageId, nodeCtx);
 
-                if (io instanceof BPlusInnerIO && pageContent.linkedPageIds != null) {
-                    long rightChildPageId = -11;
-                    // linkedPageIds are populated in InnerPageIOProcessor.getContent
-                    for (Long linkedPageId: pageContent.linkedPageIds) {
-                        triangleChecksNum++;
-
-                        if(rightChildPageId == -11 || linkedPageId == rightChildPageId) {
-                            //print("debug: we're ok");
-                        } else {
-                            //print("index is broken");
-                            triangleErrorsCounter++;
-                        }
-
-                        final ByteBuffer innerBuf = allocateBuffer(pageSize);
-
-                        try {
-                            readPage(nodeCtx.store, linkedPageId, innerBuf);
-
-                            final long childAddr = bufferAddress(innerBuf);
-
-                            final PageIO childIO = PageIO.getPageIO(childAddr);
-
-                            rightChildPageId = ((BPlusIO)childIO).getForward(childAddr);
-
-                            if (rightChildPageId == 0)
-                                print("rightChildPageId is 0");
-
-                            if (rightChildPageId < 0)
-                                print("");
-                        }
-                        finally {
-                            freeBuffer(innerBuf);
-                        }
-
-                }
-                }
+                checkTriangleInvariant(nodeCtx, pageContent, io);
             }
             finally {
                 freeBuffer(buf);
@@ -1277,6 +1236,41 @@ public class IgniteIndexReader implements AutoCloseable {
             nodeCtx.errors.computeIfAbsent(pageId, k -> new LinkedList<>()).add(e);
 
             return new TreeNode(pageId, null, "exception: " + e.getMessage(), Collections.emptyList());
+        }
+    }
+
+    /**
+     * @param nodeCtx tree traverse context.
+     * @param pageContent inner page content.
+     * @param io inner page io.
+     * @throws IgniteCheckedException
+     */
+    private void checkTriangleInvariant(TreeTraverseContext nodeCtx, PageContent pageContent,
+        PageIO io) throws IgniteCheckedException {
+        if (io instanceof BPlusInnerIO && pageContent.linkedPageIds != null) {
+            long rightChildPageId = -1;
+            // linkedPageIds are populated in InnerPageIOProcessor.getContent
+            for (Long linkedPageId: pageContent.linkedPageIds) {
+                triangleChecksNum++;
+
+                if (rightChildPageId != -1 && linkedPageId != rightChildPageId)
+                    triangleErrorsCounter++;
+
+                final ByteBuffer innerBuf = allocateBuffer(pageSize);
+
+                try {
+                    readPage(nodeCtx.store, linkedPageId, innerBuf);
+
+                    final long childAddr = bufferAddress(innerBuf);
+
+                    final PageIO childIO = PageIO.getPageIO(childAddr);
+
+                    rightChildPageId = ((BPlusIO)childIO).getForward(childAddr);
+                }
+                finally {
+                    freeBuffer(innerBuf);
+                }
+            }
         }
     }
 
