@@ -196,6 +196,10 @@ public class IgniteIndexReader implements AutoCloseable {
     /** */
     private final PageIOProcessor metaPageIOProcessor = new MetaPageIOProcessor();
 
+    private static long triangleErrorsCounter;
+
+    private static long triangleChecksNum;
+
     /**
      * Constructor.
      *
@@ -446,6 +450,9 @@ public class IgniteIndexReader implements AutoCloseable {
         print("Total pages encountered during sequential scan: " + pageClasses.values().stream().mapToLong(a -> a).sum());
         print("Total errors occurred during sequential scan: " + errors.size());
 
+        print("Number of triangle invariant errors: " + triangleErrorsCounter);
+        print("Number of total triangle invariant checks: " + triangleChecksNum);
+
         if (idxFilter != null)
             print("Orphan pages were not reported due to --indexes filter.");
 
@@ -574,6 +581,9 @@ public class IgniteIndexReader implements AutoCloseable {
 
         ProgressPrinter progressPrinter = new ProgressPrinter(System.out, "Checking partitions", partCnt);
 
+        // Map<partNum, partItemsCnt>
+        Map<Integer, Long> itemsCntMap = new HashMap<>();
+
         for (int i = 0; i < partCnt; i++) {
             progressPrinter.printProgress();
 
@@ -600,6 +610,8 @@ public class IgniteIndexReader implements AutoCloseable {
 
                     TreeTraversalInfo cacheDataTreeInfo =
                         horizontalTreeScan(partStore, cacheDataTreeRoot, "dataTree-" + partId, new ItemsListStorage());
+
+                    itemsCntMap.put(partId, cacheDataTreeInfo.itemStorage.size());
 
                     for (Object dataTreeItem : cacheDataTreeInfo.itemStorage) {
                         CacheAwareLink cacheAwareLink = (CacheAwareLink)dataTreeItem;
@@ -637,6 +649,10 @@ public class IgniteIndexReader implements AutoCloseable {
             if (!errors.isEmpty())
                 res.put(partId, errors);
         }
+
+        long totalItemsCnt = itemsCntMap.values().stream().mapToLong(Long::longValue).sum();
+
+        print("Cache items number: " + totalItemsCnt);
 
         return res;
     }
@@ -1205,10 +1221,14 @@ public class IgniteIndexReader implements AutoCloseable {
                 ioProcessor = getIOProcessor(io);
 
                 pageContent = ioProcessor.getContent(io, addr, pageId, nodeCtx);
+
+                checkTriangleInvariant(nodeCtx, pageContent, io);
             }
             finally {
                 freeBuffer(buf);
             }
+
+
 
             return ioProcessor.getNode(pageContent, pageId, nodeCtx);
         }
@@ -1216,6 +1236,41 @@ public class IgniteIndexReader implements AutoCloseable {
             nodeCtx.errors.computeIfAbsent(pageId, k -> new LinkedList<>()).add(e);
 
             return new TreeNode(pageId, null, "exception: " + e.getMessage(), Collections.emptyList());
+        }
+    }
+
+    /**
+     * @param nodeCtx tree traverse context.
+     * @param pageContent inner page content.
+     * @param io inner page io.
+     * @throws IgniteCheckedException
+     */
+    private void checkTriangleInvariant(TreeTraverseContext nodeCtx, PageContent pageContent,
+        PageIO io) throws IgniteCheckedException {
+        if (io instanceof BPlusInnerIO && pageContent.linkedPageIds != null) {
+            long rightChildPageId = -1;
+            // linkedPageIds are populated in InnerPageIOProcessor.getContent
+            for (Long linkedPageId: pageContent.linkedPageIds) {
+                triangleChecksNum++;
+
+                if (rightChildPageId != -1 && linkedPageId != rightChildPageId)
+                    triangleErrorsCounter++;
+
+                final ByteBuffer innerBuf = allocateBuffer(pageSize);
+
+                try {
+                    readPage(nodeCtx.store, linkedPageId, innerBuf);
+
+                    final long childAddr = bufferAddress(innerBuf);
+
+                    final PageIO childIO = PageIO.getPageIO(childAddr);
+
+                    rightChildPageId = ((BPlusIO)childIO).getForward(childAddr);
+                }
+                finally {
+                    freeBuffer(innerBuf);
+                }
+            }
         }
     }
 
