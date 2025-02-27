@@ -160,8 +160,8 @@ $libsDir = "$PSScriptRoot\bin\libs"
 Make-Dir($libsDir)
 
 Get-ChildItem $jarDirs.Split(',') *.jar -recurse `
-   -include "ignite-core*","ignite-indexing*","ignite-lucene*","ignite-shmem*","ignite-spring*","lucene*","ignite-h2*","cache-api*","commons-*","spring*" `
-   -exclude "*-sources*","*-javadoc*","*-tests*","*optional*" `
+   -include "ignite-core*","ignite-indexing*","ignite-lucene-8*","ignite-shmem*","ignite-spring*","lucene*","ignite-h2*","cache-api*","commons-*","spring*" `
+   -exclude "*-sources*","*-javadoc*","*-tests*","*optional*" "ignite-lucene-9*"`
    | % { Copy-Item -Force $_ $libsDir }
 
 # Restore directory
