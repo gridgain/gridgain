@@ -248,7 +248,6 @@ public class H2TableDescriptor {
             luceneIdx = idx.createLuceneIndex(tbl.cacheName(), type);
         }
 
-
         // Locate index where affinity column is first (if any).
         if (affCol != null) {
             List<IndexColumn> unwrappedKeyCols = extractKeyColumns(tbl, keyCol, null);
