@@ -82,6 +82,8 @@ import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.rest.GridRestProcessor;
 import org.apache.ignite.internal.processors.ru.RollingUpgrade;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeModeChangeResult;
+import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteScheduleProcessorAdapter;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.segmentation.GridSegmentationProcessor;
@@ -98,6 +100,7 @@ import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.worker.WorkersRegistry;
+import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.MarshallerUtils;
@@ -648,7 +651,35 @@ public class StandaloneGridKernalContext implements GridKernalContext {
 
     /** {@inheritDoc} */
     @Override public RollingUpgrade rollingUpgrade() {
-        return null;
+        return new RollingUpgrade() {
+            @Override public RollingUpgradeModeChangeResult setMode(boolean enable) {
+                return RollingUpgrade.super.setMode(enable);
+            }
+
+            @Override public RollingUpgradeStatus getStatus() {
+                return new RollingUpgradeStatus() {
+                    @Override public boolean enabled() {
+                        return false;
+                    }
+
+                    @Override public boolean forcedModeEnabled() {
+                        return false;
+                    }
+
+                    @Override public IgniteProductVersion initialVersion() {
+                        return null;
+                    }
+
+                    @Override public IgniteProductVersion targetVersion() {
+                        return null;
+                    }
+                };
+            }
+
+            @Override public RollingUpgradeModeChangeResult enableForcedMode() {
+                return RollingUpgrade.super.enableForcedMode();
+            }
+        };
     }
 
     /** {@inheritDoc} */
