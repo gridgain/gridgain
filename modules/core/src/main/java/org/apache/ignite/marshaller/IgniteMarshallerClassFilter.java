@@ -17,10 +17,14 @@
 package org.apache.ignite.marshaller;
 
 import java.util.Objects;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.internal.ClassSet;
 import org.apache.ignite.lang.IgnitePredicate;
 
-/** */
+/**
+ * The Marshall class filter is used to avoid deserialization of some classes,
+ * which can contain code injection or are exposed to vulnerability.
+ */
 public class IgniteMarshallerClassFilter implements IgnitePredicate<String> {
     /** */
     private static final long serialVersionUID = 0L;
@@ -45,10 +49,6 @@ public class IgniteMarshallerClassFilter implements IgnitePredicate<String> {
         // Allows all arrays.
         if ((blackList != null || whiteList != null) && s.charAt(0) == '[')
             return true;
-
-        if (s.contains("TxVerboseInfo")) {
-            System.out.println(s);
-        }
 
         return (blackList == null || !blackList.contains(s)) && (whiteList == null || whiteList.contains(s));
     }
