@@ -114,7 +114,7 @@ public enum IgniteComponentType {
     LUCENE(
         null,
         "org.gridgain.internal.processors.query.h2.opt.GridLuceneIndexFactory",
-        "ignite-lucene"
+        "ignite-lucene-9"
     );
 
     /** No-op class name. */
