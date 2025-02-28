@@ -1228,8 +1228,6 @@ public class IgniteIndexReader implements AutoCloseable {
                 freeBuffer(buf);
             }
 
-
-
             return ioProcessor.getNode(pageContent, pageId, nodeCtx);
         }
         catch (Throwable e) {
@@ -1249,6 +1247,7 @@ public class IgniteIndexReader implements AutoCloseable {
         PageIO io) throws IgniteCheckedException {
         if (io instanceof BPlusInnerIO && pageContent.linkedPageIds != null) {
             long rightChildPageId = -1;
+
             // linkedPageIds are populated in InnerPageIOProcessor.getContent
             for (Long linkedPageId: pageContent.linkedPageIds) {
                 triangleChecksNum++;
