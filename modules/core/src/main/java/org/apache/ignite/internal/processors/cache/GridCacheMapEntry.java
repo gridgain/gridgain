@@ -2600,34 +2600,27 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     private void drReplicate(GridDrType drType, @Nullable CacheObject val, GridCacheVersion ver, AffinityTopologyVersion topVer)
         throws IgniteCheckedException {
-        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
-
-        String keyValue = "nil";
-
-        if (log.isTraceEnabled()) {
-            if (sensitiveDataLogging == PLAIN) {
-                keyValue = keyValue(false).toString();
-            } else if (sensitiveDataLogging == HASH) {
-                keyValue = String.valueOf(IgniteUtils.hash(keyValue(false)));
-            }
-
-            if (!((GridNearCacheEntry) this).recordDhtVersion(ver)) {
-                logOnMoreRecent();
-            }
-        }
-
-        traceReplicate(ver, keyValue);
-
         if (cctx.isDrEnabled() && drType != DR_NONE && !isInternal()) {
-            if (log.isTraceEnabled())
-                log.trace("Key replication, key=" + keyValue + ", dr=" + cctx.isDrEnabled()
-                        + ", drType=" + drType);
+            traceKeyReplication(ver);
 
             cctx.dr().replicate(key, val, rawTtl(), rawExpireTime(), ver.conflictVersion(), drType, topVer);
-        } else {
-            if (log.isTraceEnabled())
-                log.trace("Skipping key replication, key=" + keyValue + ", dr=" + cctx.isDrEnabled()
-                        + ", drType=" + drType);
+        }
+    }
+
+    private void traceKeyReplication(GridCacheVersion ver) {
+        if (log.isTraceEnabled()) {
+            GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
+            String keyValue = "nil";
+
+            if (sensitiveDataLogging == PLAIN)
+                keyValue = keyValue(false).toString();
+            else if (sensitiveDataLogging == HASH)
+                keyValue = String.valueOf(IgniteUtils.hash(keyValue(false)));
+
+            if (!((GridNearCacheEntry) this).recordDhtVersion(ver))
+                logOnMoreRecent();
+
+            traceReplicate(ver, keyValue);
         }
     }
 
@@ -7305,7 +7298,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     private void traceReplicate(GridCacheVersion ver, String keyValue) {
         // log version here
-
         if (log.isTraceEnabled()) {
             log.trace("Invoking replication, key=" + keyValue +
                     ", near=" + cctx.isNear() + ", detached=" + detached()
