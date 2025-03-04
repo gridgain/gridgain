@@ -227,6 +227,8 @@ namespace ignite
             {
                 const std::string& schema = connection.GetSchema();
 
+                LOG_MSG("Statement level timeout is set to " << timeout << " seconds");
+
                 QueryExecuteRequest req(schema, sql, params, timeout, connection.IsAutoCommit());
                 QueryExecuteResponse rsp;
 
