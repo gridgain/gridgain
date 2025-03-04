@@ -649,6 +649,49 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    public void testIndexMetadataSameNameIndexes() throws Exception {
+        try (Connection conn = DriverManager.getConnection(BASE_URL)) {
+            int cnt = 0;
+
+            conn.setSchema("PREDEFINED_SCHEMAS_1");
+
+            // Create database objects.
+            try (Statement stmt = conn.createStatement()) {
+                // Create reference City table based on REPLICATED template.
+                stmt.executeUpdate("CREATE TABLE City (id LONG PRIMARY KEY, name VARCHAR) " +
+                        "WITH \"template=replicated\"");
+
+                // Create an index.
+                stmt.executeUpdate("CREATE INDEX NON_UNIQUE_SETTLEMENT_IDX on City (id)");
+            }
+
+            conn.setSchema("PREDEFINED_SCHEMAS_2");
+
+            // Create database objects.
+            try (Statement stmt = conn.createStatement()) {
+                // Create reference City table based on REPLICATED template.
+                stmt.executeUpdate("CREATE TABLE Town (id LONG PRIMARY KEY, name VARCHAR) " +
+                        "WITH \"template=replicated\"");
+
+                // Create an index.
+                stmt.executeUpdate("CREATE INDEX NON_UNIQUE_SETTLEMENT_IDX on Town (id)");
+            }
+
+            ResultSet rs = conn.getMetaData().getIndexInfo(null, null, null, true, false);
+
+            while (rs.next()) {
+                assertEquals(DatabaseMetaData.tableIndexOther, rs.getInt("TYPE"));
+                cnt++;
+            }
+
+            assertEquals(2, cnt);
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     public void testPrimaryKeyMetadata() throws Exception {
         try (Connection conn = DriverManager.getConnection(BASE_URL)) {
             ResultSet rs = conn.getMetaData().getPrimaryKeys(null, null, null);
