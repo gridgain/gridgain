@@ -57,6 +57,7 @@ import static java.sql.Types.DECIMAL;
 import static java.sql.Types.INTEGER;
 import static java.sql.Types.VARCHAR;
 import static org.apache.ignite.IgniteJdbcDriver.CFG_URL_PREFIX;
+import static org.apache.ignite.IgniteJdbcDriver.URL_PREFIX;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -642,49 +643,6 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             }
 
             assertEquals(3, cnt);
-        }
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testIndexMetadataSameNameIndexes() throws Exception {
-        try (Connection conn = DriverManager.getConnection(BASE_URL)) {
-            int cnt = 0;
-
-            conn.setSchema("PREDEFINED_SCHEMAS_1");
-
-            // Create database objects.
-            try (Statement stmt = conn.createStatement()) {
-                // Create reference City table based on REPLICATED template.
-                stmt.executeUpdate("CREATE TABLE City (id LONG PRIMARY KEY, name VARCHAR) " +
-                        "WITH \"template=replicated\"");
-
-                // Create an index.
-                stmt.executeUpdate("CREATE INDEX NON_UNIQUE_SETTLEMENT_IDX on City (id)");
-            }
-
-            conn.setSchema("PREDEFINED_SCHEMAS_2");
-
-            // Create database objects.
-            try (Statement stmt = conn.createStatement()) {
-                // Create reference City table based on REPLICATED template.
-                stmt.executeUpdate("CREATE TABLE Town (id LONG PRIMARY KEY, name VARCHAR) " +
-                        "WITH \"template=replicated\"");
-
-                // Create an index.
-                stmt.executeUpdate("CREATE INDEX NON_UNIQUE_SETTLEMENT_IDX on Town (id)");
-            }
-
-            ResultSet rs = conn.getMetaData().getIndexInfo(null, null, null, true, false);
-
-            while (rs.next()) {
-                assertEquals(DatabaseMetaData.tableIndexOther, rs.getInt("TYPE"));
-                cnt++;
-            }
-
-            assertEquals(2, cnt);
         }
     }
 

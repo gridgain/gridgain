@@ -60,6 +60,7 @@ import static java.sql.Types.DECIMAL;
 import static java.sql.Types.INTEGER;
 import static java.sql.Types.OTHER;
 import static java.sql.Types.VARCHAR;
+import static org.apache.ignite.IgniteJdbcDriver.URL_PREFIX;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.processors.query.QueryUtils.DFLT_SCHEMA;
@@ -1512,6 +1513,55 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
     public void testCatalogWithNotExistingName() throws SQLException {
         checkNoEntitiesFoundForCatalog("");
         checkNoEntitiesFoundForCatalog("NOT_EXISTING_CATALOG");
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIndexMetadataSameNameIndexes() throws Exception {
+        String idxNameNonUnique = "NON_UNIQUE_SETTLEMENT_IDX";
+
+        int totalCnt = 0;
+        int nonUniqueIndexCnt = 0;
+
+        try (Connection conn = DriverManager.getConnection(URL + "PREDEFINED_SCHEMAS_1")) {
+            // Create database objects.
+            try (Statement stmt = conn.createStatement()) {
+                // Create reference City table based on REPLICATED template.
+                stmt.executeUpdate("CREATE TABLE City (id LONG PRIMARY KEY, name VARCHAR) " +
+                        "WITH \"template=replicated\"");
+
+                // Create an index.
+                stmt.executeUpdate("CREATE INDEX " + idxNameNonUnique + " on City (id)");
+            }
+        }
+
+        try (Connection conn = DriverManager.getConnection(URL + "PREDEFINED_SCHEMAS_2")) {
+            // Create database objects.
+            try (Statement stmt = conn.createStatement()) {
+                // Create reference City table based on REPLICATED template.
+                stmt.executeUpdate("CREATE TABLE Town (id LONG PRIMARY KEY, name VARCHAR) " +
+                        "WITH \"template=replicated\"");
+
+                // Create an index.
+                stmt.executeUpdate("CREATE INDEX " + idxNameNonUnique + " on Town (id)");
+            }
+
+            ResultSet rs = conn.getMetaData().getIndexInfo(null, null, null, true, false);
+
+            while (rs.next()) {
+                assertEquals(DatabaseMetaData.tableIndexOther, rs.getInt("TYPE"));
+
+                totalCnt++;
+
+                if (idxNameNonUnique.equals(rs.getString("INDEX_NAME")))
+                    nonUniqueIndexCnt++;
+            }
+
+            assertEquals(8, totalCnt);
+            assertEquals(2, nonUniqueIndexCnt);
+        }
     }
 
     /**
