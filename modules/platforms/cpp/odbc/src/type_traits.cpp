@@ -53,8 +53,6 @@ namespace ignite
 
             const std::string SqlTypeName::GUID("GUID");
 
-#ifdef _DEBUG
-
 #define DBG_STR_CASE(x) case x: return #x
 
             const char* StatementAttrIdToString(long id)
@@ -101,7 +99,6 @@ namespace ignite
             }
 
 #undef DBG_STR_CASE
-#endif // _DEBUG
 
             const std::string& BinaryTypeToSqlTypeName(int8_t binaryType)
             {

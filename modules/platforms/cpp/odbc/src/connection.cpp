@@ -299,6 +299,8 @@ namespace ignite
 
         Connection::OperationResult::T Connection::SendAll(const int8_t* data, size_t len, int32_t timeout)
         {
+            LOG_MSG("Connection level timeout is set to " << timeout << " seconds");
+
             int sent = 0;
 
             while (sent != static_cast<int64_t>(len))
@@ -370,6 +372,8 @@ namespace ignite
         {
             size_t remain = len;
             int8_t* buffer = reinterpret_cast<int8_t*>(dst);
+
+            LOG_MSG("Connection level timeout is set to " << timeout << " seconds");
 
             while (remain)
             {
