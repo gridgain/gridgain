@@ -834,11 +834,9 @@ namespace ignite
 
         LOG_MSG("SQLGetStmtAttr called");
 
-#ifdef _DEBUG
         using odbc::type_traits::StatementAttrIdToString;
 
         LOG_MSG("Attr: " << StatementAttrIdToString(attr) << " (" << attr << ")");
-#endif //_DEBUG
 
         Statement *statement = reinterpret_cast<Statement*>(stmt);
 
@@ -859,11 +857,9 @@ namespace ignite
 
         LOG_MSG("SQLSetStmtAttr called: " << attr);
 
-#ifdef _DEBUG
         using odbc::type_traits::StatementAttrIdToString;
 
         LOG_MSG("Attr: " << StatementAttrIdToString(attr) << " (" << attr << ")");
-#endif //_DEBUG
 
         Statement *statement = reinterpret_cast<Statement*>(stmt);
 
