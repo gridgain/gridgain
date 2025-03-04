@@ -18,7 +18,7 @@ project(ignite-network)
 
 set(TARGET ${PROJECT_NAME})
 
-find_package(OpenSSL REQUIRED)
+find_package(OpenSSL)
 
 include_directories(include src ${OPENSSL_INCLUDE_DIR})
 
