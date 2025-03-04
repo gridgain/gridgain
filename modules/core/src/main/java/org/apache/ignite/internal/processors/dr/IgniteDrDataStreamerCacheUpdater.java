@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.dr.GridCacheDrExpirationInfo;
 import org.apache.ignite.internal.processors.cache.dr.GridCacheDrInfo;
 import org.apache.ignite.internal.processors.cache.version.GridCacheRawVersionedEntry;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerCacheUpdaters;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -97,9 +98,8 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
                 } else {
                     cache.putAllConflict(Collections.singletonMap(key, val));
 
-                    if (log.isTraceEnabled()) {
-                        log.trace("PutAllConflict invoked for the key = " + key);
-                    }
+                    if (log.isTraceEnabled())
+                        log.trace("PutAllConflict invoked for the key = " + IgniteUtils.resolveKey(cache.context(), key));
                 }
             }
         }

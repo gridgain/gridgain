@@ -2609,19 +2609,23 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     private void traceKeyReplication(GridCacheVersion ver) {
         if (log.isTraceEnabled()) {
-            GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
-            String keyValue = "nil";
-
-            if (sensitiveDataLogging == PLAIN)
-                keyValue = keyValue(false).toString();
-            else if (sensitiveDataLogging == HASH)
-                keyValue = String.valueOf(IgniteUtils.hash(keyValue(false)));
-
             if (!((GridNearCacheEntry) this).recordDhtVersion(ver))
                 logOnMoreRecent();
 
-            traceReplicate(ver, keyValue);
+            traceReplicate(ver, keyValueToLog());
         }
+    }
+
+    private String keyValueToLog() {
+        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
+        String keyValue = "nil";
+
+        if (sensitiveDataLogging == PLAIN)
+            keyValue = keyValue(false).toString();
+        else if (sensitiveDataLogging == HASH)
+            keyValue = String.valueOf(IgniteUtils.hash(keyValue(false)));
+
+        return keyValue;
     }
 
     /**
