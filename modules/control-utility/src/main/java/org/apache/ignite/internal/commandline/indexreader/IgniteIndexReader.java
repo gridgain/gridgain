@@ -196,9 +196,11 @@ public class IgniteIndexReader implements AutoCloseable {
     /** */
     private final PageIOProcessor metaPageIOProcessor = new MetaPageIOProcessor();
 
-    private static long triangleErrorsCounter;
+    /** */
+    private long triangleErrorsCounter;
 
-    private static long triangleChecksNum;
+    /** */
+    private long triangleChecksNum;
 
     /**
      * Constructor.
@@ -581,7 +583,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
         ProgressPrinter progressPrinter = new ProgressPrinter(System.out, "Checking partitions", partCnt);
 
-        // Map<partNum, partItemsCnt>
+        // Map partNum -> partItemsCnt
         Map<Integer, Long> itemsCntMap = new HashMap<>();
 
         for (int i = 0; i < partCnt; i++) {
@@ -651,6 +653,8 @@ public class IgniteIndexReader implements AutoCloseable {
         }
 
         long totalItemsCnt = itemsCntMap.values().stream().mapToLong(Long::longValue).sum();
+
+        print("");
 
         print("Cache items number: " + totalItemsCnt);
 
@@ -1243,21 +1247,21 @@ public class IgniteIndexReader implements AutoCloseable {
      * @param io inner page io.
      * @throws IgniteCheckedException
      */
-    private void checkTriangleInvariant(TreeTraverseContext nodeCtx, PageContent pageContent,
-        PageIO io) throws IgniteCheckedException {
+    private void checkTriangleInvariant(TreeTraverseContext nodeCtx, PageContent pageContent, PageIO io)
+        throws IgniteCheckedException {
         if (io instanceof BPlusInnerIO && pageContent.linkedPageIds != null) {
             long rightChildPageId = -1;
 
-            // linkedPageIds are populated in InnerPageIOProcessor.getContent
-            for (Long linkedPageId: pageContent.linkedPageIds) {
-                triangleChecksNum++;
+            final ByteBuffer innerBuf = allocateBuffer(pageSize);
 
-                if (rightChildPageId != -1 && linkedPageId != rightChildPageId)
-                    triangleErrorsCounter++;
+            try {
+                // linkedPageIds are populated in InnerPageIOProcessor.getContent
+                for (Long linkedPageId : pageContent.linkedPageIds) {
+                    triangleChecksNum++;
 
-                final ByteBuffer innerBuf = allocateBuffer(pageSize);
+                    if (rightChildPageId != -1 && linkedPageId != rightChildPageId)
+                        triangleErrorsCounter++;
 
-                try {
                     readPage(nodeCtx.store, linkedPageId, innerBuf);
 
                     final long childAddr = bufferAddress(innerBuf);
@@ -1266,9 +1270,9 @@ public class IgniteIndexReader implements AutoCloseable {
 
                     rightChildPageId = ((BPlusIO)childIO).getForward(childAddr);
                 }
-                finally {
-                    freeBuffer(innerBuf);
-                }
+            }
+            finally {
+                freeBuffer(innerBuf);
             }
         }
     }
