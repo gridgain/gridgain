@@ -200,7 +200,7 @@
             <dependencies>
                 <dependency>
                     <groupId>org.gridgain</groupId>
-                    <artifactId>ignite-lucene</artifactId>
+                    <artifactId>ignite-lucene-9</artifactId>
                     <version>${project.version}</version>
                 </dependency>
             </dependencies>

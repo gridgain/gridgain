@@ -40,7 +40,7 @@ namespace Apache.Ignite.Core.Impl.Common
         private static readonly string ClasspathSeparator = Os.IsWindows ? ";" : ":";
 
         /** Excluded modules from test classpath */
-        private static readonly string[] TestExcludedModules = { "rest-http", "spring-data" };
+        private static readonly string[] TestExcludedModules = { "rest-http", "spring-data", "lucene-9", "vector-query" };
 
         /// <summary>
         /// Creates classpath from the given configuration, or default classpath if given config is null.

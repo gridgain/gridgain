@@ -55,7 +55,7 @@ Build configuration ("Release", "Debug").
 Custom Maven options, default is "-U -P-lgpl,-scala,-examples,-test,-benchmarks -Dmaven.javadoc.skip=true".
 
 .PARAMETER jarDirs
-Java jar files source folders, default is "modules\indexing\target,modules\lucene\target,modules\core\target,modules\spring\target"
+Java jar files source folders, default is "modules\indexing\target,modules\lucene-8\target,modules\core\target,modules\spring\target"
 
 .PARAMETER version
 NuGet version override (normally inferred from assembly version).
@@ -81,7 +81,7 @@ param (
     [ValidateSet("Release", "Debug")]
     [string]$configuration="Release",
     [string]$mavenOpts="-U -P-lgpl,-scala,-all-scala,-spark-2.4,-examples,-test,-benchmarks -Dmaven.javadoc.skip=true",
-	[string]$jarDirs="modules\indexing\target,modules\lucene\target,modules\core\target,modules\h2\target,modules\spring\target",
+	[string]$jarDirs="modules\indexing\target,modules\lucene-8\target,modules\core\target,modules\h2\target,modules\spring\target",
 	[string]$version="",
 	[string]$versionSuffix=""
  )
@@ -159,10 +159,13 @@ else {
 $libsDir = "$PSScriptRoot\bin\libs"
 Make-Dir($libsDir)
 
-Get-ChildItem $jarDirs.Split(',') *.jar -recurse `
-   -include "ignite-core*","ignite-indexing*","ignite-lucene*","ignite-shmem*","ignite-spring*","lucene*","ignite-h2*","cache-api*","commons-*","spring*" `
-   -exclude "*-sources*","*-javadoc*","*-tests*","*optional*" `
-   | % { Copy-Item -Force $_ $libsDir }
+$files = Get-ChildItem $jarDirs.Split(',') *.jar -recurse `
+   -include "ignite-core*","ignite-indexing*","ignite-shmem*","ignite-spring*","*lucene*","ignite-h2*","cache-api*","commons-*","spring*" `
+   -exclude "*-sources*","*-javadoc*","*-tests*","*optional*","*lucene-9*","*lucene-*-9*" `
+
+$files
+
+$files | % { Copy-Item -Force $_ $libsDir }
 
 # Restore directory
 cd $PSScriptRoot
