@@ -1259,6 +1259,8 @@ public class IgniteIndexReader implements AutoCloseable {
                 for (Long linkedPageId : pageContent.linkedPageIds) {
                     triangleChecksNum++;
 
+                    innerBuf.rewind();
+
                     if (rightChildPageId != -1 && linkedPageId != rightChildPageId)
                         triangleErrorsCounter++;
 
