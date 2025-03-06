@@ -168,7 +168,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     private final Map<UUID, byte[]> allNodesMetrics = new ConcurrentHashMap<>();
 
     /** */
-    private final JdkMarshaller marsh = new JdkMarshaller();
+    private final JdkMarshaller marsh;
 
     /** */
     private DiscoveryMetricsProvider metricsProvider;
@@ -203,8 +203,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL));
 
         cluster = new IgniteClusterImpl(ctx);
-
         sndMetrics = !(ctx.config().getDiscoverySpi() instanceof TcpDiscoverySpi);
+        marsh = ctx.marshallerContext().jdkMarshaller();
 
         if (clusterIdAndTagSupport) {
             ctx.internalSubscriptionProcessor().registerDistributedConfigurationListener(

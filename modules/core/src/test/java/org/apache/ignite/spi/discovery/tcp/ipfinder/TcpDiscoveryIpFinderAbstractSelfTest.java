@@ -16,7 +16,6 @@
 
 package org.apache.ignite.spi.discovery.tcp.ipfinder;
 
-import java.lang.reflect.Field;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -25,7 +24,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.resources.LoggerResource;
+import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -36,6 +35,9 @@ public abstract class TcpDiscoveryIpFinderAbstractSelfTest<T extends TcpDiscover
     extends GridCommonAbstractTest {
     /** */
     protected T finder;
+
+    /** */
+    protected final IgniteTestResources resources = new IgniteTestResources();
 
     /**
      * Constructor.
@@ -50,7 +52,7 @@ public abstract class TcpDiscoveryIpFinderAbstractSelfTest<T extends TcpDiscover
     @Override protected void beforeTest() throws Exception {
         finder = ipFinder();
 
-        injectLogger(finder);
+        resources.inject(finder);
     }
 
     /** {@inheritDoc} */
@@ -106,26 +108,6 @@ public abstract class TcpDiscoveryIpFinderAbstractSelfTest<T extends TcpDiscover
         finder.unregisterAddresses(finder.getRegisteredAddresses());
 
         finder.close();
-    }
-
-    /**
-     * @param finder IP finder.
-     * @throws IllegalAccessException If any error occurs.
-     */
-    protected void injectLogger(T finder) throws IllegalAccessException {
-        assert finder != null;
-
-        for (Class cls = finder.getClass(); cls != Object.class; cls = cls.getSuperclass())
-            for (Field fld : cls.getDeclaredFields())
-                if (fld.getAnnotation(LoggerResource.class) != null) {
-                    boolean accessible = fld.isAccessible();
-
-                    fld.setAccessible(true);
-
-                    fld.set(finder, log);
-
-                    fld.setAccessible(accessible);
-                }
     }
 
     /**

@@ -22,11 +22,12 @@ import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.marshaller.ObjectInputStreamWrapper;
 
 /**
  * This class defines custom JDK object input stream.
  */
-class JdkMarshallerObjectInputStream extends ObjectInputStream {
+public class JdkMarshallerObjectInputStream extends ObjectInputStream implements ObjectInputStreamWrapper {
     /** */
     private final ClassLoader clsLdr;
 
@@ -38,7 +39,7 @@ class JdkMarshallerObjectInputStream extends ObjectInputStream {
      * @param clsLdr Custom class loader.
      * @throws IOException If initialization failed.
      */
-    JdkMarshallerObjectInputStream(InputStream in, ClassLoader clsLdr, IgnitePredicate<String> clsFilter) throws IOException {
+    public JdkMarshallerObjectInputStream(InputStream in, ClassLoader clsLdr, IgnitePredicate<String> clsFilter) throws IOException {
         super(in);
 
         assert clsLdr != null;
@@ -64,5 +65,10 @@ class JdkMarshallerObjectInputStream extends ObjectInputStream {
             return new Object();
 
         return super.resolveObject(o);
+    }
+
+    /** {@inheritDoc} */
+    @Override public ObjectInputStream wrap(InputStream inputStream) throws IOException {
+        return new JdkMarshallerObjectInputStream(inputStream, clsLdr, clsFilter);
     }
 }

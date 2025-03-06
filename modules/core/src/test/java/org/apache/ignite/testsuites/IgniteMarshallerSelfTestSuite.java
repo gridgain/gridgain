@@ -29,8 +29,8 @@ import org.apache.ignite.internal.util.GridHandleTableSelfTest;
 import org.apache.ignite.internal.util.io.GridUnsafeDataInputOutputByteOrderSelfTest;
 import org.apache.ignite.internal.util.io.GridUnsafeDataOutputArraySizingSelfTest;
 import org.apache.ignite.marshaller.MarshallerEnumDeadlockMultiJvmTest;
+import org.apache.ignite.marshaller.ObjectInputStreamFilteringTest;
 import org.apache.ignite.marshaller.jdk.GridJdkMarshallerSelfTest;
-
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -52,7 +52,8 @@ import org.junit.runners.Suite;
     DirectByteBufferStreamImplV2Test.class,
     GridHandleTableSelfTest.class,
     OptimizedMarshallerPooledSelfTest.class,
-    MarshallerEnumDeadlockMultiJvmTest.class
+    MarshallerEnumDeadlockMultiJvmTest.class,
+    ObjectInputStreamFilteringTest.class
 })
 public class IgniteMarshallerSelfTestSuite {
 }

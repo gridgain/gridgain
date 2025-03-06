@@ -186,7 +186,6 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.lifecycle.LifecycleAware;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.marshaller.Marshaller;
-import org.apache.ignite.marshaller.MarshallerUtils;
 import org.apache.ignite.mxbean.CacheGroupMetricsMXBean;
 import org.apache.ignite.mxbean.IgniteMBeanAware;
 import org.apache.ignite.plugin.security.SecurityException;
@@ -346,7 +345,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         caches = new ConcurrentHashMap<>();
         jCacheProxies = new ConcurrentHashMap<>();
 
-        marsh = MarshallerUtils.jdkMarshaller(ctx.igniteInstanceName());
+        marsh = ctx.marshallerContext().jdkMarshaller();
         splitter = new CacheConfigurationSplitterImpl(ctx, marsh);
         enricher = new CacheConfigurationEnricher(ctx, marsh, U.resolveClassLoader(ctx.config()));
     }

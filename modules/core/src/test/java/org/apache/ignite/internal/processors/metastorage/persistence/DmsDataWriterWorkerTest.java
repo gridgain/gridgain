@@ -346,7 +346,7 @@ public class DmsDataWriterWorkerTest {
 
     /** */
     private DistributedMetaStorageHistoryItem histItem(String key, String val) throws IgniteCheckedException {
-        return new DistributedMetaStorageHistoryItem(key, JdkMarshaller.DEFAULT.marshal(val));
+        return new DistributedMetaStorageHistoryItem(key, new JdkMarshaller().marshal(val));
     }
 
     /** */
