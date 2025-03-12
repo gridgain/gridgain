@@ -269,6 +269,7 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
 
     static class ReconciliationUnderLoadResult {
         final ReconciliationResult reconciliationResult;
+
         final Set<Integer> missedOnPrimaryKeys;
 
         ReconciliationUnderLoadResult(ReconciliationResult res, Set<Integer> missedOnPrimaryKeys) {
