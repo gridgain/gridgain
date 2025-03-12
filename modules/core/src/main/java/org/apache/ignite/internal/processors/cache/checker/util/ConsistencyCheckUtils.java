@@ -52,6 +52,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import static java.io.File.separatorChar;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_SKIP_MISSING_PRIMARY;
 
 /**
  * Utility class for the partition reconciliation.
@@ -181,7 +182,8 @@ public class ConsistencyCheckUtils {
      * @return Value to repair with.
      * @throws IgniteCheckedException If failed to retrieve value from value CacheObject.
      */
-    @Nullable public static CacheObject calculateValueToFixWith(RepairAlgorithm repairAlg,
+    @Nullable public static CacheObject calculateValueToFixWith(
+        RepairAlgorithm repairAlg,
         Map<UUID, VersionedValue> nodeToVersionedValues,
         UUID primaryNodeID,
         CacheObjectContext cacheObjCtx,
@@ -233,14 +235,30 @@ public class ConsistencyCheckUtils {
                 break;
 
             case LATEST:
-                GridCacheVersion maxVer = new GridCacheVersion(0, 0, 0);
+                valToFixWith = findLatestValue(nodeToVersionedValues);
 
-                for (VersionedValue versionedValue : nodeToVersionedValues.values()) {
-                    if (versionedValue.version().compareTo(maxVer) > 0) {
-                        maxVer = versionedValue.version();
+                break;
 
-                        valToFixWith = versionedValue.value();
-                    }
+            case LATEST_SKIP_MISSING_PRIMARY:
+                // It is assumed that this algorithm should not be used to resolve conflicts
+                // when the key is absent on the primary node.
+                if (!nodeToVersionedValues.containsKey(primaryNodeID)) {
+                    throw new IllegalArgumentException("The " + LATEST_SKIP_MISSING_PRIMARY
+                        + " algorithm cannot resolve conflicts when a key is absent on the primary node ["
+                        + "primaryNodeID=" + primaryNodeID + ", affinityNodesCnt=" + affinityNodesCnt
+                        + ", nodeToVersionedValues=" + nodeToVersionedValues + ']');
+                }
+
+                // Use the latest value if the key is present on the primary node.
+                valToFixWith = findLatestValue(nodeToVersionedValues);
+
+                break;
+
+            case LATEST_TRUST_MISSING_PRIMARY:
+                // If the key is absent on the primary node it should be removed,
+                // otherwise the LATEST algorithm should be used.
+                if (nodeToVersionedValues.containsKey(primaryNodeID)) {
+                    valToFixWith = findLatestValue(nodeToVersionedValues);
                 }
 
                 break;
@@ -251,6 +269,30 @@ public class ConsistencyCheckUtils {
 
         if (valToFixWith != null && valToFixWith.cacheObjectType() == CacheObject.TOMBSTONE)
             valToFixWith = null;
+
+        return valToFixWith;
+    }
+
+    /**
+     * Find the latest versioned value in the given map.
+     * This method returns {@code null} value if the map is empty or there is no version that is greater or equal to
+     * {@code GridCacheVersion(0, 0, 0)}.
+     *
+     * @param nodeToVersionedValues Map of node identifiers to corresponding versioned values.
+     * @return The latest value.
+     */
+    private static @Nullable CacheObject findLatestValue(Map<UUID, VersionedValue> nodeToVersionedValues) {
+        GridCacheVersion maxVer = new GridCacheVersion(0, 0, 0);
+
+        CacheObject valToFixWith = null;
+
+        for (VersionedValue versionedValue : nodeToVersionedValues.values()) {
+            if (versionedValue.version().compareTo(maxVer) > 0) {
+                maxVer = versionedValue.version();
+
+                valToFixWith = versionedValue.value();
+            }
+        }
 
         return valToFixWith;
     }

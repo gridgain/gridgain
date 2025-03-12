@@ -36,7 +36,19 @@ public enum RepairAlgorithm {
     REMOVE,
 
     /** Nicht repair, only printing. */
-    PRINT_ONLY;
+    PRINT_ONLY,
+
+    /**
+     * This algorithm behaves in the same way as {@link #LATEST} except the case when a key is missing
+     * on the primary node. In that case, the conflict will not be resolved.
+     */
+    LATEST_SKIP_MISSING_PRIMARY,
+
+    /**
+     * This algorithm behaves in the same way as {@link #LATEST} except the case when a key is missing
+     * on the primary node. In that case, the conflict will be resolved by removing the key from all partitions.
+     */
+    LATEST_TRUST_MISSING_PRIMARY;
 
     /** Enumerated values. */
     private static final RepairAlgorithm[] VALS = values();
@@ -52,10 +64,25 @@ public enum RepairAlgorithm {
     }
 
     /**
+     * Efficiently gets enumerated value from its string representation ignoring case.
+     *
+     * @param str String representation.
+     * @return Enumerated value.
+     * @throws IllegalArgumentException If string representation is not valid.
+     */
+    public static RepairAlgorithm fromString(String str) {
+        for (RepairAlgorithm val : VALS) {
+            if (val.name().equalsIgnoreCase(str))
+                return val;
+        }
+
+        throw new IllegalArgumentException("Invalid repair algorithm [name=" + str + ']');
+    }
+
+    /**
      * @return Default repair algorithm.
      */
     public static RepairAlgorithm defaultValue() {
         return PRINT_ONLY;
     }
-
 }

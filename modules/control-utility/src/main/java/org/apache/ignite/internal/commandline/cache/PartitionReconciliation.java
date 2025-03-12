@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.commandline.cache;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +62,8 @@ import static org.apache.ignite.internal.commandline.cache.argument.PartitionRec
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_ATTEMPTS;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_DELAY;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.REPAIR;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_SKIP_MISSING_PRIMARY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_TRUST_MISSING_PRIMARY;
 
 /**
  * Partition reconciliation command.
@@ -188,21 +191,42 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             args.recheckDelay
         );
 
-        List<GridClientNode> unsupportedSrvNodes = client.compute().nodes().stream()
+        List<GridClientNode> srvNodes = client.compute().nodes().stream()
+            .filter(node -> !node.isClient())
+            .collect(Collectors.toList());
+
+        // List of server node that do not support partition reconciliation.
+        List<GridClientNode> unsupportedSrvNodes = srvNodes.stream()
             .filter(node -> !node.isClient())
             .filter(node -> !node.supports(IgniteFeatures.PARTITION_RECONCILIATION))
             .collect(Collectors.toList());
 
+        List<GridClientNode> unsupportedLatestAlgNodes;
+        if (args.repairAlg == LATEST_SKIP_MISSING_PRIMARY || args.repairAlg == LATEST_TRUST_MISSING_PRIMARY) {
+            unsupportedLatestAlgNodes = srvNodes.stream()
+                .filter(node -> !node.isClient())
+                .filter(node -> !node.supports(IgniteFeatures.PARTITION_RECONCILIATION_LATEST_ALG_UPDATE))
+                .collect(Collectors.toList());
+        }
+        else
+            unsupportedLatestAlgNodes = Collections.emptyList();
+
         if (!unsupportedSrvNodes.isEmpty()) {
-            final String strErrReason = "Partition reconciliation was rejected. The node [id=%s, consistentId=%s] doesn't support this feature.";
+            final String strErrReason = "Partition reconciliation was rejected. " +
+                "The node [id=%s, consistentId=%s] doesn't support this feature.";
 
-            List<String> errs = unsupportedSrvNodes.stream()
-                .map(n -> String.format(strErrReason, n.nodeId(), n.consistentId()))
-                .collect(toList());
+            reportUnsupportedNode(strErrReason, unsupportedSrvNodes, log);
 
-            print(new ReconciliationResult(new ReconciliationAffectedEntries(), new HashMap<>(), errs), log::info);
+            throw new VisorIllegalStateException("There are server nodes that do not support the partition reconciliation.");
+        }
+        else if (!unsupportedLatestAlgNodes.isEmpty()) {
+            final String strErrReason = "Partition reconciliation was rejected. The node [id=%s, consistentId=%s] " +
+                "doesn't support repair algorithm '" + args.repairAlg + "'.";
 
-            throw new VisorIllegalStateException("There are server nodes not supported partition reconciliation.");
+            reportUnsupportedNode(strErrReason, unsupportedLatestAlgNodes, log);
+
+            throw new VisorIllegalStateException("There are server nodes " +
+                "that do not support the specified algorithm [" + args.repairAlg + "].");
         }
         else {
             ReconciliationResult res =
@@ -212,6 +236,14 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
 
             return res;
         }
+    }
+
+    private void reportUnsupportedNode(String msg, List<GridClientNode> nodes, Logger log) {
+        List<String> errs = nodes.stream()
+            .map(n -> String.format(msg, n.nodeId(), n.consistentId()))
+            .collect(toList());
+
+        print(new ReconciliationResult(new ReconciliationAffectedEntries(), new HashMap<>(), errs), log::info);
     }
 
     /** {@inheritDoc} */
@@ -255,7 +287,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
                                     "values can be used: " + Arrays.toString(RepairAlgorithm.values()) + '.');
 
                             try {
-                                repairAlg = RepairAlgorithm.valueOf(strVal);
+                                repairAlg = RepairAlgorithm.fromString(strVal);
                             }
                             catch (IllegalArgumentException e) {
                                 throw new IllegalArgumentException(

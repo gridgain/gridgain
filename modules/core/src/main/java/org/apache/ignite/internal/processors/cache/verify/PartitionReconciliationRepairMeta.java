@@ -105,8 +105,9 @@ public class PartitionReconciliationRepairMeta extends IgniteDataTransferObject 
      * @return string view.
      */
     public String stringView(boolean verbose) {
-        return "fixed=" + fixed + ", new_val=" + (val != null ? val.stringView(verbose) : "null") +
-            ", repairAlg=" + repairAlg;
+        return "fixed=" + fixed
+            + (fixed ? ", new_val=" + (val != null ? val.stringView(verbose) : "null") : "")
+            + ", repairAlg=" + repairAlg;
     }
 
     /** {@inheritDoc} */

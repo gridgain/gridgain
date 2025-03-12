@@ -17,13 +17,16 @@ package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.junit.Test;
 import org.junit.runners.Parameterized;
 
-import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_SKIP_MISSING_PRIMARY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_TRUST_MISSING_PRIMARY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRIMARY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.REMOVE;
 
@@ -43,7 +46,8 @@ public class PartitionReconciliationFixStressTest extends PartitionReconciliatio
             CacheAtomicityMode.ATOMIC, CacheAtomicityMode.TRANSACTIONAL};
 
         int[] partitions = {1, 32};
-        RepairAlgorithm[] repairAlgorithms = {LATEST, PRIMARY, MAJORITY, REMOVE};
+        RepairAlgorithm[] repairAlgorithms =
+            {LATEST, PRIMARY, MAJORITY, REMOVE, LATEST_SKIP_MISSING_PRIMARY, LATEST_TRUST_MISSING_PRIMARY};
 
         for (CacheAtomicityMode atomicityMode : atomicityModes) {
             for (int parts : partitions)
@@ -66,8 +70,22 @@ public class PartitionReconciliationFixStressTest extends PartitionReconciliatio
      */
      @Test
      @Override public void testReconciliationOfColdKeysUnderLoad() throws Exception {
-        super.testReconciliationOfColdKeysUnderLoad();
+         ReconciliationUnderLoadResult res = reconciliationOfColdKeysUnderLoad();
 
-        assertFalse(idleVerify(ig, DEFAULT_CACHE_NAME).hasConflicts());
+        if (repairAlgorithm == LATEST_SKIP_MISSING_PRIMARY) {
+            // In case when the value of the key is missing on the primary node,
+            // this algorithm should not fix the conflict.
+
+            Set<Integer> notFixedConflicts = notFixedKeys(res.reconciliationResult, DEFAULT_CACHE_NAME);
+
+            assertTrue(res.missedOnPrimaryKeys.containsAll(notFixedConflicts));
+
+            if (!notFixedConflicts.isEmpty())
+                assertTrue(idleVerify(ig, DEFAULT_CACHE_NAME).hasConflicts());
+            else
+                assertFalse(idleVerify(ig, DEFAULT_CACHE_NAME).hasConflicts());
+        }
+        else
+            assertFalse(idleVerify(ig, DEFAULT_CACHE_NAME).hasConflicts());
     }
 }

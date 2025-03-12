@@ -27,13 +27,16 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
+import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 import org.junit.runners.Parameterized;
 
-import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_SKIP_MISSING_PRIMARY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_TRUST_MISSING_PRIMARY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRIMARY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.REMOVE;
 
@@ -53,7 +56,8 @@ public class PartitionReconciliationFullFixStressTest extends PartitionReconcili
             CacheAtomicityMode.ATOMIC, CacheAtomicityMode.TRANSACTIONAL};
 
         int[] partitions = {1, 32};
-        RepairAlgorithm[] repairAlgorithms = {LATEST, PRIMARY, MAJORITY, REMOVE};
+        RepairAlgorithm[] repairAlgorithms =
+            {LATEST, PRIMARY, MAJORITY, REMOVE, LATEST_SKIP_MISSING_PRIMARY, LATEST_TRUST_MISSING_PRIMARY};
 
         for (CacheAtomicityMode atomicityMode : atomicityModes) {
             for (int parts : partitions)
@@ -84,15 +88,23 @@ public class PartitionReconciliationFullFixStressTest extends PartitionReconcili
             nodeCacheCtxs[i] = grid(i).cachex(DEFAULT_CACHE_NAME).context();
 
         Set<Integer> corruptedKeys = new HashSet<>();
+        Set<Integer> missedKeysOnPrimary = new HashSet<>();
 
         for (int i = 0; i < KEYS_CNT; i++) {
             clientCache.put(i, String.valueOf(i));
             corruptedKeys.add(i);
 
-            if (i % 3 == 0)
-                simulateMissingEntryCorruption(nodeCacheCtxs[i % NODES_CNT], i);
+            GridCacheContext<Object, Object> ctx = nodeCacheCtxs[i % NODES_CNT];
+
+            if (i % 3 == 0) {
+                simulateMissingEntryCorruption(ctx, i);
+
+                if (ctx.cache().cache().affinity().isPrimary(ctx.kernalContext().discovery().localNode(), i)) {
+                    missedKeysOnPrimary.add(i);
+                }
+            }
             else
-                simulateOutdatedVersionCorruption(nodeCacheCtxs[i % NODES_CNT], i);
+                simulateOutdatedVersionCorruption(ctx, i);
         }
 
         AtomicBoolean stopRandomLoad = new AtomicBoolean(false);
@@ -125,6 +137,23 @@ public class PartitionReconciliationFullFixStressTest extends PartitionReconcili
 
         assertResultContainsConflictKeys(res, DEFAULT_CACHE_NAME, corruptedKeys);
 
-        assertFalse(idleVerify(ig, DEFAULT_CACHE_NAME).hasConflicts());
+        IdleVerifyResultV2 idleVerifyRes = idleVerify(ig, DEFAULT_CACHE_NAME);
+
+        if (repairAlgorithm == LATEST_SKIP_MISSING_PRIMARY) {
+            // In case when the value of the key is missing on the primary node,
+            // this algorithm should not fix the conflict.
+
+            assertTrue(missedKeysOnPrimary.containsAll(notFixedKeys(res, DEFAULT_CACHE_NAME)));
+
+            if (corruptedKeys.isEmpty()) {
+
+                assertFalse(idleVerifyRes.hasConflicts());
+            }
+            else {
+                assertTrue(idleVerifyRes.hasConflicts());
+            }
+        }
+        else
+            assertFalse(idleVerifyRes.hasConflicts());
     }
 }

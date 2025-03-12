@@ -58,7 +58,7 @@ public class PartitionReconciliationAtomicLongStressTest extends PartitionReconc
     protected static final String INTERNAL_CACHE_NAME = "ignite-sys-atomic-cache@default-ds-group";
 
     /** Patten to search integer key for data structure key string representation. */
-    protected static final Pattern intKeyPattern = Pattern.compile("name=(\\d+)");
+    protected static final Pattern intKeyPattern = Pattern.compile(".+name=(\\d+).+");
 
     /** Parts. */
     @Parameterized.Parameter(0)
@@ -217,7 +217,7 @@ public class PartitionReconciliationAtomicLongStressTest extends PartitionReconc
     /** */
     protected Integer keyMap(String keyStr) {
         Matcher m = intKeyPattern.matcher(keyStr);
-        if (m.find())
+        if (m.matches())
             return Integer.parseInt(m.group(1));
         return -1;
     }

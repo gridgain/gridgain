@@ -77,9 +77,7 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         return partitionReconciliation(ig, repair, repairAlgorithm, parallelism, 1000, caches);
     }
 
-    /**
-     *
-     */
+    /** */
     public static ReconciliationResult partitionReconciliation(
         Ignite ig,
         VisorPartitionReconciliationTaskArg.Builder argBuilder
@@ -97,23 +95,12 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         );
     }
 
-    /**
-     *
-     */
+    /** */
     public static Set<Integer> conflictKeys(ReconciliationResult res, String cacheName) {
-        return res.partitionReconciliationResult().inconsistentKeys().get(cacheName)
-            .values()
-            .stream()
-            .flatMap(Collection::stream)
-            .map(PartitionReconciliationDataRowMeta::keyMeta)
-            .map(k -> (String)U.field(k, "strView"))
-            .map(Integer::valueOf)
-            .collect(Collectors.toSet());
+        return conflictKeys(res, cacheName, Integer::valueOf);
     }
 
-    /**
-     *
-     */
+    /** */
     public static <T> Set<T> conflictKeys(ReconciliationResult res, String cacheName, Function<String, T> map) {
         return res.partitionReconciliationResult().inconsistentKeys().get(cacheName)
             .values()
@@ -125,9 +112,28 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
             .collect(Collectors.toSet());
     }
 
-    /**
-     *
-     */
+    /** */
+    public static Set<Integer> notFixedKeys(ReconciliationResult res, String cacheName) {
+        return notFixedKeys(res, cacheName, Integer::valueOf);
+    }
+
+    /** */
+    public static <T> Set<T> notFixedKeys(ReconciliationResult res, String cacheName, Function<String, T> map) {
+        return res
+            .partitionReconciliationResult()
+            .inconsistentKeys()
+            .get(cacheName)
+            .values()
+            .stream()
+            .flatMap(Collection::stream)
+            .filter(dataRow -> !dataRow.repairMeta().fixed())
+            .map(PartitionReconciliationDataRowMeta::keyMeta)
+            .map(k -> (String)U.field(k, "strView"))
+            .map(map)
+            .collect(Collectors.toSet());
+    }
+
+    /** */
     public static Set<PartitionReconciliationKeyMeta> conflictKeyMetas(ReconciliationResult res, String cacheName) {
         return res.partitionReconciliationResult().inconsistentKeys().get(cacheName)
             .values()
@@ -137,9 +143,7 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
             .collect(Collectors.toSet());
     }
 
-    /**
-     *
-     */
+    /** */
     public static void assertResultContainsConflictKeys(
         ReconciliationResult res,
         String cacheName,
@@ -149,9 +153,7 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
             assertTrue("Key doesn't contain: " + key, conflictKeys(res, cacheName).contains(key));
     }
 
-    /**
-     *
-     */
+    /** */
     public static <T> void assertResultContainsConflictKeys(
         ReconciliationResult res,
         String cacheName,
@@ -162,24 +164,18 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
             assertTrue("Key doesn't contain: " + key, conflictKeys(res, cacheName, map).contains(key));
     }
 
-    /**
-     *
-     */
+    /** */
     public static void simulateOutdatedVersionCorruption(GridCacheContext<?, ?> ctx, Object key) {
         simulateOutdatedVersionCorruption(ctx, key, false);
     }
 
-    /**
-     *
-     */
+    /** */
     public static void simulateOutdatedVersionCorruption(GridCacheContext<?, ?> ctx, Object key, boolean lockEntry) {
         corruptDataEntry(ctx, key, false, true,
             new GridCacheVersion(0, 0, 0L), "_broken", lockEntry);
     }
 
-    /**
-     *
-     */
+    /** */
     public static void simulateMissingEntryCorruption(GridCacheContext<?, ?> ctx, Object key) {
         GridCacheAdapter<Object, Object> cache = (GridCacheAdapter<Object, Object>)ctx.cache();
 

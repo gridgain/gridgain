@@ -272,7 +272,10 @@ public enum IgniteFeatures {
     POINT_IN_TIME_RECOVERY_EXCHANGELESS_SUPPORT(72),
 
     /** Enables compacted topology history. */
-    TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY(73);
+    TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY(73),
+
+    /** New partition reconciliation algorithms. */
+    PARTITION_RECONCILIATION_LATEST_ALG_UPDATE(74);
 
     /**
      * Unique feature identifier.
