@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -89,6 +90,7 @@ public class PartitionReconciliationFullFixStressTest extends PartitionReconcili
 
         Set<Integer> corruptedKeys = new HashSet<>();
         Set<Integer> missedKeysOnPrimary = new HashSet<>();
+        Set<Integer> repairedMissedKeysOnPrimary = ConcurrentHashMap.newKeySet();
 
         for (int i = 0; i < KEYS_CNT; i++) {
             clientCache.put(i, String.valueOf(i));
@@ -99,12 +101,14 @@ public class PartitionReconciliationFullFixStressTest extends PartitionReconcili
             if (i % 3 == 0) {
                 simulateMissingEntryCorruption(ctx, i);
 
-                if (ctx.cache().cache().affinity().isPrimary(ctx.kernalContext().discovery().localNode(), i)) {
+                if (ctx.cache().cache().affinity().isPrimary(ctx.kernalContext().discovery().localNode(), i))
                     missedKeysOnPrimary.add(i);
-                }
             }
-            else
+            else {
+                corruptedKeys.add(i);
+
                 simulateOutdatedVersionCorruption(ctx, i);
+            }
         }
 
         AtomicBoolean stopRandomLoad = new AtomicBoolean(false);
@@ -121,6 +125,9 @@ public class PartitionReconciliationFullFixStressTest extends PartitionReconcili
                 int i = ThreadLocalRandom.current().nextInt(KEYS_CNT);
                 clientCache.put(i, String.valueOf(2 * i));
                 reloadedKeys[threadId].add(i);
+
+                if (missedKeysOnPrimary.contains(i))
+                    repairedMissedKeysOnPrimary.add(i);
             }
         }, 6, "rand-loader");
 
@@ -137,23 +144,20 @@ public class PartitionReconciliationFullFixStressTest extends PartitionReconcili
 
         assertResultContainsConflictKeys(res, DEFAULT_CACHE_NAME, corruptedKeys);
 
-        IdleVerifyResultV2 idleVerifyRes = idleVerify(ig, DEFAULT_CACHE_NAME);
+        boolean hasConflicts = idleVerify(ig, DEFAULT_CACHE_NAME).hasConflicts();
 
         if (repairAlgorithm == LATEST_SKIP_MISSING_PRIMARY) {
             // In case when the value of the key is missing on the primary node,
             // this algorithm should not fix the conflict.
 
+            // Conflicts might be resolved by async load.
             assertTrue(missedKeysOnPrimary.containsAll(notFixedKeys(res, DEFAULT_CACHE_NAME)));
 
-            if (corruptedKeys.isEmpty()) {
+            boolean shouldNotHaveConflicts = corruptedKeys.isEmpty() || repairedMissedKeysOnPrimary.isEmpty();
 
-                assertFalse(idleVerifyRes.hasConflicts());
-            }
-            else {
-                assertTrue(idleVerifyRes.hasConflicts());
-            }
+            assertEquals(shouldNotHaveConflicts, !hasConflicts);
         }
         else
-            assertFalse(idleVerifyRes.hasConflicts());
+            assertFalse(hasConflicts);
     }
 }

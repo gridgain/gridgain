@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
@@ -122,7 +123,7 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         return res
             .partitionReconciliationResult()
             .inconsistentKeys()
-            .get(cacheName)
+            .getOrDefault(cacheName, Collections.emptyMap())
             .values()
             .stream()
             .flatMap(Collection::stream)

@@ -220,7 +220,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
             invalidDataRowMeta,
             hnd.getLastOperationResult(),
             new PartitionReconciliationRepairMeta(
-                true,
+                false,
                 null,
                 RepairAlgorithm.PRINT_ONLY));
     }
@@ -483,11 +483,11 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
             invalidDataRowMeta,
             hnd.getLastOperationResult(),
             new PartitionReconciliationRepairMeta(
-                true,
+                false,
                 null,
                 RepairAlgorithm.PRINT_ONLY));
 
-        // Enusre that invalid key wasn't fixed.
+        // Ensure that invalid key wasn't fixed.
         assertNull(((IgniteEx)grid(nodes.get(0))).cachex(DEFAULT_CACHE_NAME).localPeek(INVALID_KEY, null));
 
         assertEquals(VALUE_PREFIX + INVALID_KEY,
