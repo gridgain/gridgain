@@ -1226,7 +1226,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                 pageContent = ioProcessor.getContent(io, addr, pageId, nodeCtx);
 
-                checkTriangleInvariant(nodeCtx, pageContent, io);
+                checkTriangleInvariant(nodeCtx, pageContent, pageId);
             }
             finally {
                 freeBuffer(buf);
@@ -1244,27 +1244,33 @@ public class IgniteIndexReader implements AutoCloseable {
     /**
      * @param nodeCtx tree traverse context.
      * @param pageContent inner page content.
-     * @param io inner page io.
+     * @param pageId inner page id.
      * @throws IgniteCheckedException
      */
-    private void checkTriangleInvariant(TreeTraverseContext nodeCtx, PageContent pageContent, PageIO io)
+    private void checkTriangleInvariant(TreeTraverseContext nodeCtx, PageContent pageContent, long pageId)
         throws IgniteCheckedException {
-        if (io instanceof BPlusInnerIO && pageContent.linkedPageIds != null) {
+        if (pageContent.io instanceof BPlusInnerIO && pageContent.linkedPageIds != null) {
             long rightChildPageId = -1;
 
             final ByteBuffer innerBuf = allocateBuffer(pageSize);
 
             try {
                 // linkedPageIds are populated in InnerPageIOProcessor.getContent
-                for (Long linkedPageId : pageContent.linkedPageIds) {
+                for (Long leftChildPageId : pageContent.linkedPageIds) {
                     triangleChecksNum++;
 
                     innerBuf.rewind();
 
-                    if (rightChildPageId != -1 && linkedPageId != rightChildPageId)
-                        triangleErrorsCounter++;
+                    if (rightChildPageId != -1 && leftChildPageId != rightChildPageId) {
+                        Throwable e = new IgniteException("Triangle invariant violated. " +
+                            "PageId=" + pageId + ", leftChildPageId=" + leftChildPageId + ", rightChildPageId=" + rightChildPageId);
 
-                    readPage(nodeCtx.store, linkedPageId, innerBuf);
+                        nodeCtx.errors.computeIfAbsent(pageId, k -> new LinkedList<>()).add(e);
+
+                        triangleErrorsCounter++;
+                    }
+
+                    readPage(nodeCtx.store, leftChildPageId, innerBuf);
 
                     final long childAddr = bufferAddress(innerBuf);
 
