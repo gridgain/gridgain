@@ -26,7 +26,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public class RotatedIdPartRecord extends PageDeltaRecord {
     /** Rotated id part. */
-    private byte rotatedIdPart;
+    private final int rotatedIdPart;
 
     /**
      * @param grpId Group id.
@@ -38,7 +38,7 @@ public class RotatedIdPartRecord extends PageDeltaRecord {
 
         assert rotatedIdPart >= 0 && rotatedIdPart <= 0xFF : rotatedIdPart;
 
-        this.rotatedIdPart = (byte) rotatedIdPart;
+        this.rotatedIdPart = rotatedIdPart;
     }
 
     /** {@inheritDoc} */
@@ -55,7 +55,7 @@ public class RotatedIdPartRecord extends PageDeltaRecord {
      * @return Rotated id part.
      */
     public byte rotatedIdPart() {
-        return rotatedIdPart;
+        return (byte) rotatedIdPart;
     }
 
     /** {@inheritDoc} */
