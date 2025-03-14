@@ -34,7 +34,10 @@ import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
@@ -45,6 +48,7 @@ import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatc
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
@@ -53,6 +57,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.workload.Re
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
+import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTaskV2;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -62,8 +67,12 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.util.Collections.emptySet;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.ignite.internal.IgniteFeatures.PARTITION_RECONCILIATION_LATEST_ALG_UPDATE;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.checkConflicts;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_SKIP_MISSING_PRIMARY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_TRUST_MISSING_PRIMARY;
 
 /**
  * The base point of partition reconciliation processing.
@@ -144,6 +153,9 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /** */
     private AtomicLong lastWorkProgressUpdateTime = new AtomicLong(0);
 
+    /** Class of the repair task, see {@link IgniteFeatures#PARTITION_RECONCILIATION_LATEST_ALG_UPDATE}. */
+    private final Class<? extends ComputeTaskAdapter<RepairRequest, ExecutionResult<RepairResult>>> repairTaskClass;
+
     /**
      * Creates a new instance of Partition reconciliation processor.
      *
@@ -191,6 +203,18 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         collector = (compact) ?
             new ReconciliationResultCollector.Compact(ignite, log, sesId, includeSensitive) :
             new ReconciliationResultCollector.Simple(ignite, log, includeSensitive);
+
+        boolean latestAlgSupported = allNodesSupport(
+            ctx,
+            PARTITION_RECONCILIATION_LATEST_ALG_UPDATE,
+            IgniteDiscoverySpi.SRV_NODES);
+
+        if (!latestAlgSupported && (repairAlg == LATEST_SKIP_MISSING_PRIMARY || repairAlg == LATEST_TRUST_MISSING_PRIMARY)) {
+            throw new IgniteException("The repair algorithm "
+                + repairAlg + " is not supported by all nodes in the cluster.");
+        }
+
+        repairTaskClass = latestAlgSupported ? RepairRequestTaskV2.class : RepairRequestTask.class;
     }
 
     /**
@@ -517,7 +541,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      */
     private void handle(Repair workload) throws InterruptedException {
         compute(
-            RepairRequestTask.class,
+            repairTaskClass,
             new RepairRequest(workload.sessionId(), workload.workloadChainId(), workload.data(), workload.cacheName(), workload.partitionId(), startTopVer, repairAlg,
                 workload.repairAttempt()),
             repairRes -> {

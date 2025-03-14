@@ -47,6 +47,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_SKIP_MISSING_PRIMARY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_TRUST_MISSING_PRIMARY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRIMARY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.REMOVE;
@@ -61,9 +63,7 @@ import static org.mockito.Mockito.when;
  */
 @RunWith(Parameterized.class)
 public class RepairRequestTaskTest {
-    /**
-     *
-     */
+    /** */
     private static final String DEFAULT_CACHE_NAME = "default";
 
     /** Node 2. */
@@ -74,9 +74,6 @@ public class RepairRequestTaskTest {
 
     /** Node 4. */
     private static final UUID NODE_4 = UUID.randomUUID();
-
-    /** Node 5. */
-    private static final UUID NODE_5 = UUID.randomUUID();
 
     /** Node 1. */
     private static final UUID NODE_1 = UUID.randomUUID();
@@ -99,7 +96,8 @@ public class RepairRequestTaskTest {
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
-        RepairAlgorithm[] repairAlgorithms = {LATEST, PRIMARY, MAJORITY, REMOVE};
+        RepairAlgorithm[] repairAlgorithms = {
+            LATEST, PRIMARY, MAJORITY, REMOVE, LATEST_TRUST_MISSING_PRIMARY, LATEST_SKIP_MISSING_PRIMARY};
 
         for (RepairAlgorithm algorithm : repairAlgorithms) {
             params.add(new Object[] {algorithm, true});
@@ -140,6 +138,8 @@ public class RepairRequestTaskTest {
 
         switch (repairAlgorithm) {
             case LATEST:
+            case LATEST_SKIP_MISSING_PRIMARY:
+            case LATEST_TRUST_MISSING_PRIMARY:
                 assertCacheObjectEquals(keyVers.get(NODE_4).value(), repairMeta.value());
                 break;
             case PRIMARY:
@@ -155,7 +155,7 @@ public class RepairRequestTaskTest {
     }
 
     /**
-     * This reparation works with GRID_MAX_VERSION and ignores th user algorithm.
+     * This reparation works with GRID_MAX_VERSION and ignores the user algorithm.
      */
     @Test
     public void testFullOwnerSetNotMaxAttempt() throws IllegalAccessException, IgniteCheckedException {
@@ -225,6 +225,8 @@ public class RepairRequestTaskTest {
 
         switch (repairAlgorithm) {
             case LATEST:
+            case LATEST_SKIP_MISSING_PRIMARY:
+            case LATEST_TRUST_MISSING_PRIMARY:
                 assertCacheObjectEquals(keyVers.get(NODE_4).value(), repairMeta.value());
                 break;
             case PRIMARY:
@@ -239,23 +241,65 @@ public class RepairRequestTaskTest {
         }
     }
 
-    /**
-     *
-     */
+    @Test
+    public void testPrimaryKeyIsEmpty() throws Exception {
+        if (repairAlgorithm == LATEST_SKIP_MISSING_PRIMARY) {
+            // Skip this algorithm, because it should not repair the key when primary is missing.
+            return;
+        }
+
+        Map<UUID, VersionedValue> keyVers = new HashMap<>();
+        keyVers.put(NODE_2, versionedValue("2", 2));
+        keyVers.put(NODE_3, versionedValue("2", 2));
+        keyVers.put(NODE_4, versionedValue("4", 4));
+
+        VersionedKey key = new VersionedKey(null, new KeyCacheObjectImpl(), null);
+
+        Map<VersionedKey, Map<UUID, VersionedValue>> data = new HashMap<>();
+        data.put(key, keyVers);
+
+        IgniteEx igniteMock = igniteMock(true);
+
+        final int lastAttempt = 3;
+        ExecutionResult<RepairResult> res = injectIgnite(repairJob(data, 4, lastAttempt), igniteMock).execute();
+
+        Map.Entry<VersionedKey, RepairMeta> entry = res.result().repairedKeys().entrySet().iterator().next();
+
+        assertEquals(keyVers, entry.getValue().getPreviousValue());
+
+        RepairMeta repairMeta = entry.getValue();
+
+        assertTrue(repairMeta.fixed());
+        assertEquals(repairAlgorithm, repairMeta.repairAlg());
+
+        switch (repairAlgorithm) {
+            case LATEST:
+                assertCacheObjectEquals(keyVers.get(NODE_4).value(), repairMeta.value());
+                break;
+            case PRIMARY:
+            case REMOVE:
+            case LATEST_TRUST_MISSING_PRIMARY:
+                assertCacheObjectEquals(null, repairMeta.value());
+                break;
+            case MAJORITY:
+                assertCacheObjectEquals(keyVers.get(NODE_2).value(), repairMeta.value());
+                break;
+
+            default:
+                throw new IllegalStateException("Unexpected repair algorithm: " + repairAlgorithm);
+        }
+    }
+
     private void assertCacheObjectEquals(CacheObject exp, CacheObject actual) {
         assertEquals(value(exp), value(actual));
     }
 
-    /**
-     *
-     */
+    /** */
     private String value(CacheObject cacheObj) {
         return cacheObj != null ? U.field(cacheObj, "val") : null;
     }
 
-    /**
-     *
-     */
+    /** */
     private RepairRequestTask.RepairJob repairJob(
         Map<VersionedKey, Map<UUID, VersionedValue>> data,
         int owners,
@@ -277,7 +321,7 @@ public class RepairRequestTaskTest {
                 return owners;
             }
 
-            @Override protected Object keyValue(GridCacheContext ctx, KeyCacheObject key) throws IgniteCheckedException {
+            @Override protected Object keyValue(GridCacheContext ctx, KeyCacheObject key) {
                 return KEY;
             }
         };
@@ -296,9 +340,7 @@ public class RepairRequestTaskTest {
         );
     }
 
-    /**
-     *
-     */
+    /** */
     private IgniteEx igniteMock(boolean invokeReturnFixed) throws IgniteCheckedException {
         IgniteEx igniteMock = mock(IgniteEx.class);
         GridCacheContext ccMock = mock(GridCacheContext.class);
@@ -313,11 +355,11 @@ public class RepairRequestTaskTest {
         return igniteMock;
     }
 
-    /**
-     *
-     */
-    private RepairRequestTask.RepairJob injectIgnite(RepairRequestTask.RepairJob job,
-        IgniteEx ignite) throws IllegalAccessException {
+    /** */
+    private RepairRequestTask.RepairJob injectIgnite(
+        RepairRequestTask.RepairJob job,
+        IgniteEx ignite
+    ) throws IllegalAccessException {
         Field igniteField = U.findField(RepairRequestTask.RepairJob.class, "ignite");
         igniteField.set(job, ignite);
 

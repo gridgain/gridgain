@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.AtomicConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -34,6 +35,8 @@ import org.junit.Test;
 import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_SKIP_MISSING_PRIMARY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_TRUST_MISSING_PRIMARY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRIMARY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.REMOVE;
@@ -51,7 +54,8 @@ public class PartitionReconciliationAtomicLongFixStressTest extends PartitionRec
         ArrayList<Object[]> params = new ArrayList<>();
 
         int[] partitions = {1, 32};
-        RepairAlgorithm[] repairAlgorithms = {LATEST, PRIMARY, MAJORITY, REMOVE};
+        RepairAlgorithm[] repairAlgorithms =
+            {LATEST, PRIMARY, MAJORITY, REMOVE, LATEST_SKIP_MISSING_PRIMARY, LATEST_TRUST_MISSING_PRIMARY};
 
         for (int parts : partitions)
             for (RepairAlgorithm repairAlgorithm : repairAlgorithms)
@@ -82,15 +86,23 @@ public class PartitionReconciliationAtomicLongFixStressTest extends PartitionRec
             nodeCacheCtxs[i] = grid(i).cachex(INTERNAL_CACHE_NAME).context();
 
         Set<Integer> corruptedKeys = new HashSet<>();
+        Set<Integer> missedKeysOnPrimary = new HashSet<>();
 
         for (int i = 0; i < KEYS_CNT; i++) {
             corruptedKeys.add(i);
             GridCacheInternalKeyImpl key = new GridCacheInternalKeyImpl(Integer.toString(i), "default-ds-group");
 
-            if (i % 3 == 0)
-                simulateMissingEntryCorruption(nodeCacheCtxs[i % NODES_CNT], key);
+            GridCacheContext<Object, Object> ctx = nodeCacheCtxs[i % NODES_CNT];
+
+            if (i % 3 == 0) {
+                simulateMissingEntryCorruption(ctx, key);
+
+                if (ctx.cache().cache().affinity().isPrimary(ctx.kernalContext().discovery().localNode(), key)) {
+                    missedKeysOnPrimary.add(i);
+                }
+            }
             else
-                simulateOutdatedVersionCorruption(nodeCacheCtxs[i % NODES_CNT], key, true);
+                simulateOutdatedVersionCorruption(ctx, key, true);
         }
 
         AtomicBoolean stopRandomLoad = new AtomicBoolean(false);
@@ -127,6 +139,27 @@ public class PartitionReconciliationAtomicLongFixStressTest extends PartitionRec
 
         assertResultContainsConflictKeys(res, INTERNAL_CACHE_NAME, this::keyMap, corruptedKeys);
 
-        assertFalse(idleVerify(ig, INTERNAL_CACHE_NAME).hasConflicts());
+        if (repairAlgorithm == LATEST_SKIP_MISSING_PRIMARY) {
+            // In case when the value of the key is missing on the primary node,
+            // this algorithm should not fix the conflict.
+
+            Set<Integer> notFixedConflicts = notFixedKeys(res, INTERNAL_CACHE_NAME, view -> {
+                Matcher matcher = intKeyPattern.matcher(view);
+
+                if (matcher.matches())
+                    return Integer.valueOf(matcher.group(1));
+                else
+                    throw new IllegalArgumentException("Unexpected key format [view=" + view + ']');
+            });
+
+            assertEquals(missedKeysOnPrimary, notFixedConflicts);
+
+            if (notFixedConflicts.isEmpty())
+                assertFalse(idleVerify(ig, INTERNAL_CACHE_NAME).hasConflicts());
+            else
+                assertTrue(idleVerify(ig, INTERNAL_CACHE_NAME).hasConflicts());
+        }
+        else
+            assertFalse(idleVerify(ig, INTERNAL_CACHE_NAME).hasConflicts());
     }
 }

@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.cache.checker.objects.Reconciliatio
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -118,6 +119,18 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 .build();
         }
 
+        if (arg.repairAlg() == null) {
+            // This is possible in case when a new algorithm was added and the user specified it,
+            // but this new value of RepairAlgorithm is absent on this node (RU scenario).
+            log.warning("The repair algorithm is not specified or is not supported. "
+                + "The default value will be used [session=" + sesId
+                + ", repairAlg=" + RepairAlgorithm.defaultValue() + ']');
+
+            arg = new VisorPartitionReconciliationTaskArg.Builder(arg)
+                .repairAlg(RepairAlgorithm.defaultValue())
+                .build();
+        }
+
         for (ClusterNode node : subgrid)
             jobs.put(new PartitionReconciliationJob(arg, startTime, sesId), node);
 
@@ -190,7 +203,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         private final LocalDateTime startTime;
 
         /** */
-        private long sesId;
+        private final long sesId;
 
         /**
          * Create a new instance of the job.
