@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -32,8 +33,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.GridJobCancelRequest;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.communication.GridIoMessageFactory;
@@ -45,6 +48,7 @@ import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridNioServer;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteRunnable;
+import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
@@ -63,6 +67,9 @@ import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.spi.GridSpiAbstractTest;
 import org.apache.ignite.testframework.junits.spi.GridSpiTest;
 import org.junit.Test;
+
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 /**
  *
@@ -131,7 +138,26 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
         @Override public void onMessage(UUID nodeId, Message msg, IgniteRunnable msgC) {
             msgC.run();
 
-            assertTrue(msg instanceof GridTestMessage);
+            if (!(msg instanceof GridTestMessage)) {
+                List<ClusterNode> nodes = new ArrayList<>(GridTcpCommunicationSpiConcurrentConnectSelfTest.nodes);
+
+                List<UUID> nodeIds = nodes.stream().map(ClusterNode::id).collect(toList());
+
+                List<Object> consistentIds = nodes.stream().map(ClusterNode::consistentId).collect(toList());
+
+                Map<UUID, Collection<String>> hostNames = nodes.stream().collect(toMap(ClusterNode::id, ClusterNode::hostNames));
+
+                Map<UUID, Collection<String>> addresses = nodes.stream().collect(toMap(ClusterNode::id, ClusterNode::addresses));
+
+                String errMsg = String.format(
+                    ">>>>> Not %s, but=[%s], msgNodeId=[%s], nodeIds=%s, consIds=%s, hostNames=%s, addresses=%s",
+                    GridTestMessage.class, msg, nodeId, nodeIds, consistentIds, hostNames, addresses
+                );
+
+                log.error(">>>>> IgniteMessageFactoryImpl.REGISTERED:" + U.nl() + "    " + String.join(U.nl() + "    ", IgniteMessageFactoryImpl.REGISTERED));
+
+                fail(errMsg);
+            }
 
             cntr.incrementAndGet();
 
@@ -392,7 +418,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
         TcpCommunicationSpi spi = new TcpCommunicationSpi();
 
         spi.setLocalAddress("127.0.0.1");
-        spi.setLocalPort(port++);
+        spi.setLocalPort(nextPort());
         spi.setIdleConnectionTimeout(60_000);
         spi.setConnectTimeout(10_000);
         spi.setSharedMemoryPort(-1);
@@ -400,6 +426,14 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
         spi.setUsePairedConnections(pairedConnections);
 
         return spi;
+    }
+
+    private static synchronized int nextPort() {
+        int port = GridTcpCommunicationSpiConcurrentConnectSelfTest.port++;
+
+        log.error(">>>>> Get next static port=" + port, new Exception());
+
+        return port;
     }
 
     /**
@@ -542,4 +576,23 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
             rsrcs.stopThreads();
     }
 
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        GridJobCancelRequest.LOG = log;
+        Ignition.LOG = log;
+        IgniteMessageFactoryImpl.REGISTERED = ConcurrentHashMap.newKeySet();
+    }
+
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
+
+        GridJobCancelRequest.LOG = null;
+        Ignition.LOG = new NullLogger();
+        IgniteMessageFactoryImpl.REGISTERED = null;
+    }
+
+    @Override protected void afterTest() throws Exception {
+        IgniteMessageFactoryImpl.REGISTERED.clear();
+    }
 }
