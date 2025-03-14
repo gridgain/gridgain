@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
  * Demonstrates a simple use of Ignite with {@link ComputeTaskSplitAdapter}.
  * <p>
  * Phrase passed as task argument is split into jobs each taking one word. Then jobs are distributed among
- * cluster nodes. Each node computes word length and returns result to master node where total phrase length
+ * cluster nodes. Each node computes word's length and returns result to master node where total phrase length
  * is calculated on reduce stage.
  * <p>
  * Remote nodes should always be started with special configuration file which
