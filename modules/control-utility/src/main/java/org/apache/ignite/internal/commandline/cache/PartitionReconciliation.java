@@ -197,14 +197,12 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
 
         // List of server node that do not support partition reconciliation.
         List<GridClientNode> unsupportedSrvNodes = srvNodes.stream()
-            .filter(node -> !node.isClient())
             .filter(node -> !node.supports(IgniteFeatures.PARTITION_RECONCILIATION))
             .collect(Collectors.toList());
 
         List<GridClientNode> unsupportedLatestAlgNodes;
         if (args.repairAlg == LATEST_SKIP_MISSING_PRIMARY || args.repairAlg == LATEST_TRUST_MISSING_PRIMARY) {
             unsupportedLatestAlgNodes = srvNodes.stream()
-                .filter(node -> !node.isClient())
                 .filter(node -> !node.supports(IgniteFeatures.PARTITION_RECONCILIATION_LATEST_ALG_UPDATE))
                 .collect(Collectors.toList());
         }
