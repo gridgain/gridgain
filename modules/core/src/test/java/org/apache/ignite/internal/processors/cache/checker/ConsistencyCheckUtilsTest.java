@@ -40,10 +40,13 @@ import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.calculateValueToFixWith;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_SKIP_MISSING_PRIMARY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_TRUST_MISSING_PRIMARY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRIMARY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRINT_ONLY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.REMOVE;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -471,6 +474,160 @@ public class ConsistencyCheckUtilsTest {
                 "Unexpected calculated value [repairAlg=" + repairAlgorithm + ']',
                 calculateValueToFixWith(repairAlgorithm, nodeToVersionedValues, NODE_3, cacheObjectContext(), 4));
         }
+    }
+
+    /**
+     * Return the same value as {@link RepairAlgorithm#LATEST} when {@link RepairAlgorithm#LATEST_SKIP_MISSING_PRIMARY}
+     * is used and primary node has a value.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCalcValueLatestSkipMissingPrimary() throws Exception {
+        Map<UUID, VersionedValue> nodeToVersionedValues = new HashMap<>();
+        VersionedValue ver1 = versionedValue(1, new CacheObjectImpl(644, "644".getBytes()));
+        VersionedValue ver2 = versionedValue(2, new CacheObjectImpl(331, "331".getBytes()));
+        VersionedValue ver3 = versionedValue(3, new CacheObjectImpl(123, "123".getBytes()));
+
+        nodeToVersionedValues.put(NODE_1, ver1);
+        nodeToVersionedValues.put(NODE_2, ver2);
+        nodeToVersionedValues.put(NODE_3, ver2);
+        nodeToVersionedValues.put(NODE_4, ver3);
+
+        // Check that the result is ver3.
+        CacheObject val = calculateValueToFixWith(
+            LATEST_SKIP_MISSING_PRIMARY,
+            nodeToVersionedValues,
+            NODE_1,
+            cacheObjectContext(),
+            5);
+
+        assertEquals(
+            "Unexpected calculated value [repairAlg=" + LATEST_SKIP_MISSING_PRIMARY + ']',
+            ver3.value().valueBytes(cacheObjectContext()),
+            val.valueBytes(cacheObjectContext()));
+
+        // Check that the result is the same as for LATEST
+        CacheObject latestVal = calculateValueToFixWith(
+            LATEST,
+            nodeToVersionedValues,
+            NODE_1,
+            cacheObjectContext(),
+            5);
+
+        assertEquals(
+            "The calculated value must be the same as for " + LATEST,
+            latestVal.valueBytes(cacheObjectContext()),
+            val.valueBytes(cacheObjectContext()));
+    }
+
+    /**
+     * Throws {@link IllegalArgumentException} when {@link RepairAlgorithm#LATEST_SKIP_MISSING_PRIMARY}
+     * is used and primary node has no value.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCalcValueLatestSkipMissingPrimaryThrowsExceptionWhenPrimaryIsEmpty() throws Exception {
+        Map<UUID, VersionedValue> nodeToVersionedValues = new HashMap<>();
+        VersionedValue ver1 = versionedValue(1, new CacheObjectImpl(644, "644".getBytes()));
+        VersionedValue ver2 = versionedValue(2, new CacheObjectImpl(331, "331".getBytes()));
+
+        nodeToVersionedValues.put(NODE_1, ver1);
+        nodeToVersionedValues.put(NODE_2, ver2);
+
+        assertThrows(
+            null,
+            () -> calculateValueToFixWith(
+                LATEST_SKIP_MISSING_PRIMARY, nodeToVersionedValues, NODE_3, cacheObjectContext(), 3),
+            IllegalArgumentException.class,
+            null
+        );
+    }
+
+    /**
+     * Return the same value as {@link RepairAlgorithm#LATEST} when {@link RepairAlgorithm#LATEST_TRUST_MISSING_PRIMARY}
+     * is used and primary node has a value.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCalcValueLatestTrustMissingPrimary() throws Exception {
+        Map<UUID, VersionedValue> nodeToVersionedValues = new HashMap<>();
+        VersionedValue ver1 = versionedValue(1, new CacheObjectImpl(644, "644".getBytes()));
+        VersionedValue ver2 = versionedValue(2, new CacheObjectImpl(331, "331".getBytes()));
+        VersionedValue ver3 = versionedValue(3, new CacheObjectImpl(123, "123".getBytes()));
+
+        nodeToVersionedValues.put(NODE_1, ver1);
+        nodeToVersionedValues.put(NODE_2, ver2);
+        nodeToVersionedValues.put(NODE_3, ver2);
+        nodeToVersionedValues.put(NODE_4, ver3);
+
+        // Check that the result is ver3.
+        CacheObject val = calculateValueToFixWith(
+            LATEST_TRUST_MISSING_PRIMARY,
+            nodeToVersionedValues,
+            NODE_1,
+            cacheObjectContext(),
+            5);
+
+        assertEquals(
+            "Unexpected calculated value [repairAlg=" + LATEST_TRUST_MISSING_PRIMARY + ']',
+            ver3.value().valueBytes(cacheObjectContext()),
+            val.valueBytes(cacheObjectContext()));
+
+        // Check that the result is the same as for LATEST
+        CacheObject latestVal = calculateValueToFixWith(
+            LATEST,
+            nodeToVersionedValues,
+            NODE_1,
+            cacheObjectContext(),
+            5);
+
+        assertEquals(
+            "The calculated value must be the same as for " + LATEST,
+            latestVal.valueBytes(cacheObjectContext()),
+            val.valueBytes(cacheObjectContext()));
+    }
+
+    /**
+     * Return {@code null} when {@link RepairAlgorithm#LATEST_TRUST_MISSING_PRIMARY}
+     * is used and primary node does not have a value.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCalcValueLatestTrustMissingPrimaryWhenPrimaryIsMissing() throws Exception {
+        Map<UUID, VersionedValue> nodeToVersionedValues = new HashMap<>();
+        VersionedValue ver1 = versionedValue(1, new CacheObjectImpl(644, "644".getBytes()));
+        VersionedValue ver2 = versionedValue(2, new CacheObjectImpl(331, "331".getBytes()));
+
+        nodeToVersionedValues.put(NODE_1, ver1);
+        nodeToVersionedValues.put(NODE_2, ver2);
+
+        assertNull(
+            "Unexpected calculated value [repairAlg=" + LATEST_TRUST_MISSING_PRIMARY + ']',
+            calculateValueToFixWith(LATEST_TRUST_MISSING_PRIMARY, nodeToVersionedValues, NODE_3, cacheObjectContext(), 4));
+
+    }
+
+    /**
+     * Throws {@link IllegalArgumentException} when {@link RepairAlgorithm#PRINT_ONLY} is used.
+     */
+    @Test
+    public void testCalcValuePrintOnlyThrowsException() {
+        Map<UUID, VersionedValue> nodeToVersionedValues = new HashMap<>();
+        VersionedValue ver1 = versionedValue(1, new CacheObjectImpl(644, "644".getBytes()));
+
+        nodeToVersionedValues.put(NODE_1, ver1);
+
+        assertThrows(
+            null,
+            () -> calculateValueToFixWith(
+                PRINT_ONLY, nodeToVersionedValues, NODE_1, cacheObjectContext(), 3),
+            IllegalArgumentException.class,
+            null
+        );
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,12 +53,16 @@ import org.apache.ignite.resources.LoggerResource;
 
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.calculateValueToFixWith;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_SKIP_MISSING_PRIMARY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRINT_ONLY;
 
 /**
  * Repairs conflicts based on {@link RepairAlgorithm}.
+ * This task can handle new repair algorithms:
+ * {@link RepairAlgorithm#LATEST_SKIP_MISSING_PRIMARY} and {@link RepairAlgorithm#LATEST_TRUST_MISSING_PRIMARY}.
  */
 @GridInternal
-public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, ExecutionResult<RepairResult>> {
+public class RepairRequestTaskV2 extends ComputeTaskAdapter<RepairRequest, ExecutionResult<RepairResult>> {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -79,7 +83,9 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
     private RepairRequest repairReq;
 
     /** {@inheritDoc} */
-    @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, RepairRequest arg) throws IgniteException {
+    @Override public Map<? extends ComputeJob, ClusterNode> map(
+        List<ClusterNode> subgrid, RepairRequest arg
+    ) throws IgniteException {
         repairReq = arg;
 
         IgniteInternalCache<Object, Object> cache = ignite.cachex(repairReq.cacheName());
@@ -169,7 +175,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
     }
 
     /** {@inheritDoc} */
-    @Override public ExecutionResult<RepairResult> reduce( List<ComputeJobResult> results) throws IgniteException {
+    @Override public ExecutionResult<RepairResult> reduce(List<ComputeJobResult> results) throws IgniteException {
         RepairResult aggregatedRepairRes = new RepairResult();
 
         for (ComputeJobResult result : results) {
@@ -211,19 +217,19 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
         private final Map<VersionedKey, Map<UUID, VersionedValue>> data;
 
         /** Cache name. */
-        private String cacheName;
+        private final String cacheName;
 
         /** Repair attempt. */
-        private int repairAttempt;
+        private final int repairAttempt;
 
         /** Repair algorithm to use in case of fixing doubtful keys. */
-        private RepairAlgorithm repairAlg;
+        private final RepairAlgorithm repairAlg;
 
         /** Start topology version. */
-        private AffinityTopologyVersion startTopVer;
+        private final AffinityTopologyVersion startTopVer;
 
         /** Partition id. */
-        private int partId;
+        private final int partId;
 
         /**
          * Constructor.
@@ -238,7 +244,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
         @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
         public RepairJob(
             Map<VersionedKey, Map<UUID, VersionedValue>> data,
-             String cacheName,
+            String cacheName,
             RepairAlgorithm repairAlg,
             int repairAttempt,
             AffinityTopologyVersion startTopVer,
@@ -264,7 +270,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
 
             Map<VersionedKey, RepairMeta> repairedKeys = new HashMap<>();
 
-            GridCacheContext ctx = cache.context();
+            GridCacheContext<Object, Object> ctx = cache.context();
             CacheObjectContext cacheObjCtx = ctx.cacheObjectContext();
 
             final int ownersNodesSize = owners(ctx);
@@ -281,11 +287,16 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                     CacheObject valToFixWith = null;
 
                     RepairAlgorithm usedRepairAlg = repairAlg;
+                    boolean nextAttemptIsPossible = true;
 
                     // Are there any nodes with missing key?
                     if (dataEntry.getValue().size() != ownersNodesSize && repairAttempt != MAX_REPAIR_ATTEMPTS) {
-                        if (repairAlg == RepairAlgorithm.PRINT_ONLY)
-                            keyWasSuccessfullyFixed = RepairEntryProcessor.RepairStatus.SUCCESS;
+                        if (repairAlg == PRINT_ONLY ||
+                            (repairAlg == LATEST_SKIP_MISSING_PRIMARY && !nodeToVersionedValues.containsKey(primaryUUID))) {
+
+                            keyWasSuccessfullyFixed = RepairEntryProcessor.RepairStatus.FAIL;
+                            nextAttemptIsPossible = false;
+                        }
                         else {
                             valToFixWith = calculateValueToFixWith(
                                 repairAlg,
@@ -356,8 +367,20 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                         }
                     }
 
-                    if (keyWasSuccessfullyFixed == RepairEntryProcessor.RepairStatus.FAIL)
-                        keysToRepairWithNextAttempt.put(dataEntry.getKey(), dataEntry.getValue());
+                    if (keyWasSuccessfullyFixed == RepairEntryProcessor.RepairStatus.FAIL) {
+                        if (nextAttemptIsPossible)
+                            keysToRepairWithNextAttempt.put(dataEntry.getKey(), dataEntry.getValue());
+                        else {
+                            repairedKeys.put(
+                                dataEntry.getKey(),
+                                new RepairMeta(
+                                    false,
+                                    valToFixWith,
+                                    usedRepairAlg,
+                                    dataEntry.getValue()
+                                ));
+                        }
+                    }
                     else {
                         repairedKeys.put(
                             dataEntry.getKey(),
@@ -379,23 +402,37 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
         }
 
         /**
+         * Returns primary node identifier for the given {@code key}.
          *
+         * @param ctx Cache context.
+         * @param key Key to get primary node identifier.
+         * @return Primary node identifier.
          */
-        protected UUID primaryNodeId(GridCacheContext ctx, Object key) {
+        protected UUID primaryNodeId(GridCacheContext<?, ?> ctx, Object key) {
             return ctx.affinity().nodesByKey(key, startTopVer).get(0).id();
         }
 
         /**
+         * Returns number of owners for the partition.
          *
+         * @param ctx Cache context.
+         * @return Number of owners for the partition.
          */
-        protected int owners(GridCacheContext ctx) {
+        protected int owners(GridCacheContext<?, ?> ctx) {
             return ctx.topology().owners(partId, startTopVer).size();
         }
 
         /**
+         * Returns unmarshalled values of the {@code key}.
          *
+         * @param ctx Cache context.
+         * @param key Key to unmarshal.
+         * @return Unmarshalled value of the key.
          */
-        protected Object keyValue(GridCacheContext ctx, KeyCacheObject key) throws IgniteCheckedException {
+        protected Object keyValue(
+            GridCacheContext<Object, Object> ctx,
+            KeyCacheObject key
+        ) throws IgniteCheckedException {
             KeyCacheObject unmarshalledKey = unmarshalKey(key, ctx);
 
             if (unmarshalledKey instanceof KeyCacheObjectImpl)

@@ -32,9 +32,11 @@ import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.compute.ComputeTaskFuture;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -56,6 +58,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.workload.Re
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
+import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTaskV2;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
@@ -300,7 +303,7 @@ public class PartitionReconciliationProcessorTest {
             .addTask(new Recheck(ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
                 batchRes, DEFAULT_CACHE, PARTITION_ID, MAX_RECHECK_ATTEMPTS, RepairRequestTask.MAX_REPAIR_ATTEMPTS))
             .whereResult(CollectPartitionKeysByRecheckRequestTask.class, new ExecutionResult<>(sameRes))
-            .whereResult(RepairRequestTask.class, new ExecutionResult<>(new RepairResult()))
+            .whereResult(RepairRequestTaskV2.class, new ExecutionResult<>(new RepairResult()))
             .execute();
 
         assertEquals(RecheckRequest.class.getName(), evtHist.get(0));
@@ -369,10 +372,17 @@ public class PartitionReconciliationProcessorTest {
             DiagnosticProcessor diagnosticProcessorMock = mock(DiagnosticProcessor.class);
             GridCacheProcessor cacheProcessorMock = mock(GridCacheProcessor.class);
             GridCacheSharedContext cacheSharedCtxMock = mock(GridCacheSharedContext.class);
+            IgniteDiscoverySpi discoSpiMock = mock(IgniteDiscoverySpi.class);
+            IgniteConfiguration cfgMock = mock(IgniteConfiguration.class);
+
             when(diagnosticProcessorMock.reconciliationExecutionContext()).thenReturn(reconciliationCtxMock);
             when(reconciliationCtxMock.sessionId()).thenReturn(SESSION_ID);
             when(ctxMock.diagnostic()).thenReturn(diagnosticProcessorMock);
             when(ctxMock.cache()).thenReturn(cacheProcessorMock);
+            when(ctxMock.config()).thenReturn(cfgMock);
+            when(cfgMock.getDiscoverySpi()).thenReturn(discoSpiMock);
+            when(discoSpiMock.allNodesSupport(any(), any())).thenReturn(true);
+            when(cfgMock.getDiscoverySpi()).thenReturn(discoSpiMock);
             when(cacheProcessorMock.context()).thenReturn(cacheSharedCtxMock);
             when(cacheSharedCtxMock.exchange()).thenReturn(exchMgr);
 

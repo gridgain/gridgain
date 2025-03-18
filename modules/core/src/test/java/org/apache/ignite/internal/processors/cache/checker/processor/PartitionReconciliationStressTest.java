@@ -174,13 +174,8 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
         return params;
     }
 
-    /**
-     * Test #37 Stress test for reconciliation under load
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testReconciliationOfColdKeysUnderLoad() throws Exception {
+    /** */
+    protected ReconciliationUnderLoadResult reconciliationOfColdKeysUnderLoad() throws Exception {
         IgniteCache<Integer, String> clientCache = client.cache(DEFAULT_CACHE_NAME);
 
         Set<Integer> correctKeys = new HashSet<>();
@@ -201,6 +196,7 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
 
         Set<Integer> corruptedColdKeys = new HashSet<>();
         Set<Integer> corruptedHotKeys = new HashSet<>();
+        Set<Integer> missedKeysOnPrimary = new HashSet<>();
 
         for (int i = firstBrokenKey; i < firstBrokenKey + BROKEN_KEYS_CNT; i++) {
             if (isHotKey(i))
@@ -210,10 +206,17 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
 
             correctKeys.remove(i);
 
-            if (i % 3 == 0)
-                simulateMissingEntryCorruption(nodeCacheCtxs[i % NODES_CNT], i);
+            GridCacheContext<Object, Object> ctx = nodeCacheCtxs[i % NODES_CNT];
+
+            if (i % 3 == 0) {
+                simulateMissingEntryCorruption(ctx, i);
+
+                if (ctx.cache().cache().affinity().isPrimary(ctx.kernalContext().discovery().localNode(), i)) {
+                    missedKeysOnPrimary.add(i);
+                }
+            }
             else
-                simulateOutdatedVersionCorruption(nodeCacheCtxs[i % NODES_CNT], i);
+                simulateOutdatedVersionCorruption(ctx, i);
         }
 
         log.info(">>>> Simulating data corruption finished");
@@ -243,6 +246,18 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
 
         for (Integer correctKey : correctKeys)
             assertFalse("Correct key detected as broken: " + correctKey, conflictKeys.contains(correctKey));
+
+        return new ReconciliationUnderLoadResult(res, missedKeysOnPrimary);
+    }
+
+    /**
+     * Test #37 Stress test for reconciliation under load
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testReconciliationOfColdKeysUnderLoad() throws Exception {
+        reconciliationOfColdKeysUnderLoad();
     }
 
     /**
@@ -250,5 +265,16 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
      */
     protected static boolean isHotKey(int key) {
         return key % 13 == 5 || key % 13 == 7 || key % 13 == 11;
+    }
+
+    static class ReconciliationUnderLoadResult {
+        final ReconciliationResult reconciliationResult;
+
+        final Set<Integer> missedOnPrimaryKeys;
+
+        ReconciliationUnderLoadResult(ReconciliationResult res, Set<Integer> missedOnPrimaryKeys) {
+            this.reconciliationResult = res;
+            this.missedOnPrimaryKeys = missedOnPrimaryKeys;
+        }
     }
 }
