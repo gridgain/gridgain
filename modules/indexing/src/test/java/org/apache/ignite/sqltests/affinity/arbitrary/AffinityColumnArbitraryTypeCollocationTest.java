@@ -17,11 +17,18 @@
 package org.apache.ignite.sqltests.affinity.arbitrary;
 
 import java.util.List;
+
+import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.junit.Test;
 
+/**
+ * Just a bunch of test to check how affinity field value from binary meta affects data distribution across the cluster.
+ * Answer: is doesn't affect it anyhow. GG simply ignores what affinity key for binary type that is written to the cache.
+ * Only cache-level settings matters.
+ */
 public class AffinityColumnArbitraryTypeCollocationTest extends AbstractAffinityColumnArbitraryTypeTest {
 
     public AffinityColumnArbitraryTypeCollocationTest() {
@@ -29,6 +36,8 @@ public class AffinityColumnArbitraryTypeCollocationTest extends AbstractAffinity
         gridCnt = 2;
     }
 
+    // below generators will produce groupId values in a such way that if groupId is affinity key
+    // join on foo.groupId = bar.groupId should produce result set which size is exactly half of overall table size
     static final FieldValueGenerator FOO_GENERATOR = (fieldName, id) -> ID_FIELD.equalsIgnoreCase(fieldName) ? id : id % 25;
     static final FieldValueGenerator BAR_GENERATOR = (fieldName, id) -> ID_FIELD.equalsIgnoreCase(fieldName) ? (-1) * id : id % 50;
 
@@ -54,6 +63,7 @@ public class AffinityColumnArbitraryTypeCollocationTest extends AbstractAffinity
      */
     @Test
     public void testBothTablesDefined() throws Exception {
+        // Create cache via CREATE TABLE DDL
         barTable = table(BAR_TABLE, BAR_CACHE, ID_FIELD, GROUP_ID_FIELD, BAR_GENERATOR)
             .create(backups);
 
@@ -81,8 +91,12 @@ public class AffinityColumnArbitraryTypeCollocationTest extends AbstractAffinity
      */
     @Test
     public void testPutOnRawCacheFirst() throws Exception {
+        // Create cache without table definition
         ignite(0).getOrCreateCache(new CacheConfiguration<>(BAR_CACHE)
             .setBackups(backups)
+            .setKeyConfiguration(new CacheKeyConfiguration()
+                    .setTypeName(getKeyType())
+                    .setAffinityKeyFieldName(GROUP_ID_FIELD))
             .setCacheMode(CacheMode.PARTITIONED));
 
         barTable = table(BAR_TABLE, BAR_CACHE, ID_FIELD, GROUP_ID_FIELD, BAR_GENERATOR);
@@ -95,6 +109,7 @@ public class AffinityColumnArbitraryTypeCollocationTest extends AbstractAffinity
             fooTable.insert(i);
         }
 
+        // Create BAR table after data was populated
         barTable.create(backups);
 
         String join = "SELECT * FROM " + fooTable +

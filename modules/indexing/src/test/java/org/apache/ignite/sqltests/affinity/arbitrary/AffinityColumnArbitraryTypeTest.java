@@ -30,7 +30,7 @@ public class AffinityColumnArbitraryTypeTest extends AbstractAffinityColumnArbit
     }
 
     /**
-     * If we make a 'put' first it will work
+     * Ok
      */
     @Test
     public void testPut() throws Exception {
@@ -39,7 +39,7 @@ public class AffinityColumnArbitraryTypeTest extends AbstractAffinityColumnArbit
     }
 
     /**
-     * If we make a 'put' first further inserts will also work
+     * Ok
      */
     @Test
     public void testPutFirst() throws Exception {
@@ -49,7 +49,7 @@ public class AffinityColumnArbitraryTypeTest extends AbstractAffinityColumnArbit
     }
 
     /**
-     * If we make an insert first further 'puts' will also work
+     * Ok
      */
     @Test
     public void testInsertFirst() throws Exception {
@@ -59,7 +59,7 @@ public class AffinityColumnArbitraryTypeTest extends AbstractAffinityColumnArbit
     }
 
     /**
-     * This also works
+     * Ok
      */
     @Test
     public void testConcurrentWritesToDifferentCachesWithInsertFirst() throws Exception {
@@ -68,6 +68,9 @@ public class AffinityColumnArbitraryTypeTest extends AbstractAffinityColumnArbit
         fooTable.logAndAssertTable(1);
     }
 
+    /**
+     * Ok
+     */
     @Test
     public void testConcurrentWritesDifferentCachesWithPutFirst() throws Exception {
         fooTable.insert(0);

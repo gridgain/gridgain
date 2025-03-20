@@ -30,7 +30,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_SORT_OBJECT
  * (see {@link org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl:302})
  *
  * 'puts' schema has field order [USER_ID, GROUP_ID], while SQL schemas [GROUP_ID, USER_ID].
- * This happens even despite we have <code>IGNITE_BINARY_SORT_OBJECT_FIELDS=true</code> and default idMapper
+ * This happens even if we have <code>IGNITE_BINARY_SORT_OBJECT_FIELDS=true</code> and default idMapper
  * {@link org.apache.ignite.binary.BinaryBasicIdMapper} <code>lower=true</code>
  */
 @WithSystemProperty(key = IGNITE_BINARY_SORT_OBJECT_FIELDS, value = "true")
@@ -38,8 +38,8 @@ public class AffinityColumnArbitraryTypeAndFieldsNameMismatchWithSortingTest ext
 
     @Test
     public void testPutFirstUCapGLower() throws Exception {
-        // When sorting is enabled "UserId" still will be first for 'put',
-        // because field names inserted to TreeSet !BEFORE! applying default field name mapper (lower=true)
+        // When sorting is enabled "UserId" still will be first for 'put' (we expect 'groupid' first because by default lower=true).
+        // This happens because field names inserted to TreeSet !BEFORE! applying default field name mapper
         // (see BinaryObjectBuilderImpl:302)
         testPutFirst("UserId", "groupid");
     }

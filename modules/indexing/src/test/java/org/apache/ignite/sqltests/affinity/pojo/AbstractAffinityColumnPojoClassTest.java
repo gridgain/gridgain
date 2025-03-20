@@ -36,6 +36,9 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.sqltests.affinity.AbstractAffinityColumnTest;
 import org.junit.Test;
 
+/**
+ * Base class for all tests where SQL table KV types are the class names of POJOs available in classpath "
+ */
 public abstract class AbstractAffinityColumnPojoClassTest extends AbstractAffinityColumnTest<AbstractAffinityColumnPojoClassTest.PojoTable> {
 
     @Override protected String getKeyType() {
@@ -77,7 +80,7 @@ public abstract class AbstractAffinityColumnPojoClassTest extends AbstractAffini
     }
 
     /**
-     * If we make a 'put' first it will work
+     * If we make a 'binary put' first it will work
      */
     @Test
     public void testPutBinary() throws Exception {
@@ -108,26 +111,12 @@ public abstract class AbstractAffinityColumnPojoClassTest extends AbstractAffini
     }
 
     /**
-     * This will throw exception:
-     * Binary type has different affinity key fields [typeName=... affKeyFieldName1=null, affKeyFieldName2=GROUPID]
+     * If we make put first to cache A, tables from other caches also would be safe
      */
     @Test
-    public void testConcurrentWritesDifferentCachesWithInsertFirst() throws Exception {
-        insert(0);
-        put(0);
-    }
-
-    /**
-     * This will also throw exception:
-     * Binary type has different affinity key fields [typeName=... affKeyFieldName1=null, affKeyFieldName2=GROUPID]
-     * <p>
-     * Expected exception will be DUPLICATE insert key
-     */
-    @Test
-    public void testConcurrentWritesDifferentCachesWithPutFirst() throws Exception {
+    public void testInsertFirstAfterPutWasAppliedToDifferentCache() throws Exception {
         fooTable.put(0);
-        barTable.put(0);
-        fooTable.insert(0);
+        barTable.insert(0);
     }
 
     public static class PojoTable extends AbstractAffinityColumnTest.Table {

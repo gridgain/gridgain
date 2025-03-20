@@ -18,6 +18,10 @@ package org.apache.ignite.sqltests.affinity.arbitrary;
 
 import org.junit.Test;
 
+/**
+ * Tests where table KV types are not POJO classes available in classpath.
+ * Here we demonstrate behavior when different letter cases or different fields order are applied
+ */
 public class AffinityColumnArbitraryTypeAndFieldsNameMismatchTest extends AbstractAffinityColumnArbitraryTypeTest {
 
     /** OK */
@@ -39,13 +43,20 @@ public class AffinityColumnArbitraryTypeAndFieldsNameMismatchTest extends Abstra
     }
 
     /**
-     * Both write operations are successful, but 2 versions of each field created:
+     * Both write operations are successful, but we fail on schema assertions
+     * because 2 versions of each field were created (during first insert SQL engine preferred to use UPPERCASE):
      * <li>
-     *     <ul>USERID</ul>
-     *     <ul>GROUPID</ul>
-     *     <ul>groupid</ul>
-     *     <ul>userId</ul>
+     *     <ul>name=USERID, type=long, fieldId=0xCE2B3226 (-836029914)</ul>
+     *     <ul>name=GROUPID, type=long, fieldId=0x117D5FDA (293429210)</ul>
+     *     <ul>name=groupId, type=long, fieldId=0x117D5FDA (293429210)</ul>
+     *     <ul>name=userId, type=long, fieldId=0xCE2B3226 (-836029914)</ul>
      * </li>
+     *
+     * <code>"groupid".hashCode() = 293429210</code>
+     * <code>"GROUPID".hashCode() = 1011411898</code>
+     *
+     * So the question is: If by default we use lower-case for field id calculation,
+     * why do we add uppercase column to the set of binary type fields?
      */
     @Test
     public void testInsertFirstInverseOrder() throws Exception {
@@ -54,13 +65,13 @@ public class AffinityColumnArbitraryTypeAndFieldsNameMismatchTest extends Abstra
 
     /** Fail, see {@link #testInsertFirstInverseOrder()} */
     @Test
-    public void testInsertFirstInverseOrderLowerLower() throws Exception {
+    public void testInsertFirstInverseOrderLower() throws Exception {
         testInsertFirst("groupid", ID_FIELD);
     }
 
     /** Fail, see {@link #testInsertFirstInverseOrder()} */
     @Test
-    public void testInsertFirstInverseOrderCap() throws Exception {
+    public void testInsertFirstInverseOrderCapitalized() throws Exception {
         testInsertFirst("Groupid", ID_FIELD);
     }
 

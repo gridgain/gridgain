@@ -203,10 +203,6 @@ public abstract class AbstractAffinityColumnTest<T extends AbstractAffinityColum
             this(ignite, tableName, cacheName, ID_FIELD, GROUP_ID_FIELD, keyType, Val.class.getName(), FieldValueGenerator.DEFAULT);
         }
 
-        //public Table(IgniteEx ignite, String tableName, String cacheName, String keyType) {
-        //    this(ignite, tableName, cacheName, ID_FIELD, GROUP_ID_FIELD, keyType, Val.class.getName(), FieldValueGenerator.DEFAULT);
-        //}
-
         public IgniteCache<Object, Object> getCache() {
             return ignite.cache(cacheName);
         }
