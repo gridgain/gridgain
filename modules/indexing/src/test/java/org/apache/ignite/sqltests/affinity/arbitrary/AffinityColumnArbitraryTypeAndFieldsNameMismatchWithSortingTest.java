@@ -50,9 +50,11 @@ public class AffinityColumnArbitraryTypeAndFieldsNameMismatchWithSortingTest ext
         testPutFirst("groupid", "UserId");
     }
 
+    /**
+     * Writes is successful (Groupid finally will be processed before UserId), but fails on schema assertion
+     */
     @Test
     public void testPutFirstGCapUCap() throws Exception {
-        // Same as previous
         testPutFirst("Groupid", "UserId");
     }
 
