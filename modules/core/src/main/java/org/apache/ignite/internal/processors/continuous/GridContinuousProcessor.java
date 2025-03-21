@@ -37,6 +37,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
@@ -75,7 +76,6 @@ import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.internal.util.lang.gridfunc.ReadOnlyCollectionView2X;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CI1;
@@ -95,7 +95,6 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.GridDiscoveryData;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.JoiningNodeDiscoveryData;
-import org.apache.ignite.spi.systemview.view.ContinuousQueryView;
 import org.apache.ignite.thread.IgniteThread;
 import org.apache.ignite.thread.OomExceptionHandler;
 import org.jetbrains.annotations.Nullable;
@@ -181,8 +180,8 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
     @Override public void start() throws IgniteCheckedException {
         ctx.systemView().registerView(CQ_SYS_VIEW, CQ_SYS_VIEW_DESC,
             new ContinuousQueryViewWalker(),
-            new ReadOnlyCollectionView2X<>(rmtInfos.entrySet(), locInfos.entrySet()),
-            e -> new ContinuousQueryView(e.getKey(), e.getValue()));
+            new ContinuousQueriesCollection(ctx.igniteInstanceName(), () -> locInfos.entrySet().size() + rmtInfos.entrySet().size()),
+            e -> e);
 
         discoProtoVer = ctx.discovery().mutableCustomMessages() ? 1 : 2;
 
@@ -424,6 +423,15 @@ public class GridContinuousProcessor extends GridProcessorAdapter {
 
         if (data != null)
             dataBag.addNodeSpecificData(CONTINUOUS_PROC.ordinal(), data);
+    }
+
+    /** @return Collection of local continuous routines */
+    public Collection<Map.Entry<UUID, LocalRoutineInfo>> getLocalContinuousQueryRoutines() {
+        return
+                copyLocalInfos(locInfos).
+                        entrySet().stream().
+                        filter(e -> e.getValue().handler().isQuery()).
+                        collect(Collectors.toSet());
     }
 
     /**
