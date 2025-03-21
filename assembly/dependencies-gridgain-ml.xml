@@ -34,7 +34,6 @@
                 <include>org.gridgain:ignite-ml</include>
                 <include>org.gridgain:ignite-ml-mleap-model-parser</include>
                 <include>org.gridgain:ignite-ml-spark-model-parser</include>
-                <include>org.gridgain:ignite-ml-tensorflow-model-parser</include>
                 <include>org.gridgain:ignite-ml-xgboost-model-parser</include>
             </includes>
             <sources>

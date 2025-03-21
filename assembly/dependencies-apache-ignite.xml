@@ -139,7 +139,6 @@
                 <exclude>org.gridgain:ignite-ml</exclude>
                 <exclude>org.gridgain:ignite-ml-mleap-model-parser</exclude>
                 <exclude>org.gridgain:ignite-ml-spark-model-parser</exclude>
-                <exclude>org.gridgain:ignite-ml-tensorflow-model-parser</exclude>
                 <exclude>org.gridgain:ignite-ml-xgboost-model-parser</exclude>
                 <exclude>org.gridgain:ignite-opencensus</exclude>
                 <exclude>org.gridgain:ignite-control-utility</exclude>
