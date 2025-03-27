@@ -181,6 +181,8 @@ public class RunningQueryManager {
             new SqlQueryHistoryViewWalker(),
             qryHistTracker.queryHistory().values(),
             SqlQueryHistoryView::new);
+
+        QVL.init(ctx);
     }
 
     /**
@@ -267,6 +269,8 @@ public class RunningQueryManager {
         }
 
         run.span().addTag(SQL_QRY_ID, run::globalQueryId);
+
+        QueryVerboseLogging.register(run);
 
         return qryId;
     }

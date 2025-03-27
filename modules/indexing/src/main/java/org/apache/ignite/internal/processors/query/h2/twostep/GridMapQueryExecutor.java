@@ -49,6 +49,8 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
+import org.apache.ignite.internal.processors.query.QVL;
+import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.H2StatementCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
@@ -162,6 +164,8 @@ public class GridMapQueryExecutor {
         try (TraceSurroundings ignored = MTC.support(ctx.tracing().create(SQL_QRY_CANCEL_REQ, MTC.span()))) {
             long qryReqId = msg.queryRequestId();
 
+            QVL.finish(node.id(), qryReqId, "Cancel [reqId=" + qryReqId + "]");
+
             MapNodeResults nodeRess = resultsForNode(node.id());
 
             boolean clear = qryCtxRegistry.clearShared(node.id(), qryReqId);
@@ -213,6 +217,18 @@ public class GridMapQueryExecutor {
         boolean replicated = req.isFlagSet(GridH2QueryRequest.FLAG_REPLICATED);
         final boolean lazy = req.isFlagSet(GridH2QueryRequest.FLAG_LAZY);
         boolean treatReplicatedAsPartitioned = req.isFlagSet(GridH2QueryRequest.FLAG_REPLICATED_AS_PARTITIONED);
+
+        QVL.register(
+                req.label(),
+                req.queries().stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; ")),
+                QueryUtils.globalQueryId(node.id(), req.runningQryId()),
+                null,
+                lazy,
+                distributedJoins,
+                enforceJoinOrder
+        );
+
+        QVL.logSpan(node.id(), req.requestId(), () -> this.getClass().getSimpleName() + ".onQueryRequest()");
 
         try {
             Boolean dataPageScanEnabled = req.isDataPageScanEnabled();
@@ -516,8 +532,26 @@ public class GridMapQueryExecutor {
                             dataPageScanEnabled
                         );
 
-                        if (msg != null)
+                        if (msg != null) {
+                            QVL.logSpan(node.id(), qryInfo.runningQueryId(), () -> {
+                                int rows = msg.values() != null
+                                        ? msg.values().size() / msg.columns()
+                                        : 0;
+
+                                return "Send first page message [" +
+                                                "reqId=" + msg.queryRequestId() + ", " +
+                                                "dst=" + QVL.id(node) + ", " +
+                                                "rows=" + rows +
+                                                "]";
+                            });
+
                             sendNextPage(node, msg);
+                        }
+                        else {
+                            QVL.logSpan(node.id(), qryInfo.runningQueryId(), () -> "Empty first page message [" +
+                                    "dst=" + U.id8(node.id()) +
+                                    "]");
+                        }
                     }
                     else {
                         assert !qry.isPartitioned();
@@ -768,8 +802,15 @@ public class GridMapQueryExecutor {
 
                 h2.reduceQueryExecutor().onFail(node, msg);
             }
-            else
+            else {
+                QVL.logSpan(node.id(), msg.queryRequestId(), () -> "Send fail message [" +
+                        "reqId=" + msg.queryRequestId() + ", " +
+                        "dst=" + QVL.id(node) + ", " +
+                        "failCode=" + msg.failCode() +
+                        "]");
+
                 ctx.io().sendToGridTopic(node, GridTopic.TOPIC_QUERY, msg, QUERY_POOL);
+            }
         }
         catch (Exception e) {
             e.addSuppressed(err);
@@ -866,8 +907,24 @@ public class GridMapQueryExecutor {
                             req.pageSize(),
                             dataPageScanEnabled);
 
-                        if (msg != null)
+                        if (msg != null) {
+                            QVL.logSpan(node.id(), req.queryRequestId(), () -> {
+                                int rows = msg.values() != null
+                                        ? msg.values().size() / msg.columns()
+                                        : 0;
+
+                                return "Send next-page message [" +
+                                        "reqId=" + req.queryRequestId() + ", " +
+                                        "dst=" + QVL.id(node) + ", " +
+                                        "rows=" + rows +
+                                        "]";
+                            });
+
                             sendNextPage(node, msg);
+                        }
+                        else {
+                            QVL.logSpan(node.id(), req.queryRequestId(), () -> "Empty next-page message");
+                        }
                     }
                     finally {
                         try {
