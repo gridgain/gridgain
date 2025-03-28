@@ -182,7 +182,7 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
             /** {@inheritDoc} */
             @Override public void visit(SchemaIndexCacheVisitorClosure clo) {
                 // Rebuild index after it is created.
-                storage.onStartRebuildIndexes(context);
+                storage.onStartRebuildIndexes(context, true);
 
                 try {
                     super.visit(clo);
