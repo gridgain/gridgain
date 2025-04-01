@@ -219,7 +219,6 @@ public class GridMapQueryExecutor {
         }
 
         // Log the error with the constructed message
-        System.out.println("🔥 ACTUAL LOGGER CALL: " + logMessage);// Jan 31 - Debugging statement
         log.error(logMessage.toString(), error);
 
     }
