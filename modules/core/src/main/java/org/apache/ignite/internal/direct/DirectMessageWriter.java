@@ -21,6 +21,7 @@ import java.util.BitSet;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.internal.direct.state.DirectMessageState;
 import org.apache.ignite.internal.direct.state.DirectMessageStateItem;
 import org.apache.ignite.internal.direct.stream.DirectByteBufferStream;
@@ -74,6 +75,9 @@ public class DirectMessageWriter implements MessageWriter {
 
     /** {@inheritDoc} */
     @Override public boolean writeHeader(short type, byte fieldCnt) {
+        if (type == 0)
+            Ignition.LOG.error(">>>>> write header type=" + type, new Exception());
+
         DirectByteBufferStream stream = state.item().stream;
 
         stream.writeShort(type);
