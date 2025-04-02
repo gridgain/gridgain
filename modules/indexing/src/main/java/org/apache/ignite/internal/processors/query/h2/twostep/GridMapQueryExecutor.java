@@ -186,7 +186,7 @@ public class GridMapQueryExecutor {
      * @param params Query parameters, if any.
      * @param error Exception that occurred during the query execution.
      */
-    protected void logQueryDetails(
+    String buildQueryLogDetails(
         long reqId,
         String label,
         String schemaName,
@@ -214,8 +214,8 @@ public class GridMapQueryExecutor {
             logMessage.append("\nError: ").append(error.getMessage());
         }
 
-        // Log the error with the constructed message
-        log.error(logMessage.toString(), error);
+        // Return the constructed message
+        return logMessage.toString();
 
     }
 
@@ -621,16 +621,15 @@ public class GridMapQueryExecutor {
                         if (qryRetryErr != null)
                             sendError(node, reqId, qryRetryErr);
                         else {
+                            String errMsg = buildQueryLogDetails(reqId, label, schemaName, qrys, params, e, node.id());
+
                             if (e instanceof Error) {
-                                // Log detailed query information for debugging.
-                                logQueryDetails(reqId, label, schemaName, qrys, params, e, node.id());
+                                log.error(errMsg, e);
                                 throw (Error)e;
                             } else {
-                                //Log only once for recoverable errors.
-                                logQueryDetails(reqId, label, schemaName, qrys, params, e,node.id());
+                                log.error(errMsg, e); // You can skip or keep this line based on verbosity level
                                 U.warn(log, "Failed to execute local query.", e);
                             }
-                            sendError(node, reqId, e);
                         }
                     }
                 }
