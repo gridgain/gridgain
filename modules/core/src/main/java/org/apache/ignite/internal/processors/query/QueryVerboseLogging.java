@@ -188,20 +188,21 @@ public class QueryVerboseLogging {
         }
     }
 
-    public static void logLocalSpan(long queryId, Supplier<String> messageSupplier) {
+    public static void logLocalSpan(@Nullable Long queryId, Supplier<String> messageSupplier) {
         logLocalSpan(VerbosityLevel.INFO, queryId, messageSupplier);
     }
 
-    public static void logLocalSpan(@NotNull VerbosityLevel lvl, long queryId, Supplier<String> messageSupplier) {
+    public static void logLocalSpan(@NotNull VerbosityLevel lvl, @Nullable Long queryId, Supplier<String> messageSupplier) {
         logSpan(lvl, locNodeId, queryId, messageSupplier);
     }
 
-    public static void logSpan(@NotNull UUID nodeId, long queryId, Supplier<String> messageSupplier) {
+    public static void logSpan(@NotNull UUID nodeId, @Nullable Long queryId, Supplier<String> messageSupplier) {
         logSpan(VerbosityLevel.INFO, nodeId, queryId, messageSupplier);
     }
 
-    public static void logSpan(@NotNull VerbosityLevel lvl, @NotNull UUID nodeId, long queryId, Supplier<String> messageSupplier) {
-        logSpan(lvl, QueryUtils.globalQueryId(nodeId, queryId), messageSupplier);
+    public static void logSpan(@NotNull VerbosityLevel lvl, @NotNull UUID nodeId, @Nullable Long queryId, Supplier<String> messageSupplier) {
+        if (queryId != null)
+            logSpan(lvl, QueryUtils.globalQueryId(nodeId, queryId), messageSupplier);
     }
 
     public static void logSpan(@NotNull VerbosityLevel lvl, String globalQueryId, Supplier<String> messageSupplier) {
