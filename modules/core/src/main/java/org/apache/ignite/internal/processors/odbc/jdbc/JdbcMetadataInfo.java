@@ -243,7 +243,7 @@ public class JdbcMetadataInfo {
                 int tableCmp = o1.tableName().compareTo(o2.tableName());
 
                 if (tableCmp != 0)
-                    return schemaCmp;
+                    return tableCmp;
 
                 return o1.indexName().compareTo(o2.indexName());
             }
