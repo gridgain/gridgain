@@ -218,11 +218,9 @@ public class GridMapQueryExecutor {
             logMessage.append("\nError: ").append(error.getMessage());
         }
 
-        // Return the constructed message
         return logMessage.toString();
 
     }
-
 
     /**
      * @param nodeId Node ID.
