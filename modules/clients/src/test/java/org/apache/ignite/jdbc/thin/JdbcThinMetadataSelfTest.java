@@ -1558,7 +1558,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                     nonUniqueIndexCnt++;
             }
 
-            assertEquals(8, totalCnt);
+            assertEquals(9, totalCnt);
             assertEquals(2, nonUniqueIndexCnt);
         }
     }
