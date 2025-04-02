@@ -235,6 +235,16 @@ public class JdbcMetadataInfo {
     public SortedSet<JdbcIndexMeta> getIndexesMeta(String schemaNamePtrn, String tblNamePtrn) {
         final Comparator<JdbcIndexMeta> byIndexName = new Comparator<JdbcIndexMeta>() {
             @Override public int compare(JdbcIndexMeta o1, JdbcIndexMeta o2) {
+                int schemaCmp = o1.schemaName().compareTo(o2.schemaName());
+
+                if (schemaCmp != 0)
+                    return schemaCmp;
+
+                int tableCmp = o1.tableName().compareTo(o2.tableName());
+
+                if (tableCmp != 0)
+                    return tableCmp;
+
                 return o1.indexName().compareTo(o2.indexName());
             }
         };
