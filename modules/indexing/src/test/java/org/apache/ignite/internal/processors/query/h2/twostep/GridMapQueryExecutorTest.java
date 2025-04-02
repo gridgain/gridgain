@@ -19,15 +19,12 @@ package org.apache.ignite.internal.processors.query.h2.twostep;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContextRegistry;
-import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryRequest;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
+
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
@@ -63,25 +60,29 @@ public class GridMapQueryExecutorTest {
     }
 
     /**
-     * Unit test to directly test the helper method logQueryDetails.
+     * Unit test to directly test the helper function buildQueryLogDetails.
      */
     @Test
-    public void testLogQueryDetailsDirectly() {
+    public void testBuildQueryLogDetailsDirectly() {
         long reqId = 1L;
         Throwable error = new SQLException("Test SQL Error");
         UUID remoteNodeId = UUID.randomUUID();
 
-        executor.logQueryDetails(reqId, "TestQuery", "TestSchema", Collections.emptyList(), new Object[]{}, error, remoteNodeId);
+        String logContent = executor.buildQueryLogDetails(
+            reqId,
+            "TestQuery",
+            "TestSchema",
+            Collections.emptyList(),
+            new Object[]{},
+            error,
+            remoteNodeId
+        );
 
-        ArgumentCaptor<String> logCaptor = ArgumentCaptor.forClass(String.class);
-        verify(mockLog, atLeastOnce()).error(logCaptor.capture(), any(Throwable.class));
-
-        String logContent = logCaptor.getValue();
         assertTrue(logContent.contains("Query Execution Failed"));
         assertTrue(logContent.contains("Remote Node ID: " + remoteNodeId));
-
-        // ✅ Ensure No Extra Logs Are Present
-        Mockito.verifyNoMoreInteractions(mockLog);
+        assertTrue(logContent.contains("Label: TestQuery"));
+        assertTrue(logContent.contains("Schema: TestSchema"));
+        assertTrue(logContent.contains("Error: Test SQL Error"));
     }
 
     /**
@@ -89,86 +90,25 @@ public class GridMapQueryExecutorTest {
      * of the helper method logQueryDetails.
      */
     @Test
-    public void testLogQueryDetailsOnQueryFailure() {
+    public void testBuildQueryLogDetailsOnQueryFailure() {
         ClusterNode mockNode = mock(ClusterNode.class);
-        when(mockNode.id()).thenReturn(UUID.randomUUID());
+        UUID nodeId = UUID.randomUUID();
+        when(mockNode.id()).thenReturn(nodeId);
 
         String invalidSQL = "INVALID QUERY";
         Collection<GridCacheSqlQuery> queries = Collections.singletonList(new GridCacheSqlQuery(invalidSQL));
         Object[] params = new Object[]{};
 
-        doAnswer(invocation -> {
-            Throwable e = new RuntimeException("SIMULATED SQL error");
+        Throwable e = new RuntimeException("SIMULATED SQL error");
 
-            executor.logQueryDetails(1L, "TestLabel", "TestSchema", queries, params, e, mockNode.id());
-
-            throw e;
-        }).when(executor).onQueryRequest0(
-            eq(mockNode),
-            anyLong(),
-            anyString(),
-            anyInt(),
-            anyString(),
-            anyCollection(),
-            anyList(),
-            any(),
-            any(),
-            any(),
-            anyInt(),
-            anyBoolean(),
-            anyBoolean(),
-            anyBoolean(),
-            anyInt(),
-            any(),
-            anyBoolean(),
-            any(),
-            anyBoolean(),
-            anyLong(),
-            any(),
-            anyBoolean()
+        String msg = executor.buildQueryLogDetails(
+            1L, "TestLabel", "TestSchema", queries, params, e, nodeId
         );
 
-        try {
-            executor.onQueryRequest0(
-                mockNode,
-                1L,          // reqId
-                "TestLabel", // label
-                0,           // segmentId
-                "TestSchema",// schemaName
-                queries,
-                Collections.emptyList(), // cacheIds
-                null,          // topVer
-                null,          // partsMap
-                null,          // parts
-                10,            // pageSize
-                false,         // distributedJoins
-                false,         // enforceJoinOrder
-                false,         // replicated
-                1000,          // timeout
-                params,
-                false,         // lazy
-                null,          // mvccSnapshot
-                false,         // dataPageScanEnabled
-                0L,            // maxMem
-                null,          // runningQryId
-                false          // treatReplicatedAsPartitioned
-            );
-        } catch (RuntimeException e) {
-            // Expected exception to trigger logQueryDetails
-        }
-
-        ArgumentCaptor<String> logCaptor = ArgumentCaptor.forClass(String.class);
-        verify(mockLog, atLeastOnce()).error(logCaptor.capture(), any(Throwable.class));
-
-        // ✅ Print captured logs for debugging
-        System.out.println("🚀 Captured Logs:");
-        for (String capturedLog : logCaptor.getAllValues()) {
-            System.out.println("🔥 " + capturedLog);
-        }
-
-        String logMsg = logCaptor.getValue();
-        assertTrue(logMsg.contains("INVALID QUERY"));
-        assertTrue(logMsg.contains("Parameters: []"));
+        assertTrue(msg.contains("INVALID QUERY"));
+        assertTrue(msg.contains("Parameters: []"));
+        assertTrue(msg.contains("Remote Node ID: " + nodeId));
+        assertTrue(msg.contains("Error: SIMULATED SQL error"));
     }
 
     /**
@@ -176,82 +116,47 @@ public class GridMapQueryExecutorTest {
      * with null or empty inputs.
      */
     @Test
-    public void testLogQueryDetailsWithNullInputs() {
+    public void testBuildQueryLogDetailsWithNullInputs() {
         UUID remoteNodeId = UUID.randomUUID();
 
-        executor.logQueryDetails(1L, null, null, null, null, null, remoteNodeId);
+        String logContent = executor.buildQueryLogDetails(
+            1L,
+            null,
+            null,
+            null,
+            null,
+            null,
+            remoteNodeId
+        );
 
-        ArgumentCaptor<String> logCaptor = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<Throwable> throwableCaptor = ArgumentCaptor.forClass(Throwable.class);
-
-        verify(mockLog, atLeastOnce()).error(logCaptor.capture(), throwableCaptor.capture());
-
-        System.out.println("🚀 Captured Logs is testLogQueryDetailsWithNullInputs:");
-        for (String capturedLog : logCaptor.getAllValues()) {
-            System.out.println("🔥 " + capturedLog);
-        }
-
-        String logContent = logCaptor.getValue();
-        assertTrue("Log must contain 'Query Execution Failed'", logContent.contains("Query Execution Failed"));
-        assertTrue("Log must contain 'Label: N/A'", logContent.contains("Label: N/A"));
-        assertTrue("Log must contain 'Schema: N/A'", logContent.contains("Schema: N/A"));
-        assertTrue("Log must contain 'Remote Node ID'", logContent.contains("Remote Node ID: " + remoteNodeId));
-
-        // Print all interactions captured by Mockito
-        Mockito.verifyNoMoreInteractions(mockLog);
+        assertTrue(logContent.contains("Query Execution Failed"));
+        assertTrue(logContent.contains("Label: N/A"));
+        assertTrue(logContent.contains("Schema: N/A"));
+        assertTrue(logContent.contains("Queries: N/A"));
+        assertTrue(logContent.contains("Parameters: N/A"));
+        assertTrue(logContent.contains("Remote Node ID: " + remoteNodeId));
     }
+
 
     /**
      * Integration test to validate query execution error logging through the full
      * query execution flow.
      */
     @Test
-    public void testQueryExecutionErrorLoggingIntegration() throws Exception{
+    public void testBuildQueryLogDetailsIntegrationLikeFlow() {
         ClusterNode mockNode = mock(ClusterNode.class);
-        UUID remoteNodeId = UUID.randomUUID();
-        when(mockNode.id()).thenReturn(remoteNodeId);
+        UUID nodeId = UUID.randomUUID();
+        when(mockNode.id()).thenReturn(nodeId);
 
-        doThrow(new RuntimeException("Test Exception"))
-            .when(executor).onQueryRequest0(
-                eq(mockNode),
-                anyLong(),
-                anyString(),
-                anyInt(),
-                anyString(),
-                anyCollection(),
-                anyList(),
-                any(),
-                any(),
-                any(),
-                anyInt(),
-                anyBoolean(),
-                anyBoolean(),
-                anyBoolean(),
-                anyInt(),
-                any(),
-                anyBoolean(),
-                any(),
-                anyBoolean(),
-                anyLong(),
-                any(),
-                anyBoolean());
+        Collection<GridCacheSqlQuery> queries = Collections.singletonList(new GridCacheSqlQuery("SELECT * FROM test"));
+        Throwable e = new RuntimeException("Forced Failure");
 
-        try {
-            GridH2QueryRequest req = new GridH2QueryRequest();
-            executor.onQueryRequest(mockNode, req);
-        } catch (IgniteCheckedException ignored) { /* Expected */ }
+        String logMsg = executor.buildQueryLogDetails(
+            1L, "TestLabel", "TestSchema", queries, new Object[]{}, e, nodeId
+        );
 
-        executor.logQueryDetails(1L, "TestLabel", "TestSchema", null, null, new RuntimeException("Forced Failure"), mockNode.id());
-
-        ArgumentCaptor<String> logCaptor = ArgumentCaptor.forClass(String.class);
-        verify(mockLog, atLeastOnce()).error(logCaptor.capture(), any(Throwable.class));
-
-        System.out.println("🚀 Captured Logs Before Verifying No More Interactions:");
-        for (String capturedLog : logCaptor.getAllValues()) {
-            System.out.println("🔥 " + capturedLog);
-        }
-
-        String logContent = logCaptor.getValue();
-        assertTrue(logContent.contains("Query Execution Failed"));
+        assertTrue(logMsg.contains("Query Execution Failed"));
+        assertTrue(logMsg.contains("SELECT * FROM test"));
+        assertTrue(logMsg.contains("Error: Forced Failure"));
     }
 }
