@@ -34,13 +34,16 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class GridMapQueryExecutorTest {
+
     private IgniteLogger mockLog;
     private GridKernalContext mockCtx;
+
     private IgniteH2Indexing mockH2;
     private GridMapQueryExecutor executor;
 
     @Before
     public void setup() throws Exception {
+
         mockLog = mock(IgniteLogger.class);
         mockCtx = mock(GridKernalContext.class);
         mockH2 = mock(IgniteH2Indexing.class);
@@ -64,6 +67,7 @@ public class GridMapQueryExecutorTest {
      */
     @Test
     public void testBuildQueryLogDetailsDirectly() {
+
         long reqId = 1L;
         Throwable error = new SQLException("Test SQL Error");
         UUID remoteNodeId = UUID.randomUUID();
@@ -136,7 +140,6 @@ public class GridMapQueryExecutorTest {
         assertTrue(logContent.contains("Parameters: N/A"));
         assertTrue(logContent.contains("Remote Node ID: " + remoteNodeId));
     }
-
 
     /**
      * Integration test to validate query execution error logging through the full
