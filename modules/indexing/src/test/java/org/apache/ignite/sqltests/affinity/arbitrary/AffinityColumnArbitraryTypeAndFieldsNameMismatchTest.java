@@ -48,8 +48,8 @@ public class AffinityColumnArbitraryTypeAndFieldsNameMismatchTest extends Abstra
      * <li>
      *     <ul>name=USERID, type=long, fieldId=0xCE2B3226 (-836029914)</ul>
      *     <ul>name=GROUPID, type=long, fieldId=0x117D5FDA (293429210)</ul>
-     *     <ul>name=groupId, type=long, fieldId=0x117D5FDA (293429210)</ul>
      *     <ul>name=userId, type=long, fieldId=0xCE2B3226 (-836029914)</ul>
+     *     <ul>name=groupId, type=long, fieldId=0x117D5FDA (293429210)</ul>
      * </li>
      *
      * <code>"groupid".hashCode() = 293429210</code>

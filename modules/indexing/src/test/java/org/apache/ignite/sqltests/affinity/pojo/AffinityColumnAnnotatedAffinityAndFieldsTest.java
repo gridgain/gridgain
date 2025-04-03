@@ -68,7 +68,7 @@ public class AffinityColumnAnnotatedAffinityAndFieldsTest extends AbstractAffini
     static class KeyC {
 
         @QuerySqlField(index = true)
-        long userId;
+        long UserId;
 
         @AffinityKeyMapped
         @QuerySqlField(index = true, name = "GROUPID")
@@ -76,13 +76,13 @@ public class AffinityColumnAnnotatedAffinityAndFieldsTest extends AbstractAffini
 
         static KeyC from(long id) {
             KeyC instance = new KeyC();
-            instance.userId = id;
+            instance.UserId = id;
             instance.groupId = id % 100;
             return instance;
         }
 
         @Override public String toString() {
-            return "KeyB [" + "id=" + userId + ", groupId=" + groupId + ']';
+            return "KeyB [" + "id=" + UserId + ", groupId=" + groupId + ']';
         }
 
     }

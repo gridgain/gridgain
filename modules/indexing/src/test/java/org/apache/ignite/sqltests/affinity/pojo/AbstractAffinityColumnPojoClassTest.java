@@ -34,7 +34,10 @@ package org.apache.ignite.sqltests.affinity.pojo;
 
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.sqltests.affinity.AbstractAffinityColumnTest;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_SORT_OBJECT_FIELDS;
 
 /**
  * Base class for all tests where SQL table KV types are the class names of POJOs available in classpath "
@@ -93,6 +96,23 @@ public abstract class AbstractAffinityColumnPojoClassTest extends AbstractAffini
      */
     @Test
     public void testPutAndInsert() throws Exception {
+        put(0);
+        insert(1);
+
+        logAndAssertTable(2);
+    }
+
+    /**
+     * If we have fields sorting enabled even first 'put' will fail.
+     * See {@link org.apache.ignite.sqltests.affinity.arbitrary.AffinityColumnArbitraryTypeAndFieldsNameMismatchWithSortingTest} for explanation
+     *
+     * !!! This test won't work if you run it as part of the test suite. Run it exclusively,
+     * otherwise <code>IGNITE_BINARY_SORT_OBJECT_FIELDS</code> will be populated with <code>false</code>
+     * by another test
+     */
+    @WithSystemProperty(key = IGNITE_BINARY_SORT_OBJECT_FIELDS, value = "true")
+    @Test
+    public void testPutAndInsertWithFieldsSorting() throws Exception {
         put(0);
         insert(1);
 

@@ -16,15 +16,6 @@
 
 package org.apache.ignite.sqltests.affinity.arbitrary;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
-import org.apache.ignite.internal.binary.BinaryFieldMetadata;
-import org.apache.ignite.internal.binary.BinaryMetadata;
-import org.apache.ignite.internal.binary.BinaryUtils;
-import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.sqltests.affinity.AbstractAffinityColumnTest;
 
 public abstract class AbstractAffinityColumnArbitraryTypeTest extends AbstractAffinityColumnTest<AbstractAffinityColumnTest.Table> {
@@ -44,71 +35,4 @@ public abstract class AbstractAffinityColumnArbitraryTypeTest extends AbstractAf
             .create(backups);
     }
 
-    // Metadata
-
-    protected Collection<BinaryMetadata> getMetadata() {
-        return ((CacheObjectBinaryProcessorImpl)ignite(0).context().cacheObjects()).binaryMetadata();
-    }
-
-    protected BinaryMetadata getKeyMetadata() {
-        return getMetadata().stream()
-            .filter(m -> getKeyType().equalsIgnoreCase(m.typeName()))
-            .findAny()
-            .orElseThrow(() -> new RuntimeException("Cant find " + getKeyType() + " metadata"));
-    }
-
-    protected BinaryMetadata dumpBinaryMeta() {
-        return printResult(getKeyMetadata());
-    }
-
-    protected static BinaryMetadata printResult(BinaryMetadata m) {
-        log("\ntypeId=" + printInt(m.typeId()));
-        log("typeName=" + m.typeName());
-        log("affinityKey=" + m.affinityKeyFieldName());
-        log("Fields:");
-
-        final Map<Integer, String> fldMap = new HashMap<>();
-        m.fieldsMap().forEach((name, fldMeta) -> {
-            log("    " +
-                "name=" + name +
-                ", type=" + BinaryUtils.fieldTypeName(fldMeta.typeId()) +
-                ", fieldId=" + printInt(fldMeta.fieldId())
-            );
-
-            fldMap.put(fldMeta.fieldId(), name);
-        });
-
-        log("Schemas:");
-        m.schemas().forEach(s ->
-            log("    " +
-                "schemaId=" + printInt(s.schemaId()) +
-                ", fields=" + Arrays.stream(s.fieldIds())
-                .mapToObj(fldMap::get)
-                .collect(Collectors.toList())));
-        log("");
-
-        return m;
-    }
-
-    protected static String printInt(int val) {
-        return "0x" + Integer.toHexString(val).toUpperCase() + " (" + val + ')';
-    }
-
-    protected void assertBinaryMeta() {
-        BinaryMetadata binaryMetadata = dumpBinaryMeta();
-        Map<String, BinaryFieldMetadata> fieldsMap = binaryMetadata.fieldsMap();
-
-        Map<String, BinaryFieldMetadata> groupMap = new HashMap<>();
-        fieldsMap.forEach((fn, fm) -> {
-            if (GROUP_ID_FIELD.equalsIgnoreCase(fn)) {
-                groupMap.put(fn, fm);
-            }
-        });
-
-        assertEquals("Multiple fields for " + GROUP_ID_FIELD + " were created " + groupMap.keySet(), 1, groupMap.size());
-
-        String affinityKey = binaryMetadata.affinityKeyFieldName();
-        assertNotNull("Affinity key is null", affinityKey);
-        assertEquals("Unexpected affinity key", GROUP_ID_FIELD.toLowerCase(), affinityKey.toLowerCase());
-    }
 }

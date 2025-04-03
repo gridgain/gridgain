@@ -68,20 +68,20 @@ public class AffinityColumnAnnotatedAffinityTest extends AbstractAffinityColumnP
      */
     public static class KeyB {
 
-        long userId;
+        long UserId;
 
         @AffinityKeyMapped
         long groupId;
 
         public static KeyB from(long id) {
             KeyB instance = new KeyB();
-            instance.userId = id;
+            instance.UserId = id;
             instance.groupId = id % 100;
             return instance;
         }
 
         @Override public String toString() {
-            return "KeyC [" + "id=" + userId + ", groupId=" + groupId + ']';
+            return "KeyC [" + "id=" + UserId + ", groupId=" + groupId + ']';
         }
     }
 

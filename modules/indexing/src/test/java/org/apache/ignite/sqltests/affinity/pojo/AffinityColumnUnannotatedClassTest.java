@@ -47,18 +47,19 @@ public class AffinityColumnUnannotatedClassTest extends AbstractAffinityColumnPo
      */
     public static class KeyA {
 
-        long userId;
+        long UserId;
+
         long groupId;
 
         static KeyA from(long id) {
             KeyA instance = new KeyA();
-            instance.userId = id;
+            instance.UserId = id;
             instance.groupId = id % 100;
             return instance;
         }
 
         @Override public String toString() {
-            return "KeyA [" + "id=" + userId + ", groupId=" + groupId + ']';
+            return "KeyA [" + "id=" + UserId + ", groupId=" + groupId + ']';
         }
 
     }

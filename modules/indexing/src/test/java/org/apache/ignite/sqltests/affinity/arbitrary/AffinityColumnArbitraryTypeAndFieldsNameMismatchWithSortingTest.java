@@ -25,10 +25,10 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_SORT_OBJECT
  * All tests below fail because of binary schema merging conflicts,
  * binary metadata initialized by 'puts' doesn't have affinityKey specified (despite actual affinity distribution will use GROUP_ID field),
  * meanwhile metadata created during SQL inserts HAS affinityKey=GROUP_ID.
- *
+ * <p>
  * Merging it triggered by difference between 'puts' and SQL binary schema ids
  * (see {@link org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl:302})
- *
+ * <p>
  * 'puts' schema has field order [USER_ID, GROUP_ID], while SQL schemas [GROUP_ID, USER_ID].
  * This happens even if we have <code>IGNITE_BINARY_SORT_OBJECT_FIELDS=true</code> and default idMapper
  * {@link org.apache.ignite.binary.BinaryBasicIdMapper} <code>lower=true</code>
