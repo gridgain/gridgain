@@ -162,23 +162,6 @@ public class QueryVerboseLogging {
         }
     }
 
-    public static void finish(long queryId, String message) {
-        finish(locNodeId, queryId, message);
-    }
-
-    public static void finish(UUID nodeId, long queryId, String message) {
-        finish(QueryUtils.globalQueryId(nodeId, queryId), message);
-    }
-
-    public static void finish(String globalQueryId, String message) {
-        if (cfg.isEnabled()) {
-            TargetQueryDescriptor descriptor = queries.remove(globalQueryId);
-            if (descriptor != null) {
-                descriptor.log(message).finish();
-            }
-        }
-    }
-
     public static void ifPresent(String globalQueryId, Consumer<TargetQueryDescriptor> action) {
         if (cfg.isEnabled()) {
             TargetQueryDescriptor descriptor = queries.get(globalQueryId);
@@ -200,8 +183,8 @@ public class QueryVerboseLogging {
         logSpan(VerbosityLevel.INFO, nodeId, queryId, messageSupplier);
     }
 
-    public static void logSpan(@NotNull VerbosityLevel lvl, @NotNull UUID nodeId, @Nullable Long queryId, Supplier<String> messageSupplier) {
-        if (queryId != null)
+    public static void logSpan(@NotNull VerbosityLevel lvl, @Nullable UUID nodeId, @Nullable Long queryId, Supplier<String> messageSupplier) {
+        if (queryId != null && nodeId != null)
             logSpan(lvl, QueryUtils.globalQueryId(nodeId, queryId), messageSupplier);
     }
 
@@ -212,6 +195,24 @@ public class QueryVerboseLogging {
             else
                 d.touch();
         });
+    }
+
+    public static void finish(@Nullable Long queryId, String message) {
+        finish(locNodeId, queryId, message);
+    }
+
+    public static void finish(@Nullable UUID nodeId, @Nullable Long queryId, String message) {
+        if (queryId != null && nodeId != null)
+            finish(QueryUtils.globalQueryId(nodeId, queryId), message);
+    }
+
+    public static void finish(String globalQueryId, String message) {
+        if (cfg.isEnabled()) {
+            TargetQueryDescriptor descriptor = queries.remove(globalQueryId);
+            if (descriptor != null) {
+                descriptor.log(message).finish();
+            }
+        }
     }
 
     private static void logMsg(String message) {
