@@ -23,6 +23,11 @@
     <property name="charset" value="UTF-8"/>
 
     <property name="fileExtensions" value="java, properties, xml"/>
+    
+    <module name="SuppressionFilter">
+        <property name="file" value="checkstyle/checkstyle-suppressions.xml"/>
+    </module>
+
 
     <!-- Whitespaces Checks. See: http://checkstyle.sourceforge.net/config_whitespace.html -->
     <module name="FileTabCharacter">

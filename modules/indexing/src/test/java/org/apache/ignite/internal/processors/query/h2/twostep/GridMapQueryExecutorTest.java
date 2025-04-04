@@ -36,9 +36,11 @@ import static org.mockito.Mockito.*;
 public class GridMapQueryExecutorTest {
 
     private IgniteLogger mockLog;
+
     private GridKernalContext mockCtx;
 
     private IgniteH2Indexing mockH2;
+
     private GridMapQueryExecutor executor;
 
     @Before
