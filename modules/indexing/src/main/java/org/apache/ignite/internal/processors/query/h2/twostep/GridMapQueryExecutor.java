@@ -629,7 +629,7 @@ public class GridMapQueryExecutor {
                                 log.error(errMsg, e);
                                 throw (Error)e;
                             } else {
-                                log.error(errMsg, e); // You can skip or keep this line based on verbosity level
+                                log.error(errMsg, e);
                                 U.warn(log, "Failed to execute local query.", e);
                             }
                         }
