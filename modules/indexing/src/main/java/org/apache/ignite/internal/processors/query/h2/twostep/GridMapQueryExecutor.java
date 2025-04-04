@@ -177,6 +177,48 @@ public class GridMapQueryExecutor {
     }
 
     /**
+     * Logs detailed information about a query that encountered an error during execution.
+     *
+     * @param reqId Request ID of the query.
+     * @param label Query label, if provided.
+     * @param schemaName Schema name under which the query was executed.
+     * @param queries Collection of SQL queries involved in the execution.
+     * @param params Query parameters, if any.
+     * @param error Exception that occurred during the query execution.
+     */
+    String buildQueryLogDetails(
+        long reqId,
+        String label,
+        String schemaName,
+        Collection<GridCacheSqlQuery> queries,
+        Object[] params,
+        Throwable error,
+        UUID remoteNodeId
+    ) {
+        StringBuilder logMessage = new StringBuilder();
+
+        logMessage.append("Query Execution Failed:")
+            .append("\nRequest ID: ").append(reqId)
+            .append("\nLabel: ").append(label != null ? label : "N/A")
+            .append("\nSchema: ").append(schemaName != null ? schemaName : "N/A")
+            .append("\nQueries: ").append(
+                queries != null
+                    ? queries.stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; "))
+                    : "N/A")
+            .append("\nParameters: ").append(params != null ? Arrays.toString(params) : "N/A")
+            .append("\nTimestamp: ").append(System.currentTimeMillis())
+            .append("\nLocal Node ID: ").append(ctx.localNodeId())
+            .append("\nRemote Node ID: ").append(remoteNodeId);
+
+        if (error != null) {
+            logMessage.append("\nError: ").append(error.getMessage());
+        }
+
+        return logMessage.toString();
+
+    }
+
+    /**
      * @param nodeId Node ID.
      * @return Results for node.
      */
@@ -333,7 +375,7 @@ public class GridMapQueryExecutor {
      * @param maxMem Query memory limit.
      * @param runningQryId Running query id.
      */
-    private void onQueryRequest0(
+    protected void onQueryRequest0(
         final ClusterNode node,
         final long reqId,
         final String label,
@@ -543,15 +585,14 @@ public class GridMapQueryExecutor {
         catch (Throwable e) {
             if (qryResults != null) {
                 nodeRess.remove(reqId, segmentId, qryResults);
-
                 qryResults.close();
 
                 // If a query is cancelled before execution is started partitions have to be released.
                 if (!lazy || !qryResults.isAllClosed())
                     qryResults.releaseQueryContext();
-            }
-            else
+            } else {
                 releaseReservations(qctx);
+            }
 
             if (e instanceof QueryCancelledException)
                 sendError(node, reqId, e);
@@ -578,21 +619,20 @@ public class GridMapQueryExecutor {
                         if (qryRetryErr != null)
                             sendError(node, reqId, qryRetryErr);
                         else {
+                            String errMsg = buildQueryLogDetails(reqId, label, schemaName, qrys, params, e, node.id());
+
                             if (e instanceof Error) {
-                                U.error(log, "Failed to execute local query.", e);
-
+                                log.error(errMsg, e);
                                 throw (Error)e;
+                            } else {
+                                log.error(errMsg, e);
+                                U.warn(log, "Failed to execute local query.", e);
                             }
-
-                            U.warn(log, "Failed to execute local query.", e);
-
-                            sendError(node, reqId, e);
                         }
                     }
                 }
             }
-        }
-        finally {
+        } finally {
             if (reserved != null)
                 reserved.release();
 
@@ -988,8 +1028,7 @@ public class GridMapQueryExecutor {
         try {
             boolean loc = node.isLocal();
 
-            GridQueryNextPageResponse msg = new GridQueryNextPageResponse(reqId, segmentId,
-            /*qry*/0, /*page*/0, /*allRows*/0, /*cols*/1,
+            GridQueryNextPageResponse msg = new GridQueryNextPageResponse(reqId, segmentId,/*qry*/0, /*page*/0, /*allRows*/0, /*cols*/1,
                 loc ? null : Collections.emptyList(),
                 loc ? Collections.<Value[]>emptyList() : null,
                 false);
