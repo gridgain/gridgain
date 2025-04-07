@@ -630,7 +630,7 @@ public class GridMapQueryExecutor {
                                 throw (Error)e;
                             } else {
                                 log.error(errMsg, e);
-                                U.warn(log, "Failed to execute local query.", e);
+                                sendError(node, reqId, e);
                             }
                         }
                     }
