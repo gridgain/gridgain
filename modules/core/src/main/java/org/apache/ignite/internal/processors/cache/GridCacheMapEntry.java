@@ -2601,18 +2601,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     private void drReplicate(GridDrType drType, @Nullable CacheObject val, GridCacheVersion ver, AffinityTopologyVersion topVer)
         throws IgniteCheckedException {
         if (cctx.isDrEnabled() && drType != DR_NONE && !isInternal()) {
-            traceKeyReplication(ver);
+            if (log.isTraceEnabled())
+                traceReplicate(ver, keyValueToLog());
 
             cctx.dr().replicate(key, val, rawTtl(), rawExpireTime(), ver.conflictVersion(), drType, topVer);
-        }
-    }
-
-    private void traceKeyReplication(GridCacheVersion ver) {
-        if (log.isTraceEnabled()) {
-            if (!((GridNearCacheEntry) this).recordDhtVersion(ver))
-                logOnMoreRecent();
-
-            traceReplicate(ver, keyValueToLog());
         }
     }
 
