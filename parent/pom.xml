@@ -67,12 +67,12 @@
         <checkstyle.puppycrawl.version>8.29</checkstyle.puppycrawl.version>
         <commons.beanutils.bundle.version>1.9.2_1</commons.beanutils.bundle.version>
         <commons.beanutils.version>1.9.4</commons.beanutils.version>
-        <commons.codec.version>1.15</commons.codec.version>
+        <commons.codec.version>1.18.0</commons.codec.version>
         <commons.collections.version>3.2.2</commons.collections.version>
-        <commons.compress.version>1.26.1</commons.compress.version>
+        <commons.compress.version>1.27.1</commons.compress.version>
         <commons.dbcp.version>1.4</commons.dbcp.version>
-        <commons.io.version>2.17.0</commons.io.version>
-        <commons.lang3.version>3.12.0</commons.lang3.version>
+        <commons.io.version>2.18.0</commons.io.version>
+        <commons.lang3.version>3.17.0</commons.lang3.version>
         <cron4j.version>2.2.5</cron4j.version>
         <curator.version>5.5.0</curator.version>
         <easymock.version>3.4</easymock.version>
