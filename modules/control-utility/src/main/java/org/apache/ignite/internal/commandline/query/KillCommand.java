@@ -30,14 +30,17 @@ import org.apache.ignite.internal.visor.query.VisorContinuousQueryCancelTask;
 import org.apache.ignite.internal.visor.query.VisorContinuousQueryCancelTaskArg;
 import org.apache.ignite.internal.visor.query.VisorQueryCancelOnInitiatorTask;
 import org.apache.ignite.internal.visor.query.VisorQueryCancelOnInitiatorTaskArg;
+import org.apache.ignite.internal.visor.query.VisorScanQueryCancelTask;
+import org.apache.ignite.internal.visor.query.VisorScanQueryCancelTaskArg;
 
 import static java.util.Collections.singletonMap;
+import static org.apache.ignite.internal.QueryMXBeanImpl.EXPECTED_GLOBAL_QRY_ID_FORMAT;
 import static org.apache.ignite.internal.commandline.CommandList.KILL;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
 import static org.apache.ignite.internal.commandline.query.KillSubcommand.CONTINUOUS;
+import static org.apache.ignite.internal.commandline.query.KillSubcommand.SCAN;
 import static org.apache.ignite.internal.commandline.query.KillSubcommand.SQL;
 import static org.apache.ignite.internal.sql.command.SqlKillQueryCommand.parseGlobalQueryId;
-import static org.apache.ignite.internal.QueryMXBeanImpl.EXPECTED_GLOBAL_QRY_ID_FORMAT;
 
 /**
  * control.sh kill command.
@@ -104,6 +107,16 @@ public class KillCommand implements Command<Object> {
 
                 break;
 
+            case SCAN:
+                UUID originNodeId = UUID.fromString(argIter.nextArg("Expected query originating node id."));
+                String cacheName = argIter.nextArg("Expected cache name.");
+                long qryId = Long.parseLong(argIter.nextArg("Expected query identifier."));
+
+                taskArgs = new VisorScanQueryCancelTaskArg(originNodeId, cacheName, qryId);
+                taskName = VisorScanQueryCancelTask.class.getName();
+
+                break;
+
             default:
                 throw new IllegalArgumentException("Unknown kill subcommand: " + cmd);
         }
@@ -113,12 +126,19 @@ public class KillCommand implements Command<Object> {
     @Override public void printUsage(Logger log) {
         Command.usage(log, "Kill sql query by query id:", KILL, singletonMap("query_id", "Query identifier."),
             SQL.toString(), "query_id");
+
         Map<String, String> params = new HashMap<>();
         params.put("origin_node_id", "Originating node id.");
         params.put("routine_id", "Routine identifier.");
-
         Command.usage(log, "Kill continuous query by routine id:", KILL, params, CONTINUOUS.toString(),
             "origin_node_id", "routine_id");
+
+        params.clear();
+        params.put("origin_node_id", "Originating node id.");
+        params.put("cache_name", "Cache name.");
+        params.put("query_id", "Query identifier.");
+        Command.usage(log, "Kill scan query by node id, cache name and query id:", KILL,
+            params, SCAN.toString(), "origin_node_id", "cache_name", "query_id");
     }
 
     /** {@inheritDoc} */
