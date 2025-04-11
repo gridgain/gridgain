@@ -26,6 +26,7 @@ import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.visor.client.VisorClientConnectionDropTask;
 import org.apache.ignite.internal.visor.query.VisorContinuousQueryCancelTask;
 import org.apache.ignite.internal.visor.query.VisorContinuousQueryCancelTaskArg;
 import org.apache.ignite.internal.visor.query.VisorQueryCancelOnInitiatorTask;
@@ -36,7 +37,10 @@ import org.apache.ignite.internal.visor.query.VisorScanQueryCancelTaskArg;
 import static java.util.Collections.singletonMap;
 import static org.apache.ignite.internal.QueryMXBeanImpl.EXPECTED_GLOBAL_QRY_ID_FORMAT;
 import static org.apache.ignite.internal.commandline.CommandList.KILL;
+import static org.apache.ignite.internal.commandline.CommandLogger.optional;
+import static org.apache.ignite.internal.commandline.TaskExecutor.BROADCAST_UUID;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
+import static org.apache.ignite.internal.commandline.query.KillSubcommand.CLIENT;
 import static org.apache.ignite.internal.commandline.query.KillSubcommand.CONTINUOUS;
 import static org.apache.ignite.internal.commandline.query.KillSubcommand.SCAN;
 import static org.apache.ignite.internal.commandline.query.KillSubcommand.SQL;
@@ -54,6 +58,9 @@ public class KillCommand implements Command<Object> {
     /** Task name. */
     private String taskName;
 
+    /** Node id. */
+    private UUID nodeId;
+
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
@@ -61,7 +68,7 @@ public class KillCommand implements Command<Object> {
                 client,
                 taskName,
                 taskArgs,
-                null,
+                nodeId,
                 clientCfg
             );
         }
@@ -96,6 +103,7 @@ public class KillCommand implements Command<Object> {
                     throw new IllegalArgumentException("Expected global query id. " + EXPECTED_GLOBAL_QRY_ID_FORMAT);
                 taskArgs = new VisorQueryCancelOnInitiatorTaskArg(ids.get1(), ids.get2());
                 taskName = VisorQueryCancelOnInitiatorTask.class.getName();
+                nodeId = null;
                 break;
 
             case CONTINUOUS:
@@ -104,7 +112,7 @@ public class KillCommand implements Command<Object> {
                     UUID.fromString(argIter.nextArg("Expected continuous query id.")));
 
                 taskName = VisorContinuousQueryCancelTask.class.getName();
-
+                nodeId = null;
                 break;
 
             case SCAN:
@@ -114,6 +122,23 @@ public class KillCommand implements Command<Object> {
 
                 taskArgs = new VisorScanQueryCancelTaskArg(originNodeId, cacheName, qryId);
                 taskName = VisorScanQueryCancelTask.class.getName();
+                nodeId = null;
+                break;
+
+            case CLIENT:
+                taskName = VisorClientConnectionDropTask.class.getName();
+
+                String argVal = argIter.nextArg("connection id");
+
+                taskArgs = "ALL".equals(argVal) ? null : Long.parseLong(argVal);
+
+                if ("--node-id".equals(argIter.peekNextArg())) {
+                    argIter.nextArg("--node-id");
+
+                    nodeId = UUID.fromString(argIter.nextArg("node_id"));
+                }
+                else
+                    nodeId = BROADCAST_UUID;
 
                 break;
 
@@ -139,6 +164,15 @@ public class KillCommand implements Command<Object> {
         params.put("query_id", "Query identifier.");
         Command.usage(log, "Kill scan query by node id, cache name and query id:", KILL,
             params, SCAN.toString(), "origin_node_id", "cache_name", "query_id");
+
+        params.clear();
+
+        params.put("connection_id", "Connection identifier or ALL.");
+        params.put("--node-id node_id", "Node id to drop connection from.");
+
+        Command.usage(log, "Kill client connection by id:", KILL, params, CLIENT.toString(),
+            "connection_id",
+            optional("--node-id node_id"));
     }
 
     /** {@inheritDoc} */

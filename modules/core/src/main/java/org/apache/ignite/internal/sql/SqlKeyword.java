@@ -37,6 +37,9 @@ public class SqlKeyword {
     /** Keyword: SCAN. */
     public static final String SCAN = "SCAN";
 
+    /** Keyword: CLIENT. */
+    public static final String CLIENT = "CLIENT";
+
     /** Keyword: ALTER. */
     public static final String ALTER = "ALTER";
 

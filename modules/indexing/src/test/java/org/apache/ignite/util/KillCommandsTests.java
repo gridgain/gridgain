@@ -23,15 +23,21 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.event.CacheEntryEvent;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.client.ClientConnectionException;
+import org.apache.ignite.client.IgniteClient;
+import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.index.AbstractSchemaSelfTest;
@@ -39,6 +45,7 @@ import org.apache.ignite.internal.processors.cache.query.GridCacheQueryManager;
 import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 
+import static org.apache.ignite.internal.processors.odbc.ClientListenerProcessor.CLIENT_LISTENER_PORT;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.apache.ignite.util.KillCommandsSQLTest.execute;
@@ -222,5 +229,66 @@ class KillCommandsTests {
             assertNotNull(futs);
             assertFalse(futs.containsKey(qryId));
         }
+    }
+
+    /**
+     * Test cancel of the client connection(s).
+     *
+     * @param srvs Server nodes.
+     * @param cliCanceler Client connection cancel closure.
+     */
+    public static void doTestCancelClientConnection(List<IgniteEx> srvs, BiConsumer<UUID, Long> cliCanceler) {
+        ClientConfiguration cfg = new ClientConfiguration()
+            .setAddresses("127.0.0.1:" + srvs.get(0).localNode().attribute(CLIENT_LISTENER_PORT))
+            .setAffinityAwarenessEnabled(false);
+
+        IgniteClient cli0 = Ignition.startClient(cfg);
+        IgniteClient cli1 = Ignition.startClient(cfg);
+        IgniteClient cli2 = Ignition.startClient(cfg);
+        IgniteClient cli3 = Ignition.startClient(new ClientConfiguration()
+            .setAddresses("127.0.0.1:" + srvs.get(1).localNode().attribute(CLIENT_LISTENER_PORT))
+            .setAffinityAwarenessEnabled(false));
+
+        assertEquals(ClusterState.ACTIVE, cli0.cluster().state());
+        assertEquals(ClusterState.ACTIVE, cli1.cluster().state());
+        assertEquals(ClusterState.ACTIVE, cli2.cluster().state());
+        assertEquals(ClusterState.ACTIVE, cli3.cluster().state());
+
+        List<List<?>> conns = execute(srvs.get(0), "SELECT CONNECTION_ID FROM SYS.CLIENT_CONNECTIONS ORDER BY 1");
+
+        cliCanceler.accept(srvs.get(0).localNode().id(), (Long)conns.get(0).get(0));
+
+        Predicate<IgniteClient> checker = cli -> {
+            try {
+                return waitForCondition(() -> {
+                    try {
+                        cli.cluster().state();
+
+                        return false;
+                    }
+                    catch (ClientConnectionException e) {
+                        return true;
+                    }
+                }, 10_000);
+            }
+            catch (Exception e) {
+                return false;
+            }
+        };
+
+        assertTrue(checker.test(cli0));
+        assertEquals(ClusterState.ACTIVE, cli1.cluster().state());
+        assertEquals(ClusterState.ACTIVE, cli2.cluster().state());
+        assertEquals(ClusterState.ACTIVE, cli3.cluster().state());
+
+        cliCanceler.accept(srvs.get(0).localNode().id(), null);
+
+        assertTrue(checker.test(cli1));
+        assertTrue(checker.test(cli2));
+        assertEquals(ClusterState.ACTIVE, cli3.cluster().state());
+
+        cliCanceler.accept(null, null);
+
+        assertTrue(checker.test(cli3));
     }
 }

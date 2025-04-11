@@ -25,5 +25,7 @@ public enum KillSubcommand {
     /** Kill compute task. */
     CONTINUOUS,
     /** Kill scan query. */
-    SCAN
+    SCAN,
+    /** Kill client connection. */
+    CLIENT
 }

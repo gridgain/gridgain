@@ -24,12 +24,16 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.QueryMXBeanImpl;
+import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
+import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.mxbean.QueryMXBean;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.util.KillCommandsTests.PAGE_SZ;
+import static org.apache.ignite.util.KillCommandsTests.doTestCancelClientConnection;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelContinuousQuery;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelSQLQuery;
 import static org.apache.ignite.util.KillCommandsTests.doTestScanQueryCancel;
@@ -94,6 +98,24 @@ public class KillCommandsMXBeanTest extends GridCommonAbstractTest {
     public void testCancelScanQuery() {
         doTestScanQueryCancel(startCli, srvs, args ->
             qryMBean.cancelScan(args.get1().toString(), args.get2(), args.get3()));
+    }
+
+    /** */
+    @Test
+    public void testCancelClientConnection() {
+        doTestCancelClientConnection(srvs, (nodeId, connId) -> {
+            ClientProcessorMXBean cliMxBean = getMxBean(
+                (nodeId == null ? srvs.get(1) : G.ignite(nodeId)).name(),
+                "Clients",
+                ClientListenerProcessor.class.getSimpleName(),
+                ClientProcessorMXBean.class
+            );
+
+            if (connId == null)
+                cliMxBean.dropAllConnections();
+            else
+                cliMxBean.dropConnection(connId);
+        } );
     }
 
     /**  */
