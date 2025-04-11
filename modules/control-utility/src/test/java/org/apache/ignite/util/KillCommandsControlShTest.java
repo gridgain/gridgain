@@ -25,10 +25,15 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.junit.Test;
 
+import static java.util.Arrays.asList;
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.util.KillCommandsTests.PAGE_SZ;
+import static org.apache.ignite.util.KillCommandsTests.doTestCancelClientConnection;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelContinuousQuery;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelSQLQuery;
+import static org.apache.ignite.util.KillCommandsTests.doTestScanQueryCancel;
 
 /** Tests cancel of user created entities via control.sh. */
 public class KillCommandsControlShTest extends GridCommandHandlerClusterByClassAbstractTest {
@@ -79,6 +84,31 @@ public class KillCommandsControlShTest extends GridCommandHandlerClusterByClassA
         });
     }
 
+    /** */
+    @Test
+    public void testCancelScanQuery() {
+        doTestScanQueryCancel(client, srvs, args -> {
+            int res = execute("--kill", "scan", args.get1().toString(), args.get2(), args.get3().toString());
+
+            assertEquals(EXIT_CODE_OK, res);
+        });
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testCancelClientConnection() {
+        doTestCancelClientConnection(srvs, (nodeId, connId) -> {
+            List<String> params = new ArrayList<>(
+                asList("--kill", "client", connId == null ? "ALL" : Long.toString(connId))
+            );
+
+            if (nodeId != null)
+                params.addAll(asList("--node-id", nodeId.toString()));
+
+            assertEquals(EXIT_CODE_OK, execute(params));
+        });
+    }
+
     /**  */
     @Test
     public void testCancelUnknownSQLQuery() {
@@ -96,4 +126,21 @@ public class KillCommandsControlShTest extends GridCommandHandlerClusterByClassA
         assertEquals(EXIT_CODE_OK, res);
     }
 
+    /** */
+    @Test
+    public void testCancelUnknownScanQuery() {
+        int res = execute("--kill", "scan", srvs.get(0).localNode().id().toString(), "unknown", "1");
+
+        assertEquals(EXIT_CODE_OK, res);
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testCancelClientConnectionWrongParams() {
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--kill", "client"));
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--kill", "client", "not_a_number"));
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--kill", "client", "1", "--node-id"));
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--kill", "client", "1", "--node-id", "not_an_uuid"));
+        assertEquals("Unknown connection id", EXIT_CODE_UNEXPECTED_ERROR, execute("--kill", "client", "123"));
+    }
 }

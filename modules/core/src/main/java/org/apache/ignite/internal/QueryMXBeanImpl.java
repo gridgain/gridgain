@@ -21,8 +21,11 @@ import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.mxbean.QueryMXBean;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -82,6 +85,18 @@ public class QueryMXBeanImpl implements QueryMXBean {
         }
     }
 
+    /** {@inheritDoc} */
+    @Override public void cancelScan(String originNodeId, String cacheName, Long id) {
+        A.notNullOrEmpty(originNodeId, "originNodeId");
+        A.notNullOrEmpty(cacheName, "cacheName");
+        A.notNull(id, "id");
+
+        if (log.isInfoEnabled())
+            log.info("Killing scan query[id=" + id + ",originNodeId=" + originNodeId + ']');
+
+        cancelScan(UUID.fromString(originNodeId), cacheName, id);
+    }
+
     /**
      * Executes scan query cancel on all cluster nodes.
      *
@@ -90,6 +105,18 @@ public class QueryMXBeanImpl implements QueryMXBean {
     public void cancelSQL(UUID originNodeId, long qryId) {
         ctx.grid().compute(ctx.grid().cluster().forNodeId(originNodeId))
             .broadcast(new CancelSQLOnInitiator(), qryId);
+    }
+
+    /**
+     * Executes scan query cancel on all cluster nodes.
+     *
+     * @param originNodeId Originating node id.
+     * @param cacheName    Cache name.
+     * @param id           Scan query id.
+     */
+    public void cancelScan(UUID originNodeId, String cacheName, long id) {
+        ctx.grid().compute(ctx.grid().cluster()).broadcast(new CancelScanClosure(),
+            new T3<>(originNodeId, cacheName, id));
     }
 
     /**
@@ -143,6 +170,37 @@ public class QueryMXBeanImpl implements QueryMXBean {
             catch (IgniteCheckedException e) {
                 throw new IgniteException(e);
             }
+
+            return null;
+        }
+    }
+
+    /**
+     * Cancel scan closure.
+     */
+    private static class CancelScanClosure implements IgniteClosure<T3<UUID, String, Long>, Void> {
+        /**  */
+        private static final long serialVersionUID = 0L;
+
+        /** Auto-injected grid instance. */
+        @IgniteInstanceResource
+        private transient IgniteEx ignite;
+
+        /** {@inheritDoc} */
+        @Override public Void apply(T3<UUID, String, Long> arg) {
+            IgniteLogger log = ignite.log().getLogger(getClass());
+
+            int cacheId = CU.cacheId(arg.get2());
+
+            GridCacheContext<?, ?> ctx = ignite.context().cache().context().cacheContext(cacheId);
+
+            if (ctx == null) {
+                log.warning("Cache not found[cacheName=" + arg.get2() + ']');
+
+                return null;
+            }
+
+            ctx.queries().removeQueryResult(arg.get1(), arg.get3());
 
             return null;
         }

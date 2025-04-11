@@ -59,6 +59,7 @@ import org.apache.ignite.internal.util.nio.ssl.GridNioSslFilter;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
+import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.spi.IgnitePortProtocol;
 import org.apache.ignite.spi.systemview.view.ClientConnectionAttributeView;
 import org.apache.ignite.spi.systemview.view.ClientConnectionView;
@@ -668,6 +669,13 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * @return MX bean instance.
+     */
+    public ClientProcessorMXBean mxBean() {
+        return new ClientProcessorMXBeanImpl();
+    }
+
+    /**
      * ClientProcessorMXBean interface.
      */
     private class ClientProcessorMXBeanImpl implements ClientProcessorMXBean {
@@ -693,12 +701,17 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
 
         /** {@inheritDoc} */
         @Override public void dropAllConnections() {
+            ctx.security().authorize(null, SecurityPermission.ADMIN_OPS);
+
             closeAllSessions();
         }
 
         /** {@inheritDoc} */
         @Override public boolean dropConnection(long id) {
-            assert (id >> 32) == ctx.discovery().localNode().order() : "Invalid connection id.";
+            ctx.security().authorize(null, SecurityPermission.ADMIN_OPS);
+
+            if ((id >> 32) != ctx.discovery().localNode().order())
+                return false;
 
             Collection<? extends GridNioSession> sessions = srv.sessions();
 
