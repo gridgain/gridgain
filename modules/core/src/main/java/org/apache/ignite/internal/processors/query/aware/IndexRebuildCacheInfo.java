@@ -36,6 +36,11 @@ public class IndexRebuildCacheInfo extends IgniteDataTransferObject {
     private String cacheName;
 
     /**
+     * {@code True} if index.bin recreating, {@code false} otherwise.
+     */
+    private boolean recreate;
+
+    /**
      * Default constructor for {@link Externalizable}.
      */
     public IndexRebuildCacheInfo() {
@@ -45,14 +50,17 @@ public class IndexRebuildCacheInfo extends IgniteDataTransferObject {
      * Constructor.
      *
      * @param cacheName Cache name.
+     * @param recreate {@code True} if index.bin recreating, {@code false} otherwise.
      */
-    public IndexRebuildCacheInfo(String cacheName) {
+    public IndexRebuildCacheInfo(String cacheName, boolean recreate) {
         this.cacheName = cacheName;
+        this.recreate = recreate;
     }
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         U.writeLongString(out, cacheName);
+        out.writeBoolean(recreate);
     }
 
     /** {@inheritDoc} */
@@ -61,6 +69,7 @@ public class IndexRebuildCacheInfo extends IgniteDataTransferObject {
         ObjectInput in
     ) throws IOException, ClassNotFoundException {
         cacheName = U.readLongString(in);
+        recreate = protoVer == V2 && in.readBoolean();
     }
 
     /**
@@ -70,6 +79,16 @@ public class IndexRebuildCacheInfo extends IgniteDataTransferObject {
      */
     public String cacheName() {
         return cacheName;
+    }
+
+    /** @return {@code True} if index.bin recreating, {@code false} otherwise. */
+    public boolean recreate() {
+        return recreate;
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte getProtocolVersion() {
+        return V2;
     }
 
     /** {@inheritDoc} */
