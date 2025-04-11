@@ -101,6 +101,7 @@ import org.apache.ignite.internal.sql.command.SqlDropUserCommand;
 import org.apache.ignite.internal.sql.command.SqlIndexColumn;
 import org.apache.ignite.internal.sql.command.SqlKillContinuousQueryCommand;
 import org.apache.ignite.internal.sql.command.SqlKillQueryCommand;
+import org.apache.ignite.internal.sql.command.SqlKillScanQueryCommand;
 import org.apache.ignite.internal.sql.command.SqlRefreshStatitsicsCommand;
 import org.apache.ignite.internal.sql.command.SqlRollbackTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlSetStreamingCommand;
@@ -426,6 +427,8 @@ public class CommandProcessor {
                 processKillQueryCommand((SqlKillQueryCommand) cmdNative);
             else if (cmdNative instanceof SqlKillContinuousQueryCommand)
                 processKillContinuousQueryCommand((SqlKillContinuousQueryCommand) cmdNative);
+            else if (cmdNative instanceof SqlKillScanQueryCommand)
+                processKillScanQueryCommand((SqlKillScanQueryCommand) cmdNative);
             else
                 processTxCommand(cmdNative, params);
         }
@@ -572,6 +575,16 @@ public class CommandProcessor {
      */
     private void processKillContinuousQueryCommand(SqlKillContinuousQueryCommand cmd) {
         new QueryMXBeanImpl(ctx).cancelContinuous(cmd.getOriginNodeId(), cmd.getRoutineId());
+    }
+
+    /**
+     * Process kill scan query command.
+     *
+     * @param command Command.
+     */
+    private void processKillScanQueryCommand(SqlKillScanQueryCommand command) {
+        new QueryMXBeanImpl(ctx)
+            .cancelScan(command.getOriginNodeId(), command.getCacheName(), command.getQryId());
     }
 
     /**

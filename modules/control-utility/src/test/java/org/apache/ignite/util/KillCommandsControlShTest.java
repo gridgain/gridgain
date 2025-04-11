@@ -29,6 +29,7 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK
 import static org.apache.ignite.util.KillCommandsTests.PAGE_SZ;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelContinuousQuery;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelSQLQuery;
+import static org.apache.ignite.util.KillCommandsTests.doTestScanQueryCancel;
 
 /** Tests cancel of user created entities via control.sh. */
 public class KillCommandsControlShTest extends GridCommandHandlerClusterByClassAbstractTest {
@@ -79,6 +80,16 @@ public class KillCommandsControlShTest extends GridCommandHandlerClusterByClassA
         });
     }
 
+    /** */
+    @Test
+    public void testCancelScanQuery() {
+        doTestScanQueryCancel(client, srvs, args -> {
+            int res = execute("--kill", "scan", args.get1().toString(), args.get2(), args.get3().toString());
+
+            assertEquals(EXIT_CODE_OK, res);
+        });
+    }
+
     /**  */
     @Test
     public void testCancelUnknownSQLQuery() {
@@ -96,4 +107,11 @@ public class KillCommandsControlShTest extends GridCommandHandlerClusterByClassA
         assertEquals(EXIT_CODE_OK, res);
     }
 
+    /** */
+    @Test
+    public void testCancelUnknownScanQuery() {
+        int res = execute("--kill", "scan", srvs.get(0).localNode().id().toString(), "unknown", "1");
+
+        assertEquals(EXIT_CODE_OK, res);
+    }
 }

@@ -33,10 +33,12 @@ import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.sql.SqlKeyword.CONTINUOUS;
 import static org.apache.ignite.internal.sql.SqlKeyword.KILL;
 import static org.apache.ignite.internal.sql.SqlKeyword.QUERY;
+import static org.apache.ignite.internal.sql.SqlKeyword.SCAN;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 import static org.apache.ignite.util.KillCommandsTests.PAGE_SZ;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelContinuousQuery;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelSQLQuery;
+import static org.apache.ignite.util.KillCommandsTests.doTestScanQueryCancel;
 
 /** Tests cancel of user created entities via SQL. */
 public class KillCommandsSQLTest extends GridCommonAbstractTest {
@@ -48,6 +50,9 @@ public class KillCommandsSQLTest extends GridCommonAbstractTest {
 
     /**  */
     public static final String KILL_CQ_QRY = KILL + " " + CONTINUOUS;
+
+    /** */
+    public static final String KILL_SCAN_QRY = KILL + " " + SCAN;
 
     /**  */
     private static List<IgniteEx> srvs;
@@ -93,6 +98,13 @@ public class KillCommandsSQLTest extends GridCommonAbstractTest {
             execute(killCli, KILL_CQ_QRY + " '" + nodeId.toString() + "'" + " '" + routineId.toString() + "'"));
     }
 
+    /** */
+    @Test
+    public void testCancelScanQuery() {
+        doTestScanQueryCancel(startCli, srvs,
+            args -> execute(killCli, KILL_SCAN_QRY + " '" + args.get1() + "' '" + args.get2() + "' " + args.get3()));
+    }
+
     /**  */
     @Test
     public void testCancelUnknownSQLQuery() {
@@ -106,6 +118,12 @@ public class KillCommandsSQLTest extends GridCommonAbstractTest {
     public void testCancelUnknownContinuousQuery() {
         execute(startCli,
             KILL_CQ_QRY + " '" + srvs.get(0).localNode().id().toString() + "' '" + UUID.randomUUID() + "'");
+    }
+
+    /** */
+    @Test
+    public void testCancelUnknownScanQuery() {
+        execute(startCli, KILL_SCAN_QRY + " '" + killCli.localNode().id() + "' 'unknown' 1");
     }
 
     /**
