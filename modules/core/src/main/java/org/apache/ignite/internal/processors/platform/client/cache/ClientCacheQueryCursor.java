@@ -18,11 +18,15 @@ package org.apache.ignite.internal.processors.platform.client.cache;
 
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
+import org.apache.ignite.internal.processors.cache.CacheEntryImpl;
+import org.apache.ignite.internal.processors.platform.client.ClientBitmaskFeature;
 import org.apache.ignite.internal.processors.platform.client.ClientCloseableResource;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
 
+import javax.cache.Cache;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -83,6 +87,17 @@ abstract class ClientCacheQueryCursor<T> implements ClientCloseableResource {
 
         while (cnt < pageSize && iter.hasNext()) {
             T e = iter.next();
+
+            boolean isScoreSupported = getProtocolContext().isFeatureSupported(ClientBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY);
+            if (!isScoreSupported && e instanceof Cache.Entry
+                    && ((Cache.Entry) e).getValue() instanceof Map) {
+                Cache.Entry cacheEntry = (Cache.Entry) e;
+                Map valueAsMap = (Map) cacheEntry.getValue();
+                Map.Entry entry = (Map.Entry) valueAsMap.entrySet().iterator().next();
+                if (entry.getValue() instanceof Double) {
+                    e = (T) new CacheEntryImpl(cacheEntry.getKey(), entry.getKey());
+                }
+            }
 
             writeEntry(writer, e);
 
