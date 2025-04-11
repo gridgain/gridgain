@@ -594,7 +594,8 @@ public class GridMapQueryExecutor {
                 // If a query is cancelled before execution is started partitions have to be released.
                 if (!lazy || !qryResults.isAllClosed())
                     qryResults.releaseQueryContext();
-            } else {
+            }
+            else {
                 releaseReservations(qctx);
             }
 
@@ -636,7 +637,8 @@ public class GridMapQueryExecutor {
                     }
                 }
             }
-        } finally {
+        }
+        finally {
             if (reserved != null)
                 reserved.release();
 
@@ -1032,7 +1034,8 @@ public class GridMapQueryExecutor {
         try {
             boolean loc = node.isLocal();
 
-            GridQueryNextPageResponse msg = new GridQueryNextPageResponse(reqId, segmentId,/*qry*/0, /*page*/0, /*allRows*/0, /*cols*/1,
+            GridQueryNextPageResponse msg = new GridQueryNextPageResponse(reqId, segmentId,
+                /*qry*/0, /*page*/0, /*allRows*/0, /*cols*/1,
                 loc ? null : Collections.emptyList(),
                 loc ? Collections.<Value[]>emptyList() : null,
                 false);
