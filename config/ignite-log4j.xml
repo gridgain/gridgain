@@ -77,11 +77,9 @@
         </layout>
     </appender>
 
-    <!--
-    <category name="org.apache.ignite">
+    <category name="org.apache.ignite.internal.processors.cache.distributed.dht.topology">
         <level value="DEBUG"/>
     </category>
-    -->
 
     <!--
         Uncomment to disable courtesy notices, such as SPI configuration
