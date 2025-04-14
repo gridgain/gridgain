@@ -191,28 +191,28 @@ public class GridMapQueryExecutor {
      * @param error Exception that occurred during the query execution.
      */
     String buildQueryLogDetails(
-        long reqId,
-        String label,
-        String schemaName,
-        Collection<GridCacheSqlQuery> queries,
-        Object[] params,
-        Throwable error,
-        UUID remoteNodeId
+            long reqId,
+            String label,
+            String schemaName,
+            Collection<GridCacheSqlQuery> queries,
+            Object[] params,
+            Throwable error,
+            UUID remoteNodeId
     ) {
         StringBuilder logMessage = new StringBuilder();
 
         logMessage.append("Query Execution Failed:")
-            .append("\nRequest ID: ").append(reqId)
-            .append("\nLabel: ").append(label != null ? label : "N/A")
-            .append("\nSchema: ").append(schemaName != null ? schemaName : "N/A")
-            .append("\nQueries: ").append(
-                queries != null
-                    ? queries.stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; "))
-                    : "N/A")
-            .append("\nParameters: ").append(params != null ? Arrays.toString(params) : "N/A")
-            .append("\nTimestamp: ").append(System.currentTimeMillis())
-            .append("\nLocal Node ID: ").append(ctx.localNodeId())
-            .append("\nRemote Node ID: ").append(remoteNodeId);
+                .append("\nRequest ID: ").append(reqId)
+                .append("\nLabel: ").append(label != null ? label : "N/A")
+                .append("\nSchema: ").append(schemaName != null ? schemaName : "N/A")
+                .append("\nQueries: ").append(
+                        queries != null
+                                ? queries.stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; "))
+                                : "N/A")
+                .append("\nParameters: ").append(params != null ? Arrays.toString(params) : "N/A")
+                .append("\nTimestamp: ").append(System.currentTimeMillis())
+                .append("\nLocal Node ID: ").append(ctx.localNodeId())
+                .append("\nRemote Node ID: ").append(remoteNodeId);
 
         if (error != null) {
             logMessage.append("\nError: ").append(error.getMessage());
@@ -589,15 +589,15 @@ public class GridMapQueryExecutor {
         catch (Throwable e) {
             if (qryResults != null) {
                 nodeRess.remove(reqId, segmentId, qryResults);
+
                 qryResults.close();
 
                 // If a query is cancelled before execution is started partitions have to be released.
                 if (!lazy || !qryResults.isAllClosed())
                     qryResults.releaseQueryContext();
             }
-            else {
+            else
                 releaseReservations(qctx);
-            }
 
             if (e instanceof QueryCancelledException)
                 sendError(node, reqId, e);
@@ -628,9 +628,12 @@ public class GridMapQueryExecutor {
 
                             if (e instanceof Error) {
                                 log.error(errMsg, e);
+
                                 throw (Error)e;
-                            } else {
+                            }
+                            else {
                                 log.error(errMsg, e);
+
                                 sendError(node, reqId, e);
                             }
                         }
@@ -1035,7 +1038,7 @@ public class GridMapQueryExecutor {
             boolean loc = node.isLocal();
 
             GridQueryNextPageResponse msg = new GridQueryNextPageResponse(reqId, segmentId,
-                /*qry*/0, /*page*/0, /*allRows*/0, /*cols*/1,
+            /*qry*/0, /*page*/0, /*allRows*/0, /*cols*/1,
                 loc ? null : Collections.emptyList(),
                 loc ? Collections.<Value[]>emptyList() : null,
                 false);
