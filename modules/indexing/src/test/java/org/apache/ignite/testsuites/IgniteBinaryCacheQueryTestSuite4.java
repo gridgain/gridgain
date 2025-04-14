@@ -21,6 +21,7 @@ import org.apache.ignite.internal.metric.SqlStatisticsMemoryQuotaTest;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.metric.SqlStatisticsUserQueriesFastTest;
 import org.apache.ignite.internal.metric.SqlStatisticsUserQueriesLongTest;
+import org.apache.ignite.internal.processors.cache.SqlPageLocksDumpTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedTxMultiNodeSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.IgniteCacheQueryReservationOnUnstableTopologyTest;
 import org.apache.ignite.internal.processors.cache.distributed.replicated.GridCacheReplicatedTxMultiNodeBasicTest;
@@ -154,6 +155,8 @@ import org.junit.runners.Suite;
 
     ScriptTestSuite.class,
     OOMLeadsTest.class,
+
+    SqlPageLocksDumpTest.class
 })
 public class IgniteBinaryCacheQueryTestSuite4 {
     /** Setup lazy mode default. */

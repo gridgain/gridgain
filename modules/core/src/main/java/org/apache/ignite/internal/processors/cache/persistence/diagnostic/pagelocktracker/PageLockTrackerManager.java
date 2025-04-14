@@ -32,7 +32,6 @@ import org.jetbrains.annotations.NotNull;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PAGE_LOCK_TRACKER_TYPE;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
-import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.HEAP_LOG;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 
 /**
@@ -105,7 +104,8 @@ public class PageLockTrackerManager implements LifecycleAware {
      * Default constructor.
      */
     public PageLockTrackerManager(IgniteLogger log, String managerNameId) {
-        this.trackingEnabled = getInteger(IGNITE_PAGE_LOCK_TRACKER_TYPE, HEAP_LOG) != -1;
+        // Only enable tracking if tracking is explicitly requested.
+        this.trackingEnabled = getInteger(IGNITE_PAGE_LOCK_TRACKER_TYPE, -1) != -1;
         this.managerNameId = managerNameId;
         this.mxBean = new PageLockTrackerMXBeanImpl(this, memoryCalculator);
         this.sharedPageLockTracker = new SharedPageLockTracker(this::onHangThreads, memoryCalculator);
