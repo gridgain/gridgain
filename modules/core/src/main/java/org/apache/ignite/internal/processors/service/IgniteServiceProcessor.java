@@ -55,7 +55,6 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.SkipDaemon;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
-import org.apache.ignite.internal.managers.discovery.CustomEventListener;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.systemview.walker.ServiceViewWalker;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -234,49 +233,21 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
             !F.isEmpty(cfg.getServiceConfiguration()))
             throw new IgniteCheckedException("Cannot deploy services in PRIVATE or ISOLATED deployment mode: " + depMode);
 
-        ctx.discovery().setCustomEventListener(ServiceChangeBatchRequest.class,
-            new CustomEventListener<ServiceChangeBatchRequest>() {
-                @Override public void onCustomEvent(
-                    AffinityTopologyVersion topVer,
-                    ClusterNode snd,
-                    ServiceChangeBatchRequest msg
-                ) {
-                    processServicesChangeRequest(snd, msg);
-                }
-            });
+        ctx.discovery().setCustomEventListener(
+            ServiceChangeBatchRequest.class,
+            (topVer, snd, msg) -> processServicesChangeRequest(snd, msg));
 
-        ctx.discovery().setCustomEventListener(ChangeGlobalStateMessage.class,
-            new CustomEventListener<ChangeGlobalStateMessage>() {
-                @Override public void onCustomEvent(
-                    AffinityTopologyVersion topVer,
-                    ClusterNode snd,
-                    ChangeGlobalStateMessage msg
-                ) {
-                    processChangeGlobalStateRequest(msg);
-                }
-            });
+        ctx.discovery().setCustomEventListener(
+            ChangeGlobalStateMessage.class,
+            (topVer, snd, msg) -> processChangeGlobalStateRequest(msg));
 
-        ctx.discovery().setCustomEventListener(DynamicCacheChangeBatch.class,
-            new CustomEventListener<DynamicCacheChangeBatch>() {
-                @Override public void onCustomEvent(
-                    AffinityTopologyVersion topVer,
-                    ClusterNode snd,
-                    DynamicCacheChangeBatch msg
-                ) {
-                    processDynamicCacheChangeRequest(msg);
-                }
-            });
+        ctx.discovery().setCustomEventListener(
+            DynamicCacheChangeBatch.class,
+            (topVer, snd, msg) -> processDynamicCacheChangeRequest(msg));
 
-        ctx.discovery().setCustomEventListener(ServiceClusterDeploymentResultBatch.class,
-            new CustomEventListener<ServiceClusterDeploymentResultBatch>() {
-                @Override public void onCustomEvent(
-                    AffinityTopologyVersion topVer,
-                    ClusterNode snd,
-                    ServiceClusterDeploymentResultBatch msg
-                ) {
-                    processServicesFullDeployments(msg);
-                }
-            });
+        ctx.discovery().setCustomEventListener(
+            ServiceClusterDeploymentResultBatch.class,
+            (topVer, snd, msg) -> processServicesFullDeployments(msg));
     }
 
     /** {@inheritDoc} */
