@@ -43,7 +43,6 @@ import org.apache.ignite.services.ServiceCallContext;
 import org.apache.ignite.services.ServiceConfiguration;
 import org.apache.ignite.services.ServiceContext;
 import org.apache.ignite.services.ServiceDeploymentException;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -63,8 +62,6 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /** Tests permissions that are required to perform service operations. */
 @RunWith(Parameterized.class)
-@WithSystemProperty(key = "IGNITE_SECURITY_PROCESSOR", value = "true")
-// TODO GG-42621 @WithSystemProperty(key = "IGNITE_SECURITY_PROCESSOR_V2", value = "true")
 public class ServiceAuthorizationTest extends AbstractSecurityTest {
     /** Name of the test service.*/
     private static final String TEST_SERVICE_NAME = "test-service-name";

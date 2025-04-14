@@ -127,8 +127,11 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
     }
 
     /** {@inheritDoc} */
-    @Override public SecurityContext authenticateNode(ClusterNode node, SecurityCredentials cred)
-        throws IgniteCheckedException {
+    @Override public SecurityContext authenticateNode(
+        ClusterNode node,
+        SecurityCredentials cred
+    ) throws IgniteCheckedException {
+        assert cred != null;
         if (!PERMS.containsKey(cred))
             return null;
 
@@ -190,16 +193,13 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
     }
 
     /** {@inheritDoc} */
-    @Override public void authorize(String name, SecurityPermission perm, SecurityContext securityCtx)
-        throws SecurityException {
-
+    @Override public void authorize(
+        String name,
+        SecurityPermission perm,
+        SecurityContext securityCtx
+    ) throws SecurityException {
         authorizeRecords.add(new AuthorizeRecord(name, perm, (String)securityCtx.subject().login()));
 
-        // TODO GG-42621
-//        if (!((TestSecurityContext)securityCtx).operationAllowed(name, perm))
-//            throw new SecurityException("Authorization failed [perm=" + perm +
-//                ", name=" + name +
-//                ", subject=" + securityCtx.subject() + ']');
         if (!operationAllowed(securityCtx, name, perm))
             throw new SecurityException("Authorization failed [perm=" + perm +
                 ", name=" + name +

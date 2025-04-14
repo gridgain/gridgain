@@ -236,32 +236,44 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
 
         ctx.discovery().setCustomEventListener(ServiceChangeBatchRequest.class,
             new CustomEventListener<ServiceChangeBatchRequest>() {
-                @Override public void onCustomEvent(AffinityTopologyVersion topVer, ClusterNode snd,
-                    ServiceChangeBatchRequest msg) {
+                @Override public void onCustomEvent(
+                    AffinityTopologyVersion topVer,
+                    ClusterNode snd,
+                    ServiceChangeBatchRequest msg
+                ) {
                     processServicesChangeRequest(snd, msg);
                 }
             });
 
         ctx.discovery().setCustomEventListener(ChangeGlobalStateMessage.class,
             new CustomEventListener<ChangeGlobalStateMessage>() {
-                @Override public void onCustomEvent(AffinityTopologyVersion topVer, ClusterNode snd,
-                    ChangeGlobalStateMessage msg) {
+                @Override public void onCustomEvent(
+                    AffinityTopologyVersion topVer,
+                    ClusterNode snd,
+                    ChangeGlobalStateMessage msg
+                ) {
                     processChangeGlobalStateRequest(msg);
                 }
             });
 
         ctx.discovery().setCustomEventListener(DynamicCacheChangeBatch.class,
             new CustomEventListener<DynamicCacheChangeBatch>() {
-                @Override public void onCustomEvent(AffinityTopologyVersion topVer, ClusterNode snd,
-                    DynamicCacheChangeBatch msg) {
+                @Override public void onCustomEvent(
+                    AffinityTopologyVersion topVer,
+                    ClusterNode snd,
+                    DynamicCacheChangeBatch msg
+                ) {
                     processDynamicCacheChangeRequest(msg);
                 }
             });
 
         ctx.discovery().setCustomEventListener(ServiceClusterDeploymentResultBatch.class,
             new CustomEventListener<ServiceClusterDeploymentResultBatch>() {
-                @Override public void onCustomEvent(AffinityTopologyVersion topVer, ClusterNode snd,
-                    ServiceClusterDeploymentResultBatch msg) {
+                @Override public void onCustomEvent(
+                    AffinityTopologyVersion topVer,
+                    ClusterNode snd,
+                    ServiceClusterDeploymentResultBatch msg
+                ) {
                     processServicesFullDeployments(msg);
                 }
             });
@@ -603,8 +615,11 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
      * @param dfltNodeFilter Default NodeFilter.
      * @return Configurations to deploy.
      */
-    private PreparedConfigurations<IgniteUuid> prepareServiceConfigurations(Collection<ServiceConfiguration> cfgs,
-        IgnitePredicate<ClusterNode> dfltNodeFilter) {
+    private PreparedConfigurations<IgniteUuid> prepareServiceConfigurations(
+        Collection<ServiceConfiguration> cfgs,
+        IgnitePredicate<ClusterNode> dfltNodeFilter,
+        boolean skipAuthorization
+    ) {
         List<ServiceConfiguration> cfgsCp = new ArrayList<>(cfgs.size());
 
         List<GridServiceDeploymentFuture<IgniteUuid>> failedFuts = null;
@@ -625,6 +640,20 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
                     ", srvc=" + cfg.getService() + ']', e);
 
                 err = e;
+            }
+
+            if (err == null) {
+                if (ctx.security().enabled()) {
+                    try {
+                        if (!skipAuthorization)
+                            ctx.security().authorize(cfg.getName(), SERVICE_DEPLOY);
+                    }
+                    catch (SecurityException e) {
+                        U.error(log, "Failed to authorize service access [name=" + cfg.getName() + ", perm=" + SERVICE_DEPLOY + ']', e);
+
+                        err = e;
+                    }
+                }
             }
 
             if (err == null) {
@@ -693,8 +722,10 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
      * @param dfltNodeFilter Default NodeFilter.
      * @return Future for deployment.
      */
-    private IgniteInternalFuture<?> deployAll(@NotNull Collection<ServiceConfiguration> cfgs,
-        @Nullable IgnitePredicate<ClusterNode> dfltNodeFilter) {
+    private IgniteInternalFuture<?> deployAll(
+        @NotNull Collection<ServiceConfiguration> cfgs,
+        @Nullable IgnitePredicate<ClusterNode> dfltNodeFilter
+    ) {
         opsLock.readLock().lock();
 
         try {
@@ -712,7 +743,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
             if (cfgs.isEmpty())
                 return new GridFinishedFuture<>();
 
-            PreparedConfigurations<IgniteUuid> srvcCfg = prepareServiceConfigurations(cfgs, dfltNodeFilter);
+            PreparedConfigurations<IgniteUuid> srvcCfg = prepareServiceConfigurations(cfgs, dfltNodeFilter, false);
 
             List<ServiceConfiguration> cfgsCp = srvcCfg.cfgs;
 
@@ -1606,14 +1637,16 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
         ArrayList<ServiceInfo> staticServicesInfo = new ArrayList<>();
 
         if (cfgs != null) {
-            PreparedConfigurations<IgniteUuid> prepCfgs = prepareServiceConfigurations(Arrays.asList(cfgs),
-                node -> !node.isClient());
+            PreparedConfigurations<IgniteUuid> prepCfgs = prepareServiceConfigurations(
+                Arrays.asList(cfgs),
+                node -> !node.isClient(),
+                true);
 
             if (logErrors) {
                 if (prepCfgs.failedFuts != null) {
                     for (GridServiceDeploymentFuture<IgniteUuid> fut : prepCfgs.failedFuts) {
                         U.warn(log, "Failed to validate static service configuration (won't be deployed), " +
-                            "cfg=" + fut.configuration() + ", err=" + fut.result());
+                            "cfg=" + fut.configuration() + ", err=" + fut.error());
                     }
                 }
             }
@@ -1671,9 +1704,6 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
                 }
                 else {
                     ServiceConfiguration cfg = ((ServiceDeploymentRequest)req).configuration();
-
-                    if (ctx.security().enabled())
-                        err = checkPermissions(((ServiceDeploymentRequest)req).configuration().getName(), SERVICE_DEPLOY);
 
                     if (err == null) {
                         oldDesc = lookupInRegisteredServices(cfg.getName());
