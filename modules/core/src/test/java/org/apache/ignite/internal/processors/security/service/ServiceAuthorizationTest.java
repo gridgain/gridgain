@@ -30,6 +30,7 @@ import org.apache.ignite.IgniteServices;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureHandler;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.security.AbstractSecurityTest;
@@ -102,6 +103,22 @@ public class ServiceAuthorizationTest extends AbstractSecurityTest {
         super.afterTest();
 
         stopAllGrids();
+    }
+
+    /**
+     * Tests that starting the first server node with inappropriate service configuration fails.
+     * The inappropriate configuration means that the node is not allowed to deploy statically configured services.
+     **/
+    @Test public void testStartingCoordinator() throws Exception {
+        stopAllGrids();
+
+        if (!isClient) {
+            assertThrowsWithCause(
+                () -> startGrid(configuration(FORBIDDEN_NODE_IDX, SERVICE_INVOKE)
+                        .setServiceConfiguration(serviceConfiguration())
+                        .setFailureHandler(new StopNodeFailureHandler())),
+            IgniteCheckedException.class);
+        }
     }
 
     /** Tests that all service cancel calls require {@link SecurityPermission#SERVICE_CANCEL} permission. */
