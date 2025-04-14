@@ -83,7 +83,8 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.GridAbstractTest;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
@@ -168,11 +169,14 @@ public class KillQueryTest extends GridCommonAbstractTest {
     /** Allows to block messages, issued FROM the client node. */
     private static TestRecordingCommunicationSpi clientBlocker;
 
+    /** Listening logger. */
+    private static ListeningTestLogger lsnLog;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        CacheConfiguration<?, ?> cache = GridAbstractTest.defaultCacheConfiguration();
+        CacheConfiguration<?, ?> cache = defaultCacheConfiguration();
 
         cache.setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
 
@@ -193,6 +197,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
             clientBlocker = commSpi;
         }
+
+        cfg.setGridLogger(lsnLog);
 
         cfg.setDiscoverySpi(new TcpDiscoverySpi() {
             @Override public void sendCustomEvent(DiscoverySpiCustomMessage msg) throws IgniteException {
@@ -234,7 +240,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
      * @param shift integer to avoid collocation, put different value for the different caches.
      */
     private void createJoinCache(String cacheName, int shift) {
-        CacheConfiguration<Long, Person> ccfg = GridAbstractTest.defaultCacheConfiguration();
+        CacheConfiguration<Long, Person> ccfg = defaultCacheConfiguration();
 
         ccfg.setName(cacheName);
 
@@ -270,7 +276,6 @@ public class KillQueryTest extends GridCommonAbstractTest {
         }
     }
 
-
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
@@ -278,6 +283,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
         cntr = 0;
 
         GridQueryProcessor.idxCls = MockedIndexing.class;
+
+        lsnLog = new ListeningTestLogger(log);
 
         startGrids(NODES_COUNT);
 
@@ -294,7 +301,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
         awaitPartitionMapExchange(true, true, null);
 
         // Populate data.
-        try (IgniteDataStreamer<Object, Object> ds = grid(0).dataStreamer(GridAbstractTest.DEFAULT_CACHE_NAME)) {
+        try (IgniteDataStreamer<Object, Object> ds = grid(0).dataStreamer(DEFAULT_CACHE_NAME)) {
             for (int i = 0; i < MAX_ROWS; ++i) {
                 ds.addData(i, i);
 
@@ -335,7 +342,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         conn = GridTestUtils.connect(grid(0), null);
 
-        conn.setSchema('"' + GridAbstractTest.DEFAULT_CACHE_NAME + '"');
+        conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
 
         stmt = conn.createStatement();
 
@@ -366,6 +373,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
         conn.close();
 
         assertTrue(ignite.context().query().runningQueries(-1).isEmpty());
+
+        lsnLog.clearListeners();
     }
 
     /**
@@ -620,6 +629,16 @@ public class KillQueryTest extends GridCommonAbstractTest {
     public void testCancelQuery() throws Exception {
         IgniteInternalFuture cancelRes = cancel(1, asyncCancel);
 
+        String prcessorCancellationPhaze = "Start to process query cancel:";
+        String mapperCancellationPhaze = "Start to process query cancel on MAP phase";
+        String reducerCancellationPhaze = "Failed to execute map query on remote node";
+
+        LogListener processorErrLsnr = LogListener.matches(prcessorCancellationPhaze).build();
+        LogListener mapperErrLsnr = LogListener.matches(mapperCancellationPhaze).atLeast(2).build();
+        LogListener reducerErrLsnr = LogListener.matches(reducerCancellationPhaze).build();
+
+        lsnLog.registerAllListeners(processorErrLsnr, mapperErrLsnr, reducerErrLsnr);
+
         GridTestUtils.assertThrows(log, () -> {
             stmt.executeQuery("select * from Integer where _key in " +
                 "(select abs(_key) from Integer where awaitLatchCancelled() = 0) and shouldNotBeCalledInCaseOfCancellation()");
@@ -629,6 +648,10 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         // Ensures that there were no exceptions within async cancellation process.
         cancelRes.get(CHECK_RESULT_TIMEOUT);
+
+        assertTrue(processorErrLsnr.check());
+        assertTrue(mapperErrLsnr.check());
+        assertTrue(reducerErrLsnr.check());
     }
 
     /**
