@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.security.AbstractSecurityTest;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.services.Service;
 import org.apache.ignite.services.ServiceConfiguration;
+import org.apache.ignite.services.ServiceContext;
 import org.junit.Test;
 
 /** */
@@ -86,13 +87,17 @@ public class ServiceStaticConfigTest extends AbstractSecurityTest {
         transient CountDownLatch execLatch;
 
         /** {@inheritDoc} */
-        @Override public void init() throws Exception {
+        @Override public void init(ServiceContext ctx) throws Exception {
             execLatch = new CountDownLatch(1);
         }
 
         /** {@inheritDoc} */
-        @Override public void execute() throws Exception {
+        @Override public void execute(ServiceContext ctx) throws Exception {
             execLatch.countDown();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void cancel(ServiceContext ctx) {
         }
     }
 }

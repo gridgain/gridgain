@@ -303,10 +303,8 @@ public class ServiceAuthorizationTest extends AbstractSecurityTest {
                 Object srvc = node.services().service(name);
 
                 if (deployed)
-                    assertNotNull(srvc);
                     assertNotNull("Failed to find deployed service [node=" + node.configuration().getIgniteInstanceName() + ']', srvc);
                 else
-                    assertNull(srvc);
                     assertNull("Detected deployed service [node=" + node.configuration().getIgniteInstanceName() + ']', srvc);
             }
         }
