@@ -462,6 +462,9 @@ public class CommandProcessor {
                     throw new IgniteSQLException("Failed to cancel query: KILL QUERY operation is supported in " +
                         "versions 2.8.0 and newer");
 
+                if (log.isInfoEnabled())
+                    log.info("Start to process query cancel: [nodeId=" + cmd.nodeId() + ", qryId=" + cmd.nodeQueryId() + ']');
+
                 KillQueryRun qryRun = new KillQueryRun(cmd.nodeId(), cmd.nodeQueryId(), fut);
 
                 long reqId = qryCancelReqCntr.incrementAndGet();

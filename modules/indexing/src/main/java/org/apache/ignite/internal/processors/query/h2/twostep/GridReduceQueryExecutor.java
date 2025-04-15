@@ -256,6 +256,9 @@ public class GridReduceQueryExecutor {
                 e = new CacheException(mapperFailedMsg, mapExc);
             }
 
+            if (log.isInfoEnabled())
+                log.info(mapperFailedMsg);
+
             r.setStateOnException(nodeId, e);
         }
     }
@@ -718,6 +721,9 @@ public class GridReduceQueryExecutor {
             cancel.checkCancelled();
         }
         catch (QueryCancelledException cancelEx) {
+            if (log.isInfoEnabled())
+                log.info("Failed to run reduce query locally. " + cancelEx.getMessage());
+
             throw new CacheException("Failed to run reduce query locally. " + cancelEx.getMessage(), cancelEx);
         }
 
