@@ -35,6 +35,9 @@ import static org.apache.ignite.IgniteSystemProperties.getInteger;
  * 4 - OFF_HEAP_LOG
  */
 public final class PageLockTrackerFactory {
+    /** Lock tracking disabled. */
+    public static final int TRACKING_DISABLED = -1;
+
     /** */
     public static final int HEAP_STACK = 1;
 
