@@ -17,9 +17,8 @@
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker;
 
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PAGE_LOCK_TRACKER_TYPE;
@@ -35,24 +34,8 @@ import static org.hamcrest.Matchers.not;
  *
  * @see <a href="https://ggsystems.atlassian.net/browse/GG-33352">GG-33352</a>
  */
+@WithSystemProperty(key = IGNITE_PAGE_LOCK_TRACKER_TYPE, value = "" + PageLockTrackerFactory.HEAP_LOG)
 public class PageLockTrackerResourcesTest extends GridCommonAbstractTest {
-    private String oldPageLockTrackerType;
-
-    @Before
-    public void setPageLockTrackerType() {
-        oldPageLockTrackerType = System.getProperty(IGNITE_PAGE_LOCK_TRACKER_TYPE);
-
-        System.setProperty(IGNITE_PAGE_LOCK_TRACKER_TYPE, Integer.toString(PageLockTrackerFactory.HEAP_LOG));
-    }
-
-    @After
-    public void restorePageLockTrackerType() {
-        if (oldPageLockTrackerType != null)
-            System.setProperty(IGNITE_PAGE_LOCK_TRACKER_TYPE, oldPageLockTrackerType);
-        else
-            System.clearProperty(IGNITE_PAGE_LOCK_TRACKER_TYPE);
-    }
-
     /**
      * Tests that all data structures get unregistered on node stop.
      */
