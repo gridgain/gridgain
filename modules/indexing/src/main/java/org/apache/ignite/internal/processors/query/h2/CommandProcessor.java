@@ -99,8 +99,10 @@ import org.apache.ignite.internal.sql.command.SqlDropIndexCommand;
 import org.apache.ignite.internal.sql.command.SqlDropStatisticsCommand;
 import org.apache.ignite.internal.sql.command.SqlDropUserCommand;
 import org.apache.ignite.internal.sql.command.SqlIndexColumn;
+import org.apache.ignite.internal.sql.command.SqlKillClientCommand;
 import org.apache.ignite.internal.sql.command.SqlKillContinuousQueryCommand;
 import org.apache.ignite.internal.sql.command.SqlKillQueryCommand;
+import org.apache.ignite.internal.sql.command.SqlKillScanQueryCommand;
 import org.apache.ignite.internal.sql.command.SqlRefreshStatitsicsCommand;
 import org.apache.ignite.internal.sql.command.SqlRollbackTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlSetStreamingCommand;
@@ -426,6 +428,10 @@ public class CommandProcessor {
                 processKillQueryCommand((SqlKillQueryCommand) cmdNative);
             else if (cmdNative instanceof SqlKillContinuousQueryCommand)
                 processKillContinuousQueryCommand((SqlKillContinuousQueryCommand) cmdNative);
+            else if (cmdNative instanceof SqlKillScanQueryCommand)
+                processKillScanQueryCommand((SqlKillScanQueryCommand) cmdNative);
+            else if (cmdNative instanceof SqlKillClientCommand)
+                processKillClientCommand((SqlKillClientCommand)cmdNative);
             else
                 processTxCommand(cmdNative, params);
         }
@@ -575,6 +581,28 @@ public class CommandProcessor {
      */
     private void processKillContinuousQueryCommand(SqlKillContinuousQueryCommand cmd) {
         new QueryMXBeanImpl(ctx).cancelContinuous(cmd.getOriginNodeId(), cmd.getRoutineId());
+    }
+
+    /**
+     * Process kill scan query command.
+     *
+     * @param command Command.
+     */
+    private void processKillScanQueryCommand(SqlKillScanQueryCommand command) {
+        new QueryMXBeanImpl(ctx)
+            .cancelScan(command.getOriginNodeId(), command.getCacheName(), command.getQryId());
+    }
+
+    /**
+     * Process kill client command.
+     *
+     * @param cmd Command.
+     */
+    private void processKillClientCommand(SqlKillClientCommand cmd) {
+        if (cmd.connectionId() == null)
+            ctx.sqlListener().mxBean().dropAllConnections();
+        else
+            ctx.sqlListener().mxBean().dropConnection(cmd.connectionId());
     }
 
     /**

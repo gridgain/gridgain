@@ -611,6 +611,17 @@ public class CommandHandlerParsingTest {
 
         assertParseArgsThrows("Invalid UUID string: not_a_uuid", IllegalArgumentException.class,
             "--kill", "continuous", UUID.randomUUID().toString(), "not_a_uuid");
+
+        // Scan command format errors.
+        assertParseArgsThrows("Expected query originating node id.", "--kill", "scan");
+        assertParseArgsThrows("Expected cache name.", "--kill", "scan", uuid);
+        assertParseArgsThrows("Expected query identifier.", "--kill", "scan", uuid, "cache");
+
+        assertParseArgsThrows("Invalid UUID string: not_a_uuid", IllegalArgumentException.class,
+            "--kill", "scan", "not_a_uuid");
+
+        assertParseArgsThrows("For input string: \"not_a_number\"", NumberFormatException.class,
+            "--kill", "scan", uuid, "my-cache", "not_a_number");
     }
 
     /**  */

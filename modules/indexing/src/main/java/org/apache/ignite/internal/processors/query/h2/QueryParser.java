@@ -72,8 +72,10 @@ import org.apache.ignite.internal.sql.command.SqlCreateUserCommand;
 import org.apache.ignite.internal.sql.command.SqlDropIndexCommand;
 import org.apache.ignite.internal.sql.command.SqlDropStatisticsCommand;
 import org.apache.ignite.internal.sql.command.SqlDropUserCommand;
+import org.apache.ignite.internal.sql.command.SqlKillClientCommand;
 import org.apache.ignite.internal.sql.command.SqlKillContinuousQueryCommand;
 import org.apache.ignite.internal.sql.command.SqlKillQueryCommand;
+import org.apache.ignite.internal.sql.command.SqlKillScanQueryCommand;
 import org.apache.ignite.internal.sql.command.SqlRefreshStatitsicsCommand;
 import org.apache.ignite.internal.sql.command.SqlRollbackTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlSetStreamingCommand;
@@ -99,7 +101,7 @@ public class QueryParser {
     /** A pattern for commands having internal implementation in Ignite. */
     private static final Pattern INTERNAL_CMD_RE = Pattern.compile(
         "^(create|drop)\\s+index|^analyze\\s|^refresh\\sstatistics|^drop\\sstatistics|^alter\\s+table|^copy|^set|^begin|^commit|^rollback|^(create|alter|drop)\\s+user" +
-            "|^kill\\s+(query|continuous)|show|help|grant|revoke",
+            "|^kill\\s+(query|continuous|scan|client)|show|help|grant|revoke",
         Pattern.CASE_INSENSITIVE);
 
     /** Indexing. */
@@ -113,12 +115,12 @@ public class QueryParser {
 
     /** Query parser metrics holder. */
     private final QueryParserMetricsHolder metricsHolder;
-    
+
     /**
      * Forcibly fills missing columns belonging to the primary key with nulls or default values if those have been specified.
      */
     private final boolean forceFillAbsentPKsWithDefaults;
-    
+
     /** */
     private volatile GridBoundedConcurrentLinkedHashMap<QueryDescriptor, QueryParserCacheEntry> cache =
         new GridBoundedConcurrentLinkedHashMap<>(CACHE_SIZE);
@@ -135,7 +137,7 @@ public class QueryParser {
 
         this.log = idx.kernalContext().log(QueryParser.class);
         this.metricsHolder = new QueryParserMetricsHolder(idx.kernalContext().metric());
-    
+
         this.forceFillAbsentPKsWithDefaults = IgniteSystemProperties.getBoolean(
                 IgniteSystemProperties.IGNITE_SQL_FILL_ABSENT_PK_WITH_DEFAULTS, false);
     }
@@ -292,8 +294,10 @@ public class QueryParser {
                 || nativeCmd instanceof SqlAnalyzeCommand
                 || nativeCmd instanceof SqlRefreshStatitsicsCommand
                 || nativeCmd instanceof SqlDropStatisticsCommand
-                || nativeCmd instanceof SqlKillContinuousQueryCommand)
-            )
+                || nativeCmd instanceof SqlKillContinuousQueryCommand
+                || nativeCmd instanceof SqlKillScanQueryCommand
+                || nativeCmd instanceof SqlKillClientCommand
+            ))
                 return null;
 
             SqlFieldsQuery newQry = cloneFieldsQuery(qry).setSql(parser.lastCommandSql());

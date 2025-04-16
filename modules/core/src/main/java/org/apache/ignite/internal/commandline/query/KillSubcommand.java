@@ -23,6 +23,9 @@ public enum KillSubcommand {
     /** Kill sql query. */
     SQL,
     /** Kill compute task. */
-    CONTINUOUS
-
+    CONTINUOUS,
+    /** Kill scan query. */
+    SCAN,
+    /** Kill client connection. */
+    CLIENT
 }
