@@ -94,6 +94,9 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_NEXT_PA
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_PAGE_PREPARE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_CANCEL_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXEC_REQ;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
+
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Map query executor.
@@ -197,7 +200,8 @@ public class GridMapQueryExecutor {
             Collection<GridCacheSqlQuery> queries,
             Object[] params,
             Throwable error,
-            UUID remoteNodeId
+            UUID remoteNodeId,
+            UUID localNodeId
     ) {
         StringBuilder logMessage = new StringBuilder();
 
@@ -209,14 +213,19 @@ public class GridMapQueryExecutor {
                         queries != null
                                 ? queries.stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; "))
                                 : "N/A")
-                .append("\nParameters: ").append(params != null ? Arrays.toString(params) : "N/A")
-                .append("\nTimestamp: ").append(System.currentTimeMillis())
-                .append("\nLocal Node ID: ").append(ctx.localNodeId())
+                .append("\nLocal Node ID: ").append(localNodeId)
                 .append("\nRemote Node ID: ").append(remoteNodeId);
 
-        if (error != null) {
-            logMessage.append("\nError: ").append(error.getMessage());
+        if (params == null)
+            logMessage.append("\nParameters: N/A");
+        else {
+            boolean secureParams = S.getSensitiveDataLogging() != PLAIN;
+            logMessage.append("\nParameters: ");
+            logMessage.append(secureParams ? "HIDDEN" : Arrays.toString(params));
         }
+
+        if (error != null)
+            logMessage.append("\nError: ").append(error.getMessage());
 
         return logMessage.toString();
 
@@ -624,15 +633,15 @@ public class GridMapQueryExecutor {
                         if (qryRetryErr != null)
                             sendError(node, reqId, qryRetryErr);
                         else {
-                            String errMsg = buildQueryLogDetails(reqId, label, schemaName, qrys, params, e, node.id());
+                            String errMsg = buildQueryLogDetails(reqId, label, schemaName, qrys, params, e, node.id(),ctx.localNodeId());
 
                             if (e instanceof Error) {
-                                log.error(errMsg, e);
+                                U.error(log, errMsg, e);
 
                                 throw (Error)e;
                             }
                             else {
-                                log.error(errMsg, e);
+                                U.error(log, errMsg, e);
 
                                 sendError(node, reqId, e);
                             }
