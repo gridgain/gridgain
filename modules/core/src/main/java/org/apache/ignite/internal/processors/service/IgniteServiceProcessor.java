@@ -1720,7 +1720,8 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
                     U.warn(log, err.getMessage(), err);
                 }
             }
-            else if (req instanceof ServiceUndeploymentRequest) {
+            // Service could be already undeployed if request was duplicated.
+            else if (req instanceof ServiceUndeploymentRequest && oldDesc != null) {
                 ServiceInfo rmv = registeredServices.remove(reqSrvcId);
                 registeredServicesByName.remove(oldDesc.name());
 
