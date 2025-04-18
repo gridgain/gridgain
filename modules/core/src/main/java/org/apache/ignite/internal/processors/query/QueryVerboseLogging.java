@@ -359,7 +359,7 @@ public class QueryVerboseLogging {
         private final long ttl = IgniteSystemProperties.getLong(QVL_FORCE_FINISH_TTL_PROP, 30_000);
 
         /** Force finish threshold for descriptor TTL */
-        private final long minDuration = IgniteSystemProperties.getLong(QVL_TARGET_QUERY_MIN_DURATION_PROP, 5 * 60_000);
+        private final long minDuration = IgniteSystemProperties.getLong(QVL_TARGET_QUERY_MIN_DURATION_PROP, 60_000);
 
         /** Verbosity level */
         private final VerbosityLevel verbosity = VerbosityLevel.get();
