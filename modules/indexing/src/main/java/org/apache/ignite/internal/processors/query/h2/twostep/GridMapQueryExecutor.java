@@ -164,7 +164,7 @@ public class GridMapQueryExecutor {
         try (TraceSurroundings ignored = MTC.support(ctx.tracing().create(SQL_QRY_CANCEL_REQ, MTC.span()))) {
             long qryReqId = msg.queryRequestId();
 
-            QVL.finish(node.id(), qryReqId, "Cancel [reqId=" + qryReqId + "]");
+            QVL.finish(node.id(), qryReqId, () -> "Cancel [reqId=" + qryReqId + "]");
 
             MapNodeResults nodeRess = resultsForNode(node.id());
 
@@ -551,7 +551,7 @@ public class GridMapQueryExecutor {
                         }
                         else {
                             QVL.logSpan(node.id(), qryInfo.runningQueryId(), () -> "Empty first page message [" +
-                                    "dst=" + U.id8(node.id()) +
+                                    "dst=" + QVL.id(node) +
                                     "]");
                         }
                     }

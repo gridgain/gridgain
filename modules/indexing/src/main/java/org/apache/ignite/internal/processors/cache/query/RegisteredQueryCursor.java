@@ -121,7 +121,7 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
         ) {
             super.close();
 
-            QVL.finish(qryId, this.getClass().getSimpleName() + ".close()");
+            QVL.finish(qryId, () -> this.getClass().getSimpleName() + ".close()");
             unregisterQuery();
         }
         catch (Throwable th) {
@@ -140,7 +140,7 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
 
             qrySpan.addTag(ERROR, failReason::getMessage);
 
-            QVL.finish(qryId, this.getClass().getSimpleName() + ".cancel()");
+            QVL.finish(qryId, () -> this.getClass().getSimpleName() + ".cancel()");
             close();
         }
     }
@@ -199,7 +199,7 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
      */
     private CacheException failReason(Exception e) {
         if (FAIL_REASON_UPDATER.compareAndSet(this, null, e) && QueryUtils.wasCancelled(failReason)) {
-            QVL.finish(qryId, this.getClass().getSimpleName() + ".fail(): " + e.getMessage());
+            QVL.finish(qryId, () -> this.getClass().getSimpleName() + (e != null ? ".fail(): " + e.getMessage() : ".fail()"));
             unregisterQuery();
         }
 

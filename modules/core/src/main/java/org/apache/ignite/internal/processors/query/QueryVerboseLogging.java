@@ -197,20 +197,20 @@ public class QueryVerboseLogging {
         });
     }
 
-    public static void finish(@Nullable Long queryId, String message) {
-        finish(locNodeId, queryId, message);
+    public static void finish(@Nullable Long queryId, Supplier<String> messageSupplier) {
+        finish(locNodeId, queryId, messageSupplier);
     }
 
-    public static void finish(@Nullable UUID nodeId, @Nullable Long queryId, String message) {
+    public static void finish(@Nullable UUID nodeId, @Nullable Long queryId, Supplier<String> messageSupplier) {
         if (queryId != null && nodeId != null)
-            finish(QueryUtils.globalQueryId(nodeId, queryId), message);
+            finish(QueryUtils.globalQueryId(nodeId, queryId), messageSupplier);
     }
 
-    public static void finish(String globalQueryId, String message) {
+    private static void finish(String globalQueryId, Supplier<String> messageSupplier) {
         if (cfg.isEnabled()) {
             TargetQueryDescriptor descriptor = queries.remove(globalQueryId);
             if (descriptor != null) {
-                descriptor.log(message).finish();
+                descriptor.log(messageSupplier.get()).finish();
             }
         }
     }
@@ -305,7 +305,8 @@ public class QueryVerboseLogging {
             }
         }
 
-        @Override public String toString() {
+        @Override
+        public String toString() {
             return report.toString();
         }
     }
