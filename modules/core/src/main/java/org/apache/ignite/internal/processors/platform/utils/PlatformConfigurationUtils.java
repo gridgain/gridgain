@@ -689,11 +689,25 @@ public class PlatformConfigurationUtils {
      * @return Query index.
      */
     public static QueryIndex readQueryIndex(BinaryRawReader in) {
+        return readQueryIndex(in, false);
+    }
+
+    /**
+     * Reads the query index.
+     *
+     * @param in Reader.
+     * @param hasVectorSimilarity whether the similarity function is defined.
+     * @return Query index.
+     */
+    public static QueryIndex readQueryIndex(BinaryRawReader in, boolean hasVectorSimilarity) {
         QueryIndex res = new QueryIndex();
 
         res.setName(in.readString());
         res.setIndexType(QueryIndexType.values()[in.readByte()]);
         res.setInlineSize(in.readInt());
+        if(hasVectorSimilarity){
+            res.setSimilarityFunction(in.readInt());
+        }
 
         int cnt = in.readInt();
 
