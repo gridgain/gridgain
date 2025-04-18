@@ -305,8 +305,7 @@ public class QueryVerboseLogging {
             }
         }
 
-        @Override
-        public String toString() {
+        @Override public String toString() {
             return report.toString();
         }
     }

@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class QueryVerboseLoggingTest extends JUnitAssertAware {
 
     private static final UUID LOCAL_NODE_ID = UUID.randomUUID();
+
     private static final String LABEL_PREFIX = "lbl";
 
     private final AtomicLong ID_GEN = new AtomicLong(0);
