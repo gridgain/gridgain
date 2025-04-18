@@ -162,23 +162,6 @@ public class QueryVerboseLogging {
         }
     }
 
-    public static void finish(long queryId, String message) {
-        finish(locNodeId, queryId, message);
-    }
-
-    public static void finish(UUID nodeId, long queryId, String message) {
-        finish(QueryUtils.globalQueryId(nodeId, queryId), message);
-    }
-
-    public static void finish(String globalQueryId, String message) {
-        if (cfg.isEnabled()) {
-            TargetQueryDescriptor descriptor = queries.remove(globalQueryId);
-            if (descriptor != null) {
-                descriptor.log(message).finish();
-            }
-        }
-    }
-
     public static void ifPresent(String globalQueryId, Consumer<TargetQueryDescriptor> action) {
         if (cfg.isEnabled()) {
             TargetQueryDescriptor descriptor = queries.get(globalQueryId);
@@ -188,20 +171,21 @@ public class QueryVerboseLogging {
         }
     }
 
-    public static void logLocalSpan(long queryId, Supplier<String> messageSupplier) {
+    public static void logLocalSpan(@Nullable Long queryId, Supplier<String> messageSupplier) {
         logLocalSpan(VerbosityLevel.INFO, queryId, messageSupplier);
     }
 
-    public static void logLocalSpan(@NotNull VerbosityLevel lvl, long queryId, Supplier<String> messageSupplier) {
+    public static void logLocalSpan(@NotNull VerbosityLevel lvl, @Nullable Long queryId, Supplier<String> messageSupplier) {
         logSpan(lvl, locNodeId, queryId, messageSupplier);
     }
 
-    public static void logSpan(@NotNull UUID nodeId, long queryId, Supplier<String> messageSupplier) {
+    public static void logSpan(@NotNull UUID nodeId, @Nullable Long queryId, Supplier<String> messageSupplier) {
         logSpan(VerbosityLevel.INFO, nodeId, queryId, messageSupplier);
     }
 
-    public static void logSpan(@NotNull VerbosityLevel lvl, @NotNull UUID nodeId, long queryId, Supplier<String> messageSupplier) {
-        logSpan(lvl, QueryUtils.globalQueryId(nodeId, queryId), messageSupplier);
+    public static void logSpan(@NotNull VerbosityLevel lvl, @Nullable UUID nodeId, @Nullable Long queryId, Supplier<String> messageSupplier) {
+        if (queryId != null && nodeId != null)
+            logSpan(lvl, QueryUtils.globalQueryId(nodeId, queryId), messageSupplier);
     }
 
     public static void logSpan(@NotNull VerbosityLevel lvl, String globalQueryId, Supplier<String> messageSupplier) {
@@ -211,6 +195,24 @@ public class QueryVerboseLogging {
             else
                 d.touch();
         });
+    }
+
+    public static void finish(@Nullable Long queryId, String message) {
+        finish(locNodeId, queryId, message);
+    }
+
+    public static void finish(@Nullable UUID nodeId, @Nullable Long queryId, String message) {
+        if (queryId != null && nodeId != null)
+            finish(QueryUtils.globalQueryId(nodeId, queryId), message);
+    }
+
+    public static void finish(String globalQueryId, String message) {
+        if (cfg.isEnabled()) {
+            TargetQueryDescriptor descriptor = queries.remove(globalQueryId);
+            if (descriptor != null) {
+                descriptor.log(message).finish();
+            }
+        }
     }
 
     private static void logMsg(String message) {

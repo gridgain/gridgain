@@ -218,17 +218,19 @@ public class GridMapQueryExecutor {
         final boolean lazy = req.isFlagSet(GridH2QueryRequest.FLAG_LAZY);
         boolean treatReplicatedAsPartitioned = req.isFlagSet(GridH2QueryRequest.FLAG_REPLICATED_AS_PARTITIONED);
 
-        QVL.register(
-                req.label(),
-                req.queries().stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; ")),
-                QueryUtils.globalQueryId(node.id(), req.runningQryId()),
-                null,
-                lazy,
-                distributedJoins,
-                enforceJoinOrder
-        );
+        if (node != null && req.runningQryId() != null) {
+            QVL.register(
+                    req.label(),
+                    req.queries().stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; ")),
+                    QueryUtils.globalQueryId(node.id(), req.runningQryId()),
+                    null,
+                    lazy,
+                    distributedJoins,
+                    enforceJoinOrder
+            );
 
-        QVL.logSpan(node.id(), req.requestId(), () -> this.getClass().getSimpleName() + ".onQueryRequest()");
+            QVL.logSpan(node.id(), req.runningQryId(), () -> this.getClass().getSimpleName() + ".onQueryRequest()");
+        }
 
         try {
             Boolean dataPageScanEnabled = req.isDataPageScanEnabled();
