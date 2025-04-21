@@ -648,11 +648,10 @@ public class GridMapQueryExecutor {
 
                                 throw (Error)e;
                             }
-                            else {
-                                U.error(log, errMsg, e);
 
-                                sendError(node, reqId, e);
-                            }
+                            U.warn(log, errMsg, e);
+
+                            sendError(node, reqId, e);
                         }
                     }
                 }
