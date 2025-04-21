@@ -210,7 +210,7 @@ public class GridMapQueryExecutor {
                 .append("\nLabel: ").append(label != null ? label : "N/A")
                 .append("\nSchema: ").append(schemaName != null ? schemaName : "N/A")
                 .append("\nQueries: ").append(
-                        queries != null
+                        !F.isEmpty(queries)
                                 ? queries.stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; "))
                                 : "N/A")
                 .append("\nLocal Node ID: ").append(localNodeId)
@@ -225,7 +225,7 @@ public class GridMapQueryExecutor {
         }
 
         if (error != null)
-            logMessage.append("\nError: ").append(error.getMessage());
+            logMessage.append("\nError: ");
 
         return logMessage.toString();
 
@@ -388,7 +388,7 @@ public class GridMapQueryExecutor {
      * @param maxMem Query memory limit.
      * @param runningQryId Running query id.
      */
-    protected void onQueryRequest0(
+    private void onQueryRequest0(
         final ClusterNode node,
         final long reqId,
         final String label,
@@ -633,7 +633,15 @@ public class GridMapQueryExecutor {
                         if (qryRetryErr != null)
                             sendError(node, reqId, qryRetryErr);
                         else {
-                            String errMsg = buildQueryLogDetails(reqId, label, schemaName, qrys, params, e, node.id(),ctx.localNodeId());
+                            String errMsg = buildQueryLogDetails(
+                                    reqId,
+                                    label,
+                                    schemaName,
+                                    qrys,
+                                    params,
+                                    e,
+                                    node.id(),
+                                    ctx.localNodeId());
 
                             if (e instanceof Error) {
                                 U.error(log, errMsg, e);
