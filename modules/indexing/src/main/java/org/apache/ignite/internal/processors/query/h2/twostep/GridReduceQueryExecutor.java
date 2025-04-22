@@ -16,26 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteException;
@@ -61,6 +41,7 @@ import org.apache.ignite.internal.processors.query.GridQueryCacheObjectsIterator
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.IgniteSQLMapStepException;
+import org.apache.ignite.internal.processors.query.QVL;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.H2FieldsIterator;
@@ -102,6 +83,19 @@ import org.gridgain.internal.h2.util.IntArray;
 import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import javax.cache.CacheException;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
@@ -223,6 +217,12 @@ public class GridReduceQueryExecutor {
         try (TraceSurroundings ignored = MTC.support(ctx.tracing().create(SQL_FAIL_RESP, MTC.span()))) {
             ReduceQueryRun r = runs.get(msg.queryRequestId());
 
+            QVL.logSpan(node.id(), msg.queryRequestId(), () -> "Fail [" +
+                    "reqId=" + msg.queryRequestId() + ", " +
+                    "src=" + QVL.id(node) + ", " +
+                    "failCode=" + msg.failCode() +
+                    "]");
+
             fail(r, node.id(), msg.error(), msg.failCode(), msg.sqlErrCode());
         }
     }
@@ -300,7 +300,14 @@ public class GridReduceQueryExecutor {
                             if (node.isLocal())
                                 h2.mapQueryExecutor().onNextPageRequest(node, msg0);
                             else
+                            {
+                                QVL.logLocalSpan(qryReqId, () -> "Send next-page request [" +
+                                        "reqId=" + msg0.queryRequestId() + ", " +
+                                        "dst=" + QVL.id(node) +
+                                        "]");
+
                                 ctx.io().sendToGridTopic(node, GridTopic.TOPIC_QUERY, msg0, GridIoPolicy.QUERY_POOL);
+                            }
                         }
                         catch (IgniteCheckedException e) {
                             throw new CacheException("Failed to fetch data from node: " + node.id(), e);
@@ -330,6 +337,12 @@ public class GridReduceQueryExecutor {
 
                 return;
             }
+
+            QVL.logLocalSpan(qryReqId, () -> "Receive rows page [" +
+                    "reqId=" + qryReqId + ", " +
+                    "src=" + QVL.id(node) + ", " +
+                    "size=" + page.rowsInPage() +
+                    "]");
 
             idx.addPage(page);
 
@@ -479,6 +492,14 @@ public class GridReduceQueryExecutor {
                         parts == null ? null : new ReducePartitionsSpecializer(mapping.queryPartitionsMap());
 
                     boolean retry = false;
+
+                    QVL.logLocalSpan(qryId != null ? qryId : qryReqId, () -> "Send query initial requests [" +
+                            "reqId=" + qryReqId + ", " +
+                            "nodes={" + nodes.stream()
+                            .filter(Objects::nonNull)
+                            .map(QVL::id)
+                            .collect(Collectors.joining(", ")) + "}]"
+                    );
 
                     if (send(nodes, req, spec, false)) {
                         awaitAllReplies(r, nodes, cancel);

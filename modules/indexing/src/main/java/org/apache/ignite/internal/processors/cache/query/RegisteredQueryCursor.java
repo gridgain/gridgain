@@ -24,7 +24,9 @@ import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
+import org.apache.ignite.internal.processors.query.QVL;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.query.QueryVerboseLogging;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
@@ -88,12 +90,16 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
         GridRunningQueryInfo qryInfo = runningQryMgr.runningQueryInfo(qryId);
 
         qrySpan = qryInfo == null ? NoopSpan.INSTANCE : qryInfo.span();
+
+        if (qryInfo != null) QueryVerboseLogging.logLocalSpan(qryInfo.id(), () -> "Open " + this.getClass().getSimpleName());
     }
 
     /** {@inheritDoc} */
     @Override protected Iterator<T> iter() {
         try (TraceSurroundings ignored = MTC.supportContinual(qrySpan)) {
             Iterator<T> iter = lazy() ? new RegisteredIterator(super.iter()) : super.iter();
+
+            QVL.logLocalSpan(qryId, () -> this.getClass().getSimpleName() + ".iter()");
 
             return qrySpan != NoopSpan.INSTANCE ? new TraceableIterator<>(iter) : iter;
         }
@@ -115,6 +121,7 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
         ) {
             super.close();
 
+            QVL.finish(qryId, () -> this.getClass().getSimpleName() + ".close()");
             unregisterQuery();
         }
         catch (Throwable th) {
@@ -133,6 +140,7 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
 
             qrySpan.addTag(ERROR, failReason::getMessage);
 
+            QVL.finish(qryId, () -> this.getClass().getSimpleName() + ".cancel()");
             close();
         }
     }
@@ -162,6 +170,7 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
         /** {@inheritDoc} */
         @Override public boolean hasNext() {
             try {
+                QVL.logLocalSpan(QVL.VerbosityLevel.TRACE, qryId, () -> this.getClass().getSimpleName() + ".hasNext()");
                 return delegateIt.hasNext();
             }
             catch (Exception e) {
@@ -172,6 +181,7 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
         /** {@inheritDoc} */
         @Override public T next() {
             try {
+                QVL.logLocalSpan(QVL.VerbosityLevel.TRACE, qryId, () -> this.getClass().getSimpleName() + ".next()");
                 return delegateIt.next();
             }
             catch (Exception e) {
@@ -188,8 +198,10 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
      * @return Fail reason.
      */
     private CacheException failReason(Exception e) {
-        if (FAIL_REASON_UPDATER.compareAndSet(this, null, e) && QueryUtils.wasCancelled(failReason))
+        if (FAIL_REASON_UPDATER.compareAndSet(this, null, e) && QueryUtils.wasCancelled(failReason)) {
+            QVL.finish(qryId, () -> this.getClass().getSimpleName() + (e != null ? ".fail(): " + e.getMessage() : ".fail()"));
             unregisterQuery();
+        }
 
         return failReason instanceof CacheException ? (CacheException)failReason : new CacheException(failReason);
     }
