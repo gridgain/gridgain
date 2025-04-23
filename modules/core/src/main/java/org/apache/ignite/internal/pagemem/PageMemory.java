@@ -43,7 +43,7 @@ public interface PageMemory extends PageIdAllocator, PageSupport {
 
     /**
      * @param grpId Group id.
-     * @return Page size without encryption overhead.
+     * @return Page size with encryption overhead.
      */
     public int realPageSize(int grpId);
 

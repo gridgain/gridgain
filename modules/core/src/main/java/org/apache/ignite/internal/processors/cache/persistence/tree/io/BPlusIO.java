@@ -73,7 +73,7 @@ public abstract class BPlusIO<L> extends PageIO implements CompactablePageIO {
     private static final int REMOVE_ID_OFF = FORWARD_OFF + 8;
 
     /** */
-    protected static final int ITEMS_OFF = REMOVE_ID_OFF + 8;
+    public static final int ITEMS_OFF = REMOVE_ID_OFF + 8;
 
     /** */
     private final boolean canGetRow;

@@ -22,7 +22,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.BytesInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.StringInlineIndexColumn;
@@ -144,8 +143,6 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
         }
 
         if (cfgInlineSize != -1) {
-            cfgInlineSize = Math.min(PageIO.MAX_PAYLOAD_SIZE, cfgInlineSize);
-
             if (fixedSize && size < cfgInlineSize) {
                 log.warning("Explicit INLINE_SIZE for fixed size index item is too big. " +
                         "This will lead to wasting of space inside index pages. Ignoring " +
@@ -157,7 +154,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
             return cfgInlineSize;
         }
 
-        return Math.min(PageIO.MAX_PAYLOAD_SIZE, size);
+        return size;
     }
 
     /**
