@@ -55,7 +55,8 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
     @Override public void receive(IgniteCache<KeyCacheObject, CacheObject> cache0,
         Collection<Map.Entry<KeyCacheObject, CacheObject>> col) {
         try {
-            GridKernalContext ctx = ((IgniteKernal)cache0.unwrap(Ignite.class)).context();
+            IgniteKernal kernal = (IgniteKernal) cache0.unwrap(Ignite.class);
+            GridKernalContext ctx = kernal.context();
 
             IgniteInternalCache<KeyCacheObject, CacheObject> cache;
 
@@ -71,8 +72,8 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
             assert !F.isEmpty(col);
 
             CacheObjectContext cacheObjCtx = cache.context().cacheObjectContext();
-
-            IgniteLogger log = cache0.unwrap(Ignite.class).log();
+ 
+            IgniteLogger log = kernal.log();
 
             for (Map.Entry<KeyCacheObject, CacheObject> entry0 : col) {
                 GridCacheRawVersionedEntry<KeyCacheObject, CacheObject> entry = (GridCacheRawVersionedEntry<KeyCacheObject, CacheObject>)entry0;
