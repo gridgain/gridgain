@@ -51,10 +51,6 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
-    /** Logger. */
-    @LoggerResource
-    protected IgniteLogger log;
-
     /** {@inheritDoc} */
     @Override public void receive(IgniteCache<KeyCacheObject, CacheObject> cache0,
         Collection<Map.Entry<KeyCacheObject, CacheObject>> col) {
