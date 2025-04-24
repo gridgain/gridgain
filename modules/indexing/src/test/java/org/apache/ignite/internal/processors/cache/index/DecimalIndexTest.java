@@ -21,8 +21,6 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -30,7 +28,6 @@ import org.junit.After;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.query.h2.database.H2Tree.IGNITE_THROTTLE_INLINE_SIZE_CALCULATION;
-import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
  * A set of tests for caches with decimal index.
@@ -131,30 +128,6 @@ public class DecimalIndexTest extends AbstractIndexingCommonTest {
         assertEquals(1, res.size());
         assertEquals(1, res.get(0).size());
         assertEquals(50, res.get(0).get(0));
-    }
-
-    /** */
-    @Test
-    @WithSystemProperty(key = IGNITE_THROTTLE_INLINE_SIZE_CALCULATION, value = "1")
-    public void inlineSizeExceedsMax() throws Exception {
-        final String TBL_NAME = "DECIMAL_TABLE";
-
-        Ignite node = startGrid(0);
-
-        sql(node, "create table " + TBL_NAME + " (key_pk int, key1 decimal, key2 decimal, key3 decimal, primary key(key_pk), val int)");
-
-        int cfgInlineSize = PageIO.MAX_PAYLOAD_SIZE;
-
-        assertThrows(
-                log,
-                () -> sql(node, "create index pk_id on " + TBL_NAME + " (key1, key2, key3) inline_size " + cfgInlineSize),
-                IgniteSQLException.class,
-                "Inline size is too big [cacheName=DECIMAL_TABLE" +
-                        ", tableName=SQL_PUBLIC_DECIMAL_TABLE" +
-                        ", idxName=PK_ID" +
-                        ", configuredInlineSize=" + cfgInlineSize +
-                        ", maxAllowedInlineSize="
-        );
     }
 
     /**
