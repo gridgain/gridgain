@@ -84,7 +84,6 @@ import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.P
 import static org.apache.ignite.internal.processors.query.h2.database.H2Tree.IGNITE_THROTTLE_INLINE_SIZE_CALCULATION;
 import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex.SCAN_INDEX_NAME_SUFFIX;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * A set of basic tests for caches with indexes.
