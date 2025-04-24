@@ -224,9 +224,6 @@ public class GridMapQueryExecutor {
             logMessage.append(secureParams ? "HIDDEN" : Arrays.toString(params));
         }
 
-        if (error != null)
-            logMessage.append("\nError: ");
-
         return logMessage.toString();
 
     }
