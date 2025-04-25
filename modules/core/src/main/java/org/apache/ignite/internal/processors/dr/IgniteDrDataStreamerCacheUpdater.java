@@ -40,8 +40,6 @@ import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.resources.IgniteInstanceResource;
-import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.stream.StreamReceiver;
 
 /**
@@ -52,15 +50,11 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
-    /** Local Ignite instance. */
-    @IgniteInstanceResource
-    private transient Ignite ignite;
-
     /** {@inheritDoc} */
     @Override public void receive(IgniteCache<KeyCacheObject, CacheObject> cache0,
         Collection<Map.Entry<KeyCacheObject, CacheObject>> col) {
         try {
-            IgniteKernal kernal = (IgniteKernal) ignite;
+            IgniteKernal kernal = (IgniteKernal) cache0.unwrap(Ignite.class);
             GridKernalContext ctx = kernal.context();
 
             IgniteInternalCache<KeyCacheObject, CacheObject> cache;
