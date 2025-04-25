@@ -40,7 +40,7 @@ import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.resources.IgniteInstanceResource;
+import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.stream.StreamReceiver;
 
 /**
@@ -52,14 +52,14 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
     private static final long serialVersionUID = 0L;
 
     /** Local Ignite instance. */
-    @IgniteInstanceResource
-    private transient Ignite ignite;
+    @LoggerResource
+    private transient IgniteLogger log;
 
     /** {@inheritDoc} */
     @Override public void receive(IgniteCache<KeyCacheObject, CacheObject> cache0,
         Collection<Map.Entry<KeyCacheObject, CacheObject>> col) {
         try {
-            IgniteKernal kernal = (IgniteKernal) ignite;
+            IgniteKernal kernal = (IgniteKernal) cache0.unwrap(Ignite.class);
             GridKernalContext ctx = kernal.context();
 
             IgniteInternalCache<KeyCacheObject, CacheObject> cache;
@@ -77,7 +77,7 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
 
             CacheObjectContext cacheObjCtx = cache.context().cacheObjectContext();
  
-            IgniteLogger log = kernal.log().getLogger(IgniteDrDataStreamerCacheUpdater.class);
+            IgniteLogger logger = log.getLogger(IgniteDrDataStreamerCacheUpdater.class);
 
             for (Map.Entry<KeyCacheObject, CacheObject> entry0 : col) {
                 GridCacheRawVersionedEntry<KeyCacheObject, CacheObject> entry = (GridCacheRawVersionedEntry<KeyCacheObject, CacheObject>)entry0;
@@ -99,13 +99,13 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
                 if (val == null) {
                     cache.removeAllConflict(Collections.singletonMap(key, entry.version()));
 
-                    if (log.isTraceEnabled())
-                        log.trace("RemoveAllConflict invoked for the key = " + IgniteUtils.resolveKey(cache.context(), key));
+                    if (logger.isTraceEnabled())
+                        logger.trace("RemoveAllConflict invoked for the key = " + IgniteUtils.resolveKey(cache.context(), key));
                 } else {
                     cache.putAllConflict(Collections.singletonMap(key, val));
 
-                    if (log.isTraceEnabled())
-                        log.trace("PutAllConflict invoked for the key = " + IgniteUtils.resolveKey(cache.context(), key));
+                    if (logger.isTraceEnabled())
+                        logger.trace("PutAllConflict invoked for the key = " + IgniteUtils.resolveKey(cache.context(), key));
                 }
             }
         }
