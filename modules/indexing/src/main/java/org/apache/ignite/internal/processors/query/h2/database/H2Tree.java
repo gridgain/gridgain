@@ -16,7 +16,11 @@
 
 package org.apache.ignite.internal.processors.query.h2.database;
 
-import org.apache.ignite.*;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.SystemProperty;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.pagemem.FullPageId;
@@ -40,6 +44,7 @@ import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2IOUtils;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2RowLinkIO;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
@@ -250,11 +255,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         this.affinityKey = affinityKey;
         this.mvccEnabled = mvccEnabled;
 
-        int itemOverhead = Long.BYTES + (mvccEnabled ? Long.BYTES + Long.BYTES + Integer.BYTES : 0);
-        this.maxAllowedInlineSize = Math.min(
-                PageIO.MAX_PAYLOAD_SIZE,
-                (pageMem.realPageSize(grpId) - BPlusIO.ITEMS_OFF - 3 * AbstractDataPageIO.LINK_SIZE) / 2 - itemOverhead
-        );
+        this.maxAllowedInlineSize = maxAllowedInlineSize();
 
         if (!initNew) {
             // Page is ready - read meta information.
@@ -341,8 +342,14 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             inlineIdxs = getAvailableInlineColumns(affinityKey, cacheName, idxName, log, pk,
                 table, cols, factory, true);
 
-            inlineSize = computeInlineSize(idxName, inlineIdxs, configuredInlineSize,
-                    cctx.config().getSqlIndexMaxInlineSize(), log);
+            inlineSize = computeInlineSize(
+                    idxName,
+                    inlineIdxs,
+                    configuredInlineSize,
+                    cctx.config().getSqlIndexMaxInlineSize(),
+                    maxAllowedInlineSize,
+                    log
+            );
 
             setIos(
                 H2ExtrasInnerIO.getVersions(inlineSize, mvccEnabled),
@@ -353,6 +360,16 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         }
 
         created = initNew;
+    }
+
+    private int maxAllowedInlineSize() {
+        // To avoid performance degradation, at least two items should fit into one page.
+        // So maximum payload size equals: P = (PS - H - 3L) / 2 - X , where P - Payload size, PS - page size, H - page
+        // header size, L - size of the child link, X - overhead per item.
+        int calculatedMaxItemSize = (pageMem.realPageSize(grpId) - BPlusIO.ITEMS_OFF - 3 * AbstractDataPageIO.LINK_SIZE)
+                / 2 - H2IOUtils.itemOverhead(mvccEnabled);
+
+        return Math.min(PageIO.MAX_PAYLOAD_SIZE, calculatedMaxItemSize);
     }
 
     /**
@@ -862,21 +879,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             colNames.add(index.columnName());
         }
 
-        String idxType = pk ? "PRIMARY KEY" : affinityKey ? "AFFINITY KEY (implicit)" : "SECONDARY";
-
-        if (newSize > maxAllowedInlineSize) {
-            String warn = "Size of indexed columns of the row exceeds maximum index tree item size, " +
-                    "what may lead to slowdown " +
-                    "[cacheName=" + cacheName +
-                    ", tableName=" + tblName +
-                    ", idxName=" + idxName +
-                    ", idxCols=" + cols +
-                    ", idxType=" + idxType +
-                    ", curSize=" + inlineSize() +
-                    ", indexColumnsSize=" + newSize + "]";
-
-            U.warn(log, warn);
-        } else if (newSize > inlineSize()) {
+        if (newSize > inlineSize() && newSize <= maxAllowedInlineSize) {
             int oldSize;
 
             while (true) {
@@ -910,12 +913,18 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 ", tableName=" + tblName +
                 ", idxName=" + idxName +
                 ", idxCols=" + cols +
-                ", idxType=" + idxType +
+                ", idxType=" + idxType() +
                 ", curSize=" + inlineSize() +
                 ", recommendedInlineSize=" + newSize + "]";
 
             U.warn(log, warn);
         }
+    }
+
+    private String idxType() {
+        return pk
+                ? "PRIMARY KEY"
+                : affinityKey ? "AFFINITY KEY (implicit)" : "SECONDARY";
     }
 
     /** {@inheritDoc} */

@@ -1991,21 +1991,22 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
      *
      */
     @Test
-    public void testCreateIndexFailsWhenInlineSizeExceedsMax() throws Exception {
-        inlineSize = (int) PageIO.MAX_PAYLOAD_SIZE;
+    public void testCreateIndexFailsWhenInlineSizeInDdlExceedsMax() throws Exception {
+        inlineSize = -1;
 
         startGrid();
 
         sql("CREATE TABLE TEST (ID VARCHAR, ID_AFF INT, VAL INT, PRIMARY KEY (ID, ID_AFF))");
 
+        int indexInlineSize = PageIO.MAX_PAYLOAD_SIZE + 1;
         assertThrows(
                 log,
-                () -> sql("CREATE INDEX FAILING_IDX ON TEST (VAL) inline_size " + inlineSize),
+                () -> sql("CREATE INDEX FAILING_IDX ON TEST (VAL) inline_size " + indexInlineSize),
                 IgniteSQLException.class,
                 "Inline size is too big [cacheName=TEST" +
                         ", tableName=SQL_PUBLIC_TEST" +
                         ", idxName=FAILING_IDX" +
-                        ", configuredInlineSize=" + inlineSize +
+                        ", configuredInlineSize=" + indexInlineSize +
                         ", maxAllowedInlineSize="
         );
     }
@@ -2014,12 +2015,53 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
      *
      */
     @Test
-    public void testCreateSystemIndexFailsWhenInlineSizeExceedsMax() throws Exception {
-        inlineSize = (int) PageIO.MAX_PAYLOAD_SIZE;
+    public void testMaxInlineSizeUsedWhenExceededInDdl() throws Exception {
+        inlineSize = -1;
+
+        IgniteEx ign = startGrid();
+
+        int indexColumnSize = PageIO.MAX_PAYLOAD_SIZE + 1;
+
+        sql("CREATE TABLE TEST (ID VARCHAR(" + indexColumnSize + "), ID_AFF VARCHAR, PRIMARY KEY (ID))");
+
+        GridH2Table tbl = ((IgniteH2Indexing)ign.context().query().getIndexing()).schemaManager().dataTable("PUBLIC", "TEST");
+
+        assertTrue(((H2TreeIndex)tbl.getIndex("_key_PK")).inlineSize() <= PageIO.MAX_PAYLOAD_SIZE);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCreateSystemIndexFailsWhenConfiguredInlineSizeExceedsMax() {
+        inlineSize = PageIO.MAX_PAYLOAD_SIZE + 1;
+        indexes = Collections.singletonList(new QueryIndex("valStr"));
+
+        String expMsg = "Inline size is too big [cacheName=VAL" +
+                ", tableName=default" +
+                ", idxName=VAL_VALSTR_ASC_IDX" +
+                ", configuredInlineSize=" + inlineSize +
+                ", maxAllowedInlineSize=";
+
+        assertThrows(
+                log,
+                () -> startGrid(),
+                IgniteCheckedException.class,
+                expMsg
+        );
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCreateSystemIndexFailsWhenInlineSizeSetInDdlExceedsMax() throws Exception {
+        inlineSize = -1;
+        short idxInlineSize = PageIO.MAX_PAYLOAD_SIZE;
         String expMsg = "Inline size is too big [cacheName=TEST" +
                 ", tableName=SQL_PUBLIC_TEST" +
                 ", idxName=_key_PK" +
-                ", configuredInlineSize=" + inlineSize +
+                ", configuredInlineSize=" + idxInlineSize +
                 ", maxAllowedInlineSize=";
 
         startGrid();
@@ -2031,8 +2073,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
                         + "PRIMARY KEY (ID, ID_AFF)) WITH"
                         + "\""
                         + "AFFINITY_KEY=ID_AFF,"
-                        + "PK_INLINE_SIZE=" + inlineSize + ","
-                        + "AFFINITY_INDEX_INLINE_SIZE=" + inlineSize
+                        + "PK_INLINE_SIZE=" + idxInlineSize + ","
+                        + "AFFINITY_INDEX_INLINE_SIZE=" + idxInlineSize
                         + "\""
                 ),
                 IgniteSQLException.class,

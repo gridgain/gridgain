@@ -93,6 +93,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
      * @param inlineIdxs Inline index helpers.
      * @param cfgInlineSize Inline size from cache config.
      * @param maxInlineSize Max inline size from cache config.
+     * @param maxAllowedInlineSize Max allowed inline size, calculated from page size.
      * @return Inline size.
      */
     static int computeInlineSize(
@@ -100,6 +101,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
             List<InlineIndexColumn> inlineIdxs,
             int cfgInlineSize,
             int maxInlineSize,
+            int maxAllowedInlineSize,
             IgniteLogger log) {
         if (cfgInlineSize == 0)
             return 0;
@@ -143,6 +145,8 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
         }
 
         if (cfgInlineSize != -1) {
+            cfgInlineSize = Math.min(maxAllowedInlineSize, cfgInlineSize);
+
             if (fixedSize && size < cfgInlineSize) {
                 log.warning("Explicit INLINE_SIZE for fixed size index item is too big. " +
                         "This will lead to wasting of space inside index pages. Ignoring " +
@@ -154,7 +158,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
             return cfgInlineSize;
         }
 
-        return size;
+        return Math.min(maxAllowedInlineSize, size);
     }
 
     /**

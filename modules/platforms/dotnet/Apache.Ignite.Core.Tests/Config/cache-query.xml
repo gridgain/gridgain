@@ -87,6 +87,7 @@
                                                 </map>
                                             </property>
                                             <property name="indexType" value="SORTED"/>
+                                            <property name="inlineSize" value="1234"/>
                                         </bean>
                                     </list>
                                 </property>

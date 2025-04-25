@@ -20,6 +20,7 @@ import java.util.List;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
@@ -80,7 +81,7 @@ public class H2TreeClientIndex extends H2TreeIndexBase {
         List<InlineIndexColumn> inlineCols = getAvailableInlineColumns(false, ccfg.getName(),
             idxName, log, pk, tbl, cols, new InlineIndexColumnFactory(tbl.getCompareMode()), true);
 
-        inlineSize = computeInlineSize(idxName, inlineCols, inlineSize, ccfg.getSqlIndexMaxInlineSize(), log);
+        inlineSize = computeInlineSize(idxName, inlineCols, inlineSize, ccfg.getSqlIndexMaxInlineSize(), PageIO.MAX_PAYLOAD_SIZE, log);
 
         return new H2TreeClientIndex(tbl, idxName, cols, idxType, inlineSize);
     }

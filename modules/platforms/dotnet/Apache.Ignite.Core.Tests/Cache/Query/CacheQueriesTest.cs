@@ -462,7 +462,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
             var sqlIdx = qe.Indexes.Last();
             Assert.AreEqual(QueryIndexType.Sorted, sqlIdx.IndexType);
             Assert.AreEqual("age", sqlIdx.Fields.Single().Name);
-            Assert.AreEqual(-1, sqlIdx.InlineSize);
+            Assert.AreEqual(1234, sqlIdx.InlineSize);
         }
 
         /// <summary>

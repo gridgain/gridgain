@@ -26,6 +26,16 @@ import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
  *
  */
 public class H2IOUtils {
+    private static final int ROW_LINK_SIZE = Long.BYTES;
+    private static final int MVCC_CRD_VER_SIZE = Long.BYTES;
+    private static final int MVCC_CNTR_SIZE = Long.BYTES;
+    private static final int MVCC_OP_CNTR_SIZE = Integer.BYTES;
+    private static final int MVCC_OVERHEAD_SIZE = MVCC_CRD_VER_SIZE + MVCC_CNTR_SIZE + MVCC_OP_CNTR_SIZE;
+
+    private static final int MVCC_CRD_VER_OFFSET = ROW_LINK_SIZE;
+    private static final int MVCC_CNTR_OFFSET = MVCC_CRD_VER_OFFSET + MVCC_CRD_VER_SIZE;
+    private static final int MVCC_OP_CNTR_OFFSET = MVCC_CNTR_OFFSET + MVCC_CNTR_SIZE;
+
     /**
      *
      */
@@ -49,9 +59,9 @@ public class H2IOUtils {
 
             assert MvccUtils.mvccVersionIsValid(mvccCrdVer, mvccCntr, mvccOpCntr);
 
-            PageUtils.putLong(pageAddr, off + 8, mvccCrdVer);
-            PageUtils.putLong(pageAddr, off + 16, mvccCntr);
-            PageUtils.putInt(pageAddr, off + 24, mvccOpCntr);
+            PageUtils.putLong(pageAddr, off + MVCC_CRD_VER_OFFSET, mvccCrdVer);
+            PageUtils.putLong(pageAddr, off + MVCC_CNTR_OFFSET, mvccCntr);
+            PageUtils.putInt(pageAddr, off + MVCC_OP_CNTR_OFFSET, mvccOpCntr);
         }
     }
 
@@ -83,9 +93,14 @@ public class H2IOUtils {
 
             assert MvccUtils.mvccVersionIsValid(mvccCrdVer, mvccCntr, mvccOpCntr);
 
-            PageUtils.putLong(dstPageAddr, dstOff + 8, mvccCrdVer);
-            PageUtils.putLong(dstPageAddr, dstOff + 16, mvccCntr);
-            PageUtils.putInt(dstPageAddr, dstOff + 24, mvccOpCntr);
+            PageUtils.putLong(dstPageAddr, dstOff + MVCC_CRD_VER_OFFSET, mvccCrdVer);
+            PageUtils.putLong(dstPageAddr, dstOff + MVCC_CNTR_OFFSET, mvccCntr);
+            PageUtils.putInt(dstPageAddr, dstOff + MVCC_OP_CNTR_OFFSET, mvccOpCntr);
         }
+    }
+
+    /** Size of the meta information. */
+    public static int itemOverhead(boolean mvccEnabled) {
+        return ROW_LINK_SIZE + (mvccEnabled ? MVCC_OVERHEAD_SIZE : 0);
     }
 }
