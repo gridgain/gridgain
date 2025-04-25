@@ -41,7 +41,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
-import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.stream.StreamReceiver;
 
 /**
@@ -78,7 +77,7 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
 
             CacheObjectContext cacheObjCtx = cache.context().cacheObjectContext();
  
-            IgniteLogger log = kernal.log();
+            IgniteLogger log = kernal.log().getLogger(IgniteDrDataStreamerCacheUpdater.class);
 
             for (Map.Entry<KeyCacheObject, CacheObject> entry0 : col) {
                 GridCacheRawVersionedEntry<KeyCacheObject, CacheObject> entry = (GridCacheRawVersionedEntry<KeyCacheObject, CacheObject>)entry0;
