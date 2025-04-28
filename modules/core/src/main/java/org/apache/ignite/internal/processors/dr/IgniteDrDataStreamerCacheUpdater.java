@@ -93,9 +93,6 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
 
                 if (val == null) {
                     cache.removeAllConflict(Collections.singletonMap(key, entry.version()));
-
-                    if (log.isTraceEnabled())
-                        log.trace("RemoveAllConflict invoked for the key = " + IgniteUtils.resolveKey(cache.context(), key));
                 } else {
                     cache.putAllConflict(Collections.singletonMap(key, val));
 
