@@ -252,7 +252,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
             inlineIdxs.add(createHelper(c, false));
         }
 
-        assertEquals(maxAllowedInlineSize, computeInlineSize("idx", inlineIdxs, -1, -1, maxAllowedInlineSize, log));
+        assertEquals(maxAllowedInlineSize, computeInlineSize("idx", inlineIdxs, -1, Integer.MAX_VALUE, maxAllowedInlineSize, log));
     }
 
     private static InlineIndexColumn createHelper(Column col, boolean useOptimizedComp) {
