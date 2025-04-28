@@ -13060,12 +13060,12 @@ public abstract class IgniteUtils {
         String keyValue = "nil";
 
         if (sensitiveDataLogging == GridToStringBuilder.SensitiveDataLogging.PLAIN) {
-            List<String> collect = keySet.stream().limit(5)
+            List<String> collect = keySet.stream()
                     .map(x -> Objects.requireNonNull(x.value(cctx.cacheObjectContext(), false)).toString())
                     .collect(Collectors.toList());
             keyValue = String.join(", ",collect);
         } else if (sensitiveDataLogging == GridToStringBuilder.SensitiveDataLogging.HASH) {
-            List<String> collect = keySet.stream().limit(5)
+            List<String> collect = keySet.stream()
                     .map(x -> Objects.requireNonNull(String.valueOf(IgniteUtils.hash(x))))
                     .collect(Collectors.toList());
             keyValue = String.join(", ",collect);;
