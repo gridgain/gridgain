@@ -16,6 +16,13 @@
 
 package org.apache.ignite.internal.processors.query.h2.database;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -35,7 +42,10 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapt
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.*;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
@@ -60,14 +70,6 @@ import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.computeInlineSize;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.getAvailableInlineColumns;
@@ -362,14 +364,14 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         created = initNew;
     }
 
+    /**
+     * To avoid performance degradation, at least two items should fit into one page.
+     * So maximum payload size equals: P = (PS - H - 3L) / 2 - X , where P - Payload size, PS - page size, H - page
+     * header size, L - size of the child link, X - overhead per item.
+     */
     private int maxAllowedInlineSize() {
-        // To avoid performance degradation, at least two items should fit into one page.
-        // So maximum payload size equals: P = (PS - H - 3L) / 2 - X , where P - Payload size, PS - page size, H - page
-        // header size, L - size of the child link, X - overhead per item.
-        int calculatedMaxItemSize = (pageMem.realPageSize(grpId) - BPlusIO.ITEMS_OFF - 3 * AbstractDataPageIO.LINK_SIZE)
+        return (pageMem.realPageSize(grpId) - BPlusIO.ITEMS_OFF - 3 * AbstractDataPageIO.LINK_SIZE)
                 / 2 - H2IOUtils.itemOverhead(mvccEnabled);
-
-        return Math.min(PageIO.MAX_PAYLOAD_SIZE, calculatedMaxItemSize);
     }
 
     /**

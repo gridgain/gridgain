@@ -20,7 +20,6 @@ import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.BooleanInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.ByteInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.BytesInlineIndexColumn;
@@ -43,7 +42,9 @@ import org.gridgain.internal.h2.value.TypeInfo;
 import org.gridgain.internal.h2.value.Value;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.*;
+import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT;
+import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE;
+import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.computeInlineSize;
 
 /** Tests for the computation of default inline size. */
 public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
@@ -62,7 +63,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, -1, PageIO.MAX_PAYLOAD_SIZE, log));
+        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
     }
 
     /**
@@ -79,7 +80,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, -1, PageIO.MAX_PAYLOAD_SIZE, log));
+        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
     }
 
     /**
@@ -99,7 +100,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(LEN + 3, computeInlineSize("idx", inlineIdxs, -1, -1, PageIO.MAX_PAYLOAD_SIZE, log));
+        assertEquals(LEN + 3, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
     }
 
     /**
@@ -119,7 +120,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(LEN + 3, computeInlineSize("idx", inlineIdxs, -1, -1, PageIO.MAX_PAYLOAD_SIZE, log));
+        assertEquals(LEN + 3, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
     }
 
     /**
@@ -137,7 +138,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, -1, PageIO.MAX_PAYLOAD_SIZE, log));
+        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
     }
 
     /**
@@ -169,7 +170,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         inlineIdxs.add(createHelper(c4, false));
 
         assertEquals(2 * IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE + lCol.size() + 1 + LEN + 3,
-            computeInlineSize("idx", inlineIdxs, -1, -1, PageIO.MAX_PAYLOAD_SIZE, log));
+            computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
     }
 
     /**
@@ -187,7 +188,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT, computeInlineSize("idx", inlineIdxs, -1, -1, PageIO.MAX_PAYLOAD_SIZE, log));
+        assertEquals(IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
     }
 
     /** */
@@ -207,7 +208,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
             inlineIdxs.add(createHelper(c, false));
         }
 
-        assertEquals(64, computeInlineSize("idx", inlineIdxs, 2048, -1, PageIO.MAX_PAYLOAD_SIZE, log));
+        assertEquals(64, computeInlineSize("idx", inlineIdxs, 2048, -1, Integer.MAX_VALUE, log));
     }
 
     /** */
@@ -228,12 +229,12 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
             inlineIdxs.add(createHelper(c, false));
         }
 
-        assertEquals(2048, computeInlineSize("idx", inlineIdxs, 2048, -1, PageIO.MAX_PAYLOAD_SIZE, log));
+        assertEquals(2048, computeInlineSize("idx", inlineIdxs, 2048, -1, Integer.MAX_VALUE, log));
     }
 
     /** */
     @Test
-    public void testMaxInlineSizeUsedWhenExceeded() {
+    public void testMaxAllowedInlineSizeUsedWhenExceeded() {
         int maxAllowedInlineSize = 100;
 
         List<Integer> valueTypes = Lists.newArrayList(
@@ -251,7 +252,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
             inlineIdxs.add(createHelper(c, false));
         }
 
-        assertEquals(maxAllowedInlineSize, computeInlineSize("idx", inlineIdxs, 2048, -1, maxAllowedInlineSize, log));
+        assertEquals(maxAllowedInlineSize, computeInlineSize("idx", inlineIdxs, -1, -1, maxAllowedInlineSize, log));
     }
 
     private static InlineIndexColumn createHelper(Column col, boolean useOptimizedComp) {

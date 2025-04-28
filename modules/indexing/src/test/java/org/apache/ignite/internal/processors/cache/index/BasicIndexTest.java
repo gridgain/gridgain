@@ -76,6 +76,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.ByteArrayed;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Dated;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.SqlStrConvertedValHolder;
@@ -1987,9 +1988,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         assertTrue(lsnr.check());
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCreateIndexFailsWhenInlineSizeInDdlExceedsMax() throws Exception {
         inlineSize = -1;
@@ -1998,43 +1997,44 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         sql("CREATE TABLE TEST (ID VARCHAR, ID_AFF INT, VAL INT, PRIMARY KEY (ID, ID_AFF))");
 
-        int indexInlineSize = PageIO.MAX_PAYLOAD_SIZE + 1;
+        // We need a value, that exceeds calculated calculated max allowed inline size for sure.
+        int idxInlineSize = PageIO.MAX_PAYLOAD_SIZE;
         assertThrows(
                 log,
-                () -> sql("CREATE INDEX FAILING_IDX ON TEST (VAL) inline_size " + indexInlineSize),
+                () -> sql("CREATE INDEX FAILING_IDX ON TEST (VAL) inline_size " + idxInlineSize),
                 IgniteSQLException.class,
                 "Inline size is too big [cacheName=TEST" +
                         ", tableName=SQL_PUBLIC_TEST" +
                         ", idxName=FAILING_IDX" +
-                        ", configuredInlineSize=" + indexInlineSize +
+                        ", configuredInlineSize=" + idxInlineSize +
                         ", maxAllowedInlineSize="
         );
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
-    public void testMaxInlineSizeUsedWhenExceededInDdl() throws Exception {
+    @WithSystemProperty(key = IGNITE_MAX_INDEX_PAYLOAD_SIZE, value = Integer.MAX_VALUE + "")
+    public void testMaxInlineSizeUsedWhenExceeded() throws Exception {
         inlineSize = -1;
 
         IgniteEx ign = startGrid();
 
-        int indexColumnSize = PageIO.MAX_PAYLOAD_SIZE + 1;
+        // We need a value, that exceeds calculated max allowed inline size for sure.
+        int idxColSize = PageIO.MAX_PAYLOAD_SIZE;
 
-        sql("CREATE TABLE TEST (ID VARCHAR(" + indexColumnSize + "), ID_AFF VARCHAR, PRIMARY KEY (ID))");
+        sql("CREATE TABLE TEST (ID VARCHAR(" + idxColSize + "), ID_AFF VARCHAR, PRIMARY KEY (ID))");
 
         GridH2Table tbl = ((IgniteH2Indexing)ign.context().query().getIndexing()).schemaManager().dataTable("PUBLIC", "TEST");
 
+        // Exact value is calculated and is not known.
         assertTrue(((H2TreeIndex)tbl.getIndex("_key_PK")).inlineSize() <= PageIO.MAX_PAYLOAD_SIZE);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCreateSystemIndexFailsWhenConfiguredInlineSizeExceedsMax() {
-        inlineSize = PageIO.MAX_PAYLOAD_SIZE + 1;
+        // We need value, that exceeds calculated max allowed inline size for sure.
+        inlineSize = (int) PageIO.MAX_PAYLOAD_SIZE;
         indexes = Collections.singletonList(new QueryIndex("valStr"));
 
         String expMsg = "Inline size is too big [cacheName=VAL" +

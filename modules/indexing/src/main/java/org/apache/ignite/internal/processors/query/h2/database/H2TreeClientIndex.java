@@ -37,21 +37,16 @@ import org.gridgain.internal.h2.table.IndexColumn;
  * We need indexes on an not affinity nodes. The index shouldn't contains any data.
  */
 public class H2TreeClientIndex extends H2TreeIndexBase {
-    /** */
-    private final int inlineSize;
-
     /**
      * @param tbl Table.
      * @param name Index name.
      * @param cols Index columns.
      * @param idxType Index type.
-     * @param inlineSize Inline size.
      */
     @SuppressWarnings("ZeroLengthArrayAllocation")
-    private H2TreeClientIndex(GridH2Table tbl, String name, IndexColumn[] cols, IndexType idxType, int inlineSize) {
+    private H2TreeClientIndex(GridH2Table tbl, String name, IndexColumn[] cols, IndexType idxType) {
         super(tbl, name, cols, idxType);
 
-        this.inlineSize = inlineSize;
     }
 
     /**
@@ -59,36 +54,20 @@ public class H2TreeClientIndex extends H2TreeIndexBase {
      * @param idxName Index name.
      * @param pk Primary key.
      * @param colsList Indexed columns.
-     * @param inlineSize Inline size.
-     * @param log Logger.
      * @return Index.
      */
-    public static H2TreeClientIndex createIndex(
-        GridH2Table tbl,
-        String idxName,
-        boolean pk,
-        List<IndexColumn> colsList,
-        int inlineSize,
-        IgniteLogger log
-    ) {
+    public static H2TreeClientIndex createIndex(GridH2Table tbl, String idxName, boolean pk, List<IndexColumn> colsList) {
         IndexColumn[] cols = GridH2IndexBase.columnsArray(tbl, colsList);
 
         IndexType idxType = pk ? IndexType.createPrimaryKey(false, false) :
             IndexType.createNonUnique(false, false, false);
 
-        CacheConfiguration ccfg = tbl.cacheInfo().config();
-
-        List<InlineIndexColumn> inlineCols = getAvailableInlineColumns(false, ccfg.getName(),
-            idxName, log, pk, tbl, cols, new InlineIndexColumnFactory(tbl.getCompareMode()), true);
-
-        inlineSize = computeInlineSize(idxName, inlineCols, inlineSize, ccfg.getSqlIndexMaxInlineSize(), PageIO.MAX_PAYLOAD_SIZE, log);
-
-        return new H2TreeClientIndex(tbl, idxName, cols, idxType, inlineSize);
+        return new H2TreeClientIndex(tbl, idxName, cols, idxType);
     }
 
     /** {@inheritDoc} */
     @Override public int inlineSize() {
-        return inlineSize;
+        return 0;
     }
 
     /** {@inheritDoc} */
