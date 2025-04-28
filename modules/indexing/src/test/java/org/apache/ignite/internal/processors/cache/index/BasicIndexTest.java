@@ -2051,9 +2051,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         );
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCreateSystemIndexFailsWhenInlineSizeSetInDdlExceedsMax() throws Exception {
         inlineSize = -1;
