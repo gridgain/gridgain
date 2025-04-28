@@ -27,13 +27,19 @@ import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
  */
 public class H2IOUtils {
     private static final int ROW_LINK_SIZE = Long.BYTES;
+
     private static final int MVCC_CRD_VER_SIZE = Long.BYTES;
+
     private static final int MVCC_CNTR_SIZE = Long.BYTES;
+
     private static final int MVCC_OP_CNTR_SIZE = Integer.BYTES;
+
     private static final int MVCC_OVERHEAD_SIZE = MVCC_CRD_VER_SIZE + MVCC_CNTR_SIZE + MVCC_OP_CNTR_SIZE;
 
     private static final int MVCC_CRD_VER_OFFSET = ROW_LINK_SIZE;
+
     private static final int MVCC_CNTR_OFFSET = MVCC_CRD_VER_OFFSET + MVCC_CRD_VER_SIZE;
+
     private static final int MVCC_OP_CNTR_OFFSET = MVCC_CNTR_OFFSET + MVCC_CNTR_SIZE;
 
     /**

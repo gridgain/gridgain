@@ -528,7 +528,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 );
             }
             else
-                return H2TreeClientIndex.createIndex(tbl, name, pk, unwrappedCols);
+                return H2TreeClientIndex.createIndex(tbl, name, pk, unwrappedCols, inlineSize, log);
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);
