@@ -22,7 +22,6 @@ import java.util.Map;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.CacheObject;
@@ -36,7 +35,6 @@ import org.apache.ignite.internal.processors.cache.dr.GridCacheDrExpirationInfo;
 import org.apache.ignite.internal.processors.cache.dr.GridCacheDrInfo;
 import org.apache.ignite.internal.processors.cache.version.GridCacheRawVersionedEntry;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerCacheUpdaters;
-import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -54,8 +52,7 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
     @Override public void receive(IgniteCache<KeyCacheObject, CacheObject> cache0,
         Collection<Map.Entry<KeyCacheObject, CacheObject>> col) {
         try {
-            IgniteKernal kernal = (IgniteKernal) cache0.unwrap(Ignite.class);
-            GridKernalContext ctx = kernal.context();
+            GridKernalContext ctx = ((IgniteKernal) cache0.unwrap(Ignite.class)).context();
 
             IgniteInternalCache<KeyCacheObject, CacheObject> cache;
 
@@ -71,8 +68,6 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
             assert !F.isEmpty(col);
 
             CacheObjectContext cacheObjCtx = cache.context().cacheObjectContext();
- 
-            IgniteLogger log = kernal.log();
 
             for (Map.Entry<KeyCacheObject, CacheObject> entry0 : col) {
                 GridCacheRawVersionedEntry<KeyCacheObject, CacheObject> entry = (GridCacheRawVersionedEntry<KeyCacheObject, CacheObject>)entry0;
@@ -91,14 +86,10 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
                     new GridCacheDrExpirationInfo(cacheVal, entry.version(), entry.ttl(), entry.expireTime()) :
                     new GridCacheDrInfo(cacheVal, entry.version()) : null;
 
-                if (val == null) {
+                if (val == null)
                     cache.removeAllConflict(Collections.singletonMap(key, entry.version()));
-                } else {
+                else
                     cache.putAllConflict(Collections.singletonMap(key, val));
-
-                    if (log.isTraceEnabled())
-                        log.trace("PutAllConflict invoked for the key = " + IgniteUtils.resolveKey(cache.context(), key));
-                }
             }
         }
         catch (IgniteCheckedException e) {
