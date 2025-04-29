@@ -193,7 +193,7 @@ public class GridMapQueryExecutor {
      * @param params Query parameters, if any.
      * @param error Exception that occurred during the query execution.
      */
-    String buildQueryLogDetails(
+    static String buildQueryLogDetails(
             long reqId,
             String label,
             String schemaName,
