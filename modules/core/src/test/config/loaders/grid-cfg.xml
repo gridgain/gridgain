@@ -15,7 +15,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 -->
-
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
 
 <!--
@@ -28,18 +27,31 @@
         Grid configuration.
     -->
     <bean id="grid.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
-        <!-- Grid with default name. -->                     
-         <property name="connectorConfiguration"><null/></property>
+        <property name="igniteInstanceName" value="gridName1" />
+        <property name="connectorConfiguration">
+            <null />
+        </property>
         <property name="discoverySpi">
             <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
- <property name="ipFinder">
-                    <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder">
-                        <property name="multicastGroup" value="228.111.111.222"/>
-                        <property name="multicastPort" value="54522"/>
-                        <property name="localAddress" value="172.28.0.1"/>
+                <!-- Initial local port to listen to. -->
+                <property name="localPort" value="48500" />
+
+                <!-- Changing local port range. This is an optional action. -->
+                <property name="localPortRange" value="20" />
+
+                <!-- Setting up IP finder for this cluster -->
+                <property name="ipFinder">
+                    <bean
+                        class="org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder">
                         <property name="addresses">
                             <list>
-                                <value>172.28.0.1:47510..47519</value>
+                                <!--
+                            Addresses and port range of nodes from
+                            the first cluster.
+                            127.0.0.1 can be replaced with actual IP addresses
+                            or host names. Port range is optional.
+                            -->
+                                <value>127.0.0.1:48500..48520</value>
                             </list>
                         </property>
                     </bean>
@@ -47,27 +59,49 @@
             </bean>
         </property>
 
+        <!--
+    Explicitly configure TCP communication SPI changing local
+    port number for the nodes from the first cluster.
+    -->
+        <property name="communicationSpi">
+            <bean class="org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi">
+                <property name="localPort" value="48100" />
+            </bean>
+        </property>
+
         <property name="lifecycleBeans">
             <list>
-                <bean class="org.apache.ignite.startup.cmdline.GridCommandLineLoaderTest.KillerLifecycleBean" />
+                <bean
+                    class="org.apache.ignite.startup.cmdline.GridCommandLineLoaderTest.KillerLifecycleBean" />
             </list>
         </property>
     </bean>
 
     <bean id="grid.cfg.2" class="org.apache.ignite.configuration.IgniteConfiguration">
-        <property name="igniteInstanceName" value="gridName2"/>
+        <property name="igniteInstanceName" value="gridName2" />
 
-        <property name="connectorConfiguration"><null/></property>
+        <property name="connectorConfiguration">
+            <null />
+        </property>
         <property name="discoverySpi">
             <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
- <property name="ipFinder">
-                    <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder">
-                        <property name="multicastGroup" value="228.111.111.222"/>
-                        <property name="multicastPort" value="54522"/>
-                        <property name="localAddress" value="172.28.0.1"/>
+                <!-- Initial local port to listen to. -->
+                <property name="localPort" value="49500" />
+
+                <!-- Changing local port range. This is an optional action. -->
+                <property name="localPortRange" value="20" />
+
+                <!-- Setting up IP finder for this cluster -->
+                <property name="ipFinder">
+                    <bean
+                        class="org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder">
                         <property name="addresses">
                             <list>
-                                <value>172.28.0.1:47520..47529</value>
+                                <!--
+                            Addresses and port range of the nodes from the second cluster.
+                            127.0.0.1 can be replaced with actual IP addresses or host names. Port range is optional.
+                            -->
+                                <value>127.0.0.1:49500..49520</value>
                             </list>
                         </property>
                     </bean>
@@ -75,9 +109,20 @@
             </bean>
         </property>
 
+        <!--
+    Explicitly configure TCP communication SPI changing local port number
+    for the nodes from the second cluster.
+    -->
+        <property name="communicationSpi">
+            <bean class="org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi">
+                <property name="localPort" value="49100" />
+            </bean>
+        </property>
+
         <property name="lifecycleBeans">
             <list>
-                <bean class="org.apache.ignite.startup.cmdline.GridCommandLineLoaderTest.KillerLifecycleBean" />
+                <bean
+                    class="org.apache.ignite.startup.cmdline.GridCommandLineLoaderTest.KillerLifecycleBean" />
             </list>
         </property>
     </bean>
