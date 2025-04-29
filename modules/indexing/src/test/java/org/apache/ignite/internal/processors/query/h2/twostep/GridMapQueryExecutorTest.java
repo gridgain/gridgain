@@ -37,7 +37,7 @@ public class GridMapQueryExecutorTest {
         UUID localNodeId = UUID.randomUUID();
         UUID remoteNodeId = UUID.randomUUID();
 
-        String logContent = executor.buildQueryLogDetails(
+        String logContent = GridMapQueryExecutor.buildQueryLogDetails(
                 reqId,
                 "TestQuery",
                 "TestSchema",
@@ -48,35 +48,43 @@ public class GridMapQueryExecutorTest {
                 localNodeId
         );
 
-        assertTrue(logContent.contains("Query Execution Failed"));
-        assertTrue(logContent.contains("Remote Node ID: " + remoteNodeId));
-        assertTrue(logContent.contains("Label: TestQuery"));
-        assertTrue(logContent.contains("Schema: TestSchema"));
-        assertTrue(logContent.contains("Error: Test SQL Error"));
+        assertTrue(logContent.contains("reqId=1"));
+        assertTrue(logContent.contains("label=TestQuery"));
+        assertTrue(logContent.contains("schema=TestSchema"));
+        assertTrue(logContent.contains("queries=N/A"));
+        assertTrue(logContent.contains("localNodeId=" + localNodeId));
+        assertTrue(logContent.contains("remoteNodeId=" + remoteNodeId));
+        assertTrue(logContent.contains("params=HIDDEN"));
     }
 
     @Test
     public void testBuildQueryLogDetailsWithNullInputs() {
+        long reqId = 123;
+        String label = null;
+        String schemaName = null;
+        Collection<GridCacheSqlQuery> queries = null;
+        Object[] params = null;
         UUID remoteNodeId = UUID.randomUUID();
         UUID localNodeId = UUID.randomUUID();
 
-        String logContent = executor.buildQueryLogDetails(
-                1L,
-                null,
-                null,
-                null,
-                null,
+        String logContent = GridMapQueryExecutor.buildQueryLogDetails(
+                reqId,
+                label,
+                schemaName,
+                queries,
+                params,
                 null,
                 remoteNodeId,
                 localNodeId
         );
 
-        assertTrue(logContent.contains("Query Execution Failed"));
-        assertTrue(logContent.contains("Label: N/A"));
-        assertTrue(logContent.contains("Schema: N/A"));
-        assertTrue(logContent.contains("Queries: N/A"));
-        assertTrue(logContent.contains("Parameters: N/A"));
-        assertTrue(logContent.contains("Remote Node ID: " + remoteNodeId));
+        assertTrue(logContent.contains("reqId=123"));
+        assertTrue(logContent.contains("label=N/A"));
+        assertTrue(logContent.contains("schema=N/A"));
+        assertTrue(logContent.contains("queries=N/A"));
+        assertTrue(logContent.contains("params=N/A"));
+        assertTrue(logContent.contains("localNodeId=" + localNodeId));
+        assertTrue(logContent.contains("remoteNodeId=" + remoteNodeId));
     }
 
     @Test
@@ -88,7 +96,7 @@ public class GridMapQueryExecutorTest {
                 Collections.singletonList(new GridCacheSqlQuery("SELECT * FROM test"));
         Throwable e = new RuntimeException("Forced Failure");
 
-        String logMsg = executor.buildQueryLogDetails(
+        String logMsg = GridMapQueryExecutor.buildQueryLogDetails(
                 1L,
                 "TestLabel",
                 "TestSchema",
@@ -99,8 +107,12 @@ public class GridMapQueryExecutorTest {
                 localNodeId
         );
 
-        assertTrue(logMsg.contains("Query Execution Failed"));
-        assertTrue(logMsg.contains("SELECT * FROM test"));
-        assertTrue(logMsg.contains("Error: Forced Failure"));
+        assertTrue(logMsg.contains("reqId=1"));
+        assertTrue(logMsg.contains("label=TestLabel"));
+        assertTrue(logMsg.contains("schema=TestSchema"));
+        assertTrue(logMsg.contains("queries=HIDDEN"));
+        assertTrue(logMsg.contains("localNodeId=" + localNodeId));
+        assertTrue(logMsg.contains("remoteNodeId=" + nodeId));
+        assertTrue(logMsg.contains("params=HIDDEN"));
     }
 }
