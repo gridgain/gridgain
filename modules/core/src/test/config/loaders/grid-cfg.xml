@@ -115,7 +115,7 @@
     -->
         <property name="communicationSpi">
             <bean class="org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi">
-                <property name="localPort" value="44100" />
+                <property name="localPort" value="49100" />
             </bean>
         </property>
 
