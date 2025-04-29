@@ -36,7 +36,7 @@
                     <property name="name" value="default"/>
                     <property name="initialSize" value="#{3L * 1024 * 1024 * 1024}"/> <!-- 3 GB initial -->
                     <property name="maxSize" value="#{6L * 1024 * 1024 * 1024}"/>   <!-- 6 GB max -->
-                    <property name="persistenceEnabled" value="false"/> <!-- no disk persistence -->
+                    <property name="persistenceEnabled" value="true"/> <!-- with disk persistence -->
                 </bean>
             </property>
             <property name="checkpointPageBufferSize" value="#{2L * 1024 * 1024 * 1024}"/> <!-- 2 GB buffer -->
@@ -76,7 +76,7 @@
                     <property name="name" value="default"/>
                     <property name="initialSize" value="#{3L * 1024 * 1024 * 1024}"/> <!-- 3 GB initial -->
                     <property name="maxSize" value="#{6L * 1024 * 1024 * 1024}"/>   <!-- 6 GB max -->
-                    <property name="persistenceEnabled" value="false"/> <!-- no disk persistence -->
+                    <property name="persistenceEnabled" value="true"/> <!-- with disk persistence -->
                 </bean>
             </property>
             <property name="checkpointPageBufferSize" value="#{2L * 1024 * 1024 * 1024}"/> <!-- 2 GB buffer -->
