@@ -32,11 +32,16 @@
          <property name="connectorConfiguration"><null/></property>
         <property name="discoverySpi">
             <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
-                <property name="ipFinder">
+ <property name="ipFinder">
                     <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder">
                         <property name="multicastGroup" value="228.111.111.222"/>
                         <property name="multicastPort" value="54522"/>
                         <property name="localAddress" value="127.0.0.1"/>
+                        <property name="addresses">
+                            <list>
+                                <value>127.0.0.1:47500..47509</value>
+                            </list>
+                        </property>
                     </bean>
                 </property>
             </bean>
@@ -55,11 +60,16 @@
         <property name="connectorConfiguration"><null/></property>
         <property name="discoverySpi">
             <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
-                <property name="ipFinder">
+ <property name="ipFinder">
                     <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder">
                         <property name="multicastGroup" value="228.111.111.222"/>
                         <property name="multicastPort" value="54522"/>
                         <property name="localAddress" value="127.0.0.1"/>
+                        <property name="addresses">
+                            <list>
+                                <value>127.0.0.1:47500..47509</value>
+                            </list>
+                        </property>
                     </bean>
                 </property>
             </bean>
