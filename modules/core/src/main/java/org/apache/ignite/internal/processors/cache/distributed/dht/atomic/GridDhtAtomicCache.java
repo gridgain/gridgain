@@ -97,6 +97,7 @@ import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.util.GridLongList;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.nio.GridNioBackPressureControl;
 import org.apache.ignite.internal.util.nio.GridNioMessageTracker;
@@ -680,6 +681,9 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
     @Override public void putAllConflict(Map<KeyCacheObject, GridCacheDrInfo> conflictMap)
         throws IgniteCheckedException {
         putAllConflictAsync(conflictMap).get();
+
+        if (log.isTraceEnabled())
+            log.trace("PutAllConflict invoked for the keys = " + IgniteUtils.resolveKey(ctx, conflictMap.keySet()));
     }
 
     /** {@inheritDoc} */
@@ -735,6 +739,9 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
     @Override public void removeAllConflict(Map<KeyCacheObject, GridCacheVersion> conflictMap)
         throws IgniteCheckedException {
         removeAllConflictAsync(conflictMap).get();
+
+        if (log.isTraceEnabled())
+            log.trace("RemoveAllConflict invoked for the keys = " + IgniteUtils.resolveKey(ctx, conflictMap.keySet()));
     }
 
     /** {@inheritDoc} */
