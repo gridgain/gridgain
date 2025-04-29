@@ -203,29 +203,20 @@ public class GridMapQueryExecutor {
             UUID remoteNodeId,
             UUID localNodeId
     ) {
-        StringBuilder logMessage = new StringBuilder();
+        boolean sensitive = S.getSensitiveDataLogging() != PLAIN;
 
-        logMessage.append("Query Execution Failed:")
-                .append("\nRequest ID: ").append(reqId)
-                .append("\nLabel: ").append(label != null ? label : "N/A")
-                .append("\nSchema: ").append(schemaName != null ? schemaName : "N/A")
-                .append("\nQueries: ").append(
-                        !F.isEmpty(queries)
-                                ? queries.stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; "))
-                                : "N/A")
-                .append("\nLocal Node ID: ").append(localNodeId)
-                .append("\nRemote Node ID: ").append(remoteNodeId);
-
-        if (params == null)
-            logMessage.append("\nParameters: N/A");
-        else {
-            boolean secureParams = S.getSensitiveDataLogging() != PLAIN;
-            logMessage.append("\nParameters: ");
-            logMessage.append(secureParams ? "HIDDEN" : Arrays.toString(params));
-        }
-
-        return logMessage.toString();
-
+        return String.format(
+                "[reqId=%s, label=%s, schema=%s, queries=%s, localNodeId=%s, remoteNodeId=%s, params=%s]",
+                reqId,
+                label != null ? label : "N/A",
+                schemaName != null ? schemaName : "N/A",
+                F.isEmpty(queries)
+                        ? "N/A"
+                        : (sensitive ? "HIDDEN" : queries.stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; "))),
+                localNodeId,
+                remoteNodeId,
+                params == null ? "N/A" : (sensitive ? "HIDDEN" : Arrays.toString(params))
+        );
     }
 
     /**
