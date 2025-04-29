@@ -28,14 +28,15 @@
         Grid configuration.
     -->
     <bean id="grid.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
-        <!-- Grid with default name. -->
+        <!-- Grid with default name. -->                     
+                     
     <property name="dataStorageConfiguration">
         <bean class="org.apache.ignite.configuration.DataStorageConfiguration">
             <property name="defaultDataRegionConfiguration">
                 <bean class="org.apache.ignite.configuration.DataRegionConfiguration">
-                    <property name="name" value="default"/>
+                    <property name="name" value="Default_Region"/>
                     <property name="initialSize" value="#{3L * 1024 * 1024 * 1024}"/> <!-- 3 GB initial -->
-                    <property name="maxSize" value="#{6L * 1024 * 1024 * 1024}"/>   <!-- 6 GB max -->
+                    <property name="maxSize" value="#{4L * 1024 * 1024 * 1024}"/>   <!-- 6 GB max -->
                     <property name="persistenceEnabled" value="true"/> <!-- with disk persistence -->
                 </bean>
             </property>
@@ -73,9 +74,9 @@
         <bean class="org.apache.ignite.configuration.DataStorageConfiguration">
             <property name="defaultDataRegionConfiguration">
                 <bean class="org.apache.ignite.configuration.DataRegionConfiguration">
-                    <property name="name" value="default"/>
+                    <property name="name" value="Default_Region"/>
                     <property name="initialSize" value="#{3L * 1024 * 1024 * 1024}"/> <!-- 3 GB initial -->
-                    <property name="maxSize" value="#{6L * 1024 * 1024 * 1024}"/>   <!-- 6 GB max -->
+                    <property name="maxSize" value="#{4L * 1024 * 1024 * 1024}"/>   <!-- 6 GB max -->
                     <property name="persistenceEnabled" value="true"/> <!-- with disk persistence -->
                 </bean>
             </property>
