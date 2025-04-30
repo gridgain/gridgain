@@ -61,7 +61,7 @@ public final class GridJavaProcess {
     private Process proc;
 
     /** Pid of wrapped process. Made as array to be changeable in nested static class. */
-    private volatile String pid = "-1";
+    private volatile String pid = "-5000";
 
     /** system.out stream grabber for process in which user class is running. */
     private ProcessStreamGrabber osGrabber;
