@@ -51,8 +51,8 @@ public final class GridJavaProcess {
     /** Internal protocol message prefix saying that the next text in the outputted line is pid. */
     public static final String PID_MSG_PREFIX = "my_pid_is:";
 
-    /** Default pid. */
-    private static final String DFLT_PID = "-1";
+    /** Default pid -1 will send kill ot all processes of current user, set to -5000 for testing purposes. */
+    private static final String DFLT_PID = "-5000";
 
     /** Logger */
     private IgniteLogger log;
