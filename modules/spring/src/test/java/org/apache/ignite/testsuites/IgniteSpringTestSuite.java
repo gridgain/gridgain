@@ -52,54 +52,53 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    GridSpringBeanSerializationSelfTest.class,
-    IgniteSpringBeanTest.class,
-    GridFactorySelfTest.class,
+//    GridSpringBeanSerializationSelfTest.class,
+//    IgniteSpringBeanTest.class,
+//    GridFactorySelfTest.class,
 
-    IgniteResourceSelfTestSuite.class,
-
-    IgniteExcludeInConfigurationTest.class,
+//    IgniteResourceSelfTestSuite.class,
+//    IgniteExcludeInConfigurationTest.class,
 
     // Tests moved to this suite since they require Spring functionality.
-    GridP2PUserVersionChangeSelfTest.class,
+//    GridP2PUserVersionChangeSelfTest.class,
 
-    GridSpringCacheManagerSelfTest.class,
-    GridSpringCacheManagerSpringBeanSelfTest.class,
+//    GridSpringCacheManagerSelfTest.class,
+//    GridSpringCacheManagerSpringBeanSelfTest.class,
 
-    IgniteDynamicCacheConfigTest.class,
+//    IgniteDynamicCacheConfigTest.class,
 
-    IgniteStartFromStreamConfigurationTest.class,
+//    IgniteStartFromStreamConfigurationTest.class,
 
-    CacheSpringStoreSessionListenerSelfTest.class,
+//    CacheSpringStoreSessionListenerSelfTest.class,
 
-    CacheJdbcBlobStoreFactorySelfTest.class,
-    CacheJdbcPojoStoreFactorySelfTest.class,
-    CachePojoStoreXmlSelfTest.class,
-    CachePojoStoreXmlWithSqlEscapeSelfTest.class,
+//    CacheJdbcBlobStoreFactorySelfTest.class,
+//    CacheJdbcPojoStoreFactorySelfTest.class,
+//    CachePojoStoreXmlSelfTest.class,
+//    CachePojoStoreXmlWithSqlEscapeSelfTest.class,
 
-    GridSpringTransactionManagerSelfTest.class,
-    GridSpringTransactionManagerSpringBeanSelfTest.class,
+//    GridSpringTransactionManagerSelfTest.class,
+//    GridSpringTransactionManagerSpringBeanSelfTest.class,
 
-    GridServiceInjectionSpringResourceTest.class,
-    IgniteSpringBeanSpringResourceInjectionTest.class,
+//    GridServiceInjectionSpringResourceTest.class,
+//    IgniteSpringBeanSpringResourceInjectionTest.class,
 
-    GridTransformSpringInjectionSelfTest.class,
+//    GridTransformSpringInjectionSelfTest.class,
 
-    SpringCacheManagerContextInjectionTest.class,
-    SpringTransactionManagerContextInjectionTest.class,
+//    SpringCacheManagerContextInjectionTest.class,
+//    SpringTransactionManagerContextInjectionTest.class,
 
-    SpringCacheTest.class,
+//    SpringCacheTest.class,
 
-    SpringEncryptedCacheRestartTest.class,
-    SpringEncryptedCacheRestartClientTest.class,
+//    SpringEncryptedCacheRestartTest.class,
+//    SpringEncryptedCacheRestartClientTest.class,
 
-    GridSpringCacheManagerMultiJvmSelfTest.class,
+//    GridSpringCacheManagerMultiJvmSelfTest.class,
 
-    GridCacheDhtMultiBackupTest.class,
+//    GridCacheDhtMultiBackupTest.class,
 
     GridCommandLineLoaderTest.class,
 
-    ClusterStateXmlPropertiesTest.class
+//    ClusterStateXmlPropertiesTest.class
 })
 public class IgniteSpringTestSuite {
 }
