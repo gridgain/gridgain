@@ -206,6 +206,7 @@ public final class GridJavaProcess {
      * @throws Exception If any problem occurred.
      */
     public void kill() throws Exception {
+        log.info(String.format("PID to kill: <%s>", pid));
         Process killProc = U.isWindows() ?
             Runtime.getRuntime().exec(new String[] {"taskkill", "/pid", pid, "/f", "/t"}) :
             Runtime.getRuntime().exec(new String[] {"kill", "-9", pid});
@@ -250,7 +251,9 @@ public final class GridJavaProcess {
      * @return Pid of the java process or -1 if pid is unknown.
      */
     public int getPid() {
-        return Integer.valueOf(pid);
+        Integer i = Integer.valueOf(pid);
+        log.info(String.format("Value of pid <%s>", pid));
+        return i;
     }
 
     /**
