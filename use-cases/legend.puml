@@ -1,0 +1,25 @@
+@startuml
+participant A
+participant B
+participant K8S as K
+
+activate A #orange
+-> A : startup OK
+deactivate A
+
+-> A: liveness OK
+activate A
+
+activate B #green
+
+B -[#c603fc]> A : rebalance\nsupplying
+
+-> A: readiness OK
+activate A #green
+|||
+
+K -[#red]> A : Signals from k8s
+
+deactivate A
+
+@enduml

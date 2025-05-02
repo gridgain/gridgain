@@ -1,0 +1,55 @@
+@startuml
+participant A
+participant B
+participant C
+participant K8S as K
+
+activate A #green
+activate B #green
+activate C #green
+
+K o-[#red]> A: TERM
+note right: PDB=0
+deactivate A
+|||
+
+A <-o A: restart
+
+A -[#grey]> K : liveness OK
+activate A
+
+group Rebalance
+  B -[#c603fc]> A : supply
+  C -[#c603fc]> A : supply
+end
+
+A -[#green]>o K : ready
+note right: PDB=1
+activate A #green
+|||
+
+K o-[#red]> B: TERM
+note right: PDB=0
+deactivate B
+
+B <-o B: restart
+
+B -[#grey]> K : liveness OK
+activate B
+
+group Rebalance
+  A -[#c603fc]> B : supply
+  C -[#c603fc]> B : supply
+end
+
+B -[#green]>o K : ready
+note right: PDB=1
+activate B #green
+|||
+
+K o-[#red]> C: TERM
+note right: PDB=0
+deactivate C
+
+
+@enduml

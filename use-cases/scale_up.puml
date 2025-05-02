@@ -1,0 +1,22 @@
+@startuml
+participant A
+participant B
+participant C
+participant K8S as K
+
+activate B #green
+activate C #green
+
+K <- : scale up
+K o-[#red]> A: start
+activate A
+
+group Rebalance
+  B -[#c603fc]> A : supply
+  C -[#c603fc]> A : supply
+end
+
+A -[#green]>o K : ready
+activate A #green
+
+@enduml

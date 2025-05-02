@@ -1,0 +1,20 @@
+@startuml
+participant A
+participant B
+participant C
+participant K8S as K
+
+activate A #green
+activate B #green
+activate C #green
+
+K <- : scale down
+
+K o-[#red]> A: TERM
+deactivate A
+
+group Rebalance
+  B <-[#c603fc]> C : rebalance
+end
+
+@enduml

@@ -1,0 +1,85 @@
+@startuml
+participant A
+participant B
+participant C
+participant D
+participant K8S as K
+
+activate A #green
+activate B #green
+activate C #green
+activate D #green
+
+K o-[#red]> A: TERM
+note right: PDB=1
+deactivate A
+
+K o-[#red]> B: TERM
+note right: PDB=0
+deactivate B
+
+A <-o A: restart
+
+B <-o B: restart
+
+A -[#grey]> K : liveness OK
+activate A
+
+B -[#grey]> K : liveness OK
+activate B
+
+group Rebalance A,B
+  C -[#c603fc]> A : supply
+  D -[#c603fc]> A : supply
+
+  A -[#green]>o K : ready
+  note right: PDB=1
+  activate A #green
+
+  D -[#c603fc]> B : supply
+
+  K o-[#red]> C: TERM
+  note right: PDB=0
+  deactivate C
+
+  C <-o C: restart
+
+  C -[#c603fc]>X B : fail
+  note over B: Supplier C lost\nreset rebalance
+end
+
+group Rebalance B,C
+  D -[#c603fc]> B : continue supply
+  A -[#c603fc]> B : takeover\nsupply from C
+
+  C -[#grey]> K : liveness OK
+  activate C
+
+  D -[#c603fc]> C : supply
+  A -[#c603fc]> C : supply
+
+  B -[#green]>o K : ready
+  note right: PDB=1
+  activate B #green
+
+  K o-[#red]> D: TERM
+  note right: PDB=0
+  deactivate D
+
+  D <-o D: restart
+
+  D -[#c603fc]>X C : fail
+  note over C: Supplier D lost\nreset rebalance
+end
+
+group Rebalance B,C
+  A -[#c603fc]> C : continue supply
+  B -[#c603fc]> C : takeover\nsupply from D
+
+  D -[#grey]> K : liveness OK
+  activate D
+end
+
+|||
+
+@enduml
