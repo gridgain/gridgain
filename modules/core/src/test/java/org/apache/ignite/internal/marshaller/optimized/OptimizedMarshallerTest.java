@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,8 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.compute.ComputeJobAdapter;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.GridComponent;
+import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.GridMarshallerTestInheritedBean;
 import org.apache.ignite.marshaller.Marshaller;
@@ -339,6 +341,70 @@ public class OptimizedMarshallerTest extends GridCommonAbstractTest {
         System.gc();
 
         checkPerformance(10000, 4);
+    }
+
+    /** */
+    @Test
+    public void testMarshalIgniteDataTransferObjectWithGridComponent() throws Exception {
+        OptimizedMarshaller optimizedMarshaller = new OptimizedMarshaller();
+
+        optimizedMarshaller.setContext(new MarshallerContextTestImpl());
+
+        optimizedMarshaller.marshal(new IgniteDataTransferObjectWithGridComponent(new NoopGridComponent()));
+    }
+
+    /** */
+    @Test
+    public void testMarshalSerializableObjectWithGridComponent() throws Exception {
+        OptimizedMarshaller optimizedMarshaller = new OptimizedMarshaller();
+
+        optimizedMarshaller.setContext(new MarshallerContextTestImpl());
+
+        optimizedMarshaller.marshal(new SerializableObjectWithGridComponent(new NoopGridComponent()));
+    }
+
+    /** */
+    public static class IgniteDataTransferObjectWithGridComponent extends IgniteDataTransferObject {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        private GridComponent gridComponent;
+
+        /** */
+        IgniteDataTransferObjectWithGridComponent(GridComponent gridComponent) {
+            this.gridComponent = gridComponent;
+        }
+
+        /** */
+        public IgniteDataTransferObjectWithGridComponent() {
+        }
+
+        /** {@inheritDoc} */
+        @Override protected void writeExternalData(ObjectOutput out) throws IOException {
+            out.writeObject(gridComponent);
+        }
+
+        /** {@inheritDoc} */
+        @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+            gridComponent = (GridComponent) in.readObject();
+        }
+    }
+
+    /** */
+    public static class SerializableObjectWithGridComponent implements Serializable {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        private GridComponent gridComponent;
+
+        /** */
+        SerializableObjectWithGridComponent(GridComponent gridComponent) {
+            this.gridComponent = gridComponent;
+        }
+
+        /** */
+        public SerializableObjectWithGridComponent() {
+        }
     }
 
     /**

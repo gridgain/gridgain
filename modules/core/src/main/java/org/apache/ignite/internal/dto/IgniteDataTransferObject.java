@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -124,9 +124,7 @@ public abstract class IgniteDataTransferObject implements Externalizable {
 
         out.writeInt(hdr);
 
-        try (IgniteDataTransferObjectOutput dtout = new IgniteDataTransferObjectOutput(out)) {
-            writeExternalData(dtout);
-        }
+        writeExternalData(out);
     }
 
     /**
@@ -149,8 +147,6 @@ public abstract class IgniteDataTransferObject implements Externalizable {
 
         byte ver = (byte)(hdr & 0xFF);
 
-        try (IgniteDataTransferObjectInput dtin = new IgniteDataTransferObjectInput(in)) {
-            readExternalData(ver, dtin);
-        }
+        readExternalData(ver, in);
     }
 }
