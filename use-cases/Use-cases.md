@@ -56,6 +56,12 @@ user traffic to this node.
 
 ### 6. Activation of cluster (fresh or when auto-activation disabled)
 
-Still not clear, in case if readiness returns `false` for inactive clusters (which might make sense), 
+Still not clear, in case if readiness returns `false` for inactive clusters (which might be logical), 
 k8s won't allow outer traffic to reach the cluster. This means that it won't be possible to activate cluster 
-from __thin clients__.
+from __thin clients__. But if activation is not an obstacle for successful readiness check we can end up in a 
+situation when whole cluster will be closed by k8s during rebalance after activation:
+
+![inactive_startup](./img/inactive_startup.svg)
+
+So look like we need to check for rebalance only once during pod startup, 
+if it was successful we don't need to take it under consideration anymore 

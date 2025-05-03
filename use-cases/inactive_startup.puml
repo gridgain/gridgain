@@ -1,0 +1,63 @@
+@startuml
+
+participant Outer_Client as OC
+participant A
+participant B
+participant K8S as K
+
+group Previous run
+
+  activate A #green
+  activate B #green
+
+  B x<-o B : crash
+  deactivate B
+
+  OC -> A : new traffic
+
+  K o-[#red]> A : TERM
+  deactivate A
+
+end
+
+hnote across: Cluster was stopped for a while
+
+group New run
+  A -> K : liveness OK
+  activate A
+
+  B -> K : liveness OK
+  activate B
+
+  hnote across: Cluster is still inactive (auto-activation disabled)
+
+  A -[#green]> K : readiness OK
+  activate A #green
+
+  B -[#green]> K : readiness OK
+  activate B #green
+
+  hnote across: Readiness probes returned true in order to allow outer traffic
+
+  OC -> A : Activate cluster
+
+  group Rebalance
+
+  A <-[#violet]> B: rebalancing
+
+  A -[#green]\ K : readiness=False
+  deactivate A #green
+
+  B -[#green]\ K : readiness=False
+  deactivate B #green
+
+  hnote across: Initial rebalancing triggered readiness probe failure
+
+  OC -X A : Traffic not allowed by K8S
+  OC -X B : Traffic not allowed by K8S
+
+  end
+
+end
+
+@enduml

@@ -72,7 +72,7 @@ group Rebalance B,C
   note over C: Supplier D lost\nreset rebalance
 end
 
-group Rebalance B,C
+group Rebalance C,D
   A -[#c603fc]> C : continue supply
   B -[#c603fc]> C : takeover\nsupply from D
 
