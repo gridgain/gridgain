@@ -257,7 +257,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         this.affinityKey = affinityKey;
         this.mvccEnabled = mvccEnabled;
 
-        this.maxAllowedInlineSize = maxAllowedInlineSize();
+        this.maxAllowedInlineSize = H2TreeIndexBase.maxAllowedInlineSize(table.cacheInfo().kctx().config(), mvccEnabled);
 
         if (!initNew) {
             // Page is ready - read meta information.
@@ -362,16 +362,6 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         }
 
         created = initNew;
-    }
-
-    /**
-     * To avoid performance degradation, at least two items should fit into one page.
-     * So maximum payload size equals: P = (PS - H - 3L) / 2 - X , where P - Payload size, PS - page size, H - page
-     * header size, L - size of the child link, X - overhead per item.
-     */
-    private int maxAllowedInlineSize() {
-        return (pageMem.realPageSize(grpId) - BPlusIO.ITEMS_OFF - 3 * AbstractDataPageIO.LINK_SIZE)
-                / 2 - H2IOUtils.itemOverhead(mvccEnabled);
     }
 
     /**
