@@ -22,13 +22,20 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.BytesInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.StringInlineIndexColumn;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2IOUtils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.encryption.EncryptionSpi;
 import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.index.IndexType;
@@ -87,6 +94,22 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
     /** {@inheritDoc} */
     @Override public boolean canGetFirstOrLast() {
         return true;
+    }
+
+    /**
+     * To avoid tree corruption, at least two items should fit into one page.
+     * So maximum payload size equals: P = (PS - H - 3L) / 2 - X , where P - Payload size, PS - page size, H - page
+     * header size, L - size of the child link, X - overhead per item.
+     */
+    static int maxAllowedInlineSize(IgniteConfiguration cfg, boolean mvccEnabled) {
+        int configuredPageSize = cfg.getDataStorageConfiguration() == null
+                ? cfg.getDataStorageConfiguration().getPageSize() : DataStorageConfiguration.DFLT_PAGE_SIZE;
+
+        EncryptionSpi encSpi = cfg.getEncryptionSpi();
+        int realPageSize = CU.encryptedPageSize(configuredPageSize, encSpi);
+
+        return (realPageSize - BPlusIO.ITEMS_OFF - 3 * AbstractDataPageIO.LINK_SIZE)
+                / 2 - H2IOUtils.itemOverhead(mvccEnabled);
     }
 
     /**
