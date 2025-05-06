@@ -266,7 +266,7 @@ public abstract class PagesList extends DataStructure {
                     try {
                         long pageAddr = readLock(pageId, page); // No concurrent recycling on init.
 
-                        assert pageAddr != 0L;
+                        assert pageAddr != 0L : U.hexLong(pageId);
 
                         try {
                             PagesListMetaIO io = PagesListMetaIO.VERSIONS.forPage(pageAddr);
@@ -310,7 +310,7 @@ public abstract class PagesList extends DataStructure {
                             try {
                                 long pageAddr = readLock(pageId, page);
 
-                                assert pageAddr != 0L;
+                                assert pageAddr != 0L : U.hexLong(pageId);
 
                                 try {
                                     PagesListNodeIO io = PagesListNodeIO.VERSIONS.forPage(pageAddr);
