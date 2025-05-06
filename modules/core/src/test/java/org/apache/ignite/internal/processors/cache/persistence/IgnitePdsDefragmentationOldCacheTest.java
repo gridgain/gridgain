@@ -53,8 +53,7 @@ import org.junit.Test;
  */
 public class IgnitePdsDefragmentationOldCacheTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
-    @Override
-    protected void beforeTest() throws Exception {
+    @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
         stopAllGrids();
@@ -63,8 +62,7 @@ public class IgnitePdsDefragmentationOldCacheTest extends GridCommonAbstractTest
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void afterTest() throws Exception {
+    @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -73,8 +71,7 @@ public class IgnitePdsDefragmentationOldCacheTest extends GridCommonAbstractTest
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         DataRegionConfiguration drCfg = new DataRegionConfiguration().setPersistenceEnabled(true);
 
         DataStorageConfiguration dsCfg = new DataStorageConfiguration()
