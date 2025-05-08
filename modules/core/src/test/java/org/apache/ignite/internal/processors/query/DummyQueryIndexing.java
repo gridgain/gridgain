@@ -24,6 +24,7 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.IndexQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.IgniteMBeansManager;
@@ -391,5 +392,10 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     /** {@inheritDoc} */
     @Override public boolean isConvertibleToColumnType(String schemaName, String tblName, String colName, Class<?> cls) {
         return false;
+    }
+
+    @Override
+    public void setSqlIndexMaxInlineSize(CacheConfiguration ccfg) {
+        // No-op.
     }
 }

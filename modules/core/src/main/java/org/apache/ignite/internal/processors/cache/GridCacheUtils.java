@@ -81,6 +81,8 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCach
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxLog;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -126,6 +128,7 @@ import static java.util.Objects.nonNull;
 import static java.util.stream.Stream.concat;
 import static java.util.stream.Stream.of;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
+import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
@@ -1062,6 +1065,10 @@ public class GridCacheUtils {
                 ", startingCache=" + cfg2.getName() +
                 ", starting" + capitalize(attrName) + "=" + val2 + ']');
         }
+    }
+
+    public static boolean mvccEnabled(CacheConfiguration ccfg) {
+        return ccfg.getAtomicityMode() == TRANSACTIONAL_SNAPSHOT;
     }
 
     /**

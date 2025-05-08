@@ -254,7 +254,7 @@ public class CacheGroupContext {
 
         storeCacheId = affNode && dataRegion.config().getPageEvictionMode() != DataPageEvictionMode.DISABLED;
 
-        mvccEnabled = ccfg.getAtomicityMode() == TRANSACTIONAL_SNAPSHOT;
+        mvccEnabled = CU.mvccEnabled(ccfg);
 
         log = ctx.kernalContext().log(getClass());
 

@@ -36,9 +36,6 @@ public class GridCacheContextInfo<K, V> {
     /** Dynamic cache deployment ID. */
     private final IgniteUuid dynamicDeploymentId;
 
-    /** Kernel context. */
-    private final GridKernalContext kctx;
-
     /** Cache configuration. */
     private volatile CacheConfiguration<K, V> config;
 
@@ -55,10 +52,9 @@ public class GridCacheContextInfo<K, V> {
      * Constructor of full cache context.
      *
      * @param cctx Cache context.
-     * @param kctx Kernel context.
      * @param clientCache Client cache or not.
      */
-    public GridCacheContextInfo(GridCacheContext<K, V> cctx, GridKernalContext kctx, boolean clientCache) {
+    public GridCacheContextInfo(GridCacheContext<K, V> cctx, boolean clientCache) {
         config = cctx.config();
         dynamicDeploymentId = null;
         groupId = cctx.groupId();
@@ -67,7 +63,6 @@ public class GridCacheContextInfo<K, V> {
         this.clientCache = clientCache;
 
         this.cctx = cctx;
-        this.kctx = kctx;
     }
 
     /**
@@ -75,14 +70,13 @@ public class GridCacheContextInfo<K, V> {
      *
      * @param cacheDesc Cache descriptor.
      */
-    public GridCacheContextInfo(DynamicCacheDescriptor cacheDesc, GridKernalContext ctx) {
+    public GridCacheContextInfo(DynamicCacheDescriptor cacheDesc) {
         config = cacheDesc.cacheConfiguration();
         dynamicDeploymentId = cacheDesc.deploymentId();
         groupId = cacheDesc.groupId();
         cacheId = CU.cacheId(config.getName());
 
         clientCache = true;
-        this.kctx = ctx;
     }
 
     /**
@@ -143,13 +137,6 @@ public class GridCacheContextInfo<K, V> {
      */
     @Nullable public GridCacheContext<K, V> cacheContext() {
         return cctx;
-    }
-
-    /**
-     * @return Kernal context.
-     */
-    public GridKernalContext kctx() {
-        return kctx;
     }
 
     /**

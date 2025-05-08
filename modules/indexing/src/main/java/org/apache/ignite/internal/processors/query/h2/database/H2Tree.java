@@ -37,12 +37,12 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
@@ -54,7 +54,6 @@ import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO;
-import org.apache.ignite.internal.processors.query.h2.database.io.H2IOUtils;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2RowLinkIO;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
@@ -99,7 +98,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     private final int inlineSize;
 
     /** Maximum inline size for this tree to make sure that at least two items could be stored on a page. */
-    private final int maxAllowedInlineSize;
+    private final int maxInlineSize;
 
     /** List of helpers to work with inline values on the page. */
     private final List<InlineIndexColumn> inlineIdxs;
@@ -257,7 +256,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         this.affinityKey = affinityKey;
         this.mvccEnabled = mvccEnabled;
 
-        this.maxAllowedInlineSize = H2TreeIndexBase.maxAllowedInlineSize(table.cacheInfo().kctx().config(), mvccEnabled);
+        this.maxInlineSize = GridCacheUtils.maxInlineSize(pageMem.realPageSize(grpId), mvccEnabled);
 
         if (!initNew) {
             // Page is ready - read meta information.
@@ -326,12 +325,12 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 upgradeMetaPage(inlineObjSupported);
         }
         else {
-            if (configuredInlineSize > maxAllowedInlineSize) {
+            if (configuredInlineSize > maxInlineSize) {
                 throw new IgniteCheckedException("Inline size is too big [cacheName=" + cacheName +
                         ", tableName=" + tblName +
                         ", idxName=" + idxName +
                         ", configuredInlineSize=" + configuredInlineSize +
-                        ", maxAllowedInlineSize=" + maxAllowedInlineSize + ']');
+                        ", maxInlineSize=" + maxInlineSize + ']');
             }
 
             unwrappedPk = true;
@@ -344,14 +343,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             inlineIdxs = getAvailableInlineColumns(affinityKey, cacheName, idxName, log, pk,
                 table, cols, factory, true);
 
-            inlineSize = computeInlineSize(
-                    idxName,
-                    inlineIdxs,
-                    configuredInlineSize,
-                    cctx.config().getSqlIndexMaxInlineSize(),
-                    maxAllowedInlineSize,
-                    log
-            );
+            inlineSize = computeInlineSize(idxName, inlineIdxs, configuredInlineSize, maxInlineSize, log);
 
             setIos(
                 H2ExtrasInnerIO.getVersions(inlineSize, mvccEnabled),
@@ -871,7 +863,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             colNames.add(index.columnName());
         }
 
-        if (newSize > inlineSize() && newSize <= maxAllowedInlineSize) {
+        if (newSize > inlineSize() && newSize <= maxInlineSize) {
             int oldSize;
 
             while (true) {

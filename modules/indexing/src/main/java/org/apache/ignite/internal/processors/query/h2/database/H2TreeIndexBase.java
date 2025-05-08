@@ -47,10 +47,6 @@ import org.gridgain.internal.h2.table.TableFilter;
  * H2 tree index base.
  */
 public abstract class H2TreeIndexBase extends GridH2IndexBase {
-
-    /** Default value for {@code IGNITE_MAX_INDEX_PAYLOAD_SIZE} */
-    static final int IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT = 64;
-
     /**
      * Default sql index size for types with variable length (such as String or byte[]).
      * Note that effective length will be lower, because 3 bytes will be taken for the inner representation of variable type.
@@ -96,24 +92,9 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
     }
 
     /**
-     * To avoid performance degradation, at least two items should fit into one page.
-     * So maximum payload size equals: P = (PS - H - 3L) / 2 - X , where P - Payload size, PS - page size, H - page
-     * header size, L - size of the child link, X - overhead per item.
-     */
-    static int maxAllowedInlineSize(IgniteConfiguration cfg, boolean mvccEnabled) {
-        int configuredPageSize = cfg.getDataStorageConfiguration().getPageSize();
-        EncryptionSpi encSpi = cfg.getEncryptionSpi();
-        int realPageSize = CU.encryptedPageSize(configuredPageSize, encSpi);
-
-        return (realPageSize - BPlusIO.ITEMS_OFF - 3 * AbstractDataPageIO.LINK_SIZE)
-                / 2 - H2IOUtils.itemOverhead(mvccEnabled);
-    }
-
-    /**
      * @param inlineIdxs Inline index helpers.
      * @param cfgInlineSize Inline size from cache config.
      * @param maxInlineSize Max inline size from cache config.
-     * @param maxAllowedInlineSize Max allowed inline size, calculated from page size.
      * @return Inline size.
      */
     static int computeInlineSize(
@@ -121,7 +102,6 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
             List<InlineIndexColumn> inlineIdxs,
             int cfgInlineSize,
             int maxInlineSize,
-            int maxAllowedInlineSize,
             IgniteLogger log) {
         if (cfgInlineSize == 0)
             return 0;
@@ -131,10 +111,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
 
         boolean fixedSize = true;
 
-        int propSize = maxInlineSize == -1 ? IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE,
-            IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT) : maxInlineSize;
-
-        if (propSize == 0)
+        if (maxInlineSize == 0)
             return 0;
 
         int size = 0;
@@ -159,14 +136,12 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
 
             size += sizeInc;
 
-            // total index size is limited by the property
-            if (size > propSize)
-                size = propSize;
+            // total index size is limited.
+            if (size > maxInlineSize)
+                size = maxInlineSize;
         }
 
         if (cfgInlineSize != -1) {
-            cfgInlineSize = Math.min(maxAllowedInlineSize, cfgInlineSize);
-
             if (fixedSize && size < cfgInlineSize) {
                 log.warning("Explicit INLINE_SIZE for fixed size index item is too big. " +
                         "This will lead to wasting of space inside index pages. Ignoring " +
@@ -178,7 +153,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
             return cfgInlineSize;
         }
 
-        return Math.min(maxAllowedInlineSize, size);
+        return size;
     }
 
     /**
