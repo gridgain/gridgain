@@ -52,7 +52,7 @@ public class IgniteDrDataStreamerCacheUpdater implements StreamReceiver<KeyCache
     @Override public void receive(IgniteCache<KeyCacheObject, CacheObject> cache0,
         Collection<Map.Entry<KeyCacheObject, CacheObject>> col) {
         try {
-            GridKernalContext ctx = ((IgniteKernal)cache0.unwrap(Ignite.class)).context();
+            GridKernalContext ctx = ((IgniteKernal) cache0.unwrap(Ignite.class)).context();
 
             IgniteInternalCache<KeyCacheObject, CacheObject> cache;
 

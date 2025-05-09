@@ -21,6 +21,10 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
+
+import static org.apache.ignite.internal.util.IgniteUtils.MAX_UTF_BYTES;
+import static org.apache.ignite.internal.util.IgniteUtils.UTF_BYTE_LIMIT;
 
 /** */
 public class VisorDrCacheFSTTaskResult extends IgniteDataTransferObject {
@@ -37,6 +41,11 @@ public class VisorDrCacheFSTTaskResult extends IgniteDataTransferObject {
     public VisorDrCacheFSTTaskResult() {
     }
 
+    /** {@inheritDoc} */
+    @Override public byte getProtocolVersion() {
+        return V2;
+    }
+
     /** */
     public VisorDrCacheFSTTaskResult(byte dcId, String msg) {
         dataCenterId = dcId;
@@ -46,13 +55,28 @@ public class VisorDrCacheFSTTaskResult extends IgniteDataTransferObject {
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeByte(dataCenterId);
-        out.writeUTF(resultMsg);
+
+        if (U.isStringTooLongForWriteHeuristically(resultMsg)) {
+            int length = UTF_BYTE_LIMIT / MAX_UTF_BYTES;
+
+            out.writeUTF(resultMsg.substring(0, length));
+
+            U.writeLongString(out, resultMsg.substring(length));
+        }
+        else {
+            out.writeUTF(resultMsg);
+            U.writeLongString(out, null);
+        }
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         dataCenterId = in.readByte();
         resultMsg = in.readUTF();
+
+        if (protoVer >= V2) {
+            resultMsg += U.readLongString(in);
+        }
     }
 
     /**

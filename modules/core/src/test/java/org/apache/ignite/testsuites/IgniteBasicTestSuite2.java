@@ -81,6 +81,7 @@ import org.apache.ignite.internal.util.collection.BitSetIntSetTest;
 import org.apache.ignite.internal.util.collection.ImmutableIntSetTest;
 import org.apache.ignite.internal.util.collection.IntHashMapTest;
 import org.apache.ignite.internal.util.collection.IntRWHashMapTest;
+import org.apache.ignite.internal.visor.dr.VisorTransferObjectsTest;
 import org.apache.ignite.marshaller.DynamicProxySerializationMultiJvmSelfTest;
 import org.apache.ignite.marshaller.MarshallerContextSelfTest;
 import org.apache.ignite.plugin.PluginConfigurationTest;
@@ -218,7 +219,8 @@ import org.junit.runners.Suite;
     ProgressSpeedCalculationTest.class,
     JvmConfigurationSuggestionsTest.class,
 
-    IgniteStandardMXBeanTest.class
+    IgniteStandardMXBeanTest.class,
+    VisorTransferObjectsTest.class
 })
 public class IgniteBasicTestSuite2 {
 }

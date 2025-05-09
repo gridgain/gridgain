@@ -119,6 +119,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Random;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -223,6 +224,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheAttributes;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgnitePeerToPeerClassLoadingException;
+import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.transactions.IgniteTxAlreadyCompletedCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
@@ -240,6 +242,7 @@ import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.internal.util.lang.GridPeerDeployAware;
 import org.apache.ignite.internal.util.lang.GridTuple;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
@@ -13031,5 +13034,41 @@ public abstract class IgniteUtils {
     public static void resetCachedLocalAddressAndHostNames() {
         cachedLocalAddr = null;
         cachedLocalAddrAllHostNames = null;
+    }
+
+    /**
+     * Key value for logging.
+     */
+    public static String resolveKey(GridCacheContext cctx, KeyCacheObject key) {
+        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
+        String keyValue = "nil";
+
+        if (sensitiveDataLogging == GridToStringBuilder.SensitiveDataLogging.PLAIN) {
+            keyValue = key.value(cctx.cacheObjectContext(), false);
+        } else if (sensitiveDataLogging == GridToStringBuilder.SensitiveDataLogging.HASH) {
+            keyValue = String.valueOf(IgniteUtils.hash(key));
+        }
+        return keyValue;
+    }
+
+    /**
+     * Key values for logging from conflict map.
+     */
+    public static String resolveKey(GridCacheContext cctx, Set<KeyCacheObject> keySet) {
+        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
+        String keyValue = "nil";
+
+        if (sensitiveDataLogging == GridToStringBuilder.SensitiveDataLogging.PLAIN) {
+            List<String> collect = keySet.stream()
+                    .map(x -> Objects.requireNonNull(x.value(cctx.cacheObjectContext(), false)).toString())
+                    .collect(Collectors.toList());
+            keyValue = String.join(", ",collect);
+        } else if (sensitiveDataLogging == GridToStringBuilder.SensitiveDataLogging.HASH) {
+            List<String> collect = keySet.stream()
+                    .map(x -> Objects.requireNonNull(String.valueOf(IgniteUtils.hash(x))))
+                    .collect(Collectors.toList());
+            keyValue = String.join(", ",collect);;
+        }
+        return keyValue;
     }
 }

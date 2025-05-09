@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import org.apache.ignite.internal.processors.cache.distributed.rebalancing.Suppl
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCacheEntriesExpirationTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsConsistencyOnDelayedPartitionOwning;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragmentationEncryptionTest;
+import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragmentationOldCacheTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragmentationRandomLruEvictionTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragmentationTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsRecoveryAfterFileCorruptionTest;
@@ -95,6 +96,7 @@ public class IgnitePdsTestSuite8 {
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsDefragmentationTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsDefragmentationRandomLruEvictionTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsDefragmentationEncryptionTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, IgnitePdsDefragmentationOldCacheTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, DefragmentationMXBeanTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, PagesPossibleCorruptionDiagnosticTest.class, ignoredTests);
