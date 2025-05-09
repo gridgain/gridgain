@@ -1067,6 +1067,7 @@ public class GridCacheUtils {
         }
     }
 
+    /** If MVCC enabled for given cache configuration. */
     public static boolean mvccEnabled(CacheConfiguration ccfg) {
         return ccfg.getAtomicityMode() == TRANSACTIONAL_SNAPSHOT;
     }

@@ -135,7 +135,13 @@ import org.apache.ignite.internal.processors.query.h2.affinity.PartitionExtracto
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeClientIndex;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
-import org.apache.ignite.internal.processors.query.h2.database.io.*;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2IOUtils;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2InnerIO;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2LeafIO;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2MvccInnerIO;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2MvccLeafIO;
 import org.apache.ignite.internal.processors.query.h2.defragmentation.IndexingDefragmentation;
 import org.apache.ignite.internal.processors.query.h2.dml.DmlDistributedPlanInfo;
 import org.apache.ignite.internal.processors.query.h2.dml.DmlUpdateResultsIterator;
@@ -2297,10 +2303,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         int calculatedMaxInlineSize = maxInlineSize(realPageSize, CU.mvccEnabled(ccfg));
 
         ccfg.setSqlIndexMaxInlineSize(Math.min(calculatedMaxInlineSize, configuredMaxInlineSize));
-
-        System.out.println("max=" + ccfg.getSqlIndexMaxInlineSize());
     }
 
+    /** Calculates max inline size for given page size. */
     public static int maxInlineSize(int realPageSize, boolean mvccEnabled) {
         return (realPageSize - BPlusIO.ITEMS_OFF - 3 * AbstractDataPageIO.LINK_SIZE)
                 / 2 - (H2IOUtils.itemOverhead(mvccEnabled));

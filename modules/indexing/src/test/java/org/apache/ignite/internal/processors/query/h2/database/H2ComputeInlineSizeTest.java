@@ -174,7 +174,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
-    public void testTooBigInlineNotUsed() {
+    public void testTooBigConfiguredInlineNotUsed() {
         List<Integer> valueTypes = Lists.newArrayList(
                 Value.BOOLEAN, Value.SHORT, Value.DATE, Value.DATE, Value.DOUBLE, Value.FLOAT,
                 Value.INT, Value.BYTE, Value.DECIMAL, Value.TIME, Value.TIMESTAMP, Value.UUID
@@ -189,7 +189,8 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
             inlineIdxs.add(createHelper(c, false));
         }
 
-        assertEquals(64, computeInlineSize("idx", inlineIdxs, 2048, Integer.MAX_VALUE, log));
+        // Size of all columns is 92 bytes.
+        assertEquals(92, computeInlineSize("idx", inlineIdxs, 2048, Integer.MAX_VALUE, log));
     }
 
     /** */
