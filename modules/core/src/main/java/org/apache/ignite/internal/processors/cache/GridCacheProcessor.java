@@ -4143,6 +4143,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     catch (IgniteCheckedException e) {
                         fut.onDone(e);
                     }
+
+                    ctx.query().getIndexing().setSqlIndexMaxInlineSize(ccfg);
                 }
 
                 if (fut.isDone())

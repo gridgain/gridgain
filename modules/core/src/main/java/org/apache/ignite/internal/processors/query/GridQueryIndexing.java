@@ -29,6 +29,7 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.IndexQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.IgniteMBeansManager;
@@ -601,4 +602,7 @@ public interface GridQueryIndexing {
      * @throws IgniteSQLException if table or column with specified name was not found.
      */
     boolean isConvertibleToColumnType(String schemaName, String tblName, String colName, Class<?> cls);
+
+    /** Updates configuration sqlIdxMaxInlineSize with calculated or property value if exceeded. */
+    void setSqlIndexMaxInlineSize(CacheConfiguration ccfg);
 }

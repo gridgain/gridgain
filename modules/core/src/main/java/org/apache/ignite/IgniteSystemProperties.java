@@ -1136,13 +1136,16 @@ public final class IgniteSystemProperties {
         "IndexingSpi to preserve old behavior query processor with IndexingSpi")
     public static final String IGNITE_UNWRAP_BINARY_FOR_INDEXING_SPI = "IGNITE_UNWRAP_BINARY_FOR_INDEXING_SPI";
 
+    /** Default value for {@code IGNITE_MAX_INDEX_PAYLOAD_SIZE} */
+    public static final int IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT = 64;
+
     /**
      * System property to specify maximum payload size in bytes for {@code H2TreeIndex}.
      * <p>
-     * Defaults to {@code 0}, meaning that inline index store is disabled.
+     * Defaults to {@link #IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT}. If set to {@code 0} then inline index store is disabled.
      */
     @SystemProperty(value = "Maximum payload size in bytes for H2TreeIndex. " +
-        "0 means that inline index store is disabled", type = Integer.class, defaults = "10")
+        "0 means that inline index store is disabled", type = Integer.class, defaults = IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT + "")
     public static final String IGNITE_MAX_INDEX_PAYLOAD_SIZE = "IGNITE_MAX_INDEX_PAYLOAD_SIZE";
 
     /**

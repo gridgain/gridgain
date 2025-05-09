@@ -51,6 +51,7 @@ import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
@@ -91,6 +92,7 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.cache.persistence.defragmentation.LinkMap;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
@@ -135,6 +137,7 @@ import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2IOUtils;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2InnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2LeafIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2MvccInnerIO;
@@ -204,6 +207,7 @@ import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.resources.LoggerResource;
+import org.apache.ignite.spi.encryption.EncryptionSpi;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilterImpl;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
@@ -2280,6 +2284,31 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             throw new IgniteSQLException("Colum with specified name was not found for the table [schemaName=" + schemaName +
                 ", tableName=" + tblName + ", colName=" + colName + ']', e);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void setSqlIndexMaxInlineSize(CacheConfiguration ccfg) {
+        int sqlIdxMaxInlineSize = ccfg.getSqlIndexMaxInlineSize();
+
+        int configuredMaxInlineSize = sqlIdxMaxInlineSize == -1
+                ? IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE,
+                IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT)
+                : sqlIdxMaxInlineSize;
+
+        int configuredPageSize = ctx.config().getDataStorageConfiguration().getPageSize();
+        EncryptionSpi encSpi = ctx.config().getEncryptionSpi();
+        int realPageSize = CU.encryptedPageSize(configuredPageSize, encSpi);
+
+        int calculatedMaxInlineSize = maxInlineSize(realPageSize, CU.mvccEnabled(ccfg));
+
+        ccfg.setSqlIndexMaxInlineSize(Math.min(calculatedMaxInlineSize, configuredMaxInlineSize));
+    }
+
+    /** Calculates max inline size for given page size. */
+    public static int maxInlineSize(int realPageSize, boolean mvccEnabled) {
+        return (realPageSize - BPlusIO.ITEMS_OFF - 3 * AbstractDataPageIO.LINK_SIZE)
+                / 2 - (H2IOUtils.itemOverhead(mvccEnabled));
     }
 
     /** {@inheritDoc} */

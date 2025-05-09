@@ -37,6 +37,7 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
@@ -50,6 +51,7 @@ import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.query.h2.H2RowCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO;
@@ -95,6 +97,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
     /** */
     private final int inlineSize;
+
+    /** Maximum inline size for this tree to make sure that at least two items could be stored on a page. */
+    private final int maxInlineSize;
 
     /** List of helpers to work with inline values on the page. */
     private final List<InlineIndexColumn> inlineIdxs;
@@ -252,6 +257,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         this.affinityKey = affinityKey;
         this.mvccEnabled = mvccEnabled;
 
+        this.maxInlineSize = IgniteH2Indexing.maxInlineSize(pageMem.realPageSize(grpId), mvccEnabled);
+
         if (!initNew) {
             // Page is ready - read meta information.
             MetaPageInfo metaInfo = getMetaInfo();
@@ -319,6 +326,14 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 upgradeMetaPage(inlineObjSupported);
         }
         else {
+            if (configuredInlineSize > maxInlineSize) {
+                throw new IgniteCheckedException("Inline size is too big [cacheName=" + cacheName +
+                        ", tableName=" + tblName +
+                        ", idxName=" + idxName +
+                        ", configuredInlineSize=" + configuredInlineSize +
+                        ", maxInlineSize=" + maxInlineSize + ']');
+            }
+
             unwrappedPk = true;
 
             useLegacyComparator = false;
@@ -329,8 +344,15 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             inlineIdxs = getAvailableInlineColumns(affinityKey, cacheName, idxName, log, pk,
                 table, cols, factory, true);
 
-            inlineSize = computeInlineSize(idxName, inlineIdxs, configuredInlineSize,
-                    cctx.config().getSqlIndexMaxInlineSize(), log);
+            int sqlIndexMaxInlineSize = cctx.config().getSqlIndexMaxInlineSize();
+
+            inlineSize = computeInlineSize(
+                    idxName,
+                    inlineIdxs,
+                    configuredInlineSize,
+                    Math.min(sqlIndexMaxInlineSize, maxInlineSize),
+                    log
+            );
 
             setIos(
                 H2ExtrasInnerIO.getVersions(inlineSize, mvccEnabled),
@@ -850,7 +872,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             colNames.add(index.columnName());
         }
 
-        if (newSize > inlineSize()) {
+        if (newSize > inlineSize() && newSize <= maxInlineSize) {
             int oldSize;
 
             while (true) {
@@ -864,8 +886,6 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             }
 
             String cols = colNames.stream().collect(Collectors.joining(", ", "(", ")"));
-
-            String idxType = pk ? "PRIMARY KEY" : affinityKey ? "AFFINITY KEY (implicit)" : "SECONDARY";
 
             String recommendation;
 
@@ -886,12 +906,18 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 ", tableName=" + tblName +
                 ", idxName=" + idxName +
                 ", idxCols=" + cols +
-                ", idxType=" + idxType +
+                ", idxType=" + idxType() +
                 ", curSize=" + inlineSize() +
                 ", recommendedInlineSize=" + newSize + "]";
 
             U.warn(log, warn);
         }
+    }
+
+    private String idxType() {
+        return pk
+                ? "PRIMARY KEY"
+                : affinityKey ? "AFFINITY KEY (implicit)" : "SECONDARY";
     }
 
     /** {@inheritDoc} */
