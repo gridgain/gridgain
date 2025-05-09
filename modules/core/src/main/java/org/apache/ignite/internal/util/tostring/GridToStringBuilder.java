@@ -217,7 +217,7 @@ public class GridToStringBuilder {
 
     /**
      * Setting the logic of the {@link #includeSensitive} and {@link #getSensitiveDataLogging} methods. <br/>
-     * By default, it take the value of
+     * By default, it takes the value of
      * {@link IgniteSystemProperties#IGNITE_SENSITIVE_DATA_LOGGING} system property. <br/>
      * <b>Important!</b> Changing the logic is possible only until the first
      * call of {@link #includeSensitive} or {@link #getSensitiveDataLogging} methods. <br/>

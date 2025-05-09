@@ -847,7 +847,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      */
     public Map<Integer, Set<Integer>> invalidPartitions() {
         assert isDone() :
-            "GridDhtPartitionsExchangeFuture must be done before calling ivalidPartitions method [fut=" + this + ']';
+            "GridDhtPartitionsExchangeFuture must be done before calling invalidPartitions method [fut=" + this + ']';
 
         return validator.invalidPartitions();
     }
