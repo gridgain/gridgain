@@ -104,6 +104,16 @@
             </modules>
         </profile>
         <profile>
+            <id>java-15+</id>
+            <activation>
+                <jdk>[15,)</jdk>
+            </activation>
+            <modules>
+                <module>modules/lucene-9</module>
+                <module>modules/lucene-8</module>
+            </modules>
+        </profile>
+        <profile>
             <id>java-8</id>
             <activation>
                 <jdk>1.8</jdk>

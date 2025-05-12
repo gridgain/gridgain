@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -266,7 +266,7 @@ public abstract class PagesList extends DataStructure {
                     try {
                         long pageAddr = readLock(pageId, page); // No concurrent recycling on init.
 
-                        assert pageAddr != 0L;
+                        assert pageAddr != 0L : U.hexLong(pageId);
 
                         try {
                             PagesListMetaIO io = PagesListMetaIO.VERSIONS.forPage(pageAddr);
@@ -310,7 +310,7 @@ public abstract class PagesList extends DataStructure {
                             try {
                                 long pageAddr = readLock(pageId, page);
 
-                                assert pageAddr != 0L;
+                                assert pageAddr != 0L : U.hexLong(pageId);
 
                                 try {
                                     PagesListNodeIO io = PagesListNodeIO.VERSIONS.forPage(pageAddr);

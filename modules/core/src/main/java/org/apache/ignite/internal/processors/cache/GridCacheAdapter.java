@@ -108,6 +108,7 @@ import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.transactions.TransactionCheckedException;
 import org.apache.ignite.internal.util.GridSerializableMap;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridEmbeddedFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -2121,6 +2122,9 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         });
 
         ctx.dr().onReceiveCacheEntriesReceived(drMap.size());
+
+        if (log.isTraceEnabled())
+            log.trace("PutAllConflict invoked for the keys = " + IgniteUtils.resolveKey(ctx, drMap.keySet()));
     }
 
     /** {@inheritDoc} */
@@ -2977,6 +2981,9 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 return "removeAllConflict [drMap=" + drMap + ']';
             }
         });
+
+        if (log.isTraceEnabled())
+            log.trace("RemoveAllConflict invoked for the keys = " + IgniteUtils.resolveKey(ctx, drMap.keySet()));
     }
 
     /** {@inheritDoc} */

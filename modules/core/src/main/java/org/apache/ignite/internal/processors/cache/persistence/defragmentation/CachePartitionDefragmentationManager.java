@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -814,9 +814,6 @@ public class CachePartitionDefragmentationManager {
                         long rmvId = oldPartMetaIo.getGlobalRemoveId(oldPartMetaPageAddr);
                         newPartMetaIo.setGlobalRemoveId(newPartMetaPageAddr, rmvId);
 
-                        long reuseListRoot = oldPartMetaIo.getPartitionMetaStoreReuseListRoot(oldPartMetaPageAddr);
-                        newPartMetaIo.setPartitionMetaStoreReuseListRoot(newPartMetaPageAddr, reuseListRoot);
-
                         // Copy cache sizes for shared cache group.
                         long oldCountersPageId = oldPartMetaIo.getCacheSizesPageId(oldPartMetaPageAddr);
                         if (oldCountersPageId != 0L) {
@@ -847,10 +844,6 @@ public class CachePartitionDefragmentationManager {
                             partCtx.newCacheDataStore.partStorage().insertDataRow(gapsDataRow, IoStatisticsHolderNoOp.INSTANCE);
 
                             newPartMetaIo.setGapsLink(newPartMetaPageAddr, gapsDataRow.link());
-
-                            newPartMetaIo.setPartitionMetaStoreReuseListRoot(newPartMetaPageAddr,
-                                oldPartMetaIo.getPartitionMetaStoreReuseListRoot(oldPartMetaPageAddr)
-                            );
                         }
 
                         // Encryption stuff.
