@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,19 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 
@@ -31,9 +37,16 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Test;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_FSYNC_WITH_DEDICATED_WORKER;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_MMAP;
+import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.configuration.WALMode.FSYNC;
+import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
@@ -41,6 +54,10 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
  *
  */
 public class CacheOperationsInterruptTest extends GridCommonAbstractTest {
+    private boolean persistenceEnabled;
+
+    private WALMode walMode = LOG_ONLY;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -52,6 +69,18 @@ public class CacheOperationsInterruptTest extends GridCommonAbstractTest {
         ccfg.setCacheMode(REPLICATED);
 
         cfg.setCacheConfiguration(ccfg);
+
+        if (persistenceEnabled) {
+            DataStorageConfiguration storageCfg = new DataStorageConfiguration()
+                .setWalMode(walMode)
+                .setWalSegmentSize(4 * 1024 * 1024);
+
+            storageCfg.getDefaultDataRegionConfiguration()
+                .setPersistenceEnabled(true)
+                .setMaxSize(500L * 1024 * 1024);
+
+            cfg.setDataStorageConfiguration(storageCfg);
+        }
 
         return cfg;
     }
@@ -159,5 +188,87 @@ public class CacheOperationsInterruptTest extends GridCommonAbstractTest {
                 stop.set(true);
             }
         }
+    }
+
+    /**
+     * Tests that interrupting a thread performing a cache write operation does not lead to operation failure
+     * and blockage of PME.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testInterruptAtomicUpdate() throws Exception {
+        persistenceEnabled = true;
+        walMode = FSYNC;
+
+        CacheConfiguration<Integer, Integer> cfg = new CacheConfiguration<>("test-atomic-cache");
+
+        testInterruptUpdateInternal(cfg);
+    }
+
+    /**
+     * Tests that interrupting a thread performing a cache write operation does not lead to operation failure
+     * and blockage of PME.
+     * MMAP mode is disabled, and fsync with dedicated worker is enabled.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_WAL_MMAP, value = "false")
+    @WithSystemProperty(key = IGNITE_WAL_FSYNC_WITH_DEDICATED_WORKER, value = "true")
+    public void testInterruptAtomicUpdateFsync() throws Exception {
+        persistenceEnabled = true;
+        walMode = FSYNC;
+
+        CacheConfiguration<Integer, Integer> cfg = new CacheConfiguration<>("test-atomic-cache");
+
+        testInterruptUpdateInternal(cfg);
+    }
+
+    /**
+     * Tests that interrupting a thread performing a tx cache write operation does not lead to operation failure
+     * and blockage of PME.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testInterruptTxUpdate() throws Exception {
+        persistenceEnabled = true;
+        walMode = FSYNC;
+
+        CacheConfiguration<Integer, Integer> cfg = new CacheConfiguration<>("test-atomic-cache");
+        cfg.setAtomicityMode(TRANSACTIONAL);
+
+        testInterruptUpdateInternal(cfg);
+    }
+
+    private void testInterruptUpdateInternal(CacheConfiguration<Integer, Integer> cfg) throws Exception {
+        IgniteEx n = startGrid(0);
+
+        n.cluster().state(ACTIVE);
+
+        IgniteCache<Integer, Integer> c = n.getOrCreateCache(cfg);
+
+        for (int i = 0; i < 1000; i++)
+            c.put(i, i);
+
+        try {
+            // Interrupt the thread that is doing the put operation.
+            Thread.currentThread().interrupt();
+
+            c.remove(0);
+        } catch (Throwable t) {
+            log.error("Operation has failed [err=" + t.getMessage() + ']', t);
+
+            assertTrue("Operation has failed.", false);
+        } finally {
+            // Clears interrupted status.
+            Thread.interrupted();
+        }
+
+        // Check that PME is not blocked.
+        IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() -> n.getOrCreateCache("new-test-cache"));
+
+        fut.get(5, SECONDS);
     }
 }
