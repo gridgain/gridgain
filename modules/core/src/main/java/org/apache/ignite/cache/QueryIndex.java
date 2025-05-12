@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Objects;
 
+import org.apache.ignite.cache.query.annotations.QueryVectorField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -54,6 +55,11 @@ public class QueryIndex implements Serializable {
 
     /** */
     private int inlineSize = DFLT_INLINE_SIZE;
+
+    /**
+     * Vector Similarity Function for VECTOR index.
+     */
+    private QueryVectorField.SimilarityFunction similarityFunction;
 
     /**
      * Creates an empty index. Should be populated via setters.
@@ -273,6 +279,15 @@ public class QueryIndex implements Serializable {
     }
 
     /**
+     * Gets the Vector Similarity Function for Vector Indexes
+     *
+     * @return Similarity Function.
+     */
+    public QueryVectorField.SimilarityFunction getSimilarityFunction() {
+        return similarityFunction;
+    }
+
+    /**
      * Sets index inline size in bytes. When enabled part of indexed value will be placed directly to index pages,
      * thus minimizing data page accesses, thus increasing query performance.
      * <p>
@@ -292,6 +307,17 @@ public class QueryIndex implements Serializable {
     public QueryIndex setInlineSize(int inlineSize) {
         this.inlineSize = inlineSize;
 
+        return this;
+    }
+
+    /**
+     * Sets the Vector Similarity Function for VECTOR Index
+     *
+     * @param similarityFunction Vector Similarity Function.
+     * @return {@code this} for chaining.
+     */
+    public QueryIndex setSimilarityFunction(QueryVectorField.SimilarityFunction similarityFunction) {
+        this.similarityFunction = similarityFunction;
         return this;
     }
 

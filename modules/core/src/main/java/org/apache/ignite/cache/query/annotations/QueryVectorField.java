@@ -33,5 +33,49 @@ import org.apache.ignite.internal.processors.cache.query.CacheQuery;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.TYPE})
 public @interface QueryVectorField {
-    // No-op.
+    /**
+     * Returns similarityFunction for a vector field.
+     * @return similarityFunction for a vector field.
+     */
+    SimilarityFunction similarityFunction() default SimilarityFunction.COSINE;
+
+    public static enum SimilarityFunction {
+        COSINE(1),
+        DOT_PRODUCT(2),
+        EUCLIDEAN(3),
+        MAXIMUM_INNER_PRODUCT(4);
+
+        /** Similarity Function id. */
+        private final int similarityFunctionId;
+
+        /**
+         * @param id Similarity Function ID.
+         */
+        SimilarityFunction(int id) {
+            similarityFunctionId = id;
+        }
+
+        /**
+         * Returns the integer ID of this similarity function.
+         * @return The similarity function ID.
+         */
+        public int getSimilarityFunctionId() {
+            return similarityFunctionId;
+        }
+
+        /**
+         * Converts an integer ID to the corresponding SimilarityFunction.
+         * @param id The similarity function ID.
+         * @return The SimilarityFunction corresponding to the ID.
+         * @throws IllegalArgumentException if the ID doesn't match any similarity function.
+         */
+        public static SimilarityFunction fromId(int id) {
+            for (SimilarityFunction func : values()) {
+                if (func.getSimilarityFunctionId() == id) {
+                    return func;
+                }
+            }
+            throw new IllegalArgumentException("No similarity function with ID: " + id);
+        }
+    }
 }

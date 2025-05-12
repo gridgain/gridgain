@@ -54,6 +54,7 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.eviction.EvictionPolicy;
 import org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy;
 import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy;
+import org.apache.ignite.cache.query.annotations.QueryVectorField;
 import org.apache.ignite.configuration.AtomicConfiguration;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -689,11 +690,28 @@ public class PlatformConfigurationUtils {
      * @return Query index.
      */
     public static QueryIndex readQueryIndex(BinaryRawReader in) {
+        return readQueryIndex(in, false);
+    }
+
+    /**
+     * Reads the query index.
+     *
+     * @param in Reader.
+     * @param hasVectorSimilarity whether the similarity function is defined.
+     * @return Query index.
+     */
+    public static QueryIndex readQueryIndex(BinaryRawReader in, boolean hasVectorSimilarity) {
         QueryIndex res = new QueryIndex();
 
         res.setName(in.readString());
         res.setIndexType(QueryIndexType.values()[in.readByte()]);
         res.setInlineSize(in.readInt());
+
+        //check if similarity function feature is supported
+        if (hasVectorSimilarity) {
+            int similarityFunctionInt = in.readInt();
+            res.setSimilarityFunction(QueryVectorField.SimilarityFunction.fromId(similarityFunctionInt));
+        }
 
         int cnt = in.readInt();
 
