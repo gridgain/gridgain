@@ -75,7 +75,7 @@ public @interface QueryVectorField {
                     return func;
                 }
             }
-            throw new IllegalArgumentException("No similarity function with ID: " + id);
+            return COSINE;
         }
     }
 }
