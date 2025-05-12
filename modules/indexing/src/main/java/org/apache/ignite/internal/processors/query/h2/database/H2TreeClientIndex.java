@@ -58,6 +58,8 @@ public class H2TreeClientIndex extends H2TreeIndexBase {
      * @param idxName Index name.
      * @param pk Primary key.
      * @param colsList Indexed columns.
+     * @param inlineSize Inline size.
+     * @param log Logger.
      * @return Index.
      */
     public static H2TreeClientIndex createIndex(
