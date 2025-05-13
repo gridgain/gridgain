@@ -37,7 +37,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 /**
- *
+ * Based on {@link PageEvictionAbstractTest}. Reusing it was too inconvenient.
  */
 public abstract class PageEvictionLargeEntriesAbstractTest extends GridCommonAbstractTest {
     /** Page size. */
@@ -212,11 +212,6 @@ public abstract class PageEvictionLargeEntriesAbstractTest extends GridCommonAbs
 
             cache.put(i, new TestObject(LARGE_ENTRY_SIZE / Integer.BYTES));
 
-//            if (r.nextInt() % 5 == 0)
-//                cache.put(i, new TestObject(PAGE_SIZE / 4 - 50 + r.nextInt(5000))); // Fragmented object.
-//            else
-//                cache.put(i, new TestObject(r.nextInt(PAGE_SIZE / 4 - 50))); // Fits in one page.
-
             if (r.nextInt() % 7 == 0)
                 cache.get(r.nextInt(i)); // Touch.
             else if (r.nextInt() % 11 == 0)
@@ -232,8 +227,8 @@ public abstract class PageEvictionLargeEntriesAbstractTest extends GridCommonAbs
 
         System.out.println(">>> Resulting size: " + resultingSize);
 
-//        // Eviction started, no OutOfMemory occurred, success.
-//        assertTrue(resultingSize < ENTRIES * 10 / 11);
+        // Eviction started, no OutOfMemory occurred, success.
+        assertTrue(resultingSize < ENTRIES * 10 / 11);
 
         clientGrid().destroyCache(cfg.getName());
     }

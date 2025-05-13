@@ -6405,18 +6405,17 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     }
 
     /**
-     * A generic visitor-style interface for performing filtering/modifications/miscellaneous operations on the tree.
+     * A generic visitor-style interface for reading values from the tree..
      */
     public interface TreeRowMapper<L, T extends L, R> {
         /**
-         * Performs inspection or operation on a specified row and returns true if this row is
-         * required or matches or /operation successful (depending on the context).
+         * Performs inspection or operation on a specified row and returns the result.
          *
          * @param tree The tree.
          * @param io The tree IO object.
          * @param pageAddr The page address.
          * @param idx The item index.
-         * @return {@code True} if the item passes the predicate.
+         * @return The result..
          * @throws IgniteCheckedException If failed.
          */
         public @Nullable R apply(BPlusTree<L, T> tree, BPlusIO<L> io, long pageAddr, int idx)
