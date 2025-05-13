@@ -125,49 +125,6 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
         } while (!success);
     }
 
-    private int findPageForEviction(ThreadLocalRandom rnd) {
-        int lruTrackingIdx = -1;
-
-        int lruCompactTs = Integer.MAX_VALUE;
-
-        int dataPagesCnt = 0;
-
-        int sampleSpinCnt = 0;
-
-        while (dataPagesCnt < SAMPLE_SIZE) {
-            int trackingIdx = rnd.nextInt(trackingSize);
-
-            int firstTs = firstTimestamp(trackingIdx);
-
-            int secondTs = secondTimestamp(trackingIdx);
-
-            int minTs = Math.min(firstTs, secondTs);
-
-            int maxTs = Math.max(firstTs, secondTs);
-
-            if (maxTs != 0) {
-                // We chose data page with at least one touch.
-                if (minTs < lruCompactTs) {
-                    lruTrackingIdx = trackingIdx;
-
-                    lruCompactTs = minTs;
-                }
-
-                dataPagesCnt++;
-            }
-
-            sampleSpinCnt++;
-
-            if (sampleSpinCnt > SAMPLE_SPIN_LIMIT) {
-                LT.warn(log, "Too many attempts to choose data page: " + SAMPLE_SPIN_LIMIT);
-
-                return -1;
-            }
-        }
-
-        return lruTrackingIdx;
-    }
-
     /** {@inheritDoc} */
     @Override public void evictDataPage() throws IgniteCheckedException {
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
@@ -175,7 +132,48 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
         int evictAttemptsCnt = 0;
 
         while (evictAttemptsCnt < EVICT_ATTEMPTS_LIMIT) {
-            int lruTrackingIdx = findPageForEviction(rnd);
+            int lruTrackingIdx = -1;
+
+            int lruCompactTs = Integer.MAX_VALUE;
+
+            int dataPagesCnt = 0;
+
+            int sampleSpinCnt = 0;
+
+            while (dataPagesCnt < SAMPLE_SIZE) {
+                int trackingIdx = rnd.nextInt(trackingSize);
+
+                int firstTs = firstTimestamp(trackingIdx);
+
+                int secondTs = secondTimestamp(trackingIdx);
+
+                int minTs = Math.min(firstTs, secondTs);
+
+                int maxTs = Math.max(firstTs, secondTs);
+
+                if (maxTs != 0) {
+                    // We chose data page with at least one touch.
+                    if (minTs < lruCompactTs) {
+                        lruTrackingIdx = trackingIdx;
+
+                        lruCompactTs = minTs;
+                    }
+
+                    dataPagesCnt++;
+                }
+
+                sampleSpinCnt++;
+
+                if (sampleSpinCnt > SAMPLE_SPIN_LIMIT) {
+                    LT.warn(log, "Too many attempts to choose data page: " + SAMPLE_SPIN_LIMIT);
+
+                    lruTrackingIdx = -1;
+                    break;
+                }
+            }
+            if (lruTrackingIdx == 0) {
+                lruTrackingIdx = lruTrackingIdx;
+            }
 
             if (lruTrackingIdx < 0)
                 break;
