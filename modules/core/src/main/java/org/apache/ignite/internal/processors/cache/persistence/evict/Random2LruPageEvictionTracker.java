@@ -171,9 +171,6 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
                     break;
                 }
             }
-            if (lruTrackingIdx == 0) {
-                lruTrackingIdx = lruTrackingIdx;
-            }
 
             if (lruTrackingIdx < 0)
                 break;
@@ -184,7 +181,7 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
             evictAttemptsCnt++;
         }
 
-        while (evictAttemptsCnt < EVICT_ATTEMPTS_LIMIT) {
+        for (evictAttemptsCnt = 0; evictAttemptsCnt < EVICT_ATTEMPTS_LIMIT; evictAttemptsCnt++) {
             if (evictRandomRow(rnd))
                 return;
         }
@@ -195,36 +192,35 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
     private boolean evictRandomRow(Random rnd) throws IgniteCheckedException {
         List<CacheDataRowAdapter> randomRows = findRandomRows(rnd, SAMPLE_SIZE);
 
-        if (!randomRows.isEmpty()) {
-            int lruCompactTs = Integer.MAX_VALUE;
+        if (randomRows.isEmpty())
+            return false;
 
-            CacheDataRowAdapter minRow = randomRows.get(0);
+        int lruCompactTs = Integer.MAX_VALUE;
 
-            for (CacheDataRowAdapter randomRow : randomRows) {
-                int trackingIdx = trackingIdx(PageIdUtils.pageIndex(randomRow.link()));
+        CacheDataRowAdapter minRow = randomRows.get(0);
 
-                int firstTs = firstTimestamp(trackingIdx);
+        for (CacheDataRowAdapter randomRow : randomRows) {
+            int trackingIdx = trackingIdx(PageIdUtils.pageIndex(randomRow.link()));
 
-                int secondTs = secondTimestamp(trackingIdx);
+            int firstTs = firstTimestamp(trackingIdx);
 
-                int minTs = Math.min(firstTs, secondTs);
+            int secondTs = secondTimestamp(trackingIdx);
 
-                int maxTs = Math.max(firstTs, secondTs);
+            int minTs = Math.min(firstTs, secondTs);
 
-                if (maxTs != 0) {
-                    // We chose data page with at least one touch.
-                    if (minTs < lruCompactTs) {
-                        lruCompactTs = minTs;
+            int maxTs = Math.max(firstTs, secondTs);
 
-                        minRow = randomRow;
-                    }
+            if (maxTs != 0) {
+                // We chose data page with at least one touch.
+                if (minTs < lruCompactTs) {
+                    lruCompactTs = minTs;
+
+                    minRow = randomRow;
                 }
             }
-
-            return evictDataPage(PageIdUtils.pageIndex(minRow.link()));
         }
 
-        return false;
+        return evictDataPage(PageIdUtils.pageIndex(minRow.link()));
     }
 
     /** {@inheritDoc} */

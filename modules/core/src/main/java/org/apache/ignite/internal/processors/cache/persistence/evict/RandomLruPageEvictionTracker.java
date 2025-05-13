@@ -188,9 +188,6 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
                     break;
                 }
             }
-            if (lruTrackingIdx == 0) {
-                lruTrackingIdx = lruTrackingIdx;
-            }
 
             if (lruTrackingIdx < 0)
                 break;
@@ -201,7 +198,7 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
             evictAttemptsCnt++;
         }
 
-        while (evictAttemptsCnt < EVICT_ATTEMPTS_LIMIT) {
+        for (evictAttemptsCnt = 0; evictAttemptsCnt < EVICT_ATTEMPTS_LIMIT; evictAttemptsCnt++) {
             if (evictRandomRow(rnd))
                 return;
         }
@@ -212,28 +209,27 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
     private boolean evictRandomRow(Random rnd) throws IgniteCheckedException {
         List<CacheDataRowAdapter> randomRows = findRandomRows(rnd, SAMPLE_SIZE);
 
-        if (!randomRows.isEmpty()) {
-            int lruCompactTs = Integer.MAX_VALUE;
+        if (randomRows.isEmpty())
+            return false;
 
-            CacheDataRowAdapter minRow = randomRows.get(0);
+        int lruCompactTs = Integer.MAX_VALUE;
 
-            for (CacheDataRowAdapter randomRow : randomRows) {
-                int sampleTrackingIdx = trackingIdx(PageIdUtils.pageIndex(randomRow.link()));
+        CacheDataRowAdapter minRow = randomRows.get(0);
 
-                int compactTs = trackingTimestamp(sampleTrackingIdx);
+        for (CacheDataRowAdapter randomRow : randomRows) {
+            int sampleTrackingIdx = trackingIdx(PageIdUtils.pageIndex(randomRow.link()));
 
-                // We chose data page with at least one touch.
-                if (compactTs != 0 && compactTs < lruCompactTs) {
-                    lruCompactTs = compactTs;
+            int compactTs = trackingTimestamp(sampleTrackingIdx);
 
-                    minRow = randomRow;
-                }
+            // We chose data page with at least one touch.
+            if (compactTs != 0 && compactTs < lruCompactTs) {
+                lruCompactTs = compactTs;
+
+                minRow = randomRow;
             }
-
-            return evictDataPage(PageIdUtils.pageIndex(minRow.link()));
         }
 
-        return false;
+        return evictDataPage(PageIdUtils.pageIndex(minRow.link()));
     }
 
     /** {@inheritDoc} */
