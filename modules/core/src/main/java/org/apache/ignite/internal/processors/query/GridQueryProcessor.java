@@ -1098,7 +1098,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         if (ctx.discovery().localNode().isClient())
             enrichConfiguration(cacheDesc);
 
-        GridCacheContextInfo cacheInfo = new GridCacheContextInfo(cacheDesc, ctx);
+        GridCacheContextInfo cacheInfo = new GridCacheContextInfo(cacheDesc);
 
         onCacheStart(cacheInfo, schema, cacheDesc.sql());
     }
@@ -1921,7 +1921,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             GridCacheContext<?, ?> cctx = ctx.cache().context().cacheContext(CU.cacheId(cacheName));
 
             if (cctx != null)
-                cacheInfo = new GridCacheContextInfo<>(cctx, ctx, false);
+                cacheInfo = new GridCacheContextInfo<>(cctx, false);
             else
                 return;
 

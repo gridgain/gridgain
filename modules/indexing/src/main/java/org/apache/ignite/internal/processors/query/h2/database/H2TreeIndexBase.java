@@ -102,7 +102,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
      * header size, L - size of the child link, X - overhead per item.
      */
     static int maxAllowedInlineSize(IgniteConfiguration cfg, boolean mvccEnabled) {
-        int configuredPageSize = cfg.getDataStorageConfiguration() == null
+        int configuredPageSize = cfg.getDataStorageConfiguration() != null
                 ? cfg.getDataStorageConfiguration().getPageSize() : DataStorageConfiguration.DFLT_PAGE_SIZE;
 
         EncryptionSpi encSpi = cfg.getEncryptionSpi();

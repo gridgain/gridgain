@@ -995,7 +995,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     boolean rmvIdx = !cache.context().group().persistenceEnabled();
 
                     // Re-create cache structures inside indexing in order to apply recent schema changes.
-                    GridCacheContextInfo cacheInfo = new GridCacheContextInfo(cache.context(), ctx, false);
+                    GridCacheContextInfo cacheInfo = new GridCacheContextInfo(cache.context(), false);
 
                     ctx.query().onCacheStop0(cacheInfo, rmvIdx, rmvIdx);
                     ctx.query().onCacheStart0(cacheInfo, desc.schema(), desc.sql());
@@ -1062,7 +1062,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             if (callDestroy)
                 cache.removeMetrics();
 
-            GridCacheContextInfo cacheInfo = new GridCacheContextInfo(ctx, this.ctx, false);
+            GridCacheContextInfo cacheInfo = new GridCacheContextInfo(ctx, false);
 
             if (clearDbObjects) {
                 boolean rmvIdx = !cache.context().group().persistenceEnabled() || callDestroy;
@@ -1933,7 +1933,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                         if (!cctx.isRecoveryMode()) {
                             ctx.query().onCacheStart(
-                                new GridCacheContextInfo(cctx, ctx, cacheInfo.isClientCache()),
+                                new GridCacheContextInfo(cctx, cacheInfo.isClientCache()),
                                 cacheInfo.getCacheDescriptor().schema() != null
                                     ? cacheInfo.getCacheDescriptor().schema()
                                     : new QuerySchema(),
@@ -1996,7 +1996,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             finishRecovery(exchTopVer, cacheCtx);
         else {
             ctx.query().onCacheStart(
-                    new GridCacheContextInfo(cacheCtx, ctx, clientCache),
+                    new GridCacheContextInfo(cacheCtx, clientCache),
                     desc.schema() != null ? desc.schema() : new QuerySchema(),
                     desc.sql()
             );
@@ -2407,7 +2407,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         grpCtx.onCacheStarted(cacheCtx);
 
-        ctx.query().onCacheStart(new GridCacheContextInfo(cacheCtx, ctx, false),
+        ctx.query().onCacheStart(new GridCacheContextInfo(cacheCtx, false),
             desc.schema() != null ? desc.schema() : new QuerySchema(), desc.sql());
 
         if (log.isInfoEnabled()) {
