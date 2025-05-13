@@ -36,6 +36,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.SwitchSegmentRecord;
@@ -374,8 +375,12 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
                     return;
 
                 if (fsyncDelay > 0 && !stop.get()) {
-                    // Delay fsync to collect as many updates as possible: trade latency for throughput.
-                    U.await(fsync, fsyncDelay, TimeUnit.NANOSECONDS);
+                    try {
+                        U.await(fsync, fsyncDelay, TimeUnit.NANOSECONDS);
+                    } catch (IgniteInterruptedCheckedException ignored) {
+                        // Current thread is interrupted, but we still can try to do fsync.
+                        // It can be a non-optimal way, however it is better than aborting the user operation.
+                    }
 
                     if (!needFsync(ptr))
                         return;
