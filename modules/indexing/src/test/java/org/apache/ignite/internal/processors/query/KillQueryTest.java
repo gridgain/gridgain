@@ -110,6 +110,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.resolveIgnitePath;
 @WithSystemProperty(key = IgniteSystemProperties.IGNITE_SQL_MAX_EXTRACTED_PARTS_FROM_BETWEEN, value = "21")
 public class KillQueryTest extends GridCommonAbstractTest {
     public static final String QUERY_WASN_T_ACTUALLY_CANCELLED = "Query wasn't actually cancelled.";
+    public static final String QUERY_RUN_LONG_AFTER_CANCEL = "Query is running too long since it was canceled.";
 
     /** Generates values for the {@link #asyncCancel} parameter. */
     @Parameterized.Parameters(name = "asyncCancel = {0}")
@@ -176,6 +177,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
     /** Listener to check that query wasn't actually cancelled. Mostly required to check MAP fragments. */
     private LogListener notCancelledErrLsnr = LogListener.matches(QUERY_WASN_T_ACTUALLY_CANCELLED).build();
+
+    /** Listener to check that query runs too long after cancellation. Mostly required to check MAP fragments. */
+    private LogListener runningToLongErrLsnr = LogListener.matches(QUERY_RUN_LONG_AFTER_CANCEL).build();
 
     @Override protected long getTestTimeout() {
         return 10_000L;
@@ -365,7 +369,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         MockedIndexing.resetToDefault();
 
-        lsnLog.registerListener(notCancelledErrLsnr);
+        lsnLog.registerAllListeners(notCancelledErrLsnr, runningToLongErrLsnr);
     }
 
     /**
@@ -390,6 +394,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
         assertTrue(ignite.context().query().runningQueries(-1).isEmpty());
 
         assertFalse(notCancelledErrLsnr.check());
+        assertFalse(runningToLongErrLsnr.check());
 
         lsnLog.clearListeners();
     }
@@ -1406,7 +1411,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
         @QuerySqlFunction
         public static boolean shouldNotBeCalledMoreThan(int times) {
             if (funCallCnt.incrementAndGet() >= times)
-                fail("Query is running too long since it was canceled.");
+                fail(QUERY_RUN_LONG_AFTER_CANCEL);
 
             return true;
         }
