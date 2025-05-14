@@ -1231,13 +1231,18 @@ public class GridReduceQueryExecutor {
         if (log.isDebugEnabled())
             log.debug("Sending: [msg=" + msg + ", nodes=" + nodes + ", specialize=" + specialize + "]");
 
+        byte ioPolicy = GridIoPolicy.QUERY_POOL;
+        // Kill of map fragments shouldn't depend on a free/busy QUERY pool, so we will execute it in a management pool.
+        if (msg instanceof GridQueryCancelRequest)
+            ioPolicy = GridIoPolicy.MANAGEMENT_POOL;
+
         return h2.send(GridTopic.TOPIC_QUERY,
             GridTopic.TOPIC_QUERY.ordinal(),
             nodes,
             msg,
             specialize,
             locNodeHnd,
-            GridIoPolicy.QUERY_POOL,
+            ioPolicy,
             runLocParallel
         );
     }

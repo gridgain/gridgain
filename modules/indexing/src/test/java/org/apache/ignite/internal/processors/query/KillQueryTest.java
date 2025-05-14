@@ -109,6 +109,10 @@ import static org.apache.ignite.internal.util.IgniteUtils.resolveIgnitePath;
 // see org.apache.ignite.internal.processors.query.h2.affinity.PartitionExtractor.tryExtractBetween
 @WithSystemProperty(key = IgniteSystemProperties.IGNITE_SQL_MAX_EXTRACTED_PARTS_FROM_BETWEEN, value = "21")
 public class KillQueryTest extends GridCommonAbstractTest {
+    public static final String QUERY_WASN_T_ACTUALLY_CANCELLED = "Query wasn't actually cancelled.";
+
+    public static final String QUERY_RUN_LONG_AFTER_CANCEL = "Query is running too long since it was canceled.";
+
     /** Generates values for the {@link #asyncCancel} parameter. */
     @Parameterized.Parameters(name = "asyncCancel = {0}")
     public static Iterable<Object[]> valuesForAsync() {
@@ -172,6 +176,16 @@ public class KillQueryTest extends GridCommonAbstractTest {
     /** Listening logger. */
     private static ListeningTestLogger lsnLog;
 
+    /** Listener to check that query wasn't actually cancelled. Mostly required to check MAP fragments. */
+    private LogListener notCancelledErrLsnr = LogListener.matches(QUERY_WASN_T_ACTUALLY_CANCELLED).build();
+
+    /** Listener to check that query runs too long after cancellation. Mostly required to check MAP fragments. */
+    private LogListener runningToLongErrLsnr = LogListener.matches(QUERY_RUN_LONG_AFTER_CANCEL).build();
+
+    @Override protected long getTestTimeout() {
+        return 10_000L;
+    }
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -227,6 +241,10 @@ public class KillQueryTest extends GridCommonAbstractTest {
                 super.sendCustomEvent(msg);
             }
         }.setIpFinder(IP_FINDER));
+
+        // It is important to have just single thread for the query execution pool
+        // to check the ability to cancel queries, even query pool is busy.
+        cfg.setQueryThreadPoolSize(1);
 
         return cfg;
     }
@@ -351,6 +369,8 @@ public class KillQueryTest extends GridCommonAbstractTest {
         igniteForKillRequest = getKillRequestNode();
 
         MockedIndexing.resetToDefault();
+
+        lsnLog.registerAllListeners(notCancelledErrLsnr, runningToLongErrLsnr);
     }
 
     /**
@@ -373,6 +393,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
         conn.close();
 
         assertTrue(ignite.context().query().runningQueries(-1).isEmpty());
+
+        assertFalse(notCancelledErrLsnr.check());
+        assertFalse(runningToLongErrLsnr.check());
 
         lsnLog.clearListeners();
     }
@@ -1389,7 +1412,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
         @QuerySqlFunction
         public static boolean shouldNotBeCalledMoreThan(int times) {
             if (funCallCnt.incrementAndGet() >= times)
-                fail("Query is running too long since it was canceled.");
+                fail(QUERY_RUN_LONG_AFTER_CANCEL);
 
             return true;
         }
@@ -1401,7 +1424,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
          */
         @QuerySqlFunction
         public static long shouldNotBeCalledInCaseOfCancellation() {
-            fail("Query wasn't actually cancelled.");
+            fail(QUERY_WASN_T_ACTUALLY_CANCELLED);
 
             return 0;
         }
