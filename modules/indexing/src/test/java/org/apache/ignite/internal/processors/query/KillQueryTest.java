@@ -110,6 +110,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.resolveIgnitePath;
 @WithSystemProperty(key = IgniteSystemProperties.IGNITE_SQL_MAX_EXTRACTED_PARTS_FROM_BETWEEN, value = "21")
 public class KillQueryTest extends GridCommonAbstractTest {
     public static final String QUERY_WASN_T_ACTUALLY_CANCELLED = "Query wasn't actually cancelled.";
+
     public static final String QUERY_RUN_LONG_AFTER_CANCEL = "Query is running too long since it was canceled.";
 
     /** Generates values for the {@link #asyncCancel} parameter. */
