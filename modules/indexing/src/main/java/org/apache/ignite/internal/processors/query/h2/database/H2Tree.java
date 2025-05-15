@@ -96,6 +96,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** */
     private final int inlineSize;
 
+    /** Maximum inline size for this tree to make sure that at least two items could be stored on a page. */
+    private final int maxAllowedInlineSize;
+
     /** List of helpers to work with inline values on the page. */
     private final List<InlineIndexColumn> inlineIdxs;
 
@@ -252,6 +255,17 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         this.affinityKey = affinityKey;
         this.mvccEnabled = mvccEnabled;
 
+        // For case of index tree cleanup.
+        if (table != null) {
+            this.maxAllowedInlineSize = H2TreeIndexBase.maxAllowedInlineSize(
+                    table.isPersistIndexes(),
+                    table.cacheInfo().kctx().config(),
+                    mvccEnabled
+            );
+        }
+        else
+            this.maxAllowedInlineSize = 0;
+
         if (!initNew) {
             // Page is ready - read meta information.
             MetaPageInfo metaInfo = getMetaInfo();
@@ -319,6 +333,14 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 upgradeMetaPage(inlineObjSupported);
         }
         else {
+            if (configuredInlineSize > maxAllowedInlineSize) {
+                throw new IgniteCheckedException("Inline size is too big [cacheName=" + cacheName +
+                        ", tableName=" + tblName +
+                        ", idxName=" + idxName +
+                        ", configuredInlineSize=" + configuredInlineSize +
+                        ", maxAllowedInlineSize=" + maxAllowedInlineSize + ']');
+            }
+
             unwrappedPk = true;
 
             useLegacyComparator = false;
@@ -329,8 +351,14 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             inlineIdxs = getAvailableInlineColumns(affinityKey, cacheName, idxName, log, pk,
                 table, cols, factory, true);
 
-            inlineSize = computeInlineSize(idxName, inlineIdxs, configuredInlineSize,
-                    cctx.config().getSqlIndexMaxInlineSize(), log);
+            inlineSize = computeInlineSize(
+                    idxName,
+                    inlineIdxs,
+                    configuredInlineSize,
+                    cctx.config().getSqlIndexMaxInlineSize(),
+                    maxAllowedInlineSize,
+                    log
+            );
 
             setIos(
                 H2ExtrasInnerIO.getVersions(inlineSize, mvccEnabled),
@@ -850,7 +878,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             colNames.add(index.columnName());
         }
 
-        if (newSize > inlineSize()) {
+        if (newSize > inlineSize() && newSize <= maxAllowedInlineSize) {
             int oldSize;
 
             while (true) {
@@ -864,8 +892,6 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             }
 
             String cols = colNames.stream().collect(Collectors.joining(", ", "(", ")"));
-
-            String idxType = pk ? "PRIMARY KEY" : affinityKey ? "AFFINITY KEY (implicit)" : "SECONDARY";
 
             String recommendation;
 
@@ -886,12 +912,18 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 ", tableName=" + tblName +
                 ", idxName=" + idxName +
                 ", idxCols=" + cols +
-                ", idxType=" + idxType +
+                ", idxType=" + idxType() +
                 ", curSize=" + inlineSize() +
                 ", recommendedInlineSize=" + newSize + "]";
 
             U.warn(log, warn);
         }
+    }
+
+    private String idxType() {
+        return pk
+                ? "PRIMARY KEY"
+                : affinityKey ? "AFFINITY KEY (implicit)" : "SECONDARY";
     }
 
     /** {@inheritDoc} */

@@ -22,14 +22,20 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.BytesInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.StringInlineIndexColumn;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2IOUtils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.encryption.EncryptionSpi;
 import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.index.IndexType;
@@ -91,9 +97,27 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
     }
 
     /**
+     * To avoid tree corruption, at least two items should fit into one page.
+     * So maximum payload size equals: P = (PS - H - 3L) / 2 - X , where P - Payload size, PS - page size, H - page
+     * header size, L - size of the child link, X - overhead per item.
+     */
+    static int maxAllowedInlineSize(boolean persistIndexes, IgniteConfiguration cfg, boolean mvccEnabled) {
+        int configuredPageSize = cfg.getDataStorageConfiguration() != null
+                ? cfg.getDataStorageConfiguration().getPageSize() : DataStorageConfiguration.DFLT_PAGE_SIZE;
+        EncryptionSpi encSpi = cfg.getEncryptionSpi();
+
+        // Encryption is not used for no store memory.
+        int realPageSize = persistIndexes ? CU.encryptedPageSize(configuredPageSize, encSpi) : configuredPageSize;
+
+        return (realPageSize - BPlusIO.ITEMS_OFF - 3 * AbstractDataPageIO.LINK_SIZE)
+                / 2 - H2IOUtils.itemOverhead(mvccEnabled);
+    }
+
+    /**
      * @param inlineIdxs Inline index helpers.
      * @param cfgInlineSize Inline size from cache config.
      * @param maxInlineSize Max inline size from cache config.
+     * @param maxAllowedInlineSize Max allowed inline size, calculated from page size.
      * @return Inline size.
      */
     static int computeInlineSize(
@@ -101,6 +125,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
             List<InlineIndexColumn> inlineIdxs,
             int cfgInlineSize,
             int maxInlineSize,
+            int maxAllowedInlineSize,
             IgniteLogger log) {
         if (cfgInlineSize == 0)
             return 0;
@@ -144,7 +169,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
         }
 
         if (cfgInlineSize != -1) {
-            cfgInlineSize = Math.min(PageIO.MAX_PAYLOAD_SIZE, cfgInlineSize);
+            cfgInlineSize = Math.min(maxAllowedInlineSize, cfgInlineSize);
 
             if (fixedSize && size < cfgInlineSize) {
                 log.warning("Explicit INLINE_SIZE for fixed size index item is too big. " +
@@ -157,7 +182,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
             return cfgInlineSize;
         }
 
-        return Math.min(PageIO.MAX_PAYLOAD_SIZE, size);
+        return Math.min(maxAllowedInlineSize, size);
     }
 
     /**

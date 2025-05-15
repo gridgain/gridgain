@@ -54,6 +54,7 @@ import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
@@ -61,6 +62,7 @@ import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -74,6 +76,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.ByteArrayed;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Dated;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.SqlStrConvertedValHolder;
@@ -81,6 +84,7 @@ import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCover
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.database.H2Tree.IGNITE_THROTTLE_INLINE_SIZE_CALCULATION;
 import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex.SCAN_INDEX_NAME_SUFFIX;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
  * A set of basic tests for caches with indexes.
@@ -1982,6 +1986,100 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         }
 
         assertTrue(lsnr.check());
+    }
+
+    /** */
+    @Test
+    public void testCreateIndexFailsWhenInlineSizeInDdlExceedsMax() throws Exception {
+        inlineSize = -1;
+
+        startGrid();
+
+        sql("CREATE TABLE TEST (ID VARCHAR, ID_AFF INT, VAL INT, PRIMARY KEY (ID, ID_AFF))");
+
+        // We need a value, that exceeds calculated calculated max allowed inline size for sure.
+        int idxInlineSize = PageIO.MAX_PAYLOAD_SIZE;
+        assertThrows(
+                log,
+                () -> sql("CREATE INDEX FAILING_IDX ON TEST (VAL) inline_size " + idxInlineSize),
+                IgniteSQLException.class,
+                "Inline size is too big [cacheName=TEST" +
+                        ", tableName=SQL_PUBLIC_TEST" +
+                        ", idxName=FAILING_IDX" +
+                        ", configuredInlineSize=" + idxInlineSize +
+                        ", maxAllowedInlineSize="
+        );
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_MAX_INDEX_PAYLOAD_SIZE, value = Integer.MAX_VALUE + "")
+    public void testMaxInlineSizeUsedWhenExceeded() throws Exception {
+        inlineSize = -1;
+
+        IgniteEx ign = startGrid();
+
+        // We need a value, that exceeds calculated max allowed inline size for sure.
+        int idxColSize = PageIO.MAX_PAYLOAD_SIZE;
+
+        sql("CREATE TABLE TEST (ID VARCHAR(" + idxColSize + "), ID_AFF VARCHAR, PRIMARY KEY (ID))");
+
+        GridH2Table tbl = ((IgniteH2Indexing)ign.context().query().getIndexing()).schemaManager().dataTable("PUBLIC", "TEST");
+
+        // Exact value is calculated and is not known.
+        assertTrue(((H2TreeIndex)tbl.getIndex("_key_PK")).inlineSize() <= PageIO.MAX_PAYLOAD_SIZE);
+    }
+
+    /** */
+    @Test
+    public void testCreateSystemIndexFailsWhenConfiguredInlineSizeExceedsMax() {
+        // We need value, that exceeds calculated max allowed inline size for sure.
+        inlineSize = (int) PageIO.MAX_PAYLOAD_SIZE;
+        indexes = Collections.singletonList(new QueryIndex("valStr"));
+
+        String expMsg = "Inline size is too big [cacheName=VAL" +
+                ", tableName=default" +
+                ", idxName=VAL_VALSTR_ASC_IDX" +
+                ", configuredInlineSize=" + inlineSize +
+                ", maxAllowedInlineSize=";
+
+        assertThrows(
+                log,
+                () -> startGrid(),
+                IgniteCheckedException.class,
+                expMsg
+        );
+    }
+
+    /** */
+    @Test
+    public void testCreateSystemIndexFailsWhenInlineSizeSetInDdlExceedsMax() throws Exception {
+        inlineSize = -1;
+        short idxInlineSize = PageIO.MAX_PAYLOAD_SIZE;
+        String expMsg = "Inline size is too big [cacheName=TEST" +
+                ", tableName=SQL_PUBLIC_TEST" +
+                ", idxName=_key_PK" +
+                ", configuredInlineSize=" + idxInlineSize +
+                ", maxAllowedInlineSize=";
+
+        startGrid();
+
+        // Actual reason is suppressed.
+        IgniteSQLException e = assertThrows(
+                log,
+                () -> sql("CREATE TABLE TEST (ID VARCHAR, ID_AFF INT, VAL INT, "
+                        + "PRIMARY KEY (ID, ID_AFF)) WITH"
+                        + "\""
+                        + "AFFINITY_KEY=ID_AFF,"
+                        + "PK_INLINE_SIZE=" + idxInlineSize + ","
+                        + "AFFINITY_INDEX_INLINE_SIZE=" + idxInlineSize
+                        + "\""
+                ),
+                IgniteSQLException.class,
+                "Failed to complete exchange process"
+        );
+
+        assertTrue(X.hasCause(e, expMsg, IgniteCheckedException.class));
     }
 
     /** */

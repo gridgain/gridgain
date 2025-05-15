@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache;
 
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.schema.operation.SchemaAddQueryEntityOperation;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -34,6 +35,9 @@ public class GridCacheContextInfo<K, V> {
 
     /** Dynamic cache deployment ID. */
     private final IgniteUuid dynamicDeploymentId;
+
+    /** Kernel context. */
+    private final GridKernalContext kctx;
 
     /** Cache configuration. */
     private volatile CacheConfiguration<K, V> config;
@@ -62,6 +66,7 @@ public class GridCacheContextInfo<K, V> {
         this.clientCache = clientCache;
 
         this.cctx = cctx;
+        this.kctx = cctx.kernalContext();
     }
 
     /**
@@ -76,6 +81,7 @@ public class GridCacheContextInfo<K, V> {
         cacheId = CU.cacheId(config.getName());
 
         clientCache = true;
+        this.kctx = cacheDesc.kctx();
     }
 
     /**
@@ -136,6 +142,13 @@ public class GridCacheContextInfo<K, V> {
      */
     @Nullable public GridCacheContext<K, V> cacheContext() {
         return cctx;
+    }
+
+    /**
+     * @return Kernal context.
+     */
+    public GridKernalContext kctx() {
+        return kctx;
     }
 
     /**

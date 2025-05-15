@@ -42,6 +42,10 @@ import org.gridgain.internal.h2.value.TypeInfo;
 import org.gridgain.internal.h2.value.Value;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT;
+import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE;
+import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.computeInlineSize;
+
 /** Tests for the computation of default inline size. */
 public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
 
@@ -49,7 +53,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
      * Test to check calculation of the default size for {@link StringInlineIndexColumn}.
      *
      * Steps:
-     * 1) Call {@link H2TreeIndexBase#computeInlineSize(String, java.util.List, int, int, org.apache.ignite.IgniteLogger)} function for {@link StringInlineIndexColumn}.
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize} function for {@link StringInlineIndexColumn}.
      * 2) Check that computed size is equal to default length for variable types.
      */
     @Test
@@ -59,14 +63,14 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, -1, -1, log));
+        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
     }
 
     /**
      * Test to check calculation of the default size for {@link BytesInlineIndexColumn}.
      *
      * Steps:
-     * 1) Call {@link H2TreeIndexBase#computeInlineSize(String, java.util.List, int, int, org.apache.ignite.IgniteLogger)} function for {@link BytesInlineIndexColumn}.
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize} function for {@link BytesInlineIndexColumn}.
      * 2) Check that computed size is equal to default length for variable types.
      */
     @Test
@@ -76,19 +80,19 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, -1, -1, log));
+        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
     }
 
     /**
      * Test to check calculation of the default size for {@link StringInlineIndexColumn} with defined length.
      *
      * Steps:
-     * 1) Call {@link H2TreeIndexBase#computeInlineSize(String, java.util.List, int, int, org.apache.ignite.IgniteLogger)} function for {@link StringInlineIndexColumn} with defined length.
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize} function for {@link StringInlineIndexColumn} with defined length.
      * 2) Check that computed size is equal to defined length + 3 bytes (inner system info for String type).
      */
     @Test
     public void testDefaultSizeForStringWithDefinedLength() {
-        final byte LEN = H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE + 10;
+        final byte LEN = IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE + 10;
 
         Column c = new Column("c", new TypeInfo(Value.STRING, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
         c.setOriginalSQL("VARCHAR(" + LEN + ")");
@@ -96,19 +100,19 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(LEN + 3, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, -1, -1, log));
+        assertEquals(LEN + 3, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
     }
 
     /**
      * Test to check calculation of the default size for {@link BytesInlineIndexColumn} with defined length.
      *
      * Steps:
-     * 1) Call {@link H2TreeIndexBase#computeInlineSize(String, java.util.List, int, int, org.apache.ignite.IgniteLogger)} function for {@link BytesInlineIndexColumn} with defined length.
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize} function for {@link BytesInlineIndexColumn} with defined length.
      * 2) Check that computed size is equal to defined length + 3 bytes (inner system info for byte[] type).
      */
     @Test
     public void testDefaultSizeForBytesWithDefinedLength() {
-        final byte LEN = H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE + 20;
+        final byte LEN = IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE + 20;
 
         Column c = new Column("c", new TypeInfo(Value.BYTES, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
         c.setOriginalSQL("BINARY(" + LEN + ")");
@@ -116,14 +120,14 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(LEN + 3, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, -1, -1, log));
+        assertEquals(LEN + 3, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
     }
 
     /**
      * Test to check calculation of the default size for {@link StringInlineIndexColumn} with unexpected sql pattern.
      *
      * Steps:
-     * 1) Call {@link H2TreeIndexBase#computeInlineSize(String, java.util.List, int, int, org.apache.ignite.IgniteLogger)} function for {@link StringInlineIndexColumn} with unexpected sql pattern.
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize} function for {@link StringInlineIndexColumn} with unexpected sql pattern.
      * 2) Check that computed size is equal to default length for variable types.
      */
     @Test
@@ -134,21 +138,21 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, -1, -1, log));
+        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
     }
 
     /**
      * Test to check calculation of the default size for composite index.
      *
      * Steps:
-     * 1) Call {@link H2TreeIndexBase#computeInlineSize(String, java.util.List, int, int, org.apache.ignite.IgniteLogger)} function for {@link StringInlineIndexColumn},
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize} function for {@link StringInlineIndexColumn},
      * {@link BytesInlineIndexColumn}, {@link LongInlineIndexColumn} and {@link StringInlineIndexColumn} with defined length.
      * 2) Check that computed size is equal to 2 * default length for variable types + constant length of long column +
      * defined String length + 3 bytes (inner system info for String type).
      */
     @Test
     public void testDefaultSizeForCompositeIndex() {
-        final byte LEN = H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE - 1;
+        final byte LEN = IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE - 1;
 
         Column c1 = new Column("c1", new TypeInfo(Value.STRING, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
         Column c2 = new Column("c2", new TypeInfo(Value.BYTES, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
@@ -165,15 +169,15 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         inlineIdxs.add(createHelper(c3, false));
         inlineIdxs.add(createHelper(c4, false));
 
-        assertEquals(2 * H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE + lCol.size() + 1 + LEN + 3,
-            H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, -1, -1, log));
+        assertEquals(2 * IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE + lCol.size() + 1 + LEN + 3,
+            computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
     }
 
     /**
      * Test to check calculation of the default size when calculated default size is larger than max default index size.
      *
      * Steps:
-     * 1) Call {@link H2TreeIndexBase#computeInlineSize(String, java.util.List, int, int, org.apache.ignite.IgniteLogger)} function for {@link StringInlineIndexColumn} with large length.
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize} function for {@link StringInlineIndexColumn} with large length.
      * 2) Check that computed size is equal to default max length.
      */
     @Test
@@ -184,7 +188,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(H2TreeIndexBase.IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, -1, -1, log));
+        assertEquals(IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
     }
 
     /** */
@@ -204,7 +208,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
             inlineIdxs.add(createHelper(c, false));
         }
 
-        assertEquals(64, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, 2048, -1, log));
+        assertEquals(64, computeInlineSize("idx", inlineIdxs, 2048, -1, Integer.MAX_VALUE, log));
     }
 
     /** */
@@ -225,7 +229,30 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
             inlineIdxs.add(createHelper(c, false));
         }
 
-        assertEquals(2048, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, 2048, -1, log));
+        assertEquals(2048, computeInlineSize("idx", inlineIdxs, 2048, -1, Integer.MAX_VALUE, log));
+    }
+
+    /** */
+    @Test
+    public void testMaxAllowedInlineSizeUsedWhenExceeded() {
+        int maxAllowedInlineSize = 100;
+
+        List<Integer> valueTypes = Lists.newArrayList(
+                Value.BOOLEAN, Value.SHORT, Value.DATE, Value.DATE, Value.DOUBLE, Value.FLOAT,
+                Value.INT, Value.BYTE, Value.DECIMAL, Value.TIME, Value.TIMESTAMP, Value.UUID,
+                Value.STRING
+        );
+
+        List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
+
+        for (int i = 0; i < valueTypes.size(); i++) {
+            Integer valueType = valueTypes.get(i);
+
+            Column c = new Column("c" + i, new TypeInfo(valueType, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
+            inlineIdxs.add(createHelper(c, false));
+        }
+
+        assertEquals(maxAllowedInlineSize, computeInlineSize("idx", inlineIdxs, -1, Integer.MAX_VALUE, maxAllowedInlineSize, log));
     }
 
     private static InlineIndexColumn createHelper(Column col, boolean useOptimizedComp) {
