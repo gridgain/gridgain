@@ -15,15 +15,18 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence.evict;
 
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -33,7 +36,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  */
 public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
     /** Evict attempts limit. */
-    private static final int EVICT_ATTEMPTS_LIMIT = 30;
+    private static final int EVICT_ATTEMPTS_LIMIT = 15;
 
     /** LRU Sample size. */
     private static final int SAMPLE_SIZE = 5;
@@ -108,9 +111,9 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
         do {
             int trackingIdx = trackingIdx(pageIdx);
 
-            int firstTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx));
+            int firstTs = firstTimestamp(trackingIdx);
 
-            int secondTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx) + 4);
+            int secondTs = secondTimestamp(trackingIdx);
 
             if (firstTs <= secondTs)
                 success = GridUnsafe.compareAndSwapInt(null,
@@ -140,9 +143,9 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
             while (dataPagesCnt < SAMPLE_SIZE) {
                 int trackingIdx = rnd.nextInt(trackingSize);
 
-                int firstTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx));
+                int firstTs = firstTimestamp(trackingIdx);
 
-                int secondTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx) + 4);
+                int secondTs = secondTimestamp(trackingIdx);
 
                 int minTs = Math.min(firstTs, secondTs);
 
@@ -164,9 +167,13 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
                 if (sampleSpinCnt > SAMPLE_SPIN_LIMIT) {
                     LT.warn(log, "Too many attempts to choose data page: " + SAMPLE_SPIN_LIMIT);
 
-                    return;
+                    lruTrackingIdx = -1;
+                    break;
                 }
             }
+
+            if (lruTrackingIdx < 0)
+                break;
 
             if (evictDataPage(pageIdx(lruTrackingIdx)))
                 return;
@@ -174,14 +181,53 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
             evictAttemptsCnt++;
         }
 
-        LT.warn(log, "Too many failed attempts to evict page: " + EVICT_ATTEMPTS_LIMIT);
+        for (evictAttemptsCnt = 0; evictAttemptsCnt < EVICT_ATTEMPTS_LIMIT; evictAttemptsCnt++) {
+            if (evictRandomRow(rnd))
+                return;
+        }
+
+        LT.warn(log, "Too many failed attempts to evict page: " + EVICT_ATTEMPTS_LIMIT * 2);
+    }
+
+    private boolean evictRandomRow(Random rnd) throws IgniteCheckedException {
+        List<CacheDataRowAdapter> randomRows = findRandomRows(rnd, SAMPLE_SIZE);
+
+        if (randomRows.isEmpty())
+            return false;
+
+        int lruCompactTs = Integer.MAX_VALUE;
+
+        CacheDataRowAdapter minRow = randomRows.get(0);
+
+        for (CacheDataRowAdapter randomRow : randomRows) {
+            int trackingIdx = trackingIdx(PageIdUtils.pageIndex(randomRow.link()));
+
+            int firstTs = firstTimestamp(trackingIdx);
+
+            int secondTs = secondTimestamp(trackingIdx);
+
+            int minTs = Math.min(firstTs, secondTs);
+
+            int maxTs = Math.max(firstTs, secondTs);
+
+            if (maxTs != 0) {
+                // We chose data page with at least one touch.
+                if (minTs < lruCompactTs) {
+                    lruCompactTs = minTs;
+
+                    minRow = randomRow;
+                }
+            }
+        }
+
+        return evictDataPage(PageIdUtils.pageIndex(minRow.link()));
     }
 
     /** {@inheritDoc} */
     @Override protected boolean checkTouch(long pageId) {
         int trackingIdx = trackingIdx(PageIdUtils.pageIndex(pageId));
 
-        int firstTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx));
+        int firstTs = firstTimestamp(trackingIdx);
 
         return firstTs != 0;
     }
@@ -193,5 +239,13 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
         int trackingIdx = trackingIdx(pageIdx);
 
         GridUnsafe.putLongVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx), 0L);
+    }
+
+    private int firstTimestamp(int trackingIdx) {
+        return GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx));
+    }
+
+    private int secondTimestamp(int trackingIdx) {
+        return GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx) + 4);
     }
 }
