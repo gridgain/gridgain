@@ -255,7 +255,16 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         this.affinityKey = affinityKey;
         this.mvccEnabled = mvccEnabled;
 
-        this.maxAllowedInlineSize = H2TreeIndexBase.maxAllowedInlineSize(table.cacheInfo().kctx().config(), mvccEnabled);
+        // For case of index tree cleanup.
+        if (table != null) {
+            this.maxAllowedInlineSize = H2TreeIndexBase.maxAllowedInlineSize(
+                    table.isPersistIndexes(),
+                    table.cacheInfo().kctx().config(),
+                    mvccEnabled
+            );
+        }
+        else
+            this.maxAllowedInlineSize = 0;
 
         if (!initNew) {
             // Page is ready - read meta information.

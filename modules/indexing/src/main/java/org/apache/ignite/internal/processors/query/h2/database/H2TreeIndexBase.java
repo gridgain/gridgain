@@ -101,12 +101,13 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
      * So maximum payload size equals: P = (PS - H - 3L) / 2 - X , where P - Payload size, PS - page size, H - page
      * header size, L - size of the child link, X - overhead per item.
      */
-    static int maxAllowedInlineSize(IgniteConfiguration cfg, boolean mvccEnabled) {
+    static int maxAllowedInlineSize(boolean persistIndexes, IgniteConfiguration cfg, boolean mvccEnabled) {
         int configuredPageSize = cfg.getDataStorageConfiguration() != null
                 ? cfg.getDataStorageConfiguration().getPageSize() : DataStorageConfiguration.DFLT_PAGE_SIZE;
-
         EncryptionSpi encSpi = cfg.getEncryptionSpi();
-        int realPageSize = CU.encryptedPageSize(configuredPageSize, encSpi);
+
+        // Encryption is not used for no store memory.
+        int realPageSize = persistIndexes ? CU.encryptedPageSize(configuredPageSize, encSpi) : configuredPageSize;
 
         return (realPageSize - BPlusIO.ITEMS_OFF - 3 * AbstractDataPageIO.LINK_SIZE)
                 / 2 - H2IOUtils.itemOverhead(mvccEnabled);
