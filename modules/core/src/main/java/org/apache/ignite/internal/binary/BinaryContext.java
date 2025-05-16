@@ -1450,6 +1450,16 @@ public class BinaryContext {
         schemas.remove(typeId);
     }
 
+    /** Restores preconfigured user types after reconnect. */
+    public void onReconnect() {
+        // Note: after fixing https://issues.apache.org/jira/browse/IGNITE-3455 this code may
+        // need to call #configure method instead.
+        for (BinaryClassDescriptor desc : predefinedTypes.values()) {
+            if (desc.userType())
+                descByCls.put(desc.describedClass(), desc);
+        }
+    }
+
     /**
      * Type descriptors.
      */

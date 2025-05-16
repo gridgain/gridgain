@@ -21,11 +21,12 @@ import org.apache.ignite.internal.IgniteClientConnectAfterCommunicationFailureTe
 import org.apache.ignite.internal.IgniteClientReconnectApiExceptionTest;
 import org.apache.ignite.internal.IgniteClientReconnectAtomicsTest;
 import org.apache.ignite.internal.IgniteClientReconnectAtomicsWithLostPartitionsTest;
-import org.apache.ignite.internal.IgniteClientReconnectBinaryContexTest;
+import org.apache.ignite.internal.IgniteClientReconnectBinaryContextTest;
 import org.apache.ignite.internal.IgniteClientReconnectCacheTest;
 import org.apache.ignite.internal.IgniteClientReconnectCollectionsTest;
 import org.apache.ignite.internal.IgniteClientReconnectComputeTest;
 import org.apache.ignite.internal.IgniteClientReconnectContinuousProcessorTest;
+import org.apache.ignite.internal.IgniteClientReconnectCustomBinaryContextTest;
 import org.apache.ignite.internal.IgniteClientReconnectDelayedSpiTest;
 import org.apache.ignite.internal.IgniteClientReconnectDiscoveryStateTest;
 import org.apache.ignite.internal.IgniteClientReconnectFailoverTest;
@@ -47,7 +48,8 @@ import org.junit.runners.Suite;
     IgniteClientReconnectDiscoveryStateTest.class,
     IgniteClientReconnectCacheTest.class,
     IgniteClientReconnectDelayedSpiTest.class,
-    IgniteClientReconnectBinaryContexTest.class,
+    IgniteClientReconnectBinaryContextTest.class,
+    IgniteClientReconnectCustomBinaryContextTest.class,
     IgniteClientReconnectContinuousProcessorTest.class,
     IgniteClientCheckClusterGroupLocalIdAfterReconnect.class,
     IgniteClientReconnectComputeTest.class,
