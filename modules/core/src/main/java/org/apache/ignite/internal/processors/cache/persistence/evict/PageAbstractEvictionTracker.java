@@ -138,6 +138,10 @@ public abstract class PageAbstractEvictionTracker implements PageEvictionTracker
         return evictionDone;
     }
 
+    /**
+     * Returns a list of rows, randomly chosen from random caches that belong to the same data region as this tracker.
+     * Real size of the list may be less than {@code cnt}. List might also contain the same element multiple times.
+     */
     protected final List<CacheDataRowAdapter> findRandomRows(Random rnd, int cnt) throws IgniteCheckedException {
         List<GridCacheAdapter<?, ?>> caches = new ArrayList<>();
 

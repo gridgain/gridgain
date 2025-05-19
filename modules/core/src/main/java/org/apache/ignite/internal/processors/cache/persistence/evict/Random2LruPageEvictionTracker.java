@@ -111,9 +111,9 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
         do {
             int trackingIdx = trackingIdx(pageIdx);
 
-            int firstTs = firstTimestamp(trackingIdx);
+            int firstTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx));
 
-            int secondTs = secondTimestamp(trackingIdx);
+            int secondTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx) + 4);
 
             if (firstTs <= secondTs)
                 success = GridUnsafe.compareAndSwapInt(null,
@@ -143,9 +143,9 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
             while (dataPagesCnt < SAMPLE_SIZE) {
                 int trackingIdx = rnd.nextInt(trackingSize);
 
-                int firstTs = firstTimestamp(trackingIdx);
+                int firstTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx));
 
-                int secondTs = secondTimestamp(trackingIdx);
+                int secondTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx) + 4);
 
                 int minTs = Math.min(firstTs, secondTs);
 
@@ -202,9 +202,9 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
         for (CacheDataRowAdapter randomRow : randomRows) {
             int trackingIdx = trackingIdx(PageIdUtils.pageIndex(randomRow.link()));
 
-            int firstTs = firstTimestamp(trackingIdx);
+            int firstTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx));
 
-            int secondTs = secondTimestamp(trackingIdx);
+            int secondTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx) + 4);
 
             int minTs = Math.min(firstTs, secondTs);
 
@@ -227,7 +227,7 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
     @Override protected boolean checkTouch(long pageId) {
         int trackingIdx = trackingIdx(PageIdUtils.pageIndex(pageId));
 
-        int firstTs = firstTimestamp(trackingIdx);
+        int firstTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx));
 
         return firstTs != 0;
     }
@@ -241,11 +241,4 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
         GridUnsafe.putLongVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx), 0L);
     }
 
-    private int firstTimestamp(int trackingIdx) {
-        return GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx));
-    }
-
-    private int secondTimestamp(int trackingIdx) {
-        return GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx) + 4);
-    }
 }

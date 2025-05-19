@@ -129,7 +129,8 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
             while (dataPagesCnt < SAMPLE_SIZE) {
                 int sampleTrackingIdx = rnd.nextInt(trackingSize);
 
-                int compactTs = trackingTimestamp(sampleTrackingIdx);
+                int compactTs = GridUnsafe.getIntVolatile(null,
+                    trackingArrPtr + trackingArrayOffset(sampleTrackingIdx));
 
                 if (compactTs != 0) {
                     // We chose data page with at least one touch.
@@ -182,7 +183,10 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
         for (CacheDataRowAdapter randomRow : randomRows) {
             int sampleTrackingIdx = trackingIdx(PageIdUtils.pageIndex(randomRow.link()));
 
-            int compactTs = trackingTimestamp(sampleTrackingIdx);
+            int compactTs = GridUnsafe.getIntVolatile(
+                null,
+                trackingArrPtr + trackingArrayOffset(sampleTrackingIdx)
+            );
 
             // We chose data page with at least one touch.
             if (compactTs != 0 && compactTs < lruCompactTs) {
@@ -199,7 +203,7 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
     @Override protected boolean checkTouch(long pageId) {
         int trackingIdx = trackingIdx(PageIdUtils.pageIndex(pageId));
 
-        int ts = trackingTimestamp(trackingIdx);
+        int ts = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx));
 
         return ts != 0;
     }
@@ -211,10 +215,4 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
         GridUnsafe.putIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx(pageIdx)), 0);
     }
 
-    private int trackingTimestamp(int sampleTrackingIdx) {
-        return GridUnsafe.getIntVolatile(
-            null,
-            trackingArrPtr + trackingArrayOffset(sampleTrackingIdx)
-        );
-    }
 }
