@@ -53,7 +53,7 @@ public abstract class PageAbstractEvictionTracker implements PageEvictionTracker
     private final long baseCompactTs;
 
     /** Shared context. */
-    protected final GridCacheSharedContext<?, ?> sharedCtx;
+    private final GridCacheSharedContext<?, ?> sharedCtx;
 
     /**
      * @param pageMem Page memory.

@@ -6405,7 +6405,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     }
 
     /**
-     * A generic visitor-style interface for reading values from the tree..
+     * A generic visitor-style interface for reading values from the tree.
      */
     public interface TreeRowMapper<L, T extends L, R> {
         /**

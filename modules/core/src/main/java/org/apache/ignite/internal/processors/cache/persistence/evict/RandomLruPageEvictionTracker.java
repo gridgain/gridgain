@@ -214,5 +214,4 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
 
         GridUnsafe.putIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx(pageIdx)), 0);
     }
-
 }
