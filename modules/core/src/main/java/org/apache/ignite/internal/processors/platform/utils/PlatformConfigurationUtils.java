@@ -704,11 +704,13 @@ public class PlatformConfigurationUtils {
         QueryIndex res = new QueryIndex();
 
         res.setName(in.readString());
-        res.setIndexType(QueryIndexType.values()[in.readByte()]);
+        byte b = in.readByte();
+        QueryIndexType queryIndexType = QueryIndexType.values()[b];
+        res.setIndexType(queryIndexType);
         res.setInlineSize(in.readInt());
 
         //check if similarity function feature is supported
-        if (hasVectorSimilarity) {
+        if (queryIndexType == QueryIndexType.VECTOR && hasVectorSimilarity) {
             int similarityFunctionInt = in.readInt();
             res.setSimilarityFunction(QueryVectorField.SimilarityFunction.fromId(similarityFunctionInt));
         }
