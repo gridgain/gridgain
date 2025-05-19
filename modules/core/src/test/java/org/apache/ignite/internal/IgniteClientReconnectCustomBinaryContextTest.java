@@ -64,27 +64,28 @@ import static java.time.temporal.ChronoField.YEAR;
  * Test binary configuration restored after client reconnect.
  */
 public class IgniteClientReconnectCustomBinaryContextTest extends GridCommonAbstractTest {
+    public static final String CACHE_NAME = "Test";
+
     private final AtomicBoolean block = new AtomicBoolean(false);
 
-    @Override
-    protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setBinaryConfiguration(
-                new BinaryConfiguration()
-                        .setTypeConfigurations(
-                                Arrays.asList(
-                                        new BinaryTypeConfiguration(DateKey.class.getName())
-                                                .setIdMapper(new BinaryBasicIdMapper(true))
-                                                .setNameMapper(new BinaryBasicNameMapper(true)),
-                                        new BinaryTypeConfiguration("java.time.Ser")
-                                                .setSerializer(new LocalDateBinarySerializer())
-                                )
-                        )
+            new BinaryConfiguration()
+                .setTypeConfigurations(
+                    Arrays.asList(
+                        new BinaryTypeConfiguration(DateKey.class.getName())
+                            .setIdMapper(new BinaryBasicIdMapper(true))
+                            .setNameMapper(new BinaryBasicNameMapper(true)),
+                        new BinaryTypeConfiguration("java.time.Ser")
+                            .setSerializer(new LocalDateBinarySerializer())
+                    )
+                )
         );
 
         if (igniteInstanceName.equals("client")) {
-            TcpDiscoverySpi discoverySpi = (TcpDiscoverySpi) cfg.getDiscoverySpi();
+            TcpDiscoverySpi discoverySpi = (TcpDiscoverySpi)cfg.getDiscoverySpi();
             TcpDiscoveryIpFinder ipFinder = discoverySpi.getIpFinder();
 
             BlockedDiscoverySpi clientDiscoverySpi = new BlockedDiscoverySpi(block);
@@ -107,39 +108,49 @@ public class IgniteClientReconnectCustomBinaryContextTest extends GridCommonAbst
         srv1.getOrCreateCache(getCacheConfiguration());
 
         DateKey storedKey = new DateKey(LocalDate.now());
+        String value = "Hello";
 
         // Put value to cache and ensure it is visible from client and server.
-        srv1.cache("Test").put(storedKey, "Hello");
-        assertEquals("Hello", srv1.cache("Test").get(storedKey));
-        assertEquals("Hello", client.cache("Test").get(storedKey));
+        srv1.cache(CACHE_NAME).put(storedKey, value);
+        assertEquals(value, srv1.cache(CACHE_NAME).get(storedKey));
+        assertEquals(value, client.cache(CACHE_NAME).get(storedKey));
 
         // Wait for client disconnected.
         block.set(true);
         GridTestUtils.waitForCondition(() -> {
             try {
-                client.cache("Test").get(storedKey);
-            } catch (IgniteClientDisconnectedException ex) {
+                client.cache(CACHE_NAME).get(storedKey);
+            }
+            catch (IgniteClientDisconnectedException ex) {
                 return true;
             }
             return false;
-        }, 10000);
+        }, getTestTimeout());
 
         assertTrue(client.context().clientDisconnected());
         block.set(false);
 
-        // Reconnect client. And ensure value is still there.
-        assertEquals("Hello", client.cache("Test").get(storedKey));
+        // Wait for client to reconnect.
+        try {
+            client.cache(CACHE_NAME);
+        }
+        catch (IgniteClientDisconnectedException ex) {
+            ex.reconnectFuture().get();
+        }
+
+        // Ensure value is still there.
+        assertEquals(value, client.cache(CACHE_NAME).get(storedKey));
 
         client.close();
 
         Ignite client1 = startClientGrid("client");
-        assertEquals("Hello", client1.cache("Test").get(storedKey));
+        assertEquals(value, client1.cache(CACHE_NAME).get(storedKey));
     }
 
     private static CacheConfiguration<DateKey, String> getCacheConfiguration() {
         CacheConfiguration<DateKey, String> ccfg = new CacheConfiguration<>();
 
-        ccfg.setName("Test");
+        ccfg.setName(CACHE_NAME);
         ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
         ccfg.setAtomicityMode(CacheAtomicityMode.ATOMIC);
         ccfg.setTypes(DateKey.class, String.class);
@@ -150,28 +161,22 @@ public class IgniteClientReconnectCustomBinaryContextTest extends GridCommonAbst
     }
 
     public static class DateKey {
-
         LocalDate date;
 
         public DateKey(LocalDate date) {
             this.date = date;
         }
-
-        @Override
-        public String toString() {
-            return "DateKey{" +
-                    "date=" + date +
-                    '}';
-        }
     }
 
     public static class LocalDateBinarySerializer implements BinarySerializer {
-
         private static final byte DURATION_TYPE = 1;
+
         private static final byte LOCAL_DATE_TYPE = 3;
+
         private static final byte LOCAL_DATE_TIME_TYPE = 5;
 
         private final Field objectField;
+
         private final Field typeField;
 
         public LocalDateBinarySerializer() {
@@ -182,20 +187,21 @@ public class IgniteClientReconnectCustomBinaryContextTest extends GridCommonAbst
 
                 typeField = ReflectionUtils.findField(cls, "type");
                 typeField.setAccessible(true);
-            } catch (ClassNotFoundException e) {
+            }
+            catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
         }
 
-        @Override
-        public void writeBinary(Object obj, BinaryWriter writer) throws BinaryObjectException {
-            Byte type = (Byte) ReflectionUtils.getField(typeField, obj);
+        @Override public void writeBinary(Object obj, BinaryWriter writer) throws BinaryObjectException {
+            Byte type = (Byte)ReflectionUtils.getField(typeField, obj);
             writer.writeByte("type", type);
             if (type == DURATION_TYPE) {
-                Duration duration = (Duration) ReflectionUtils.getField(objectField, obj);
+                Duration duration = (Duration)ReflectionUtils.getField(objectField, obj);
                 writer.writeString("duration", duration != null ? duration.toString() : null);
-            } else {
-                Temporal date = (Temporal) ReflectionUtils.getField(objectField, obj);
+            }
+            else {
+                Temporal date = (Temporal)ReflectionUtils.getField(objectField, obj);
                 writer.writeInt("year", date.get(YEAR));
                 writer.writeInt("month", date.get(MONTH_OF_YEAR));
                 writer.writeInt("day", date.get(DAY_OF_MONTH));
@@ -208,8 +214,7 @@ public class IgniteClientReconnectCustomBinaryContextTest extends GridCommonAbst
             }
         }
 
-        @Override
-        public void readBinary(Object obj, BinaryReader reader) throws BinaryObjectException {
+        @Override public void readBinary(Object obj, BinaryReader reader) throws BinaryObjectException {
             byte type = reader.readByte("type");
 
             if (type == DURATION_TYPE) {
@@ -217,7 +222,8 @@ public class IgniteClientReconnectCustomBinaryContextTest extends GridCommonAbst
                 Duration duration = string != null ? Duration.parse(string) : null;
                 ReflectionUtils.setField(objectField, obj, duration);
 
-            } else {
+            }
+            else {
                 int year = reader.readInt("year");
                 int month = reader.readInt("month");
                 int day = reader.readInt("day");
@@ -225,12 +231,13 @@ public class IgniteClientReconnectCustomBinaryContextTest extends GridCommonAbst
                 LocalDate date = LocalDate.of(year, month, day);
                 if (type == LOCAL_DATE_TYPE) {
                     ReflectionUtils.setField(objectField, obj, date);
-                } else {
+                }
+                else {
                     LocalTime time = LocalTime.of(
-                            reader.readInt("hour"),
-                            reader.readInt("minute"),
-                            reader.readInt("second"),
-                            reader.readInt("nano")
+                        reader.readInt("hour"),
+                        reader.readInt("minute"),
+                        reader.readInt("second"),
+                        reader.readInt("nano")
                     );
                     LocalDateTime dateTime = LocalDateTime.of(date, time);
                     ReflectionUtils.setField(objectField, obj, dateTime);
@@ -243,45 +250,45 @@ public class IgniteClientReconnectCustomBinaryContextTest extends GridCommonAbst
      * Discovery SPI, that makes a node stop sending messages when {@code block} is set to {@code true}.
      */
     private static class BlockedDiscoverySpi extends TcpDiscoverySpi {
-        /** */
+        /**  */
         private final AtomicBoolean block;
 
-        /** */
+        /**  */
         public BlockedDiscoverySpi(AtomicBoolean block) {
             this.block = block;
         }
 
         /** {@inheritDoc} */
         @Override protected void writeToSocket(ClusterNode node, Socket sock, OutputStream out,
-                                               TcpDiscoveryAbstractMessage msg, long timeout) throws IOException, IgniteCheckedException {
+            TcpDiscoveryAbstractMessage msg, long timeout) throws IOException, IgniteCheckedException {
             if (!block.get())
                 super.writeToSocket(node, sock, out, msg, timeout);
         }
 
         /** {@inheritDoc} */
         @Override protected void writeToSocket(Socket sock, TcpDiscoveryAbstractMessage msg, byte[] data,
-                                               long timeout) throws IOException {
+            long timeout) throws IOException {
             if (!block.get())
                 super.writeToSocket(sock, msg, data, timeout);
         }
 
         /** {@inheritDoc} */
         @Override protected void writeToSocket(Socket sock, TcpDiscoveryAbstractMessage msg,
-                                               long timeout) throws IOException, IgniteCheckedException {
+            long timeout) throws IOException, IgniteCheckedException {
             if (!block.get())
                 super.writeToSocket(sock, msg, timeout);
         }
 
         /** {@inheritDoc} */
         @Override protected void writeToSocket(Socket sock, OutputStream out, TcpDiscoveryAbstractMessage msg,
-                                               long timeout) throws IOException, IgniteCheckedException {
+            long timeout) throws IOException, IgniteCheckedException {
             if (!block.get())
                 super.writeToSocket(sock, out, msg, timeout);
         }
 
         /** {@inheritDoc} */
         @Override protected void writeToSocket(TcpDiscoveryAbstractMessage msg, Socket sock, int res,
-                                               long timeout) throws IOException {
+            long timeout) throws IOException {
             if (!block.get())
                 super.writeToSocket(msg, sock, res, timeout);
         }
