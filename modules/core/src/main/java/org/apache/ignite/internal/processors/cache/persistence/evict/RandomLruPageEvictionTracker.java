@@ -111,43 +111,6 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
         GridUnsafe.putIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx(pageIdx)), (int)res);
     }
 
-    private int findPageForEviction(Random rnd) {
-        int lruTrackingIdx = -1;
-
-        int lruCompactTs = Integer.MAX_VALUE;
-
-        int dataPagesCnt = 0;
-
-        int sampleSpinCnt = 0;
-
-        while (dataPagesCnt < SAMPLE_SIZE) {
-            int sampleTrackingIdx = rnd.nextInt(trackingSize);
-
-            int compactTs = trackingTimestamp(sampleTrackingIdx);
-
-            if (compactTs != 0) {
-                // We chose data page with at least one touch.
-                if (compactTs < lruCompactTs) {
-                    lruTrackingIdx = sampleTrackingIdx;
-
-                    lruCompactTs = compactTs;
-                }
-
-                dataPagesCnt++;
-            }
-
-            sampleSpinCnt++;
-
-            if (sampleSpinCnt > SAMPLE_SPIN_LIMIT) {
-                LT.warn(log, "Too many attempts to choose data page: " + SAMPLE_SPIN_LIMIT);
-
-                return -1;
-            }
-        }
-
-        return lruTrackingIdx;
-    }
-
     /** {@inheritDoc} */
     @Override public void evictDataPage() throws IgniteCheckedException {
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
