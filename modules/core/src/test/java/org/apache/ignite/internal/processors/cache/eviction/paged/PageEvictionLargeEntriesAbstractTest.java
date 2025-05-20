@@ -33,7 +33,6 @@ import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 /**
@@ -126,7 +125,7 @@ public abstract class PageEvictionLargeEntriesAbstractTest extends GridCommonAbs
      * @return Cache configuration.
      */
     protected CacheConfiguration<Object, Object> cacheConfig(
-        @NotNull String name,
+        String name,
         String memoryPlcName,
         CacheMode cacheMode,
         CacheAtomicityMode atomicityMode,
@@ -177,6 +176,7 @@ public abstract class PageEvictionLargeEntriesAbstractTest extends GridCommonAbs
         return 20 * 60 * 1000;
     }
 
+    /** {@inheritDoc} */
     @Override protected FailureHandler getFailureHandler(String igniteInstanceName) {
         return new StopNodeFailureHandler();
     }
@@ -220,12 +220,12 @@ public abstract class PageEvictionLargeEntriesAbstractTest extends GridCommonAbs
                 cache.put(r.nextInt(i), new TestObject(r.nextInt(PAGE_SIZE / 2))); // Update.
 
             if (i % (ENTRIES / 10) == 0)
-                System.out.println(">>> Entries put: " + i);
+                log().info(">>> Entries put: " + i);
         }
 
         int resultingSize = cache.size(CachePeekMode.PRIMARY);
 
-        System.out.println(">>> Resulting size: " + resultingSize);
+        log().info(">>> Resulting size: " + resultingSize);
 
         // Eviction started, no OutOfMemory occurred, success.
         assertTrue(resultingSize < ENTRIES * 10 / 11);

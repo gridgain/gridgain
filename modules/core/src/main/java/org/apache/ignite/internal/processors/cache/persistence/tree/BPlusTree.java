@@ -1581,7 +1581,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         } catch (CorruptedDataStructureException e) {
             throw e;
         } catch (IgniteCheckedException e) {
-            throw new IgniteCheckedException("Runtime failure on lookup random row: ", e);
+            throw new IgniteCheckedException(String.format("Runtime failure on lookup random row in group %d: ", grpId), e);
         } catch (RuntimeException | AssertionError e) {
             throw corruptedTreeException("Runtime failure on lookup random row: ", e, grpId, f.pageId);
         } finally {
@@ -1708,7 +1708,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         return res;
 
                     case NOT_FOUND:
-                        assert lvl == 0 : lvl;
+                        assert lvl == 0
+                            : String.format("Empty leaf found outside of root [lvl=%d, grpId=%d, pageId=%d]", lvl, grpId, pageId);
 
                         return res;
 
