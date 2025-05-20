@@ -1581,7 +1581,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         } catch (CorruptedDataStructureException e) {
             throw e;
         } catch (IgniteCheckedException e) {
-            throw new IgniteCheckedException(String.format("Runtime failure on lookup random row in group %d: ", grpId), e);
+            throw new IgniteCheckedException(String.format("Runtime failure on lookup random row in group %d", grpId), e);
         } catch (RuntimeException | AssertionError e) {
             throw corruptedTreeException("Runtime failure on lookup random row: ", e, grpId, f.pageId);
         } finally {
