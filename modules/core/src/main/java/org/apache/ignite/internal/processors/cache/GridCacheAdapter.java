@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -93,8 +94,10 @@ import org.apache.ignite.internal.processors.cache.dr.GridCacheDrInfo;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxLocalAdapter;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxLocalEx;
+import org.apache.ignite.internal.processors.cache.tree.RowLinkIO;
 import org.apache.ignite.internal.processors.cache.version.GridCacheRawVersionedEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerEntry;
@@ -4250,6 +4253,29 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         boolean keepBinary = ctx.keepBinary();
 
         return new EntrySet(map.entrySet(ctx.cacheId(), filter), keepBinary);
+    }
+
+    /**
+     * Returns a random {@link CacheDataRowAdapter} from the cache's data stores.
+     * This method selects a random data store and retrieves a random row from it.
+     *
+     * @param rnd Random number generator used to select a data store and a row.
+     * @return A random {@link CacheDataRowAdapter} retrieved from the selected data store.
+     * @throws IgniteCheckedException If there is an issue accessing the off-heap data or finding a random row.
+     */
+    public CacheDataRowAdapter randomRow(Random rnd) throws IgniteCheckedException {
+        List<IgniteCacheOffheapManager.CacheDataStore> stores = new ArrayList<>();
+
+        for (IgniteCacheOffheapManager.CacheDataStore store : ctx.offheap().cacheDataStores())
+            stores.add(store);
+
+        IgniteCacheOffheapManager.CacheDataStore store = stores.get(rnd.nextInt(stores.size()));
+
+        return store.tree().findRandom((tree, io, pageAddr, idx) -> {
+            RowLinkIO rowLinkIO = (RowLinkIO)io;
+
+            return new CacheDataRowAdapter(rowLinkIO.getLink(pageAddr, idx));
+        });
     }
 
     /**
