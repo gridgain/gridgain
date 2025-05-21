@@ -132,8 +132,7 @@ public class QueryEntityIndexDescriptor implements GridQueryIndexDescriptor {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public QueryVectorField.SimilarityFunction similarityFunction() {
+    @Override public QueryVectorField.SimilarityFunction similarityFunction() {
         return similarityFunction;
     }
 

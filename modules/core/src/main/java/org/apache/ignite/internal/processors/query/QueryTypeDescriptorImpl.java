@@ -366,8 +366,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
 
         fullTextIdx.addField(field, 0, false);
     }
-
-
+    
     /**
      * Adds field to VECTOR index.
      *
