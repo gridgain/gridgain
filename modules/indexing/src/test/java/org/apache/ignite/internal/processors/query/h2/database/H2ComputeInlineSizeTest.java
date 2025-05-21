@@ -42,7 +42,6 @@ import org.gridgain.internal.h2.value.TypeInfo;
 import org.gridgain.internal.h2.value.Value;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.computeInlineSize;
 
@@ -63,7 +62,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
+        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, Integer.MAX_VALUE, log));
     }
 
     /**
@@ -80,7 +79,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
+        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, Integer.MAX_VALUE, log));
     }
 
     /**
@@ -100,7 +99,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(LEN + 3, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
+        assertEquals(LEN + 3, computeInlineSize("idx", inlineIdxs, -1, Integer.MAX_VALUE, log));
     }
 
     /**
@@ -120,7 +119,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(LEN + 3, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
+        assertEquals(LEN + 3, computeInlineSize("idx", inlineIdxs, -1, Integer.MAX_VALUE, log));
     }
 
     /**
@@ -138,7 +137,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
+        assertEquals(IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE, computeInlineSize("idx", inlineIdxs, -1, Integer.MAX_VALUE, log));
     }
 
     /**
@@ -170,25 +169,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
         inlineIdxs.add(createHelper(c4, false));
 
         assertEquals(2 * IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE + lCol.size() + 1 + LEN + 3,
-            computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
-    }
-
-    /**
-     * Test to check calculation of the default size when calculated default size is larger than max default index size.
-     *
-     * Steps:
-     * 1) Call {@link H2TreeIndexBase#computeInlineSize} function for {@link StringInlineIndexColumn} with large length.
-     * 2) Check that computed size is equal to default max length.
-     */
-    @Test
-    public void testDefaultSizeForLargeIndex() {
-        Column c = new Column("c", new TypeInfo(Value.STRING, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
-        c.setOriginalSQL("VARCHAR(" + 300 + ")");
-
-        List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
-        inlineIdxs.add(createHelper(c, false));
-
-        assertEquals(IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT, computeInlineSize("idx", inlineIdxs, -1, -1, Integer.MAX_VALUE, log));
+            computeInlineSize("idx", inlineIdxs, -1, Integer.MAX_VALUE, log));
     }
 
     /** */
@@ -208,7 +189,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
             inlineIdxs.add(createHelper(c, false));
         }
 
-        assertEquals(64, computeInlineSize("idx", inlineIdxs, 2048, -1, Integer.MAX_VALUE, log));
+        assertEquals(92, computeInlineSize("idx", inlineIdxs, 2048, Integer.MAX_VALUE, log));
     }
 
     /** */
@@ -229,30 +210,21 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
             inlineIdxs.add(createHelper(c, false));
         }
 
-        assertEquals(2048, computeInlineSize("idx", inlineIdxs, 2048, -1, Integer.MAX_VALUE, log));
+        assertEquals(2048, computeInlineSize("idx", inlineIdxs, 2048, Integer.MAX_VALUE, log));
     }
 
     /** */
     @Test
-    public void testMaxAllowedInlineSizeUsedWhenExceeded() {
-        int maxAllowedInlineSize = 100;
+    public void testMaxInlineSizeUsedWhenExceeded() {
+        int maxInlineSize = 100;
 
-        List<Integer> valueTypes = Lists.newArrayList(
-                Value.BOOLEAN, Value.SHORT, Value.DATE, Value.DATE, Value.DOUBLE, Value.FLOAT,
-                Value.INT, Value.BYTE, Value.DECIMAL, Value.TIME, Value.TIMESTAMP, Value.UUID,
-                Value.STRING
-        );
+        Column c = new Column("c", new TypeInfo(Value.STRING, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
+        c.setOriginalSQL("VARCHAR(" + 300 + ")");
 
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
+        inlineIdxs.add(createHelper(c, false));
 
-        for (int i = 0; i < valueTypes.size(); i++) {
-            Integer valueType = valueTypes.get(i);
-
-            Column c = new Column("c" + i, new TypeInfo(valueType, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
-            inlineIdxs.add(createHelper(c, false));
-        }
-
-        assertEquals(maxAllowedInlineSize, computeInlineSize("idx", inlineIdxs, -1, Integer.MAX_VALUE, maxAllowedInlineSize, log));
+        assertEquals(maxInlineSize, computeInlineSize("idx", inlineIdxs, -1, maxInlineSize, log));
     }
 
     private static InlineIndexColumn createHelper(Column col, boolean useOptimizedComp) {

@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapt
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
@@ -53,6 +54,7 @@ import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2IOUtils;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2RowLinkIO;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
@@ -69,8 +71,8 @@ import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.computeInlineSize;
-import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.getAvailableInlineColumns;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE;
+import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.*;
 import static org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.AbstractInlineIndexColumn.CANT_BE_COMPARE;
 import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.mergeTasks;
 import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.toMaintenanceTask;
@@ -255,16 +257,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         this.affinityKey = affinityKey;
         this.mvccEnabled = mvccEnabled;
 
-        // For case of index tree cleanup.
-        if (table != null) {
-            this.maxAllowedInlineSize = H2TreeIndexBase.maxAllowedInlineSize(
-                    table.isPersistIndexes(),
-                    table.cacheInfo().kctx().config(),
-                    mvccEnabled
-            );
-        }
-        else
-            this.maxAllowedInlineSize = 0;
+        this.maxAllowedInlineSize = calculateMaxAllowedInlineSize(pageMem.realPageSize(grpId), mvccEnabled);
 
         if (!initNew) {
             // Page is ready - read meta information.
@@ -334,11 +327,12 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         }
         else {
             if (configuredInlineSize > maxAllowedInlineSize) {
-                throw new IgniteCheckedException("Inline size is too big [cacheName=" + cacheName +
+                U.warn(log, "Configured inline size is too big [cacheName=" + cacheName +
                         ", tableName=" + tblName +
                         ", idxName=" + idxName +
                         ", configuredInlineSize=" + configuredInlineSize +
-                        ", maxAllowedInlineSize=" + maxAllowedInlineSize + ']');
+                        ", maxAllowedInlineSize=" + maxAllowedInlineSize + ']'
+                );
             }
 
             unwrappedPk = true;
@@ -351,12 +345,17 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             inlineIdxs = getAvailableInlineColumns(affinityKey, cacheName, idxName, log, pk,
                 table, cols, factory, true);
 
+            int sqlIndexMaxInlineSize = cctx.config().getSqlIndexMaxInlineSize();
+
+            int configuredMaxInlineSize = sqlIndexMaxInlineSize == -1
+                    ? IgniteSystemProperties.getInteger(IGNITE_MAX_INDEX_PAYLOAD_SIZE, IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT)
+                    : sqlIndexMaxInlineSize;
+
             inlineSize = computeInlineSize(
                     idxName,
                     inlineIdxs,
                     configuredInlineSize,
-                    cctx.config().getSqlIndexMaxInlineSize(),
-                    maxAllowedInlineSize,
+                    Math.min(maxAllowedInlineSize, configuredMaxInlineSize),
                     log
             );
 
@@ -369,6 +368,16 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         }
 
         created = initNew;
+    }
+
+    /**
+     * To avoid tree corruption, at least two items should fit into one page.
+     * So maximum payload size equals: P = (PS - H - 3L) / 2 - X , where P - Payload size, PS - page size, H - page
+     * header size, L - size of the child link, X - overhead per item.
+     */
+    static int calculateMaxAllowedInlineSize(int realPageSize, boolean mvccEnabled) {
+        return (realPageSize - BPlusIO.ITEMS_OFF - 3 * AbstractDataPageIO.LINK_SIZE)
+                / 2 - H2IOUtils.itemOverhead(mvccEnabled);
     }
 
     /**

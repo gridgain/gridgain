@@ -1990,25 +1990,31 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
-    public void testCreateIndexFailsWhenInlineSizeInDdlExceedsMax() throws Exception {
+    public void testWarnWhenInlineSizeInDdlExceedsMax() throws Exception {
         inlineSize = -1;
+        srvLog = new ListeningTestLogger(false, log);
 
         startGrid();
 
-        sql("CREATE TABLE TEST (ID VARCHAR, ID_AFF INT, VAL INT, PRIMARY KEY (ID, ID_AFF))");
-
-        // We need a value, that exceeds calculated calculated max allowed inline size for sure.
+        // We need a value, that exceeds calculated max allowed inline size for sure.
         int idxInlineSize = PageIO.MAX_PAYLOAD_SIZE;
-        assertThrows(
-                log,
-                () -> sql("CREATE INDEX FAILING_IDX ON TEST (VAL) inline_size " + idxInlineSize),
-                IgniteSQLException.class,
-                "Inline size is too big [cacheName=TEST" +
-                        ", tableName=SQL_PUBLIC_TEST" +
-                        ", idxName=FAILING_IDX" +
-                        ", configuredInlineSize=" + idxInlineSize +
-                        ", maxAllowedInlineSize="
-        );
+
+        String warnMsg = "Configured inline size is too big [cacheName=TEST" +
+                ", tableName=SQL_PUBLIC_TEST" +
+                ", idxName=FAILING_IDX" +
+                ", configuredInlineSize=" + idxInlineSize +
+                ", maxAllowedInlineSize=";
+
+        LogListener lsnr = LogListener.matches(warnMsg).build();
+
+        srvLog.registerListener(lsnr);
+
+        sql("CREATE TABLE TEST (ID VARCHAR, ID_AFF INT, VAL INT, PRIMARY KEY (ID, ID_AFF))");
+        sql("CREATE INDEX FAILING_IDX ON TEST (VAL) inline_size " + idxInlineSize);
+
+        assertTrue(lsnr.check());
+
+        srvLog.unregisterListener(lsnr);
     }
 
     /** */
@@ -2032,54 +2038,58 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
-    public void testCreateSystemIndexFailsWhenConfiguredInlineSizeExceedsMax() {
+    public void testCreateSystemIndexWarnWhenConfiguredInlineSizeExceedsMax() throws Exception {
         // We need value, that exceeds calculated max allowed inline size for sure.
         inlineSize = (int) PageIO.MAX_PAYLOAD_SIZE;
         indexes = Collections.singletonList(new QueryIndex("valStr"));
+        srvLog = new ListeningTestLogger(false, log);
 
-        String expMsg = "Inline size is too big [cacheName=VAL" +
+        String warnMsg = "Configured inline size is too big [cacheName=VAL" +
                 ", tableName=default" +
                 ", idxName=VAL_VALSTR_ASC_IDX" +
                 ", configuredInlineSize=" + inlineSize +
                 ", maxAllowedInlineSize=";
 
-        assertThrows(
-                log,
-                () -> startGrid(),
-                IgniteCheckedException.class,
-                expMsg
-        );
+        LogListener lsnr = LogListener.matches(warnMsg).build();
+
+        srvLog.registerListener(lsnr);
+
+        startGrid();
+
+        srvLog.unregisterListener(lsnr);
+        assertTrue(lsnr.check());
     }
 
     /** */
     @Test
-    public void testCreateSystemIndexFailsWhenInlineSizeSetInDdlExceedsMax() throws Exception {
+    public void testCreateSystemIndexWarnWhenInlineSizeSetInDdlExceedsMax() throws Exception {
         inlineSize = -1;
         short idxInlineSize = PageIO.MAX_PAYLOAD_SIZE;
-        String expMsg = "Inline size is too big [cacheName=TEST" +
+        srvLog = new ListeningTestLogger(false, log);
+
+        String warnMsg = "Configured inline size is too big [cacheName=TEST" +
                 ", tableName=SQL_PUBLIC_TEST" +
                 ", idxName=_key_PK" +
                 ", configuredInlineSize=" + idxInlineSize +
                 ", maxAllowedInlineSize=";
 
+        LogListener lsnr = LogListener.matches(warnMsg).build();
+
+        srvLog.registerListener(lsnr);
+
         startGrid();
 
-        // Actual reason is suppressed.
-        IgniteSQLException e = assertThrows(
-                log,
-                () -> sql("CREATE TABLE TEST (ID VARCHAR, ID_AFF INT, VAL INT, "
+        sql("CREATE TABLE TEST (ID VARCHAR, ID_AFF INT, VAL INT, "
                         + "PRIMARY KEY (ID, ID_AFF)) WITH"
                         + "\""
                         + "AFFINITY_KEY=ID_AFF,"
                         + "PK_INLINE_SIZE=" + idxInlineSize + ","
                         + "AFFINITY_INDEX_INLINE_SIZE=" + idxInlineSize
                         + "\""
-                ),
-                IgniteSQLException.class,
-                "Failed to complete exchange process"
-        );
+                );
 
-        assertTrue(X.hasCause(e, expMsg, IgniteCheckedException.class));
+        assertTrue(lsnr.check());
+        srvLog.unregisterListener(lsnr);
     }
 
     /** */
