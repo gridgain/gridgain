@@ -62,7 +62,6 @@ import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -77,6 +76,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE;
+import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_PAGE_SIZE;
+import static org.apache.ignite.configuration.DataStorageConfiguration.MAX_PAGE_SIZE;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.ByteArrayed;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Dated;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.SqlStrConvertedValHolder;
@@ -116,6 +117,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** */
     private int gridCount = 1;
+
+    /** */
+    private int pageSize;
 
     /** Server listening logger. */
     private ListeningTestLogger srvLog;
@@ -176,7 +180,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             igniteCfg.setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration().setPersistenceEnabled(true).setMaxSize(10 * 1024 * 1024)
-                )
+                ).setPageSize(pageSize)
             );
         }
 
@@ -186,6 +190,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        pageSize = DFLT_PAGE_SIZE;
+
         super.beforeTest();
 
         stopAllGrids();
@@ -2015,6 +2021,47 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         assertTrue(lsnr.check());
 
         srvLog.unregisterListener(lsnr);
+    }
+
+    @Ignore("GG-43558")
+    @Test
+    public void testSortedIndexInlineSizeOnClientNodes() throws Exception {
+        inlineSize = -1;
+        IgniteEx server = startGrid();
+        IgniteEx client = startGrid(CLIENT_NAME);
+
+        sql("CREATE TABLE TEST (ID VARCHAR, ID_AFF VARCHAR, PRIMARY KEY (ID))");
+
+        log.info(sql(client, "SELECT * FROM SYS.INDEXES").getAll().toString());
+        log.info(sql(server, "SELECT * FROM SYS.INDEXES").getAll().toString());
+        log.info("INDEX VIEW");
+        int clientInlineSize = (int) sql(client, "SELECT INLINE_SIZE FROM SYS.INDEXES WHERE TABLE_NAME='TEST' and INDEX_NAME = '_key_PK'")
+                .iterator().next().get(0);
+        int srvInlineSize = (int) sql(server, "SELECT INLINE_SIZE FROM SYS.INDEXES WHERE TABLE_NAME = 'TEST' and INDEX_NAME = '_key_PK'")
+                .iterator().next().get(0);
+
+        assertEquals(srvInlineSize, clientInlineSize);
+    }
+
+    @Test
+    @WithSystemProperty(key = IGNITE_MAX_INDEX_PAYLOAD_SIZE, value = Integer.MAX_VALUE + "")
+    public void testCreateIndexWithLargeInlineSizeAndLargePageSize() throws Exception {
+        isPersistenceEnabled = true;
+        inlineSize = -1;
+        pageSize = MAX_PAGE_SIZE;
+
+        IgniteEx ign = startGrid();
+
+        ign.cluster().active(true);
+
+        // We need a value, that exceeds calculated max allowed inline size for sure.
+        int idxColSize = PageIO.MAX_PAYLOAD_SIZE;
+
+        sql("CREATE TABLE TEST (ID VARCHAR(" + idxColSize + "), ID_AFF VARCHAR, PRIMARY KEY (ID))");
+
+        GridH2Table tbl = ((IgniteH2Indexing)ign.context().query().getIndexing()).schemaManager().dataTable("PUBLIC", "TEST");
+
+        assertEquals(PageIO.MAX_PAYLOAD_SIZE, ((H2TreeIndex)tbl.getIndex("_key_PK")).inlineSize());
     }
 
     /** */

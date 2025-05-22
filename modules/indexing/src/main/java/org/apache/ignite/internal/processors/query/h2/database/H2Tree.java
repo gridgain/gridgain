@@ -376,8 +376,10 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * header size, L - size of the child link, X - overhead per item.
      */
     static int calculateMaxAllowedInlineSize(int realPageSize, boolean mvccEnabled) {
-        return (realPageSize - BPlusIO.ITEMS_OFF - 3 * AbstractDataPageIO.LINK_SIZE)
+        int fromPageSize = (realPageSize - BPlusIO.ITEMS_OFF - 3 * AbstractDataPageIO.LINK_SIZE)
                 / 2 - H2IOUtils.itemOverhead(mvccEnabled);
+
+        return Math.min(AbstractDataPageIO.MAX_PAYLOAD_SIZE, fromPageSize);
     }
 
     /**
