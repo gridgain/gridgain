@@ -347,7 +347,7 @@ public interface ClusterMetrics {
      * Gets percentage of time this node is busy executing jobs vs. idling.
      *
      * @return Percentage of time this node is busy (value is less than
-     *      or equal to {@code 1} and greater than or equal to {@code 0})
+     *      or equal to {@code 100} and greater than or equal to {@code 0})
      */
     public float getBusyTimePercentage();
 
@@ -355,7 +355,7 @@ public interface ClusterMetrics {
      * Gets percentage of time this node is idling vs. executing jobs.
      *
      * @return Percentage of time this node is idle (value is less than
-     *      or equal to {@code 1} and greater than or equal to {@code 0})
+     *      or equal to {@code 100} and greater than or equal to {@code 0})
      */
     public float getIdleTimePercentage();
 
