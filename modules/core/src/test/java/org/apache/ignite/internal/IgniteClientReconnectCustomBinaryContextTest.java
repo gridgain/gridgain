@@ -117,7 +117,7 @@ public class IgniteClientReconnectCustomBinaryContextTest extends GridCommonAbst
 
         // Wait for client disconnected.
         block.set(true);
-        GridTestUtils.waitForCondition(() -> {
+        assertTrue(GridTestUtils.waitForCondition(() -> {
             try {
                 client.cache(CACHE_NAME).get(storedKey);
             }
@@ -125,7 +125,7 @@ public class IgniteClientReconnectCustomBinaryContextTest extends GridCommonAbst
                 return true;
             }
             return false;
-        }, getTestTimeout());
+        }, getTestTimeout()));
 
         assertTrue(client.context().clientDisconnected());
         block.set(false);
