@@ -70,9 +70,6 @@ public class DynamicCacheDescriptor {
     /** */
     private final UUID rcvdFrom;
 
-    /** Kernal context. */
-    private final GridKernalContext kctx;
-
     /** Mutex. */
     private final Object mux = new Object();
 
@@ -150,7 +147,6 @@ public class DynamicCacheDescriptor {
         this.staticCfg = staticCfg;
         this.sql = sql;
         this.deploymentId = deploymentId;
-        this.kctx = ctx;
 
         cacheId = CU.cacheId(cacheCfg.getName());
 
@@ -159,13 +155,6 @@ public class DynamicCacheDescriptor {
         }
 
         this.cacheCfgEnrichment = cacheCfgEnrichment;
-    }
-
-    /**
-     * @return Kernal context.
-     */
-    public GridKernalContext kctx() {
-        return kctx;
     }
 
     /**

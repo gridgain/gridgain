@@ -94,6 +94,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     /** Default client name. */
     private static final String CLIENT_NAME = "client";
 
+    /** Max inline size, calculated for 4KB page size. */
+    private static final int MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE = 1999;
+
     /** {@code True} If index need to be created throught static config. */
     private static boolean createIdx = true;
 
@@ -2002,14 +2005,13 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         startGrid();
 
-        // We need a value, that exceeds calculated max allowed inline size for sure.
-        int idxInlineSize = PageIO.MAX_PAYLOAD_SIZE;
+        int idxInlineSize = MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE + 1;
 
         String warnMsg = "Configured inline size is too big [cacheName=TEST" +
                 ", tableName=SQL_PUBLIC_TEST" +
                 ", idxName=FAILING_IDX" +
                 ", configuredInlineSize=" + idxInlineSize +
-                ", maxAllowedInlineSize=";
+                ", maxAllowedInlineSize=" + MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE;
 
         LogListener lsnr = LogListener.matches(warnMsg).build();
 
@@ -2035,9 +2037,11 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         log.info(sql(client, "SELECT * FROM SYS.INDEXES").getAll().toString());
         log.info(sql(server, "SELECT * FROM SYS.INDEXES").getAll().toString());
         log.info("INDEX VIEW");
-        int clientInlineSize = (int) sql(client, "SELECT INLINE_SIZE FROM SYS.INDEXES WHERE TABLE_NAME='TEST' and INDEX_NAME = '_key_PK'")
+        String inlineSizeSql = "SELECT INLINE_SIZE FROM SYS.INDEXES WHERE TABLE_NAME= 'TEST' and INDEX_NAME = '_key_PK'";
+
+        int clientInlineSize = (int) sql(client, inlineSizeSql)
                 .iterator().next().get(0);
-        int srvInlineSize = (int) sql(server, "SELECT INLINE_SIZE FROM SYS.INDEXES WHERE TABLE_NAME = 'TEST' and INDEX_NAME = '_key_PK'")
+        int srvInlineSize = (int) sql(server, inlineSizeSql)
                 .iterator().next().get(0);
 
         assertEquals(srvInlineSize, clientInlineSize);
@@ -2054,13 +2058,13 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         ign.cluster().active(true);
 
-        // We need a value, that exceeds calculated max allowed inline size for sure.
-        int idxColSize = PageIO.MAX_PAYLOAD_SIZE;
+        int idxColSize = PageIO.MAX_PAYLOAD_SIZE + 1;
 
         sql("CREATE TABLE TEST (ID VARCHAR(" + idxColSize + "), ID_AFF VARCHAR, PRIMARY KEY (ID))");
 
         GridH2Table tbl = ((IgniteH2Indexing)ign.context().query().getIndexing()).schemaManager().dataTable("PUBLIC", "TEST");
 
+        // Inline size can't be bigger than max payload size even for big pages.
         assertEquals(PageIO.MAX_PAYLOAD_SIZE, ((H2TreeIndex)tbl.getIndex("_key_PK")).inlineSize());
     }
 
@@ -2073,21 +2077,20 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         IgniteEx ign = startGrid();
 
         // We need a value, that exceeds calculated max allowed inline size for sure.
-        int idxColSize = PageIO.MAX_PAYLOAD_SIZE;
+        int idxColSize = MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE + 1;
 
         sql("CREATE TABLE TEST (ID VARCHAR(" + idxColSize + "), ID_AFF VARCHAR, PRIMARY KEY (ID))");
 
         GridH2Table tbl = ((IgniteH2Indexing)ign.context().query().getIndexing()).schemaManager().dataTable("PUBLIC", "TEST");
 
         // Exact value is calculated and is not known.
-        assertTrue(((H2TreeIndex)tbl.getIndex("_key_PK")).inlineSize() <= PageIO.MAX_PAYLOAD_SIZE);
+        assertEquals(MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE, ((H2TreeIndex)tbl.getIndex("_key_PK")).inlineSize());
     }
 
     /** */
     @Test
     public void testCreateSystemIndexWarnWhenConfiguredInlineSizeExceedsMax() throws Exception {
-        // We need value, that exceeds calculated max allowed inline size for sure.
-        inlineSize = (int) PageIO.MAX_PAYLOAD_SIZE;
+        inlineSize = MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE + 1;
         indexes = Collections.singletonList(new QueryIndex("valStr"));
         srvLog = new ListeningTestLogger(false, log);
 
@@ -2095,7 +2098,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
                 ", tableName=default" +
                 ", idxName=VAL_VALSTR_ASC_IDX" +
                 ", configuredInlineSize=" + inlineSize +
-                ", maxAllowedInlineSize=";
+                ", maxAllowedInlineSize=" + MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE;
 
         LogListener lsnr = LogListener.matches(warnMsg).build();
 
@@ -2111,14 +2114,14 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     @Test
     public void testCreateSystemIndexWarnWhenInlineSizeSetInDdlExceedsMax() throws Exception {
         inlineSize = -1;
-        short idxInlineSize = PageIO.MAX_PAYLOAD_SIZE;
+        short idxInlineSize = MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE + 1;
         srvLog = new ListeningTestLogger(false, log);
 
         String warnMsg = "Configured inline size is too big [cacheName=TEST" +
                 ", tableName=SQL_PUBLIC_TEST" +
                 ", idxName=_key_PK" +
                 ", configuredInlineSize=" + idxInlineSize +
-                ", maxAllowedInlineSize=";
+                ", maxAllowedInlineSize=" + MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE;
 
         LogListener lsnr = LogListener.matches(warnMsg).build();
 
