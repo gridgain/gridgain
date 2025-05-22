@@ -21,8 +21,6 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.BytesInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.StringInlineIndexColumn;
@@ -93,7 +91,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
     /**
      * @param inlineIdxs Inline index helpers.
      * @param cfgInlineSize Inline size from cache config.
-     * @param maxInlineSize Max inline size from cache config.
+     * @param maxInlineSize Max inline size.
      * @return Inline size.
      */
     static int computeInlineSize(
@@ -109,12 +107,6 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
             return 0;
 
         boolean fixedSize = true;
-
-        int propSize = maxInlineSize == -1 ? IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE,
-            IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT) : maxInlineSize;
-
-        if (propSize == 0)
-            return 0;
 
         int size = 0;
 
@@ -138,13 +130,12 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
 
             size += sizeInc;
 
-            // total index size is limited by the property
-            if (size > propSize)
-                size = propSize;
+            if (size > maxInlineSize)
+                size = maxInlineSize;
         }
 
         if (cfgInlineSize != -1) {
-            cfgInlineSize = Math.min(PageIO.MAX_PAYLOAD_SIZE, cfgInlineSize);
+            cfgInlineSize = Math.min(maxInlineSize, cfgInlineSize);
 
             if (fixedSize && size < cfgInlineSize) {
                 log.warning("Explicit INLINE_SIZE for fixed size index item is too big. " +
@@ -157,7 +148,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
             return cfgInlineSize;
         }
 
-        return Math.min(PageIO.MAX_PAYLOAD_SIZE, size);
+        return size;
     }
 
     /**
