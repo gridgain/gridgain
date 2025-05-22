@@ -36,6 +36,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.cache.CacheException;
+
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.binary.BinaryObjectBuilder;
@@ -2027,6 +2029,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     @Ignore("GG-43558")
     @Test
+    /** */
     public void testSortedIndexInlineSizeOnClientNodes() throws Exception {
         inlineSize = -1;
         IgniteEx server = startGrid();
@@ -2034,17 +2037,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         sql("CREATE TABLE TEST (ID VARCHAR, ID_AFF VARCHAR, PRIMARY KEY (ID))");
 
-        log.info(sql(client, "SELECT * FROM SYS.INDEXES").getAll().toString());
-        log.info(sql(server, "SELECT * FROM SYS.INDEXES").getAll().toString());
-        log.info("INDEX VIEW");
-        String inlineSizeSql = "SELECT INLINE_SIZE FROM SYS.INDEXES WHERE TABLE_NAME= 'TEST' and INDEX_NAME = '_key_PK'";
+        String inlineSizeSql = "SELECT INLINE_SIZE FROM SYS.INDEXES WHERE TABLE_NAME = 'TEST' and INDEX_NAME = '_key_PK'";
 
-        int clientInlineSize = (int) sql(client, inlineSizeSql)
-                .iterator().next().get(0);
-        int srvInlineSize = (int) sql(server, inlineSizeSql)
-                .iterator().next().get(0);
-
-        assertEquals(srvInlineSize, clientInlineSize);
+        assertEquals(execSql(client, inlineSizeSql), execSql(server, inlineSizeSql));
     }
 
     @Test
@@ -2550,5 +2545,10 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         SqlDataType(Object javaType) {
             this.javaType = javaType;
         }
+    }
+
+    /** */
+    private static List<List<?>> execSql(Ignite ign, String sql) {
+        return ((IgniteEx)ign).context().query().querySqlFields(new SqlFieldsQuery(sql), false).getAll();
     }
 }
