@@ -15,11 +15,15 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence.evict;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
+import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -49,7 +53,7 @@ public abstract class PageAbstractEvictionTracker implements PageEvictionTracker
     private final long baseCompactTs;
 
     /** Shared context. */
-    private final GridCacheSharedContext sharedCtx;
+    private final GridCacheSharedContext<?, ?> sharedCtx;
 
     /**
      * @param pageMem Page memory.
@@ -132,6 +136,41 @@ public abstract class PageAbstractEvictionTracker implements PageEvictionTracker
         }
 
         return evictionDone;
+    }
+
+    /**
+     * Returns a list of rows, randomly chosen from random caches that belong to the same data region as this tracker.
+     * Real size of the list may be less than {@code cnt}. List might also contain the same element multiple times.
+     *
+     * @param rnd Random number generator to be used by the algorithm.
+     * @param cnt Upper bound for the number of rows to be returned.
+     * @return List of randomly chosen rows. Might be empty or have a size below {@code cnt}.
+     */
+    protected final List<CacheDataRowAdapter> findRandomRows(Random rnd, int cnt) throws IgniteCheckedException {
+        List<GridCacheAdapter<?, ?>> caches = new ArrayList<>();
+
+        for (GridCacheContext<?, ?> cacheCtx : sharedCtx.cacheContexts()) {
+            if (!cacheCtx.userCache() || cacheCtx.dataRegion().pageMemory() != pageMem)
+                continue;
+
+            caches.add(cacheCtx.cache());
+        }
+
+        if (caches.isEmpty())
+            return Collections.emptyList();
+
+        List<CacheDataRowAdapter> rows = new ArrayList<>(cnt);
+
+        for (int i = 0; i < cnt; i++) {
+            GridCacheAdapter<?, ?> randomCache = caches.get(rnd.nextInt(caches.size()));
+
+            CacheDataRowAdapter randomRow = randomCache.randomRow(rnd);
+
+            if (randomRow != null)
+                rows.add(randomRow);
+        }
+
+        return rows;
     }
 
     /**

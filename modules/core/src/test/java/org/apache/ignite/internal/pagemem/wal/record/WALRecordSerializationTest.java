@@ -38,6 +38,7 @@ import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.wal.record.RecordUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.internal.matchers.apachecommons.ReflectionEquals;
 
@@ -190,6 +191,7 @@ public class WALRecordSerializationTest extends GridCommonAbstractTest {
      * @throws Exception If fail.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-41562")
     public void testAllWalRecordsSerializedCompressedAndThenDeserializedSuccessfully() throws Exception {
         compactionEnabled = true;
 

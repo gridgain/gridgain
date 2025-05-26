@@ -36,8 +36,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.cache.CacheException;
-
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.binary.BinaryObjectBuilder;
@@ -56,7 +54,6 @@ import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
@@ -78,16 +75,14 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE;
-import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_PAGE_SIZE;
-import static org.apache.ignite.configuration.DataStorageConfiguration.MAX_PAGE_SIZE;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.ByteArrayed;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Dated;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.SqlStrConvertedValHolder;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Timed;
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.database.H2Tree.IGNITE_THROTTLE_INLINE_SIZE_CALCULATION;
+import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.MAX_INLINE_SIZE;
 import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex.SCAN_INDEX_NAME_SUFFIX;
-import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
  * A set of basic tests for caches with indexes.
@@ -95,9 +90,6 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 public class BasicIndexTest extends AbstractIndexingCommonTest {
     /** Default client name. */
     private static final String CLIENT_NAME = "client";
-
-    /** Max inline size, calculated for 4KB page size. */
-    private static final int MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE = 1999;
 
     /** {@code True} If index need to be created throught static config. */
     private static boolean createIdx = true;
@@ -122,9 +114,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** */
     private int gridCount = 1;
-
-    /** */
-    private int pageSize;
 
     /** Server listening logger. */
     private ListeningTestLogger srvLog;
@@ -185,7 +174,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             igniteCfg.setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration().setPersistenceEnabled(true).setMaxSize(10 * 1024 * 1024)
-                ).setPageSize(pageSize)
+                )
             );
         }
 
@@ -195,8 +184,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        pageSize = DFLT_PAGE_SIZE;
-
         super.beforeTest();
 
         stopAllGrids();
@@ -1999,141 +1986,48 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         assertTrue(lsnr.check());
     }
 
+    @Test
+    @WithSystemProperty(key = IGNITE_MAX_INDEX_PAYLOAD_SIZE, value = Integer.MAX_VALUE + "")
+    public void testMaxInlineSizeIsUsedWhenExceeded() throws Exception {
+        inlineSize = -1;
+
+        IgniteEx ign = startGrid();
+
+        int idxColSize = MAX_INLINE_SIZE + 1;
+
+        sql("CREATE TABLE TEST (ID VARCHAR(" + idxColSize + "), ID_AFF VARCHAR, PRIMARY KEY (ID))");
+
+        GridH2Table tbl = ((IgniteH2Indexing)ign.context().query().getIndexing()).schemaManager().dataTable("PUBLIC", "TEST");
+
+        // Inline size can't be bigger than this constant.
+        assertEquals(MAX_INLINE_SIZE, ((H2TreeIndex)tbl.getIndex("_key_PK")).inlineSize());
+    }
+
     /** */
     @Test
-    public void testWarnWhenInlineSizeInDdlExceedsMax() throws Exception {
+    public void testWarnWhenConfiguredInlineSizeExceedsMax() throws Exception {
         inlineSize = -1;
         srvLog = new ListeningTestLogger(false, log);
 
         startGrid();
 
-        int idxInlineSize = MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE + 1;
+        int idxInlineSize = MAX_INLINE_SIZE + 1;
 
         String warnMsg = "Configured inline size is too big [cacheName=TEST" +
                 ", tableName=SQL_PUBLIC_TEST" +
-                ", idxName=FAILING_IDX" +
+                ", idxName=SOME_IDX" +
                 ", configuredInlineSize=" + idxInlineSize +
-                ", maxAllowedInlineSize=" + MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE;
+                ", maxAllowedInlineSize=" + MAX_INLINE_SIZE;
 
         LogListener lsnr = LogListener.matches(warnMsg).build();
 
         srvLog.registerListener(lsnr);
 
         sql("CREATE TABLE TEST (ID VARCHAR, ID_AFF INT, VAL INT, PRIMARY KEY (ID, ID_AFF))");
-        sql("CREATE INDEX FAILING_IDX ON TEST (VAL) inline_size " + idxInlineSize);
+        sql("CREATE INDEX SOME_IDX ON TEST (VAL) inline_size " + idxInlineSize);
 
         assertTrue(lsnr.check());
 
-        srvLog.unregisterListener(lsnr);
-    }
-
-    @Ignore("GG-43558")
-    @Test
-    /** */
-    public void testSortedIndexInlineSizeOnClientNodes() throws Exception {
-        inlineSize = -1;
-        IgniteEx server = startGrid();
-        IgniteEx client = startGrid(CLIENT_NAME);
-
-        sql("CREATE TABLE TEST (ID VARCHAR, ID_AFF VARCHAR, PRIMARY KEY (ID))");
-
-        String inlineSizeSql = "SELECT INLINE_SIZE FROM SYS.INDEXES WHERE TABLE_NAME = 'TEST' and INDEX_NAME = '_key_PK'";
-
-        assertEquals(execSql(client, inlineSizeSql), execSql(server, inlineSizeSql));
-    }
-
-    @Test
-    @WithSystemProperty(key = IGNITE_MAX_INDEX_PAYLOAD_SIZE, value = Integer.MAX_VALUE + "")
-    public void testCreateIndexWithLargeInlineSizeAndLargePageSize() throws Exception {
-        isPersistenceEnabled = true;
-        inlineSize = -1;
-        pageSize = MAX_PAGE_SIZE;
-
-        IgniteEx ign = startGrid();
-
-        ign.cluster().active(true);
-
-        int idxColSize = PageIO.MAX_PAYLOAD_SIZE + 1;
-
-        sql("CREATE TABLE TEST (ID VARCHAR(" + idxColSize + "), ID_AFF VARCHAR, PRIMARY KEY (ID))");
-
-        GridH2Table tbl = ((IgniteH2Indexing)ign.context().query().getIndexing()).schemaManager().dataTable("PUBLIC", "TEST");
-
-        // Inline size can't be bigger than max payload size even for big pages.
-        assertEquals(PageIO.MAX_PAYLOAD_SIZE, ((H2TreeIndex)tbl.getIndex("_key_PK")).inlineSize());
-    }
-
-    /** */
-    @Test
-    @WithSystemProperty(key = IGNITE_MAX_INDEX_PAYLOAD_SIZE, value = Integer.MAX_VALUE + "")
-    public void testMaxInlineSizeUsedWhenExceeded() throws Exception {
-        inlineSize = -1;
-
-        IgniteEx ign = startGrid();
-
-        // We need a value, that exceeds calculated max allowed inline size for sure.
-        int idxColSize = MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE + 1;
-
-        sql("CREATE TABLE TEST (ID VARCHAR(" + idxColSize + "), ID_AFF VARCHAR, PRIMARY KEY (ID))");
-
-        GridH2Table tbl = ((IgniteH2Indexing)ign.context().query().getIndexing()).schemaManager().dataTable("PUBLIC", "TEST");
-
-        // Exact value is calculated and is not known.
-        assertEquals(MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE, ((H2TreeIndex)tbl.getIndex("_key_PK")).inlineSize());
-    }
-
-    /** */
-    @Test
-    public void testCreateSystemIndexWarnWhenConfiguredInlineSizeExceedsMax() throws Exception {
-        inlineSize = MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE + 1;
-        indexes = Collections.singletonList(new QueryIndex("valStr"));
-        srvLog = new ListeningTestLogger(false, log);
-
-        String warnMsg = "Configured inline size is too big [cacheName=VAL" +
-                ", tableName=default" +
-                ", idxName=VAL_VALSTR_ASC_IDX" +
-                ", configuredInlineSize=" + inlineSize +
-                ", maxAllowedInlineSize=" + MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE;
-
-        LogListener lsnr = LogListener.matches(warnMsg).build();
-
-        srvLog.registerListener(lsnr);
-
-        startGrid();
-
-        srvLog.unregisterListener(lsnr);
-        assertTrue(lsnr.check());
-    }
-
-    /** */
-    @Test
-    public void testCreateSystemIndexWarnWhenInlineSizeSetInDdlExceedsMax() throws Exception {
-        inlineSize = -1;
-        short idxInlineSize = MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE + 1;
-        srvLog = new ListeningTestLogger(false, log);
-
-        String warnMsg = "Configured inline size is too big [cacheName=TEST" +
-                ", tableName=SQL_PUBLIC_TEST" +
-                ", idxName=_key_PK" +
-                ", configuredInlineSize=" + idxInlineSize +
-                ", maxAllowedInlineSize=" + MAX_INLINE_SIZE_DEFAULT_PAGE_SIZE;
-
-        LogListener lsnr = LogListener.matches(warnMsg).build();
-
-        srvLog.registerListener(lsnr);
-
-        startGrid();
-
-        sql("CREATE TABLE TEST (ID VARCHAR, ID_AFF INT, VAL INT, "
-                        + "PRIMARY KEY (ID, ID_AFF)) WITH"
-                        + "\""
-                        + "AFFINITY_KEY=ID_AFF,"
-                        + "PK_INLINE_SIZE=" + idxInlineSize + ","
-                        + "AFFINITY_INDEX_INLINE_SIZE=" + idxInlineSize
-                        + "\""
-                );
-
-        assertTrue(lsnr.check());
         srvLog.unregisterListener(lsnr);
     }
 
@@ -2545,10 +2439,5 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         SqlDataType(Object javaType) {
             this.javaType = javaType;
         }
-    }
-
-    /** */
-    private static List<List<?>> execSql(Ignite ign, String sql) {
-        return ((IgniteEx)ign).context().query().querySqlFields(new SqlFieldsQuery(sql), false).getAll();
     }
 }

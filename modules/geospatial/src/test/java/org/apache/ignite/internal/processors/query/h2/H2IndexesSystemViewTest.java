@@ -73,9 +73,8 @@ public class H2IndexesSystemViewTest extends GridCommonAbstractTest {
 
         List<List<?>> clientNodeNodeIndexes = execSql(grid(CLIENT), idxSql);
 
-        // TODO GG-43558 Client nodes currently return inline size = -1 for BPLUS indexes.
-        // for (List<?> idx : clientNodeNodeIndexes)
-        // assertTrue(srvNodeIndexes.contains(idx));
+        for (List<?> idx : clientNodeNodeIndexes)
+            assertTrue(srvNodeIndexes.contains(idx));
 
         Object[][] expectedResults = {
             {-825022849, "SQL_PUBLIC_AFF_CACHE", "PUBLIC", "AFF_CACHE", "IDX_GEO_1", "SPATIAL", "\"GEOM\" ASC", false, false, null},
@@ -84,22 +83,10 @@ public class H2IndexesSystemViewTest extends GridCommonAbstractTest {
             {-825022849, "SQL_PUBLIC_AFF_CACHE", "PUBLIC", "AFF_CACHE", "_key_PK_hash", "HASH", "\"ID1\" ASC", false, true, null}
         };
 
-        Object[][] clientExpectedResults = {
-                {-825022849, "SQL_PUBLIC_AFF_CACHE", "PUBLIC", "AFF_CACHE", "IDX_GEO_1", "SPATIAL", "\"GEOM\" ASC", false, false, null},
-                {-825022849, "SQL_PUBLIC_AFF_CACHE", "PUBLIC", "AFF_CACHE", "__SCAN_", "SCAN", null, false, false, null},
-                {-825022849, "SQL_PUBLIC_AFF_CACHE", "PUBLIC", "AFF_CACHE", "_key_PK", "BTREE", "\"ID1\" ASC", true, true, -1},
-                {-825022849, "SQL_PUBLIC_AFF_CACHE", "PUBLIC", "AFF_CACHE", "_key_PK_hash", "HASH", "\"ID1\" ASC", false, true, null}
-        };
+        assertEquals(expectedResults.length, srvNodeIndexes.size());
 
-        checkResults(expectedResults, srvNodeIndexes);
-        checkResults(clientExpectedResults, clientNodeNodeIndexes);
-    }
-
-    private static void checkResults(Object[][] expectedResults, List<List<?>> nodeIndexes) {
-        assertEquals(expectedResults.length, nodeIndexes.size());
-
-        for (int i = 0; i < nodeIndexes.size(); i++) {
-            List<?> resRow = nodeIndexes.get(i);
+        for (int i = 0; i < srvNodeIndexes.size(); i++) {
+            List<?> resRow = srvNodeIndexes.get(i);
 
             Object[] expRow = expectedResults[i];
 

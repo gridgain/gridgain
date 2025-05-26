@@ -21,7 +21,13 @@ import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -271,8 +277,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
 
         List<List<?>> clientNodeNodeIndexes = execSql(client, idxSql);
 
-        // TODO GG-43558 Client nodes currently return inline size = -1 for BPLUS indexes.
-        // assertTrue(srvNodeIndexes.containsAll(clientNodeNodeIndexes));
+        assertTrue(srvNodeIndexes.containsAll(clientNodeNodeIndexes));
 
         //ToDo: As of now we can see duplicates columns within index due to https://issues.apache.org/jira/browse/IGNITE-11125
 
@@ -304,14 +309,6 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
             {2584860, "TST1", "TST1", "VALUECLASS", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true, 5},
             {2584860, "TST1", "TST1", "VALUECLASS", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null},
         };
-
-        Object[][] clientExpectedResults = new Object[expectedResults.length][10];
-
-        for (int i = 0; i < expectedResults.length; i++) {
-            clientExpectedResults[i] = Arrays.copyOf(expectedResults[i], expectedResults[i].length);
-            if (expectedResults[i][9] != null)
-                clientExpectedResults[i][10] = -1;
-        }
 
         assertEquals(expectedResults.length, srvNodeIndexes.size());
 

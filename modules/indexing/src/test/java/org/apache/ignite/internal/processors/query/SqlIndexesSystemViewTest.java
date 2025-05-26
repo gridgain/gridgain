@@ -38,7 +38,6 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.gridgain.internal.h2.value.Value;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -97,9 +96,9 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         execSql(driver, "CREATE TABLE Person(id INT PRIMARY KEY, name VARCHAR, age INT)");
 
         List<Object> expInit = Arrays.asList(
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "__SCAN_", "SCAN", null, false, false),
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK", "BTREE", "\"ID\" ASC", true, true),
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID\" ASC", false, true)
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "__SCAN_", "SCAN", null, false, false, null),
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK", "BTREE", "\"ID\" ASC", true, true, 5),
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID\" ASC", false, true, null)
         );
 
         checkIndexes(expInit::equals);
@@ -129,10 +128,10 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         execSql(driver, "CREATE INDEX NameIdx ON Person(name)");
 
         List<Object> expWithSecondary = Arrays.asList(
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "NAMEIDX", "BTREE", "\"NAME\" ASC, \"ID\" ASC", false, false),
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "__SCAN_", "SCAN", null, false, false),
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK", "BTREE", "\"ID\" ASC", true, true),
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID\" ASC", false, true)
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "NAMEIDX", "BTREE", "\"NAME\" ASC, \"ID\" ASC", false, false, 15),
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "__SCAN_", "SCAN", null, false, false, null),
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK", "BTREE", "\"ID\" ASC", true, true, 5),
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID\" ASC", false, true, null)
         );
 
         checkIndexes(expWithSecondary::equals);
@@ -144,10 +143,10 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         execSql(driver, "CREATE INDEX CompIdx ON Person(name, age)");
 
         List<Object> expWithCompound = Arrays.asList(
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "COMPIDX", "BTREE", "\"NAME\" ASC, \"AGE\" ASC, \"ID\" ASC", false, false),
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "__SCAN_", "SCAN", null, false, false),
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK", "BTREE", "\"ID\" ASC", true, true),
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID\" ASC", false, true)
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "COMPIDX", "BTREE", "\"NAME\" ASC, \"AGE\" ASC, \"ID\" ASC", false, false, 20),
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "__SCAN_", "SCAN", null, false, false, null),
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK", "BTREE", "\"ID\" ASC", true, true, 5),
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID\" ASC", false, true, null)
         );
 
         checkIndexes(expWithCompound::equals);
@@ -164,9 +163,9 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         execSql(driver, "CREATE TABLE Person(id1 INT, id2 INT, name VARCHAR, age INT, PRIMARY KEY (id1, id2))");
 
         List<Object> expInit = Arrays.asList(
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "__SCAN_", "SCAN", null, false, false),
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK", "BTREE", "\"ID1\" ASC, \"ID2\" ASC", true, true),
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID1\" ASC, \"ID2\" ASC", false, true)
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "__SCAN_", "SCAN", null, false, false, null),
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK", "BTREE", "\"ID1\" ASC, \"ID2\" ASC", true, true, 10),
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID1\" ASC, \"ID2\" ASC", false, true, null)
         );
 
         checkIndexes(expInit::equals);
@@ -174,10 +173,10 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         execSql(driver, "CREATE INDEX CompIdx ON Person(name, age)");
 
         List<Object> expWithSecondary = Arrays.asList(
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "COMPIDX", "BTREE", "\"NAME\" ASC, \"AGE\" ASC, \"ID1\" ASC, \"ID2\" ASC", false, false),
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "__SCAN_", "SCAN", null, false, false),
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK", "BTREE", "\"ID1\" ASC, \"ID2\" ASC", true, true),
-            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID1\" ASC, \"ID2\" ASC", false, true)
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "COMPIDX", "BTREE", "\"NAME\" ASC, \"AGE\" ASC, \"ID1\" ASC, \"ID2\" ASC", false, false, 10),
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "__SCAN_", "SCAN", null, false, false, null),
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK", "BTREE", "\"ID1\" ASC, \"ID2\" ASC", true, true, 10),
+            Arrays.asList(-1447683814, "SQL_PUBLIC_PERSON", -1447683814, "SQL_PUBLIC_PERSON", "PUBLIC", "PERSON", "_key_PK_hash", "HASH", "\"ID1\" ASC, \"ID2\" ASC", false, true, null)
         );
 
         checkIndexes(expWithSecondary::equals);
@@ -191,10 +190,10 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
                 .setIndexes(Collections.singleton(new QueryIndex("i"))))));
 
         List<Object> expCache = Arrays.asList(
-            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false),
-            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "__SCAN_", "SCAN", null, false, false),
-            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true),
-            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true)
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "__SCAN_", "SCAN", null, false, false, null),
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true, 5),
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null)
         );
 
         checkIndexes(expCache::equals);
@@ -204,22 +203,22 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         checkIndexes(List::isEmpty);
 
         List<Object> expGrpBoth = Arrays.asList(
-            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false),
-            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "__SCAN_", "SCAN", null, false, false),
-            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true),
-            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true),
+            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
+            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "__SCAN_", "SCAN", null, false, false, null),
+            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true, 5),
+            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null),
 
-            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false),
-            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "__SCAN_", "SCAN", null, false, false),
-            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true),
-            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true)
+            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
+            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "__SCAN_", "SCAN", null, false, false, null),
+            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true, 5),
+            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null)
         );
 
         List<Object> expGrpSingle = Arrays.asList(
-            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false),
-            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "__SCAN_", "SCAN", null, false, false),
-            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true),
-            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true)
+            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
+            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "__SCAN_", "SCAN", null, false, false, null),
+            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true, 5),
+            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null)
         );
 
         driver.createCache(new CacheConfiguration<>("cache1")
@@ -256,10 +255,10 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
         assertEqualsCollections(Collections.singleton(new T2<>(1, "john")), res);
 
         List<Object> expIdxs = Arrays.asList(
-            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "STRING", "STRING__VAL_IDX", "BTREE", "\"_VAL\" ASC, \"_KEY\" ASC", false, false),
-            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "STRING", "__SCAN_", "SCAN", null, false, false),
-            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "STRING", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true),
-            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "STRING", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true)
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "STRING", "STRING__VAL_IDX", "BTREE", "\"_VAL\" ASC, \"_KEY\" ASC", false, false, 15),
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "STRING", "__SCAN_", "SCAN", null, false, false, null),
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "STRING", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true, 5),
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "STRING", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null)
         );
 
         // It is expected that TEXT index is not present in the list
@@ -270,21 +269,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
     private void checkIndexes(Predicate<List<List<?>>> checker) throws Exception {
         for (Ignite ign : G.allGrids()) {
             assertTrue(GridTestUtils.waitForCondition(() -> {
-                List<List<?>> indexes = execSql(ign, "SELECT " +
-                        "CACHE_GROUP_ID, " +
-                        "CACHE_GROUP_NAME, " +
-                        "CACHE_ID, " +
-                        "CACHE_NAME, " +
-                        "SCHEMA_NAME, " +
-                        "TABLE_NAME, " +
-                        "INDEX_NAME, " +
-                        "INDEX_TYPE, " +
-                        "COLUMNS, " +
-                        "IS_PK, " +
-                        "IS_UNIQUE " +
-                        // TODO GG-43558
-                        //",  INLINE_SIZE" +
-                        " FROM " + sysSchemaName() + ".INDEXES ORDER BY CACHE_NAME, INDEX_NAME");
+                List<List<?>> indexes = execSql(ign, "SELECT * FROM " + sysSchemaName() + ".INDEXES ORDER BY CACHE_NAME, INDEX_NAME");
 
                 return checker.test(indexes);
             }, 1000));
