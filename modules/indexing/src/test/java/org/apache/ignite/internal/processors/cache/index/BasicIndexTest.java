@@ -1986,6 +1986,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         assertTrue(lsnr.check());
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_MAX_INDEX_PAYLOAD_SIZE, value = Integer.MAX_VALUE + "")
     public void testMaxInlineSizeIsUsedWhenExceeded() throws Exception {
