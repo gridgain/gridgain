@@ -119,7 +119,7 @@ public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
                         else
                             logFile = new File(req0.path());
                     }
-                    else if (req0.path().startsWith(ctx.config().getIgniteHome()))
+                    else if (req0.path().startsWith(ctx.config().getIgniteHome()) && !req0.path().contains(".."))
                         logFile = new File(req0.path());
                     else {
                         return new GridFinishedFuture<>(new GridRestResponse(GridRestResponse.STATUS_FAILED,
