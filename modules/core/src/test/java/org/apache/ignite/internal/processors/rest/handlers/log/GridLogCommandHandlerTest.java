@@ -201,6 +201,28 @@ public class GridLogCommandHandlerTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    public void testHandleAsyncPathWithIgniteHomeAndContainsParentDirectory() throws Exception {
+        IgniteConfiguration cfg = new IgniteConfiguration();
+        cfg.setIgniteHome(igniteHome);
+        GridTestKernalContext ctx = newContext(cfg);
+        GridLogCommandHandler cmdHandler = new GridLogCommandHandler(ctx);
+        GridRestLogRequest req = new GridRestLogRequest();
+
+        req.to(5);
+        req.from(2);
+        req.path(igniteHome + "/..");
+
+        IgniteInternalFuture<GridRestResponse> resp = cmdHandler.handleAsync(req);
+
+        assertEquals("Request parameter 'path' must contain a path to valid log file.", resp.result().getError());
+        assertEquals(GridRestResponse.STATUS_FAILED, resp.result().getSuccessStatus());
+        assertNull(resp.result().getResponse());
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     public void testHandleAsyncFromGreaterThanTo() throws Exception {
         IgniteConfiguration cfg = new IgniteConfiguration();
         cfg.setIgniteHome(igniteHome);
