@@ -990,11 +990,11 @@ public class BinaryUtils {
                 );
             }
 
-            boolean affIgnoreCase = false;
-
             // Check affinity field names.
             if (!F.eq(oldMeta.affinityKeyFieldName(), newMeta.affinityKeyFieldName())) {
-                affIgnoreCase = binCtx != null &&
+                boolean affIgnoreCase = binCtx != null &&
+                    oldMeta.affinityKeyFieldName() != null &&
+                    newMeta.affinityKeyFieldName() != null &&
                     (binCtx.fieldId(oldMeta.typeId(), oldMeta.affinityKeyFieldName()) ==
                         binCtx.fieldId(newMeta.typeId(), newMeta.affinityKeyFieldName()));
 
@@ -1049,7 +1049,7 @@ public class BinaryUtils {
 
                 String fieldName = newField.getKey();
 
-                if (binCtx != null && binCtx.fieldId(newMeta.typeId(), oldMetaFieldIgnoreCaseName) == binCtx.fieldId(newMeta.typeId(), fieldName)) {
+                if (binCtx != null && oldMetaFieldIgnoreCaseName != null && binCtx.fieldId(newMeta.typeId(), oldMetaFieldIgnoreCaseName) == binCtx.fieldId(newMeta.typeId(), fieldName)) {
                     fieldName = oldMetaFieldIgnoreCaseName;
                 }
 
