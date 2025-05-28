@@ -955,7 +955,7 @@ public class BinaryUtils {
      * @throws BinaryObjectException If merge failed due to metadata conflict.
      */
     public static BinaryMetadata mergeMetadata(@Nullable BinaryMetadata oldMeta, BinaryMetadata newMeta) {
-        return mergeMetadata(oldMeta, newMeta, null);
+        return mergeMetadata(oldMeta, newMeta, null, null);
     }
 
     /**
@@ -968,7 +968,7 @@ public class BinaryUtils {
      * @throws BinaryObjectException If merge failed due to metadata conflict.
      */
     public static BinaryMetadata mergeMetadata(@Nullable BinaryMetadata oldMeta, BinaryMetadata newMeta,
-        @Nullable Set<Integer> changedSchemas) {
+        @Nullable Set<Integer> changedSchemas, @Nullable BinaryContext binCtx) {
         assert newMeta != null;
 
         if (oldMeta == null) {
@@ -990,13 +990,21 @@ public class BinaryUtils {
                 );
             }
 
+            boolean affIgnoreCase = false;
+
             // Check affinity field names.
             if (!F.eq(oldMeta.affinityKeyFieldName(), newMeta.affinityKeyFieldName())) {
-                throw new BinaryObjectException(
-                    "Binary type has different affinity key fields [" + "typeName=" + newMeta.typeName() +
-                        ", affKeyFieldName1=" + oldMeta.affinityKeyFieldName() +
-                        ", affKeyFieldName2=" + newMeta.affinityKeyFieldName() + ']'
-                );
+                affIgnoreCase = binCtx != null &&
+                    (binCtx.fieldId(oldMeta.typeId(), oldMeta.affinityKeyFieldName()) ==
+                        binCtx.fieldId(newMeta.typeId(), newMeta.affinityKeyFieldName()));
+
+                if (!affIgnoreCase) {
+                    throw new BinaryObjectException(
+                        "Binary type has different affinity key fields [" + "typeName=" + newMeta.typeName() +
+                            ", affKeyFieldName1=" + oldMeta.affinityKeyFieldName() +
+                            ", affKeyFieldName2=" + newMeta.affinityKeyFieldName() + ']'
+                    );
+                }
             }
 
             // Check enum flag.
@@ -1012,12 +1020,19 @@ public class BinaryUtils {
             // Check and merge fields.
             Map<String, BinaryFieldMetadata> mergedFields;
 
+            Map<String, String> oldLowerCaseMap = new HashMap<>();
+
+            for (String fieldName : oldMeta.fieldsMap().keySet()) {
+                oldLowerCaseMap.put(fieldName.toLowerCase(), fieldName);
+            }
+
             if (FIELDS_SORTED_ORDER)
                 mergedFields = new TreeMap<>(oldMeta.fieldsMap());
             else
                 mergedFields = new LinkedHashMap<>(oldMeta.fieldsMap());
 
             Map<String, BinaryFieldMetadata> newFields = newMeta.fieldsMap();
+            Map<String, BinaryFieldMetadata> oldFields = oldMeta.fieldsMap();
 
             boolean changed = false;
 
@@ -1030,7 +1045,15 @@ public class BinaryUtils {
             }
 
             for (Map.Entry<String, BinaryFieldMetadata> newField : newFields.entrySet()) {
-                BinaryFieldMetadata oldFieldMeta = mergedFields.put(newField.getKey(), newField.getValue());
+                String oldMetaFieldIgnoreCaseName = oldLowerCaseMap.get(newField.getKey().toLowerCase());
+
+                String fieldName = newField.getKey();
+
+                if (binCtx != null && binCtx.fieldId(newMeta.typeId(), oldMetaFieldIgnoreCaseName) == binCtx.fieldId(newMeta.typeId(), fieldName)) {
+                    fieldName = oldMetaFieldIgnoreCaseName;
+                }
+
+                BinaryFieldMetadata oldFieldMeta = mergedFields.put(fieldName, newField.getValue());
 
                 if (oldFieldMeta == null)
                     changed = true;
