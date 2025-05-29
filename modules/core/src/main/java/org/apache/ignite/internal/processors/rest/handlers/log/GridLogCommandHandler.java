@@ -19,7 +19,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.InvalidPathException;
+import java.net.URI;
 import java.util.Collection;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
@@ -35,7 +35,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.LOG;
 
 /**
- * Handler for {@link org.apache.ignite.internal.processors.rest.GridRestCommand#LOG} command.
+ * Handler for {@link GridRestCommand#LOG} command.
  */
 public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
     /**
@@ -119,7 +119,7 @@ public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
                         else
                             logFile = new File(req0.path());
                     }
-                    else if (req0.path().startsWith(ctx.config().getIgniteHome()))
+                    else if (resolveFilePath(req0.path()).startsWith(ctx.config().getIgniteHome()))
                         logFile = new File(req0.path());
                     else {
                         return new GridFinishedFuture<>(new GridRestResponse(GridRestResponse.STATUS_FAILED,
@@ -131,7 +131,7 @@ public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
                 else
                     logFile = new File(log.fileName());
             }
-            catch (InvalidPathException e) {
+            catch (Exception e) {
                 return new GridFinishedFuture<>(new GridRestResponse(GridRestResponse.STATUS_FAILED,
                     "Incorrect path to a log file [msg=" + e.getMessage() + ']'));
             }
@@ -158,7 +158,7 @@ public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
      * @return Content that is read.
      * @throws IgniteCheckedException If failed.
      */
-    private String readLog(int from, int to, File logFile) throws IgniteCheckedException {
+    private static String readLog(int from, int to, File logFile) throws IgniteCheckedException {
         StringBuilder content = new StringBuilder();
 
         try (BufferedReader reader = new BufferedReader(new FileReader(logFile))) {
@@ -182,5 +182,12 @@ public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
         }
 
         return content.toString();
+    }
+
+    /** */
+    private static String resolveFilePath(String p) throws Exception {
+        p = new URI(p).normalize().getPath();
+
+        return new File(p).getCanonicalPath();
     }
 }
