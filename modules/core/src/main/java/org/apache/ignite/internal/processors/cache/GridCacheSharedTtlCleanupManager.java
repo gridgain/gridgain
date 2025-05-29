@@ -124,6 +124,8 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                 if (oldVal == null && newVal == null)
                     return;
 
+                // We expose some details about proprietary DR feature there, but we assume that it is a safe trade-off
+                // since users of CE edition don't care about tombstones at all (there are no reasons for that)
                 U.log(log, "Tombstones TTL has been updated [" + (oldVal != null ? oldVal : dfltTombstoneTtl + " (dflt)") + " -> " + newVal + "]. " +
                         "Note that tombstones that existed before this change will not be affected. " +
                         "You can find more details about it at " + TOMBSTONE_TTL_DOC_URL);
