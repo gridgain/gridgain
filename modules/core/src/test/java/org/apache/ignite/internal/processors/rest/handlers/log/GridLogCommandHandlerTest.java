@@ -237,7 +237,6 @@ public class GridLogCommandHandlerTest extends GridCommonAbstractTest {
 
         IgniteInternalFuture<GridRestResponse> resp = cmdHandler.handleAsync(req);
 
-        assertEquals("Request parameter 'path' must contain a path to valid log file.", resp.result().getError());
         assertEquals(GridRestResponse.STATUS_FAILED, resp.result().getSuccessStatus());
         assertNull(resp.result().getResponse());
     }

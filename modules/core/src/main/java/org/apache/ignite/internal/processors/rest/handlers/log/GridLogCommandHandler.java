@@ -19,9 +19,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.InvalidPathException;
+import java.net.URI;
 import java.util.Collection;
-import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -53,16 +52,6 @@ public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
      * Default log file end line number*
      */
     private static final int DEFAULT_TO = 1;
-
-    /**
-     * Pattern for replacing the URL encoded dot to ".".
-     */
-    private static final Pattern URL_ENCODED_DOT_PATTERN = Pattern.compile("%2e|%252e");
-
-    /**
-     * Pattern for removing the URL encoded null bytes.
-     */
-    private static final Pattern NULL_BYTES_PATTERN = Pattern.compile("%00");
 
     /**
      * @param ctx Context.
@@ -130,7 +119,7 @@ public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
                         else
                             logFile = new File(req0.path());
                     }
-                    else if (req0.path().startsWith(ctx.config().getIgniteHome()) && !isPathTraversal(req0.path()))
+                    else if (resolveFilePath(req0.path()).startsWith(ctx.config().getIgniteHome()))
                         logFile = new File(req0.path());
                     else {
                         return new GridFinishedFuture<>(new GridRestResponse(GridRestResponse.STATUS_FAILED,
@@ -142,7 +131,7 @@ public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
                 else
                     logFile = new File(log.fileName());
             }
-            catch (InvalidPathException e) {
+            catch (Exception e) {
                 return new GridFinishedFuture<>(new GridRestResponse(GridRestResponse.STATUS_FAILED,
                     "Incorrect path to a log file [msg=" + e.getMessage() + ']'));
             }
@@ -169,7 +158,7 @@ public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
      * @return Content that is read.
      * @throws IgniteCheckedException If failed.
      */
-    private String readLog(int from, int to, File logFile) throws IgniteCheckedException {
+    private static String readLog(int from, int to, File logFile) throws IgniteCheckedException {
         StringBuilder content = new StringBuilder();
 
         try (BufferedReader reader = new BufferedReader(new FileReader(logFile))) {
@@ -196,10 +185,9 @@ public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
     }
 
     /** */
-    private static boolean isPathTraversal(String p) {
-        p = URL_ENCODED_DOT_PATTERN.matcher(p).replaceAll(".");
-        p = NULL_BYTES_PATTERN.matcher(p).replaceAll("");
+    private static String resolveFilePath(String p) throws Exception {
+        p = new URI(p).normalize().getPath();
 
-        return p.contains("..");
+        return new File(p).getCanonicalPath();
     }
 }
