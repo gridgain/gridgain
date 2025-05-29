@@ -135,10 +135,9 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
 
             computedInlineSize += sizeInc;
 
-            if (computedInlineSize > maxInlineSize) {
+            // We can't break here, because we need to check all columns for fixed size.
+            if (computedInlineSize > maxInlineSize)
                 computedInlineSize = maxInlineSize;
-                break;
-            }
         }
 
         if (cfgInlineSize != -1) {
