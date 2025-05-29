@@ -196,7 +196,7 @@ public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
     }
 
     /** */
-    public static boolean isPathTraversal(String p) {
+    private static boolean isPathTraversal(String p) {
         p = URL_ENCODED_DOT_PATTERN.matcher(p).replaceAll(".");
         p = NULL_BYTES_PATTERN.matcher(p).replaceAll("");
 
