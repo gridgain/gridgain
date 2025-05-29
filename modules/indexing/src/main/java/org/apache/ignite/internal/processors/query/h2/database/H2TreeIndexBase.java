@@ -143,7 +143,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
 
         if (cfgInlineSize != -1) {
             if (fixedSize && computedInlineSize < cfgInlineSize) {
-                log.warning("Explicit INLINE_SIZE for fixed size index item is too big. " +
+                U.warn(log, "Explicit INLINE_SIZE for fixed size index item is too big. " +
                         "This will lead to wasting of space inside index pages. Ignoring " +
                         "[index=" + name + ", explicitInlineSize=" + cfgInlineSize + ", realInlineSize=" + computedInlineSize + ']');
 
@@ -151,7 +151,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
             }
 
             if (cfgInlineSize > maxInlineSize)
-                log.warning("Explicit INLINE_SIZE exceeds maximum size. Ignoring " +
+                U.warn(log, "Explicit INLINE_SIZE exceeds maximum size. Ignoring " +
                         "[index=" + name + ", explicitInlineSize=" + cfgInlineSize + ", maxInlineSize=" + maxInlineSize + ']');
 
             return Math.min(cfgInlineSize, maxInlineSize);
@@ -208,7 +208,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
     private static int maxInlineSize(int cfgMaxInlineSize, String name, IgniteLogger log) {
         if (cfgMaxInlineSize != -1) {
             if (cfgMaxInlineSize > MAX_INLINE_SIZE) {
-                log.warning("Cache sqlIdxMaxInlineSize exceeds maximum allowed size. Ignoring" +
+                U.warn(log, "Cache sqlIdxMaxInlineSize exceeds maximum allowed size. Ignoring" +
                         "[index=" + name + ", maxInlineSize=" + cfgMaxInlineSize + ", maxAllowedInlineSize=" + MAX_INLINE_SIZE + ']');
 
                 return MAX_INLINE_SIZE;
@@ -221,7 +221,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
                 MAX_INLINE_SIZE);
 
         if (propSize > MAX_INLINE_SIZE) {
-            log.warning("System property IGNITE_MAX_INDEX_PAYLOAD_SIZE exceeds maximum allowed size. Ignoring" +
+            U.warn(log, "System property IGNITE_MAX_INDEX_PAYLOAD_SIZE exceeds maximum allowed size. Ignoring" +
                     "[index=" + name + ", propertySize=" + propSize + ", maxAllowedInlineSize=" + MAX_INLINE_SIZE + ']');
 
             return MAX_INLINE_SIZE;
