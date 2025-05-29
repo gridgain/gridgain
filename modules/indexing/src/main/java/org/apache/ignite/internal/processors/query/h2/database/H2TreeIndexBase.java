@@ -41,10 +41,6 @@ import org.gridgain.internal.h2.table.TableFilter;
  * H2 tree index base.
  */
 public abstract class H2TreeIndexBase extends GridH2IndexBase {
-
-    /** Default value for {@code IGNITE_MAX_INDEX_PAYLOAD_SIZE} */
-    static final int IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT = 64;
-
     /**
      * Default sql index size for types with variable length (such as String or byte[]).
      * Note that effective length will be lower, because 3 bytes will be taken for the inner representation of variable type.
@@ -117,13 +113,27 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
 
         boolean fixedSize = true;
 
-        int propSize = cfgMaxInlineSize == -1 ? IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE,
-            IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT) : cfgMaxInlineSize;
+        int maxSize = cfgMaxInlineSize;
 
-        if (propSize == 0)
+        if (cfgMaxInlineSize > MAX_INLINE_SIZE) {
+            log.warning("Cache sqlIdxMaxInlineSize exceeds maximum allowed size. Ignoring" +
+                    "[index=" + name + ", maxInlineSize=" + maxSize + ", maxAllowedInlineSize=" + MAX_INLINE_SIZE + ']');
+            maxSize = MAX_INLINE_SIZE;
+        }
+
+        if (cfgMaxInlineSize == -1) {
+            int propSize = IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE,
+                    MAX_INLINE_SIZE);
+
+            if (propSize > MAX_INLINE_SIZE)
+                log.warning("System property IGNITE_MAX_INDEX_PAYLOAD_SIZE exceeds maximum allowed size. Ignoring" +
+                        "[index=" + name + ", propertySize=" + propSize + ", maxAllowedInlineSize=" + MAX_INLINE_SIZE + ']');
+
+            maxSize = Math.min(propSize, MAX_INLINE_SIZE);
+        }
+
+        if (maxSize == 0)
             return 0;
-
-        int maxSize = propSize == -1 ? MAX_INLINE_SIZE : Math.min(propSize, MAX_INLINE_SIZE);
 
         int size = 0;
 
@@ -159,10 +169,21 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
                 return size;
             }
 
+            if (cfgInlineSize > maxSize)
+                log.warning("Explicit INLINE_SIZE exceeds maximum size. Ignoring " +
+                        "[index=" + name + ", explicitInlineSize=" + cfgInlineSize + ", maxInlineSize=" + maxSize + ']');
+
             return Math.min(cfgInlineSize, maxSize);
         }
 
-        return Math.min(maxSize, size);
+        if (size > maxSize) {
+            log.warning("Calculated inline size exceeds maximum size. Ignoring " +
+                    "[index=" + name + ", calculatedInlineSize=" + size + ", maxInlineSize=" + maxSize + ']');
+
+            return maxSize;
+        }
+
+        return size;
     }
 
     /**

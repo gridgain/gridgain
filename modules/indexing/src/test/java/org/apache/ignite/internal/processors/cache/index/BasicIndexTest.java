@@ -611,7 +611,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         cache = client.cache(DEFAULT_CACHE_NAME);
 
-        LogListener lsnrIdx5 = LogListener.matches(msg1).andMatches("idx5").build();
+        LogListener lsnrIdx5 = LogListener.matches(msg1).andMatches("newIndexName=idx5").build();
 
         srvLog.registerListener(lsnrIdx5);
 
@@ -619,7 +619,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         assertTrue(lsnrIdx5.check());
 
-        LogListener lsnrIdx7 = LogListener.matches(msg1).andMatches("idx7").build();
+        LogListener lsnrIdx7 = LogListener.matches(msg1).andMatches("newIndexName=idx7").build();
 
         srvLog.registerListener(lsnrIdx7);
 
