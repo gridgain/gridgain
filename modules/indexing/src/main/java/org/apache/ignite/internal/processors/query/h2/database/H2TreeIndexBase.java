@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.Inli
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.StringInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
@@ -36,6 +37,8 @@ import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.table.Table;
 import org.gridgain.internal.h2.table.TableFilter;
+
+import static org.apache.ignite.internal.util.IgniteUtils.MAX_INLINE_SIZE;
 
 /**
  * H2 tree index base.
@@ -49,14 +52,6 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
 
     /** SQL pattern for the String with defined length. */
     static final Pattern STRING_WITH_LENGTH_SQL_PATTERN = Pattern.compile("\\w+\\((\\d+)\\)");
-
-    /**
-     * To avoid tree corruption, at least two items should fit into one page.
-     * So maximum payload size equals: P = (PS - H - 3L) / 2 - X , where P - Payload size, PS - page size, H - page
-     * header size, L - size of the child link, X - overhead per item. Calculated for pageSize = 1KB with
-     * KeystoreEncryptionSpi and MVCC enabled.
-     */
-    public static final int MAX_INLINE_SIZE = 427;
 
     /**
      * Constructor.
@@ -113,29 +108,12 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
 
         boolean fixedSize = true;
 
-        int maxSize = cfgMaxInlineSize;
+        int maxInlineSize = maxInlineSize(cfgMaxInlineSize, name, log);
 
-        if (cfgMaxInlineSize > MAX_INLINE_SIZE) {
-            log.warning("Cache sqlIdxMaxInlineSize exceeds maximum allowed size. Ignoring" +
-                    "[index=" + name + ", maxInlineSize=" + maxSize + ", maxAllowedInlineSize=" + MAX_INLINE_SIZE + ']');
-            maxSize = MAX_INLINE_SIZE;
-        }
-
-        if (cfgMaxInlineSize == -1) {
-            int propSize = IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE,
-                    MAX_INLINE_SIZE);
-
-            if (propSize > MAX_INLINE_SIZE)
-                log.warning("System property IGNITE_MAX_INDEX_PAYLOAD_SIZE exceeds maximum allowed size. Ignoring" +
-                        "[index=" + name + ", propertySize=" + propSize + ", maxAllowedInlineSize=" + MAX_INLINE_SIZE + ']');
-
-            maxSize = Math.min(propSize, MAX_INLINE_SIZE);
-        }
-
-        if (maxSize == 0)
+        if (maxInlineSize == 0)
             return 0;
 
-        int size = 0;
+        int computedInlineSize = 0;
 
         for (InlineIndexColumn idxHelper : inlineIdxs) {
             // for variable types - default variable size, for other types - type's size + type marker
@@ -155,35 +133,31 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
                 }
             }
 
-            size += sizeInc;
+            computedInlineSize += sizeInc;
+
+            if (computedInlineSize > maxInlineSize) {
+                computedInlineSize = maxInlineSize;
+                break;
+            }
         }
 
         if (cfgInlineSize != -1) {
-            size = Math.min(size, maxSize);
-
-            if (fixedSize && size < cfgInlineSize) {
+            if (fixedSize && computedInlineSize < cfgInlineSize) {
                 log.warning("Explicit INLINE_SIZE for fixed size index item is too big. " +
                         "This will lead to wasting of space inside index pages. Ignoring " +
-                        "[index=" + name + ", explicitInlineSize=" + cfgInlineSize + ", realInlineSize=" + size + ']');
+                        "[index=" + name + ", explicitInlineSize=" + cfgInlineSize + ", realInlineSize=" + computedInlineSize + ']');
 
-                return size;
+                return computedInlineSize;
             }
 
-            if (cfgInlineSize > maxSize)
+            if (cfgInlineSize > maxInlineSize)
                 log.warning("Explicit INLINE_SIZE exceeds maximum size. Ignoring " +
-                        "[index=" + name + ", explicitInlineSize=" + cfgInlineSize + ", maxInlineSize=" + maxSize + ']');
+                        "[index=" + name + ", explicitInlineSize=" + cfgInlineSize + ", maxInlineSize=" + maxInlineSize + ']');
 
-            return Math.min(cfgInlineSize, maxSize);
+            return Math.min(cfgInlineSize, maxInlineSize);
         }
 
-        if (size > maxSize) {
-            log.warning("Calculated inline size exceeds maximum size. Ignoring " +
-                    "[index=" + name + ", calculatedInlineSize=" + size + ", maxInlineSize=" + maxSize + ']');
-
-            return maxSize;
-        }
-
-        return size;
+        return computedInlineSize;
     }
 
     /**
@@ -228,5 +202,31 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
         }
 
         return res;
+    }
+
+    /** Returns maximum inline size based on cache configuration, system property and {@link IgniteUtils#MAX_INLINE_SIZE}. */
+    private static int maxInlineSize(int cfgMaxInlineSize, String name, IgniteLogger log) {
+        if (cfgMaxInlineSize != -1) {
+            if (cfgMaxInlineSize > MAX_INLINE_SIZE) {
+                log.warning("Cache sqlIdxMaxInlineSize exceeds maximum allowed size. Ignoring" +
+                        "[index=" + name + ", maxInlineSize=" + cfgMaxInlineSize + ", maxAllowedInlineSize=" + MAX_INLINE_SIZE + ']');
+
+                return MAX_INLINE_SIZE;
+            }
+
+            return cfgMaxInlineSize;
+        }
+
+        int propSize = IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE,
+                MAX_INLINE_SIZE);
+
+        if (propSize > MAX_INLINE_SIZE) {
+            log.warning("System property IGNITE_MAX_INDEX_PAYLOAD_SIZE exceeds maximum allowed size. Ignoring" +
+                    "[index=" + name + ", propertySize=" + propSize + ", maxAllowedInlineSize=" + MAX_INLINE_SIZE + ']');
+
+            return MAX_INLINE_SIZE;
+        }
+
+        return propSize;
     }
 }

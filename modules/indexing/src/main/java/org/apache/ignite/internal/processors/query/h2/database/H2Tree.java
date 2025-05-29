@@ -69,12 +69,12 @@ import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.MAX_INLINE_SIZE;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.computeInlineSize;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.getAvailableInlineColumns;
 import static org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.AbstractInlineIndexColumn.CANT_BE_COMPARE;
 import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.mergeTasks;
 import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.toMaintenanceTask;
+import static org.apache.ignite.internal.util.IgniteUtils.MAX_INLINE_SIZE;
 
 /**
  * H2 tree index implementation.
@@ -253,14 +253,6 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         this.affinityKey = affinityKey;
         this.mvccEnabled = mvccEnabled;
 
-        if (configuredInlineSize > MAX_INLINE_SIZE)
-            U.warn(log, "Configured inline size is too big [cacheName=" + cacheName +
-                    ", tableName=" + tblName +
-                    ", idxName=" + idxName +
-                    ", configuredInlineSize=" + configuredInlineSize +
-                    ", maxAllowedInlineSize=" + MAX_INLINE_SIZE + ']'
-            );
-
         if (!initNew) {
             // Page is ready - read meta information.
             MetaPageInfo metaInfo = getMetaInfo();
@@ -298,6 +290,16 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             inlineIdxs = inlineObjSupported ? inlineIdxs0 : inlineIdxs0.stream()
                 .filter(ih -> ih.type() != Value.JAVA_OBJECT)
                 .collect(Collectors.toList());
+
+            int recommendedInlineSize = computeInlineSize(name, inlineIdxs, -1, configuredInlineSize, log);
+
+            if (inlineSize > recommendedInlineSize)
+                U.warn(log, "Index inline size is too big. [cacheName=" + cacheName +
+                        ", tableName=" + tblName +
+                        ", idxName=" + idxName +
+                        ", configuredInlineSize=" + configuredInlineSize +
+                        ", recommended=" + recommendedInlineSize + ']'
+                );
 
             inlineCols = new IndexColumn[inlineIdxs.size()];
 

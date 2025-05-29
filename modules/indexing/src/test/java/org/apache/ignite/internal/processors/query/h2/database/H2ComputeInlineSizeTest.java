@@ -42,7 +42,7 @@ import org.gridgain.internal.h2.value.TypeInfo;
 import org.gridgain.internal.h2.value.Value;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.MAX_INLINE_SIZE;
+import static org.apache.ignite.internal.util.IgniteUtils.MAX_INLINE_SIZE;
 
 /** Tests for the computation of default inline size. */
 public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {

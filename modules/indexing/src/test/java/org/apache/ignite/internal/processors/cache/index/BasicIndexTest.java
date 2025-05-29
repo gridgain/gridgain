@@ -81,8 +81,8 @@ import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCover
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Timed;
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.database.H2Tree.IGNITE_THROTTLE_INLINE_SIZE_CALCULATION;
-import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.MAX_INLINE_SIZE;
 import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex.SCAN_INDEX_NAME_SUFFIX;
+import static org.apache.ignite.internal.util.IgniteUtils.MAX_INLINE_SIZE;
 
 /**
  * A set of basic tests for caches with indexes.
@@ -2014,11 +2014,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         int idxInlineSize = MAX_INLINE_SIZE + 1;
 
-        String warnMsg = "Configured inline size is too big [cacheName=TEST" +
-                ", tableName=SQL_PUBLIC_TEST" +
-                ", idxName=SOME_IDX" +
-                ", configuredInlineSize=" + idxInlineSize +
-                ", maxAllowedInlineSize=" + MAX_INLINE_SIZE;
+        String warnMsg = "Explicit INLINE_SIZE exceeds maximum size. Ignoring " +
+                "[index=SOME_IDX, explicitInlineSize=" + idxInlineSize + ", maxInlineSize=" + MAX_INLINE_SIZE + "]";
 
         LogListener lsnr = LogListener.matches(warnMsg).build();
 
