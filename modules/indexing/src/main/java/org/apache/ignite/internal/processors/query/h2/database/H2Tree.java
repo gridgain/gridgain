@@ -291,7 +291,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 .filter(ih -> ih.type() != Value.JAVA_OBJECT)
                 .collect(Collectors.toList());
 
-            int recommendedInlineSize = computeInlineSize(name, inlineIdxs, -1, configuredInlineSize, log);
+            // Using default limits to compute the best inline size, not considering user configurations.
+            int recommendedInlineSize = computeInlineSize(name, inlineIdxs, -1, MAX_INLINE_SIZE, log);
 
             if (inlineSize > recommendedInlineSize)
                 U.warn(log, "Index inline size is too big. [cacheName=" + cacheName +
