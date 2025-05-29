@@ -15,7 +15,7 @@
  */
 package org.apache.ignite.internal.processors.rest.handlers.log;
 
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -37,7 +37,7 @@ import org.junit.Test;
  */
 public class GridLogCommandHandlerTest extends GridCommonAbstractTest {
     /** */
-    private String igniteHome = System.getProperty("user.dir");
+    private final String igniteHome = System.getProperty("user.dir");
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -52,11 +52,13 @@ public class GridLogCommandHandlerTest extends GridCommonAbstractTest {
         Files.createDirectories(dir);
 
         Path file = Paths.get(igniteHome + "/work/log/" + "ignite.log");
-        Files.write(file, lines, Charset.forName("UTF-8"));
+        Files.write(file, lines, StandardCharsets.UTF_8);
 
         file = Paths.get(igniteHome + "/work/log/" + "test.log");
-        Files.write(file, lines, Charset.forName("UTF-8"));
+        Files.write(file, lines, StandardCharsets.UTF_8);
 
+        file = Paths.get(igniteHome + "/../parent.txt");
+        Files.write(file, "Should not be read.".getBytes(StandardCharsets.UTF_8));
     }
 
     /** {@inheritDoc} */
@@ -64,6 +66,7 @@ public class GridLogCommandHandlerTest extends GridCommonAbstractTest {
         Files.delete(Paths.get(igniteHome + "/work/log/" + "test.log"));
         Files.delete(Paths.get(igniteHome + "/work/log/" + "ignite.log"));
         Files.delete(Paths.get(igniteHome + "/work/log/"));
+        Files.delete(Paths.get(igniteHome + "/../parent.txt"));
     }
 
     /**
@@ -193,6 +196,47 @@ public class GridLogCommandHandlerTest extends GridCommonAbstractTest {
         IgniteInternalFuture<GridRestResponse> resp = cmdHandler.handleAsync(req);
 
         assertEquals("Request parameter 'path' must contain a path to valid log file.", resp.result().getError());
+        assertEquals(GridRestResponse.STATUS_FAILED, resp.result().getSuccessStatus());
+        assertNull(resp.result().getResponse());
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testHandleAsyncPathWithIgniteHomeAndContainsParentDirectory() throws Exception {
+        testHandleAsyncPathWithIgniteHomeAndContainsParentDirectory(igniteHome + "/../parent.txt");
+
+        testHandleAsyncPathWithIgniteHomeAndContainsParentDirectory(igniteHome + "/.%2e/parent.txt");
+        testHandleAsyncPathWithIgniteHomeAndContainsParentDirectory(igniteHome + "/%2e./parent.txt");
+        testHandleAsyncPathWithIgniteHomeAndContainsParentDirectory(igniteHome + "/%2e%2e/parent.txt");
+
+        testHandleAsyncPathWithIgniteHomeAndContainsParentDirectory(igniteHome + "/.%252e/parent.txt");
+        testHandleAsyncPathWithIgniteHomeAndContainsParentDirectory(igniteHome + "/%252e./parent.txt");
+        testHandleAsyncPathWithIgniteHomeAndContainsParentDirectory(igniteHome + "/%252e%252e/parent.txt");
+
+        testHandleAsyncPathWithIgniteHomeAndContainsParentDirectory(igniteHome + "/%2e%252e/parent.txt");
+
+        testHandleAsyncPathWithIgniteHomeAndContainsParentDirectory(igniteHome + "/%00../parent.txt");
+        testHandleAsyncPathWithIgniteHomeAndContainsParentDirectory(igniteHome + "/.%00./parent.txt");
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    private void testHandleAsyncPathWithIgniteHomeAndContainsParentDirectory(String p) throws Exception {
+        IgniteConfiguration cfg = new IgniteConfiguration();
+        cfg.setIgniteHome(igniteHome);
+        GridTestKernalContext ctx = newContext(cfg);
+        GridLogCommandHandler cmdHandler = new GridLogCommandHandler(ctx);
+        GridRestLogRequest req = new GridRestLogRequest();
+
+        req.to(1);
+        req.from(0);
+        req.path(p);
+
+        IgniteInternalFuture<GridRestResponse> resp = cmdHandler.handleAsync(req);
+
         assertEquals(GridRestResponse.STATUS_FAILED, resp.result().getSuccessStatus());
         assertNull(resp.result().getResponse());
     }
