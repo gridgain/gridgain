@@ -21,6 +21,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.InvalidPathException;
 import java.util.Collection;
+import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -35,7 +36,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.LOG;
 
 /**
- * Handler for {@link org.apache.ignite.internal.processors.rest.GridRestCommand#LOG} command.
+ * Handler for {@link GridRestCommand#LOG} command.
  */
 public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
     /**
@@ -52,6 +53,16 @@ public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
      * Default log file end line number*
      */
     private static final int DEFAULT_TO = 1;
+
+    /**
+     * Pattern for replacing the URL encoded dot to ".".
+     */
+    private static final Pattern URL_ENCODED_DOT_PATTERN = Pattern.compile("%2e|%252e");
+
+    /**
+     * Pattern for removing the URL encoded null bytes.
+     */
+    private static final Pattern NULL_BYTES_PATTERN = Pattern.compile("%00");
 
     /**
      * @param ctx Context.
@@ -119,7 +130,7 @@ public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
                         else
                             logFile = new File(req0.path());
                     }
-                    else if (req0.path().startsWith(ctx.config().getIgniteHome()) && !req0.path().contains(".."))
+                    else if (req0.path().startsWith(ctx.config().getIgniteHome()) && !isPathTraversal(req0.path()))
                         logFile = new File(req0.path());
                     else {
                         return new GridFinishedFuture<>(new GridRestResponse(GridRestResponse.STATUS_FAILED,
@@ -182,5 +193,13 @@ public class GridLogCommandHandler extends GridRestCommandHandlerAdapter {
         }
 
         return content.toString();
+    }
+
+    /** */
+    public static boolean isPathTraversal(String p) {
+        p = URL_ENCODED_DOT_PATTERN.matcher(p).replaceAll(".");
+        p = NULL_BYTES_PATTERN.matcher(p).replaceAll("");
+
+        return p.contains("..");
     }
 }
