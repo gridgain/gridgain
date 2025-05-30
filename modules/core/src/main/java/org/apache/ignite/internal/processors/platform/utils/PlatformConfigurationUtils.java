@@ -709,12 +709,6 @@ public class PlatformConfigurationUtils {
         res.setIndexType(queryIndexType);
         res.setInlineSize(in.readInt());
 
-        //check if similarity function feature is supported
-        if (queryIndexType == QueryIndexType.VECTOR && hasVectorSimilarity) {
-            int similarityFunctionInt = in.readInt();
-            res.setSimilarityFunction(QueryVectorField.SimilarityFunction.fromId(similarityFunctionInt));
-        }
-
         int cnt = in.readInt();
 
         if (cnt > 0) {
@@ -726,6 +720,11 @@ public class PlatformConfigurationUtils {
             res.setFields(fields);
         }
 
+        //check if similarity function feature is supported
+        if (queryIndexType == QueryIndexType.VECTOR && hasVectorSimilarity) {
+            int similarityFunctionInt = in.readInt();
+            res.setSimilarityFunction(QueryVectorField.SimilarityFunction.fromId(similarityFunctionInt));
+        }
         return res;
     }
 
@@ -1317,6 +1316,19 @@ public class PlatformConfigurationUtils {
      * @param idx Index.
      */
     public static void writeQueryIndex(BinaryRawWriter writer, QueryIndex idx) {
+        writeQueryIndex(writer, idx, false);
+    }
+
+    /**
+     * Writer query index WITH similarity function for protocol-aware call sites.
+     *
+     * Format: [name, type, inline_size, fields_array, similarity_function_at_end]
+     *
+     * @param writer Writer.
+     * @param idx Index.
+     * @param writeSimilarityFunction Whether to write similarity_function at the end.
+     */
+    public static void writeQueryIndex(BinaryRawWriter writer, QueryIndex idx, boolean writeSimilarityFunction) {
         assert idx != null;
 
         writer.writeString(idx.getName());
@@ -1335,6 +1347,18 @@ public class PlatformConfigurationUtils {
         }
         else
             writer.writeInt(0);
+
+        // Write similarity_function at the END (only if requested)
+        if (writeSimilarityFunction) {
+            if (idx.getIndexType() == QueryIndexType.VECTOR) {
+                QueryVectorField.SimilarityFunction similarityFunction = idx.getSimilarityFunction();
+                int similarityId = (similarityFunction != null) ?
+                        similarityFunction.getSimilarityFunctionId() : 1;
+                writer.writeInt(similarityId);
+            } else {
+                writer.writeInt(1);
+            }
+        }
     }
 
     /**

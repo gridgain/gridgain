@@ -369,6 +369,16 @@ public final class ClientUtils {
                                             w.writeBoolean(!f.getValue());
                                         }
                                 );
+                                // Write similarity_function at the END (only if client supports it)
+                                if (protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY)) {
+                                    if (i.getIndexType() == QueryIndexType.VECTOR) {
+                                        w.writeInt(i.getSimilarityFunction() != null ?
+                                                i.getSimilarityFunction().getSimilarityFunctionId() : 1);
+                                    } else {
+                                        // Write default similarity for non-VECTOR indexes when feature is supported
+                                        w.writeInt(1);
+                                    }
+                                }
                             });
                         }
                 )

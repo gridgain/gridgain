@@ -37,7 +37,11 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.processors.platform.client.*;
+import org.apache.ignite.internal.processors.platform.client.ClientBitmaskFeature;
+import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
+import org.apache.ignite.internal.processors.platform.client.ClientProtocolVersionFeature;
+import org.apache.ignite.internal.processors.platform.client.ClientStatus;
+import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
 import org.apache.ignite.internal.processors.platform.utils.PlatformConfigurationUtils;
 import org.apache.ignite.internal.processors.plugin.IgnitePluginProcessor;
 import org.apache.ignite.plugin.CachePluginConfiguration;
@@ -283,9 +287,9 @@ public class ClientCacheConfigurationSerializer {
 
         if (indexes != null) {
             writer.writeInt(indexes.size());
-
+            boolean hasVectorSimilarity = protocolCtx.isFeatureSupported(ClientBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY);
             for (QueryIndex index : indexes)
-                PlatformConfigurationUtils.writeQueryIndex(writer, index);
+                PlatformConfigurationUtils.writeQueryIndex(writer, index, hasVectorSimilarity);
         }
         else
             writer.writeInt(0);
@@ -560,7 +564,6 @@ public class ClientCacheConfigurationSerializer {
             Collection<QueryIndex> indexes = new ArrayList<>(cnt);
 
             for (int i = 0; i < cnt; i++) {
-                QueryIndex queryIndex = null;
                 //check if similarity function feature is supported
                 boolean isVectorSimilarityFunctionSupported = protocolCtx.isFeatureSupported(ClientBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY);
                 if (isVectorSimilarityFunctionSupported) {
