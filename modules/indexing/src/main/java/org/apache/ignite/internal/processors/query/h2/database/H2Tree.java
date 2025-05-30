@@ -291,18 +291,17 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 .filter(ih -> ih.type() != Value.JAVA_OBJECT)
                 .collect(Collectors.toList());
 
-            // Skip for durable destruction of indexes.
-            if (table != null) {
+            // Skip for destruction of indexes.
+            if (table != null && inlineSize > MAX_INLINE_SIZE) {
                 // Using default limits to compute the best inline size, not considering user configurations.
                 int recommendedInlineSize = computeInlineSize(name, inlineIdxs, -1, MAX_INLINE_SIZE, log);
 
-                if (inlineSize > MAX_INLINE_SIZE)
-                    U.warn(log, "Index inline size is too big. [cacheName=" + cacheName +
-                            ", tableName=" + tblName +
-                            ", idxName=" + idxName +
-                            ", inlineSize=" + inlineSize +
-                            ", recommended=" + recommendedInlineSize + ']'
-                    );
+                U.warn(log, "Index inline size is too big. [cacheName=" + cacheName +
+                        ", tableName=" + tblName +
+                        ", idxName=" + idxName +
+                        ", inlineSize=" + inlineSize +
+                        ", recommended=" + recommendedInlineSize + ']'
+                );
             }
 
             inlineCols = new IndexColumn[inlineIdxs.size()];
