@@ -22,12 +22,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.BytesInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.StringInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
@@ -38,14 +38,12 @@ import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.table.Table;
 import org.gridgain.internal.h2.table.TableFilter;
 
+import static org.apache.ignite.internal.util.IgniteUtils.MAX_INLINE_SIZE;
+
 /**
  * H2 tree index base.
  */
 public abstract class H2TreeIndexBase extends GridH2IndexBase {
-
-    /** Default value for {@code IGNITE_MAX_INDEX_PAYLOAD_SIZE} */
-    static final int IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT = 64;
-
     /**
      * Default sql index size for types with variable length (such as String or byte[]).
      * Note that effective length will be lower, because 3 bytes will be taken for the inner representation of variable type.
@@ -93,14 +91,14 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
     /**
      * @param inlineIdxs Inline index helpers.
      * @param cfgInlineSize Inline size from cache config.
-     * @param maxInlineSize Max inline size from cache config.
+     * @param cfgMaxInlineSize Max inline size from cache config.
      * @return Inline size.
      */
     static int computeInlineSize(
             String name,
             List<InlineIndexColumn> inlineIdxs,
             int cfgInlineSize,
-            int maxInlineSize,
+            int cfgMaxInlineSize,
             IgniteLogger log) {
         if (cfgInlineSize == 0)
             return 0;
@@ -110,13 +108,12 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
 
         boolean fixedSize = true;
 
-        int propSize = maxInlineSize == -1 ? IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE,
-            IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT) : maxInlineSize;
+        int maxInlineSize = maxInlineSize(cfgMaxInlineSize, name, log);
 
-        if (propSize == 0)
+        if (maxInlineSize == 0)
             return 0;
 
-        int size = 0;
+        int computedInlineSize = 0;
 
         for (InlineIndexColumn idxHelper : inlineIdxs) {
             // for variable types - default variable size, for other types - type's size + type marker
@@ -136,28 +133,30 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
                 }
             }
 
-            size += sizeInc;
+            computedInlineSize += sizeInc;
 
-            // total index size is limited by the property
-            if (size > propSize)
-                size = propSize;
+            // We can't break here, because we need to check all columns for fixed size.
+            if (computedInlineSize > maxInlineSize)
+                computedInlineSize = maxInlineSize;
         }
 
         if (cfgInlineSize != -1) {
-            cfgInlineSize = Math.min(PageIO.MAX_PAYLOAD_SIZE, cfgInlineSize);
-
-            if (fixedSize && size < cfgInlineSize) {
-                log.warning("Explicit INLINE_SIZE for fixed size index item is too big. " +
+            if (fixedSize && computedInlineSize < cfgInlineSize) {
+                U.warn(log, "Explicit INLINE_SIZE for fixed size index item is too big. " +
                         "This will lead to wasting of space inside index pages. Ignoring " +
-                        "[index=" + name + ", explicitInlineSize=" + cfgInlineSize + ", realInlineSize=" + size + ']');
+                        "[index=" + name + ", explicitInlineSize=" + cfgInlineSize + ", realInlineSize=" + computedInlineSize + ']');
 
-                return size;
+                return computedInlineSize;
             }
 
-            return cfgInlineSize;
+            if (cfgInlineSize > maxInlineSize)
+                U.warn(log, "Explicit INLINE_SIZE exceeds maximum size. Ignoring " +
+                        "[index=" + name + ", explicitInlineSize=" + cfgInlineSize + ", maxInlineSize=" + maxInlineSize + ']');
+
+            return Math.min(cfgInlineSize, maxInlineSize);
         }
 
-        return Math.min(PageIO.MAX_PAYLOAD_SIZE, size);
+        return computedInlineSize;
     }
 
     /**
@@ -202,5 +201,31 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
         }
 
         return res;
+    }
+
+    /** Returns maximum inline size based on cache configuration, system property and {@link IgniteUtils#MAX_INLINE_SIZE}. */
+    private static int maxInlineSize(int cfgMaxInlineSize, String name, IgniteLogger log) {
+        if (cfgMaxInlineSize != -1) {
+            if (cfgMaxInlineSize > MAX_INLINE_SIZE) {
+                U.warn(log, "Cache sqlIdxMaxInlineSize exceeds maximum allowed size. Ignoring" +
+                        "[index=" + name + ", maxInlineSize=" + cfgMaxInlineSize + ", maxAllowedInlineSize=" + MAX_INLINE_SIZE + ']');
+
+                return MAX_INLINE_SIZE;
+            }
+
+            return cfgMaxInlineSize;
+        }
+
+        int propSize = IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE,
+                MAX_INLINE_SIZE);
+
+        if (propSize > MAX_INLINE_SIZE) {
+            U.warn(log, "System property IGNITE_MAX_INDEX_PAYLOAD_SIZE exceeds maximum allowed size. Ignoring" +
+                    "[index=" + name + ", propertySize=" + propSize + ", maxAllowedInlineSize=" + MAX_INLINE_SIZE + ']');
+
+            return MAX_INLINE_SIZE;
+        }
+
+        return propSize;
     }
 }

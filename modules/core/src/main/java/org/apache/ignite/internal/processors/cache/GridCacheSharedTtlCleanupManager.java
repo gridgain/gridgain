@@ -16,10 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
@@ -41,6 +37,11 @@ import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.thread.IgniteThread;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
+
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
 import static org.apache.ignite.internal.processors.configuration.distributed.DistributedBooleanProperty.detachedBooleanProperty;
@@ -50,6 +51,10 @@ import static org.apache.ignite.internal.processors.configuration.distributed.Di
  * Periodically removes expired entities from caches with {@link CacheConfiguration#isEagerTtl()} flag set.
  */
 public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdapter implements PartitionsExchangeAware {
+
+    /** Documentation article about tombstone TTLs in the context of DR */
+    public static final String TOMBSTONE_TTL_DOC_URL = "https://www.gridgain.com/docs/latest/administrators-guide/data-center-replication/configuring-replication#tombstone-ttl";
+
     /** Ttl cleanup worker thread sleep interval, ms. */
     private final long cleanupWorkerSleepInterval =
         IgniteSystemProperties.getLong("CLEANUP_WORKER_SLEEP_INTERVAL", 500);
@@ -85,13 +90,13 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     private final Map<Integer, GridCacheTtlManager> mgrs = new ConcurrentHashMap<>();
 
     /** Tombstones limit per cache group. */
-    private DistributedLongProperty tsLimit = detachedLongProperty(TS_LIMIT);
+    private final DistributedLongProperty tsLimit = detachedLongProperty(TS_LIMIT);
 
     /** Tombstones TTL. */
-    private DistributedLongProperty tsTtl = detachedLongProperty(TS_TTL);
+    private final DistributedLongProperty tsTtl = detachedLongProperty(TS_TTL);
 
     /** Tombstones suspended cleanup state. */
-    private DistributedBooleanProperty tsSuspendedCleanup = detachedBooleanProperty(TS_CLEANUP);
+    private final DistributedBooleanProperty tsSuspendedCleanup = detachedBooleanProperty(TS_CLEANUP);
 
     /** Default tombstone TTL. */
     private long dfltTombstoneTtl;
@@ -119,7 +124,14 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                 if (oldVal == null && newVal == null)
                     return;
 
-                U.log(log, "Tombstones time to live has been updated [oldVal=" + oldVal + ", newVal=" + newVal + ']');
+                // We expose some details about proprietary DR feature there, but we assume that it is a safe trade-off
+                // since users of CE edition don't care about tombstones at all (there are no reasons for that)
+                U.log(log, "Tombstones TTL has been updated [" +
+                        "oldVal=" + oldVal + ", " +
+                        "newVal=" + newVal + ", " +
+                        "default=" + dfltTombstoneTtl + "]. " +
+                        "Note that tombstones that existed before this change will not be affected. " +
+                        "You can find more details about it at " + TOMBSTONE_TTL_DOC_URL);
             });
 
             dispatcher.registerProperty(tsTtl);
@@ -209,6 +221,21 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
      */
     public final long tombstoneTTL() {
         return tsTtl.getOrDefault(dfltTombstoneTtl);
+    }
+
+    /**
+     * @return Default tombstone TTL
+     */
+    public final long defaultTombstoneTTL() {
+        return dfltTombstoneTtl;
+    }
+
+    /**
+     * @return <code>true</code> if tombstone TTL was not overridden via {@link #TS_TTL} distributed
+     * property or {@link #DEFAULT_TOMBSTONE_TTL_PROP} JVM property
+     */
+    public final boolean isTombstoneTtlUnset() {
+        return tsTtl.get() == null && IgniteSystemProperties.getString(DEFAULT_TOMBSTONE_TTL_PROP) == null;
     }
 
     /**

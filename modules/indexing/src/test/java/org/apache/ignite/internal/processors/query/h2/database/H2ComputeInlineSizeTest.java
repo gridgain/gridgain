@@ -42,6 +42,8 @@ import org.gridgain.internal.h2.value.TypeInfo;
 import org.gridgain.internal.h2.value.Value;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.util.IgniteUtils.MAX_INLINE_SIZE;
+
 /** Tests for the computation of default inline size. */
 public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
 
@@ -170,26 +172,46 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     * Test to check calculation of the default size when calculated default size is larger than max default index size.
+     * Test to check calculation of the default size when calculated default size is larger than max index size.
      *
      * Steps:
      * 1) Call {@link H2TreeIndexBase#computeInlineSize(String, java.util.List, int, int, org.apache.ignite.IgniteLogger)} function for {@link StringInlineIndexColumn} with large length.
-     * 2) Check that computed size is equal to default max length.
+     * 2) Check that computed size is equal to max size.
      */
     @Test
-    public void testDefaultSizeForLargeIndex() {
+    public void testMaximumSizeUsedForLargeIndex() {
         Column c = new Column("c", new TypeInfo(Value.STRING, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
-        c.setOriginalSQL("VARCHAR(" + 300 + ")");
+        c.setOriginalSQL("VARCHAR(" + (MAX_INLINE_SIZE + 1) + ")");
 
         List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
         inlineIdxs.add(createHelper(c, false));
 
-        assertEquals(H2TreeIndexBase.IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, -1, -1, log));
+        assertEquals(MAX_INLINE_SIZE, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, -1, -1, log));
+    }
+
+    /**
+     * Test to check that maximum configured max size is used when exceeded.
+     * <p>
+     * Steps:
+     * 1) Call {@link H2TreeIndexBase#computeInlineSize(String, java.util.List, int, int, org.apache.ignite.IgniteLogger)} function for {@link StringInlineIndexColumn} with large length.
+     * 2) Check that computed size is equal to max size.
+     */
+    @Test
+    public void testConfiguredMaximumSizeUsedForLargeIndex() {
+        int cfgMaxSize = 100;
+
+        Column c = new Column("c", new TypeInfo(Value.STRING, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
+        c.setOriginalSQL("VARCHAR(" + (cfgMaxSize + 1) + ")");
+
+        List<InlineIndexColumn> inlineIdxs = new ArrayList<>();
+        inlineIdxs.add(createHelper(c, false));
+
+        assertEquals(cfgMaxSize, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, -1, cfgMaxSize, log));
     }
 
     /** */
     @Test
-    public void testTooBigInlineNotUsed() {
+    public void testTooBigConfiguredInlineSizeNotUsed() {
         List<Integer> valueTypes = Lists.newArrayList(
                 Value.BOOLEAN, Value.SHORT, Value.DATE, Value.DATE, Value.DOUBLE, Value.FLOAT,
                 Value.INT, Value.BYTE, Value.DECIMAL, Value.TIME, Value.TIMESTAMP, Value.UUID
@@ -204,12 +226,12 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
             inlineIdxs.add(createHelper(c, false));
         }
 
-        assertEquals(64, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, 2048, -1, log));
+        assertEquals(92, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, MAX_INLINE_SIZE, -1, log));
     }
 
     /** */
     @Test
-    public void testTooBigInlineSizeUsedBecauseOneOfFieldsIsNotFixed() {
+    public void testTooBigConfiguredInlineSizeUsedBecauseOneOfFieldsIsNotFixed() {
         List<Integer> valueTypes = Lists.newArrayList(
                 Value.BOOLEAN, Value.SHORT, Value.DATE, Value.DATE, Value.DOUBLE, Value.FLOAT,
                 Value.INT, Value.BYTE, Value.DECIMAL, Value.TIME, Value.TIMESTAMP, Value.UUID,
@@ -225,7 +247,8 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
             inlineIdxs.add(createHelper(c, false));
         }
 
-        assertEquals(2048, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, 2048, -1, log));
+        int cfgInlineSize = MAX_INLINE_SIZE - 1;
+        assertEquals(cfgInlineSize, H2TreeIndexBase.computeInlineSize("idx", inlineIdxs, cfgInlineSize, -1, log));
     }
 
     private static InlineIndexColumn createHelper(Column col, boolean useOptimizedComp) {

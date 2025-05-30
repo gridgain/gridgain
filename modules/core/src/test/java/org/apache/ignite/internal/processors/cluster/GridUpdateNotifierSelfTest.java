@@ -30,6 +30,7 @@ import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -170,6 +171,7 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
     }
 
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-42460")
     public void testGetUpdatesOldVersion() throws Exception {
         Map<String, String> updates = getUpdates("8.7.1");
 

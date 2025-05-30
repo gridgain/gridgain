@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.binary.builder;
 
+import static org.apache.ignite.internal.MarshallerPlatformIds.JAVA_ID;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -44,8 +46,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
-
-import static org.apache.ignite.internal.MarshallerPlatformIds.JAVA_ID;
 
 /**
  *
@@ -90,12 +90,15 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
     /** Affinity key field name. */
     private String affFieldName;
 
+    private String clsName = null;
+
     /**
      * @param clsName Class name.
      * @param ctx Binary context.
      */
     public BinaryObjectBuilderImpl(BinaryContext ctx, String clsName) {
         this(ctx, ctx.typeId(clsName), ctx.userTypeName(clsName));
+        this.clsName = clsName;
     }
 
     /**
@@ -361,7 +364,7 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
                 if (affFieldName0 == null)
                     affFieldName0 = ctx.affinityKeyFieldName(typeId);
 
-                ctx.registerUserClassName(typeId, typeName, writer.failIfUnregistered(), false, JAVA_ID);
+                ctx.registerUserClassName(typeId, (clsName != null) ? clsName : typeName, writer.failIfUnregistered(), false, JAVA_ID);
 
                 ctx.updateMetadata(typeId, new BinaryMetadata(typeId, typeName, fieldsMeta, affFieldName0,
                     Collections.singleton(curSchema), false, null), writer.failIfUnregistered());

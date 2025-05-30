@@ -74,6 +74,7 @@ import static org.apache.ignite.internal.processors.query.h2.database.H2TreeInde
 import static org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.AbstractInlineIndexColumn.CANT_BE_COMPARE;
 import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.mergeTasks;
 import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.toMaintenanceTask;
+import static org.apache.ignite.internal.util.IgniteUtils.MAX_INLINE_SIZE;
 
 /**
  * H2 tree index implementation.
@@ -289,6 +290,19 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             inlineIdxs = inlineObjSupported ? inlineIdxs0 : inlineIdxs0.stream()
                 .filter(ih -> ih.type() != Value.JAVA_OBJECT)
                 .collect(Collectors.toList());
+
+            // Skip for destruction of indexes.
+            if (table != null && inlineSize > MAX_INLINE_SIZE) {
+                // Using default limits to compute the best inline size, not considering user configurations.
+                int recommendedInlineSize = computeInlineSize(name, inlineIdxs, -1, MAX_INLINE_SIZE, log);
+
+                U.warn(log, "Index inline size is too big. [cacheName=" + cacheName +
+                        ", tableName=" + tblName +
+                        ", idxName=" + idxName +
+                        ", inlineSize=" + inlineSize +
+                        ", recommended=" + recommendedInlineSize + ']'
+                );
+            }
 
             inlineCols = new IndexColumn[inlineIdxs.size()];
 
@@ -850,7 +864,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             colNames.add(index.columnName());
         }
 
-        if (newSize > inlineSize()) {
+        if (newSize > inlineSize() && newSize <= MAX_INLINE_SIZE) {
             int oldSize;
 
             while (true) {

@@ -867,6 +867,40 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         }
     }
 
+    /** */
+    private final PageHandler<FindRandomRow<?>, Result> findRandom = new FindRandom();
+
+    /** Page handler to find a random row. */
+    private class FindRandom extends PageHandler<FindRandomRow<?>, Result> {
+        @Override public Result run(
+            int cacheId, long pageId, long page, long pageAddr, PageIO io, Boolean walPlc,
+            FindRandomRow<?> arg, int intArg, IoStatisticsHolder statHolder
+        ) throws IgniteCheckedException {
+            BPlusIO<L> treeIO = (BPlusIO<L>)io;
+
+            if (!treeIO.isLeaf()) {
+                int cnt = treeIO.getCount(pageAddr);
+                int randomPageIdx = randomInt(cnt + 1);
+
+                long selectedPageId = inner(treeIO).getLeft(pageAddr, randomPageIdx);
+                arg.nextPageId(selectedPageId);
+
+                return GO_DOWN;
+            }
+
+            int cnt = treeIO.getCount(pageAddr);
+            if (cnt == 0) {
+                return NOT_FOUND;
+            }
+
+            if (arg.found(treeIO, pageAddr, cnt)) {
+                return FOUND;
+            }
+
+            return GO_DOWN;
+        }
+    }
+
     /**
      * @param name Tree name.
      * @param cacheGrpId Cache group ID.
@@ -1530,6 +1564,32 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     }
 
     /**
+     * Searches for the random row.
+     *
+     * @return random row.
+     * @throws IgniteCheckedException If failed.
+     */
+    public final @Nullable <R> R findRandom(TreeRowMapper<L, T, R> mapper) throws IgniteCheckedException {
+        checkDestroyed();
+
+        FindRandomRow<R> f = new FindRandomRow<>(mapper);
+
+        try {
+            doFindRandom(f);
+
+            return f.res;
+        } catch (CorruptedDataStructureException e) {
+            throw e;
+        } catch (IgniteCheckedException e) {
+            throw new IgniteCheckedException(String.format("Runtime failure on lookup random row in group %d", grpId), e);
+        } catch (RuntimeException | AssertionError e) {
+            throw corruptedTreeException("Runtime failure on lookup random row: ", e, grpId, f.pageId);
+        } finally {
+            checkDestroyed();
+        }
+    }
+
+    /**
      * @param g Get.
      * @throws IgniteCheckedException If failed.
      */
@@ -1608,6 +1668,59 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         finally {
             if (g.canRelease(pageId, lvl))
                 releasePage(pageId, page);
+        }
+    }
+
+    private void doFindRandom(FindRandomRow<?> f) throws IgniteCheckedException {
+        assert !sequentialWriteOptsEnabled;
+
+        for (; ; ) { // Go down with retries.
+            f.init();
+
+            switch (findDownRandom(f, f.rootId, 0L, f.rootLvl)) {
+                case RETRY:
+                case RETRY_ROOT:
+                    continue;
+
+                default:
+                    return;
+            }
+        }
+    }
+
+    private Result findDownRandom(FindRandomRow<?> f, long pageId, long fwdId, int lvl) throws IgniteCheckedException {
+        long page = acquirePage(pageId);
+
+        try {
+            for (; ; ) {
+                f.checkLockRetry();
+
+                // Init args.
+                f.pageId = pageId;
+                f.fwdId = fwdId;
+
+                Result res = read(pageId, page, findRandom, f, lvl, RETRY);
+
+                switch (res) {
+                    case GO_DOWN:
+                        res = findDownRandom(f, f.nextPageId, f.fwdId, lvl - 1);
+
+                        return res;
+
+                    case NOT_FOUND:
+                        assert lvl == 0
+                            : String.format("Empty leaf found outside of root [lvl=%d, grpId=%d, pageId=%d]", lvl, grpId, pageId);
+
+                        return res;
+
+                    default:
+                        return res;
+                }
+            }
+        } finally {
+            if (f.canRelease(pageId)) {
+                releasePage(pageId, page);
+            }
         }
     }
 
@@ -5373,6 +5486,83 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     }
 
     /**
+     * Find random row operation.
+     */
+    private final class FindRandomRow<R> {
+        /** Starting point root level. May be outdated. Must be modified only in {@link Get#init()}. */
+        int rootLvl;
+
+        /** Starting point root ID. May be outdated. Must be modified only in {@link Get#init()}. */
+        long rootId;
+
+        long pageId;
+
+        /** In/Out parameter: expected forward page ID. */
+        long fwdId;
+
+        int lockRetriesCnt = getLockRetries();
+
+        long nextPageId;
+
+        @Nullable R res;
+
+        private final TreeRowMapper<L, T, R> mapper;
+
+        FindRandomRow(TreeRowMapper<L, T, R> mapper) {
+            this.mapper = mapper;
+        }
+
+        void init() throws IgniteCheckedException {
+            TreeMetaData meta0 = treeMeta();
+
+            assert meta0 != null;
+
+            restartFromRoot(meta0.rootId, meta0.rootLvl);
+        }
+
+        void restartFromRoot(long rootId, int rootLvl) {
+            this.rootId = rootId;
+            this.rootLvl = rootLvl;
+        }
+
+        boolean found(BPlusIO<L> io, long pageAddr, int cnt) throws IgniteCheckedException {
+            int idx = randomInt(cnt);
+
+            res = mapper.apply(BPlusTree.this, io, pageAddr, idx);
+
+            return true;
+        }
+
+        void checkLockRetry() throws IgniteCheckedException {
+            if (lockRetriesCnt == 0) {
+                String errMsg = lockRetryErrorMessage(getClass().getSimpleName());
+
+                throw new IgniteCheckedException(errMsg);
+            }
+
+            lockRetriesCnt--;
+        }
+
+        /**
+         * Sets next page ID.
+         *
+         * @param nextPageId Next page ID.
+         */
+        void nextPageId(long nextPageId) {
+            this.nextPageId = nextPageId;
+        }
+
+        /**
+         * Returns {@code true} If we can release the given page.
+         *
+         * @param pageId Page.
+         */
+        public boolean canRelease(long pageId) {
+            return pageId != 0L;
+        }
+    }
+
+    /**
      * Tail for remove.
      */
     private static final class Tail<L> {
@@ -6205,13 +6395,31 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          * required or matches or /operation successful (depending on the context).
          *
          * @param tree The tree.
-         * @param io Th tree IO object.
+         * @param io The tree IO object.
          * @param pageAddr The page address.
          * @param idx The item index.
          * @return {@code True} if the item passes the predicate.
          * @throws IgniteCheckedException If failed.
          */
         public boolean apply(BPlusTree<L, T> tree, BPlusIO<L> io, long pageAddr, int idx)
+            throws IgniteCheckedException;
+    }
+
+    /**
+     * A generic visitor-style interface for reading values from the tree.
+     */
+    public interface TreeRowMapper<L, T extends L, R> {
+        /**
+         * Performs inspection or operation on a specified row and returns the result.
+         *
+         * @param tree The tree.
+         * @param io The tree IO object.
+         * @param pageAddr The page address.
+         * @param idx The item index.
+         * @return The result..
+         * @throws IgniteCheckedException If failed.
+         */
+        public @Nullable R apply(BPlusTree<L, T> tree, BPlusIO<L> io, long pageAddr, int idx)
             throws IgniteCheckedException;
     }
 

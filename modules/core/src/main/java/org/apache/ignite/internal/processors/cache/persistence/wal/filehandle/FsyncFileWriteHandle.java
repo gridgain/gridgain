@@ -575,7 +575,12 @@ class FsyncFileWriteHandle extends AbstractFileHandle implements FileWriteHandle
 
                 if (fsyncDelay > 0 && !stopped()) {
                     // Delay fsync to collect as many updates as possible: trade latency for throughput.
-                    U.await(fsync, fsyncDelay, TimeUnit.NANOSECONDS);
+                    try {
+                        U.await(fsync, fsyncDelay, TimeUnit.NANOSECONDS);
+                    } catch (IgniteInterruptedCheckedException ignored) {
+                        // Current thread is interrupted, but we still can try to do fsync.
+                        // It can be a non-optimal way, however it is better than aborting the user operation.
+                    }
 
                     if (!needFsync(ptr))
                         return;
