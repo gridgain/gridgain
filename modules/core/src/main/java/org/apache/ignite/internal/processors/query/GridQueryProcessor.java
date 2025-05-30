@@ -63,6 +63,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
@@ -1236,6 +1237,27 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 boolean binaryEnabled = ctx.cacheObjects().isBinaryEnabled(ccfg);
 
                 if (binaryEnabled) {
+                    if (ccfg != null && ccfg.getKeyConfiguration() != null) {
+                        for (CacheKeyConfiguration keyCfg : ccfg.getKeyConfiguration()) {
+                            String typeName = keyCfg.getTypeName();
+                            BinaryContext binCtx = ((CacheObjectBinaryProcessorImpl)ctx.cacheObjects()).binaryContext();
+                            int typeId = binCtx.typeId(typeName);
+                            BinaryType type = binCtx.metadata(typeId);
+
+                            if (type != null && keyCfg.getAffinityKeyFieldName() != null) {
+                                String cacheAffName = keyCfg.getAffinityKeyFieldName();
+
+                                if (type.affinityKeyFieldName() == null) {
+                                    throw new BinaryObjectException("Binary schema already registered without binary key: " + typeName);
+                                }
+
+                                if (binCtx.fieldId(typeId, cacheAffName) != binCtx.fieldId(typeId, type.affinityKeyFieldName())) {
+                                    throw new IllegalArgumentException("Binary schema already registered with different affinity key field: " + typeId + ", old=" + binCtx.affinityKeyFieldName(typeId) + ", new=" + cacheAffName);
+                                }
+                            }
+                        }
+                    }
+
                     for (QueryEntity qryEntity : qryEntities) {
                         registerTypeLocally(qryEntity.findKeyType(), platformOnly);
                         registerTypeLocally(qryEntity.findValueType(), platformOnly);
