@@ -47,6 +47,7 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.annotations.QueryVectorField;
 import org.apache.ignite.client.ClientCacheConfiguration;
 import org.apache.ignite.client.ClientCachePluginConfiguration;
 import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
@@ -368,6 +369,16 @@ public final class ClientUtils {
                                             w.writeBoolean(!f.getValue());
                                         }
                                 );
+                                // Write similarity_function at the END (only if client supports it)
+                                if (protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY)) {
+                                    if (i.getIndexType() == QueryIndexType.VECTOR) {
+                                        w.writeInt(i.getSimilarityFunction() != null ?
+                                                i.getSimilarityFunction().getSimilarityFunctionId() : 1);
+                                    } else {
+                                        // Write default similarity for non-VECTOR indexes when feature is supported
+                                        w.writeInt(1);
+                                    }
+                                }
                             });
                         }
                 )
@@ -526,7 +537,15 @@ public final class ClientUtils {
                                             LinkedHashMap::new
                                     ));
 
-                                    return new QueryIndex(fields, type).setName(name).setInlineSize(inlineSize);
+                                    QueryIndex queryIndex = new QueryIndex(fields, type).setName(name).setInlineSize(inlineSize);
+
+                                    //check if similarity function feature is supported
+                                    if (type == QueryIndexType.VECTOR && protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY)) {
+                                        int similarityFunctionInt = reader.readInt();
+                                        queryIndex.setSimilarityFunction(QueryVectorField.SimilarityFunction.fromId(similarityFunctionInt));
+                                    }
+
+                                    return queryIndex;
                                 }
                             ));
                     }
