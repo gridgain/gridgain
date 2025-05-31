@@ -207,7 +207,7 @@ final class BinaryMetadataTransport {
                 .map(BinaryMetadataHolder::metadata)
                 .orElse(null);
 
-            BinaryMetadata mergedMeta = mergeMetadata(oldMeta, newMeta, null);
+            BinaryMetadata mergedMeta = mergeMetadata(oldMeta, newMeta, null, binCtx);
 
             if (mergedMeta == oldMeta) {
                 if (metaHolder.pendingVersion() == metaHolder.acceptedVersion())
@@ -229,7 +229,7 @@ final class BinaryMetadataTransport {
         Set<Integer> changedSchemas = new LinkedHashSet<>();
 
         //Ensure after putting pending future, metadata still has difference.
-        BinaryMetadata mergedMeta = mergeMetadata(oldMeta, newMeta, changedSchemas);
+        BinaryMetadata mergedMeta = mergeMetadata(oldMeta, newMeta, changedSchemas, binCtx);
 
         if (mergedMeta == oldMeta) {
             resFut.onDone(MetadataUpdateResult.createSuccessfulResult(-1));
@@ -573,7 +573,7 @@ final class BinaryMetadataTransport {
                     try {
                         Set<Integer> changedSchemas = new LinkedHashSet<>();
 
-                        BinaryMetadata mergedMeta = mergeMetadata(locMeta, msg.metadata(), changedSchemas);
+                        BinaryMetadata mergedMeta = mergeMetadata(locMeta, msg.metadata(), changedSchemas, binCtx);
 
                         if (log.isDebugEnabled())
                             log.debug("Versions are stamped on coordinator" +
@@ -635,7 +635,7 @@ final class BinaryMetadataTransport {
                         changedSchemas = new LinkedHashSet<>();
 
                     try {
-                        BinaryMetadata mergedMeta = mergeMetadata(locMeta, msg.metadata(), changedSchemas);
+                        BinaryMetadata mergedMeta = mergeMetadata(locMeta, msg.metadata(), changedSchemas, binCtx);
 
                         BinaryMetadataHolder newHolder = new BinaryMetadataHolder(mergedMeta, pendingVer, acceptedVer);
 
