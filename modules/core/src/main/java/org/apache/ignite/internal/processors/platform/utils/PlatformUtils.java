@@ -1141,7 +1141,7 @@ public class PlatformUtils {
 
         writer.writeInt(meta.typeId());
         writer.writeString(meta.typeName());
-        // writer.writeString(meta.affinityKeyFieldName());
+        writer.writeString(null);
 
         writer.writeInt(fields.size());
 
@@ -1214,7 +1214,8 @@ public class PlatformUtils {
     public static BinaryMetadata readBinaryMetadata(BinaryRawReaderEx reader) {
         int typeId = reader.readInt();
         String typeName = reader.readString();
-        // String affKey = reader.readString();
+        // TODO
+        reader.readString();
 
         Map<String, BinaryFieldMetadata> fields = readLinkedMap(reader,
                 new PlatformReaderBiClosure<String, BinaryFieldMetadata>() {
