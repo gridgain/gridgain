@@ -165,7 +165,7 @@ public class GridCacheClientNodeBinaryObjectMetadataMultinodeTest extends GridCo
 
                 assertTrue(names.add(meta.typeName()));
 
-                assertNull(meta.affinityKeyFieldName());
+                // assertNull(meta.affinityKeyFieldName());
 
                 assertEquals(10, meta.fieldNames().size());
             }
@@ -252,7 +252,7 @@ public class GridCacheClientNodeBinaryObjectMetadataMultinodeTest extends GridCo
             for (BinaryType meta : metaCol) {
                 assertTrue(names.add(meta.typeName()));
 
-                assertNull(meta.affinityKeyFieldName());
+                // assertNull(meta.affinityKeyFieldName());
 
                 assertEquals(1, meta.fieldNames().size());
             }

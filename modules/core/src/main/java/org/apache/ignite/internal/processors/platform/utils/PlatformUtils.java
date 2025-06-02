@@ -1142,7 +1142,7 @@ public class PlatformUtils {
 
         writer.writeInt(meta.typeId());
         writer.writeString(meta.typeName());
-        writer.writeString(meta.affinityKeyFieldName());
+        // writer.writeString(meta.affinityKeyFieldName());
 
         writer.writeInt(fields.size());
 

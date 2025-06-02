@@ -27,7 +27,6 @@ import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Binary object metadata to show in Visor.
@@ -41,9 +40,6 @@ public class VisorBinaryMetadata extends VisorDataTransferObject {
 
     /** Type Id */
     private int typeId;
-
-    /** Affinity key field name. */
-    private String affinityKeyFieldName;
 
     /** Filed list */
     private List<VisorBinaryMetadataField> fields;
@@ -76,7 +72,7 @@ public class VisorBinaryMetadata extends VisorDataTransferObject {
     public VisorBinaryMetadata(IgniteBinary binary, BinaryType binaryType) {
         typeName = binaryType.typeName();
         typeId = binary.typeId(typeName);
-        affinityKeyFieldName = binaryType.affinityKeyFieldName();
+        // affinityKeyFieldName = binaryType.affinityKeyFieldName();
 
         Collection<String> binaryTypeFields = binaryType.fieldNames();
 
@@ -107,18 +103,11 @@ public class VisorBinaryMetadata extends VisorDataTransferObject {
         return fields;
     }
 
-    /**
-     * @return Affinity key field name.
-     */
-    @Nullable public String getAffinityKeyFieldName() {
-        return affinityKeyFieldName;
-    }
-
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         U.writeString(out, typeName);
         out.writeInt(typeId);
-        U.writeString(out, affinityKeyFieldName);
+        // U.writeString(out, affinityKeyFieldName);
         U.writeCollection(out, fields);
     }
 
@@ -126,7 +115,7 @@ public class VisorBinaryMetadata extends VisorDataTransferObject {
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         typeName = U.readString(in);
         typeId = in.readInt();
-        affinityKeyFieldName = U.readString(in);
+        // affinityKeyFieldName = U.readString(in);
         fields = U.readList(in);
     }
 

@@ -1302,12 +1302,12 @@ public class BinaryContext {
     public String affinityKeyFieldName(int typeId) {
         String res = affKeyFieldNames.get(typeId);
 
-        if (res == null) {
-            BinaryMetadata meta = metaHnd.metadata0(typeId);
-
-            if (meta != null)
-                res = meta.affinityKeyFieldName();
-        }
+        //        if (res == null) {
+        //            BinaryMetadata meta = metaHnd.metadata0(typeId);
+        //
+        //            if (meta != null)
+        //                res = meta.affinityKeyFieldName();
+        //        }
 
         return res;
     }

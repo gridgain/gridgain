@@ -41,7 +41,7 @@ public class BinaryMetadataViewWalker implements SystemViewRowAttributeWalker<Bi
     @Override public void visitAll(BinaryMetadataView row, AttributeWithValueVisitor v) {
         v.acceptInt(0, "typeId", row.typeId());
         v.accept(1, "typeName", String.class, row.typeName());
-        v.accept(2, "affKeyFieldName", String.class, row.affKeyFieldName());
+        // v.accept(2, "affKeyFieldName", String.class, row.affKeyFieldName());
         v.acceptInt(3, "fieldsCount", row.fieldsCount());
         v.accept(4, "fields", String.class, row.fields());
         v.accept(5, "schemasIds", String.class, row.schemasIds());

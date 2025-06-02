@@ -223,7 +223,7 @@ public final class ClientUtils {
         try (BinaryRawWriterEx w = new BinaryWriterExImpl(marsh.context(), out, null, null)) {
             w.writeInt(meta.typeId());
             w.writeString(meta.typeName());
-            w.writeString(meta.affinityKeyFieldName());
+            // w.writeString(meta.affinityKeyFieldName());
 
             collection(
                 meta.fieldsMap().entrySet(),

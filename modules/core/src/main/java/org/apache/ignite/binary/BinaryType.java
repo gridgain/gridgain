@@ -64,15 +64,6 @@ public interface BinaryType {
     public BinaryField field(String fieldName);
 
     /**
-     * Binary objects can optionally specify custom key-affinity mapping in the
-     * configuration. This method returns the name of the field which should be
-     * used for the key-affinity mapping.
-     *
-     * @return Affinity key field name.
-     */
-    public String affinityKeyFieldName();
-
-    /**
      * Check whether type represents enum or not.
      *
      * @return {@code True} if type is enum.

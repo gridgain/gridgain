@@ -47,12 +47,6 @@ public class BinaryMetadataView {
         return meta.typeName();
     }
 
-    /** @return Affinity key field name. */
-    @Order(2)
-    public String affKeyFieldName() {
-        return meta.affinityKeyFieldName();
-    }
-
     /** @return Fields count. */
     @Order(3)
     public int fieldsCount() {

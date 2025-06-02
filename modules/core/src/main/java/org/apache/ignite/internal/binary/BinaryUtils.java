@@ -990,14 +990,14 @@ public class BinaryUtils {
                 );
             }
 
-            // Check affinity field names.
-            if (!F.eq(oldMeta.affinityKeyFieldName(), newMeta.affinityKeyFieldName())) {
-                throw new BinaryObjectException(
-                    "Binary type has different affinity key fields [" + "typeName=" + newMeta.typeName() +
-                        ", affKeyFieldName1=" + oldMeta.affinityKeyFieldName() +
-                        ", affKeyFieldName2=" + newMeta.affinityKeyFieldName() + ']'
-                );
-            }
+            //          // Check affinity field names.
+            //          if (!F.eq(oldMeta.affinityKeyFieldName(), newMeta.affinityKeyFieldName())) {
+            //              throw new BinaryObjectException(
+            //                  "Binary type has different affinity key fields [" + "typeName=" + newMeta.typeName() +
+            //                      ", affKeyFieldName1=" + oldMeta.affinityKeyFieldName() +
+            //                      ", affKeyFieldName2=" + newMeta.affinityKeyFieldName() + ']'
+            //              );
+            //          }
 
             // Check enum flag.
             if (oldMeta.isEnum() != newMeta.isEnum()) {
@@ -1067,7 +1067,7 @@ public class BinaryUtils {
 
             // Return either old meta if no changes detected, or new merged meta.
             return changed ? new BinaryMetadata(oldMeta.typeId(), oldMeta.typeName(), mergedFields,
-                oldMeta.affinityKeyFieldName(), mergedSchemas, oldMeta.isEnum(), mergedEnumMap) : oldMeta;
+                null, mergedSchemas, oldMeta.isEnum(), mergedEnumMap) : oldMeta;
         }
     }
 

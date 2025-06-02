@@ -109,7 +109,6 @@ public class IgniteBinaryQueryTest {
         for (String f : exp.fieldNames())
             assertEquals(exp.fieldTypeName(f), actual.fieldTypeName(f));
 
-        assertEquals(exp.affinityKeyFieldName(), actual.affinityKeyFieldName());
         assertEquals(exp.isEnum(), actual.isEnum());
     }
 
