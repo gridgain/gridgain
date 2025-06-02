@@ -990,15 +990,6 @@ public class BinaryUtils {
                 );
             }
 
-            // Check affinity field names.
-            if (!F.eq(oldMeta.affinityKeyFieldName(), newMeta.affinityKeyFieldName())) {
-                throw new BinaryObjectException(
-                    "Binary type has different affinity key fields [" + "typeName=" + newMeta.typeName() +
-                        ", affKeyFieldName1=" + oldMeta.affinityKeyFieldName() +
-                        ", affKeyFieldName2=" + newMeta.affinityKeyFieldName() + ']'
-                );
-            }
-
             // Check enum flag.
             if (oldMeta.isEnum() != newMeta.isEnum()) {
                 if (oldMeta.isEnum())
