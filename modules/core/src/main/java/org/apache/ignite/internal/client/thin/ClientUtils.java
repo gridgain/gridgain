@@ -374,9 +374,6 @@ public final class ClientUtils {
                                     if (i.getIndexType() == QueryIndexType.VECTOR) {
                                         w.writeInt(i.getSimilarityFunction() != null ?
                                                 i.getSimilarityFunction().getSimilarityFunctionId() : 1);
-                                    } else {
-                                        // Write default similarity for non-VECTOR indexes when feature is supported
-                                        w.writeInt(1);
                                     }
                                 }
                             });
