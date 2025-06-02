@@ -1355,8 +1355,6 @@ public class PlatformConfigurationUtils {
                 int similarityId = (similarityFunction != null) ?
                         similarityFunction.getSimilarityFunctionId() : 1;
                 writer.writeInt(similarityId);
-            } else {
-                writer.writeInt(1);
             }
         }
     }
