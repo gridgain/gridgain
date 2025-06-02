@@ -186,7 +186,7 @@ public final class ClientUtils {
         try (BinaryReaderExImpl reader = createBinaryReader(in)) {
             int typeId = reader.readInt();
             String typeName = reader.readString();
-            String affKeyFieldName = reader.readString();
+            // String affKeyFieldName = reader.readString();
 
             Map<String, BinaryFieldMetadata> fields = ClientUtils.map(
                 in,
@@ -210,7 +210,7 @@ public final class ClientUtils {
                 typeId,
                 typeName,
                 fields,
-                affKeyFieldName,
+                null,
                 schemas,
                 isEnum,
                 enumValues
