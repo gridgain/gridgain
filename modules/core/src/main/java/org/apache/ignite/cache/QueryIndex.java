@@ -334,12 +334,13 @@ public class QueryIndex implements Serializable {
         return inlineSize == index.inlineSize &&
             F.eq(name, index.name) &&
             F.eq(fields, index.fields) &&
-            type == index.type;
+            type == index.type &&
+            F.eq(similarityFunction, index.similarityFunction);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return Objects.hash(name, fields, type, inlineSize);
+        return Objects.hash(name, fields, type, inlineSize, similarityFunction);
     }
 
     /** {@inheritDoc} */
