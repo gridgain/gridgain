@@ -152,7 +152,9 @@ public class PartitionReconciliationFullFixStressTest extends PartitionReconcili
             // Conflicts might be resolved by async load.
             assertTrue(missedKeysOnPrimary.containsAll(notFixedKeys(res, DEFAULT_CACHE_NAME)));
 
-            boolean shouldNotHaveConflicts = corruptedKeys.isEmpty() || repairedMissedKeysOnPrimary.isEmpty();
+            missedKeysOnPrimary.removeAll(repairedMissedKeysOnPrimary);
+
+            boolean shouldNotHaveConflicts = missedKeysOnPrimary.isEmpty();
 
             assertEquals(shouldNotHaveConflicts, !hasConflicts);
         }
