@@ -34,7 +34,7 @@
     <url>http://ignite.apache.org</url>
 
     <properties>
-        <commons-beanutils.version>1.9.4</commons-beanutils.version>
+        <commons-beanutils.version>1.11.0</commons-beanutils.version>
     </properties>
 
     <build>
