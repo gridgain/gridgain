@@ -224,10 +224,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     @SystemProperty(value = "Enables log checkpoint read lock holders")
     public static final String IGNITE_PDS_LOG_CP_READ_LOCK_HOLDERS = "IGNITE_PDS_LOG_CP_READ_LOCK_HOLDERS";
 
-    /** */
-    @SystemProperty(value = "Sets a flag to force a checkpoint at node stop", defaults = "false")
-    public static final String IGNITE_PDS_FORCIBLE_CHECKPOINT_ON_NODE_STOP = "IGNITE_PDS_FORCIBLE_CHECKPOINT_ON_NODE_STOP";
-
     /** MemoryPolicyConfiguration name reserved for meta store. */
     public static final String METASTORE_DATA_REGION_NAME = "metastoreMemPlc";
 
@@ -1185,7 +1181,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             defrgMgr.cancel();
 
         if (cancel)
-            doCheckpointAtNodeStopIfAvailable();
+            doCheckpointAtNodeStopIfForced();
 
         checkpointManager.stop(cancel);
 
@@ -3968,13 +3964,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /** */
-    private static boolean isForcibleDoCheckpointAtNodeStop() {
-        return getBoolean(IGNITE_PDS_FORCIBLE_CHECKPOINT_ON_NODE_STOP);
+    private static boolean isForcedDoCheckpointAtNodeStop() {
+        return getBoolean(IgniteSystemProperties.IGNITE_PDS_FORCED_CHECKPOINT_ON_NODE_STOP);
     }
 
     /** */
-    private void doCheckpointAtNodeStopIfAvailable() {
-        if (isForcibleDoCheckpointAtNodeStop() && !ctx.clientNode() && ClusterState.active(ctx.cluster().get().state())) {
+    private void doCheckpointAtNodeStopIfForced() {
+        if (isForcedDoCheckpointAtNodeStop() && !ctx.clientNode() && ClusterState.active(ctx.cluster().get().state())) {
             try {
                 waitForCheckpoint("forcible at node stop");
             } catch (IgniteCheckedException e) {

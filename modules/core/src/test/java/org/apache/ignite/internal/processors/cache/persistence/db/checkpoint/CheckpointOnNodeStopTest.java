@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.db.checkpoint;
 
 import static java.util.stream.Collectors.toList;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_FORCED_CHECKPOINT_ON_NODE_STOP;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasItem;
@@ -30,7 +31,7 @@ import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.CheckpointState;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -83,7 +84,7 @@ public class CheckpointOnNodeStopTest extends GridCommonAbstractTest {
 
     /**  */
     @Test
-    @WithSystemProperty(key = GridCacheDatabaseSharedManager.IGNITE_PDS_FORCIBLE_CHECKPOINT_ON_NODE_STOP, value = "true")
+    @WithSystemProperty(key = IGNITE_PDS_FORCED_CHECKPOINT_ON_NODE_STOP, value = "true")
     public void testStopBeforeActivateWithSystemProperty() throws Exception {
         testStopBeforeActivateWithoutSystemProperty();
     }
@@ -100,11 +101,12 @@ public class CheckpointOnNodeStopTest extends GridCommonAbstractTest {
         stopGridGracefully(0);
 
         assertThat(reasons(progresses), not(hasItem(SHUTDOWN_REASON)));
+        assertAllCheckpointsFinished(progresses);
     }
 
     /**  */
     @Test
-    @WithSystemProperty(key = GridCacheDatabaseSharedManager.IGNITE_PDS_FORCIBLE_CHECKPOINT_ON_NODE_STOP, value = "true")
+    @WithSystemProperty(key = IGNITE_PDS_FORCED_CHECKPOINT_ON_NODE_STOP, value = "true")
     public void testStopAfterActivateWithSystemProperty() throws Exception {
         IgniteEx n = startGrid(0);
 
@@ -115,6 +117,7 @@ public class CheckpointOnNodeStopTest extends GridCommonAbstractTest {
         stopGridGracefully(0);
 
         assertThat(reasons(progresses), hasItem(SHUTDOWN_REASON));
+        assertAllCheckpointsFinished(progresses);
     }
 
     /**  */
@@ -133,11 +136,12 @@ public class CheckpointOnNodeStopTest extends GridCommonAbstractTest {
         stopGridGracefully(0);
 
         assertThat(reasons(progresses), not(hasItem(SHUTDOWN_REASON)));
+        assertAllCheckpointsFinished(progresses);
     }
 
     /**  */
     @Test
-    @WithSystemProperty(key = GridCacheDatabaseSharedManager.IGNITE_PDS_FORCIBLE_CHECKPOINT_ON_NODE_STOP, value = "true")
+    @WithSystemProperty(key = IGNITE_PDS_FORCED_CHECKPOINT_ON_NODE_STOP, value = "true")
     public void testStopWithCacheWithSystemProperty() throws Exception {
         IgniteEx n = startGrid(0);
 
@@ -152,6 +156,7 @@ public class CheckpointOnNodeStopTest extends GridCommonAbstractTest {
         stopGridGracefully(0);
 
         assertThat(reasons(progresses), hasItem(SHUTDOWN_REASON));
+        assertAllCheckpointsFinished(progresses);
     }
 
     /** */
@@ -166,6 +171,20 @@ public class CheckpointOnNodeStopTest extends GridCommonAbstractTest {
         dbMgr(n).addCheckpointListener(listenForBeginCheckpoints(progresses));
 
         return progresses;
+    }
+
+    /** */
+    private static void assertAllCheckpointsFinished(Collection<CheckpointProgress> progresses) {
+        int i = 0;
+
+        for (CheckpointProgress progress : progresses) {
+            assertTrue(
+                    "i=" + i + ", reason=" + progress.reason(),
+                    progress.futureFor(CheckpointState.FINISHED).isDone()
+            );
+
+            i++;
+        }
     }
 
     /**  */
