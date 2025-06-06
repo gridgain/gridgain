@@ -43,8 +43,7 @@ public class CheckpointOnNodeStopTest extends GridCommonAbstractTest {
     private static final String SHUTDOWN_REASON = "forcible at node stop";
 
     /** {@inheritDoc} */
-    @Override
-    protected void beforeTest() throws Exception {
+    @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
         stopAllGrids();
@@ -53,8 +52,7 @@ public class CheckpointOnNodeStopTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void afterTest() throws Exception {
+    @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -63,8 +61,7 @@ public class CheckpointOnNodeStopTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         DataStorageConfiguration dsCfg = new DataStorageConfiguration();
 
         dsCfg.getDefaultDataRegionConfiguration().setPersistenceEnabled(true);
@@ -182,20 +179,17 @@ public class CheckpointOnNodeStopTest extends GridCommonAbstractTest {
     private static CheckpointListener listenForBeginCheckpoints(Collection<CheckpointProgress> progresses) {
         return new CheckpointListener() {
             /** {@inheritDoc} */
-            @Override
-            public void onMarkCheckpointBegin(Context ctx) {
+            @Override public void onMarkCheckpointBegin(Context ctx) {
                 /** No-op. */
             }
 
             /** {@inheritDoc} */
-            @Override
-            public void onCheckpointBegin(Context ctx) {
+            @Override public void onCheckpointBegin(Context ctx) {
                 progresses.add(ctx.progress());
             }
 
             /** {@inheritDoc} */
-            @Override
-            public void beforeCheckpointBegin(Context ctx) {
+            @Override public void beforeCheckpointBegin(Context ctx) {
                 /** No-op. */
             }
         };
