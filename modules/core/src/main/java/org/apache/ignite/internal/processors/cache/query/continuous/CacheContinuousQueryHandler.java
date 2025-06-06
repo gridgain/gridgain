@@ -803,7 +803,8 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
      * @throws IgniteCheckedException If P2P unmarshalling failed.
      */
     public CacheEntryEventFilter getEventFilter() throws IgniteCheckedException {
-        initFut.get();
+        if (initFut != null)
+            initFut.get();
 
         return getEventFilter0();
     }
@@ -821,7 +822,8 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
      * @return Cache entry event transformer.
      */
     @Nullable public IgniteClosure<CacheEntryEvent<? extends K, ? extends V>, ?> getTransformer() throws IgniteCheckedException {
-        initFut.get();
+        if (initFut != null)
+            initFut.get();
 
         return getTransformer0();
     }
