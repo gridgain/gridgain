@@ -66,7 +66,7 @@
         <camel.version>2.22.3</camel.version>
         <checkstyle.puppycrawl.version>8.29</checkstyle.puppycrawl.version>
         <commons.beanutils.bundle.version>1.9.2_1</commons.beanutils.bundle.version>
-        <commons.beanutils.version>1.9.4</commons.beanutils.version>
+        <commons.beanutils.version>1.11.0</commons.beanutils.version>
         <commons.codec.version>1.18.0</commons.codec.version>
         <commons.collections.version>3.2.2</commons.collections.version>
         <commons.compress.version>1.27.1</commons.compress.version>
