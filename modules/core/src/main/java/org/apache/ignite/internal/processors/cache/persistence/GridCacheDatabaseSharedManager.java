@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,6 +57,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.SystemProperty;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -1177,6 +1178,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     @Override protected void onKernalStop0(boolean cancel) {
         if (defrgMgr != null)
             defrgMgr.cancel();
+
+        if (cancel)
+            doCheckpointAtNodeStopIfForced();
 
         checkpointManager.stop(cancel);
 
@@ -3956,5 +3960,21 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** {@inheritDoc} */
     @Override public void prepareCachesStopOnDeActivate() {
         checkpointManager.prepareCachesStopOnDeActivate();
+    }
+
+    /** */
+    private static boolean isForcedDoCheckpointAtNodeStop() {
+        return getBoolean(IgniteSystemProperties.IGNITE_PDS_FORCED_CHECKPOINT_ON_NODE_STOP);
+    }
+
+    /** */
+    private void doCheckpointAtNodeStopIfForced() {
+        if (isForcedDoCheckpointAtNodeStop() && !ctx.clientNode() && ClusterState.active(ctx.cluster().get().state())) {
+            try {
+                waitForCheckpoint("forcible at node stop");
+            } catch (IgniteCheckedException e) {
+                throw new IgniteException("Error on forced checkpoint at node stop", e);
+            }
+        }
     }
 }

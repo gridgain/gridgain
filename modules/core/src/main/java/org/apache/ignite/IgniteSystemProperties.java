@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -2273,6 +2273,10 @@ public final class IgniteSystemProperties {
     /** Nodes will send messages with compacted topology history. */
     @SystemProperty(value = "Nodes will send messages with compacted topology history", defaults = "true")
     public static final String IGNITE_COMPACTED_TOPOLOGY_HISTORY = "IGNITE_COMPACTED_TOPOLOGY_HISTORY";
+
+    /** Sets a flag to force a checkpoint at node stop. */
+    @SystemProperty(value = "Sets a flag to force a checkpoint at node stop", defaults = "false")
+    public static final String IGNITE_PDS_FORCED_CHECKPOINT_ON_NODE_STOP = "IGNITE_PDS_FORCED_CHECKPOINT_ON_NODE_STOP";
 
     /**
      * Enforces singleton.
