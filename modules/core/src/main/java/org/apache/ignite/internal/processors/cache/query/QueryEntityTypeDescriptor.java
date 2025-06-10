@@ -25,8 +25,8 @@ import java.util.Set;
 import javax.cache.CacheException;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
+import org.apache.ignite.cache.SimilarityFunction;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
-import org.apache.ignite.cache.query.annotations.QueryVectorField;
 import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -155,7 +155,7 @@ public class QueryEntityTypeDescriptor {
      * @param field              Field name.
      * @param similarityFunction Vector Similarity Function for VECTOR index.
      */
-    public void addFieldToVectorIndex(String field, QueryVectorField.SimilarityFunction similarityFunction) {
+    public void addFieldToVectorIndex(String field, SimilarityFunction similarityFunction) {
         if (vectorIdx == null) {
             vectorIdx = new QueryEntityIndexDescriptor(QueryIndexType.VECTOR, similarityFunction);
 

@@ -48,13 +48,13 @@ import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
+import org.apache.ignite.cache.SimilarityFunction;
 import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cache.affinity.rendezvous.ClusterNodeAttributeAffinityBackupFilter;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.eviction.EvictionPolicy;
 import org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy;
 import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy;
-import org.apache.ignite.cache.query.annotations.QueryVectorField;
 import org.apache.ignite.configuration.AtomicConfiguration;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -723,7 +723,7 @@ public class PlatformConfigurationUtils {
         //check if similarity function feature is supported
         if (queryIndexType == QueryIndexType.VECTOR && hasVectorSimilarity) {
             int similarityFunctionInt = in.readInt();
-            res.setSimilarityFunction(QueryVectorField.SimilarityFunction.fromId(similarityFunctionInt));
+            res.setSimilarityFunction(SimilarityFunction.fromId(similarityFunctionInt));
         }
         return res;
     }
@@ -1351,7 +1351,7 @@ public class PlatformConfigurationUtils {
         // Write similarity_function at the END (only if requested)
         if (writeSimilarityFunction) {
             if (idx.getIndexType() == QueryIndexType.VECTOR) {
-                QueryVectorField.SimilarityFunction similarityFunction = idx.getSimilarityFunction();
+                SimilarityFunction similarityFunction = idx.getSimilarityFunction();
                 int similarityId = (similarityFunction != null) ?
                         similarityFunction.getSimilarityFunctionId() : 1;
                 writer.writeInt(similarityId);

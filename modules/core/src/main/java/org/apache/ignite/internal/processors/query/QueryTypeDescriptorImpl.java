@@ -30,7 +30,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.QueryIndexType;
-import org.apache.ignite.cache.query.annotations.QueryVectorField;
+import org.apache.ignite.cache.SimilarityFunction;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
@@ -374,7 +374,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
      * @param similarityFunction Vector Similarity Function for VECTOR index.
      * @throws IgniteCheckedException If failed.
      */
-    public void addFieldToVectorIndex(String field, QueryVectorField.SimilarityFunction similarityFunction) throws IgniteCheckedException {
+    public void addFieldToVectorIndex(String field, SimilarityFunction similarityFunction) throws IgniteCheckedException {
         if (vectorIdx == null)
             vectorIdx = new QueryIndexDescriptorImpl(this, null, QueryIndexType.VECTOR, 0, similarityFunction);
 

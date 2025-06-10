@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.query;
 
 import org.apache.ignite.cache.QueryIndexType;
-import org.apache.ignite.cache.query.annotations.QueryVectorField;
+import org.apache.ignite.cache.SimilarityFunction;
 
 import java.util.Collection;
 
@@ -67,5 +67,5 @@ public interface GridQueryIndexDescriptor {
      *
      * @return Similarity Function.
      */
-    public QueryVectorField.SimilarityFunction similarityFunction();
+    public SimilarityFunction similarityFunction();
 }

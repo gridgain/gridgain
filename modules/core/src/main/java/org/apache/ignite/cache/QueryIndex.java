@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Objects;
 
-import org.apache.ignite.cache.query.annotations.QueryVectorField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -59,7 +58,7 @@ public class QueryIndex implements Serializable {
     /**
      * Vector Similarity Function for VECTOR index.
      */
-    private QueryVectorField.SimilarityFunction similarityFunction;
+    private SimilarityFunction similarityFunction;
 
     /**
      * Creates an empty index. Should be populated via setters.
@@ -283,7 +282,7 @@ public class QueryIndex implements Serializable {
      *
      * @return Similarity Function.
      */
-    public QueryVectorField.SimilarityFunction getSimilarityFunction() {
+    public SimilarityFunction getSimilarityFunction() {
         return similarityFunction;
     }
 
@@ -316,7 +315,7 @@ public class QueryIndex implements Serializable {
      * @param similarityFunction Vector Similarity Function.
      * @return {@code this} for chaining.
      */
-    public QueryIndex setSimilarityFunction(QueryVectorField.SimilarityFunction similarityFunction) {
+    public QueryIndex setSimilarityFunction(SimilarityFunction similarityFunction) {
         this.similarityFunction = similarityFunction;
         return this;
     }

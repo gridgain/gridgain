@@ -22,7 +22,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.TreeSet;
 import org.apache.ignite.cache.QueryIndexType;
-import org.apache.ignite.cache.query.annotations.QueryVectorField;
+import org.apache.ignite.cache.SimilarityFunction;
 import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -51,7 +51,7 @@ public class QueryEntityIndexDescriptor implements GridQueryIndexDescriptor {
     /**
      * Vector Similarity Function for VECTOR Indexes.
      */
-    private QueryVectorField.SimilarityFunction similarityFunction;
+    private SimilarityFunction similarityFunction;
 
     /** Fields which should be indexed in descending order. */
     private Collection<String> descendings;
@@ -71,7 +71,7 @@ public class QueryEntityIndexDescriptor implements GridQueryIndexDescriptor {
      * @param type               Type.
      * @param similarityFunction Vector Similarity Function for VECTOR Indexes.
      */
-    QueryEntityIndexDescriptor(QueryIndexType type, QueryVectorField.SimilarityFunction similarityFunction) {
+    QueryEntityIndexDescriptor(QueryIndexType type, SimilarityFunction similarityFunction) {
         this(type, -1);
         this.similarityFunction = similarityFunction;
     }
@@ -132,7 +132,7 @@ public class QueryEntityIndexDescriptor implements GridQueryIndexDescriptor {
     }
 
     /** {@inheritDoc} */
-    @Override public QueryVectorField.SimilarityFunction similarityFunction() {
+    @Override public SimilarityFunction similarityFunction() {
         return similarityFunction;
     }
 

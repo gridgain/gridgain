@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.query;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.QueryIndexType;
-import org.apache.ignite.cache.query.annotations.QueryVectorField;
+import org.apache.ignite.cache.SimilarityFunction;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -63,7 +63,7 @@ public class QueryIndexDescriptorImpl implements GridQueryIndexDescriptor {
     /**
      * Vector Similarity Function for VECTOR index.
      */
-    private QueryVectorField.SimilarityFunction similarityFunction;
+    private SimilarityFunction similarityFunction;
 
     /**
      * Constructor.
@@ -91,7 +91,7 @@ public class QueryIndexDescriptorImpl implements GridQueryIndexDescriptor {
      * @param inlineSize         Inline size.
      * @param similarityFunction Vector Similarity Function for VECTOR index.
      */
-    public QueryIndexDescriptorImpl(QueryTypeDescriptorImpl typDesc, String name, QueryIndexType type, int inlineSize, QueryVectorField.SimilarityFunction similarityFunction) {
+    public QueryIndexDescriptorImpl(QueryTypeDescriptorImpl typDesc, String name, QueryIndexType type, int inlineSize, SimilarityFunction similarityFunction) {
         this(typDesc, name, type, inlineSize);
         this.similarityFunction = similarityFunction;
     }
@@ -125,7 +125,7 @@ public class QueryIndexDescriptorImpl implements GridQueryIndexDescriptor {
 
 
     /** {@inheritDoc} */
-    @Override public QueryVectorField.SimilarityFunction similarityFunction() {
+    @Override public SimilarityFunction similarityFunction() {
         return similarityFunction;
     }
 
