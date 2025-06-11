@@ -1569,6 +1569,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private final boolean IS_INCREMENTAL_DR_ENABLED = getBoolean("GG_INCREMENTAL_STATE_TRANSFER", true);
 
         /** */
+        private final boolean GG_DR_DISABLE_TRANSITIVE_UPDATES = IS_INCREMENTAL_DR_ENABLED &&
+            getBoolean("GG_DR_DISABLE_TRANSITIVE_UPDATES", false);
+
+        /** */
         private final int partId;
 
         /** */
@@ -1937,11 +1941,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          * @param ver Version to check.
          * @return {@code true} if row need to be replicated, {@code false} otherwise.
          */
-        public static boolean replicationRequire(GridCacheVersion ver) {
+        public boolean replicationRequire(GridCacheVersion ver) {
             final GridCacheVersion conflictVer = ver.conflictVersion();
 
             if (ver == conflictVer)
-                return true;
+                return true; // Local update.
+
+            if (GG_DR_DISABLE_TRANSITIVE_UPDATES)
+                return false; // Ignored update.
 
             final byte dc0 = ver.dataCenterId();
             final byte dc1 = conflictVer.dataCenterId();
