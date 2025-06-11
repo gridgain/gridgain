@@ -723,7 +723,7 @@ public class PlatformConfigurationUtils {
         //check if similarity function feature is supported
         if (queryIndexType == QueryIndexType.VECTOR && hasVectorSimilarity) {
             int similarityFunctionInt = in.readInt();
-            res.setSimilarityFunction(SimilarityFunction.fromId(similarityFunctionInt));
+            res.setSimilarityFunction(SimilarityFunction.fromOrdinal(similarityFunctionInt));
         }
         return res;
     }
@@ -1353,7 +1353,7 @@ public class PlatformConfigurationUtils {
             if (idx.getIndexType() == QueryIndexType.VECTOR) {
                 SimilarityFunction similarityFunction = idx.getSimilarityFunction();
                 int similarityId = (similarityFunction != null) ?
-                        similarityFunction.getSimilarityFunctionId() : 1;
+                        similarityFunction.ordinal() : 1;
                 writer.writeInt(similarityId);
             }
         }

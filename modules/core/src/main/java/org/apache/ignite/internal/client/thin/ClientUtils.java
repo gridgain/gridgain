@@ -373,7 +373,7 @@ public final class ClientUtils {
                                 if (protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY)) {
                                     if (i.getIndexType() == QueryIndexType.VECTOR) {
                                         w.writeInt(i.getSimilarityFunction() != null ?
-                                                i.getSimilarityFunction().getSimilarityFunctionId() : 1);
+                                                i.getSimilarityFunction().ordinal() : 1);
                                     }
                                 }
                             });
@@ -539,7 +539,7 @@ public final class ClientUtils {
                                     //check if similarity function feature is supported
                                     if (type == QueryIndexType.VECTOR && protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY)) {
                                         int similarityFunctionInt = reader.readInt();
-                                        queryIndex.setSimilarityFunction(SimilarityFunction.fromId(similarityFunctionInt));
+                                        queryIndex.setSimilarityFunction(SimilarityFunction.fromOrdinal(similarityFunctionInt));
                                     }
 
                                     return queryIndex;

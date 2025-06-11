@@ -4,44 +4,21 @@ package org.apache.ignite.cache;
  * Defines Similarity Function for Vector Search.
  */
 public enum SimilarityFunction {
-    COSINE(1),
-    DOT_PRODUCT(2),
-    EUCLIDEAN(3),
-    MAXIMUM_INNER_PRODUCT(4);
+    COSINE,
+    DOT_PRODUCT,
+    EUCLIDEAN,
+    MAXIMUM_INNER_PRODUCT;
+
+    /** Enum values. */
+    private static final SimilarityFunction[] VALS = values();
 
     /**
-     * Similarity Function id.
-     */
-    private final int similarityFunctionId;
-
-    /**
-     * @param id Similarity Function ID.
-     */
-    SimilarityFunction(int id) {
-        similarityFunctionId = id;
-    }
-
-    /**
-     * Returns the integer ID of this similarity function.
+     * Efficiently gets SimilarityFunction from its ordinal.
      *
-     * @return The similarity function ID.
+     * @param ord Ordinal value.
+     * @return The SimilarityFunction corresponding to the ordinal, or COSINE if no match is found
      */
-    public int getSimilarityFunctionId() {
-        return similarityFunctionId;
-    }
-
-    /**
-     * Converts an integer ID to the corresponding SimilarityFunction.
-     *
-     * @param id The similarity function ID.
-     * @return The SimilarityFunction corresponding to the ID, or COSINE if no match is found
-     */
-    public static SimilarityFunction fromId(int id) {
-        for (SimilarityFunction func : values()) {
-            if (func.getSimilarityFunctionId() == id) {
-                return func;
-            }
-        }
-        return COSINE;
+    public static SimilarityFunction fromOrdinal(int ord) {
+        return ord >= 0 && ord < VALS.length ? VALS[ord] : COSINE;
     }
 }
