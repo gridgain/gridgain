@@ -170,6 +170,18 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
     }
 
     @Test
+    public void testGetUpdatesOldVersionEndOfLife() throws Exception {
+        Map<String, String> updates = getUpdates("8.7.2");
+
+        assertEquals(
+                "The GridGain 8.7.x is End Of Life since 2021-12-31. " +
+                        "Upgrade now to the latest version of GridGain 8.9. " +
+                        "Learn more on the Versioning and Support Lifecycle, and upgrade options: " +
+                        "https://www.gridgain.com/docs/latest/installation-guide/versioning-and-support-lifecycle",
+                updates.get("eol_message"));
+    }
+
+    @Test
     public void testGetUpdatesOldVersion() throws Exception {
         Map<String, String> updates = getUpdates("8.7.1");
 
