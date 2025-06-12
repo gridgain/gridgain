@@ -171,7 +171,6 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
     }
 
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-42460")
     public void testGetUpdatesOldVersion() throws Exception {
         Map<String, String> updates = getUpdates("8.7.1");
 
