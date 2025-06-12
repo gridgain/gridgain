@@ -373,7 +373,7 @@ public final class ClientUtils {
                                 if (protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY)) {
                                     if (i.getIndexType() == QueryIndexType.VECTOR) {
                                         w.writeInt(i.getSimilarityFunction() != null ?
-                                                i.getSimilarityFunction().ordinal() : 1);
+                                                i.getSimilarityFunction().ordinal() : 0);
                                     }
                                 }
                             });

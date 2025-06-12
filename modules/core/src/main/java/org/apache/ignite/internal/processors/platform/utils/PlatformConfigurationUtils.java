@@ -1353,7 +1353,7 @@ public class PlatformConfigurationUtils {
             if (idx.getIndexType() == QueryIndexType.VECTOR) {
                 SimilarityFunction similarityFunction = idx.getSimilarityFunction();
                 int similarityId = (similarityFunction != null) ?
-                        similarityFunction.ordinal() : 1;
+                        similarityFunction.ordinal() : 0;
                 writer.writeInt(similarityId);
             }
         }
