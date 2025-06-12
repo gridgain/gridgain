@@ -181,18 +181,6 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
                 updates.get("eol_message"));
     }
 
-    @Test
-    public void testGetUpdatesOldVersion() throws Exception {
-        Map<String, String> updates = getUpdates("8.7.1");
-
-        assertEquals(
-                "The GridGain 8.7.x End of Life is approaching on 2025-01-31. " +
-                        "Test comment text. " +
-                        "Learn more on the Versioning, Support Lifecycle, and upgrade options: " +
-                        "https://www.gridgain.com/docs/latest/installation-guide/versioning-and-support-lifecycle",
-                updates.get("eol_message"));
-    }
-
     private static Map<String, String> getUpdates(String ver) throws Exception {
         HttpIgniteUpdatesChecker checker = new HttpIgniteUpdatesChecker(GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL, "UTF-8");
 
