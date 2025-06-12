@@ -408,7 +408,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         if (evt.type() == EVT_DISCOVERY_CUSTOM_EVT &&
                 (((DiscoveryCustomEvent)evt).customMessage() instanceof ClientCacheChangeDummyDiscoveryMessage)) {
-
             ClientCacheChangeDummyDiscoveryMessage dummyDiscoveryMsg =
                     (ClientCacheChangeDummyDiscoveryMessage)((DiscoveryCustomEvent)evt).customMessage();
 
