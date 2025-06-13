@@ -30,7 +30,6 @@ import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -171,14 +170,13 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
     }
 
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-42460")
-    public void testGetUpdatesOldVersion() throws Exception {
-        Map<String, String> updates = getUpdates("8.7.1");
+    public void testGetUpdatesOldVersionEndOfLife() throws Exception {
+        Map<String, String> updates = getUpdates("8.7.2");
 
         assertEquals(
-                "The GridGain 8.7.x End of Life is approaching on 2025-01-31. " +
-                        "Test comment text. " +
-                        "Learn more on the Versioning, Support Lifecycle, and upgrade options: " +
+                "The GridGain 8.7.x is End Of Life since 2021-12-31. " +
+                        "Upgrade now to the latest version of GridGain 8.9. " +
+                        "Learn more on the Versioning and Support Lifecycle, and upgrade options: " +
                         "https://www.gridgain.com/docs/latest/installation-guide/versioning-and-support-lifecycle",
                 updates.get("eol_message"));
     }
