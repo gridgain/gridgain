@@ -1298,6 +1298,11 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         checkInactiveClusterCacheOps(1, 1);
     }
 
+    /**
+     * @param srvs Number of servers.
+     * @param clients Number of clients.
+     * @throws Exception If failed.
+     */
     private void checkInactiveClusterCacheOps(int srvs, int clients) throws Exception {
         startWithCaches1(srvs, clients);
 
