@@ -31,7 +31,6 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.engine.Constants;
@@ -39,7 +38,7 @@ import org.gridgain.internal.h2.result.Row;
 import org.gridgain.internal.h2.value.Value;
 import org.gridgain.internal.h2.value.ValueNull;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.getSensitiveDataLogging;
 
 /**
  * Table row implementation based on {@link GridQueryTypeDescriptor}.
@@ -381,11 +380,12 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
         sb.a(Integer.toHexString(System.identityHashCode(this)));
 
         Value v = keyWrapped();
-        sb.a("[ key: ").a(v == null ? "nil" : v.getString());
+        sb.a("[ key: ");
+        appendValueToString(sb, v);
 
         v = valueWrapped();
-        sb.a(", val: ").a(v == null ? "nil" : (S.includeSensitive() ? v.getString() :
-            "Data hidden due to " + IGNITE_SENSITIVE_DATA_LOGGING + " flag."));
+        sb.a(", val: ");
+        appendValueToString(sb, v);
 
         sb.a(" ][ ");
 
@@ -398,7 +398,7 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
                     v = getValue(i);
 
                     if (!desc.isKeyValueOrVersionColumn(i))
-                        sb.a(v == null ? "nil" : (S.includeSensitive() ? v.getString() : "data hidden"));
+                        appendValueToString(sb, v);
                 }
                 catch (Exception e) {
                     sb.a("<value skipped on error: " + e.getMessage() + '>');
@@ -413,5 +413,29 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
 
     public GridH2RowDescriptor getDesc() {
         return desc;
+    }
+
+    /**
+     * Appends the given value to string builder based on sensitive data logging settings.
+     *
+     * @param sb String builder to append to.
+     * @param v Value to append.
+     */
+    private void appendValueToString(SB sb, Value v) {
+        if (v == null)
+            sb.a("nil");
+        else {
+            switch (getSensitiveDataLogging()) {
+                case PLAIN:
+                    sb.a(v.getString());
+                    break;
+                case HASH:
+                    sb.a(v.hashCode());
+                    break;
+                case NONE:
+                    sb.a("hidden data");
+                    break;
+            }
+        }
     }
 }

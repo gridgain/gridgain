@@ -60,11 +60,10 @@ import org.apache.ignite.internal.processors.query.h2.database.IndexInformation;
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
 import org.apache.ignite.internal.processors.query.stat.ObjectStatistics;
 import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
-import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
@@ -88,12 +87,17 @@ import org.gridgain.internal.h2.table.TableBase;
 import org.gridgain.internal.h2.table.TableType;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.Integer.toHexString;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion.NONE;
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.AFFINITY_KEY_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_HASH_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex.SCAN_INDEX_NAME_SUFFIX;
 import static org.apache.ignite.internal.processors.query.schema.SchemaOperationException.CODE_INDEX_EXISTS;
+import static org.apache.ignite.internal.util.IgniteUtils.byteArray2HexString;
+import static org.apache.ignite.internal.util.IgniteUtils.nl;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.getSensitiveDataLogging;
 
 /**
  * H2 Table implementation.
@@ -884,15 +888,40 @@ public class GridH2Table extends TableBase {
                     boolean scndRmv = ((GridH2IndexBase)idx).removex(row0);
 
                     if (scndRmv != pkRmv) {
+                        String rowKeyHex;
+                        String rowValueHex;
+
+                        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = getSensitiveDataLogging();
+
+                        switch (sensitiveDataLogging) {
+                            case PLAIN:
+                                rowKeyHex = "0x" + byteArray2HexString(rowKeyBytes(row0));
+                                rowValueHex = "0x" + byteArray2HexString(rowValueBytes(row0));
+                                break;
+                            case HASH:
+                                rowKeyHex = "0x" + toHexString(rowKeyHash(row0)).toUpperCase();
+                                rowValueHex = "0x" + toHexString(rowValueHash(row0)).toUpperCase();
+                                break;
+                            case NONE:
+                                rowKeyHex = "hidden data";
+                                rowValueHex = "hidden data";
+                                break;
+                            default:
+                                // Unknown mode.
+                                rowKeyHex = "";
+                                rowValueHex = "";
+                        }
+
                         log.warning(
-                            "SQL index inconsistency detected:\n" +
-                            "wasInPk=" + pkRmv + ",\n" +
-                            "wasInSecIdx=" + scndRmv + ",\n" +
-                            "tblName=" + getName() + ",\n" +
-                            "secIdxName=" + idx.getName() + ",\n" +
-                            "row=" + row0 + ",\n" +
-                            "rowKeyHex=0x" + IgniteUtils.byteArray2HexString(rowKeyBytes(row0)) + ",\n" +
-                            "rowValueHex=0x" + IgniteUtils.byteArray2HexString(rowValueBytes(row0))
+                            "SQL index inconsistency detected:" + nl() +
+                            "wasInPk=" + pkRmv + ',' + nl() +
+                            "wasInSecIdx=" + scndRmv + ',' + nl() +
+                            "tblName=" + getName() + ',' + nl() +
+                            "secIdxName=" + idx.getName() + ',' + nl() +
+                            "row=" + row0 + ',' + nl() +
+                            "rowKeyHex=" + rowKeyHex + ',' + nl() +
+                            "rowValueHex=" + rowValueHex + ',' + nl() +
+                            "sensitiveDataLoggingMode=" + sensitiveDataLogging
                         );
                     }
                 }
@@ -1840,10 +1869,7 @@ public class GridH2Table extends TableBase {
     }
 
     /** */
-    public byte[] rowValueBytes(Object row) {
-        if (!S.includeSensitive())
-            return "<HIDDEN>".getBytes();
-
+    private byte[] rowValueBytes(Object row) {
         if (row instanceof H2CacheRow) {
             try {
                 return ((H2CacheRow)row).value().valueBytes(cacheContext().cacheObjectContext());
@@ -1853,11 +1879,24 @@ public class GridH2Table extends TableBase {
             }
         }
 
-        return "<UNAVAILABLE>".getBytes();
+        return "<UNAVAILABLE>".getBytes(UTF_8);
+    }
+
+    private int rowValueHash(Object row) {
+        if (row instanceof H2CacheRow) {
+            try {
+                return ((H2CacheRow)row).value().hashCode();
+            }
+            catch (Exception ex) {
+                // NO-OP
+            }
+        }
+
+        return "<UNAVAILABLE>".hashCode();
     }
 
     /** */
-    public byte[] rowKeyBytes(Object row) {
+    private byte[] rowKeyBytes(Object row) {
         if (row instanceof H2CacheRow) {
             try {
                 return ((H2CacheRow)row).key().valueBytes(cacheContext().cacheObjectContext());
@@ -1867,7 +1906,21 @@ public class GridH2Table extends TableBase {
             }
         }
 
-        return "<UNAVAILABLE>".getBytes();
+        return "<UNAVAILABLE>".getBytes(UTF_8);
+    }
+
+    /** */
+    private int rowKeyHash(Object row) {
+        if (row instanceof H2CacheRow) {
+            try {
+                return ((H2CacheRow)row).key().hashCode();
+            }
+            catch (Exception ex) {
+                // NO-OP
+            }
+        }
+
+        return "<UNAVAILABLE>".hashCode();
     }
 
     /**
