@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -899,8 +900,8 @@ public class GridH2Table extends TableBase {
                                 rowValueHex = "0x" + byteArray2HexString(rowValueBytes(row0));
                                 break;
                             case HASH:
-                                rowKeyHex = "0x" + toHexString(rowKeyHash(row0)).toUpperCase();
-                                rowValueHex = "0x" + toHexString(rowValueHash(row0)).toUpperCase();
+                                rowKeyHex = "0x" + toHexString(Arrays.hashCode(rowKeyBytes(row0))).toUpperCase();
+                                rowValueHex = "0x" + toHexString(Arrays.hashCode(rowValueBytes(row0))).toUpperCase();
                                 break;
                             case NONE:
                                 rowKeyHex = "hidden data";
@@ -1882,19 +1883,6 @@ public class GridH2Table extends TableBase {
         return "<UNAVAILABLE>".getBytes(UTF_8);
     }
 
-    private int rowValueHash(Object row) {
-        if (row instanceof H2CacheRow) {
-            try {
-                return ((H2CacheRow)row).value().hashCode();
-            }
-            catch (Exception ex) {
-                // NO-OP
-            }
-        }
-
-        return "<UNAVAILABLE>".hashCode();
-    }
-
     /** */
     private byte[] rowKeyBytes(Object row) {
         if (row instanceof H2CacheRow) {
@@ -1907,20 +1895,6 @@ public class GridH2Table extends TableBase {
         }
 
         return "<UNAVAILABLE>".getBytes(UTF_8);
-    }
-
-    /** */
-    private int rowKeyHash(Object row) {
-        if (row instanceof H2CacheRow) {
-            try {
-                return ((H2CacheRow)row).key().hashCode();
-            }
-            catch (Exception ex) {
-                // NO-OP
-            }
-        }
-
-        return "<UNAVAILABLE>".hashCode();
     }
 
     /**
