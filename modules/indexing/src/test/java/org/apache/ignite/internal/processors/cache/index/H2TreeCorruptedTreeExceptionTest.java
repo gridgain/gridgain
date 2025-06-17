@@ -59,10 +59,9 @@ public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
     private final LogListener logListener = new MessageOrderLogListener(
         format(
                 ".*?Tree is corrupted.*?cacheId=65, cacheName=A, indexName=%s, groupName=%s" +
-                    ", msg=Runtime failure on row: Row@.*?key: 1, val: .*?%s.*",
+                    ", msg=Runtime failure on row: Row@.*?key: hidden data, val: hidden data \\]\\[ , hidden data \\]\\].*",
                 IDX_NAME,
-                GRP_NAME,
-                IGNITE_SENSITIVE_DATA_LOGGING
+                GRP_NAME
         )
     );
 
