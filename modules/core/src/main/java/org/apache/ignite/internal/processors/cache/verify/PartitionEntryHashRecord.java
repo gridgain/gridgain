@@ -20,9 +20,12 @@ import java.util.Arrays;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+
+import static java.lang.Integer.toHexString;
 
 /**
  *
@@ -225,8 +228,25 @@ public class PartitionEntryHashRecord implements Serializable {
 
     /** {@inheritDoc} */
     @Override public String toString() {
+        String keyBytesStr = null;
+        String valBytesStr = null;
+
+        switch (GridToStringBuilder.getSensitiveDataLogging()) {
+            case PLAIN:
+                keyBytesStr = keyBytes != null ? U.byteArray2HexString(keyBytes) : null;
+                valBytesStr = valBytes != null ? U.byteArray2HexString(valBytes) : null;
+                break;
+            case HASH:
+                keyBytesStr = keyBytes != null ? toHexString(Arrays.hashCode(keyBytes)) : null;
+                valBytesStr = valBytes != null ? toHexString(Arrays.hashCode(valBytes)) : null;
+                break;
+            case NONE:
+                keyBytesStr = "hidden";
+                valBytesStr = "hidden";
+                break;
+        }
         return S.toString(PartitionEntryHashRecord.class, this,
-            "keyBytes", keyBytes != null ? U.byteArray2HexString(keyBytes) : null,
-            "valueBytes", valBytes != null ? U.byteArray2HexString(valBytes) : null);
+            "keyBytes", keyBytesStr,
+            "valueBytes", valBytesStr);
     }
 }
