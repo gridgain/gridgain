@@ -889,28 +889,36 @@ public class GridH2Table extends TableBase {
                     boolean scndRmv = ((GridH2IndexBase)idx).removex(row0);
 
                     if (scndRmv != pkRmv) {
-                        String rowKeyHex;
-                        String rowValueHex;
+                        String rowKeyHex = null;
+                        String rowValueHex = null;
 
                         GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = getSensitiveDataLogging();
 
                         switch (sensitiveDataLogging) {
-                            case PLAIN:
-                                rowKeyHex = "0x" + byteArray2HexString(rowKeyBytes(row0));
-                                rowValueHex = "0x" + byteArray2HexString(rowValueBytes(row0));
+                            case PLAIN: {
+                                byte[] rowBytes = rowKeyBytes(row0);
+                                rowKeyHex = rowBytes != null ? "0x" + byteArray2HexString(rowBytes) : null;
+
+                                rowBytes = rowValueBytes(row0);
+                                rowValueHex = rowBytes != null ? "0x" + byteArray2HexString(rowBytes) : null;
                                 break;
-                            case HASH:
-                                rowKeyHex = "0x" + toHexString(Arrays.hashCode(rowKeyBytes(row0))).toUpperCase();
-                                rowValueHex = "0x" + toHexString(Arrays.hashCode(rowValueBytes(row0))).toUpperCase();
+                            }
+                            case HASH: {
+                                byte[] rowBytes = rowKeyBytes(row0);
+                                if (rowBytes != null)
+                                    rowKeyHex = "0x" + toHexString(Arrays.hashCode(rowBytes)).toUpperCase();
+
+                                rowBytes = rowValueBytes(row0);
+                                if (rowBytes != null)
+                                    rowValueHex = "0x" + toHexString(Arrays.hashCode(rowBytes)).toUpperCase();
+
                                 break;
-                            case NONE:
+                            }
+                            case NONE: {
                                 rowKeyHex = "hidden data";
                                 rowValueHex = "hidden data";
                                 break;
-                            default:
-                                // Unknown mode.
-                                rowKeyHex = "";
-                                rowValueHex = "";
+                            }
                         }
 
                         log.warning(
