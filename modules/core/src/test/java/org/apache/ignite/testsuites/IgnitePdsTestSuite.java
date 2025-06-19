@@ -50,7 +50,7 @@ import org.apache.ignite.internal.processors.database.IgniteDbSingleNodePutGetTe
 import org.apache.ignite.internal.processors.database.IgniteDbSingleNodeTinyPutGetTest;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessorTest;
 import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessorSelfTest;
-import org.apache.ignite.internal.processors.metastorage.DistributedMetaStoragePersistentTest;
+import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStoragePersistentTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;

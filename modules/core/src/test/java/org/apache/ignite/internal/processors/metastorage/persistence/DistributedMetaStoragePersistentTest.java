@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.metastorage;
+package org.apache.ignite.internal.processors.metastorage.persistence;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -24,8 +24,10 @@ import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
-import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageTest;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.apache.ignite.spi.discovery.DiscoverySpiDataExchange;
@@ -541,6 +543,40 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
             IgniteSpiException.class,
             "Joining node has conflicting distributed metastorage data"
         );
+    }
+
+    /** */
+    @Test
+    public void testReplayOnJoinSkipsHistoryItemsOptimization() throws Exception {
+        IgniteEx igniteEx = startGrid(0);
+
+        igniteEx.cluster().baselineAutoAdjustEnabled(false);
+
+        startGrid(1);
+
+        grid(0).cluster().active(true);
+
+        metastorage(0).write("key1", "value1");
+
+        stopGrid(1);
+
+        JdkMarshaller marshaller = GridTestUtils.getFieldValue(metastorage(0), "marshaller");
+        GridTestUtils.invoke(
+            metastorage(0),
+            "completeWrite",
+            new DistributedMetaStorageHistoryItem("key1", marshaller.marshal("value1")),
+            false
+        );
+
+        startGrid(1);
+
+        metastorage(0).write("key2", "value2");
+
+        stopGrid(0);
+        stopGrid(1);
+
+        startGrid(0);
+        startGrid(1);
     }
 
     /** */

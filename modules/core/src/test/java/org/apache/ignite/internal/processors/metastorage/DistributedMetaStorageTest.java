@@ -123,6 +123,8 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
+        cleanPersistenceDir();
+
         startGrid(0);
 
         // We have to start the second node and wait when it is started
