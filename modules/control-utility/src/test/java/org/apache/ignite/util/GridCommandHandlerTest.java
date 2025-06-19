@@ -113,6 +113,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.spi.IgniteSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -158,6 +159,7 @@ import static org.apache.ignite.internal.encryption.AbstractEncryptionTest.MASTE
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP;
 import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.GRID_NOT_IDLE_MSG;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_ADDRS;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
@@ -166,6 +168,9 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasSize;
 
 /**
  * Command line handler test. You can use this class if you need create nodes for each test. If you not necessary create
@@ -184,6 +189,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     /** */
     protected static File customDiagnosticDir;
 
+    /** */
+    private String cfgLocalHost;
+
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
@@ -191,6 +199,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         initDiagnosticDir();
 
         cleanPersistenceDir();
+
+        cfgLocalHost = null;
     }
 
     /** {@inheritDoc} */
@@ -205,6 +215,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setGridLogger(new ListeningTestLogger(log));
+
+        if (cfgLocalHost != null)
+            cfg.setLocalHost(cfgLocalHost);
 
         return cfg;
     }
@@ -1268,6 +1281,27 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertEquals(EXIT_CODE_OK, execute("--diagnostic", "connectivity"));
 
+        assertContains(log, testOut.toString(), "There are no connectivity problems.");
+    }
+
+    /**
+     * Test connectivity command works via control.sh.
+     */
+    @Test
+    public void testConnectivityCommandWithMultipleTcpLocalAddresses() throws Exception {
+        cfgLocalHost = "";
+
+        IgniteEx ignite = startGrids(6);
+        assertThatNodeHasMultipleLocalAddresses(ignite);
+
+        IgniteEx client = startClientGrid(6);
+        assertThatNodeHasMultipleLocalAddresses(client);
+
+        ignite.cluster().state(ACTIVE);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--diagnostic", "connectivity"));
         assertContains(log, testOut.toString(), "There are no connectivity problems.");
     }
 
@@ -3289,5 +3323,14 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             ++cnt;
 
         return cnt;
+    }
+
+    /** */
+    private void assertThatNodeHasMultipleLocalAddresses(IgniteEx n) {
+        IgniteSpi commSpi = n.context().config().getCommunicationSpi();
+
+        Collection<String> rmtAddrs = n.localNode().attribute(U.spiAttribute(commSpi, ATTR_ADDRS));
+
+        assertThat(rmtAddrs, hasSize(greaterThan(1)));
     }
 }

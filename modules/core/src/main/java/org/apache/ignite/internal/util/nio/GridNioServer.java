@@ -2095,7 +2095,7 @@ public class GridNioServer<T> {
                                 SelectionKey key = ch.keyFor(selector);
 
                                 if (key != null)
-                                    ses = (GridSelectorNioSessionImpl)key.attachment();
+                                    ses = sessionForCancelConnect(key);
 
                                 if (ses == null) {
                                     // Session was not created yet.
@@ -4506,5 +4506,17 @@ public class GridNioServer<T> {
          * @return Requested change operation.
          */
         NioOperation operation();
+    }
+
+    private static @Nullable GridSelectorNioSessionImpl sessionForCancelConnect(SelectionKey key) {
+        Object a = key.attachment();
+
+        if (a instanceof GridSelectorNioSessionImpl)
+            return (GridSelectorNioSessionImpl) a;
+        else if (a instanceof NioOperationFuture && ((NioOperationFuture<?>) a).operation() == NioOperation.CONNECT)
+            // Canceled immediately after NioOperation.CONNECT without waiting NioOperation.REGISTER.
+            return null;
+
+        throw new IgniteException("No session found when closing connection");
     }
 }
