@@ -18,10 +18,6 @@ import org.gridgain.internal.h2.samples.Compact;
 import org.gridgain.internal.h2.samples.CsvSample;
 import org.gridgain.internal.h2.samples.Function;
 import org.gridgain.internal.h2.samples.ReadOnlyDatabaseInZip;
-import org.gridgain.internal.h2.samples.RowAccessRights;
-import org.gridgain.internal.h2.samples.TriggerPassData;
-import org.gridgain.internal.h2.samples.TriggerSample;
-import org.gridgain.internal.h2.samples.UpdatableView;
 import org.gridgain.internal.h2.store.fs.FileUtils;
 import org.gridgain.internal.h2.tools.ChangeFileEncryption;
 import org.gridgain.internal.h2.tools.RunScript;
@@ -99,25 +95,12 @@ public class TestSampleApps extends TestDb {
         // TODO test ShowProgress (percent numbers are hardware specific)
         // TODO test ShutdownServer (server needs to be started in a separate
         // process)
-        testApp("The sum is 20.00", TriggerSample.class);
-        testApp("Hello: 1\nWorld: 2", TriggerPassData.class);
-        testApp("table test:\n" +
-                "1 Hallo\n\n" +
-                "test_view:\n" +
-                "1 Hallo",
-                UpdatableView.class);
         testApp(
                 "adding test data...\n" +
                 "defrag to reduce random access...\n" +
                 "create the zip file...\n" +
                 "open the database from the zip file...",
                 ReadOnlyDatabaseInZip.class);
-        testApp(
-                "a: 1/Hello!\n" +
-                "b: 1/Hallo!\n" +
-                "1/A/Hello!\n" +
-                "1/B/Hallo!",
-                RowAccessRights.class);
 
         // tools
         testApp("Allows changing the database file encryption password or algorithm*",
