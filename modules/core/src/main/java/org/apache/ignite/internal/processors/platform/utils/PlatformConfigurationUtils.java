@@ -48,6 +48,7 @@ import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
+import org.apache.ignite.cache.SimilarityFunction;
 import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cache.affinity.rendezvous.ClusterNodeAttributeAffinityBackupFilter;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -689,10 +690,23 @@ public class PlatformConfigurationUtils {
      * @return Query index.
      */
     public static QueryIndex readQueryIndex(BinaryRawReader in) {
+        return readQueryIndex(in, false);
+    }
+
+    /**
+     * Reads the query index.
+     *
+     * @param in Reader.
+     * @param hasVectorSimilarity whether the similarity function is defined.
+     * @return Query index.
+     */
+    public static QueryIndex readQueryIndex(BinaryRawReader in, boolean hasVectorSimilarity) {
         QueryIndex res = new QueryIndex();
 
         res.setName(in.readString());
-        res.setIndexType(QueryIndexType.values()[in.readByte()]);
+        byte b = in.readByte();
+        QueryIndexType queryIndexType = QueryIndexType.values()[b];
+        res.setIndexType(queryIndexType);
         res.setInlineSize(in.readInt());
 
         int cnt = in.readInt();
@@ -706,6 +720,11 @@ public class PlatformConfigurationUtils {
             res.setFields(fields);
         }
 
+        //check if similarity function feature is supported
+        if (queryIndexType == QueryIndexType.VECTOR && hasVectorSimilarity) {
+            int similarityFunctionInt = in.readInt();
+            res.setSimilarityFunction(SimilarityFunction.fromOrdinal(similarityFunctionInt));
+        }
         return res;
     }
 
@@ -1297,6 +1316,19 @@ public class PlatformConfigurationUtils {
      * @param idx Index.
      */
     public static void writeQueryIndex(BinaryRawWriter writer, QueryIndex idx) {
+        writeQueryIndex(writer, idx, false);
+    }
+
+    /**
+     * Writer query index WITH similarity function for protocol-aware call sites.
+     *
+     * Format: [name, type, inline_size, fields_array, similarity_function_at_end]
+     *
+     * @param writer Writer.
+     * @param idx Index.
+     * @param writeSimilarityFunction Whether to write similarity_function at the end.
+     */
+    public static void writeQueryIndex(BinaryRawWriter writer, QueryIndex idx, boolean writeSimilarityFunction) {
         assert idx != null;
 
         writer.writeString(idx.getName());
@@ -1315,6 +1347,16 @@ public class PlatformConfigurationUtils {
         }
         else
             writer.writeInt(0);
+
+        // Write similarity_function at the END (only if requested)
+        if (writeSimilarityFunction) {
+            if (idx.getIndexType() == QueryIndexType.VECTOR) {
+                SimilarityFunction similarityFunction = idx.getSimilarityFunction();
+                int similarityId = (similarityFunction != null) ?
+                        similarityFunction.ordinal() : 0;
+                writer.writeInt(similarityId);
+            }
+        }
     }
 
     /**
