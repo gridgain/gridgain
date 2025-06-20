@@ -40,10 +40,10 @@ public class PageEvictionAbstractTest extends GridCommonAbstractTest {
     static final int PAGE_SIZE = 2048;
 
     /** Number of entries. */
-    static final int ENTRIES = 12_000;
+    static final int ENTRIES = 120_000;
 
     /** Empty pages pool size. */
-    private static final int EMPTY_PAGES_POOL_SIZE = 100;
+    private static final int EMPTY_PAGES_POOL_SIZE = 30;
 
     /** Eviction threshold. */
     private static final double EVICTION_THRESHOLD = 0.9;

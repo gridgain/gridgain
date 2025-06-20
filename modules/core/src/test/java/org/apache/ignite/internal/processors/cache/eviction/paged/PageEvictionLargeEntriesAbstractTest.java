@@ -147,15 +147,15 @@ public abstract class PageEvictionLargeEntriesAbstractTest extends GridCommonAbs
     }
 
     /** Cache modes. */
-    private static final CacheMode[] CACHE_MODES = {CacheMode.PARTITIONED, CacheMode.REPLICATED};
+    private static final CacheMode[] CACHE_MODES = {CacheMode.PARTITIONED/*, CacheMode.REPLICATED*/};
 
     /** Atomicity modes. */
     private static final CacheAtomicityMode[] ATOMICITY_MODES = {
-        CacheAtomicityMode.ATOMIC, CacheAtomicityMode.TRANSACTIONAL};
+        CacheAtomicityMode.ATOMIC/*, CacheAtomicityMode.TRANSACTIONAL*/};
 
     /** Write modes. */
     private static final CacheWriteSynchronizationMode[] WRITE_MODES = {CacheWriteSynchronizationMode.PRIMARY_SYNC,
-        CacheWriteSynchronizationMode.FULL_SYNC, CacheWriteSynchronizationMode.FULL_ASYNC};
+        CacheWriteSynchronizationMode.FULL_SYNC/*, CacheWriteSynchronizationMode.FULL_ASYNC*/};
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {

@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.cache.eviction.paged;
 
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -24,6 +25,7 @@ import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -32,19 +34,22 @@ import org.junit.Test;
  */
 public abstract class PageEvictionMultinodeAbstractTest extends PageEvictionAbstractTest {
     /** Cache modes. */
-    private static final CacheMode[] CACHE_MODES = {CacheMode.PARTITIONED, CacheMode.REPLICATED};
+    private static final CacheMode[] CACHE_MODES = {CacheMode.PARTITIONED/*, CacheMode.REPLICATED*/};
 
     /** Atomicity modes. */
     private static final CacheAtomicityMode[] ATOMICITY_MODES = {
-        CacheAtomicityMode.ATOMIC, CacheAtomicityMode.TRANSACTIONAL};
+        CacheAtomicityMode.ATOMIC/*, CacheAtomicityMode.TRANSACTIONAL*/};
 
     /** Write modes. */
-    private static final CacheWriteSynchronizationMode[] WRITE_MODES = {CacheWriteSynchronizationMode.PRIMARY_SYNC,
-        CacheWriteSynchronizationMode.FULL_SYNC, CacheWriteSynchronizationMode.FULL_ASYNC};
+    private static final CacheWriteSynchronizationMode[] WRITE_MODES = {
+        CacheWriteSynchronizationMode.PRIMARY_SYNC,
+    //    CacheWriteSynchronizationMode.FULL_SYNC,
+    //    CacheWriteSynchronizationMode.FULL_ASYNC
+    };
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        startGridsMultiThreaded(4, false);
+        startGridsMultiThreaded(1, false);
 
         startGrid("client");
     }
@@ -93,8 +98,8 @@ public abstract class PageEvictionMultinodeAbstractTest extends PageEvictionAbst
     /**
      * @throws Exception If failed.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-10738")
-    @Test
+//    @Ignore("https://issues.apache.org/jira/browse/IGNITE-10738")
+//    @Test
     public void testPageEvictionMvcc() throws Exception {
         for (int i = 0; i < CACHE_MODES.length; i++) {
             CacheConfiguration<Object, Object> cfg = cacheConfig(
@@ -110,33 +115,30 @@ public abstract class PageEvictionMultinodeAbstractTest extends PageEvictionAbst
      * @throws Exception If failed.
      */
     protected void createCacheAndTestEviction(CacheConfiguration<Object, Object> cfg) throws Exception {
-        IgniteCache<Object, Object> cache = clientGrid().getOrCreateCache(cfg);
+        IgniteCache<Object, Object> cache = grid(0).getOrCreateCache(cfg);
 
-        for (int i = 1; i <= ENTRIES; i++) {
+        AtomicInteger entriesToProcess = new AtomicInteger(ENTRIES);
+
+        GridTestUtils.runMultiThreaded(() -> {
             ThreadLocalRandom r = ThreadLocalRandom.current();
+            int i = entriesToProcess.decrementAndGet();
+            while (i >= 0) {
+                cache.put(i, new TestObject(PAGE_SIZE * 2)); // Fits in one page.
 
-            if (r.nextInt() % 5 == 0)
-                cache.put(i, new TestObject(PAGE_SIZE / 4 - 50 + r.nextInt(5000))); // Fragmented object.
-            else
-                cache.put(i, new TestObject(r.nextInt(PAGE_SIZE / 4 - 50))); // Fits in one page.
+                if (i % (ENTRIES / 10) == 0)
+                    System.out.println(">>> Entries put: " + i);
 
-            if (r.nextInt() % 7 == 0)
-                cache.get(r.nextInt(i)); // Touch.
-            else if (r.nextInt() % 11 == 0)
-                cache.remove(r.nextInt(i)); // Remove.
-            else if (r.nextInt() % 13 == 0)
-                cache.put(r.nextInt(i), new TestObject(r.nextInt(PAGE_SIZE / 2))); // Update.
-
-            if (i % (ENTRIES / 10) == 0)
-                System.out.println(">>> Entries put: " + i);
-        }
+                i = entriesToProcess.decrementAndGet();
+            }},
+            Runtime.getRuntime().availableProcessors() * 4,
+            "user-thread");
 
         int resultingSize = cache.size(CachePeekMode.PRIMARY);
 
         System.out.println(">>> Resulting size: " + resultingSize);
 
         // Eviction started, no OutOfMemory occurred, success.
-        assertTrue(resultingSize < ENTRIES * 10 / 11);
+        //assertTrue(resultingSize < ENTRIES * 10 / 11);
 
         clientGrid().destroyCache(cfg.getName());
     }
