@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -1928,11 +1928,34 @@ public final class GridTestUtils {
         for (int i = 0, size = objs.length; i < size; i++) {
             Object o = objs[i];
 
-            if (o != null && !types[i].isInstance(o))
+            if (o != null && !box(types[i]).isInstance(o))
                 return false;
         }
 
         return true;
+    }
+
+    private static Class<?> box(Class cls) {
+        if (cls.isPrimitive()) {
+            if (cls == boolean.class)
+                return Boolean.class;
+            else if (cls == byte.class)
+                return Byte.class;
+            else if (cls == char.class)
+                return Character.class;
+            else if (cls == short.class)
+                return Short.class;
+            else if (cls == int.class)
+                return Integer.class;
+            else if (cls == long.class)
+                return Long.class;
+            else if (cls == float.class)
+                return Float.class;
+            else if (cls == double.class)
+                return Double.class;
+        }
+
+        return cls;
     }
 
     /**
