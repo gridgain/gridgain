@@ -90,6 +90,32 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
      * @throws Exception If failed.
      */
     @Test
+    public void testDeactivateWriteActivate() throws Exception {
+        startGrid(0);
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
+        grid(0).cluster().state(ClusterState.INACTIVE);
+
+        // Deactivation is asynchronous.
+        Thread.sleep(100);
+
+        metastorage(0).write("key1", "value1");
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        assertEquals("value1", metastorage(0).read("key1"));
+
+        stopGrid(0);
+
+        startGrid(0);
+
+        assertEquals("value1", metastorage(0).read("key1"));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     public void testJoinDirtyNode() throws Exception {
         IgniteEx ignite = startGrid(0);
 

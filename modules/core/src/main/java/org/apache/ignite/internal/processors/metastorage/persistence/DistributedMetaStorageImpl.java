@@ -369,6 +369,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
     /** {@inheritDoc} */
     @Override public void onActivate(GridKernalContext kctx) {
+        // No-op. "onMetaStorageReadyForWrite" will be called if the cluster is persistent.
     }
 
     /**
