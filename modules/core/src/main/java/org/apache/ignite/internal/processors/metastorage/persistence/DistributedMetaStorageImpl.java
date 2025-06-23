@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -369,6 +369,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
     /** {@inheritDoc} */
     @Override public void onActivate(GridKernalContext kctx) {
+        // No-op. "onMetaStorageReadyForWrite" will be called if the cluster is persistent.
     }
 
     /**
@@ -690,7 +691,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
             if (remoteVer.id < locVer.id - locHistSize) {
                 // Remote node is too far behind.
-                // Technicaly this situation should be banned because there's no way to prove data consistency.
+                // Technically, this situation should be banned because there's no way to prove data consistency.
                 errorMsg = null;
             }
             else if (remoteVer.id < locVer.id) {
@@ -703,18 +704,33 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
                 if (newRemoteVer.equals(locVer))
                     errorMsg = null;
-                else
-                    errorMsg = "Joining node has conflicting distributed metastorage data.";
+                else {
+                    DistributedMetaStorageHistoryItem[] locHist = localHistoryArray(remoteVer.id + 1, locVer.id);
+
+                    errorMsg = S.toString(
+                        "Joining node has conflicting distributed metastorage data:",
+                        "clusterVersion", locVer, false,
+                        "joiningNodeVersion", remoteVer, false,
+                        "localHistorySize", locHistSize, false,
+                        "remoteHistorySize", remoteHistSize, false,
+                        "branching", branchingMessage(locHist, locVer, remoteHist, remoteVer), false
+                    );
+                }
             }
             else if (remoteVer.id == locVer.id) {
                 // Remote and local versions match.
                 if (remoteVer.equals(locVer))
                     errorMsg = null;
                 else {
+                    DistributedMetaStorageHistoryItem[] locHist = localHistoryArray(locVer.id - locHistSize + 1, locVer.id);
+
                     errorMsg = S.toString(
                         "Joining node has conflicting distributed metastorage data:",
                         "clusterVersion", locVer, false,
-                        "joiningNodeVersion", remoteVer, false
+                        "joiningNodeVersion", remoteVer, false,
+                        "localHistorySize", locHistSize, false,
+                        "remoteHistorySize", remoteHistSize, false,
+                        "branching", branchingMessage(locHist, locVer, remoteHist, remoteVer), false
                     );
                 }
             }
@@ -725,7 +741,15 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                         " The node is most likely in invalid state and can't be joined.";
                 }
                 else if (remoteBltId < locBltId)
-                    errorMsg = "Joining node has conflicting distributed metastorage data.";
+                    errorMsg = S.toString(
+                        "Joining node has conflicting distributed metastorage data:",
+                        "clusterVersion", locVer, false,
+                        "joiningNodeVersion", remoteVer, false,
+                        "localHistorySize", locHistSize, false,
+                        "remoteHistorySize", remoteHistSize, false,
+                        "localBltId", locBltId, false,
+                        "remoteBltId", remoteBltId, false
+                    );
                 else {
                     DistributedMetaStorageVersion newLocVer = locVer.nextVersion(
                         remoteHist,
@@ -735,8 +759,18 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
                     if (newLocVer.equals(remoteVer))
                         errorMsg = null;
-                    else
-                        errorMsg = "Joining node has conflicting distributed metastorage data.";
+                    else {
+                        DistributedMetaStorageHistoryItem[] locHist = localHistoryArray(locVer.id - locHistSize + 1, locVer.id);
+
+                        errorMsg = S.toString(
+                            "Joining node has conflicting distributed metastorage data:",
+                            "clusterVersion", locVer, false,
+                            "joiningNodeVersion", remoteVer, false,
+                            "localHistorySize", locHistSize, false,
+                            "remoteHistorySize", remoteHistSize, false,
+                            "branching", branchingMessage(locHist, locVer, remoteHist, remoteVer), false
+                        );
+                    }
                 }
             }
             else {
@@ -763,6 +797,75 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         finally {
             lock.readLock().unlock();
         }
+    }
+
+    /** */
+    private DistributedMetaStorageHistoryItem[] localHistoryArray(long from, long to) {
+        return LongStream.rangeClosed(from, to)
+            .mapToObj(this::historyItem)
+            .toArray(DistributedMetaStorageHistoryItem[]::new);
+    }
+
+    /**
+     * Finds a place in history where we have a mismatch, if that's possible, and creates a string that shows it.
+     */
+    private String branchingMessage(
+        DistributedMetaStorageHistoryItem[] locHist,
+        DistributedMetaStorageVersion locVer,
+        DistributedMetaStorageHistoryItem[] remHist,
+        DistributedMetaStorageVersion remVer
+    ) {
+        int locHistIdx = 0;
+        int remHistIdx = 0;
+        long locHistIdxId = locVer.id - locHist.length + 1;
+        long remHistIdxId = remVer.id - remHist.length + 1;
+
+        int diff = (int) Math.abs(locHistIdxId - remHistIdxId);
+        if (locHistIdxId < remHistIdxId) {
+            locHistIdxId += diff;
+            locHistIdx += diff;
+        } else {
+            remHistIdxId += diff;
+            remHistIdx += diff;
+        }
+
+        while (locHistIdx < locHist.length && remHistIdx < remHist.length) {
+            DistributedMetaStorageHistoryItem locItem = locHist[locHistIdx];
+            DistributedMetaStorageHistoryItem remItem = remHist[remHistIdx];
+
+            if (!locItem.equals(remItem))
+                break;
+
+            locHistIdx++;
+            remHistIdx++;
+
+            // These two should be equal.
+            locHistIdxId++;
+            remHistIdxId++;
+
+            assert locHistIdxId == remHistIdxId;
+        }
+
+        return "[local=" + printHistoryItemsArray(locHist, locHistIdx, locHistIdxId)
+            + ", remote=" + printHistoryItemsArray(remHist, remHistIdx, remHistIdxId) + ']';
+    }
+
+    /** */
+    private String printHistoryItemsArray(DistributedMetaStorageHistoryItem[] hist, int start, long startVerId) {
+        StringBuilder sb = new StringBuilder("[");
+
+        while (start < hist.length) {
+            DistributedMetaStorageHistoryItem histItem = hist[start];
+
+            sb.append(startVerId)
+                .append(":[keys=").append(Arrays.toString(histItem.keys))
+                .append(",hash=").append(histItem.longHash()).append(']');
+
+            if (++start < hist.length)
+                sb.append(", ");
+        }
+
+        return sb.append(']').toString();
     }
 
     /**
@@ -818,7 +921,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                         int hv = (int)(v - remoteVer.id + hist.length - 1);
 
                         try {
-                            completeWrite(hist[hv]);
+                            completeWrite(hist[hv], false);
                         }
                         catch (IgniteCheckedException ex) {
                             log.error("Unable to unmarshal new metastore data. update=" + hist[hv], ex);
@@ -1050,7 +1153,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
                 if (nodeData.updates != null) {
                     for (DistributedMetaStorageHistoryItem update : nodeData.updates)
-                        completeWrite(update);
+                        completeWrite(update, false);
                 }
             }
             else if (!isClient && ver.id > 0) {
@@ -1206,7 +1309,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             if (msg instanceof DistributedMetaStorageCasMessage)
                 completeCas((DistributedMetaStorageCasMessage)msg);
             else
-                completeWrite(new DistributedMetaStorageHistoryItem(msg.key(), msg.value()));
+                completeWrite(new DistributedMetaStorageHistoryItem(msg.key(), msg.value()), true);
         }
         catch (IgniteInterruptedCheckedException e) {
             throw U.convertException(e);
@@ -1262,15 +1365,18 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      * Store data in local metastorage or in memory.
      *
      * @param histItem {@code <key, value>} pair to process.
+     * @param optimize Remove history item values that match already existing values. Might lead to no-op.
      * @throws IgniteCheckedException In case of IO/unmarshalling errors.
      */
     private void completeWrite(
-        DistributedMetaStorageHistoryItem histItem
+        DistributedMetaStorageHistoryItem histItem,
+        boolean optimize
     ) throws IgniteCheckedException {
         lock.writeLock().lock();
 
         try {
-            histItem = optimizeHistoryItem(histItem);
+            if (optimize)
+                histItem = optimizeHistoryItem(histItem);
 
             if (histItem == null)
                 return;
@@ -1356,7 +1462,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      * Store data in local metastorage or in memory.
      *
      * @param msg Message with all required data.
-     * @see #completeWrite(DistributedMetaStorageHistoryItem)
+     * @see #completeWrite(DistributedMetaStorageHistoryItem, boolean)
      */
     private void completeCas(
         DistributedMetaStorageCasMessage msg
@@ -1375,7 +1481,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             return;
         }
 
-        completeWrite(new DistributedMetaStorageHistoryItem(msg.key(), msg.value()));
+        completeWrite(new DistributedMetaStorageHistoryItem(msg.key(), msg.value()), true);
     }
 
     /**
