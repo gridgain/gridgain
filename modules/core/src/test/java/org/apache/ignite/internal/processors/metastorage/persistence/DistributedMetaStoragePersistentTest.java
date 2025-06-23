@@ -20,7 +20,9 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
@@ -87,6 +89,8 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
     }
 
     /**
+     * Tests that write operation, executed on inactive cluster, is not lost after cluster activation and restart.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -94,10 +98,19 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
         startGrid(0);
 
         grid(0).cluster().state(ClusterState.ACTIVE);
-        grid(0).cluster().state(ClusterState.INACTIVE);
+
+        CountDownLatch deactivationLatch = new CountDownLatch(1);
 
         // Deactivation is asynchronous.
-        Thread.sleep(100);
+        grid(0).events().localListen(event -> {
+            deactivationLatch.countDown();
+
+            return true;
+        }, EventType.EVT_CLUSTER_DEACTIVATED);
+
+        grid(0).cluster().state(ClusterState.INACTIVE);
+
+        deactivationLatch.await();
 
         metastorage(0).write("key1", "value1");
 
@@ -580,12 +593,14 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
 
         startGrid(1);
 
-        grid(0).cluster().active(true);
+        grid(0).cluster().state(ClusterState.ACTIVE);
 
         metastorage(0).write("key1", "value1");
 
         stopGrid(1);
 
+        // Here we emulate the situation where DMS history item is written twice with the same value. Such a situation
+        // should not exist, but there's a bug somewhere that leads to it. If it happened, we should not fail.
         JdkMarshaller marshaller = GridTestUtils.getFieldValue(metastorage(0), "marshaller");
         GridTestUtils.invoke(
             metastorage(0),
@@ -596,11 +611,15 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
 
         startGrid(1);
 
+        // Check that there are no errors when we update the cluster, even if it happened to be broken. Currently, it
+        // won't be broken in "master" branch, but it was broken before the fix.
         metastorage(0).write("key2", "value2");
 
         stopGrid(0);
         stopGrid(1);
 
+        // Full cluster restart would fail before the fix, because node 1 wasn't able to join due to DMS history being
+        // inconsistent with node 0.
         startGrid(0);
         startGrid(1);
     }

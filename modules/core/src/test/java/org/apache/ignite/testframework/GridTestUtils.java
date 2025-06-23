@@ -111,6 +111,7 @@ import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.processors.port.GridPortRecord;
 import org.apache.ignite.internal.util.GridBusyLock;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridAbsClosure;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
@@ -1928,34 +1929,11 @@ public final class GridTestUtils {
         for (int i = 0, size = objs.length; i < size; i++) {
             Object o = objs[i];
 
-            if (o != null && !box(types[i]).isInstance(o))
+            if (o != null && !IgniteUtils.box(types[i]).isInstance(o))
                 return false;
         }
 
         return true;
-    }
-
-    private static Class<?> box(Class cls) {
-        if (cls.isPrimitive()) {
-            if (cls == boolean.class)
-                return Boolean.class;
-            else if (cls == byte.class)
-                return Byte.class;
-            else if (cls == char.class)
-                return Character.class;
-            else if (cls == short.class)
-                return Short.class;
-            else if (cls == int.class)
-                return Integer.class;
-            else if (cls == long.class)
-                return Long.class;
-            else if (cls == float.class)
-                return Float.class;
-            else if (cls == double.class)
-                return Double.class;
-        }
-
-        return cls;
     }
 
     /**
