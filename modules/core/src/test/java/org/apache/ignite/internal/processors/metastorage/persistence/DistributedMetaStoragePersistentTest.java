@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
@@ -110,7 +111,7 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
 
         grid(0).cluster().state(ClusterState.INACTIVE);
 
-        deactivationLatch.await();
+        assertTrue(deactivationLatch.await(5, TimeUnit.SECONDS));
 
         metastorage(0).write("key1", "value1");
 
