@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -71,6 +72,7 @@ import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanType;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -94,7 +96,6 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_NEXT_PA
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_PAGE_PREPARE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_CANCEL_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXEC_REQ;
-import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -203,19 +204,43 @@ public class GridMapQueryExecutor {
             UUID remoteNodeId,
             UUID localNodeId
     ) {
-        boolean sensitive = S.getSensitiveDataLogging() != PLAIN;
+        SensitiveDataLogging sensitivity = S.getSensitiveDataLogging();
+
+        String queriesStr = F.isEmpty(queries)
+                ? "N/A"
+                : queries.stream()
+                .map(GridCacheSqlQuery::query)
+                .collect(Collectors.joining("; "));
+
+        String paramsStr;
+        if (params == null || params.length == 0) {
+            paramsStr = "params=HIDDEN";
+        } else {
+            switch (sensitivity) {
+                case NONE:
+                    paramsStr = "params=HIDDEN";
+                    break;
+                case HASH:
+                    paramsStr = "params=" + Arrays.stream(params)
+                            .map(p -> Integer.toHexString(Objects.hashCode(p)))
+                            .collect(Collectors.toList());
+                    break;
+                case PLAIN:
+                default:
+                    paramsStr = "params=" + Arrays.toString(params);
+                    break;
+            }
+        }
 
         return String.format(
                 "[reqId=%s, label=%s, schema=%s, queries=%s, localNodeId=%s, remoteNodeId=%s, params=%s]",
                 reqId,
                 label != null ? label : "N/A",
                 schemaName != null ? schemaName : "N/A",
-                F.isEmpty(queries)
-                        ? "N/A"
-                        : (sensitive ? "HIDDEN" : queries.stream().map(GridCacheSqlQuery::query).collect(Collectors.joining("; "))),
+                queriesStr,
                 localNodeId,
                 remoteNodeId,
-                params == null ? "N/A" : (sensitive ? "HIDDEN" : Arrays.toString(params))
+                paramsStr
         );
     }
 

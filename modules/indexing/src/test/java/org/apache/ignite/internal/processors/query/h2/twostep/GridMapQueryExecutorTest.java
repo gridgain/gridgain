@@ -82,7 +82,7 @@ public class GridMapQueryExecutorTest {
         assertTrue(logContent.contains("label=N/A"));
         assertTrue(logContent.contains("schema=N/A"));
         assertTrue(logContent.contains("queries=N/A"));
-        assertTrue(logContent.contains("params=N/A"));
+        assertTrue(logContent.contains("params=params=HIDDEN"));
         assertTrue(logContent.contains("localNodeId=" + localNodeId));
         assertTrue(logContent.contains("remoteNodeId=" + remoteNodeId));
     }
@@ -110,7 +110,7 @@ public class GridMapQueryExecutorTest {
         assertTrue(logMsg.contains("reqId=1"));
         assertTrue(logMsg.contains("label=TestLabel"));
         assertTrue(logMsg.contains("schema=TestSchema"));
-        assertTrue(logMsg.contains("queries=HIDDEN"));
+        assertTrue(logMsg.contains("queries=SELECT * FROM test"));
         assertTrue(logMsg.contains("localNodeId=" + localNodeId));
         assertTrue(logMsg.contains("remoteNodeId=" + nodeId));
         assertTrue(logMsg.contains("params=HIDDEN"));
