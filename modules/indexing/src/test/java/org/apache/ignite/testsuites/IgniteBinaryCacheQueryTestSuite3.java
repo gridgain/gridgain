@@ -144,6 +144,7 @@ import org.apache.ignite.internal.processors.query.h2.sql.ParameterTypeInference
 import org.apache.ignite.internal.processors.query.h2.twostep.AndOperationExtractPartitionSelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.BetweenOperationExtractPartitionSelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.DmlSelectPartitionPruningSelfTest;
+import org.apache.ignite.internal.processors.query.h2.twostep.GridMapQueryExecutorTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.InOperationExtractPartitionSelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.JoinPartitionPruningSelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.MvccDmlPartitionPruningSelfTest;
@@ -333,6 +334,7 @@ import org.junit.runners.Suite;
     JoinPartitionPruningSelfTest.class,
     DmlSelectPartitionPruningSelfTest.class,
     MvccDmlPartitionPruningSelfTest.class,
+    GridMapQueryExecutorTest.class,
 
     GridCacheDynamicLoadOnClientTest.class,
     GridCacheDynamicLoadOnClientPersistentTest.class,

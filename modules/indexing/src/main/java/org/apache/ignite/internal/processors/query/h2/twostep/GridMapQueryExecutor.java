@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -71,6 +72,7 @@ import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanType;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -94,6 +96,8 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_NEXT_PA
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_PAGE_PREPARE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_CANCEL_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXEC_REQ;
+
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Map query executor.
@@ -178,6 +182,66 @@ public class GridMapQueryExecutor {
 
             nodeRess.cancelRequest(qryReqId);
         }
+    }
+
+    /**
+     * Logs detailed information about a query that encountered an error during execution.
+     *
+     * @param reqId Request ID of the query.
+     * @param label Query label, if provided.
+     * @param schemaName Schema name under which the query was executed.
+     * @param queries Collection of SQL queries involved in the execution.
+     * @param params Query parameters, if any.
+     * @param error Exception that occurred during the query execution.
+     */
+    static String buildQueryLogDetails(
+            long reqId,
+            String label,
+            String schemaName,
+            Collection<GridCacheSqlQuery> queries,
+            Object[] params,
+            Throwable error,
+            UUID remoteNodeId,
+            UUID localNodeId
+    ) {
+        SensitiveDataLogging sensitivity = S.getSensitiveDataLogging();
+
+        String queriesStr = F.isEmpty(queries)
+                ? "N/A"
+                : queries.stream()
+                .map(GridCacheSqlQuery::query)
+                .collect(Collectors.joining("; "));
+
+        String paramsStr;
+        if (params == null || params.length == 0) {
+            paramsStr = "params=HIDDEN";
+        } else {
+            switch (sensitivity) {
+                case NONE:
+                    paramsStr = "params=HIDDEN";
+                    break;
+                case HASH:
+                    paramsStr = "params=" + Arrays.stream(params)
+                            .map(p -> Integer.toHexString(Objects.hashCode(p)))
+                            .collect(Collectors.toList());
+                    break;
+                case PLAIN:
+                default:
+                    paramsStr = "params=" + Arrays.toString(params);
+                    break;
+            }
+        }
+
+        return String.format(
+                "[reqId=%s, label=%s, schema=%s, queries=%s, localNodeId=%s, remoteNodeId=%s, params=%s]",
+                reqId,
+                label != null ? label : "N/A",
+                schemaName != null ? schemaName : "N/A",
+                queriesStr,
+                localNodeId,
+                remoteNodeId,
+                paramsStr
+        );
     }
 
     /**
@@ -582,13 +646,23 @@ public class GridMapQueryExecutor {
                         if (qryRetryErr != null)
                             sendError(node, reqId, qryRetryErr);
                         else {
+                            String errMsg = buildQueryLogDetails(
+                                    reqId,
+                                    label,
+                                    schemaName,
+                                    qrys,
+                                    params,
+                                    e,
+                                    node.id(),
+                                    ctx.localNodeId());
+
                             if (e instanceof Error) {
-                                U.error(log, "Failed to execute local query.", e);
+                                U.error(log, errMsg, e);
 
                                 throw (Error)e;
                             }
 
-                            U.warn(log, "Failed to execute local query.", e);
+                            U.warn(log, errMsg, e);
 
                             sendError(node, reqId, e);
                         }
