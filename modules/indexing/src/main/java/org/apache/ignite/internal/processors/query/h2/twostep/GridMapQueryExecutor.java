@@ -26,7 +26,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -72,6 +71,7 @@ import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanType;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -185,6 +185,35 @@ public class GridMapQueryExecutor {
     }
 
     /**
+     * Converts the provided parameters to a string representation based on the configured
+     *
+     * <ul>
+     *     <li>NONE → returns {@code "HIDDEN"}</li>
+     *     <li>HASH → returns a hashed value of the array content</li>
+     *     <li>PLAIN → returns full array contents via {@code Arrays.toString()}</li>
+     * </ul>
+     *
+     * @param params Query parameters to stringify. May be {@code null}.
+     * @return String representation of parameters depending on sensitivity level, or {@code "N/A"} if null/empty.
+     */
+    private static String stringifyParams(Object[] params) {
+        if (params == null || params.length == 0)
+            return "N/A";
+
+        SensitiveDataLogging sensitivity = S.getSensitiveDataLogging();
+
+        switch (sensitivity) {
+            case NONE:
+                return "HIDDEN";
+            case HASH:
+                return String.valueOf(IgniteUtils.hash(Arrays.hashCode(params)));
+            case PLAIN:
+            default:
+                return Arrays.toString(params);
+        }
+    }
+
+    /**
      * Logs detailed information about a query that encountered an error during execution.
      *
      * @param reqId Request ID of the query.
@@ -193,6 +222,9 @@ public class GridMapQueryExecutor {
      * @param queries Collection of SQL queries involved in the execution.
      * @param params Query parameters, if any.
      * @param error Exception that occurred during the query execution.
+     * @param remoteNodeId Remote node ID.
+     * @param localNodeId  Local node ID.
+     * @return The constructed log message.
      */
     static String buildQueryLogDetails(
             long reqId,
@@ -204,43 +236,24 @@ public class GridMapQueryExecutor {
             UUID remoteNodeId,
             UUID localNodeId
     ) {
-        SensitiveDataLogging sensitivity = S.getSensitiveDataLogging();
-
-        String queriesStr = F.isEmpty(queries)
+        String queryStr = F.isEmpty(queries)
                 ? "N/A"
                 : queries.stream()
                 .map(GridCacheSqlQuery::query)
                 .collect(Collectors.joining("; "));
 
-        String paramsStr;
-        if (params == null || params.length == 0) {
-            paramsStr = "params=HIDDEN";
-        } else {
-            switch (sensitivity) {
-                case NONE:
-                    paramsStr = "params=HIDDEN";
-                    break;
-                case HASH:
-                    paramsStr = "params=" + Arrays.stream(params)
-                            .map(p -> Integer.toHexString(Objects.hashCode(p)))
-                            .collect(Collectors.toList());
-                    break;
-                case PLAIN:
-                default:
-                    paramsStr = "params=" + Arrays.toString(params);
-                    break;
-            }
-        }
+        String paramsStr = stringifyParams(params);
 
         return String.format(
-                "[reqId=%s, label=%s, schema=%s, queries=%s, localNodeId=%s, remoteNodeId=%s, params=%s]",
+                "Query failed [reqId=%d, label=%s, schema=%s, queries=%s, params=%s, err=%s, remoteNodeId=%s, localNodeId=%s]",
                 reqId,
                 label != null ? label : "N/A",
                 schemaName != null ? schemaName : "N/A",
-                queriesStr,
-                localNodeId,
+                queryStr,
+                paramsStr,
+                error,
                 remoteNodeId,
-                paramsStr
+                localNodeId
         );
     }
 
