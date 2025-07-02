@@ -16,10 +16,13 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
@@ -28,10 +31,9 @@ import static org.junit.Assert.assertTrue;
 
 public class GridMapQueryExecutorTest {
 
-    private final GridMapQueryExecutor executor = new GridMapQueryExecutor();
+    public void testBuildQueryLogDetailsWithSampleParams(String sensitivity, String expectedParams) {
+        System.setProperty(IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING, sensitivity);
 
-    @Test
-    public void testBuildQueryLogDetailsWithNullParams() {
         Collection<GridCacheSqlQuery> queries = Collections.singletonList(
                 new GridCacheSqlQuery("SELECT * FROM test")
         );
@@ -41,59 +43,13 @@ public class GridMapQueryExecutorTest {
                 "TestLabel",
                 "TestSchema",
                 queries,
-                null,
+                new Object[]{42, "john", 345},
                 new RuntimeException("Test exception"),
                 UUID.randomUUID(),
                 UUID.randomUUID()
         );
 
-        assertTrue(log.contains("params=N/A"));
-    }
-
-    @Test
-    public void testBuildQueryLogDetailsWithEmptyParams() {
-        Collection<GridCacheSqlQuery> queries = Collections.singletonList(
-                new GridCacheSqlQuery("SELECT * FROM test")
-        );
-
-        String log = GridMapQueryExecutor.buildQueryLogDetails(
-                123L,
-                "TestLabel",
-                "TestSchema",
-                queries,
-                new Object[]{},
-                new RuntimeException("Test exception"),
-                UUID.randomUUID(),
-                UUID.randomUUID()
-        );
-
-        assertTrue(log.contains("params=N/A"));
-    }
-
-    @Test
-    public void testBuildQueryLogDetailsWithSampleParams() {
-        Collection<GridCacheSqlQuery> queries = Collections.singletonList(
-                new GridCacheSqlQuery("SELECT * FROM test")
-        );
-
-        Object[] params = new Object[]{42, "foo", 3.14};
-
-        String log = GridMapQueryExecutor.buildQueryLogDetails(
-                123L,
-                "TestLabel",
-                "TestSchema",
-                queries,
-                params,
-                new RuntimeException("Test exception"),
-                UUID.randomUUID(),
-                UUID.randomUUID()
-        );
-
-        // Depending on system config, assert format
-        assertTrue(log.contains("params="));
-        assertTrue(log.contains("TestLabel"));
-        assertTrue(log.contains("TestSchema"));
-        assertTrue(log.contains("SELECT * FROM test"));
+        assertTrue(log.contains("params=" + expectedParams));
     }
 
     @Test
@@ -114,4 +70,21 @@ public class GridMapQueryExecutorTest {
         assertTrue(log.contains("queries=N/A"));
         assertTrue(log.contains("params=N/A"));
     }
+
+    @Test
+    public void testBuildQueryLogDetailsWithPlainSensitivity() {
+        testBuildQueryLogDetailsWithSampleParams("plain", "[42, john, 345]");
+    }
+
+    @Test
+    public void testBuildQueryLogDetailsWithHashSensitivity() {
+        int hash = Arrays.hashCode(new Object[]{42, "john", 345});
+        testBuildQueryLogDetailsWithSampleParams("hash", String.valueOf(IgniteUtils.hash(hash)));
+    }
+
+    @Test
+    public void testBuildQueryLogDetailsWithNoneSensitivity() {
+        testBuildQueryLogDetailsWithSampleParams("none", "HIDDEN");
+    }
+
 }
