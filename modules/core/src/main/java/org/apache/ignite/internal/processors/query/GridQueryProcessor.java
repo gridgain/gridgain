@@ -947,6 +947,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             }
         }
 
+        registerMetadataForRegisteredCaches(false);
+
         ctx.cache().context().database().checkpointReadLock();
 
         try {
