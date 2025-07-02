@@ -18,7 +18,6 @@ package org.apache.ignite.internal.binary;
 
 import java.io.Serializable;
 import java.util.Collections;
-import java.util.UUID;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryReader;
 import org.apache.ignite.binary.BinarySerializer;
@@ -28,16 +27,7 @@ import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.client.GridClient;
-import org.apache.ignite.internal.client.GridClientConfiguration;
-import org.apache.ignite.internal.client.GridClientFactory;
-import org.apache.ignite.internal.client.GridClientProtocol;
-import org.apache.ignite.internal.client.balancer.GridClientRoundRobinBalancer;
-import org.apache.ignite.internal.visor.VisorTaskArgument;
-import org.apache.ignite.internal.visor.node.VisorNodePingTask;
-import org.apache.ignite.internal.visor.node.VisorNodePingTaskArg;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Test;
 
 /**
  * Tests that node will start with custom binary serializer and thin client will connect to such node.
@@ -81,31 +71,6 @@ public class BinaryConfigurationCustomSerializerSelfTest extends GridCommonAbstr
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
-    }
-
-    /**
-     * Test that thin client will be able to connect to node with custom binary serializer and custom consistent ID.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testThinClientConnected() throws Exception {
-        UUID nid = ignite(0).cluster().localNode().id();
-
-        GridClientConfiguration clnCfg = new GridClientConfiguration();
-
-        clnCfg.setProtocol(GridClientProtocol.TCP);
-        clnCfg.setServers(Collections.singleton("127.0.0.1:11211"));
-        clnCfg.setBalancer(new GridClientRoundRobinBalancer());
-
-        // Start client.
-        GridClient client = GridClientFactory.start(clnCfg);
-
-        // Execute some task.
-        client.compute().execute(VisorNodePingTask.class.getName(),
-            new VisorTaskArgument<>(nid, new VisorNodePingTaskArg(nid), false));
-
-        GridClientFactory.stop(client.id(), false);
     }
 
     /**

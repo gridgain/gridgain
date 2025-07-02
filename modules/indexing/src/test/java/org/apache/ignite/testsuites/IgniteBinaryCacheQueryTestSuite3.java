@@ -126,7 +126,6 @@ import org.apache.ignite.internal.processors.query.QueryJmxMetricsTest;
 import org.apache.ignite.internal.processors.query.SqlIncompatibleDataTypeExceptionTest;
 import org.apache.ignite.internal.processors.query.SqlIndexesSystemViewStaticCfgTest;
 import org.apache.ignite.internal.processors.query.SqlIndexesSystemViewTest;
-import org.apache.ignite.internal.processors.query.SqlMetricsOnWebConsoleSelfTest;
 import org.apache.ignite.internal.processors.query.SqlQueryHistoryFromClientSelfTest;
 import org.apache.ignite.internal.processors.query.SqlQueryHistorySelfTest;
 import org.apache.ignite.internal.processors.query.SqlQuerySystemViewsIntegrationTest;
@@ -258,7 +257,6 @@ import org.junit.runners.Suite;
     SqlQuerySystemViewsIntegrationTest.class,
     SqlIndexesSystemViewTest.class,
     SqlIndexesSystemViewStaticCfgTest.class,
-    SqlMetricsOnWebConsoleSelfTest.class,
     ScanQueryConcurrentUpdatesTest.class,
     ScanQueryConcurrentSqlUpdatesTest.class,
     ReservationsOnDoneAfterTopologyUnlockFailTest.class,

@@ -56,7 +56,6 @@ import org.apache.ignite.internal.processors.cache.ttl.CacheTtlTransactionalPart
 import org.apache.ignite.internal.processors.client.IgniteDataStreamerTest;
 import org.apache.ignite.internal.processors.query.h2.database.H2ComputeInlineSizeTest;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnTest;
-import org.apache.ignite.internal.visor.VisorQueryTaskSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -117,8 +116,6 @@ import org.junit.runners.Suite;
     RebuildIndexLogMessageTest.class,
 
     H2TreeCorruptedTreeExceptionTest.class,
-
-    VisorQueryTaskSelfTest.class,
 
     WrongIndexedTypesTest.class,
 
