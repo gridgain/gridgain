@@ -320,6 +320,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         }, QRY_DETAIL_METRICS_EVICTION_FREQ, QRY_DETAIL_METRICS_EVICTION_FREQ);
 
         idxBuildStatusStorage.start();
+
+        registerMetadataForRegisteredCaches(false);
     }
 
     /** {@inheritDoc} */
@@ -944,8 +946,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                     return;
             }
         }
-
-        registerMetadataForRegisteredCaches(false);
 
         ctx.cache().context().database().checkpointReadLock();
 

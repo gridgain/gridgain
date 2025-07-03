@@ -5507,6 +5507,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             CacheJoinNodeDiscoveryData data = locCfgMgr.restoreCacheConfigurations();
 
             cachesInfo.onStart(data);
+
+            ctx.query().registerMetadataForRegisteredCaches(false);
         }
 
         /** {@inheritDoc} */
