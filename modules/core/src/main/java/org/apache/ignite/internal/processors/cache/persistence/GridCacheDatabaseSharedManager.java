@@ -484,7 +484,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * @return WAL rebalance threshold.
      */
     public int walRebalanceThreshold() {
-        return historicalRebalanceThreshold.get();
+        return historicalRebalanceThreshold.getOrDefault(walRebalanceThresholdLegacy);
     }
 
     /**
@@ -1849,7 +1849,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             for (GridDhtLocalPartition locPart : grp.topology().currentLocalPartitions()) {
                 if (locPart.state() == OWNING && (preferWalRebalance() ||
-                    locPart.fullSize() > historicalRebalanceThreshold.getOrDefault(walRebalanceThresholdLegacy)))
+                    locPart.fullSize() > walRebalanceThreshold()))
                     res.computeIfAbsent(grp.groupId(), k -> new HashSet<>()).add(locPart.id());
             }
         }
