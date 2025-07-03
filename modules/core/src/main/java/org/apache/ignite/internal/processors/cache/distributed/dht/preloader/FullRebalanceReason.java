@@ -37,8 +37,7 @@ public enum FullRebalanceReason {
         this.msg = msg;
     }
 
-    @Override
-    public String toString() {
+    @Override public String toString() {
         return msg;
     }
 }
