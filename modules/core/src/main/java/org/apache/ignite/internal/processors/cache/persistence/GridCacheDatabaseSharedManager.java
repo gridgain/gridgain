@@ -481,6 +481,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /**
+     * @return WAL rebalance threshold.
+     */
+    public int walRebalanceThreshold() {
+        return historicalRebalanceThreshold.get();
+    }
+
+    /**
      * For test use only.
      */
     public IgniteInternalFuture<Void> enableCheckpoints(boolean enable) {
