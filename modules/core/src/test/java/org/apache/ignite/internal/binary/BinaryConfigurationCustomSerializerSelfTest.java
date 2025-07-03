@@ -34,8 +34,8 @@ import org.apache.ignite.internal.client.GridClientFactory;
 import org.apache.ignite.internal.client.GridClientProtocol;
 import org.apache.ignite.internal.client.balancer.GridClientRoundRobinBalancer;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
-import org.apache.ignite.internal.visor.node.VisorNodePingTask;
-import org.apache.ignite.internal.visor.node.VisorNodePingTaskArg;
+import org.apache.ignite.internal.visor.metric.VisorMetricTask;
+import org.apache.ignite.internal.visor.metric.VisorMetricTaskArg;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -102,8 +102,8 @@ public class BinaryConfigurationCustomSerializerSelfTest extends GridCommonAbstr
         GridClient client = GridClientFactory.start(clnCfg);
 
         // Execute some task.
-        client.compute().execute(VisorNodePingTask.class.getName(),
-            new VisorTaskArgument<>(nid, new VisorNodePingTaskArg(nid), false));
+        client.compute().execute(VisorMetricTask.class.getName(),
+            new VisorTaskArgument<>(nid, new VisorMetricTaskArg("test"), false));
 
         GridClientFactory.stop(client.id(), false);
     }
