@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.query.h2.twostep;
 
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
-
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.junit.Test;
 
@@ -31,7 +30,14 @@ import static org.junit.Assert.assertTrue;
 
 public class GridMapQueryExecutorTest {
 
-    public void testBuildQueryLogDetailsWithSampleParams(String sensitivity, String expectedParams) {
+    /**
+     * Helper method for testing log output based on sensitivity config and parameters.
+     *
+     * @param sensitivity      The system property value for IGNITE_SENSITIVE_DATA_LOGGING.
+     * @param params           The parameters passed to the log method.
+     * @param expectedParams   Expected formatted output in the log.
+     */
+    private static void testBuildQueryLogDetailsWithSampleParams(String sensitivity, Object[] params, String expectedParams) {
         System.setProperty(IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING, sensitivity);
 
         Collection<GridCacheSqlQuery> queries = Collections.singletonList(
@@ -43,13 +49,53 @@ public class GridMapQueryExecutorTest {
                 "TestLabel",
                 "TestSchema",
                 queries,
-                new Object[]{42, "john", 345},
+                params,
                 new RuntimeException("Test exception"),
                 UUID.randomUUID(),
                 UUID.randomUUID()
         );
 
-        assertTrue(log.contains("params=" + expectedParams));
+        assertTrue("Log does not contain expected param string", log.contains("params=" + expectedParams));
+    }
+
+    @Test
+    public void testBuildQueryLogDetailsWithNullParams() {
+        Collection<GridCacheSqlQuery> queries = Collections.singletonList(
+                new GridCacheSqlQuery("SELECT * FROM test")
+        );
+
+        String log = GridMapQueryExecutor.buildQueryLogDetails(
+                123L,
+                "TestLabel",
+                "TestSchema",
+                queries,
+                null,
+                new RuntimeException("Test exception"),
+                UUID.randomUUID(),
+                UUID.randomUUID()
+        );
+
+        assertTrue(log.contains("params=N/A"));
+    }
+
+    @Test
+    public void testBuildQueryLogDetailsWithEmptyParams() {
+        Collection<GridCacheSqlQuery> queries = Collections.singletonList(
+                new GridCacheSqlQuery("SELECT * FROM test")
+        );
+
+        String log = GridMapQueryExecutor.buildQueryLogDetails(
+                123L,
+                "TestLabel",
+                "TestSchema",
+                queries,
+                new Object[]{},
+                new RuntimeException("Test exception"),
+                UUID.randomUUID(),
+                UUID.randomUUID()
+        );
+
+        assertTrue(log.contains("params=N/A"));
     }
 
     @Test
@@ -73,18 +119,25 @@ public class GridMapQueryExecutorTest {
 
     @Test
     public void testBuildQueryLogDetailsWithPlainSensitivity() {
-        testBuildQueryLogDetailsWithSampleParams("plain", "[42, john, 345]");
+        Object[] givenParams = new Object[]{42, "john", 345};
+
+        testBuildQueryLogDetailsWithSampleParams("plain", givenParams, "[42, john, 345]");
     }
 
     @Test
     public void testBuildQueryLogDetailsWithHashSensitivity() {
-        int hash = Arrays.hashCode(new Object[]{42, "john", 345});
-        testBuildQueryLogDetailsWithSampleParams("hash", String.valueOf(IgniteUtils.hash(hash)));
+        Object[] givenParams = new Object[]{42, "john", 345};
+        int hash = Arrays.hashCode(givenParams);
+        String expected = String.valueOf(IgniteUtils.hash(hash));
+
+        testBuildQueryLogDetailsWithSampleParams("hash", givenParams, expected);
     }
 
     @Test
     public void testBuildQueryLogDetailsWithNoneSensitivity() {
-        testBuildQueryLogDetailsWithSampleParams("none", "HIDDEN");
+        Object[] givenParams = new Object[]{42, "john", 345};
+
+        testBuildQueryLogDetailsWithSampleParams("none", givenParams, "HIDDEN");
     }
 
 }
