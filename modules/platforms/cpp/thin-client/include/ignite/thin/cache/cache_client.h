@@ -144,7 +144,7 @@ namespace ignite
                  *
                  * @param key Key.
                  * @param value Value.
-                 * @return @c false if the value was NULL @c true otherwise.
+                 * @return @c true if the value is not NULL.
                  */
                 bool Get(const KeyType& key, ValueType& value)
                 {
@@ -153,7 +153,7 @@ namespace ignite
 
                     proxy.Get(wrKey, rdValue);
 
-                    return rdValue.IsNull();
+                    return !rdValue.IsNull();
                 }
 
                 /**

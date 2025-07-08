@@ -2082,7 +2082,7 @@ BOOST_AUTO_TEST_CASE(CacheClientPutGetNonEmptyValue)
     BOOST_CHECK(cache.ContainsKey(key));
 
     std::string value;
-    bool isNull = cache.Get(key, value);
+    bool isNull = !cache.Get(key, value);
 
     BOOST_CHECK_EQUAL(value, testValue);
     BOOST_CHECK(!isNull);
@@ -2102,7 +2102,7 @@ BOOST_AUTO_TEST_CASE(CacheClientGetEmptyValue)
     BOOST_CHECK(!cache.ContainsKey(key));
 
     std::string value;
-    bool isNull = cache.Get(key, value);
+    bool isNull = !cache.Get(key, value);
 
     BOOST_CHECK(value.empty());
     BOOST_CHECK(isNull);
@@ -2123,7 +2123,7 @@ BOOST_AUTO_TEST_CASE(CacheClientPutGetNullValue)
 
     std::string *value = 0;
     try {
-        bool isNull = cache.Get(key, value);
+        bool isNull = !cache.Get(key, value);
 
         BOOST_CHECK(value == 0);
         BOOST_CHECK(isNull);
