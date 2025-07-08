@@ -88,7 +88,11 @@ namespace ignite
                 virtual void Read(binary::BinaryReaderImpl& reader)
                 {
                     isNull = !reader.SkipIfNull();
-                    reader.ReadTopObject<ValueType>(value);
+                    if (isNull) {
+                        value = ignite::binary::BinaryType<T>::GetNull();
+                    } else {
+                        reader.ReadTopObject<ValueType>(value);
+                    }
                 }
 
                 /**
@@ -125,7 +129,7 @@ namespace ignite
                 /**
                  * Constructor.
                  *
-                 * @param value Value.
+                 * @param pair Pair.
                  */
                 ReadableImpl(std::pair<ValueType1, ValueType2>& pair) :
                     pair(pair)
