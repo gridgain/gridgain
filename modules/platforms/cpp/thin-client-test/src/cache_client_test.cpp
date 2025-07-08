@@ -2066,4 +2066,73 @@ BOOST_AUTO_TEST_CASE(CacheClientGetAndPutIfAbsentComplexKey)
     BOOST_CHECK_EQUAL(valOut, valIn1);
 }
 
+BOOST_AUTO_TEST_CASE(CacheClientPutGetNonEmptyValue)
+{
+    IgniteClientConfiguration cfg;
+
+    cfg.SetEndPoints("127.0.0.1:11110");
+
+    IgniteClient client = IgniteClient::Start(cfg);
+
+    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("local");
+
+    const int32_t key = 53453;
+    std::string testValue = "Test";
+    cache.Put(key, testValue);
+    BOOST_CHECK(cache.ContainsKey(key));
+
+    std::string value;
+    bool isNull = cache.Get(key, value);
+
+    BOOST_CHECK_EQUAL(value, testValue);
+    BOOST_CHECK(!isNull);
+}
+
+BOOST_AUTO_TEST_CASE(CacheClientGetEmptyValue)
+{
+    IgniteClientConfiguration cfg;
+
+    cfg.SetEndPoints("127.0.0.1:11110");
+
+    IgniteClient client = IgniteClient::Start(cfg);
+
+    cache::CacheClient<int32_t, std::string> cache = client.GetCache<int32_t, std::string>("local");
+
+    const int32_t key = 53453;
+    BOOST_CHECK(!cache.ContainsKey(key));
+
+    std::string value;
+    bool isNull = cache.Get(key, value);
+
+    BOOST_CHECK(value.empty());
+    BOOST_CHECK(isNull);
+}
+
+BOOST_AUTO_TEST_CASE(CacheClientPutGetNullValue)
+{
+    IgniteClientConfiguration cfg;
+
+    cfg.SetEndPoints("127.0.0.1:11110");
+
+    IgniteClient client = IgniteClient::Start(cfg);
+
+    cache::CacheClient<int32_t, std::string*> cache = client.GetCache<int32_t, std::string*>("local");
+
+    const int32_t key = 53453;
+    BOOST_CHECK(!cache.ContainsKey(key));
+
+    std::string *value = 0;
+    try {
+        bool isNull = cache.Get(key, value);
+
+        BOOST_CHECK(value == 0);
+        BOOST_CHECK(isNull);
+    } catch (...) {
+        delete value;
+        throw;
+    }
+
+    delete value;
+}
+
 BOOST_AUTO_TEST_SUITE_END()
