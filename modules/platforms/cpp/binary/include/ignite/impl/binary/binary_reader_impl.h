@@ -967,7 +967,25 @@ namespace ignite
                 template<typename T>
                 void ReadTopObject(T& res)
                 {
-                    return ReadHelper<T>::Read(*this, res);
+                    ReadHelper<T>::Read(*this, res);
+                }
+
+                /**
+                 * Read object.
+                 *
+                 * @param res Read object.
+                 * @return @c true if the object is not NULL.
+                 */
+                template<typename T>
+                bool ReadTopObjectNullable(T& res)
+                {
+                    bool nonNull = SkipIfNull();
+                    if (nonNull) {
+                        ReadHelper<T>::Read(*this, res);
+                    } else {
+                        res = ignite::binary::BinaryType<T>::GetNull();
+                    }
+                    return nonNull;
                 }
 
                 /**

@@ -87,12 +87,7 @@ namespace ignite
                  */
                 virtual void Read(binary::BinaryReaderImpl& reader)
                 {
-                    isNull = !reader.SkipIfNull();
-                    if (isNull) {
-                        value = ignite::binary::BinaryType<T>::GetNull();
-                    } else {
-                        reader.ReadTopObject<ValueType>(value);
-                    }
+                    isNull = !reader.ReadTopObjectNullable<T>(value);
                 }
 
                 /**
