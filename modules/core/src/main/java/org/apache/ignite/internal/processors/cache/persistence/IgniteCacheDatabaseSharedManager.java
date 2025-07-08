@@ -1720,9 +1720,10 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * Marks cache group as with disabled WAL.
      *
      * @param grpId Group id.
+     * @param cacheOrGrpName Cache or group name.
      * @param enabled flag.
      */
-    public void walEnabled(int grpId, boolean enabled, boolean local) {
+    public void walEnabled(int grpId, String cacheOrGrpName, boolean enabled, boolean local) {
         // No-op.
     }
 

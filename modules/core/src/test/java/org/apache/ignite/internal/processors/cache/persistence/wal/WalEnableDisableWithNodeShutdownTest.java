@@ -271,7 +271,7 @@ public class WalEnableDisableWithNodeShutdownTest extends GridCommonAbstractTest
             node = Ignition.start(igniteCfg(false, consistentId));
         }
         catch (Exception ex) {
-            assertTrue(X.hasCause(ex, "Ignite node with disabled WAL was stopped in the middle of a checkpoint", IgniteException.class));
+            assertTrue(X.hasCause(ex, "WAL was disabled for Ignite node", IgniteException.class));
 
             node = Ignition.start(igniteCfg(false, consistentId));
 
