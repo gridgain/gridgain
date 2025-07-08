@@ -144,13 +144,16 @@ namespace ignite
                  *
                  * @param key Key.
                  * @param value Value.
+                 * @return @c false if the value was NULL @c true otherwise.
                  */
-                void Get(const KeyType& key, ValueType& value)
+                bool Get(const KeyType& key, ValueType& value)
                 {
                     impl::thin::WritableKeyImpl<KeyType> wrKey(key);
                     impl::thin::ReadableImpl<ValueType> rdValue(value);
 
                     proxy.Get(wrKey, rdValue);
+
+                    return rdValue.IsNull();
                 }
 
                 /**
