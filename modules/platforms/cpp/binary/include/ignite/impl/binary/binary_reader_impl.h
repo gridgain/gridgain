@@ -29,7 +29,6 @@
 #include "ignite/impl/binary/binary_common.h"
 #include "ignite/impl/binary/binary_id_resolver.h"
 #include "ignite/impl/binary/binary_schema.h"
-#include "ignite/common/utils.h"
 #include "ignite/binary/binary_consts.h"
 #include "ignite/binary/binary_type.h"
 #include "ignite/binary/binary_enum_entry.h"
@@ -979,13 +978,13 @@ namespace ignite
                 template<typename T>
                 bool ReadTopObjectNullable(T& res)
                 {
-                    bool nonNull = SkipIfNull();
-                    if (nonNull) {
-                        ReadHelper<T>::Read(*this, res);
-                    } else {
+                    bool isNull = SkipIfNull();
+                    if (isNull) {
                         res = GetNull<T>();
+                    } else {
+                        ReadHelper<T>::Read(*this, res);
                     }
-                    return nonNull;
+                    return isNull;
                 }
 
                 /**
@@ -1321,7 +1320,7 @@ namespace ignite
                  *
                  * @param fieldName Field name.
                  * @param func Function to be invoked on stream.
-                 * @param epxHdr Expected header.
+                 * @param expHdr Expected header.
                  * @param dflt Default value returned if field is not found.
                  * @return Result.
                  */
@@ -1693,6 +1692,12 @@ namespace ignite
                 ignite::binary::BinaryReader, std::vector<int64_t> >(std::vector<int64_t>& res);
 
             template<>
+            inline bool BinaryReaderImpl::GetNull() const
+            {
+                return false;
+            }
+
+            template<>
             inline int8_t BinaryReaderImpl::GetNull() const
             {
                 return 0;
@@ -1712,6 +1717,30 @@ namespace ignite
 
             template<>
             inline int64_t BinaryReaderImpl::GetNull() const
+            {
+                return 0;
+            }
+
+            template<>
+            inline uint8_t BinaryReaderImpl::GetNull() const
+            {
+                return 0;
+            }
+
+            template<>
+            inline uint16_t BinaryReaderImpl::GetNull() const
+            {
+                return 0;
+            }
+
+            template<>
+            inline uint32_t BinaryReaderImpl::GetNull() const
+            {
+                return 0;
+            }
+
+            template<>
+            inline uint64_t BinaryReaderImpl::GetNull() const
             {
                 return 0;
             }
@@ -1756,6 +1785,12 @@ namespace ignite
             inline std::string BinaryReaderImpl::GetNull() const
             {
                 return std::string();
+            }
+
+            template<>
+            inline std::vector<int8_t> BinaryReaderImpl::GetNull() const
+            {
+                return std::vector<int8_t>();
             }
         }
     }
