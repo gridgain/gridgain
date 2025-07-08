@@ -56,6 +56,11 @@ public class QueryIndex implements Serializable {
     private int inlineSize = DFLT_INLINE_SIZE;
 
     /**
+     * Vector Similarity Function for VECTOR index.
+     */
+    private SimilarityFunction similarityFunction;
+
+    /**
      * Creates an empty index. Should be populated via setters.
      */
     public QueryIndex() {
@@ -273,6 +278,15 @@ public class QueryIndex implements Serializable {
     }
 
     /**
+     * Gets the Vector Similarity Function for Vector Indexes
+     *
+     * @return Similarity Function.
+     */
+    public SimilarityFunction getSimilarityFunction() {
+        return similarityFunction;
+    }
+
+    /**
      * Sets index inline size in bytes. When enabled part of indexed value will be placed directly to index pages,
      * thus minimizing data page accesses, thus increasing query performance.
      * <p>
@@ -295,6 +309,17 @@ public class QueryIndex implements Serializable {
         return this;
     }
 
+    /**
+     * Sets the Vector Similarity Function for VECTOR Index
+     *
+     * @param similarityFunction Vector Similarity Function.
+     * @return {@code this} for chaining.
+     */
+    public QueryIndex setSimilarityFunction(SimilarityFunction similarityFunction) {
+        this.similarityFunction = similarityFunction;
+        return this;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (this == o)
@@ -308,12 +333,13 @@ public class QueryIndex implements Serializable {
         return inlineSize == index.inlineSize &&
             F.eq(name, index.name) &&
             F.eq(fields, index.fields) &&
-            type == index.type;
+            type == index.type &&
+            F.eq(similarityFunction, index.similarityFunction);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return Objects.hash(name, fields, type, inlineSize);
+        return Objects.hash(name, fields, type, inlineSize, similarityFunction);
     }
 
     /** {@inheritDoc} */
