@@ -983,7 +983,7 @@ namespace ignite
                     if (nonNull) {
                         ReadHelper<T>::Read(*this, res);
                     } else {
-                        res = ignite::binary::BinaryType<T>::GetNull();
+                        ignite::binary::BinaryType<T>::GetNull(res);
                     }
                     return nonNull;
                 }
