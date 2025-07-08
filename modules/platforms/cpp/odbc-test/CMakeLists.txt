@@ -22,6 +22,7 @@ if (WIN32)
     set(Boost_USE_STATIC_LIBS ON)
 endif()
 
+cmake_policy(SET CMP0167 OLD)
 find_package(Boost 1.53 REQUIRED COMPONENTS unit_test_framework chrono thread system regex)
 
 find_package(ODBC REQUIRED)
