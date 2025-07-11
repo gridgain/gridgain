@@ -26,6 +26,7 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
 import org.junit.Test;
@@ -65,11 +66,17 @@ public class IgniteInsertNullableDuplicatesSqlTest extends AbstractIndexingCommo
     public void testInsertKeyWithNullKeyParts() {
         sql("CREATE TABLE test (id1 INT, id2 INT, val INT, CONSTRAINT PK PRIMARY KEY(id1, id2))");
         sql("insert into test (id1, id2, val) values (1, null, 1);");
-        
-        assertThrows(log,
-            () -> sql("insert into test (id1, id2, val) values (1, null, 1);"),
-            TransactionDuplicateKeyException.class,
-            "Duplicate key during INSERT");
+
+        try {
+            sql("insert into test (id1, id2, val) values (1, null, 1);");
+            fail("exception expected");
+        }
+        catch (TransactionDuplicateKeyException e) {
+            if (log.isInfoEnabled())
+                log.info("Caught expected exception: " + e.getMessage());
+
+            assertTrue(e.getMessage().matches("Duplicate key during INSERT \\[key=\\d+, table=[\\w\\.]+\\]"));
+        }
 
         assertThrows(log,
             () -> sql("insert into test (id1, val) values (1, 1);"),

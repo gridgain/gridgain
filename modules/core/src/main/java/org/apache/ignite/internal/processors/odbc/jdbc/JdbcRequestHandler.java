@@ -81,6 +81,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.marshaller.MarshallerContext;
+import org.apache.ignite.transactions.TransactionDuplicateKeyException;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcBulkLoadBatchRequest.CMD_CONTINUE;
@@ -777,7 +778,14 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                 return exceptionToResult(e0);
             }
             else {
-                U.warn(log, "Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req + ']', e);
+                if (X.hasCause(e, TransactionDuplicateKeyException.class)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req +
+                                "], reason: " + e);
+                    }
+                }
+                else
+                    U.warn(log, "Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req + "]", e);
 
                 return exceptionToResult(e);
             }

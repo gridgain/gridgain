@@ -203,7 +203,8 @@ public class DmlUtils {
                 if (cctx.cache().putIfAbsent(t.getKey(), t.getValue()))
                     return 1;
                 else
-                    throw new TransactionDuplicateKeyException("Duplicate key during INSERT [key=" + t.getKey() + ']');
+                    throw new TransactionDuplicateKeyException("Duplicate key during INSERT [key=" + t.getKey() +
+                            ", table=" + plan.tableIdentifier() + ']');
             }
         }
         else {
