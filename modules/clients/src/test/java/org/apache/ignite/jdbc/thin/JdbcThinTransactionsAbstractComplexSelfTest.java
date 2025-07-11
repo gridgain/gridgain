@@ -262,13 +262,15 @@ public abstract class JdbcThinTransactionsAbstractComplexSelfTest extends JdbcTh
 
                 return null;
             }
-        }, IgniteException.class, "Duplicate key during INSERT [key=" + IgniteUtils.hash(6) + "]");
+        }, IgniteException.class, "Duplicate key during INSERT [key=" + IgniteUtils.hash(6) +
+                ", table=" + "Person.PERSON]");
 
         assertTrue(e.getCause() instanceof BatchUpdateException);
 
         assertEquals(IgniteQueryErrorCode.DUPLICATE_KEY, ((BatchUpdateException)e.getCause()).getErrorCode());
 
-        assertTrue(e.getCause().getMessage().contains("Duplicate key during INSERT [key=" + IgniteUtils.hash(6) + "]"));
+        assertTrue(e.getCause().getMessage().contains("Duplicate key during INSERT [key=" + IgniteUtils.hash(6) +
+                ", table=" + "Person.PERSON]"));
 
         // First we insert id 7, then 6. Still, 7 is not in the cache as long as the whole batch has failed inside tx.
         assertEquals(Collections.emptyList(), execute("SELECT * FROM \"Person\".Person where id > 6 order by id"));

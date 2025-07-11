@@ -552,6 +552,13 @@ public final class UpdatePlan {
     }
 
     /**
+     * @return Table identifier.
+     */
+    public String tableIdentifier() {
+        return tbl.identifierString();
+    }
+
+    /**
      * @return Distributed plan info (for skip-reducer mode).
      */
     @Nullable public DmlDistributedPlanInfo distributedPlan() {

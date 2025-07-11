@@ -182,6 +182,7 @@ import org.apache.ignite.internal.sql.command.SqlCommand;
 import org.apache.ignite.internal.sql.command.SqlCommitTransactionCommand;
 import org.apache.ignite.internal.sql.command.SqlRollbackTransactionCommand;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResult;
+import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridEmptyCloseableIterator;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
@@ -207,6 +208,7 @@ import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilterImpl;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
+import org.apache.ignite.transactions.TransactionDuplicateKeyException;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.api.JavaObjectSerializer;
 import org.gridgain.internal.h2.engine.Constants;
@@ -3645,6 +3647,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             throw new CacheServerNotFoundException(e.getMessage(), e);
         }
         catch (IgniteCheckedException e) {
+            if (e instanceof IgniteTxDuplicateKeyCheckedException) {
+                IgniteTxDuplicateKeyCheckedException e0 = (IgniteTxDuplicateKeyCheckedException) e;
+                // enrich exception with operation table
+                e0.tableName(dml.plan().tableIdentifier());
+            }
+
             IgniteSQLException sqlEx = X.cause(e, IgniteSQLException.class);
 
             if (sqlEx != null)
