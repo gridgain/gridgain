@@ -208,7 +208,6 @@ import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilterImpl;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
-import org.apache.ignite.transactions.TransactionDuplicateKeyException;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.api.JavaObjectSerializer;
 import org.gridgain.internal.h2.engine.Constants;
