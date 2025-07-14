@@ -50,6 +50,7 @@ import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCompute;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheRebalanceMode;
@@ -405,8 +406,19 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         // Clear local join caches context.
         cctx.cache().localJoinCachesContext();
 
-        if (log.isDebugEnabled())
-            log.debug("Ignore event, cluster is inactive: " + evt);
+        if (evt.type() == EVT_DISCOVERY_CUSTOM_EVT &&
+                (((DiscoveryCustomEvent)evt).customMessage() instanceof ClientCacheChangeDummyDiscoveryMessage)) {
+            ClientCacheChangeDummyDiscoveryMessage dummyDiscoveryMsg =
+                    (ClientCacheChangeDummyDiscoveryMessage)((DiscoveryCustomEvent)evt).customMessage();
+
+            IgniteException err = new IgniteException("Can not perform the operation because the cluster is inactive.");
+
+            cctx.cache().completeClientCacheChangeFuture(dummyDiscoveryMsg.requestId(), err);
+        }
+        else {
+            if (log.isDebugEnabled())
+                log.debug("Ignore event, cluster is inactive: " + evt);
+        }
    }
 
     /** {@inheritDoc} */

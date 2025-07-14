@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.metastorage;
+package org.apache.ignite.internal.processors.metastorage.persistence;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
-import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageTest;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.apache.ignite.spi.discovery.DiscoverySpiDataExchange;
@@ -82,6 +87,43 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
         ignite.cluster().active(true);
 
         assertEquals("value", ignite.context().distributedMetastorage().read("key"));
+    }
+
+    /**
+     * Tests that write operation, executed on inactive cluster, is not lost after cluster activation and restart.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDeactivateWriteActivate() throws Exception {
+        startGrid(0);
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        CountDownLatch deactivationLatch = new CountDownLatch(1);
+
+        // Deactivation is asynchronous.
+        grid(0).events().localListen(event -> {
+            deactivationLatch.countDown();
+
+            return true;
+        }, EventType.EVT_CLUSTER_DEACTIVATED);
+
+        grid(0).cluster().state(ClusterState.INACTIVE);
+
+        assertTrue(deactivationLatch.await(5, TimeUnit.SECONDS));
+
+        metastorage(0).write("key1", "value1");
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        assertEquals("value1", metastorage(0).read("key1"));
+
+        stopGrid(0);
+
+        startGrid(0);
+
+        assertEquals("value1", metastorage(0).read("key1"));
     }
 
     /**
@@ -541,6 +583,46 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
             IgniteSpiException.class,
             "Joining node has conflicting distributed metastorage data"
         );
+    }
+
+    /** */
+    @Test
+    public void testReplayOnJoinSkipsHistoryItemsOptimization() throws Exception {
+        IgniteEx igniteEx = startGrid(0);
+
+        igniteEx.cluster().baselineAutoAdjustEnabled(false);
+
+        startGrid(1);
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        metastorage(0).write("key1", "value1");
+
+        stopGrid(1);
+
+        // Here we emulate the situation where DMS history item is written twice with the same value. Such a situation
+        // should not exist, but there's a bug somewhere that leads to it. If it happened, we should not fail.
+        JdkMarshaller marshaller = GridTestUtils.getFieldValue(metastorage(0), "marshaller");
+        GridTestUtils.invoke(
+            metastorage(0),
+            "completeWrite",
+            new DistributedMetaStorageHistoryItem("key1", marshaller.marshal("value1")),
+            false
+        );
+
+        startGrid(1);
+
+        // Check that there are no errors when we update the cluster, even if it happened to be broken. Currently, it
+        // won't be broken in "master" branch, but it was broken before the fix.
+        metastorage(0).write("key2", "value2");
+
+        stopGrid(0);
+        stopGrid(1);
+
+        // Full cluster restart would fail before the fix, because node 1 wasn't able to join due to DMS history being
+        // inconsistent with node 0.
+        startGrid(0);
+        startGrid(1);
     }
 
     /** */

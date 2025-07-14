@@ -24,6 +24,8 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.MutableEntry;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -1278,6 +1280,68 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         checkRecordedMessages(true);
 
         checkCaches(nodesCnt);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testInactiveClusterCacheOps() throws Exception {
+        checkInactiveClusterCacheOps(2, 0);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testInactiveClusterCacheOpsClient() throws Exception {
+        checkInactiveClusterCacheOps(1, 1);
+    }
+
+    /**
+     * @param srvs Number of servers.
+     * @param clients Number of clients.
+     * @throws Exception If failed.
+     */
+    private void checkInactiveClusterCacheOps(int srvs, int clients) throws Exception {
+        startWithCaches1(srvs, clients);
+
+        for (int i = 0; i < srvs + clients; i++) {
+            ignite(i).cluster().state(ACTIVE);
+
+            assertActive(ignite(i).context().state().publicApiState(true));
+
+            IgniteCache<Integer, Integer> cache = ignite(i).cache(CACHE_NAME_PREFIX + 0);
+
+            ignite(i).cluster().state(INACTIVE);
+
+            assertInactive(ignite(i).context().state().publicApiState(true));
+
+            Integer key = ThreadLocalRandom.current().nextInt(1000);
+            Integer value = ThreadLocalRandom.current().nextInt(1000);
+
+            assertThrowsWithCause(() -> cache.put(key, value), IllegalStateException.class);
+            assertThrowsWithCause(() -> cache.get(key), IllegalStateException.class);
+            assertThrowsWithCause(() -> cache.invoke(key, new DummyEntryProcessor()), IllegalStateException.class);
+            assertThrowsWithCause(() -> cache.remove(key), IllegalStateException.class);
+        }
+    }
+
+    /**
+     * Dummy entry processor.
+     */
+    private static class DummyEntryProcessor implements EntryProcessor<Integer, Integer, Integer> {
+        /** {@inheritDoc} */
+        @Override public Integer process(MutableEntry<Integer, Integer> entry, Object... arguments) {
+            Integer currVal = entry.getValue();
+
+            if (currVal == null)
+                entry.setValue(0);
+            else
+                entry.setValue(currVal + 1);
+
+            return null;
+        }
     }
 
     /**

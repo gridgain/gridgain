@@ -377,7 +377,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
                 .map(ccfg -> ccfg.getGroupName() != null ? ccfg.getGroupName() : ccfg.getName())
                 .collect(Collectors.toList());
 
-            String errorMsg = "Ignite node with disabled WAL was stopped in the middle of a checkpoint, " +
+            String errorMsg = "WAL was disabled for Ignite node, " +
                 "data files may be corrupted. Node will stop and enter the Maintenance Mode on next start. " +
                 "In the Maintenance Mode, use the Control Utility *persistence* command " +
                 "to clean and optionally back up corrupted files. When cleaning is done, restart the node manually. " +

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,6 +111,7 @@ import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.processors.port.GridPortRecord;
 import org.apache.ignite.internal.util.GridBusyLock;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridAbsClosure;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
@@ -1928,7 +1929,7 @@ public final class GridTestUtils {
         for (int i = 0, size = objs.length; i < size; i++) {
             Object o = objs[i];
 
-            if (o != null && !types[i].isInstance(o))
+            if (o != null && !IgniteUtils.box(types[i]).isInstance(o))
                 return false;
         }
 

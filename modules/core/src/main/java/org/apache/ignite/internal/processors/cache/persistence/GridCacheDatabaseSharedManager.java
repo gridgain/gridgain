@@ -481,6 +481,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /**
+     * @return WAL rebalance threshold.
+     */
+    public int walRebalanceThreshold() {
+        return historicalRebalanceThreshold.getOrDefault(walRebalanceThresholdLegacy);
+    }
+
+    /**
      * For test use only.
      */
     public IgniteInternalFuture<Void> enableCheckpoints(boolean enable) {
@@ -1842,7 +1849,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             for (GridDhtLocalPartition locPart : grp.topology().currentLocalPartitions()) {
                 if (locPart.state() == OWNING && (preferWalRebalance() ||
-                    locPart.fullSize() > historicalRebalanceThreshold.getOrDefault(walRebalanceThresholdLegacy)))
+                    locPart.fullSize() > walRebalanceThreshold()))
                     res.computeIfAbsent(grp.groupId(), k -> new HashSet<>()).add(locPart.id());
             }
         }
@@ -3385,7 +3392,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /** {@inheritDoc} */
-    @Override public void walEnabled(int grpId, boolean enabled, boolean local) {
+    @Override public void walEnabled(int grpId, String cacheOrGrpName, boolean enabled, boolean local) {
         String key = walGroupIdToKey(grpId, local);
 
         checkpointReadLock();
@@ -3398,9 +3405,17 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 lastCheckpointInapplicableForWalRebalance(grpId);
             }
+
+            if (log.isInfoEnabled())
+                log.info("Group durability change was persisted [grpId=" + grpId +
+                        ", cacheOrGrpName=" + cacheOrGrpName +
+                        ", enabled=" + enabled +
+                        ", local=" + local + ']'
+                );
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException("Failed to write cache group WAL state [grpId=" + grpId +
+                ", cacheOrGrpName=" + cacheOrGrpName +
                 ", enabled=" + enabled + ']', e);
         }
         finally {

@@ -260,6 +260,13 @@ public class CacheGroupContext {
 
         metrics = new CacheGroupMetricsImpl(this);
 
+        if (log.isInfoEnabled())
+            log.info("WAL settings on startup [grpId=" + grpId +
+                    ", grpName=" + ccfg.getGroupName() +
+                    ", cacheName=" + ccfg.getName() +
+                    ", globalWalEnabled=" + globalWalEnabled +
+                    ", localWalEnabled=" + localWalEnabled + "]");
+
         if (systemCache()) {
             statHolderIdx = IoStatisticsHolderNoOp.INSTANCE;
             statHolderData = IoStatisticsHolderNoOp.INSTANCE;
@@ -1314,7 +1321,8 @@ public class CacheGroupContext {
     public void globalWalEnabled(boolean enabled) {
         if (globalWalEnabled != enabled) {
             if (log.isInfoEnabled()) {
-                log.info("Global state for group durability has changed [name=" + cacheOrGroupName() +
+                log.info("Global state for group durability has changed [grpId = " + grpId +
+                    ", cacheOrGrpName=" + cacheOrGroupName() +
                     ", enabled=" + enabled + ']');
             }
 
@@ -1331,18 +1339,14 @@ public class CacheGroupContext {
     public void localWalEnabled(boolean enabled, boolean persist) {
         if (localWalEnabled != enabled) {
             if (log.isInfoEnabled())
-                log.info("Local state for group durability has changed [name=" + cacheOrGroupName() +
+                log.info("Local state for group durability has changed [grpId=" + grpId +
+                    "cacheOrGprName= " + cacheOrGroupName() +
                     ", enabled=" + enabled + ']');
 
             localWalEnabled = enabled;
         }
 
         if (persist) {
-            if (log.isInfoEnabled()) {
-                log.info("Local state for group durability has been logged to WAL [name=" + cacheOrGroupName() +
-                    ", enabled=" + enabled + ']');
-            }
-
             persistLocalWalState(enabled);
         }
     }
@@ -1351,14 +1355,14 @@ public class CacheGroupContext {
      * @param enabled Enabled flag.
      */
     private void persistGlobalWalState(boolean enabled) {
-        shared().database().walEnabled(grpId, enabled, false);
+        shared().database().walEnabled(grpId, cacheOrGroupName(), enabled, false);
     }
 
     /**
      * @param enabled Enabled flag..
      */
     private void persistLocalWalState(boolean enabled) {
-        shared().database().walEnabled(grpId, enabled, true);
+        shared().database().walEnabled(grpId, cacheOrGroupName(), enabled, true);
     }
 
     /**
