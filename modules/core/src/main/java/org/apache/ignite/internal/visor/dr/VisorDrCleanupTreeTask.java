@@ -24,6 +24,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
@@ -33,7 +34,7 @@ import org.apache.ignite.internal.processors.task.GridVisorManagementTask;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.visor.VisorJob;
-import org.apache.ignite.internal.visor.VisorOneNodeTask;
+import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.apache.ignite.maintenance.MaintenanceAction;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.maintenance.MaintenanceTask;
@@ -47,7 +48,7 @@ import static org.apache.ignite.internal.processors.cache.tree.updatelog.Partiti
 /**  */
 @GridInternal
 @GridVisorManagementTask
-public class VisorDrCleanupTreeTask extends VisorOneNodeTask<VisorDrCleanupTreeTaskArgs, VisorDrCleanupTreeTaskResult> {
+public class VisorDrCleanupTreeTask extends VisorMultiNodeTask<VisorDrCleanupTreeTaskArgs, VisorDrCleanupTreeTaskResult, VisorDrCleanupTreeTaskResult> {
     /**  */
     private static final long serialVersionUID = 0L;
 
@@ -55,6 +56,37 @@ public class VisorDrCleanupTreeTask extends VisorOneNodeTask<VisorDrCleanupTreeT
     @Override protected VisorJob<VisorDrCleanupTreeTaskArgs, VisorDrCleanupTreeTaskResult> job(
         VisorDrCleanupTreeTaskArgs arg) {
         return new CleanupJob(arg, debug);
+    }
+
+    @Override
+    protected @Nullable VisorDrCleanupTreeTaskResult reduce0(List<ComputeJobResult> results) throws IgniteException {
+        if (taskArg.op() == VisorDrRebuildTreeOperation.DEFAULT) {
+            StringBuilder msg = new StringBuilder();
+
+            for (ComputeJobResult res : results) {
+                msg.append(res.getNode().consistentId()).append(":\n");
+
+                if (res.getData() == null)
+                    msg.append("    err=").append(res.getException()).append('\n');
+                else {
+                    VisorDrCleanupTreeTaskResult data = res.getData();
+
+                    msg.append("    success=").append(data.isSuccess()).append('\n');
+                    msg.append("    msg=").append(String.join(";", data.messages())).append('\n');
+                }
+            }
+
+            return new VisorDrCleanupTreeTaskResult(true, msg.toString());
+        }
+
+        assert results.size() == 1;
+
+        ComputeJobResult res = results.get(0);
+
+        if (res.getException() == null)
+            return res.getData();
+
+        throw res.getException();
     }
 
     /**  */

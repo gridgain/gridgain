@@ -16,10 +16,7 @@
 
 package org.apache.ignite.internal.commandline.dr.subcommands;
 
-import java.util.Optional;
-import java.util.Set;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientNode;
@@ -27,15 +24,22 @@ import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
+import org.apache.ignite.internal.commandline.TaskExecutor;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.dr.VisorDrCleanupTreeTask;
 import org.apache.ignite.internal.visor.dr.VisorDrCleanupTreeTaskArgs;
 import org.apache.ignite.internal.visor.dr.VisorDrCleanupTreeTaskResult;
 import org.apache.ignite.internal.visor.dr.VisorDrRebuildTreeOperation;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CLEANUP_TREES;
 import static org.apache.ignite.internal.commandline.util.TopologyUtils.anyConnectableServerNode;
 
@@ -49,6 +53,9 @@ public class DrCleanupPartitionLogCommand extends AbstractCommand<DrCleanupParti
     /**  */
     public static final String CACHES_ARG = "--caches";
 
+    /** */
+    public static final String NODES_ARG = "--nodes";
+
     /**  */
     private Arguments arguments;
 
@@ -58,12 +65,33 @@ public class DrCleanupPartitionLogCommand extends AbstractCommand<DrCleanupParti
             Optional<GridClientNode> firstNodeOpt = anyConnectableServerNode(client.compute());
 
             if (firstNodeOpt.isPresent()) {
-                VisorDrCleanupTreeTaskResult res = executeTaskByNameOnNode(client,
-                    VisorDrCleanupTreeTask.class.getName(),
-                    convertArguments(),
-                    null, // Use node from clientCfg.
-                    clientCfg
-                );
+                VisorDrCleanupTreeTaskResult res;
+
+                if (arguments.nodeIds == null) {
+                    res = TaskExecutor.executeTaskByNameOnNode(
+                            client,
+                            VisorDrCleanupTreeTask.class.getName(),
+                            convertArguments(),
+                            null, // Use node from clientCfg.
+                            clientCfg
+                    );
+                }
+                else {
+                    VisorTaskArgument<?> visorArg = new VisorTaskArgument<>(
+                            client.compute().nodes().stream().filter(
+                                    node -> arguments.nodeIds.contains(node.consistentId().toString())
+                            ).map(GridClientNode::nodeId).collect(Collectors.toList()),
+                            convertArguments(),
+                            false
+                    );
+
+                    res = client.compute()
+                            .projection(firstNodeOpt.get())
+                            .execute(
+                                    VisorDrCleanupTreeTask.class.getName(),
+                                    visorArg
+                            );
+                }
 
                 printResult(res, logger);
             }
@@ -116,6 +144,7 @@ public class DrCleanupPartitionLogCommand extends AbstractCommand<DrCleanupParti
     @Override public void parseArguments(CommandArgIterator argIter) {
         Set<String> cacheGrps = null;
         Set<String> cacheNames = null;
+        List<String> consistentIds = null;
 
         Operation op = Operation.of(argIter.peekNextArg());
 
@@ -144,12 +173,23 @@ public class DrCleanupPartitionLogCommand extends AbstractCommand<DrCleanupParti
                             cacheGrps = CommandArgUtils.validateCachesArgument(argIter.nextCacheGroupsSet(nextArg), CLEANUP_TREES.toString());
                             break;
 
+                        case NODES_ARG: {
+                            Set<String> ids = argIter.nextStringSet(NODES_ARG);
+
+                            if (ids.isEmpty())
+                                throw new IllegalArgumentException("Consistent ids list is empty.");
+
+                            consistentIds = new ArrayList<>(ids);
+
+                            break;
+                        }
+
                         default:
                             throw new IllegalArgumentException("Argument " + nextArg + " is not supported.");
                     }
                 }
 
-                arguments = new Arguments(cacheNames, cacheGrps);
+                arguments = new Arguments(cacheNames, cacheGrps, consistentIds);
 
                 return;
             default:
@@ -175,10 +215,14 @@ public class DrCleanupPartitionLogCommand extends AbstractCommand<DrCleanupParti
         /** Cache groups. */
         private Set<String> groups;
 
-        public Arguments(Set<String> caches, Set<String> groups) {
+        /** Nodes ids to execute task on. */
+        private List<String> nodeIds;
+
+        public Arguments(Set<String> caches, Set<String> groups, List<String> nodeIds) {
             this.op = Operation.DEFAULT;
             this.caches = caches;
             this.groups = groups;
+            this.nodeIds = nodeIds;
         }
 
         public Arguments(Operation op) {

@@ -23,6 +23,7 @@ import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCacheCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCheckPartitionCountersCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrCleanupPartitionLogCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrNodeCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrRebuildPartitionLogCommand;
@@ -180,8 +181,9 @@ public class DrCommand extends AbstractCommand<Object> {
         usage(log, "Schedule/run maintenance task for cleanup DR tries:",
             DATA_CENTER_REPLICATION,
             CLEANUP_TREES.toString(),
-            optional(DrRebuildPartitionLogCommand.CACHES_ARG, "cacheName1,cacheName2,...,cacheNameN"),
-            optional(DrRebuildPartitionLogCommand.GROUPS_ARG, "groupName1,groupName2,...,groupNameN"),
+            optional(DrCleanupPartitionLogCommand.CACHES_ARG, "cacheName1,cacheName2,...,cacheNameN"),
+            optional(DrCleanupPartitionLogCommand.GROUPS_ARG, "groupName1,groupName2,...,groupNameN"),
+            optional(DrCleanupPartitionLogCommand.NODES_ARG, "consistentId0,consistentId1,...,consistentIdN"),
             optional(CMD_AUTO_CONFIRMATION)
         );
     }
