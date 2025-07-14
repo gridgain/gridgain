@@ -38,7 +38,6 @@ public class IgniteTxDuplicateKeyCheckedException extends TransactionCheckedExce
      * @param key Duplicate key
      */
     public IgniteTxDuplicateKeyCheckedException(KeyCacheObject key) {
-        super("");
         keyStr = key.toString();
     }
 
