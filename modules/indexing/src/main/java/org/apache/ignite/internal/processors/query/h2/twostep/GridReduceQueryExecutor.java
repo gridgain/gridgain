@@ -455,6 +455,8 @@ public class GridReduceQueryExecutor {
 
                 runs.put(qryReqId, r);
 
+                ReduceH2QueryInfo qryInfo = null;
+
                 try {
                     cancel.add(() -> send(nodes, new GridQueryCancelRequest(qryReqId), null, true));
 
@@ -552,17 +554,27 @@ public class GridReduceQueryExecutor {
 
                         H2Utils.bindParameters(stmt, F.asList(rdc.parameters(params)));
 
-                        ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), ctx.discovery().localNode(), qryReqId, qryId, label);
+                        qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), ctx.discovery().localNode(), qryReqId, qryId, label);
 
-                        r.reducers().forEach(reducer -> reducer.memoryTracker(h2.memTracker(qryInfo)));
+                        h2.longRunningQueries().registerQuery(qryInfo);
 
-                        ResultSet res = h2.executeSqlQueryWithTimer(stmt, conn,
-                            rdc.query(),
-                            timeoutMillis,
-                            cancel,
-                            dataPageScanEnabled,
-                            qryInfo,
-                            maxMem
+                        ReduceH2QueryInfo qryInfo0 = qryInfo;
+                        r.reducers().forEach(reducer -> reducer.memoryTracker(h2.memTracker(qryInfo0)));
+
+                        H2PooledConnection conn0 = conn;
+
+                        ResultSet res = h2.executeWithResumableTimeTracking(
+                                () -> h2.executeSqlQueryWithTimer(
+                                        stmt,
+                                        conn0,
+                                        rdc.query(),
+                                        timeoutMillis,
+                                        cancel,
+                                        dataPageScanEnabled,
+                                        null,
+                                        maxMem
+                                ),
+                                qryInfo
                         );
 
                         resIter = new H2FieldsIterator(
@@ -585,6 +597,9 @@ public class GridReduceQueryExecutor {
                 }
                 catch (IgniteCheckedException | RuntimeException e) {
                     release = true;
+
+                    if (qryInfo != null)
+                        h2.longRunningQueries().unregisterQuery(qryInfo, e);
 
                     if (e instanceof CacheException) {
                         if (QueryUtils.wasCancelled(e))

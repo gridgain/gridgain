@@ -534,6 +534,8 @@ public class GridMapQueryExecutor {
 
                 qryResults.addResult(qryIdx, res);
 
+                MapH2QueryInfo qryInfo = null;
+
                 try {
                     res.lock();
 
@@ -548,17 +550,24 @@ public class GridMapQueryExecutor {
 
                         H2Utils.bindParameters(stmt, params0);
 
-                        MapH2QueryInfo qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId, runningQryId, label);
+                        qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId, runningQryId, label);
 
-                        ResultSet rs = h2.executeSqlQueryWithTimer(
-                            stmt,
-                            conn,
-                            sql,
-                            timeout,
-                            qryResults.queryCancel(qryIdx),
-                            dataPageScanEnabled,
-                            qryInfo,
-                            maxMem
+                        h2.longRunningQueries().registerQuery(qryInfo);
+
+                        GridQueryCancel qryCancel = qryResults.queryCancel(qryIdx);
+
+                        ResultSet rs = h2.executeWithResumableTimeTracking(
+                                () -> h2.executeSqlQueryWithTimer(
+                                        stmt,
+                                        conn,
+                                        sql,
+                                        timeout,
+                                        qryCancel,
+                                        dataPageScanEnabled,
+                                        null,
+                                        maxMem
+                                ),
+                                qryInfo
                         );
 
                         if (evt) {
@@ -587,14 +596,21 @@ public class GridMapQueryExecutor {
 
                         res.openResult(rs, qryInfo, ctx.tracing());
 
-                        final GridQueryNextPageResponse msg = prepareNextPage(
-                            nodeRess,
-                            node,
-                            qryResults,
-                            qryIdx,
-                            segmentId,
-                            pageSize,
-                            dataPageScanEnabled
+                        MapQueryResults qryResults0 = qryResults;
+
+                        int qryIdx0 = qryIdx;
+
+                        final GridQueryNextPageResponse msg = h2.executeWithResumableTimeTracking(
+                                () -> prepareNextPage(
+                                        nodeRess,
+                                        node,
+                                        qryResults0,
+                                        qryIdx0,
+                                        segmentId,
+                                        pageSize,
+                                        dataPageScanEnabled
+                                ),
+                                qryInfo
                         );
 
                         if (msg != null)
@@ -607,6 +623,12 @@ public class GridMapQueryExecutor {
                     }
 
                     qryIdx++;
+                }
+                catch (Throwable e) {
+                    if (qryInfo != null)
+                        h2.longRunningQueries().unregisterQuery(qryInfo, e);
+
+                    throw e;
                 }
                 finally {
                     try {
@@ -929,13 +951,15 @@ public class GridMapQueryExecutor {
 
             final MapQueryResults qryResults = nodeRess.get(reqId, req.segmentId());
 
+            MapQueryResult res = null;
+
             if (qryResults == null)
                 sendError(node, reqId, new CacheException("No query result found for request: " + req));
             else if (qryResults.cancelled())
                 sendQueryCancel(node, reqId);
             else {
                 try {
-                    MapQueryResult res = qryResults.result(req.query());
+                    res = qryResults.result(req.query());
 
                     assert res != null;
 
@@ -948,14 +972,18 @@ public class GridMapQueryExecutor {
 
                         Boolean dataPageScanEnabled = isDataPageScanEnabled(req.getFlags());
 
-                        GridQueryNextPageResponse msg = prepareNextPage(
-                            nodeRess,
-                            node,
-                            qryResults,
-                            req.query(),
-                            req.segmentId(),
-                            req.pageSize(),
-                            dataPageScanEnabled);
+                        GridQueryNextPageResponse msg = h2.executeWithResumableTimeTracking(
+                                () -> prepareNextPage(
+                                        nodeRess,
+                                        node,
+                                        qryResults,
+                                        req.query(),
+                                        req.segmentId(),
+                                        req.pageSize(),
+                                        dataPageScanEnabled
+                                ),
+                                res.qryInfo()
+                        );
 
                         if (msg != null)
                             sendNextPage(node, msg);
@@ -970,6 +998,9 @@ public class GridMapQueryExecutor {
                     }
                 }
                 catch (Exception e) {
+                    if (res.qryInfo() != null)
+                        h2.longRunningQueries().unregisterQuery(res.qryInfo(), e);
+
                     QueryRetryException retryEx = X.cause(e, QueryRetryException.class);
 
                     if (retryEx != null)
@@ -1024,6 +1055,9 @@ public class GridMapQueryExecutor {
 
             if (last) {
                 qr.closeResult(qry);
+
+                if (res.qryInfo() != null)
+                    h2.longRunningQueries().unregisterQuery(res.qryInfo(), null);
 
                 if (qr.isAllClosed()) {
                     nodeRess.remove(qr.queryRequestId(), segmentId, qr);
