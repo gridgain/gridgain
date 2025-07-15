@@ -364,6 +364,7 @@ public class QueryUtils {
             normalIdx.setFields(idx.getFields());
             normalIdx.setIndexType(idx.getIndexType());
             normalIdx.setInlineSize(idx.getInlineSize());
+            normalIdx.setSimilarityFunction(idx.getSimilarityFunction());
 
             normalIdx.setName(normalizeObjectName(indexName(normalTblName, idx), false));
 
@@ -845,7 +846,7 @@ public class QueryUtils {
                 if (idxTyp == QueryIndexType.FULLTEXT)
                     d.addFieldToTextIndex(field);
                 else
-                    d.addFieldToVectorIndex(field);
+                    d.addFieldToVectorIndex(field, idx.getSimilarityFunction());
             }
         }
         else if (idxTyp != null)

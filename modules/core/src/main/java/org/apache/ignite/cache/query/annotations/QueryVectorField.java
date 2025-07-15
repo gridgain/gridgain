@@ -21,6 +21,8 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+
+import org.apache.ignite.cache.SimilarityFunction;
 import org.apache.ignite.internal.processors.cache.query.CacheQuery;
 
 /**
@@ -33,5 +35,10 @@ import org.apache.ignite.internal.processors.cache.query.CacheQuery;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.TYPE})
 public @interface QueryVectorField {
-    // No-op.
+    /**
+     * Returns similarityFunction for a vector field. Defaults to COSINE if not specified.
+     * @return similarityFunction for a vector field.
+     */
+    SimilarityFunction similarityFunction() default SimilarityFunction.COSINE;
+
 }
