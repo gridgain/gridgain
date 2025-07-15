@@ -571,7 +571,7 @@ public class GridReduceQueryExecutor {
                                         timeoutMillis,
                                         cancel,
                                         dataPageScanEnabled,
-                                        null,
+                                        qryInfo0,
                                         maxMem
                                 ),
                                 qryInfo

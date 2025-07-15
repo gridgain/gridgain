@@ -727,6 +727,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         longRunningQryMgr.registerQuery(qryInfo);
 
+                        H2QueryInfo qryInfo0 = qryInfo;
+
                         ResultSet rs = executeWithResumableTimeTracking(
                             () -> executeSqlQueryWithTimer(
                                 stmt,
@@ -735,7 +737,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                                 timeout,
                                 cancel,
                                 qryParams.dataPageScanEnabled(),
-                                null,
+                                qryInfo0,
                                 maxMem
                             ), qryInfo
                         );
@@ -1064,11 +1066,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         final H2QueryInfo qryInfo,
         long maxMem
     ) throws IgniteCheckedException {
-        if (qryInfo != null) {
-            longRunningQryMgr.registerQuery(qryInfo);
-
+        if (qryInfo != null)
             initSession(conn, qryInfo, maxMem);
-        }
 
         enableDataPageScan(dataPageScanEnabled);
 
@@ -1081,12 +1080,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (log.isDebugEnabled())
                 log.debug("Start execute query: " + qryInfo);
 
-            ResultSet rs = executeSqlQuery(conn, stmt, timeoutMillis, cancel);
-
-            if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout())
-                qryInfo.printLogMessage(log, "Long running query is finished", null);
-
-            return rs;
+            return executeSqlQuery(conn, stmt, timeoutMillis, cancel);
         }
         catch (Throwable e) {
             err = e;
@@ -1097,8 +1091,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             CacheDataTree.setDataPageScanEnabled(false);
 
             if (qryInfo != null) {
-                longRunningQryMgr.unregisterQuery(qryInfo, err);
-
                 H2Utils.session(conn).queryDescription(null);
             }
         }

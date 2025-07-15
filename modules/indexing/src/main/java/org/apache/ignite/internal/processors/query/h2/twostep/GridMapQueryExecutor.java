@@ -50,6 +50,7 @@ import org.apache.ignite.internal.processors.cache.query.CacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
+import org.apache.ignite.internal.processors.query.h2.H2QueryInfo;
 import org.apache.ignite.internal.processors.query.h2.H2StatementCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -556,6 +557,8 @@ public class GridMapQueryExecutor {
 
                         GridQueryCancel qryCancel = qryResults.queryCancel(qryIdx);
 
+                        H2QueryInfo qryInfo0 = qryInfo;
+
                         ResultSet rs = h2.executeWithResumableTimeTracking(
                                 () -> h2.executeSqlQueryWithTimer(
                                         stmt,
@@ -564,7 +567,7 @@ public class GridMapQueryExecutor {
                                         timeout,
                                         qryCancel,
                                         dataPageScanEnabled,
-                                        null,
+                                        qryInfo0,
                                         maxMem
                                 ),
                                 qryInfo
