@@ -74,7 +74,7 @@ public class IgniteInsertNullableDuplicatesSqlTest extends AbstractIndexingCommo
             if (log.isInfoEnabled())
                 log.info("Caught expected exception: " + e.getMessage());
 
-            assertTrue(e.getMessage().matches("Duplicate key during INSERT \\[key=\\d+, table=[\\w\\.]+\\]"));
+            assertTrue(e.getMessage().matches("Duplicate key during INSERT \\[key=\\d+, table=PUBLIC\\.TEST\\]"));
         }
 
         assertThrows(log,
