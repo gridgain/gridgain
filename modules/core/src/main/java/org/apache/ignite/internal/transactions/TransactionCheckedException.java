@@ -29,6 +29,10 @@ public abstract class TransactionCheckedException extends IgniteCheckedException
     }
 
     /** */
+    TransactionCheckedException() {
+    }
+
+    /** */
     TransactionCheckedException(Throwable cause) {
         super(cause);
     }
