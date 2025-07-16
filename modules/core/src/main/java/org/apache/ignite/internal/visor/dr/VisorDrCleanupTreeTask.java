@@ -58,8 +58,7 @@ public class VisorDrCleanupTreeTask extends VisorMultiNodeTask<VisorDrCleanupTre
         return new CleanupJob(arg, debug);
     }
 
-    @Override
-    protected @Nullable VisorDrCleanupTreeTaskResult reduce0(List<ComputeJobResult> results) throws IgniteException {
+    @Override protected @Nullable VisorDrCleanupTreeTaskResult reduce0(List<ComputeJobResult> results) throws IgniteException {
         if (taskArg.op() == VisorDrRebuildTreeOperation.DEFAULT) {
             StringBuilder msg = new StringBuilder();
 
