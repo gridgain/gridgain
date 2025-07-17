@@ -1071,7 +1071,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         enableDataPageScan(dataPageScanEnabled);
 
-        Throwable err = null;
         try (
             TraceSurroundings ignored = MTC.support(ctx.tracing()
                 .create(SQL_QRY_EXECUTE, MTC.span())
@@ -1081,11 +1080,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 log.debug("Start execute query: " + qryInfo);
 
             return executeSqlQuery(conn, stmt, timeoutMillis, cancel);
-        }
-        catch (Throwable e) {
-            err = e;
-
-            throw e;
         }
         finally {
             CacheDataTree.setDataPageScanEnabled(false);
