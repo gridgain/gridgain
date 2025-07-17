@@ -5,11 +5,9 @@
  */
 package org.gridgain.internal.h2.tools;
 
-import java.net.URI;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.server.Service;
 import org.gridgain.internal.h2.server.ShutdownHandler;
@@ -17,9 +15,7 @@ import org.gridgain.internal.h2.server.TcpServer;
 import org.gridgain.internal.h2.server.pg.PgServer;
 import org.gridgain.internal.h2.server.web.WebServer;
 import org.gridgain.internal.h2.api.ErrorCode;
-import org.gridgain.internal.h2.util.StringUtils;
 import org.gridgain.internal.h2.util.Tool;
-import org.gridgain.internal.h2.util.Utils;
 
 /**
  * Starts the H2 Console (web-) server, TCP, and PG server.
