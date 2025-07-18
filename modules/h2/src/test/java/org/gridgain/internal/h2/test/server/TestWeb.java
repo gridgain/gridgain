@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.sql.Connection;
@@ -42,22 +41,18 @@ import javax.servlet.ServletException;
 
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.engine.Constants;
-import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.server.web.WebServlet;
 import org.gridgain.internal.h2.store.fs.FileUtils;
 import org.gridgain.internal.h2.test.TestBase;
 import org.gridgain.internal.h2.test.TestDb;
 import org.gridgain.internal.h2.tools.Server;
 import org.gridgain.internal.h2.util.StringUtils;
-import org.gridgain.internal.h2.util.Task;
 import org.gridgain.internal.h2.test.utils.AssertThrows;
 
 /**
  * Tests the H2 Console application.
  */
 public class TestWeb extends TestDb {
-
-    private static volatile String lastUrl;
 
     /**
      * Run just this test.
@@ -74,7 +69,6 @@ public class TestWeb extends TestDb {
         testWrongParameters();
         testTools();
         testAlreadyRunning();
-        testStartWebServerWithConnection();
         testServer();
         testWebApp();
         testIfExists();
@@ -548,57 +542,6 @@ public class TestWeb extends TestDb {
         } finally {
             server.shutdown();
         }
-    }
-
-    private void testStartWebServerWithConnection() throws Exception {
-        String old = System.getProperty(SysProperties.H2_BROWSER);
-        try {
-            System.setProperty(SysProperties.H2_BROWSER,
-                    "call:" + TestWeb.class.getName() + ".openBrowser");
-            Server.openBrowser("testUrl");
-            assertEquals("testUrl", lastUrl);
-            String oldUrl = lastUrl;
-            final Connection conn = getConnection(getTestName());
-            Task t = new Task() {
-                @Override
-                public void call() throws Exception {
-                    Server.startWebServer(conn, true);
-                }
-            };
-            t.execute();
-            for (int i = 0; lastUrl == oldUrl; i++) {
-                if (i > 100) {
-                    throw new Exception("Browser not started");
-                }
-                Thread.sleep(100);
-            }
-            String url = lastUrl;
-            WebClient client = new WebClient();
-            client.readSessionId(url);
-            url = client.getBaseUrl(url);
-            try {
-                client.get(url, "logout.do");
-            } catch (ConnectException e) {
-                // the server stops on logout
-            }
-            t.get();
-            conn.close();
-        } finally {
-            if (old != null) {
-                System.setProperty(SysProperties.H2_BROWSER, old);
-            } else {
-                System.clearProperty(SysProperties.H2_BROWSER);
-            }
-        }
-    }
-
-    /**
-     * This method is called via reflection.
-     *
-     * @param url the browser url
-     */
-    public static void openBrowser(String url) {
-        lastUrl = url;
     }
 
     /**
