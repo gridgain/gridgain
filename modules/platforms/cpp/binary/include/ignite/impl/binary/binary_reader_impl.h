@@ -853,8 +853,8 @@ namespace ignite
                         elemRead = 0;
                     }
 
-                    key = ReadTopObject<K>();
-                    val = ReadTopObject<V>();
+                    ReadTopObject<K>(key);
+                    ReadTopObject<V>(val);
                 }
 
                 /**
