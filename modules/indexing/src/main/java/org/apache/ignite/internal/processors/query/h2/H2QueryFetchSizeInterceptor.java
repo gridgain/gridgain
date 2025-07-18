@@ -20,7 +20,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.mxbean.SqlQueryMXBean;
 
 /**
- * Print warning message to log when query result size fetch count is bigger then specified threshold.
+ * Print warning message to log when query result size fetch count is bigger than specified threshold.
  * Threshold may be recalculated with multiplier.
  *
  * @see SqlQueryMXBean

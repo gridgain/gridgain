@@ -193,6 +193,7 @@ import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgniteInClosure2X;
 import org.apache.ignite.internal.util.lang.IgniteSingletonIterator;
+import org.apache.ignite.internal.util.lang.IgniteThrowableSupplier;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -698,6 +699,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {
                     H2PooledConnection conn = connections().connection(qryDesc.schemaName());
 
+                    H2QueryInfo qryInfo = null;
+
                     try (TraceSurroundings ignored = MTC.support(ctx.tracing().create(SQL_ITER_OPEN, MTC.span()))) {
                         H2Utils.setupConnection(conn, qctx,
                             qryDesc.distributedJoins(), qryDesc.enforceJoinOrder(), qryParams.lazy());
@@ -714,7 +717,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         H2Utils.bindParameters(stmt, F.asList(params));
 
-                        H2QueryInfo qryInfo = new H2QueryInfo(
+                        qryInfo = new H2QueryInfo(
                             H2QueryInfo.QueryType.LOCAL,
                             stmt,
                             qry,
@@ -723,15 +726,21 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             qryDesc.label()
                         );
 
-                        ResultSet rs = executeSqlQueryWithTimer(
-                            stmt,
-                            conn,
-                            qry,
-                            timeout,
-                            cancel,
-                            qryParams.dataPageScanEnabled(),
-                            qryInfo,
-                            maxMem
+                        longRunningQryMgr.registerQuery(qryInfo);
+
+                        H2QueryInfo qryInfo0 = qryInfo;
+
+                        ResultSet rs = executeWithResumableTimeTracking(
+                            () -> executeSqlQueryWithTimer(
+                                stmt,
+                                conn,
+                                qry,
+                                timeout,
+                                cancel,
+                                qryParams.dataPageScanEnabled(),
+                                qryInfo0,
+                                maxMem
+                            ), qryInfo
                         );
 
                         return new H2FieldsIterator(
@@ -746,6 +755,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     }
                     catch (IgniteCheckedException | RuntimeException | Error e) {
                         conn.close();
+
+                        if (qryInfo != null)
+                            longRunningQryMgr.unregisterQuery(qryInfo, e);
 
                         try {
                             if (mvccTracker != null)
@@ -1055,11 +1067,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         final H2QueryInfo qryInfo,
         long maxMem
     ) throws IgniteCheckedException {
-        if (qryInfo != null) {
-            longRunningQryMgr.registerQuery(qryInfo);
-
+        if (qryInfo != null)
             initSession(conn, qryInfo, maxMem);
-        }
 
         enableDataPageScan(dataPageScanEnabled);
 
@@ -1071,27 +1080,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (log.isDebugEnabled())
                 log.debug("Start execute query: " + qryInfo);
 
-            ResultSet rs = executeSqlQuery(conn, stmt, timeoutMillis, cancel);
-
-            if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout())
-                qryInfo.printLogMessage(log, "Long running query is finished", null);
-
-            return rs;
-        }
-        catch (Throwable e) {
-            if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout()) {
-                qryInfo.printLogMessage(log, "Long running query is finished with error: "
-                    + e.getMessage(), null);
-            }
-
-            throw e;
+            return executeSqlQuery(conn, stmt, timeoutMillis, cancel);
         }
         finally {
             CacheDataTree.setDataPageScanEnabled(false);
 
             if (qryInfo != null) {
-                longRunningQryMgr.unregisterQuery(qryInfo);
-
                 H2Utils.session(conn).queryDescription(null);
             }
         }
@@ -3801,6 +3795,27 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 if (!(e instanceof SchemaIndexOperationCancellationException))
                     log.warning("Error after canceling index rebuild.", e);
             }
+        }
+    }
+
+    /**
+     * Resumes time tracking before the task (if needed) and suspends time tracking after the task is finished.
+     *
+     * @param task Query/fetch to execute.
+     * @param qryInfo Query info.
+     * @throws IgniteCheckedException If failed.
+     */
+    public <T> T executeWithResumableTimeTracking(
+            IgniteThrowableSupplier<T> task,
+            final H2QueryInfo qryInfo
+    ) throws IgniteCheckedException {
+        qryInfo.resumeTracking();
+
+        try {
+            return task.get();
+        }
+        finally {
+            qryInfo.suspendTracking();
         }
     }
 }

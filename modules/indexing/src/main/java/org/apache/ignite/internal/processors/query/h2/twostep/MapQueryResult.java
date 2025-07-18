@@ -344,6 +344,11 @@ class MapQueryResult {
     }
 
     /** */
+    public MapH2QueryInfo qryInfo() {
+        return res.qryInfo;
+    }
+
+    /** */
     private class Result {
         /** */
         private final ResultInterface res;
@@ -363,6 +368,9 @@ class MapQueryResult {
         /** */
         private final Tracing tracing;
 
+        /** */
+        private final MapH2QueryInfo qryInfo;
+
         /**
          * Constructor.
          *
@@ -370,6 +378,7 @@ class MapQueryResult {
          */
         Result(@NotNull ResultSet rs, MapH2QueryInfo qryInfo, Tracing tracing) {
             this.rs = rs;
+            this.qryInfo = qryInfo;
             this.tracing = tracing;
 
             try {
