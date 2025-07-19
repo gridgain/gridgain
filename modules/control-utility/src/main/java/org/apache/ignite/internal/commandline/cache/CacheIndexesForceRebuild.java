@@ -47,8 +47,6 @@ import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.INDE
 import static org.apache.ignite.internal.commandline.cache.argument.IndexForceRebuildCommandArg.CACHE_NAMES;
 import static org.apache.ignite.internal.commandline.cache.argument.IndexForceRebuildCommandArg.GROUP_NAMES;
 import static org.apache.ignite.internal.commandline.cache.argument.IndexForceRebuildCommandArg.NODE_ID;
-import static org.apache.ignite.internal.commandline.cache.argument.IndexListCommandArg.CACHE_NAME;
-import static org.apache.ignite.internal.commandline.cache.argument.IndexListCommandArg.GRP_NAME;
 
 /**
  * Cache subcommand that triggers indexes force rebuild.
@@ -73,7 +71,7 @@ public class CacheIndexesForceRebuild extends AbstractCommand<CacheIndexesForceR
             desc,
             map,
             NODE_ID.argName() + " nodeId",
-            or(CACHE_NAME + " cacheName1,...cacheNameN", GRP_NAME + " groupName1,...groupNameN")
+            or(CACHE_NAMES + " cacheName1,...cacheNameN", GROUP_NAMES + " groupName1,...groupNameN")
         );
     }
 
