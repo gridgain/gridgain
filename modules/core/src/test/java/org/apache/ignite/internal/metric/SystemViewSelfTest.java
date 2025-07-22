@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.metric;
 
+import com.google.common.collect.ImmutableList;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.util.Arrays;
@@ -108,6 +109,7 @@ import org.apache.ignite.spi.systemview.view.FiltrableSystemView;
 import org.apache.ignite.spi.systemview.view.MetastorageView;
 import org.apache.ignite.spi.systemview.view.PagesListView;
 import org.apache.ignite.spi.systemview.view.ScanQueryView;
+import org.apache.ignite.spi.systemview.view.ServiceDistributionView;
 import org.apache.ignite.spi.systemview.view.ServiceView;
 import org.apache.ignite.spi.systemview.view.StripedExecutorTaskView;
 import org.apache.ignite.spi.systemview.view.SystemView;
@@ -145,7 +147,6 @@ import static org.apache.ignite.internal.processors.cache.persistence.IgniteCach
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.TXS_MON_LIST;
 import static org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor.BASELINE_NODE_ATTRIBUTES_SYS_VIEW;
 import static org.apache.ignite.internal.processors.continuous.GridContinuousProcessor.CQ_SYS_VIEW;
-import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl.DISTRIBUTED_METASTORE_VIEW;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DEFAULT_DS_GROUP_NAME;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DEFAULT_VOLATILE_DS_GROUP_NAME;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.LATCHES_VIEW;
@@ -158,10 +159,12 @@ import static org.apache.ignite.internal.processors.datastructures.DataStructure
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.SETS_VIEW;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.STAMPED_VIEW;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
+import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl.DISTRIBUTED_METASTORE_VIEW;
 import static org.apache.ignite.internal.processors.odbc.ClientListenerProcessor.CLI_CONN_ATTR_VIEW;
 import static org.apache.ignite.internal.processors.odbc.ClientListenerProcessor.CLI_CONN_VIEW;
 import static org.apache.ignite.internal.processors.pool.PoolProcessor.STREAM_POOL_QUEUE_VIEW;
 import static org.apache.ignite.internal.processors.pool.PoolProcessor.SYS_POOL_QUEUE_VIEW;
+import static org.apache.ignite.internal.processors.service.IgniteServiceProcessor.SERVICES_DISTRIBUTION_VIEW;
 import static org.apache.ignite.internal.processors.service.IgniteServiceProcessor.SVCS_VIEW;
 import static org.apache.ignite.internal.processors.task.GridTaskProcessor.TASKS_VIEW;
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
@@ -175,6 +178,11 @@ import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 import static org.apache.ignite.transactions.TransactionState.ACTIVE;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.junit.Assert.assertThat;
 
 /** Tests for {@link SystemView}. */
 public class SystemViewSelfTest extends GridCommonAbstractTest {
@@ -298,6 +306,65 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
                 assertFalse(sview[0].staticallyConfigured());
                 assertEquals(g.localNode().id(), sview[0].originNodeId());
             }
+        }
+    }
+
+    /** Tests work of {@link SystemView} for services distribution. */
+    @Test
+    @WithSystemProperty(key = IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED, value = "true")
+    public void testServicesDistribution() throws Exception {
+        try (IgniteEx g = startGrids(2)) {
+            {
+                ServiceConfiguration srvcCfg = new ServiceConfiguration();
+
+                srvcCfg.setName("service");
+                srvcCfg.setMaxPerNodeCount(2);
+                srvcCfg.setTotalCount(5);
+                srvcCfg.setService(new DummyService());
+                srvcCfg.setNodeFilter(new TestNodeFilter());
+
+                g.services().deploy(srvcCfg);
+
+                SystemView<ServiceDistributionView> srvs = g.context().systemView().view(SERVICES_DISTRIBUTION_VIEW);
+
+                assertThat(
+                    ImmutableList.copyOf(srvs.iterator()),
+                    containsInAnyOrder(
+                        allOf(
+                            hasProperty("nodeId", equalTo(grid(0).localNode().id())),
+                            hasProperty("servicesCount", equalTo(2))
+                        ),
+                        allOf(
+                            hasProperty("nodeId", equalTo(grid(1).localNode().id())),
+                            hasProperty("servicesCount", equalTo(2))
+                        )
+                    ));
+
+                startGrid(2);
+
+                U.sleep(500L);
+
+                srvs = g.context().systemView().view(SERVICES_DISTRIBUTION_VIEW);
+
+                assertThat(
+                    ImmutableList.copyOf(srvs.iterator()),
+                    containsInAnyOrder(
+                        allOf(
+                            hasProperty("nodeId", equalTo(grid(0).localNode().id())),
+                            hasProperty("servicesCount", equalTo(2))
+                        ),
+                        allOf(
+                            hasProperty("nodeId", equalTo(grid(1).localNode().id())),
+                            hasProperty("servicesCount", equalTo(2))
+                        ),
+                        allOf(
+                            hasProperty("nodeId", equalTo(grid(2).localNode().id())),
+                            hasProperty("servicesCount", equalTo(1))
+                        )
+                    ));
+            }
+        } finally {
+            stopAllGrids();
         }
     }
 
