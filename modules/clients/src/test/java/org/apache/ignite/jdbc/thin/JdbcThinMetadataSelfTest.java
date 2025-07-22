@@ -413,6 +413,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
         HashSet<String> expViews = new HashSet<>(Arrays.asList(
                 sysSchemaName() + ".METRICS",
                 sysSchemaName() + ".SERVICES",
+                sysSchemaName() + ".SERVICES_DISTRIBUTION",
                 sysSchemaName() + ".CACHE_GROUPS",
                 sysSchemaName() + ".CACHES",
                 sysSchemaName() + ".TASKS",
@@ -1142,6 +1143,12 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                     sysSchemaName() + ".SERVICES.NODE_FILTER.null.2147483647",
                     sysSchemaName() + ".SERVICES.STATICALLY_CONFIGURED.null.1",
                     sysSchemaName() + ".SERVICES.SERVICE_ID.null.2147483647"
+            ));
+
+            expectedCols.addAll(Arrays.asList(
+                sysSchemaName() + ".SERVICES_DISTRIBUTION.SERVICE_ID.null.2147483647",
+                sysSchemaName() + ".SERVICES_DISTRIBUTION.NODE_ID.null.16",
+                sysSchemaName() + ".SERVICES_DISTRIBUTION.SERVICES_COUNT.null.10"
             ));
 
             Assert.assertEquals(expectedCols, actualSystemCols);

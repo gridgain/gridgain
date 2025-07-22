@@ -408,6 +408,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
         Set<String> expViews = new HashSet<>(asList(
             "METRICS",
             "SERVICES",
+            "SERVICES_DISTRIBUTION",
             "CACHE_GROUPS",
             "CACHES",
             "TASKS",
