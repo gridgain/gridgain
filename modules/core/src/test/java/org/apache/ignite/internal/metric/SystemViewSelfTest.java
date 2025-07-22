@@ -342,7 +342,8 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
 
                 startGrid(2);
 
-                U.sleep(500L);
+                GridTestUtils.waitForCondition(() ->
+                    F.size(g.context().systemView().view(SERVICES_DISTRIBUTION_VIEW).iterator()) == 3, 500L);
 
                 srvs = g.context().systemView().view(SERVICES_DISTRIBUTION_VIEW);
 
