@@ -16,19 +16,38 @@
 
 package org.apache.ignite.internal.transactions;
 
+import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.jetbrains.annotations.Nullable;
+
 /**
- * Exception thrown whenever transaction tries to inserts entry with same mvcc version more than once.
+ * Exception thrown whenever transaction tries to insert entry with same mvcc version more than once.
  */
 public class IgniteTxDuplicateKeyCheckedException extends TransactionCheckedException {
     /** */
     private static final long serialVersionUID = 0L;
 
+    /** Key in string representation. */
+    String keyStr;
+
+    /** Operation related table name. */
+    @Nullable String table;
+
     /**
      * Creates new duplicate ket exception with given error message.
      *
-     * @param msg Error message.
+     * @param key Duplicate key
      */
-    public IgniteTxDuplicateKeyCheckedException(String msg) {
-        super(msg);
+    public IgniteTxDuplicateKeyCheckedException(KeyCacheObject key) {
+        keyStr = key.toString();
+    }
+
+    /** Operation related table. */
+    public void tableName(String table) {
+        this.table = table;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getMessage() {
+        return "Duplicate key during INSERT [key=" + keyStr + (table == null ? ']' : ", table=" + table + ']');
     }
 }

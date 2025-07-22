@@ -50,6 +50,7 @@ import org.apache.ignite.internal.processors.cache.query.CacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
+import org.apache.ignite.internal.processors.query.h2.H2QueryInfo;
 import org.apache.ignite.internal.processors.query.h2.H2StatementCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -71,6 +72,8 @@ import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanType;
+import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -94,6 +97,8 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_NEXT_PA
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_PAGE_PREPARE;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_CANCEL_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXEC_REQ;
+
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Map query executor.
@@ -178,6 +183,79 @@ public class GridMapQueryExecutor {
 
             nodeRess.cancelRequest(qryReqId);
         }
+    }
+
+    /**
+     * Converts the provided parameters to a string representation based on the configured
+     *
+     * <ul>
+     *     <li>NONE → returns {@code "HIDDEN"}</li>
+     *     <li>HASH → returns a hashed value of the array content</li>
+     *     <li>PLAIN → returns full array contents via {@code Arrays.toString()}</li>
+     * </ul>
+     *
+     * @param params Query parameters to stringify. May be {@code null}.
+     * @return String representation of parameters depending on sensitivity level, or {@code "N/A"} if null/empty.
+     */
+    private static String stringifyParams(Object[] params) {
+        if (params == null || params.length == 0)
+            return "N/A";
+
+        SensitiveDataLogging sensitivity = S.getSensitiveDataLogging();
+
+        switch (sensitivity) {
+            case NONE:
+                return "HIDDEN";
+            case HASH:
+                return String.valueOf(IgniteUtils.hash(Arrays.hashCode(params)));
+            case PLAIN:
+            default:
+                return Arrays.toString(params);
+        }
+    }
+
+    /**
+     * Logs detailed information about a query that encountered an error during execution.
+     *
+     * @param reqId Request ID of the query.
+     * @param label Query label, if provided.
+     * @param schemaName Schema name under which the query was executed.
+     * @param queries Collection of SQL queries involved in the execution.
+     * @param params Query parameters, if any.
+     * @param error Exception that occurred during the query execution.
+     * @param remoteNodeId Remote node ID.
+     * @param localNodeId  Local node ID.
+     * @return The constructed log message.
+     */
+    static String buildQueryLogDetails(
+            long reqId,
+            String label,
+            String schemaName,
+            Collection<GridCacheSqlQuery> queries,
+            Object[] params,
+            Throwable error,
+            UUID remoteNodeId,
+            UUID localNodeId
+    ) {
+        String queryStr = F.isEmpty(queries)
+                ? "N/A"
+                : queries.stream()
+                .map(GridCacheSqlQuery::query)
+                .collect(Collectors.joining("; "));
+
+        String paramsStr = stringifyParams(params);
+
+        return String.format(
+                "Query failed [reqId=%d, label=%s, schema=%s, queries=%s, params=%s, err=%s, remoteNodeId=%s, localNodeId=%s]",
+                reqId,
+                label != null ? label : "N/A",
+                schemaName != null ? schemaName : "N/A",
+                queryStr,
+                paramsStr,
+                error,
+                remoteNodeId,
+                localNodeId
+        );
     }
 
     /**
@@ -457,6 +535,8 @@ public class GridMapQueryExecutor {
 
                 qryResults.addResult(qryIdx, res);
 
+                MapH2QueryInfo qryInfo = null;
+
                 try {
                     res.lock();
 
@@ -471,17 +551,26 @@ public class GridMapQueryExecutor {
 
                         H2Utils.bindParameters(stmt, params0);
 
-                        MapH2QueryInfo qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId, runningQryId, label);
+                        qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId, runningQryId, label);
 
-                        ResultSet rs = h2.executeSqlQueryWithTimer(
-                            stmt,
-                            conn,
-                            sql,
-                            timeout,
-                            qryResults.queryCancel(qryIdx),
-                            dataPageScanEnabled,
-                            qryInfo,
-                            maxMem
+                        h2.longRunningQueries().registerQuery(qryInfo);
+
+                        GridQueryCancel qryCancel = qryResults.queryCancel(qryIdx);
+
+                        H2QueryInfo qryInfo0 = qryInfo;
+
+                        ResultSet rs = h2.executeWithResumableTimeTracking(
+                                () -> h2.executeSqlQueryWithTimer(
+                                        stmt,
+                                        conn,
+                                        sql,
+                                        timeout,
+                                        qryCancel,
+                                        dataPageScanEnabled,
+                                        qryInfo0,
+                                        maxMem
+                                ),
+                                qryInfo
                         );
 
                         if (evt) {
@@ -510,14 +599,21 @@ public class GridMapQueryExecutor {
 
                         res.openResult(rs, qryInfo, ctx.tracing());
 
-                        final GridQueryNextPageResponse msg = prepareNextPage(
-                            nodeRess,
-                            node,
-                            qryResults,
-                            qryIdx,
-                            segmentId,
-                            pageSize,
-                            dataPageScanEnabled
+                        MapQueryResults qryResults0 = qryResults;
+
+                        int qryIdx0 = qryIdx;
+
+                        final GridQueryNextPageResponse msg = h2.executeWithResumableTimeTracking(
+                                () -> prepareNextPage(
+                                        nodeRess,
+                                        node,
+                                        qryResults0,
+                                        qryIdx0,
+                                        segmentId,
+                                        pageSize,
+                                        dataPageScanEnabled
+                                ),
+                                qryInfo
                         );
 
                         if (msg != null)
@@ -530,6 +626,12 @@ public class GridMapQueryExecutor {
                     }
 
                     qryIdx++;
+                }
+                catch (Throwable e) {
+                    if (qryInfo != null)
+                        h2.longRunningQueries().unregisterQuery(qryInfo, e);
+
+                    throw e;
                 }
                 finally {
                     try {
@@ -582,13 +684,23 @@ public class GridMapQueryExecutor {
                         if (qryRetryErr != null)
                             sendError(node, reqId, qryRetryErr);
                         else {
+                            String errMsg = buildQueryLogDetails(
+                                    reqId,
+                                    label,
+                                    schemaName,
+                                    qrys,
+                                    params,
+                                    e,
+                                    node.id(),
+                                    ctx.localNodeId());
+
                             if (e instanceof Error) {
-                                U.error(log, "Failed to execute local query.", e);
+                                U.error(log, errMsg, e);
 
                                 throw (Error)e;
                             }
 
-                            U.warn(log, "Failed to execute local query.", e);
+                            U.warn(log, errMsg, e);
 
                             sendError(node, reqId, e);
                         }
@@ -842,13 +954,15 @@ public class GridMapQueryExecutor {
 
             final MapQueryResults qryResults = nodeRess.get(reqId, req.segmentId());
 
+            MapQueryResult res = null;
+
             if (qryResults == null)
                 sendError(node, reqId, new CacheException("No query result found for request: " + req));
             else if (qryResults.cancelled())
                 sendQueryCancel(node, reqId);
             else {
                 try {
-                    MapQueryResult res = qryResults.result(req.query());
+                    res = qryResults.result(req.query());
 
                     assert res != null;
 
@@ -861,14 +975,18 @@ public class GridMapQueryExecutor {
 
                         Boolean dataPageScanEnabled = isDataPageScanEnabled(req.getFlags());
 
-                        GridQueryNextPageResponse msg = prepareNextPage(
-                            nodeRess,
-                            node,
-                            qryResults,
-                            req.query(),
-                            req.segmentId(),
-                            req.pageSize(),
-                            dataPageScanEnabled);
+                        GridQueryNextPageResponse msg = h2.executeWithResumableTimeTracking(
+                                () -> prepareNextPage(
+                                        nodeRess,
+                                        node,
+                                        qryResults,
+                                        req.query(),
+                                        req.segmentId(),
+                                        req.pageSize(),
+                                        dataPageScanEnabled
+                                ),
+                                res.qryInfo()
+                        );
 
                         if (msg != null)
                             sendNextPage(node, msg);
@@ -883,6 +1001,9 @@ public class GridMapQueryExecutor {
                     }
                 }
                 catch (Exception e) {
+                    if (res.qryInfo() != null)
+                        h2.longRunningQueries().unregisterQuery(res.qryInfo(), e);
+
                     QueryRetryException retryEx = X.cause(e, QueryRetryException.class);
 
                     if (retryEx != null)
@@ -937,6 +1058,9 @@ public class GridMapQueryExecutor {
 
             if (last) {
                 qr.closeResult(qry);
+
+                if (res.qryInfo() != null)
+                    h2.longRunningQueries().unregisterQuery(res.qryInfo(), null);
 
                 if (qr.isAllClosed()) {
                     nodeRess.remove(qr.queryRequestId(), segmentId, qr);

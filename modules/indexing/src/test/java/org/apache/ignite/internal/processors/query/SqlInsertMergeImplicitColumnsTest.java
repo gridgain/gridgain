@@ -53,7 +53,7 @@ public class SqlInsertMergeImplicitColumnsTest extends AbstractIndexingCommonTes
         checkDml("INSERT INTO test3 set id=2, val1='Bobby'", 1);
 
         GridTestUtils.assertThrows(log, () -> sql("INSERT INTO test3 set id=1, val2='Kennedy'"),
-            TransactionDuplicateKeyException.class, "Duplicate key during INSERT [key=1]");
+            TransactionDuplicateKeyException.class, "Duplicate key during INSERT [key=1, table=PUBLIC.TEST3]");
     }
 
     /**

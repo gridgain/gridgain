@@ -21,9 +21,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.thread.IgniteThread;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Long running query manager.
@@ -40,6 +42,12 @@ public final class LongRunningQueryManager {
 
     /** Message about the long execution of the query. */
     public static final String LONG_QUERY_EXEC_MSG = "Query execution is too long";
+
+    /** */
+    public static final String LONG_QUERY_FINISHED_MSG = "Long running query is finished: ";
+
+    /** */
+    public static final String LONG_QUERY_ERROR_MSG = "Long running query is finished with error: ";
 
     /** Queries collection. Sorted collection isn't used to reduce 'put' time. */
     private final ConcurrentHashMap<H2QueryInfo, TimeoutChecker> qrys = new ConcurrentHashMap<>();
@@ -125,11 +133,17 @@ public final class LongRunningQueryManager {
 
     /**
      * @param qryInfo Query info to remove.
+     * @param err Exception if query executed with error.
      */
-    public void unregisterQuery(H2QueryInfo qryInfo) {
+    public void unregisterQuery(H2QueryInfo qryInfo, @Nullable Throwable err) {
         assert qryInfo != null;
 
-        qrys.remove(qryInfo);
+        if (qrys.remove(qryInfo) != null && qryInfo.time() > timeout) {
+            if (err == null)
+                LT.warn(log, LONG_QUERY_FINISHED_MSG + qryInfo.description());
+            else
+                LT.warn(log, LONG_QUERY_ERROR_MSG + err.getMessage() + qryInfo.description());
+        }
     }
 
     /**

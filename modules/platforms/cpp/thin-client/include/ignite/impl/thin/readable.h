@@ -66,7 +66,8 @@ namespace ignite
                  * @param value Value.
                  */
                 ReadableImpl(ValueType& value) :
-                    value(value)
+                    value(value),
+                    isNull(false)
                 {
                     // No-op.
                 }
@@ -86,12 +87,25 @@ namespace ignite
                  */
                 virtual void Read(binary::BinaryReaderImpl& reader)
                 {
-                    reader.ReadTopObject<ValueType>(value);
+                    isNull = reader.ReadTopObjectNullable<T>(value);
+                }
+
+                /**
+                 * Check if the value is NULL.
+                 *
+                 * @return @c true if the value is NULL.
+                 */
+                bool IsNull() const
+                {
+                    return isNull;
                 }
 
             private:
                 /** Value reference. */
                 ValueType& value;
+
+                /** Null value flag. */
+                bool isNull;
             };
 
             /**
@@ -110,7 +124,7 @@ namespace ignite
                 /**
                  * Constructor.
                  *
-                 * @param value Value.
+                 * @param pair Pair.
                  */
                 ReadableImpl(std::pair<ValueType1, ValueType2>& pair) :
                     pair(pair)

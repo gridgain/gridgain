@@ -40,6 +40,7 @@ import org.junit.Test;
 
 import static java.lang.Thread.currentThread;
 import static org.apache.ignite.internal.processors.query.h2.LongRunningQueryManager.LONG_QUERY_EXEC_MSG;
+import static org.gridgain.internal.h2.engine.Constants.DEFAULT_PAGE_SIZE;
 
 /**
  * Tests for log print for long running query.
@@ -56,6 +57,12 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
 
     /** Local query mode. */
     private boolean local;
+
+    /** Page size. */
+    private int pageSize = DEFAULT_PAGE_SIZE;
+
+    /** Number of keys to be queries in lazy queries. */
+    private static final int LAZY_QRYS_KEY_CNT = 5;
 
     /** Lazy query mode. */
     private boolean lazy;
@@ -106,6 +113,18 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
      *
      */
     @Test
+    public void testLongDistributedLazy() {
+        local = false;
+        lazy = true;
+
+        checkLongRunning();
+        checkFastQueries();
+    }
+
+    /**
+     *
+     */
+    @Test
     public void testLongDmlDistributed() {
         local = false;
         lazy = false;
@@ -121,6 +140,18 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
     public void testLongLocal() {
         local = true;
         lazy = false;
+
+        checkLongRunning();
+        checkFastQueries();
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testLongLocalLazy() {
+        local = true;
+        lazy = true;
 
         checkLongRunning();
         checkFastQueries();
@@ -268,13 +299,30 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     * @param sql SQL query.
+     * @param args Query parameters.
+     */
+    private void sqlCheckLongRunningLazy(String sql, Object... args) {
+        pageSize = 1;
+
+        try {
+            assertEquals(LAZY_QRYS_KEY_CNT, sql(sql, args).getAll().size());
+        }
+        finally {
+            pageSize = DEFAULT_PAGE_SIZE;
+        }
+    }
+
+    /**
      * Execute long running sql with a check for errors.
      */
     private void sqlCheckLongRunning(boolean dml) {
-        String sql = dml
-            ? "DELETE FROM test WHERE id not in (SELECT T0.id FROM test AS T0, test AS T1, test AS T2 where T0.id > ?)"
-            : "SELECT T0.id FROM test AS T0, test AS T1, test AS T2 where T0.id > ?";
-        sqlCheckLongRunning(sql, 0);
+        if (dml)
+            sqlCheckLongRunning("DELETE FROM test WHERE id not in (SELECT T0.id FROM test AS T0, test AS T1, test AS T2 where T0.id > ?)", 0);
+        else if (lazy)
+            sqlCheckLongRunningLazy("SELECT * FROM test WHERE _key < sleep_func(?, ?)", 2000, LAZY_QRYS_KEY_CNT);
+        else
+            sqlCheckLongRunning("SELECT T0.id FROM test AS T0, test AS T1, test AS T2 where T0.id > ?", 0);
     }
 
     /**
@@ -288,6 +336,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
             .setLocal(local)
             .setLazy(lazy)
             .setSchema("TEST")
+            .setPageSize(pageSize)
             .setLabel(LRQ_LABEL)
             .setArgs(args), false);
     }
@@ -297,19 +346,19 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
      */
     public static class TestSQLFunctions {
         /**
-         * @param v amount of milliseconds to sleep
-         * @return amount of milliseconds to sleep
+         * @param sleep amount of milliseconds to sleep
+         * @param val value to be returned by the function
          */
         @SuppressWarnings("unused")
         @QuerySqlFunction
-        public static int sleep_func(int v) {
+        public static int sleep_func(int sleep, int val) {
             try {
-                Thread.sleep(v);
+                Thread.sleep(sleep);
             }
             catch (InterruptedException ignored) {
                 // No-op
             }
-            return v;
+            return val;
         }
     }
 

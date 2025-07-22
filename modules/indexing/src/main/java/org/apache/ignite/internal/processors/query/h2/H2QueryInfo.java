@@ -48,6 +48,15 @@ public class H2QueryInfo {
     /** Begin timestamp. */
     private final long beginTs;
 
+    /** The most recent point in time when the tracking of a long query was suspended. */
+    private volatile long lastSuspendTs;
+
+    /** External wait time. */
+    private volatile long extWait;
+
+    /** Long query time tracking suspension flag. */
+    private volatile boolean isSuspended;
+
     /** Query schema. */
     private final String schema;
 
@@ -116,7 +125,25 @@ public class H2QueryInfo {
      * @return Query execution time.
      */
     public long time() {
-        return U.currentTimeMillis() - beginTs;
+        return (isSuspended ? lastSuspendTs : U.currentTimeMillis()) - beginTs - extWait;
+    }
+
+    /** */
+    public synchronized void suspendTracking() {
+        if (!isSuspended) {
+            isSuspended = true;
+
+            lastSuspendTs = U.currentTimeMillis();
+        }
+    }
+
+    /** */
+    public synchronized void resumeTracking() {
+        if (isSuspended) {
+            isSuspended = false;
+
+            extWait += U.currentTimeMillis() - lastSuspendTs;
+        }
     }
 
     /** @return Query id assigned by {@link RunningQueryManager}. */
@@ -129,6 +156,11 @@ public class H2QueryInfo {
      */
     public UUID node() {
         return node;
+    }
+
+    /** */
+    public long extWait() {
+        return extWait;
     }
 
     /**
@@ -173,6 +205,11 @@ public class H2QueryInfo {
         // Include 'sql' text into key for compatibility with older versions.
         String throttleKey = globalQueryId + "#" + (runningQryId == null ? sql : type);
         LT.warn(log, throttleKey, msgSb.toString());
+    }
+
+    /** */
+    public boolean isSuspended() {
+        return isSuspended;
     }
 
     /**

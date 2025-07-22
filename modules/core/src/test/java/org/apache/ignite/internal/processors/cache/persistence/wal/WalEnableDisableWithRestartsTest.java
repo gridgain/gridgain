@@ -143,7 +143,7 @@ public class WalEnableDisableWithRestartsTest extends GridCommonAbstractTest {
             node = Ignition.start(igniteCfg(false, consistentId));
         }
         catch (Exception ex) {
-            if (!X.hasCause(ex, "Ignite node with disabled WAL was stopped in the middle of a checkpoint", IgniteException.class))
+            if (!X.hasCause(ex, "WAL was disabled for Ignite node", IgniteException.class))
                 throw ex;
 
             node = Ignition.start(igniteCfg(false, consistentId));

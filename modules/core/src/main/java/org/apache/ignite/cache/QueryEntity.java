@@ -706,6 +706,7 @@ public class QueryEntity implements Serializable {
 
                 vectIdx.setIndexType(idx.type());
                 vectIdx.setFieldNames(idx.fields(), true);
+                vectIdx.setSimilarityFunction(idx.similarityFunction());
 
                 idxs.add(vectIdx);
             }
@@ -905,7 +906,7 @@ public class QueryEntity implements Serializable {
             desc.addFieldToTextIndex(prop.fullName());
 
         if (vecAnn != null)
-            desc.addFieldToVectorIndex(prop.fullName());
+            desc.addFieldToVectorIndex(prop.fullName(), vecAnn.similarityFunction());
     }
 
     /** {@inheritDoc} */
