@@ -42,7 +42,7 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metr
 import static org.apache.ignite.internal.util.IgniteUtils.IGNITE_PKG;
 
 /**
- * Responsibility of this class it to recursively iterate {@link IgniteConfiguration} object
+ * Responsibility of this class is to recursively iterate {@link IgniteConfiguration} object
  * and expose all properties in form of String pairs.
  */
 public class IgniteConfigurationIterable implements Iterable<ConfigurationView> {

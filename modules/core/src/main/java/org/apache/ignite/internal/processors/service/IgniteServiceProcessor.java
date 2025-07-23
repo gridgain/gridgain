@@ -56,6 +56,8 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.SkipDaemon;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
+import org.apache.ignite.internal.managers.systemview.ServiceDistributionIterable;
+import org.apache.ignite.internal.managers.systemview.walker.ServiceDistributionViewWalker;
 import org.apache.ignite.internal.managers.systemview.walker.ServiceViewWalker;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.DynamicCacheChangeBatch;
@@ -121,6 +123,12 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
 
     /** */
     public static final String SVCS_VIEW_DESC = "Services";
+
+    /** */
+    public static final String SERVICES_DISTRIBUTION_VIEW = "services_distribution";
+
+    /** */
+    public static final String SERVICES_DISTRIBUTION_DESC = "Services distribution";
 
     /** Local service instances. */
     private final ConcurrentMap<IgniteUuid, Collection<ServiceContextImpl>> locServices = new ConcurrentHashMap<>();
@@ -221,6 +229,14 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
             new ServiceViewWalker(),
             registeredServices.values(),
             ServiceView::new);
+
+        ctx.systemView().registerInnerCollectionView(
+            SERVICES_DISTRIBUTION_VIEW,
+            SERVICES_DISTRIBUTION_DESC,
+            new ServiceDistributionViewWalker(),
+            deployedServices.values(),
+            ServiceDistributionIterable::new,
+            (cfg, view) -> view);
     }
 
     /** {@inheritDoc} */
