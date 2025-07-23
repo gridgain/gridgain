@@ -87,7 +87,6 @@ import org.apache.ignite.internal.processors.compute.IgniteComputeCustomExecutor
 import org.apache.ignite.internal.processors.compute.InterruptComputeJobTest;
 import org.apache.ignite.internal.processors.compute.PublicThreadpoolStarvationTest;
 import org.apache.ignite.internal.util.StripedExecutorTest;
-import org.apache.ignite.internal.visor.VisorCacheRebalanceCollectorTaskSelfTest;
 import org.apache.ignite.p2p.GridMultinodeRedeployContinuousModeSelfTest;
 import org.apache.ignite.p2p.GridMultinodeRedeployIsolatedModeSelfTest;
 import org.apache.ignite.p2p.GridMultinodeRedeployPrivateModeSelfTest;
@@ -184,7 +183,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVI
     IgniteComputeJobOneThreadTest.class,
 
     VisorManagementEventSelfTest.class,
-    VisorCacheRebalanceCollectorTaskSelfTest.class,
 
     ComputeGridMonitorTest.class,
     ComputeJobChangePriorityTest.class,
