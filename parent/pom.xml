@@ -122,7 +122,7 @@
         <mysql.connector.version>8.0.13</mysql.connector.version>
         <netlibjava.version>1.1.2</netlibjava.version>
         <netty.version>4.1.119.Final</netty.version>
-        <opencensus.version>0.31.1</opencensus.version>
+        <opencensus.version>1.68.0</opencensus.version>
         <org.testcontainers.testcontainers>1.12.3</org.testcontainers.testcontainers>
         <oro.bundle.version>2.0.8_6</oro.bundle.version>
         <osgi.core.version>5.0.0</osgi.core.version>
