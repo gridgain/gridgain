@@ -104,39 +104,6 @@
                     <skip>true</skip>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <configuration>
-                    <executable>java</executable>
-                    <arguments>
-                        <argument>-Xms16G</argument>
-                        <argument>-Xmx16G</argument>
-                        <argument>--add-exports</argument>
-                        <argument>java.base/jdk.internal.misc=ALL-UNNAMED</argument>
-                        <argument>--add-exports</argument>
-                        <argument>java.base/sun.nio.ch=ALL-UNNAMED</argument>
-                        <argument>--add-exports</argument>
-                        <argument>java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED</argument>
-                        <argument>--add-exports</argument>
-                        <argument>jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED</argument>
-                        <argument>--add-exports</argument>
-                        <argument>java.base/java.io=ALL-UNNAMED</argument>
-                        <argument>--add-exports</argument>
-                        <argument>java.base/java.nio=ALL-UNNAMED</argument>
-                        <argument>--add-exports</argument>
-                        <argument>java.base/java.util=ALL-UNNAMED</argument>
-                        <argument>--add-exports</argument>
-                        <argument>java.base/java.lang=ALL-UNNAMED</argument>
-                        <argument>--add-exports</argument>
-                        <argument>java.base/java.lang.invoke=ALL-UNNAMED</argument>
-                        <argument>--add-exports</argument>
-                        <argument>java.sql/java.sql=ALL-UNNAMED</argument>
-                        <argument>--add-exports</argument>
-                        <argument>java.base/java.nio=ALL-UNNAMED</argument>
-                    </arguments>
-                </configuration>
-            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
