@@ -90,6 +90,7 @@
         <module>modules/geospatial</module>
         <module>modules/schedule</module>
         <module>modules/control-utility</module>
+        <module>modules/benchmarks</module>
     </modules>
 
     <profiles>
