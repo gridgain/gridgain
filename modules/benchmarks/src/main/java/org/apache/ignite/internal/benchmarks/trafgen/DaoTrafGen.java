@@ -9,6 +9,7 @@ package org.apache.ignite.internal.benchmarks.trafgen;
 
 import org.apache.ignite.internal.benchmarks.trafgen.utils.Metric;
 import org.apache.ignite.internal.benchmarks.trafgen.utils.ThrowingConsumer;
+import org.apache.ignite.internal.util.IgniteUtils;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -186,7 +187,9 @@ public final class DaoTrafGen
     }
 
     private static Set<String> makeSet(String val) {
-
+        HashSet<String> set = IgniteUtils.newHashSet(1);
+        set.add(val);
+        return set;
     }
 
     private static void doCreateOrReplace(String key)
