@@ -108,6 +108,7 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <configuration>
+                    <executable>java</executable>
                     <arguments>
                         <argument>-Xms16G</argument>
                         <argument>-Xmx16G</argument>
