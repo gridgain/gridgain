@@ -219,9 +219,9 @@ public class GG8Sample
         TcpDiscoveryVmIpFinder lvFinder = new TcpDiscoveryVmIpFinder();
         lvFinder.setAddresses(makeList(lvAdresses));
         lvSpi.setLocalPort(port);
-        lvSpi.setLocalPortRange(0);
+        lvSpi.setLocalPortRange(10);
         lvCommSpi.setLocalPort(lvComPort);
-        lvCommSpi.setLocalPortRange(0);
+        lvCommSpi.setLocalPortRange(10);
 
         lvSpi.setIpFinder(lvFinder);
 
