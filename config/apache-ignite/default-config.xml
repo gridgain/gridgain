@@ -24,5 +24,12 @@
     <!--
         Alter configuration below as needed.
     -->
-    <bean id="grid.cfg" class="org.apache.ignite.configuration.IgniteConfiguration"/>
+    <bean id="grid.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
+        <property name="defaultDataRegionConfiguration">
+            <bean class="org.apache.ignite.configuration.DataRegionConfiguration">
+                <property name="persistenceEnabled" value="false"/>
+                <property name="maxSize" value="#{4L * 1024 * 1024 * 1024}"/>
+            </bean>
+        </property>
+    </bean>
 </beans>

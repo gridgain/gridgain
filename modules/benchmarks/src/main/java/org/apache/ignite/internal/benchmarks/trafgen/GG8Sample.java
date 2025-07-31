@@ -9,6 +9,7 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.*;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
@@ -177,6 +178,7 @@ public class GG8Sample
         System.out.println("PVD:: Before client start");
 
         client = Ignition.start(igniteConfiguration());
+        client.cluster().state(ClusterState.ACTIVE);
 
         System.out.println("PVD:: Client started");
 
