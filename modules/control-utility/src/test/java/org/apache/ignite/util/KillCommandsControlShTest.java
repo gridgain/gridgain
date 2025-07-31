@@ -23,16 +23,21 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.lang.IgniteUuid;
 import org.junit.Test;
 
 import static java.util.Arrays.asList;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
+import static org.apache.ignite.util.KillCommandsTests.PAGES_CNT;
 import static org.apache.ignite.util.KillCommandsTests.PAGE_SZ;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelClientConnection;
+import static org.apache.ignite.util.KillCommandsTests.doTestCancelComputeTask;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelContinuousQuery;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelSQLQuery;
+import static org.apache.ignite.util.KillCommandsTests.doTestCancelService;
+import static org.apache.ignite.util.KillCommandsTests.doTestCancelTx;
 import static org.apache.ignite.util.KillCommandsTests.doTestScanQueryCancel;
 
 /** Tests cancel of user created entities via control.sh. */
@@ -53,15 +58,50 @@ public class KillCommandsControlShTest extends GridCommandHandlerClusterByClassA
             new CacheConfiguration<>(DEFAULT_CACHE_NAME).setIndexedTypes(Integer.class, Integer.class)
                 .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));
 
-        for (int i = 0; i < PAGE_SZ * PAGE_SZ; i++)
+        // There must be enough cache entries to keep scan query cursor opened.
+        // Cursor may be concurrently closed when all the data retrieved.
+        for (int i = 0; i < PAGES_CNT * PAGE_SZ; i++)
             cache.put(i, i);
 
         awaitPartitionMapExchange();
+
+        // We change to reduce the waiting time for interrupting compute job.
+        computeJobWorkerInterruptTimeout(srvs.get(0)).propagate(100L);
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         // No-op. Prevent cache destroy from super class.
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testCancelComputeTask() throws Exception {
+        doTestCancelComputeTask(client, srvs, sessId -> {
+            int res = execute("--kill", "compute", sessId);
+
+            assertEquals(EXIT_CODE_OK, res);
+        });
+    }
+
+    /** */
+    @Test
+    public void testCancelTx() {
+        doTestCancelTx(client, srvs, xid -> {
+            int res = execute("--kill", "transaction", xid);
+
+            assertEquals(EXIT_CODE_OK, res);
+        });
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testCancelService() throws Exception {
+        doTestCancelService(client, client, srvs.get(0), name -> {
+            int res = execute("--kill", "service", name);
+
+            assertEquals(EXIT_CODE_OK, res);
+        });
     }
 
     /**  */
@@ -142,5 +182,29 @@ public class KillCommandsControlShTest extends GridCommandHandlerClusterByClassA
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--kill", "client", "1", "--node-id"));
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--kill", "client", "1", "--node-id", "not_an_uuid"));
         assertEquals("Unknown connection id", EXIT_CODE_UNEXPECTED_ERROR, execute("--kill", "client", "123"));
+    }
+
+    /** */
+    @Test
+    public void testCancelUnknownComputeTask() {
+        int res = execute("--kill", "compute", IgniteUuid.randomUuid().toString());
+
+        assertEquals(EXIT_CODE_OK, res);
+    }
+
+    /** */
+    @Test
+    public void testCancelUnknownService() {
+        int res = execute("--kill", "service", "unknown");
+
+        assertEquals(EXIT_CODE_OK, res);
+    }
+
+    /** */
+    @Test
+    public void testCancelUnknownTx() {
+        int res = execute("--kill", "transaction", "unknown");
+
+        assertEquals(EXIT_CODE_OK, res);
     }
 }
