@@ -236,7 +236,7 @@ public final class DaoTrafGen
     public static void main(String[] args) throws InterruptedException
     {
         CallFlow callFlow = new CallFlow(CRUD.CREATE_OR_REPLACE);
-        int iterations = 0;
+        int iterations = 100_000;
         int parallelism = 1;
         int optPayloadSize = DEF_PAYLOAD_SIZE;
 
@@ -297,6 +297,9 @@ public final class DaoTrafGen
                 warmup = 0;
             }
         }, 5, 5, TimeUnit.SECONDS);
+
+        System.out.printf("Parallelism=" + parallelism + ", callFlow=" + callFlow.operations.length + ", iters=" + iterations);
+
         // Run the call flow
         final Thread[] threads = createThreads(parallelism, callFlow, iterations);
         startAllThenJoin(threads);
@@ -308,7 +311,6 @@ public final class DaoTrafGen
         }
         System.out.printf("Storage: %s %s%n", optRealm, optStorage);
         callFlow.metrics().forEach(Metric::print);
-
     }
 
     private static CallFlow parseCallFlow(String anArg)

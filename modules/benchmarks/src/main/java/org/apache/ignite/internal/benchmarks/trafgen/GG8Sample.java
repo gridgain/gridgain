@@ -209,9 +209,9 @@ public class GG8Sample
         cfg.setPeerClassLoadingEnabled(true);
         cfg.setClientMode(true);
         cfg.setShutdownPolicy(ShutdownPolicy.GRACEFUL);
-        String lvAdresses = "localhost";
+        String lvAdresses = "172.25.4.101";
         int port = 47500;
-        int lvComPort = 47510;
+        int lvComPort = 47100;
 
         TcpDiscoverySpi lvSpi = new TcpDiscoverySpi();
         TcpCommunicationSpi lvCommSpi = new TcpCommunicationSpi();
