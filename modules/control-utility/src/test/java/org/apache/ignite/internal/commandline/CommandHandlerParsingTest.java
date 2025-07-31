@@ -629,11 +629,11 @@ public class CommandHandlerParsingTest {
         assertParseArgsThrows("Invalid UUID string: not_a_uuid", IllegalArgumentException.class,
             "--kill", "compute", "not_a_uuid");
 
-        // Transaction command format errors.
-        assertParseArgsThrows("Expected transaction id.", "--kill", "tx");
-
         // Service command format errors.
         assertParseArgsThrows("Expected service name.", "--kill", "service");
+
+        // Transaction command format errors.
+        assertParseArgsThrows("Expected transaction id.", "--kill", "transaction");
     }
 
     /**  */
