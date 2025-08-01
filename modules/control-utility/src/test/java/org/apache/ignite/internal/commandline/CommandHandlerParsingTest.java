@@ -541,7 +541,7 @@ public class CommandHandlerParsingTest {
     }
 
     /**
-     * test parsing dump transaction arguments
+     * Test parsing dump transaction arguments
      */
     @Test
     public void testTransactionArguments() {
@@ -622,6 +622,18 @@ public class CommandHandlerParsingTest {
 
         assertParseArgsThrows("For input string: \"not_a_number\"", NumberFormatException.class,
             "--kill", "scan", uuid, "my-cache", "not_a_number");
+
+        // Compute command format errors.
+        assertParseArgsThrows("Expected compute task id.", "--kill", "compute");
+
+        assertParseArgsThrows("Invalid UUID string: not_a_uuid", IllegalArgumentException.class,
+            "--kill", "compute", "not_a_uuid");
+
+        // Service command format errors.
+        assertParseArgsThrows("Expected service name.", "--kill", "service");
+
+        // Transaction command format errors.
+        assertParseArgsThrows("Expected transaction id.", "--kill", "transaction");
     }
 
     /**  */
@@ -1159,7 +1171,7 @@ public class CommandHandlerParsingTest {
      * @param args Incoming arguments.
      */
     private void assertParseArgsThrows(@Nullable String failMsg, String... args) {
-        assertThrows(null, () -> parseArgs(asList(args)), IllegalArgumentException.class, failMsg);
+        assertParseArgsThrows(failMsg, IllegalArgumentException.class, args);
     }
 
     /**

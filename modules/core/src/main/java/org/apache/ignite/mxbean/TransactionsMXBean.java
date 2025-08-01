@@ -60,6 +60,16 @@ public interface TransactionsMXBean {
     );
 
     /**
+     * Kills transactions by the xid.
+     *
+     * @param xid Transaction xid.
+     */
+    @MXBeanDescription("Kills transactions by the xid.")
+    public void cancel(
+        @MXBeanParameter(name = "xid", description = "Transaction XID.") String xid
+    );
+
+    /**
      * Gets transaction timeout on partition map exchange.
      * <p>
      * @see TransactionConfiguration#getTxTimeoutOnPartitionMapExchange

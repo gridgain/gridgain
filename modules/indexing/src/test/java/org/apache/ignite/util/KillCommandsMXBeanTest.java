@@ -22,20 +22,31 @@ import java.util.UUID;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.ComputeMXBeanImpl;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.QueryMXBeanImpl;
+import org.apache.ignite.internal.ServiceMXBeanImpl;
+import org.apache.ignite.internal.TransactionsMXBeanImpl;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
+import org.apache.ignite.mxbean.ComputeMXBean;
 import org.apache.ignite.mxbean.QueryMXBean;
+import org.apache.ignite.mxbean.ServiceMXBean;
+import org.apache.ignite.mxbean.TransactionsMXBean;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.util.KillCommandsTests.PAGES_CNT;
 import static org.apache.ignite.util.KillCommandsTests.PAGE_SZ;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelClientConnection;
+import static org.apache.ignite.util.KillCommandsTests.doTestCancelComputeTask;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelContinuousQuery;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelSQLQuery;
+import static org.apache.ignite.util.KillCommandsTests.doTestCancelService;
+import static org.apache.ignite.util.KillCommandsTests.doTestCancelTx;
 import static org.apache.ignite.util.KillCommandsTests.doTestScanQueryCancel;
 
 /** Tests cancel of user created entities via JMX. */
@@ -55,6 +66,16 @@ public class KillCommandsMXBeanTest extends GridCommonAbstractTest {
     /**  */
     private static QueryMXBean qryMBean;
 
+    /** */
+    private static TransactionsMXBean txMBean;
+
+    /** */
+    private static ComputeMXBean computeMBean;
+
+    /** */
+    private static ServiceMXBean svcMxBean;
+
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         startGridsMultiThreaded(NODES_CNT);
@@ -69,15 +90,55 @@ public class KillCommandsMXBeanTest extends GridCommonAbstractTest {
 
         srvs.get(0).cluster().state(ACTIVE);
 
+        // We change to reduce the waiting time for interrupting compute job.
+        computeJobWorkerInterruptTimeout(srvs.get(0)).propagate(100L);
+
         IgniteCache<Object, Object> cache = startCli.getOrCreateCache(
             new CacheConfiguration<>(DEFAULT_CACHE_NAME).setIndexedTypes(Integer.class, Integer.class)
                 .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));
 
-        for (int i = 0; i < PAGE_SZ * PAGE_SZ; i++)
+        // There must be enough cache entries to keep scan query cursor opened.
+        // Cursor may be concurrently closed when all the data retrieved.
+        for (int i = 0; i < PAGES_CNT * PAGE_SZ; i++)
             cache.put(i, i);
 
         qryMBean = getMxBean(killCli.name(), "Query",
             QueryMXBeanImpl.class.getSimpleName(), QueryMXBean.class);
+
+        txMBean = getMxBean(killCli.name(), "Transactions",
+            TransactionsMXBeanImpl.class.getSimpleName(), TransactionsMXBean.class);
+
+        computeMBean = getMxBean(killCli.name(), "Compute",
+            ComputeMXBeanImpl.class.getSimpleName(), ComputeMXBean.class);
+
+        svcMxBean = getMxBean(killCli.name(), "Service",
+            ServiceMXBeanImpl.class.getSimpleName(), ServiceMXBean.class);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
+
+        stopAllGrids();
+        cleanPersistenceDir();
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testCancelComputeTask() throws Exception {
+        doTestCancelComputeTask(startCli, srvs, sessId -> computeMBean.cancel(sessId));
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testCancelService() throws Exception {
+        doTestCancelService(startCli, killCli, srvs.get(0), name -> svcMxBean.cancel(name));
+    }
+
+    /** */
+    @Test
+    public void testCancelTx() {
+        doTestCancelTx(startCli, srvs, xid -> txMBean.cancel(xid));
     }
 
     /**  */
@@ -134,5 +195,23 @@ public class KillCommandsMXBeanTest extends GridCommonAbstractTest {
     @Test
     public void testCancelUnknownScanQuery() {
         qryMBean.cancelScan(srvs.get(0).localNode().id().toString(), "unknown", 1L);
+    }
+
+    /** */
+    @Test
+    public void testCancelUnknownComputeTask() {
+        computeMBean.cancel(IgniteUuid.randomUuid().toString());
+    }
+
+    /** */
+    @Test
+    public void testCancelUnknownTx() {
+        txMBean.cancel("unknown");
+    }
+
+    /** */
+    @Test
+    public void testCancelUnknownService() {
+        svcMxBean.cancel("unknown");
     }
 }

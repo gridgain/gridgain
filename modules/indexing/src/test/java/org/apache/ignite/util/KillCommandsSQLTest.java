@@ -27,20 +27,28 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractSchemaSelfTest;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.sql.SqlKeyword.CLIENT;
+import static org.apache.ignite.internal.sql.SqlKeyword.COMPUTE;
 import static org.apache.ignite.internal.sql.SqlKeyword.CONTINUOUS;
 import static org.apache.ignite.internal.sql.SqlKeyword.KILL;
 import static org.apache.ignite.internal.sql.SqlKeyword.QUERY;
 import static org.apache.ignite.internal.sql.SqlKeyword.SCAN;
+import static org.apache.ignite.internal.sql.SqlKeyword.SERVICE;
+import static org.apache.ignite.internal.sql.SqlKeyword.TRANSACTION;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
+import static org.apache.ignite.util.KillCommandsTests.PAGES_CNT;
 import static org.apache.ignite.util.KillCommandsTests.PAGE_SZ;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelClientConnection;
+import static org.apache.ignite.util.KillCommandsTests.doTestCancelComputeTask;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelContinuousQuery;
 import static org.apache.ignite.util.KillCommandsTests.doTestCancelSQLQuery;
+import static org.apache.ignite.util.KillCommandsTests.doTestCancelService;
+import static org.apache.ignite.util.KillCommandsTests.doTestCancelTx;
 import static org.apache.ignite.util.KillCommandsTests.doTestScanQueryCancel;
 
 /** Tests cancel of user created entities via SQL. */
@@ -50,6 +58,15 @@ public class KillCommandsSQLTest extends GridCommonAbstractTest {
 
     /**  */
     public static final String KILL_SQL_QRY = KILL + " " + QUERY;
+
+    /** */
+    public static final String KILL_COMPUTE_QRY = KILL + " " + COMPUTE;
+
+    /** */
+    public static final String KILL_SVC_QRY = KILL + " " + SERVICE;
+
+    /** */
+    public static final String KILL_TX_QRY = KILL + " " + TRANSACTION;
 
     /**  */
     public static final String KILL_CQ_QRY = KILL + " " + CONTINUOUS;
@@ -83,12 +100,36 @@ public class KillCommandsSQLTest extends GridCommonAbstractTest {
 
         srvs.get(0).cluster().state(ACTIVE);
 
+        // We change to reduce the waiting time for interrupting compute job.
+        computeJobWorkerInterruptTimeout(srvs.get(0)).propagate(100L);
+
         IgniteCache<Object, Object> cache = startCli.getOrCreateCache(
             new CacheConfiguration<>(DEFAULT_CACHE_NAME).setIndexedTypes(Integer.class, Integer.class)
                 .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));
 
-        for (int i = 0; i < PAGE_SZ * PAGE_SZ; i++)
+        // There must be enough cache entries to keep scan query cursor opened.
+        // Cursor may be concurrently closed when all the data retrieved.
+        for (int i = 0; i < PAGES_CNT * PAGE_SZ; i++)
             cache.put(i, i);
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testCancelComputeTask() throws Exception {
+        doTestCancelComputeTask(startCli, srvs, sessId -> execute(killCli, KILL_COMPUTE_QRY + " '" + sessId + "'"));
+    }
+
+    /** */
+    @Test
+    public void testCancelTx() {
+        doTestCancelTx(startCli, srvs, xid -> execute(killCli, KILL_TX_QRY + " '" + xid + "'"));
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testCancelService() throws Exception {
+        doTestCancelService(startCli, killCli, srvs.get(0),
+            name -> execute(srvs.get(0), KILL_SVC_QRY + " '" + name + "'"));
     }
 
     /**  */
@@ -139,6 +180,24 @@ public class KillCommandsSQLTest extends GridCommonAbstractTest {
     @Test
     public void testCancelUnknownScanQuery() {
         execute(startCli, KILL_SCAN_QRY + " '" + killCli.localNode().id() + "' 'unknown' 1");
+    }
+
+    /** */
+    @Test
+    public void testCancelUnknownComputeTask() {
+        execute(killCli, KILL_COMPUTE_QRY + " '" + IgniteUuid.randomUuid() + "'");
+    }
+
+    /** */
+    @Test
+    public void testCancelUnknownService() {
+        execute(killCli, KILL_SVC_QRY + " 'unknown'");
+    }
+
+    /** */
+    @Test
+    public void testCancelUnknownTx() {
+        execute(killCli, KILL_TX_QRY + " 'unknown'");
     }
 
     /**

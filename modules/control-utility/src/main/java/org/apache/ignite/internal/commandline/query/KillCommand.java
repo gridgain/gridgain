@@ -27,12 +27,23 @@ import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.visor.client.VisorClientConnectionDropTask;
+import org.apache.ignite.internal.visor.compute.VisorComputeCancelSessionTask;
+import org.apache.ignite.internal.visor.compute.VisorComputeCancelSessionTaskArg;
 import org.apache.ignite.internal.visor.query.VisorContinuousQueryCancelTask;
 import org.apache.ignite.internal.visor.query.VisorContinuousQueryCancelTaskArg;
 import org.apache.ignite.internal.visor.query.VisorQueryCancelOnInitiatorTask;
 import org.apache.ignite.internal.visor.query.VisorQueryCancelOnInitiatorTaskArg;
 import org.apache.ignite.internal.visor.query.VisorScanQueryCancelTask;
 import org.apache.ignite.internal.visor.query.VisorScanQueryCancelTaskArg;
+import org.apache.ignite.internal.visor.service.VisorCancelServiceTask;
+import org.apache.ignite.internal.visor.service.VisorCancelServiceTaskArg;
+import org.apache.ignite.internal.visor.tx.VisorTxOperation;
+import org.apache.ignite.internal.visor.tx.VisorTxTask;
+import org.apache.ignite.internal.visor.tx.VisorTxTaskArg;
+import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.mxbean.ComputeMXBean;
+import org.apache.ignite.mxbean.QueryMXBean;
+import org.apache.ignite.mxbean.TransactionsMXBean;
 
 import static java.util.Collections.singletonMap;
 import static org.apache.ignite.internal.QueryMXBeanImpl.EXPECTED_GLOBAL_QRY_ID_FORMAT;
@@ -41,15 +52,21 @@ import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.TaskExecutor.BROADCAST_UUID;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
 import static org.apache.ignite.internal.commandline.query.KillSubcommand.CLIENT;
+import static org.apache.ignite.internal.commandline.query.KillSubcommand.COMPUTE;
 import static org.apache.ignite.internal.commandline.query.KillSubcommand.CONTINUOUS;
 import static org.apache.ignite.internal.commandline.query.KillSubcommand.SCAN;
+import static org.apache.ignite.internal.commandline.query.KillSubcommand.SERVICE;
 import static org.apache.ignite.internal.commandline.query.KillSubcommand.SQL;
+import static org.apache.ignite.internal.commandline.query.KillSubcommand.TRANSACTION;
 import static org.apache.ignite.internal.sql.command.SqlKillQueryCommand.parseGlobalQueryId;
 
 /**
  * control.sh kill command.
  *
  * @see KillSubcommand
+ * @see QueryMXBean
+ * @see ComputeMXBean
+ * @see TransactionsMXBean
  */
 public class KillCommand implements Command<Object> {
     /** Command argument. */
@@ -97,6 +114,37 @@ public class KillCommand implements Command<Object> {
         }
 
         switch (cmd) {
+            case COMPUTE:
+                taskArgs = new VisorComputeCancelSessionTaskArg(
+                    IgniteUuid.fromString(argIter.nextArg("Expected compute task id.")));
+
+                taskName = VisorComputeCancelSessionTask.class.getName();
+
+                nodeId = null;
+
+                break;
+
+            case SERVICE:
+                taskArgs = new VisorCancelServiceTaskArg(argIter.nextArg("Expected service name."));
+
+                taskName = VisorCancelServiceTask.class.getName();
+
+                nodeId = null;
+
+                break;
+
+            case TRANSACTION:
+                String xid = argIter.nextArg("Expected transaction id.");
+
+                taskArgs = new VisorTxTaskArg(VisorTxOperation.KILL, null, null, null, null, null, null, xid, null,
+                    null, null);
+
+                taskName = VisorTxTask.class.getName();
+
+                nodeId = null;
+
+                break;
+
             case SQL:
                 T2<UUID, Long> ids = parseGlobalQueryId(argIter.nextArg("Expected SQL query id."));
                 if (ids == null)
@@ -149,6 +197,14 @@ public class KillCommand implements Command<Object> {
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger log) {
+        Command.usage(log, "Kill compute task by session id:", KILL, singletonMap("session_id", "Session identifier."),
+            COMPUTE.toString(), "session_id");
+
+        Command.usage(log, "Kill service by name:", KILL, singletonMap("name", "Service name."), SERVICE.toString(), "name");
+
+        Command.usage(log, "Kill transaction by xid:", KILL, singletonMap("xid", "Transaction identifier."),
+            TRANSACTION.toString(), "xid");
+
         Command.usage(log, "Kill sql query by query id:", KILL, singletonMap("query_id", "Query identifier."),
             SQL.toString(), "query_id");
 

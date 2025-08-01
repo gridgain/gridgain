@@ -1405,7 +1405,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     /** */
     @Test
-    public void testCacheClear() throws IgniteCheckedException {
+    public void testCacheClear() {
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--cache", CLEAR.text()));
