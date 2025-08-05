@@ -19,7 +19,9 @@ package org.apache.ignite.internal.managers.communication;
 /** Holder for priority processing. */
 public class PriorityWrapper implements Runnable {
     private final Runnable clo;
+
     private final Byte priority;
+
     private final long initializedTs;
 
     /** */

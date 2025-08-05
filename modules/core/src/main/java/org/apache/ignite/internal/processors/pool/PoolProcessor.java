@@ -466,8 +466,7 @@ public class PoolProcessor extends GridProcessorAdapter {
             cfg.getQueryThreadPoolSize(),
             DFLT_THREAD_KEEP_ALIVE_TIME,
             new PriorityBlockingQueue<>(11, new Comparator<Runnable>() {
-                @Override
-                public int compare(Runnable o1, Runnable o2) {
+                @Override public int compare(Runnable o1, Runnable o2) {
                     Byte leftPriority = null;
                     Byte rightPriority = null;
                     long leftTs = 0;
