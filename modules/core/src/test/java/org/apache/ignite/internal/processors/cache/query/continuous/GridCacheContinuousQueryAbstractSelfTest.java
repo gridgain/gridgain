@@ -207,6 +207,11 @@ public abstract class GridCacheContinuousQueryAbstractSelfTest extends GridCommo
 
                     if (!((Map)U.field(proc, "rmtInfos")).isEmpty())
                         return false;
+
+                    CacheContinuousQueryManager mgr = grid(i).context().cache().internalCache(DEFAULT_CACHE_NAME).context().continuousQueries();
+
+                    if (!((Map)U.field(mgr, "lsnrs")).isEmpty())
+                        return false;
                 }
 
                 return true;
