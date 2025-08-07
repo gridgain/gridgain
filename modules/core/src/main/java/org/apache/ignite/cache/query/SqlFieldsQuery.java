@@ -50,6 +50,16 @@ public class SqlFieldsQuery extends Query<List<?>> {
     /** Default value of the update internal batch size. */
     private static final int DFLT_UPDATE_BATCH_SIZE = 1;
 
+    /**
+     * The minimum priority that a query can have.
+     */
+    public static final int MIN_PRIORITY = 0;
+
+    /**
+     * The maximum priority that a query can have.
+     */
+    public static final int MAX_PRIORITY = 10;
+
     /** Threaded query originator. */
     private static ThreadLocal<String> threadedQryInitiatorId = new ThreadLocal<>();
 
@@ -111,6 +121,9 @@ public class SqlFieldsQuery extends Query<List<?>> {
     /** Query label. */
     private @Nullable String label;
 
+    /** Priority. */
+    private byte priority;
+
     /**
      * Copy constructs SQL fields query.
      *
@@ -131,6 +144,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
         qryInitiatorId = qry.qryInitiatorId;
         skipReducerOnUpdate = qry.skipReducerOnUpdate;
         label = qry.label;
+        priority = qry.priority;
     }
 
     /**
@@ -419,6 +433,39 @@ public class SqlFieldsQuery extends Query<List<?>> {
      */
     public boolean isLazy() {
         return lazy;
+    }
+
+    /**
+     * Sets priority for a query.
+     * Queries with higher (numerically greater) priority will be processed faster.
+     *
+     * @param priority priority to set this query to
+     *
+     * @throws IllegalArgumentException  If the priority is not in the
+     *               range {@code MIN_PRIORITY} to
+     *               {@code MAX_PRIORITY}.
+     * @see        #MAX_PRIORITY
+     * @see        #MIN_PRIORITY
+     * @return {@code this} for chaining.
+     */
+    public SqlFieldsQuery setPriority(int priority) {
+        A.ensure(priority >= MIN_PRIORITY && priority <= MAX_PRIORITY, "Priority should be in range 0..10");
+
+        this.priority = (byte)priority;
+
+        return this;
+    }
+
+    /**
+     * Gets the query priority.
+     * Default is 0.
+     * @see        #MAX_PRIORITY
+     * @see        #MIN_PRIORITY
+     *
+     * @return Query priority.
+     */
+    public byte priority() {
+        return priority;
     }
 
     /**

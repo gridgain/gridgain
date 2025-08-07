@@ -34,6 +34,7 @@ import org.apache.ignite.internal.processors.query.LongRunningQueryThrottlingTes
 import org.apache.ignite.internal.processors.query.SqlLocalQueryConnectionAndStatementTest;
 import org.apache.ignite.internal.processors.query.SqlPartOfComplexPkLookupTest;
 import org.apache.ignite.internal.processors.query.SqlQueriesTopologyMappingTest;
+import org.apache.ignite.internal.processors.query.SqlQueryPriorityTest;
 import org.apache.ignite.internal.processors.query.h2.CacheQueryEntityWithDateTimeApiFieldsTest;
 import org.apache.ignite.internal.processors.query.h2.DmlStatementsProcessorTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.CacheQueryMemoryLeakTest;
@@ -156,7 +157,8 @@ import org.junit.runners.Suite;
     ScriptTestSuite.class,
     OOMLeadsTest.class,
 
-    SqlPageLocksDumpTest.class
+    SqlPageLocksDumpTest.class,
+    SqlQueryPriorityTest.class
 })
 public class IgniteBinaryCacheQueryTestSuite4 {
     /** Setup lazy mode default. */
