@@ -437,7 +437,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
 
     /**
      * Sets priority for a query.
-     * Queries with higher priority will be processed faster.
+     * Queries with higher (numerically greater) priority will be processed faster.
      *
      * @param priority priority to set this query to
      *

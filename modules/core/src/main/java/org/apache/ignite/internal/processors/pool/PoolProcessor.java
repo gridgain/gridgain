@@ -465,37 +465,16 @@ public class PoolProcessor extends GridProcessorAdapter {
             cfg.getQueryThreadPoolSize(),
             cfg.getQueryThreadPoolSize(),
             DFLT_THREAD_KEEP_ALIVE_TIME,
-            new PriorityBlockingQueue<>(11, new Comparator<Runnable>() {
+            new PriorityBlockingQueueEx(new Comparator<Runnable>() {
                 @Override public int compare(Runnable o1, Runnable o2) {
-                    Byte leftPriority = null;
-                    Byte rightPriority = null;
-                    long leftTs = 0;
-                    long rightTs = 0;
+                    PriorityWrapper left = (PriorityWrapper)o1;
+                    PriorityWrapper right = (PriorityWrapper)o2;
 
-                    if (o1 instanceof PriorityWrapper) {
-                        PriorityWrapper left = (PriorityWrapper)o1;
-                        leftPriority = (byte)-left.priority();
-                        leftTs = left.initializedTs();
-                    }
+                    int comp = Byte.compare((byte)-left.priority(), (byte)-right.priority());
 
-                    if (o2 instanceof PriorityWrapper) {
-                        PriorityWrapper right = (PriorityWrapper)o2;
-                        rightPriority = (byte)-right.priority();
-                        rightTs = right.initializedTs();
-                    }
-
-                    if (leftPriority != null && rightPriority != null) {
-                        int comp = Byte.compare(leftPriority, rightPriority);
-                        return comp == 0 ? Long.compare(leftTs, rightTs) : comp;
-                    }
-                    else if (leftPriority != null || rightPriority != null) {
-                        return leftPriority != null ? leftPriority : rightPriority;
-                    }
-                    else {
-                        // Operations on PriorityBlockingQueue make no guarantees about the ordering of elements
-                        // with equal priority, thus initialization timestamp need to be used if priorities are equal.
-                        return Long.compare(leftTs, rightTs);
-                    }
+                    // Operations on PriorityBlockingQueue make no guarantees about the ordering of elements
+                    // with equal priority, thus initialization timestamp need to be used if priorities are equal.
+                    return comp != 0 ? comp : Long.compare(left.initializedTs(), right.initializedTs());
                 }
             }),
             GridIoPolicy.QUERY_POOL,
@@ -567,6 +546,24 @@ public class PoolProcessor extends GridProcessorAdapter {
 
                 customExecs.put(execCfg.getName(), exec);
             }
+        }
+    }
+
+    private static class PriorityBlockingQueueEx extends PriorityBlockingQueue<Runnable> {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** */
+        PriorityBlockingQueueEx(Comparator<Runnable> comparator) {
+            super(11, comparator);
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean offer(Runnable exec) {
+            if (!(exec instanceof PriorityWrapper)) {
+                exec = new PriorityWrapper(exec);
+            }
+            return super.offer(exec);
         }
     }
 

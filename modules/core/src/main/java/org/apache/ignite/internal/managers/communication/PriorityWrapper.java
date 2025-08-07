@@ -20,7 +20,7 @@ package org.apache.ignite.internal.managers.communication;
 public class PriorityWrapper implements Runnable {
     private final Runnable clo;
 
-    private final Byte priority;
+    private final byte priority;
 
     private final long initializedTs;
 
@@ -28,7 +28,12 @@ public class PriorityWrapper implements Runnable {
     public PriorityWrapper(Runnable clo, byte priority) {
         this.clo = clo;
         this.priority = priority;
-        initializedTs = System.nanoTime();
+        initializedTs = System.currentTimeMillis();
+    }
+
+    /** */
+    public PriorityWrapper(Runnable clo) {
+        this(clo, (byte)0);
     }
 
     /** */
@@ -39,11 +44,14 @@ public class PriorityWrapper implements Runnable {
     /**
      * @return Current priority.
      */
-    public Byte priority() {
+    public byte priority() {
         return priority;
     }
 
     /**
+     * This value is used to preserve natural ordering for tasks with the same priority.
+     * Because PriorityQueue doesn't guarantee FIFO order for the same priority.
+     *
      * @return Initialized ts.
      */
     public long initializedTs() {

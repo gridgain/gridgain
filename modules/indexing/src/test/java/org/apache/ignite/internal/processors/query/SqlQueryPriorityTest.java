@@ -114,7 +114,7 @@ public class SqlQueryPriorityTest extends AbstractIndexingCommonTest {
      * @throws Exception
      */
     @Test
-    public void testPriritizedQuery() throws Exception {
+    public void testPrioritizedQuery() throws Exception {
         CacheConfiguration<Integer, Object> cacheCfg = new CacheConfiguration<Integer, Object>("cache")
                 .setSqlSchema("PUBLIC");
 
@@ -193,7 +193,7 @@ public class SqlQueryPriorityTest extends AbstractIndexingCommonTest {
     }
 
     @Test
-    public void testPriritizedQueryParams() {
+    public void testPrioritizedQueryParams() {
         IgniteCache<Object, Object> cache = isClient
                 ? client.getOrCreateCache(DEFAULT_CACHE_NAME)
                 : grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
