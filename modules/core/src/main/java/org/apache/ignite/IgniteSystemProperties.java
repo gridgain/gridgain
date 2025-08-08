@@ -134,8 +134,8 @@ import static org.apache.ignite.internal.util.GridLogThrottle.DFLT_LOG_THROTTLE_
 import static org.apache.ignite.internal.util.GridReflectionCache.DFLT_REFLECTION_CACHE_SIZE;
 import static org.apache.ignite.internal.util.GridUnsafe.DFLT_MEMORY_PER_BYTE_COPY_THRESHOLD;
 import static org.apache.ignite.internal.util.IgniteExceptionRegistry.DEFAULT_QUEUE_SIZE;
-import static org.apache.ignite.internal.util.IgniteUtils.*;
 import static org.apache.ignite.internal.util.IgniteUtils.DFLT_MBEAN_APPEND_CLASS_LOADER_ID;
+import static org.apache.ignite.internal.util.IgniteUtils.IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT;
 import static org.apache.ignite.internal.util.StripedExecutor.DFLT_DATA_STREAMING_EXECUTOR_SERVICE_TASKS_STEALING_THRESHOLD;
 import static org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor.DFLT_NIO_RECOVERY_DESCRIPTOR_RESERVATION_TIMEOUT;
 import static org.apache.ignite.internal.util.nio.GridNioServer.DFLT_IO_BALANCE_PERIOD;
