@@ -38,6 +38,7 @@ import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.table.Table;
 import org.gridgain.internal.h2.table.TableFilter;
 
+import static org.apache.ignite.internal.util.IgniteUtils.IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT;
 import static org.apache.ignite.internal.util.IgniteUtils.MAX_INLINE_SIZE;
 
 /**
@@ -217,7 +218,7 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
         }
 
         int propSize = IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE,
-                MAX_INLINE_SIZE);
+                IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT);
 
         if (propSize > MAX_INLINE_SIZE) {
             U.warn(log, "System property IGNITE_MAX_INDEX_PAYLOAD_SIZE exceeds maximum allowed size. Ignoring" +
