@@ -135,6 +135,7 @@ import static org.apache.ignite.internal.util.GridReflectionCache.DFLT_REFLECTIO
 import static org.apache.ignite.internal.util.GridUnsafe.DFLT_MEMORY_PER_BYTE_COPY_THRESHOLD;
 import static org.apache.ignite.internal.util.IgniteExceptionRegistry.DEFAULT_QUEUE_SIZE;
 import static org.apache.ignite.internal.util.IgniteUtils.DFLT_MBEAN_APPEND_CLASS_LOADER_ID;
+import static org.apache.ignite.internal.util.IgniteUtils.IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT;
 import static org.apache.ignite.internal.util.StripedExecutor.DFLT_DATA_STREAMING_EXECUTOR_SERVICE_TASKS_STEALING_THRESHOLD;
 import static org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor.DFLT_NIO_RECOVERY_DESCRIPTOR_RESERVATION_TIMEOUT;
 import static org.apache.ignite.internal.util.nio.GridNioServer.DFLT_IO_BALANCE_PERIOD;
@@ -1141,7 +1142,7 @@ public final class IgniteSystemProperties {
      * index store is disabled.
      */
     @SystemProperty(value = "Maximum payload size in bytes for H2TreeIndex. " +
-        "0 means that inline index store is disabled", type = Integer.class, defaults = "" + IgniteUtils.MAX_INLINE_SIZE)
+        "0 means that inline index store is disabled", type = Integer.class, defaults = "" + IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT)
     public static final String IGNITE_MAX_INDEX_PAYLOAD_SIZE = "IGNITE_MAX_INDEX_PAYLOAD_SIZE";
 
     /**

@@ -423,6 +423,9 @@ public abstract class IgniteUtils {
     /** Ignite package. */
     public static final String IGNITE_PKG = "org.apache.ignite.";
 
+    /** Default value for {@code IGNITE_MAX_INDEX_PAYLOAD_SIZE} */
+    public static final int IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT = 64;
+
     /**
      * To avoid tree corruption, at least two items should fit into one page of H2 index tree.
      * So maximum payload size equals: P = (PS - H - 3L) / 2 - X , where P - Payload size, PS - page size, H - page
