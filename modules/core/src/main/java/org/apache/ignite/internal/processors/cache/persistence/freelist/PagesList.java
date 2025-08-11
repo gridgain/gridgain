@@ -1332,6 +1332,8 @@ public abstract class PagesList extends DataStructure {
      */
     protected long takeEmptyPage(int bucket, @Nullable IOVersions initIoVers,
         IoStatisticsHolder statHolder) throws IgniteCheckedException {
+        int cnt = 0;
+
         PagesCache pagesCache = getBucketCache(bucket, false);
 
         long pageId;
@@ -1350,12 +1352,18 @@ public abstract class PagesList extends DataStructure {
         }
 
         for (int lockAttempt = 0; ;) {
+            cnt++;
+
             Stripe stripe = getPageForTake(bucket);
 
             if (stripe == null)
                 return 0L;
 
             final long tailId = stripe.tailId;
+
+            if (cnt > 10) {
+                log.info(String.format("tailId=%s", tailId));
+            }
 
             // Stripe was removed from bucket concurrently.
             if (tailId == 0L)
@@ -1366,12 +1374,20 @@ public abstract class PagesList extends DataStructure {
             try {
                 long tailAddr = writeLockPage(tailId, tailPage, bucket, lockAttempt++, null); // Explicit check.
 
+                if (cnt > 10) {
+                    log.info(String.format("tailAddr=%s", tailAddr));
+                }
+
                 if (tailAddr == 0L)
                     continue;
 
                 if (stripe.empty || stripe.tailId != tailId) {
                     // Another thread took the last page.
                     writeUnlock(tailId, tailPage, tailAddr, false);
+
+                    if (cnt > 10) {
+                        log.info(String.format("bucketSize=%s", bucketsSize.get(bucket)));
+                    }
 
                     if (bucketsSize.get(bucket) > 0) {
                         lockAttempt--; // Ignore current attempt.
@@ -1394,7 +1410,13 @@ public abstract class PagesList extends DataStructure {
                 try {
                     PagesListNodeIO io = PagesListNodeIO.VERSIONS.forPage(tailAddr);
 
-                    if (io.getNextId(tailAddr) != 0) {
+                    long nextId = io.getNextId(tailAddr);
+
+                    if (cnt > 10) {
+                        log.info(String.format("tailAddr=%s, nextId=%s", tailAddr, nextId));
+                    }
+
+                    if (nextId != 0) {
                         // It is not a tail anymore, retry.
                         continue;
                     }
