@@ -90,9 +90,20 @@ public abstract class PagesList extends DataStructure {
     public static final int DFLT_PAGES_LIST_CACHING_EMPTY_FLUSH_GC_THRESHOLD = 10;
 
     /** */
+    public static final int DFLT_LOOP_CNT = 10;
+
+    /** */
+    @SystemProperty(value = "Loop count", type = Long.class,
+        defaults = "" + DFLT_LOOP_CNT)
+    public static final String IGNITE_LOOP_CNT = "IGNITE_LOOP_CNT";
+
+    /** */
     @SystemProperty(value = "Pages cache maximum size", type = Long.class,
         defaults = "" + DFLT_PAGES_LIST_CACHING_MAX_CACHE_SIZE)
     public static final String IGNITE_PAGES_LIST_CACHING_MAX_CACHE_SIZE = "IGNITE_PAGES_LIST_CACHING_MAX_CACHE_SIZE";
+
+    /** */
+    private static final int LOOP_CNT = IgniteSystemProperties.getInteger(IGNITE_LOOP_CNT, DFLT_LOOP_CNT);
 
     /** */
     @SystemProperty(value = "Stripes count. Must be power of 2", type = Long.class,
@@ -1361,7 +1372,7 @@ public abstract class PagesList extends DataStructure {
 
             final long tailId = stripe.tailId;
 
-            if (cnt > 10) {
+            if (cnt > LOOP_CNT) {
                 log.info(String.format("tailId=%s", tailId));
             }
 
@@ -1374,7 +1385,7 @@ public abstract class PagesList extends DataStructure {
             try {
                 long tailAddr = writeLockPage(tailId, tailPage, bucket, lockAttempt++, null); // Explicit check.
 
-                if (cnt > 10) {
+                if (cnt > LOOP_CNT) {
                     log.info(String.format("tailAddr=%s", tailAddr));
                 }
 
@@ -1385,7 +1396,7 @@ public abstract class PagesList extends DataStructure {
                     // Another thread took the last page.
                     writeUnlock(tailId, tailPage, tailAddr, false);
 
-                    if (cnt > 10) {
+                    if (cnt > LOOP_CNT) {
                         log.info(String.format("bucketSize=%s", bucketsSize.get(bucket)));
                     }
 
@@ -1412,7 +1423,7 @@ public abstract class PagesList extends DataStructure {
 
                     long nextId = io.getNextId(tailAddr);
 
-                    if (cnt > 10) {
+                    if (cnt > LOOP_CNT) {
                         log.info(String.format("tailAddr=%s, nextId=%s", tailAddr, nextId));
                     }
 
