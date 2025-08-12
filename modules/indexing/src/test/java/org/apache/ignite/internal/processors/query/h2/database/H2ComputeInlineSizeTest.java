@@ -37,11 +37,13 @@ import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.Stri
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.TimeInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.TimestampInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.UuidInlineIndexColumn;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.value.TypeInfo;
 import org.gridgain.internal.h2.value.Value;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE;
 import static org.apache.ignite.internal.util.IgniteUtils.MAX_INLINE_SIZE;
 
 /** Tests for the computation of default inline size. */
@@ -179,6 +181,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
      * 2) Check that computed size is equal to max size.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_MAX_INDEX_PAYLOAD_SIZE, value = Integer.MAX_VALUE + "")
     public void testMaximumSizeUsedForLargeIndex() {
         Column c = new Column("c", new TypeInfo(Value.STRING, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null));
         c.setOriginalSQL("VARCHAR(" + (MAX_INLINE_SIZE + 1) + ")");
@@ -197,6 +200,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
      * 2) Check that computed size is equal to max size.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_MAX_INDEX_PAYLOAD_SIZE, value = Integer.MAX_VALUE + "")
     public void testConfiguredMaximumSizeUsedForLargeIndex() {
         int cfgMaxSize = 100;
 
@@ -211,6 +215,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
+    @WithSystemProperty(key = IGNITE_MAX_INDEX_PAYLOAD_SIZE, value = Integer.MAX_VALUE + "")
     public void testTooBigConfiguredInlineSizeNotUsed() {
         List<Integer> valueTypes = Lists.newArrayList(
                 Value.BOOLEAN, Value.SHORT, Value.DATE, Value.DATE, Value.DOUBLE, Value.FLOAT,
@@ -231,6 +236,7 @@ public class H2ComputeInlineSizeTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
+    @WithSystemProperty(key = IGNITE_MAX_INDEX_PAYLOAD_SIZE, value = Integer.MAX_VALUE + "")
     public void testTooBigConfiguredInlineSizeUsedBecauseOneOfFieldsIsNotFixed() {
         List<Integer> valueTypes = Lists.newArrayList(
                 Value.BOOLEAN, Value.SHORT, Value.DATE, Value.DATE, Value.DOUBLE, Value.FLOAT,
