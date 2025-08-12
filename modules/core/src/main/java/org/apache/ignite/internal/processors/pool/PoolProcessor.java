@@ -553,9 +553,14 @@ public class PoolProcessor extends GridProcessorAdapter {
         /** */
         private static final long serialVersionUID = 0L;
 
+        /**
+         * Default capacity.
+         */
+        private static final int DEFAULT_INITIAL_CAPACITY = 11;
+
         /** */
         PriorityBlockingQueueEx(Comparator<Runnable> comparator) {
-            super(11, comparator);
+            super(DEFAULT_INITIAL_CAPACITY, comparator);
         }
 
         /** {@inheritDoc} */
