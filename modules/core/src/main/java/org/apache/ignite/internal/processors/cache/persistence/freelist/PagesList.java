@@ -90,9 +90,31 @@ public abstract class PagesList extends DataStructure {
     public static final int DFLT_PAGES_LIST_CACHING_EMPTY_FLUSH_GC_THRESHOLD = 10;
 
     /** */
+    public static final int DFLT_LOOP_CNT_MIN = 10;
+
+    /** */
+    public static final int DFLT_LOOP_CNT_MAX = 200;
+
+    /** */
+    @SystemProperty(value = "Loop count min", type = Long.class,
+        defaults = "" + DFLT_LOOP_CNT_MIN)
+    public static final String IGNITE_LOOP_CNT_MIN = "IGNITE_LOOP_CNT_MIN";
+
+    /** */
+    @SystemProperty(value = "Loop count max", type = Long.class,
+        defaults = "" + DFLT_LOOP_CNT_MAX)
+    public static final String IGNITE_LOOP_CNT_MAX = "IGNITE_LOOP_CNT_MAX";
+
+    /** */
     @SystemProperty(value = "Pages cache maximum size", type = Long.class,
         defaults = "" + DFLT_PAGES_LIST_CACHING_MAX_CACHE_SIZE)
     public static final String IGNITE_PAGES_LIST_CACHING_MAX_CACHE_SIZE = "IGNITE_PAGES_LIST_CACHING_MAX_CACHE_SIZE";
+
+    /** */
+    private static final int LOOP_CNT_MIN = IgniteSystemProperties.getInteger(IGNITE_LOOP_CNT_MIN, DFLT_LOOP_CNT_MIN);
+
+    /** */
+    private static final int LOOP_CNT_MAX = IgniteSystemProperties.getInteger(IGNITE_LOOP_CNT_MAX, DFLT_LOOP_CNT_MAX);
 
     /** */
     @SystemProperty(value = "Stripes count. Must be power of 2", type = Long.class,
@@ -1332,6 +1354,8 @@ public abstract class PagesList extends DataStructure {
      */
     protected long takeEmptyPage(int bucket, @Nullable IOVersions initIoVers,
         IoStatisticsHolder statHolder) throws IgniteCheckedException {
+        int cnt = 0;
+
         PagesCache pagesCache = getBucketCache(bucket, false);
 
         long pageId;
@@ -1350,12 +1374,18 @@ public abstract class PagesList extends DataStructure {
         }
 
         for (int lockAttempt = 0; ;) {
+            cnt++;
+
             Stripe stripe = getPageForTake(bucket);
 
             if (stripe == null)
                 return 0L;
 
             final long tailId = stripe.tailId;
+
+            if (cnt > LOOP_CNT_MIN && cnt < LOOP_CNT_MAX) {
+                log.info(String.format("tailId=%s", tailId));
+            }
 
             // Stripe was removed from bucket concurrently.
             if (tailId == 0L)
@@ -1366,12 +1396,20 @@ public abstract class PagesList extends DataStructure {
             try {
                 long tailAddr = writeLockPage(tailId, tailPage, bucket, lockAttempt++, null); // Explicit check.
 
+                if (cnt > LOOP_CNT_MIN && cnt < LOOP_CNT_MAX) {
+                    log.info(String.format("tailAddr=%s", tailAddr));
+                }
+
                 if (tailAddr == 0L)
                     continue;
 
                 if (stripe.empty || stripe.tailId != tailId) {
                     // Another thread took the last page.
                     writeUnlock(tailId, tailPage, tailAddr, false);
+
+                    if (cnt > LOOP_CNT_MIN && cnt < LOOP_CNT_MAX) {
+                        log.info(String.format("bucketSize=%s", bucketsSize.get(bucket)));
+                    }
 
                     if (bucketsSize.get(bucket) > 0) {
                         lockAttempt--; // Ignore current attempt.
@@ -1394,7 +1432,13 @@ public abstract class PagesList extends DataStructure {
                 try {
                     PagesListNodeIO io = PagesListNodeIO.VERSIONS.forPage(tailAddr);
 
-                    if (io.getNextId(tailAddr) != 0) {
+                    long nextId = io.getNextId(tailAddr);
+
+                    if (cnt > LOOP_CNT_MIN && cnt < LOOP_CNT_MAX) {
+                        log.info(String.format("tailAddr=%s, nextId=%s", tailAddr, nextId));
+                    }
+
+                    if (nextId != 0) {
                         // It is not a tail anymore, retry.
                         continue;
                     }

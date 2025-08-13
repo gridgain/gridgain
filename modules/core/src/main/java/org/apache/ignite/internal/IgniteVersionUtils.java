@@ -62,10 +62,7 @@ public class IgniteVersionUtils {
      * Static initializer.
      */
     static {
-        VER_STR = IgniteProperties.get("ignite.version")
-            .replace(".a", "-a") // Backward compatibility fix.
-            .replace(".b", "-b")
-            .replace(".final", "-final");
+        VER_STR = makeVersionBackwardsCompatible(IgniteProperties.get("ignite.version"));
 
         BUILD_TSTAMP_FROM_PROPERTY = IgniteProperties.get("ignite.build");
 
@@ -107,6 +104,13 @@ public class IgniteVersionUtils {
      */
     public static String formatBuildTimeStamp(long ts) {
         return BUILD_TSTAMP_DATE_FORMATTER.format(Instant.ofEpochMilli(ts));
+    }
+
+    /** */
+    public static String makeVersionBackwardsCompatible(String ver) {
+        return ver.replace(".a", "-a") // Backward compatibility fix.
+            .replace(".b", "-b")
+            .replace(".final", "-final");
     }
 
     /**
