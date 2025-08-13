@@ -62,7 +62,7 @@ public class IgniteVersionUtils {
      * Static initializer.
      */
     static {
-        VER_STR = makeVersionBackwardsCompatible(IgniteProperties.get("ignite.version"));
+        VER_STR = "8.9.22-p1";//makeVersionBackwardsCompatible(IgniteProperties.get("ignite.version"));
 
         BUILD_TSTAMP_FROM_PROPERTY = IgniteProperties.get("ignite.build");
 
