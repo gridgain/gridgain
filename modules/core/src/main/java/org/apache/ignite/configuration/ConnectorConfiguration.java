@@ -126,6 +126,8 @@ public class ConnectorConfiguration {
     /** Client message interceptor. */
     private ConnectorMessageInterceptor msgInterceptor;
 
+    private Factory<?> jettyServerFactory;
+
     /**
      * Creates client connection configuration with all default values.
      */
@@ -162,6 +164,7 @@ public class ConnectorConfiguration {
         sslFactory = cfg.getSslFactory();
         idleQryCurTimeout = cfg.getIdleQueryCursorTimeout();
         idleQryCurCheckFreq = cfg.getIdleQueryCursorCheckFrequency();
+        jettyServerFactory = cfg.jettyServerFactory();
     }
 
     /**
@@ -193,6 +196,16 @@ public class ConnectorConfiguration {
      */
     public String getJettyPath() {
         return jettyPath;
+    }
+
+    public Factory<?> getJettyServerFactory() {
+        return jettyServerFactory;
+    }
+
+    public ConnectorConfiguration setJettyServerFactory(Factory<?> jettyServerFactory) {
+        this.jettyServerFactory = jettyServerFactory;
+
+        return this;
     }
 
     /**
