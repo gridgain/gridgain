@@ -19,8 +19,10 @@ package org.apache.ignite.internal.processors.cache.tree.updatelog;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
@@ -34,11 +36,13 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.AbstractFreeList;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.PagesList;
+import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListNodeIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiClosure;
@@ -164,6 +168,9 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
         log.info(String.format("cacheOrGroupName=%s, groupId=%s, partId=%s", grp.cacheOrGroupName(), grpId, part));
 
+        if (reuseList instanceof PagesList)
+            printMeta(((PagesList)reuseList).metaPageId());
+
         for (PagesList.Stripe stripe : stripes) {
             long tailId = stripe.tailId;
 
@@ -196,6 +203,56 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
             printStripeList("prev", previousId, PagesListNodeIO::getPreviousId);
             printStripeList("next", nextId, PagesListNodeIO::getNextId);
+        }
+    }
+
+    private void printMeta(long metaPageId) throws IgniteCheckedException {
+        while (metaPageId != 0) {
+            long nextPageId;
+            long metaPage = acquirePage(metaPageId, IoStatisticsHolderNoOp.INSTANCE);
+
+            try {
+                long metaAddr = readLock(metaPageId, metaPage);
+
+                if (metaAddr == 0) {
+                    log.warning(String.format("meta-lock-failed[pageId=%s]", toHexString(metaPageId)));
+
+                    return;
+                }
+
+                try {
+                    PagesListMetaIO io = PagesListMetaIO.VERSIONS.forPage(metaAddr);
+
+                    Map<Integer, GridLongList> map = new TreeMap<>();
+                    Map<Integer, String[]> strMap = new TreeMap<>();
+                    io.getBucketsData(metaAddr, map);
+                    for (Map.Entry<Integer, GridLongList> entry : map.entrySet()) {
+                        GridLongList longLost = entry.getValue();
+                        String[] strList = new String[longLost.size()];
+                        for (int i = 0; i < longLost.size(); i++) {
+                            strList[i] = toHexString(longLost.get(i));
+                        }
+                        strMap.put(entry.getKey(), strList);
+                    }
+
+                    long nextMetaPageId = io.getNextMetaPageId(metaAddr);
+
+                    log.info(String.format(
+                        "meta[pageId=%s, nextMetaPageId=%s, pages=%s]",
+                        toHexString(metaPageId),
+                        toHexString(nextMetaPageId),
+                        strMap
+                    ));
+
+                    nextPageId = nextMetaPageId;
+                } finally {
+                    readUnlock(metaPageId, metaPage, metaAddr);
+                }
+            } finally {
+                releasePage(metaPageId, metaPage);
+            }
+
+            metaPageId = nextPageId;
         }
     }
 
