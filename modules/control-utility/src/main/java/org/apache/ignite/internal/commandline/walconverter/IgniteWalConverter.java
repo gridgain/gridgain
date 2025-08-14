@@ -19,11 +19,14 @@ package org.apache.ignite.internal.commandline.walconverter;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
@@ -32,6 +35,7 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
+import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.TimeStampRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
@@ -226,8 +230,12 @@ public class IgniteWalConverter {
 
             dataRecord.setWriteEntries(entryWrappers);
         }
-        else if (walRecord instanceof MetastoreDataRecord)
-            walRecord = new MetastoreDataRecordWrapper((MetastoreDataRecord)walRecord, sensitiveData);
+        else if (walRecord instanceof MetastoreDataRecord) {
+            walRecord = new MetastoreDataRecordWrapper((MetastoreDataRecord) walRecord, sensitiveData);
+        }
+        else if (walRecord instanceof PageSnapshot) {
+            return new PageSnapshotRecordWrapper((PageSnapshot) walRecord, TARGET_IOS).toString();
+        }
 
         return walRecord.toString();
     }
@@ -259,4 +267,79 @@ public class IgniteWalConverter {
 
         return filter != null ? new FilteredWalIterator(walIter, filter) : walIter;
     }
+
+    private static final Map<String, Integer> IO_TYPES_MAP = new HashMap<>();
+
+    static {
+        // Types taken from org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO
+        IO_TYPES_MAP.put("T_DATA", (int) PageIO.T_DATA);
+        IO_TYPES_MAP.put("T_BPLUS_META", (int) PageIO.T_BPLUS_META);
+        IO_TYPES_MAP.put("T_H2_REF_LEAF", (int) PageIO.T_H2_REF_LEAF);
+        IO_TYPES_MAP.put("T_H2_REF_INNER", (int) PageIO.T_H2_REF_INNER);
+        IO_TYPES_MAP.put("T_DATA_REF_INNER", (int) PageIO.T_DATA_REF_INNER);
+        IO_TYPES_MAP.put("T_DATA_REF_LEAF", (int) PageIO.T_DATA_REF_LEAF);
+        IO_TYPES_MAP.put("T_METASTORE_INNER", (int) PageIO.T_METASTORE_INNER);
+        IO_TYPES_MAP.put("T_METASTORE_LEAF", (int) PageIO.T_METASTORE_LEAF);
+        IO_TYPES_MAP.put("T_PENDING_REF_INNER", (int) PageIO.T_PENDING_REF_INNER);
+        IO_TYPES_MAP.put("T_PENDING_REF_LEAF", (int) PageIO.T_PENDING_REF_LEAF);
+        IO_TYPES_MAP.put("T_META", (int) PageIO.T_META);
+        IO_TYPES_MAP.put("T_PAGE_LIST_META", (int) PageIO.T_PAGE_LIST_META);
+        IO_TYPES_MAP.put("T_PAGE_LIST_NODE", (int) PageIO.T_PAGE_LIST_NODE);
+        IO_TYPES_MAP.put("T_PART_META", (int) PageIO.T_PART_META);
+        IO_TYPES_MAP.put("T_PAGE_UPDATE_TRACKING", (int) PageIO.T_PAGE_UPDATE_TRACKING);
+        IO_TYPES_MAP.put("T_CACHE_ID_AWARE_DATA_REF_INNER", (int) PageIO.T_CACHE_ID_AWARE_DATA_REF_INNER);
+        IO_TYPES_MAP.put("T_CACHE_ID_AWARE_DATA_REF_LEAF", (int) PageIO.T_CACHE_ID_AWARE_DATA_REF_LEAF);
+        IO_TYPES_MAP.put("T_CACHE_ID_AWARE_PENDING_REF_INNER", (int) PageIO.T_CACHE_ID_AWARE_PENDING_REF_INNER);
+        IO_TYPES_MAP.put("T_CACHE_ID_AWARE_PENDING_REF_LEAF", (int) PageIO.T_CACHE_ID_AWARE_PENDING_REF_LEAF);
+        IO_TYPES_MAP.put("T_PART_CNTRS", (int) PageIO.T_PART_CNTRS);
+        IO_TYPES_MAP.put("T_DATA_METASTORAGE", (int) PageIO.T_DATA_METASTORAGE);
+        IO_TYPES_MAP.put("T_DATA_REF_METASTORAGE_INNER", (int) PageIO.T_DATA_REF_METASTORAGE_INNER);
+        IO_TYPES_MAP.put("T_DATA_REF_METASTORAGE_LEAF", (int) PageIO.T_DATA_REF_METASTORAGE_LEAF);
+        IO_TYPES_MAP.put("T_DATA_REF_MVCC_INNER", (int) PageIO.T_DATA_REF_MVCC_INNER);
+        IO_TYPES_MAP.put("T_DATA_REF_MVCC_LEAF", (int) PageIO.T_DATA_REF_MVCC_LEAF);
+        IO_TYPES_MAP.put("T_CACHE_ID_DATA_REF_MVCC_INNER", (int) PageIO.T_CACHE_ID_DATA_REF_MVCC_INNER);
+        IO_TYPES_MAP.put("T_CACHE_ID_DATA_REF_MVCC_LEAF", (int) PageIO.T_CACHE_ID_DATA_REF_MVCC_LEAF);
+        IO_TYPES_MAP.put("T_H2_MVCC_REF_LEAF", (int) PageIO.T_H2_MVCC_REF_LEAF);
+        IO_TYPES_MAP.put("T_H2_MVCC_REF_INNER", (int) PageIO.T_H2_MVCC_REF_INNER);
+        IO_TYPES_MAP.put("T_TX_LOG_LEAF", (int) PageIO.T_TX_LOG_LEAF);
+        IO_TYPES_MAP.put("T_TX_LOG_INNER", (int) PageIO.T_TX_LOG_INNER);
+        IO_TYPES_MAP.put("T_DATA_PART", (int) PageIO.T_DATA_PART);
+        IO_TYPES_MAP.put("T_MARKER_PAGE", (int) PageIO.T_MARKER_PAGE);
+        IO_TYPES_MAP.put("T_DEFRAG_LINK_MAPPING_INNER", (int) PageIO.T_DEFRAG_LINK_MAPPING_INNER);
+        IO_TYPES_MAP.put("T_DEFRAG_LINK_MAPPING_LEAF", (int) PageIO.T_DEFRAG_LINK_MAPPING_LEAF);
+        IO_TYPES_MAP.put("T_H2_EX_REF_LEAF_START", (int) PageIO.T_H2_EX_REF_LEAF_START);
+        IO_TYPES_MAP.put("T_H2_EX_REF_LEAF_END", (int) PageIO.T_H2_EX_REF_LEAF_END);
+        IO_TYPES_MAP.put("T_H2_EX_REF_INNER_START", (int) PageIO.T_H2_EX_REF_INNER_START);
+        IO_TYPES_MAP.put("T_H2_EX_REF_INNER_END", (int) PageIO.T_H2_EX_REF_INNER_END);
+        IO_TYPES_MAP.put("T_H2_EX_REF_MVCC_LEAF_START", (int) PageIO.T_H2_EX_REF_MVCC_LEAF_START);
+        IO_TYPES_MAP.put("T_H2_EX_REF_MVCC_LEAF_END", (int) PageIO.T_H2_EX_REF_MVCC_LEAF_END);
+        IO_TYPES_MAP.put("T_H2_EX_REF_MVCC_INNER_START", (int) PageIO.T_H2_EX_REF_MVCC_INNER_START);
+        IO_TYPES_MAP.put("T_H2_EX_REF_MVCC_INNER_END", (int) PageIO.T_H2_EX_REF_MVCC_INNER_END);
+
+        // DR IOs
+        IO_TYPES_MAP.put("T_UPDATE_LOG_REF_INNER", (int) PageIO.T_UPDATE_LOG_REF_INNER & 0xFFFF);
+        IO_TYPES_MAP.put("T_UPDATE_LOG_REF_LEAF", (int) PageIO.T_UPDATE_LOG_REF_LEAF & 0xFFFF);
+        IO_TYPES_MAP.put("T_CACHE_ID_AWARE_UPDATE_LOG_REF_INNER", (int) PageIO.T_CACHE_ID_AWARE_UPDATE_LOG_REF_INNER & 0xFFFF);
+        IO_TYPES_MAP.put("T_CACHE_ID_AWARE_UPDATE_LOG_REF_LEAF", (int) PageIO.T_CACHE_ID_AWARE_UPDATE_LOG_REF_LEAF & 0xFFFF);
+    }
+
+    private static int[] parseTargetIoType(String csv) {
+        String[] typeNames = csv.split(",");
+        List<Integer> l = new ArrayList<>(typeNames.length);
+
+        for (String typeName : typeNames) {
+            Integer typeId = IO_TYPES_MAP.get(typeName);
+            if (typeId != null) {
+                l.add(typeId);
+            }
+        }
+
+        return l.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    private static final String TARGET_IOS_STRING = IgniteSystemProperties.getString("TARGET_IOS_STRING", null);
+
+    private static final int[] TARGET_IOS = TARGET_IOS_STRING != null
+            ? parseTargetIoType(TARGET_IOS_STRING)
+            : new int[]{};
 }
