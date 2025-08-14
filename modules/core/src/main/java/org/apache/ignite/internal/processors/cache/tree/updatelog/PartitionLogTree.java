@@ -160,7 +160,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     private void printReuseList() throws IgniteCheckedException {
         List<PagesList.Stripe> stripes = ((AbstractFreeList)reuseList).getStripes();
 
-        log.info(String.format("cacheGrpName=%s, partId=%s", grpName, part));
+        log.info(String.format("cacheOrGroupName=%s, partId=%s", grp.cacheOrGroupName(), part));
 
         for (PagesList.Stripe stripe : stripes) {
             final long tailPage = acquirePage(stripe.tailId, IoStatisticsHolderNoOp.INSTANCE);
