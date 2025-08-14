@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -40,9 +41,10 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiClosure;
 import org.apache.ignite.maintenance.MaintenanceTask;
 
-import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.PAGE_OVERHEAD;
+import static java.lang.Long.toHexString;
 
 /**
  *
@@ -160,18 +162,87 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     private void printReuseList() throws IgniteCheckedException {
         List<PagesList.Stripe> stripes = ((AbstractFreeList)reuseList).getStripes();
 
-        log.info(String.format("cacheOrGroupName=%s, partId=%s", grp.cacheOrGroupName(), part));
+        log.info(String.format("cacheOrGroupName=%s, groupId=%s, partId=%s", grp.cacheOrGroupName(), grpId, part));
 
         for (PagesList.Stripe stripe : stripes) {
-            final long tailPage = acquirePage(stripe.tailId, IoStatisticsHolderNoOp.INSTANCE);
+            long tailId = stripe.tailId;
 
-            long tailAddr = tailPage + PAGE_OVERHEAD;
+            long nextId;
+            long previousId;
 
-            PagesListNodeIO io = PagesListNodeIO.VERSIONS.forPage(tailAddr);
+            long tailPage = acquirePage(tailId, IoStatisticsHolderNoOp.INSTANCE);
 
-            long nextId = io.getNextId(tailAddr);
+            try {
+                long tailAddr = readLock(tailId, tailPage);
 
-            log.info(String.format("reuseListStripe=[tailId=%s, empty=%s, nextId=%s]", stripe.tailId, stripe.empty, nextId));
+                try {
+                    PagesListNodeIO io = PagesListNodeIO.VERSIONS.forPage(tailAddr);
+                    nextId = io.getNextId(tailAddr);
+                    previousId = io.getPreviousId(tailAddr);
+
+                    log.info(String.format(
+                        "reuseListStripe=[tailId=%s, empty=%s, nextId=%s, previousId=%s]",
+                        toHexString(tailId),
+                        stripe.empty,
+                        toHexString(nextId),
+                        toHexString(previousId)
+                    ));
+                } finally {
+                    readUnlock(tailId, tailPage, tailAddr);
+                }
+            } finally {
+                releasePage(tailId, tailPage);
+            }
+
+            printStripeList("prev", previousId, PagesListNodeIO::getPreviousId);
+            printStripeList("next", nextId, PagesListNodeIO::getNextId);
+        }
+    }
+
+    private void printStripeList(String prefix, long curPageId, IgniteBiClosure<PagesListNodeIO, Long, Long> next) throws IgniteCheckedException {
+        Set<Long> dejaVu = new HashSet<>();
+
+        while (curPageId != 0) {
+            if (!dejaVu.add(curPageId)) {
+                log.warning(String.format(prefix + "-cycle-detected[pageId=%s]", toHexString(curPageId)));
+
+                return;
+            }
+
+            long page = acquirePage(curPageId, IoStatisticsHolderNoOp.INSTANCE);
+
+            long nextPageId;
+            try {
+                long addr = readLock(curPageId, page);
+
+                if (addr == 0) {
+                    log.warning(String.format(prefix + "-lock-failed[pageId=%s]", toHexString(curPageId)));
+
+                    return;
+                }
+
+                try {
+                    PagesListNodeIO io = PagesListNodeIO.VERSIONS.forPage(addr);
+
+                    long nextId = io.getNextId(addr);
+                    long previousId = io.getPreviousId(addr);
+
+                    nextPageId = next.apply(io, addr);
+
+                    log.info(String.format(
+                        prefix + "[pageId=%s, nextId=%s, previousId=%s]",
+                        toHexString(curPageId),
+                        toHexString(nextId),
+                        toHexString(previousId)
+                    ));
+                } finally {
+                    readUnlock(curPageId, page, addr);
+                }
+            } finally {
+                releasePage(curPageId, page);
+            }
+
+            curPageId = nextPageId;
         }
     }
 
