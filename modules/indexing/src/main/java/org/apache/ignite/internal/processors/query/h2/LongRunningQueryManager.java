@@ -93,7 +93,7 @@ public final class LongRunningQueryManager {
         log = ctx.log(LongRunningQueryManager.class);
 
         checkWorker = new GridWorker(ctx.igniteInstanceName(), "long-qry", log) {
-            @Override protected void body() throws InterruptedException, IgniteInterruptedCheckedException {
+            @Override protected void body() throws IgniteInterruptedCheckedException {
                 while (true) {
                     checkLongRunning();
 
@@ -237,7 +237,7 @@ public final class LongRunningQueryManager {
      * @param rsSizeThresholdMult Result set size threshold multiplier
      */
     public void setResultSetSizeThresholdMultiplier(int rsSizeThresholdMult) {
-        this.rsSizeThresholdMult = rsSizeThresholdMult <= 1 ? 1 : rsSizeThresholdMult;
+        this.rsSizeThresholdMult = Math.max(rsSizeThresholdMult, 1);
     }
 
     /**
@@ -248,7 +248,7 @@ public final class LongRunningQueryManager {
         private long timeout;
 
         /** */
-        private int timeoutMult;
+        private final int timeoutMult;
 
         /**
          * @param timeout Initial timeout.

@@ -31,9 +31,13 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.SqlConfiguration;
+import org.apache.ignite.events.EventType;
+import org.apache.ignite.events.QueryExecutionFinishedEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.systemview.walker.SqlQueryHistoryViewWalker;
 import org.apache.ignite.internal.managers.systemview.walker.SqlQueryViewWalker;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
@@ -145,6 +149,15 @@ public class RunningQueryManager {
     /** */
     private final List<Consumer<GridQueryFinishedInfo>> qryFinishedListeners = new CopyOnWriteArrayList<>();
 
+    /** {@code true} if {@link EventType#EVT_QUERY_FINISHED} need to be processed, {@code false} otherwise. */
+    private final boolean processQueryFinishedEvent;
+
+    /** */
+    private final GridEventStorageManager event;
+
+    /** Local node. */
+    private final ClusterNode localNode;
+
     /**
      * Constructor.
      *
@@ -181,6 +194,12 @@ public class RunningQueryManager {
             new SqlQueryHistoryViewWalker(),
             qryHistTracker.queryHistory().values(),
             SqlQueryHistoryView::new);
+
+        event = ctx.event();
+
+        processQueryFinishedEvent = event.isRecordable(EventType.EVT_QUERY_FINISHED);
+
+        localNode = ctx.discovery().localNode();
     }
 
     /**
@@ -304,7 +323,7 @@ public class RunningQueryManager {
                     ", failReason=" + (failReason != null ? failReason.getMessage() : "null") + ']');
             }
 
-            if (!qryFinishedListeners.isEmpty()) {
+            if (!qryFinishedListeners.isEmpty() || processQueryFinishedEvent) {
                 GridQueryFinishedInfo info = new GridQueryFinishedInfo(
                     qry.id(),
                     locNodeId,
@@ -321,6 +340,8 @@ public class RunningQueryManager {
                     failReason,
                     qry.queryInitiatorId()
                 );
+
+                event.record(new QueryExecutionFinishedEvent(localNode, info));
 
                 try {
                     closure.runLocal(
