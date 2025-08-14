@@ -16,7 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.freelist;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import org.apache.ignite.IgniteCheckedException;
@@ -685,6 +687,19 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
     /** {@inheritDoc} */
     @Override protected Stripe[] getBucket(int bucket) {
         return buckets.get(bucket);
+    }
+
+    public List<Stripe> getStripes() {
+        List<Stripe> stripes = new ArrayList<>();
+        for (int i = 0; i < ((PagesList)reuseList).bucketsCount(); i++) {
+            Stripe[] bucket = ((PagesList)reuseList).getBucket(i);
+
+            if (bucket != null) {
+                stripes.addAll(Arrays.asList(bucket));
+            }
+        }
+
+        return stripes;
     }
 
     /** {@inheritDoc} */

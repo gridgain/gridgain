@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -24,10 +25,15 @@ import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.SystemProperty;
 import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
+import org.apache.ignite.internal.processors.cache.persistence.freelist.AbstractFreeList;
+import org.apache.ignite.internal.processors.cache.persistence.freelist.PagesList;
+import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListNodeIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
@@ -35,6 +41,8 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseL
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.maintenance.MaintenanceTask;
+
+import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.PAGE_OVERHEAD;
 
 /**
  *
@@ -72,6 +80,28 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
     /** */
     private final IgniteLogger log;
+
+    /** */
+    public static final int DFLT_PART_NUMBER_TO_DEBUG = 467;
+
+    /** */
+    @SystemProperty(value = "Partition number to print reuse lists details", type = Long.class,
+        defaults = "" + DFLT_PART_NUMBER_TO_DEBUG)
+    public static final String PART_NUMBER_TO_DEBUG = "PART_NUMBER_TO_DEBUG";
+
+    /** */
+    private static final int PART_NUMBER = IgniteSystemProperties.getInteger(PART_NUMBER_TO_DEBUG, DFLT_PART_NUMBER_TO_DEBUG);
+
+    /** */
+    public static final String DFLT_CACHE_OR_GROUP_NAME_TO_DEBUG = "com.aexp.rc.authorization.Authorization";
+
+    /** */
+    @SystemProperty(value = "Cache or group name to print reuse lists details", type = Long.class,
+        defaults = "" + DFLT_CACHE_OR_GROUP_NAME_TO_DEBUG)
+    public static final String CACHE_OR_GROUP_NAME_TO_DEBUG = "CACHE_OR_GROUP_NAME_TO_DEBUG";
+
+    /** */
+    private static final String CACHE_OR_GROUP_NAME = IgniteSystemProperties.getString(CACHE_OR_GROUP_NAME_TO_DEBUG, DFLT_CACHE_OR_GROUP_NAME_TO_DEBUG);
 
     /**
      * @param grp Cache group.
@@ -120,7 +150,29 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
         assert !grp.dataRegion().config().isPersistenceEnabled() || grp.shared().database().checkpointLockIsHeldByThread();
 
+        if (PART_NUMBER == -1 || (part == PART_NUMBER && Objects.equals(grp.cacheOrGroupName(), CACHE_OR_GROUP_NAME))) {
+            printReuseList();
+        }
+
         initTree(initNew);
+    }
+
+    private void printReuseList() throws IgniteCheckedException {
+        List<PagesList.Stripe> stripes = ((AbstractFreeList)reuseList).getStripes();
+
+        log.info(String.format("cacheGrpName=%s, partId=%s", grpName, part));
+
+        for (PagesList.Stripe stripe : stripes) {
+            final long tailPage = acquirePage(stripe.tailId, IoStatisticsHolderNoOp.INSTANCE);
+
+            long tailAddr = tailPage + PAGE_OVERHEAD;
+
+            PagesListNodeIO io = PagesListNodeIO.VERSIONS.forPage(tailAddr);
+
+            long nextId = io.getNextId(tailAddr);
+
+            log.info(String.format("reuseListStripe=[tailId=%s, empty=%s, nextId=%s]", stripe.tailId, stripe.empty, nextId));
+        }
     }
 
     /** {@inheritDoc} */
