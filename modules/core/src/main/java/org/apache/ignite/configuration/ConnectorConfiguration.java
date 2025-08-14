@@ -164,7 +164,7 @@ public class ConnectorConfiguration {
         sslFactory = cfg.getSslFactory();
         idleQryCurTimeout = cfg.getIdleQueryCursorTimeout();
         idleQryCurCheckFreq = cfg.getIdleQueryCursorCheckFrequency();
-        jettyServerFactory = cfg.jettyServerFactory();
+        jettyServerFactory = cfg.getJettyServerFactory();
     }
 
     /**
