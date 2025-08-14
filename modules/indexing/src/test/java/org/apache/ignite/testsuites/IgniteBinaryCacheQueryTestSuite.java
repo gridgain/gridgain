@@ -16,6 +16,7 @@
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.events.QueryExecutionFinishedEventTest;
 import org.apache.ignite.internal.processors.cache.AffinityKeyNameAndValueFieldNameConflictTest;
 import org.apache.ignite.internal.processors.cache.CacheOffheapBatchIndexingMultiTypeTest;
 import org.apache.ignite.internal.processors.cache.CacheQueryBuildValueTest;
@@ -328,6 +329,8 @@ import org.junit.runners.Suite;
 
     GridCircularQueueTest.class,
     IndexingSpiQueryWithH2IndexingSelfTest.class,
+
+    QueryExecutionFinishedEventTest.class,
 
     // DDL.
     H2DynamicIndexTransactionalReplicatedSelfTest.class,

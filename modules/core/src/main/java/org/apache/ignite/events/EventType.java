@@ -927,6 +927,13 @@ public interface EventType {
     public static final int EVT_SERVICE_METHOD_EXECUTION_FAILED = 165;
 
     /**
+     * Built-in event type: will occur when the sql query finishes.
+     *
+     * @see QueryExecutionFinishedEvent
+     */
+    public static final int EVT_QUERY_FINISHED = 166;
+
+    /**
      * All checkpoint events. This array can be directly passed into
      * {@link IgniteEvents#localListen(IgnitePredicate, int...)} method to
      * subscribe to all checkpoint events.
