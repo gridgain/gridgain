@@ -17,24 +17,38 @@
 package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.SystemProperty;
 import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
+import org.apache.ignite.internal.processors.cache.persistence.freelist.AbstractFreeList;
+import org.apache.ignite.internal.processors.cache.persistence.freelist.PagesList;
+import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListMetaIO;
+import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListNodeIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiClosure;
 import org.apache.ignite.maintenance.MaintenanceTask;
+
+import static java.lang.Long.toHexString;
 
 /**
  *
@@ -72,6 +86,28 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
     /** */
     private final IgniteLogger log;
+
+    /** */
+    public static final int DFLT_PART_NUMBER_TO_DEBUG = 467;
+
+    /** */
+    @SystemProperty(value = "Partition number to print reuse lists details", type = Long.class,
+        defaults = "" + DFLT_PART_NUMBER_TO_DEBUG)
+    public static final String PART_NUMBER_TO_DEBUG = "PART_NUMBER_TO_DEBUG";
+
+    /** */
+    private static final int PART_NUMBER = IgniteSystemProperties.getInteger(PART_NUMBER_TO_DEBUG, DFLT_PART_NUMBER_TO_DEBUG);
+
+    /** */
+    public static final String DFLT_CACHE_OR_GROUP_NAME_TO_DEBUG = "com.aexp.rc.authorization.Authorization";
+
+    /** */
+    @SystemProperty(value = "Cache or group name to print reuse lists details", type = Long.class,
+        defaults = "" + DFLT_CACHE_OR_GROUP_NAME_TO_DEBUG)
+    public static final String CACHE_OR_GROUP_NAME_TO_DEBUG = "CACHE_OR_GROUP_NAME_TO_DEBUG";
+
+    /** */
+    private static final String CACHE_OR_GROUP_NAME = IgniteSystemProperties.getString(CACHE_OR_GROUP_NAME_TO_DEBUG, DFLT_CACHE_OR_GROUP_NAME_TO_DEBUG);
 
     /**
      * @param grp Cache group.
@@ -120,7 +156,151 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
         assert !grp.dataRegion().config().isPersistenceEnabled() || grp.shared().database().checkpointLockIsHeldByThread();
 
+        if (PART_NUMBER == -1 || (part == PART_NUMBER && Objects.equals(grp.cacheOrGroupName(), CACHE_OR_GROUP_NAME))) {
+            printReuseList();
+        }
+
         initTree(initNew);
+    }
+
+    private void printReuseList() throws IgniteCheckedException {
+        List<PagesList.Stripe> stripes = ((AbstractFreeList)reuseList).getStripes();
+
+        log.info(String.format("cacheOrGroupName=%s, groupId=%s, partId=%s", grp.cacheOrGroupName(), grpId, part));
+
+        if (reuseList instanceof PagesList)
+            printMeta(((PagesList)reuseList).metaPageId());
+
+        for (PagesList.Stripe stripe : stripes) {
+            long tailId = stripe.tailId;
+
+            long nextId;
+            long previousId;
+
+            long tailPage = acquirePage(tailId, IoStatisticsHolderNoOp.INSTANCE);
+
+            try {
+                long tailAddr = readLock(tailId, tailPage);
+
+                try {
+                    PagesListNodeIO io = PagesListNodeIO.VERSIONS.forPage(tailAddr);
+                    nextId = io.getNextId(tailAddr);
+                    previousId = io.getPreviousId(tailAddr);
+
+                    log.info(String.format(
+                        "reuseListStripe=[tailId=%s, empty=%s, nextId=%s, previousId=%s]",
+                        toHexString(tailId),
+                        stripe.empty,
+                        toHexString(nextId),
+                        toHexString(previousId)
+                    ));
+                } finally {
+                    readUnlock(tailId, tailPage, tailAddr);
+                }
+            } finally {
+                releasePage(tailId, tailPage);
+            }
+
+            printStripeList("prev", previousId, PagesListNodeIO::getPreviousId);
+            printStripeList("next", nextId, PagesListNodeIO::getNextId);
+        }
+    }
+
+    private void printMeta(long metaPageId) throws IgniteCheckedException {
+        while (metaPageId != 0) {
+            long nextPageId;
+            long metaPage = acquirePage(metaPageId, IoStatisticsHolderNoOp.INSTANCE);
+
+            try {
+                long metaAddr = readLock(metaPageId, metaPage);
+
+                if (metaAddr == 0) {
+                    log.warning(String.format("meta-lock-failed[pageId=%s]", toHexString(metaPageId)));
+
+                    return;
+                }
+
+                try {
+                    PagesListMetaIO io = PagesListMetaIO.VERSIONS.forPage(metaAddr);
+
+                    Map<Integer, GridLongList> map = new TreeMap<>();
+                    Map<Integer, String[]> strMap = new TreeMap<>();
+                    io.getBucketsData(metaAddr, map);
+                    for (Map.Entry<Integer, GridLongList> entry : map.entrySet()) {
+                        GridLongList longLost = entry.getValue();
+                        String[] strList = new String[longLost.size()];
+                        for (int i = 0; i < longLost.size(); i++) {
+                            strList[i] = toHexString(longLost.get(i));
+                        }
+                        strMap.put(entry.getKey(), strList);
+                    }
+
+                    long nextMetaPageId = io.getNextMetaPageId(metaAddr);
+
+                    log.info(String.format(
+                        "meta[pageId=%s, nextMetaPageId=%s, pages=%s]",
+                        toHexString(metaPageId),
+                        toHexString(nextMetaPageId),
+                        strMap
+                    ));
+
+                    nextPageId = nextMetaPageId;
+                } finally {
+                    readUnlock(metaPageId, metaPage, metaAddr);
+                }
+            } finally {
+                releasePage(metaPageId, metaPage);
+            }
+
+            metaPageId = nextPageId;
+        }
+    }
+
+    private void printStripeList(String prefix, long curPageId, IgniteBiClosure<PagesListNodeIO, Long, Long> next) throws IgniteCheckedException {
+        Set<Long> dejaVu = new HashSet<>();
+
+        while (curPageId != 0) {
+            if (!dejaVu.add(curPageId)) {
+                log.warning(String.format(prefix + "-cycle-detected[pageId=%s]", toHexString(curPageId)));
+
+                return;
+            }
+
+            long page = acquirePage(curPageId, IoStatisticsHolderNoOp.INSTANCE);
+
+            long nextPageId;
+            try {
+                long addr = readLock(curPageId, page);
+
+                if (addr == 0) {
+                    log.warning(String.format(prefix + "-lock-failed[pageId=%s]", toHexString(curPageId)));
+
+                    return;
+                }
+
+                try {
+                    PagesListNodeIO io = PagesListNodeIO.VERSIONS.forPage(addr);
+
+                    long nextId = io.getNextId(addr);
+                    long previousId = io.getPreviousId(addr);
+
+                    nextPageId = next.apply(io, addr);
+
+                    log.info(String.format(
+                        prefix + "[pageId=%s, nextId=%s, previousId=%s]",
+                        toHexString(curPageId),
+                        toHexString(nextId),
+                        toHexString(previousId)
+                    ));
+                } finally {
+                    readUnlock(curPageId, page, addr);
+                }
+            } finally {
+                releasePage(curPageId, page);
+            }
+
+            curPageId = nextPageId;
+        }
     }
 
     /** {@inheritDoc} */
