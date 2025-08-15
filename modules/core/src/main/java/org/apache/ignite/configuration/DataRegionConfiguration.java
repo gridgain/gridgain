@@ -344,7 +344,7 @@ public final class DataRegionConfiguration implements Serializable {
      * This parameter ensures that Ignite will be able to successfully evict old data entries when the size of
      * (key, value) pair is slightly larger than page size / 2.
      * Increase this parameter if cache can contain very big entries (total size of pages in this pool should be enough
-     * to contain largest cache entry).
+     * to contain the largest cache entry).
      * Increase this parameter if {@link IgniteOutOfMemoryException} occurred with enabled page eviction.
      *
      * @return Minimum number of empty pages in reuse list.
@@ -358,7 +358,7 @@ public final class DataRegionConfiguration implements Serializable {
      * This parameter ensures that Ignite will be able to successfully evict old data entries when the size of
      * (key, value) pair is slightly larger than page size / 2.
      * Increase this parameter if cache can contain very big entries (total size of pages in this pool should be enough
-     * to contain largest cache entry).
+     * to contain the largest cache entry).
      * Increase this parameter if {@link IgniteOutOfMemoryException} occurred with enabled page eviction.
      *
      * @param emptyPagesPoolSize Empty pages pool size.
