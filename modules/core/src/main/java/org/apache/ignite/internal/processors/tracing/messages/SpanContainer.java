@@ -74,7 +74,7 @@ public class SpanContainer implements Serializable {
     /** {@inheritDoc} */
     @Override public String toString() {
         return "SpanContainer{" +
-            "serializedSpanBytes=" + serializedSpanBytes +
+            "serializedSpanBytes=" + new String(serializedSpanBytes) +
             ", span=" + span +
             '}';
     }
