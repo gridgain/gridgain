@@ -40,6 +40,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.SystemProperty;
 import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.internal.Factory;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.managers.encryption.ReencryptStateUtils;
@@ -105,7 +106,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageParti
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV3;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseListImpl;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataRowStore;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
@@ -114,7 +114,6 @@ import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccUpdateResult;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccLinkAwareSearchRow;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.PartitionLogTree;
-import org.apache.ignite.internal.Factory;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLog;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -1548,7 +1547,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                 IgniteWriteAheadLogManager wal = ctx.cache().context().wal();
 
-                if (changed && PageHandler.isWalDeltaRecordNeeded(pageMem, grpId, metaPageId, metaPage, wal, null))
+                if (changed && isWalDeltaRecordNeeded(pageMem, grpId, metaPageId, metaPage, wal, null))
                     wal.log(new MetaPageUpdateIndexDataRecord(grpId, metaPageId, encryptIdx, encryptCnt));
             }
             finally {
@@ -2297,46 +2296,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                     int grpId = grp.groupId();
 
-                    delegate0 = new CacheDataStoreImpl(partId,
-                        rowStore,
-                        dataTree,
-                        updateLog,
-                        () -> pendingTree0,
-                        grp,
-                        busyLock,
-                        log,
-                        () -> rowCacheCleaner
-                    ) {
-                        /** {@inheritDoc} */
-                        @Override public PendingEntriesTree pendingTree() {
-                            return pendingTree0;
-                        }
-
-                        /** {@inheritDoc} */
-                        @Override public void preload() throws IgniteCheckedException {
-                            IgnitePageStoreManager pageStoreMgr = ctx.pageStore();
-
-                            if (pageStoreMgr == null)
-                                return;
-
-                            int pages = pageStoreMgr.pages(grpId, partId);
-
-                            long pageId = pageMem.partitionMetaPageId(grpId, partId);
-
-                            // For each page sequentially pin/unpin.
-                            for (int pageNo = 0; pageNo < pages; pageId++, pageNo++) {
-                                long pagePointer = -1;
-
-                                try {
-                                    pagePointer = pageMem.acquirePage(grpId, pageId);
-                                }
-                                finally {
-                                    if (pagePointer != -1)
-                                        pageMem.releasePage(grpId, pageId, pagePointer);
-                                }
-                            }
-                        }
-                    };
+                    delegate0 = new GridCacheDataStoreImpl(rowStore, updateLog, pendingTree0, pageMem);
 
                     pendingTree = pendingTree0;
 
@@ -3473,18 +3433,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             // Zero link will force tree creation on initialization.
             resetUpdateLogTreeLink();
 
-            // Force initialization of CacheStore with all its structures.
-            if (init.compareAndSet(true, false)) {
-                delegate = null;
-
-                init0(false);
-            }
+            // Allocates a new PartitionLogTree and updates the delegate.
+            // The same checkpoint read lock is still being held.
+            reInitPartitionLogTree();
         }
 
+        /** */
         private void resetUpdateLogTreeLink() throws IgniteCheckedException {
             PageMemoryEx pageMem = (PageMemoryEx)grp.dataRegion().pageMemory();
-
-            IgniteWriteAheadLogManager wal = grp.shared().wal();
 
             int grpId = grp.groupId();
             long partMetaId = pageMem.partitionMetaPageId(grpId, partId);
@@ -3496,12 +3452,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 try {
                     PagePartitionMetaIO io = PagePartitionMetaIO.VERSIONS.latest();
 
+                    // Must nullify it before initializing.
+                    // No WAL records required, because meta will be updated and logged in reInitPartitionLogTree().
                     io.setUpdateTreeRoot(partMetaPageAddr, 0);
-
-                    if (isWalDeltaRecordNeeded(pageMem, grpId, partMetaId, partMetaPage, wal, null)) {
-                        wal.log(new PageSnapshot(new FullPageId(partMetaId, grpId), partMetaPageAddr,
-                            pageMem.pageSize(), pageMem.realPageSize(grpId)));
-                    }
                 }
                 finally {
                     pageMem.writeUnlock(grpId, partMetaId, partMetaPage, null, true);
@@ -3509,6 +3462,85 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             }
             finally {
                 pageMem.releasePage(grpId, partMetaId, partMetaPage);
+            }
+        }
+
+        /**
+         * Creates a new delegate, where the only changed value is a newly initialized update log tree. We're doing it
+         * without caring for concurrent operations, assuming they don't happen in maintenance mode.
+         */
+        private void reInitPartitionLogTree() throws IgniteCheckedException {
+            PageMemoryEx pageMem = (PageMemoryEx)grp.dataRegion().pageMemory();
+
+            CacheDataStoreImpl oldDelegate = delegate;
+
+            UpdateLog updateLog = new UpdateLogImpl(createLogTreeFactory());
+            // Initializes the tree.
+            PartitionLogTree logTree = updateLog.tree();
+            assert logTree != null : "Partition log tree must be reinitialized: " + partId;
+
+            delegate = new GridCacheDataStoreImpl((CacheDataRowStore)oldDelegate.rowStore(), updateLog, oldDelegate.pendingTree(), pageMem);
+        }
+
+        /** */
+        private class GridCacheDataStoreImpl extends CacheDataStoreImpl {
+            private final PendingEntriesTree pendingTree;
+            private final GridCacheSharedContext<?, ?> ctx;
+            private final PageMemoryEx pageMem;
+
+            public GridCacheDataStoreImpl(
+                CacheDataRowStore rowStore,
+                UpdateLog updateLog,
+                PendingEntriesTree pendingTree,
+                PageMemoryEx pageMem
+            ) {
+                super(
+                    GridCacheDataStore.this.partId,
+                    rowStore,
+                    GridCacheDataStore.this.dataTree,
+                    updateLog,
+                    () -> pendingTree,
+                    GridCacheDataStore.this.grp,
+                    GridCacheDataStore.this.busyLock,
+                    GridCacheDataStore.this.log,
+                    () -> GridCacheDataStore.this.rowCacheCleaner
+                );
+
+                this.pendingTree = pendingTree;
+                this.ctx = grp.shared();
+                this.pageMem = pageMem;
+            }
+
+            /** {@inheritDoc} */
+            @Override public PendingEntriesTree pendingTree() {
+                return pendingTree;
+            }
+
+            /** {@inheritDoc} */
+            @Override public void preload() throws IgniteCheckedException {
+                IgnitePageStoreManager pageStoreMgr = ctx.pageStore();
+
+                if (pageStoreMgr == null)
+                    return;
+
+                int grpId = grp.groupId();
+
+                int pages = pageStoreMgr.pages(grpId, partId);
+
+                long pageId = pageMem.partitionMetaPageId(grpId, partId);
+
+                // For each page sequentially pin/unpin.
+                for (int pageNo = 0; pageNo < pages; pageId++, pageNo++) {
+                    long pagePointer = -1;
+
+                    try {
+                        pagePointer = pageMem.acquirePage(grpId, pageId);
+                    }
+                    finally {
+                        if (pagePointer != -1)
+                            pageMem.releasePage(grpId, pageId, pagePointer);
+                    }
+                }
             }
         }
     }
