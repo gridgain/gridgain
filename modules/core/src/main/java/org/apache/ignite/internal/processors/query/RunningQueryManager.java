@@ -32,6 +32,8 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.SqlConfiguration;
+import org.apache.ignite.events.EventType;
+import org.apache.ignite.events.QueryExecutionFinishedEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.systemview.walker.SqlQueryHistoryViewWalker;
@@ -181,6 +183,11 @@ public class RunningQueryManager {
             new SqlQueryHistoryViewWalker(),
             qryHistTracker.queryHistory().values(),
             SqlQueryHistoryView::new);
+
+        if (ctx.event().isRecordable(EventType.EVT_QUERY_FINISHED)) {
+            registerQueryFinishedListener(info -> ctx.event()
+                    .record(new QueryExecutionFinishedEvent(ctx.discovery().localNode(), info)));
+        }
     }
 
     /**
