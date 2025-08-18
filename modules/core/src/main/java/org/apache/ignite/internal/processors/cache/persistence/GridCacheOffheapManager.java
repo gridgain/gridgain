@@ -2296,7 +2296,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                     int grpId = grp.groupId();
 
-                    delegate0 = new GridCacheDataStoreImpl(rowStore, updateLog, pendingTree0, pageMem);
+                    delegate0 = newDelegate(rowStore, updateLog, pendingTree0, pageMem);
 
                     pendingTree = pendingTree0;
 
@@ -3479,69 +3479,59 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             PartitionLogTree logTree = updateLog.tree();
             assert logTree != null : "Partition log tree must be reinitialized: " + partId;
 
-            delegate = new GridCacheDataStoreImpl((CacheDataRowStore)oldDelegate.rowStore(), updateLog, oldDelegate.pendingTree(), pageMem);
+            delegate = newDelegate((CacheDataRowStore)oldDelegate.rowStore(), updateLog, oldDelegate.pendingTree(), pageMem);
         }
 
         /** */
-        private class GridCacheDataStoreImpl extends CacheDataStoreImpl {
-            private final PendingEntriesTree pendingTree;
-            private final GridCacheSharedContext<?, ?> ctx;
-            private final PageMemoryEx pageMem;
-
-            public GridCacheDataStoreImpl(
-                CacheDataRowStore rowStore,
-                UpdateLog updateLog,
-                PendingEntriesTree pendingTree,
-                PageMemoryEx pageMem
+        private CacheDataStoreImpl newDelegate(
+            CacheDataRowStore rowStore,
+            UpdateLog updateLog,
+            PendingEntriesTree pendingTree,
+            PageMemoryEx pageMem
+        ) {
+            return new CacheDataStoreImpl(
+                partId,
+                rowStore,
+                dataTree,
+                updateLog,
+                () -> pendingTree,
+                grp,
+                busyLock,
+                log,
+                () -> rowCacheCleaner
             ) {
-                super(
-                    GridCacheDataStore.this.partId,
-                    rowStore,
-                    GridCacheDataStore.this.dataTree,
-                    updateLog,
-                    () -> pendingTree,
-                    GridCacheDataStore.this.grp,
-                    GridCacheDataStore.this.busyLock,
-                    GridCacheDataStore.this.log,
-                    () -> GridCacheDataStore.this.rowCacheCleaner
-                );
+                /** {@inheritDoc} */
+                @Override public PendingEntriesTree pendingTree() {
+                    return pendingTree;
+                }
 
-                this.pendingTree = pendingTree;
-                this.ctx = grp.shared();
-                this.pageMem = pageMem;
-            }
+                /** {@inheritDoc} */
+                @Override public void preload() throws IgniteCheckedException {
+                    IgnitePageStoreManager pageStoreMgr = grp.shared().pageStore();
 
-            /** {@inheritDoc} */
-            @Override public PendingEntriesTree pendingTree() {
-                return pendingTree;
-            }
+                    if (pageStoreMgr == null)
+                        return;
 
-            /** {@inheritDoc} */
-            @Override public void preload() throws IgniteCheckedException {
-                IgnitePageStoreManager pageStoreMgr = ctx.pageStore();
+                    int grpId = grp.groupId();
 
-                if (pageStoreMgr == null)
-                    return;
+                    int pages = pageStoreMgr.pages(grpId, partId);
 
-                int grpId = grp.groupId();
+                    long pageId = pageMem.partitionMetaPageId(grpId, partId);
 
-                int pages = pageStoreMgr.pages(grpId, partId);
+                    // For each page sequentially pin/unpin.
+                    for (int pageNo = 0; pageNo < pages; pageId++, pageNo++) {
+                        long pagePointer = -1;
 
-                long pageId = pageMem.partitionMetaPageId(grpId, partId);
-
-                // For each page sequentially pin/unpin.
-                for (int pageNo = 0; pageNo < pages; pageId++, pageNo++) {
-                    long pagePointer = -1;
-
-                    try {
-                        pagePointer = pageMem.acquirePage(grpId, pageId);
-                    }
-                    finally {
-                        if (pagePointer != -1)
-                            pageMem.releasePage(grpId, pageId, pagePointer);
+                        try {
+                            pagePointer = pageMem.acquirePage(grpId, pageId);
+                        }
+                        finally {
+                            if (pagePointer != -1)
+                                pageMem.releasePage(grpId, pageId, pagePointer);
+                        }
                     }
                 }
-            }
+            };
         }
     }
 }
