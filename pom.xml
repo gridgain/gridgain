@@ -25,12 +25,12 @@
     <parent>
         <groupId>org.gridgain</groupId>
         <artifactId>ignite-parent</artifactId>
-        <version>8.9.127-SNAPSHOT</version>
+        <version>8.9.22-p2</version>
         <relativePath>parent/pom.xml</relativePath>
     </parent>
 
     <artifactId>apache-ignite</artifactId>
-    <version>8.9.127-SNAPSHOT</version>
+    <version>8.9.22-p2</version>
     <packaging>pom</packaging>
 
     <scm>
