@@ -25,7 +25,10 @@ import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.affinity.AffinityKeyMapped;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
@@ -67,6 +70,9 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+            cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+                .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+                    .setPersistenceEnabled(persistenceEnabled())));
 
         cfg.setDiscoverySpi(new TcpDiscoverySpi() {
             @Override public void sendCustomEvent(DiscoverySpiCustomMessage msg) throws IgniteException {
@@ -118,12 +124,18 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
         communicationMessages.clear();
     }
 
+    /** Indicates whether persistence should be enabled or not. */
+    protected boolean persistenceEnabled() {
+        return false;
+    }
+
     /**
      * @throws Exception If failed.
      */
     @Test
     public void testAffinityKeyRegisteredStaticCache() throws Exception {
         Ignite ignite = startGrid(0);
+        ignite.cluster().state(ClusterState.ACTIVE);
 
         assertEquals("affKey", getAffinityKey(ignite, StaticKey.class));
         assertEquals("affKey", getAffinityKey(ignite, StaticValue.class));
@@ -135,6 +147,7 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
     @Test
     public void testAffinityKeyRegisteredDynamicCache() throws Exception {
         Ignite ignite = startGrid(0);
+        ignite.cluster().state(ClusterState.ACTIVE);
 
         ignite.createCache(cacheConfiguration(DYNAMIC_CACHE_NAME, DynamicKey.class, DynamicValue.class));
 
@@ -148,6 +161,7 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
     @Test
     public void testClientFindsValueByAffinityKeyStaticCacheWithoutExtraRequest() throws Exception {
         Ignite srv = startGrid(0);
+        srv.cluster().state(ClusterState.ACTIVE);
         IgniteCache<StaticKey, StaticValue> cache = srv.cache(STATIC_CACHE_NAME);
 
         testClientAndServerFindsValueByAffinityKey(cache, new StaticKey(1), new StaticValue(2));
@@ -162,6 +176,7 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
     @Test
     public void testClientFindsValueByAffinityKeyDynamicCacheWithoutExtraRequest() throws Exception {
         Ignite srv = startGrid(0);
+        srv.cluster().state(ClusterState.ACTIVE);
         IgniteCache<DynamicKey, DynamicValue> cache =
             srv.createCache(cacheConfiguration(DYNAMIC_CACHE_NAME, DynamicKey.class, DynamicValue.class));
 
@@ -179,6 +194,8 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
      */
     private <K> String getAffinityKey(Ignite ignite, Class<K> keyCls) {
         BinaryType binType = ignite.binary().type(keyCls);
+
+        assertNotNull(binType);
 
         return binType.affinityKeyFieldName();
     }
