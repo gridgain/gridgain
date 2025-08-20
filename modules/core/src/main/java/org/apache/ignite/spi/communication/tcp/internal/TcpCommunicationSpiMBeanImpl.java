@@ -16,6 +16,7 @@
 
 package org.apache.ignite.spi.communication.tcp.internal;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -24,6 +25,8 @@ import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiMBeanAdapter;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiMBean;
+
+import static java.util.Collections.emptyMap;
 
 /**
  * MBean implementation for TcpCommunicationSpi.
@@ -178,41 +181,65 @@ public class TcpCommunicationSpiMBeanImpl extends IgniteSpiMBeanAdapter implemen
 
     /** {@inheritDoc} */
     @Override public int getSentMessagesCount() {
+        if (metricLsnrSupplier == null)
+            return 0;
+
         return metricLsnrSupplier.get().sentMessagesCount();
     }
 
     /** {@inheritDoc} */
     @Override public long getSentBytesCount() {
+        if (metricLsnrSupplier == null)
+            return 0;
+
         return metricLsnrSupplier.get().sentBytesCount();
     }
 
     /** {@inheritDoc} */
     @Override public int getReceivedMessagesCount() {
+        if (metricLsnrSupplier == null)
+            return 0;
+
         return metricLsnrSupplier.get().receivedMessagesCount();
     }
 
     /** {@inheritDoc} */
     @Override public long getReceivedBytesCount() {
+        if (metricLsnrSupplier == null)
+            return 0;
+
         return metricLsnrSupplier.get().receivedBytesCount();
     }
 
     /** {@inheritDoc} */
     @Override public Map<String, Long> getReceivedMessagesByType() {
+        if (metricLsnrSupplier == null)
+            return emptyMap();
+
         return metricLsnrSupplier.get().receivedMessagesByType();
     }
 
     /** {@inheritDoc} */
     @Override public Map<UUID, Long> getReceivedMessagesByNode() {
+        if (metricLsnrSupplier == null)
+            return emptyMap();
+
         return metricLsnrSupplier.get().receivedMessagesByNode();
     }
 
     /** {@inheritDoc} */
     @Override public Map<String, Long> getSentMessagesByType() {
+        if (metricLsnrSupplier == null)
+            return emptyMap();
+
         return metricLsnrSupplier.get().sentMessagesByType();
     }
 
     /** {@inheritDoc} */
     @Override public Map<UUID, Long> getSentMessagesByNode() {
+        if (metricLsnrSupplier == null)
+            return emptyMap();
+
         return metricLsnrSupplier.get().sentMessagesByNode();
     }
 
