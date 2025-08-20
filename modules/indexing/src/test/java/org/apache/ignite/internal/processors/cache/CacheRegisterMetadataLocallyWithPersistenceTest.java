@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.cache;
 
 /**
- * Tests, that binary metadata is registered correctly during the start without extra request to grid.
+ * Tests that binary metadata is registered correctly during the start without extra request to grid.
  */
 public class CacheRegisterMetadataLocallyWithPersistenceTest extends CacheRegisterMetadataLocallyTest {
     /** {@inheritDoc} */

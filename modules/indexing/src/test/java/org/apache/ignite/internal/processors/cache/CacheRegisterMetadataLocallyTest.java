@@ -49,7 +49,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- * Tests, that binary metadata is registered correctly during the start without extra request to grid.
+ * Tests that binary metadata is registered correctly during the start without extra request to grid.
  */
 public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
     /** */
@@ -69,8 +69,8 @@ public class CacheRegisterMetadataLocallyTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-            cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName)
+            .setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                     .setPersistenceEnabled(persistenceEnabled())));
 
