@@ -33,7 +33,7 @@ import static java.util.Collections.emptyMap;
  */
 public class TcpCommunicationSpiMBeanImpl extends IgniteSpiMBeanAdapter implements TcpCommunicationSpiMBean {
     /** Statistics. */
-    private final Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier;
+    private final Supplier<TcpCommunicationMetricsListener> metricsLsnrSupplier;
 
     /** Config. */
     private final TcpCommunicationConfiguration cfg;
@@ -44,12 +44,12 @@ public class TcpCommunicationSpiMBeanImpl extends IgniteSpiMBeanAdapter implemen
     /** {@inheritDoc} */
     public TcpCommunicationSpiMBeanImpl(
         IgniteSpiAdapter spiAdapter,
-        Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier,
+        Supplier<TcpCommunicationMetricsListener> metricsLsnrSupplier,
         TcpCommunicationConfiguration cfg,
         ClusterStateProvider stateProvider
     ) {
         super(spiAdapter);
-        this.metricLsnrSupplier = metricLsnrSupplier;
+        this.metricsLsnrSupplier = metricsLsnrSupplier;
         this.cfg = cfg;
         this.stateProvider = stateProvider;
     }
@@ -181,66 +181,74 @@ public class TcpCommunicationSpiMBeanImpl extends IgniteSpiMBeanAdapter implemen
 
     /** {@inheritDoc} */
     @Override public int getSentMessagesCount() {
-        if (metricLsnrSupplier == null)
+        TcpCommunicationMetricsListener metricsLsnr = metricsLsnrSupplier.get();
+        if (metricsLsnr == null)
             return 0;
 
-        return metricLsnrSupplier.get().sentMessagesCount();
+        return metricsLsnr.sentMessagesCount();
     }
 
     /** {@inheritDoc} */
     @Override public long getSentBytesCount() {
-        if (metricLsnrSupplier == null)
+        TcpCommunicationMetricsListener metricsLsnr = metricsLsnrSupplier.get();
+        if (metricsLsnr == null)
             return 0;
 
-        return metricLsnrSupplier.get().sentBytesCount();
+        return metricsLsnr.sentBytesCount();
     }
 
     /** {@inheritDoc} */
     @Override public int getReceivedMessagesCount() {
-        if (metricLsnrSupplier == null)
+        TcpCommunicationMetricsListener metricsLsnr = metricsLsnrSupplier.get();
+        if (metricsLsnr == null)
             return 0;
 
-        return metricLsnrSupplier.get().receivedMessagesCount();
+        return metricsLsnr.receivedMessagesCount();
     }
 
     /** {@inheritDoc} */
     @Override public long getReceivedBytesCount() {
-        if (metricLsnrSupplier == null)
+        TcpCommunicationMetricsListener metricsLsnr = metricsLsnrSupplier.get();
+        if (metricsLsnr == null)
             return 0;
 
-        return metricLsnrSupplier.get().receivedBytesCount();
+        return metricsLsnr.receivedBytesCount();
     }
 
     /** {@inheritDoc} */
     @Override public Map<String, Long> getReceivedMessagesByType() {
-        if (metricLsnrSupplier == null)
+        TcpCommunicationMetricsListener metricsLsnr = metricsLsnrSupplier.get();
+        if (metricsLsnr == null)
             return emptyMap();
 
-        return metricLsnrSupplier.get().receivedMessagesByType();
+        return metricsLsnr.receivedMessagesByType();
     }
 
     /** {@inheritDoc} */
     @Override public Map<UUID, Long> getReceivedMessagesByNode() {
-        if (metricLsnrSupplier == null)
+        TcpCommunicationMetricsListener metricsLsnr = metricsLsnrSupplier.get();
+        if (metricsLsnr == null)
             return emptyMap();
 
-        return metricLsnrSupplier.get().receivedMessagesByNode();
+        return metricsLsnr.receivedMessagesByNode();
     }
 
     /** {@inheritDoc} */
     @Override public Map<String, Long> getSentMessagesByType() {
-        if (metricLsnrSupplier == null)
+        TcpCommunicationMetricsListener metricsLsnr = metricsLsnrSupplier.get();
+        if (metricsLsnr == null)
             return emptyMap();
 
-        return metricLsnrSupplier.get().sentMessagesByType();
+        return metricsLsnr.sentMessagesByType();
     }
 
     /** {@inheritDoc} */
     @Override public Map<UUID, Long> getSentMessagesByNode() {
-        if (metricLsnrSupplier == null)
+        TcpCommunicationMetricsListener metricsLsnr = metricsLsnrSupplier.get();
+        if (metricsLsnr == null)
             return emptyMap();
 
-        return metricLsnrSupplier.get().sentMessagesByNode();
+        return metricsLsnr.sentMessagesByNode();
     }
 
     /** {@inheritDoc} */
