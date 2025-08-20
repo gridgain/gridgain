@@ -29,6 +29,7 @@ import org.apache.ignite.internal.processors.cache.CacheQueryAfterDynamicCacheSt
 import org.apache.ignite.internal.processors.cache.CacheQueryFilterExpiredTest;
 import org.apache.ignite.internal.processors.cache.CacheRandomOperationsMultithreadedTest;
 import org.apache.ignite.internal.processors.cache.CacheRegisterMetadataLocallyTest;
+import org.apache.ignite.internal.processors.cache.CacheRegisterMetadataLocallyWithPersistenceTest;
 import org.apache.ignite.internal.processors.cache.ClientReconnectAfterClusterRestartTest;
 import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeDoesNotBreakSqlSelectTest;
 import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeSqlTest;
@@ -96,6 +97,7 @@ import org.junit.runners.Suite;
     CacheQueryAfterDynamicCacheStartFailureTest.class,
 
     CacheRegisterMetadataLocallyTest.class,
+    CacheRegisterMetadataLocallyWithPersistenceTest.class,
 
     IgniteCacheGroupsSqlTest.class,
 
