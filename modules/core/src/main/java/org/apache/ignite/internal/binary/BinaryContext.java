@@ -1043,11 +1043,13 @@ public class BinaryContext {
      * @param affFieldName Affinity field name.
      * @return GridBinaryClassDescriptor.
      */
-    public BinaryClassDescriptor registerPredefinedType(Class<?> cls, int id, String affFieldName, boolean registered) {
+    public BinaryClassDescriptor registerPredefinedType(Class<?> cls, int id, @Nullable String affFieldName, boolean registered) {
         String simpleClsName = SIMPLE_NAME_LOWER_CASE_MAPPER.typeName(cls.getName());
 
         if (id == 0)
             id = SIMPLE_NAME_LOWER_CASE_MAPPER.typeId(simpleClsName);
+
+        boolean metadataEnabled = affFieldName != null;
 
         BinaryClassDescriptor desc = new BinaryClassDescriptor(
             this,
@@ -1058,7 +1060,7 @@ public class BinaryContext {
             affFieldName,
             SIMPLE_NAME_LOWER_CASE_MAPPER,
             new BinaryReflectiveSerializer(),
-            false,
+            metadataEnabled,
             registered /* registered */
         );
 
@@ -1069,6 +1071,11 @@ public class BinaryContext {
 
         if (affFieldName != null)
             affKeyFieldNames.putIfAbsent(id, affFieldName);
+
+        if (metadataEnabled) {
+            metaHnd.addMeta(id,
+                new BinaryMetadata(id, desc.typeName(), desc.fieldsMeta(), affFieldName, null, false, null).wrap(this), false);
+        }
 
         return desc;
     }
