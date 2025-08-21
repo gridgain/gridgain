@@ -907,7 +907,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
             @Override public BinaryType apply(BinaryMetadataHolder metaHolder) {
                 return metaHolder.metadata().wrap(binaryCtx);
             }
-        });
+        }, metaHolder -> !metaHolder.metadata().system());
     }
 
     /**
@@ -919,7 +919,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
             @Override public BinaryMetadata apply(BinaryMetadataHolder metaHolder) {
                 return metaHolder.metadata();
             }
-        });
+        }, metaHolder -> !metaHolder.metadata().system());
     }
 
     /**

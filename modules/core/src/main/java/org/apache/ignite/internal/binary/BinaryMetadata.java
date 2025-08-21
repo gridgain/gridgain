@@ -43,7 +43,7 @@ public class BinaryMetadata implements Externalizable {
     private static final long serialVersionUID = 0L;
 
     /** */
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
 
     /** Type ID. */
     @GridToStringInclude(sensitive = true)
@@ -77,6 +77,8 @@ public class BinaryMetadata implements Externalizable {
     /** Enum ordinal to name mapping. */
     private Map<Integer, String> ordinalToName;
 
+    private boolean system;
+
     /**
      * For {@link Externalizable}.
      */
@@ -98,6 +100,23 @@ public class BinaryMetadata implements Externalizable {
     public BinaryMetadata(int typeId, String typeName, @Nullable Map<String, BinaryFieldMetadata> fields,
         @Nullable String affKeyFieldName, @Nullable Collection<BinarySchema> schemas, boolean isEnum,
         @Nullable Map<String, Integer> enumMap) {
+        this(typeId, typeName, fields, affKeyFieldName, schemas, isEnum, enumMap, false);
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param typeId Type ID.
+     * @param typeName Type name.
+     * @param fields Fields map.
+     * @param affKeyFieldName Affinity key field name.
+     * @param schemas Schemas.
+     * @param isEnum Enum flag.
+     * @param enumMap Enum name to ordinal mapping.
+     */
+    public BinaryMetadata(int typeId, String typeName, @Nullable Map<String, BinaryFieldMetadata> fields,
+        @Nullable String affKeyFieldName, @Nullable Collection<BinarySchema> schemas, boolean isEnum,
+        @Nullable Map<String, Integer> enumMap, boolean system) {
         assert typeName != null;
 
         this.typeId = typeId;
@@ -125,6 +144,8 @@ public class BinaryMetadata implements Externalizable {
             for (Map.Entry<String, Integer> e: nameToOrdinal.entrySet())
                 this.ordinalToName.put(e.getValue(), e.getKey());
         }
+
+        this.system = system;
     }
 
     /**
@@ -207,6 +228,10 @@ public class BinaryMetadata implements Externalizable {
         return new BinaryTypeImpl(ctx, this);
     }
 
+    public boolean system() {
+        return system;
+    }
+
     /** {@inheritDoc} */
     @Override public void writeExternal(ObjectOutput out) throws IOException {
         writeTo(out);
@@ -261,6 +286,9 @@ public class BinaryMetadata implements Externalizable {
                 out.writeInt(e.getValue());
             }
         }
+
+        // TODO version
+        out.writeBoolean(system);
     }
 
     /** {@inheritDoc} */
@@ -279,7 +307,7 @@ public class BinaryMetadata implements Externalizable {
      * @exception IOException if I/O errors occur.
      */
     public void readFrom(DataInput in) throws IOException {
-        in.readByte(); //skip version
+        int ver = in.readByte(); //skip version
 
         typeId = in.readInt();
         typeName = U.readString(in);
@@ -344,6 +372,10 @@ public class BinaryMetadata implements Externalizable {
                     nameToOrdinal.put(name, ord);
                 }
             }
+        }
+
+        if (ver > 1) {
+            system = in.readBoolean();
         }
     }
 

@@ -1074,7 +1074,7 @@ public class BinaryContext {
 
         if (metadataEnabled) {
             metaHnd.addMeta(id,
-                new BinaryMetadata(id, desc.typeName(), desc.fieldsMeta(), affFieldName, null, false, null).wrap(this), false);
+                new BinaryMetadata(id, desc.typeName(), desc.fieldsMeta(), affFieldName, null, false, null, true).wrap(this), false);
         }
 
         return desc;
