@@ -16,7 +16,6 @@
 
 package org.apache.ignite.spi.communication.tcp.internal;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;

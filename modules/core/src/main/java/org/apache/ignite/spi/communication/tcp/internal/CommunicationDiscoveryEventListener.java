@@ -17,7 +17,6 @@
 package org.apache.ignite.spi.communication.tcp.internal;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
