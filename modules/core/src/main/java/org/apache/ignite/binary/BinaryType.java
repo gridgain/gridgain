@@ -47,6 +47,13 @@ public interface BinaryType {
     public Collection<String> fieldNames();
 
     /**
+     * System class.
+     *
+     * @return {@code True} if this type is a system type.
+     */
+    public boolean system();
+
+    /**
      * Gets name of the field type for a given field.
      *
      * @param fieldName Field name.
