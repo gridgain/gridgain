@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -435,7 +436,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** {@inheritDoc} */
     @Override public int getSentMessagesCount() {
-        // Listener could be not initialized yet, but discovery thread could try to aggregate metrics.
+        // Listener could be not initialized yet.
         if (metricsLsnr == null)
             return 0;
 
@@ -453,7 +454,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** {@inheritDoc} */
     @Override public int getReceivedMessagesCount() {
-        // Listener could be not initialized yet, but discovery thread could try to aggregate metrics.
+        // Listener could be not initialized yet.
         if (metricsLsnr == null)
             return 0;
 
@@ -462,7 +463,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** {@inheritDoc} */
     @Override public long getReceivedBytesCount() {
-        // Listener could be not initialized yet, but discovery thread could try to aggregate metrics.
+        // Listener could be not initialized yet.
         if (metricsLsnr == null)
             return 0;
 
@@ -472,36 +473,52 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     /**
      * Gets received messages counts (grouped by type).
      *
-     * @return Map containing message types and respective counts.
+     * @return Map containing message types and respective counts or empty if metrics listener not initialized.
      */
     public Map<String, Long> getReceivedMessagesByType() {
+        // Listener could be not initialized yet.
+        if (metricsLsnr == null)
+            return Collections.emptyMap();
+
         return metricsLsnr.receivedMessagesByType();
     }
 
     /**
      * Gets received messages counts (grouped by node).
      *
-     * @return Map containing sender nodes and respective counts.
+     * @return Map containing sender nodes and respective counts or empty if metrics listener not initialized.
      */
     public Map<UUID, Long> getReceivedMessagesByNode() {
+        // Listener could be not initialized yet.
+        if (metricsLsnr == null)
+            return Collections.emptyMap();
+
         return metricsLsnr.receivedMessagesByNode();
     }
 
     /**
      * Gets sent messages counts (grouped by type).
      *
-     * @return Map containing message types and respective counts.
+     * @return Map containing message types and respective counts or empty if metrics listener not initialized.
      */
     public Map<String, Long> getSentMessagesByType() {
+        // Listener could be not initialized yet.
+        if (metricsLsnr == null)
+            return Collections.emptyMap();
+
         return metricsLsnr.sentMessagesByType();
     }
 
     /**
      * Gets sent messages counts (grouped by node).
      *
-     * @return Map containing receiver nodes and respective counts.
+     * @return Map containing receiver nodes and respective counts or empty if metrics listener not initialized.
      */
     public Map<UUID, Long> getSentMessagesByNode() {
+        // Listener could be not initialized yet.
+        if (metricsLsnr == null)
+            return Collections.emptyMap();
+
         return metricsLsnr.sentMessagesByNode();
     }
 
@@ -514,7 +531,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** {@inheritDoc} */
     @Override public void resetMetrics() {
-        metricsLsnr.resetMetrics();
+        if (metricsLsnr != null)
+            metricsLsnr.resetMetrics();
     }
 
     /**
@@ -524,7 +542,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     void onNodeLeft(Object consistentId, UUID nodeId) {
         assert nodeId != null;
 
-        metricsLsnr.onNodeLeft(consistentId);
+        if (metricsLsnr != null)
+            metricsLsnr.onNodeLeft(consistentId);
         clientPool.onNodeLeft(nodeId);
     }
 
@@ -781,8 +800,6 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
         nioSrvWrapper.clientPool(clientPool);
 
-        discoLsnr = new CommunicationDiscoveryEventListener(clientPool, metricLsnrSupplier);
-
         try {
             shmemSrv = resetShmemServer();
         }
@@ -864,6 +881,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
                 TcpCommunicationSpiMBean.class
         );
 
+        // Shmem is history now, this code is not updated for a long time and contains bugs.
         if (shmemSrv != null) {
 
             MessageFactory msgFactory = new MessageFactory() {
@@ -965,9 +983,11 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         if (cfg.boundTcpShmemPort() > 0)
             spiCtx.registerPort(cfg.boundTcpShmemPort(), IgnitePortProtocol.TCP);
 
-        spiCtx.addLocalEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
-
         metricsLsnr = new TcpCommunicationMetricsListener(ignite, spiCtx);
+
+        discoLsnr = new CommunicationDiscoveryEventListener(clientPool, metricsLsnr);
+
+        spiCtx.addLocalEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
 
         ctxInitLatch.countDown();
     }

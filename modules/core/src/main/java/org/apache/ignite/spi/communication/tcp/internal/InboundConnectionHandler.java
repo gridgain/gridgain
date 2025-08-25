@@ -269,8 +269,10 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
     @Override public void onMessageSent(GridNioSession ses, Message msg) {
         Object consistentId = ses.meta(CONSISTENT_ID_META);
 
-        if (consistentId != null)
-            metricsLsnrSupplier.get().onMessageSent(msg, consistentId);
+        TcpCommunicationMetricsListener metricsLsnr = metricsLsnrSupplier.get();
+        if (consistentId != null && metricsLsnr != null) {
+            metricsLsnr.onMessageSent(msg, consistentId);
+        }
     }
 
     /** {@inheritDoc} */
@@ -306,8 +308,10 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
             assert consistentId != null;
 
+            TcpCommunicationMetricsListener metricsLsnr = metricsLsnrSupplier.get();
             if (msg instanceof RecoveryLastReceivedMessage) {
-                metricsLsnrSupplier.get().onMessageReceived(msg, consistentId);
+                if (metricsLsnr != null)
+                    metricsLsnr.onMessageReceived(msg, consistentId);
 
                 GridNioRecoveryDescriptor recovery = ses.outRecoveryDescriptor();
 
@@ -371,7 +375,8 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 }
             }
 
-            metricsLsnrSupplier.get().onMessageReceived(msg, consistentId);
+            if (metricsLsnr != null)
+                metricsLsnr.onMessageReceived(msg, consistentId);
 
             IgniteRunnable c;
 
