@@ -124,6 +124,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAIT_SCHEMA_UPDATE;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.BINARY_PROC;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CONSISTENCY_CHECK_SKIPPED;
 import static org.apache.ignite.internal.binary.BinaryUtils.mergeMetadata;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 
@@ -153,7 +154,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     private BinaryContext binaryCtx;
 
     /** */
-    private Marshaller marsh;
+    private final Marshaller marsh;
 
     /** */
     private GridBinaryMarshaller binaryMarsh;
@@ -169,7 +170,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     @Nullable private File binaryMetadataFileStoreDir;
 
     /** How long to wait for schema if no updates in progress. */
-    private long waitSchemaTimeout = IgniteSystemProperties.getLong(IGNITE_WAIT_SCHEMA_UPDATE, DFLT_WAIT_SCHEMA_UPDATE);
+    private final long waitSchemaTimeout = IgniteSystemProperties.getLong(IGNITE_WAIT_SCHEMA_UPDATE, DFLT_WAIT_SCHEMA_UPDATE);
 
     /** For tests. */
     @SuppressWarnings("PublicField")
@@ -1363,16 +1364,22 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public IgniteNodeValidationResult validateNode(ClusterNode rmtNode,
-        DiscoveryDataBag.JoiningNodeDiscoveryData discoData
+    @Nullable @Override public IgniteNodeValidationResult validateNode(
+            ClusterNode rmtNode,
+            DiscoveryDataBag.JoiningNodeDiscoveryData discoData
     ) {
-        IgniteNodeValidationResult res;
-
         if (getBoolean(IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK) || !(marsh instanceof BinaryMarshaller))
             return null;
 
-        if ((res = validateBinaryConfiguration(rmtNode)) != null)
-            return res;
+        if (Boolean.TRUE.equals(rmtNode.attribute(ATTR_CONSISTENCY_CHECK_SKIPPED))) {
+            return null;
+        }
+
+        IgniteNodeValidationResult binaryConfValidationResult = validateBinaryConfiguration(rmtNode);
+
+        if (binaryConfValidationResult != null) {
+            return binaryConfValidationResult;
+        }
 
         return validateBinaryMetadata(rmtNode.id(), (Map<Integer, BinaryMetadataHolder>)discoData.joiningNodeData());
     }
