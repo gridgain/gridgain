@@ -26,8 +26,6 @@ import java.util.List;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
 
 public class BinaryConfigurationConsistencyMultiJvmSelfTest extends GridCommonAbstractTest {
-    private int curNodeIdx;
-
     @Override protected boolean isMultiJvm() {
         return true;
     }
@@ -35,11 +33,7 @@ public class BinaryConfigurationConsistencyMultiJvmSelfTest extends GridCommonAb
     @Override protected List<String> additionalRemoteJvmArgs() {
         List<String> defaultArgs = super.additionalRemoteJvmArgs();
 
-        if (curNodeIdx == 0) {
-            return defaultArgs;
-        } else {
-            defaultArgs.add("-D" + IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK + "=true");
-        }
+        defaultArgs.add("-D" + IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK + "=true");
 
         return defaultArgs;
     }
@@ -60,8 +54,9 @@ public class BinaryConfigurationConsistencyMultiJvmSelfTest extends GridCommonAb
      */
     @Test
     public void testSkipConsistencyCheckMismatch() throws Exception {
-        startGrid(curNodeIdx++);
+        startGrid(0);
 
-        startGrid(curNodeIdx);
+        // This node is started on a remote JVM with a different system property value.
+        startGrid(1);
     }
 }
