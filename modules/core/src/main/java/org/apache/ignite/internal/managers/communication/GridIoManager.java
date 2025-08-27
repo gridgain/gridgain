@@ -49,7 +49,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -1307,12 +1306,10 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
             if (plc == GridIoPolicy.QUERY_POOL) {
                 Message initMsg = msg.message();
-                byte priority = SqlFieldsQuery.MIN_PRIORITY;
                 if (initMsg instanceof GridPriorityAware) {
                     GridPriorityAware obj = (GridPriorityAware)initMsg;
-                    priority = obj.priority();
+                    c = new PriorityWrapper(c, obj.priority());
                 }
-                c = new PriorityWrapper(c, priority);
             }
 
             pools.poolForPolicy(plc).execute(c);

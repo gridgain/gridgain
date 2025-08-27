@@ -31,6 +31,9 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.IntSupplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -480,8 +483,6 @@ public class PoolProcessor extends GridProcessorAdapter {
             GridIoPolicy.QUERY_POOL,
             oomeHnd);
 
-        qryExecSvc.allowCoreThreadTimeOut(true);
-
         schemaExecSvc = new IgniteThreadPoolExecutor(
             "schema",
             cfg.getIgniteInstanceName(),
@@ -553,6 +554,18 @@ public class PoolProcessor extends GridProcessorAdapter {
         /** */
         private static final long serialVersionUID = 0L;
 
+        /** */
+        private final LinkedBlockingQueue<Runnable> nonPriorityQueue = new LinkedBlockingQueue<>();
+
+        /** */
+        private final ReentrantLock lock = new ReentrantLock();
+
+        /** */
+        private final Condition notEmpty = lock.newCondition();
+
+        /** */
+        private final AtomicInteger bqUsageCnt = new AtomicInteger();
+
         /**
          * Default capacity.
          */
@@ -565,10 +578,70 @@ public class PoolProcessor extends GridProcessorAdapter {
 
         /** {@inheritDoc} */
         @Override public boolean offer(Runnable exec) {
-            if (!(exec instanceof PriorityWrapper)) {
-                exec = new PriorityWrapper(exec);
+            boolean res;
+
+            boolean wrapped = exec instanceof PriorityWrapper;
+
+            lock.lock();
+
+            try {
+                if (wrapped) {
+                    res = super.offer(exec);
+
+                    bqUsageCnt.incrementAndGet();
+                }
+                else
+                    res = nonPriorityQueue.offer(exec);
+
+                notEmpty.signalAll();
+
+                return res;
+            } finally {
+                lock.unlock();
             }
-            return super.offer(exec);
+        }
+
+        /** {@inheritDoc} */
+        @Override public Runnable take() throws InterruptedException {
+            Runnable res = null;
+
+            // Fast path attempt.
+            if (bqUsageCnt.get() > 0) {
+                res = poll();
+            }
+
+            if (res != null) {
+                bqUsageCnt.getAndDecrement();
+
+                return res;
+            }
+            else {
+                res = nonPriorityQueue.poll();
+
+                if (res != null)
+                    return res;
+            }
+
+            lock.lock();
+
+            try {
+                while (res == null) {
+                    notEmpty.await();
+
+                    res = nonPriorityQueue.poll();
+
+                    if (res == null) {
+                        res = poll();
+
+                        if (res != null)
+                            bqUsageCnt.getAndDecrement();
+                    }
+                }
+            } finally {
+                lock.unlock();
+            }
+
+            return res;
         }
     }
 
