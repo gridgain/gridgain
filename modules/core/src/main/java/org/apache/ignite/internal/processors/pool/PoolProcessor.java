@@ -634,7 +634,8 @@ public class PoolProcessor extends GridProcessorAdapter {
 
             try {
                 while (res == null) {
-                    notEmpty.await();
+                    while (prioritySize.get() == 0 && nonPrioritySize.get() == 0)
+                        notEmpty.await();
 
                     res = poll();
 
