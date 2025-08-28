@@ -564,7 +564,9 @@ public class PoolProcessor extends GridProcessorAdapter {
         private final Condition notEmpty = lock.newCondition();
 
         /** */
-        private final AtomicInteger bqUsageCnt = new AtomicInteger();
+        private final AtomicInteger prioritySize = new AtomicInteger();
+
+        private final AtomicInteger nonPrioritySize = new AtomicInteger();
 
         /**
          * Default capacity.
@@ -583,10 +585,13 @@ public class PoolProcessor extends GridProcessorAdapter {
             if (exec instanceof PriorityWrapper) {
                 res = super.offer(exec);
 
-                bqUsageCnt.incrementAndGet();
+                prioritySize.incrementAndGet();
             }
-            else
+            else {
                 res = nonPriorityQueue.offer(exec);
+
+                nonPrioritySize.incrementAndGet();
+            }
 
             signalNotEmpty();
 
@@ -596,7 +601,7 @@ public class PoolProcessor extends GridProcessorAdapter {
         private void signalNotEmpty() {
             lock.lock();
             try {
-                notEmpty.signal();
+                notEmpty.signalAll();
             } finally {
                 lock.unlock();
             }
@@ -607,35 +612,39 @@ public class PoolProcessor extends GridProcessorAdapter {
             Runnable res = null;
 
             // Fast path attempt.
-            if (bqUsageCnt.get() > 0) {
+            if (prioritySize.get() > 0) {
                 res = poll();
+
+                if (res != null) {
+                    prioritySize.decrementAndGet();
+                    return res;
+                }
             }
 
-            if (res != null) {
-                bqUsageCnt.getAndDecrement();
-
-                return res;
-            }
-            else {
+            if (nonPrioritySize.get() > 0) {
                 res = nonPriorityQueue.poll();
 
-                if (res != null)
+                if (res != null) {
+                    nonPrioritySize.decrementAndGet();
                     return res;
+                }
             }
 
-            lock.lockInterruptibly();
+            lock.lock();
 
             try {
                 while (res == null) {
                     notEmpty.await();
 
-                    res = nonPriorityQueue.poll();
+                    res = poll();
 
                     if (res == null) {
-                        res = poll();
+                        res = nonPriorityQueue.poll();
 
                         if (res != null)
-                            bqUsageCnt.getAndDecrement();
+                            nonPrioritySize.getAndDecrement();
+                    } else {
+                        prioritySize.decrementAndGet();
                     }
                 }
             } finally {
