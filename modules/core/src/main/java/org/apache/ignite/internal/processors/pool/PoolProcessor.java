@@ -580,22 +580,23 @@ public class PoolProcessor extends GridProcessorAdapter {
         @Override public boolean offer(Runnable exec) {
             boolean res;
 
-            boolean wrapped = exec instanceof PriorityWrapper;
+            if (exec instanceof PriorityWrapper) {
+                res = super.offer(exec);
 
+                bqUsageCnt.incrementAndGet();
+            }
+            else
+                res = nonPriorityQueue.offer(exec);
+
+            signalNotEmpty();
+
+            return res;
+        }
+
+        private void signalNotEmpty() {
             lock.lock();
-
             try {
-                if (wrapped) {
-                    res = super.offer(exec);
-
-                    bqUsageCnt.incrementAndGet();
-                }
-                else
-                    res = nonPriorityQueue.offer(exec);
-
-                notEmpty.signalAll();
-
-                return res;
+                notEmpty.signal();
             } finally {
                 lock.unlock();
             }
@@ -622,7 +623,7 @@ public class PoolProcessor extends GridProcessorAdapter {
                     return res;
             }
 
-            lock.lock();
+            lock.lockInterruptibly();
 
             try {
                 while (res == null) {
