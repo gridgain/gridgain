@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.pool;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -27,7 +26,6 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -45,7 +43,6 @@ import org.apache.ignite.internal.StripedExecutorMXBeanAdapter;
 import org.apache.ignite.internal.ThreadPoolMXBeanAdapter;
 import org.apache.ignite.internal.managers.IgniteMBeansManager;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
-import org.apache.ignite.internal.managers.communication.PriorityWrapper;
 import org.apache.ignite.internal.managers.systemview.walker.StripedExecutorTaskViewWalker;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -465,18 +462,7 @@ public class PoolProcessor extends GridProcessorAdapter {
             cfg.getQueryThreadPoolSize(),
             cfg.getQueryThreadPoolSize(),
             DFLT_THREAD_KEEP_ALIVE_TIME,
-            new PriorityBlockingQueueEx(new Comparator<Runnable>() {
-                @Override public int compare(Runnable o1, Runnable o2) {
-                    PriorityWrapper left = (PriorityWrapper)o1;
-                    PriorityWrapper right = (PriorityWrapper)o2;
-
-                    int comp = Byte.compare((byte)-left.priority(), (byte)-right.priority());
-
-                    // Operations on PriorityBlockingQueue make no guarantees about the ordering of elements
-                    // with equal priority, thus initialization timestamp need to be used if priorities are equal.
-                    return comp != 0 ? comp : Long.compare(left.initializedTs(), right.initializedTs());
-                }
-            }),
+            new LinkedBlockingQueue<>(),
             GridIoPolicy.QUERY_POOL,
             oomeHnd);
 
@@ -546,29 +532,6 @@ public class PoolProcessor extends GridProcessorAdapter {
 
                 customExecs.put(execCfg.getName(), exec);
             }
-        }
-    }
-
-    private static class PriorityBlockingQueueEx extends PriorityBlockingQueue<Runnable> {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /**
-         * Default capacity.
-         */
-        private static final int DEFAULT_INITIAL_CAPACITY = 11;
-
-        /** */
-        PriorityBlockingQueueEx(Comparator<Runnable> comparator) {
-            super(DEFAULT_INITIAL_CAPACITY, comparator);
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean offer(Runnable exec) {
-            if (!(exec instanceof PriorityWrapper)) {
-                exec = new PriorityWrapper(exec);
-            }
-            return super.offer(exec);
         }
     }
 

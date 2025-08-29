@@ -359,7 +359,6 @@ public class GridReduceQueryExecutor {
      * @param dataPageScanEnabled If data page scan is enabled.
      * @param pageSize Page size.
      * @param maxMem Query memory limit.
-     * @param priority Query priority.
      * @return Rows iterator.
      */
     public Iterator<List<?>> query(
@@ -377,8 +376,7 @@ public class GridReduceQueryExecutor {
         MvccQueryTracker mvccTracker,
         Boolean dataPageScanEnabled,
         int pageSize,
-        long maxMem,
-        byte priority
+        long maxMem
     ) {
         assert !qry.mvccEnabled() || mvccTracker != null;
 
@@ -477,8 +475,7 @@ public class GridReduceQueryExecutor {
                         .schemaName(schemaName)
                         .maxMemory(maxMem)
                         .runningQryId(qryId)
-                        .label(label)
-                        .priority(priority);
+                        .label(label);
 
                     if (mvccTracker != null)
                         req.mvccSnapshot(mvccTracker.snapshot());

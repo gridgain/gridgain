@@ -204,8 +204,7 @@ public class QueryParser {
             nestedTxMode,
             autoCommit,
             batchedArgs,
-            qry.getUpdateBatchSize(),
-            qry.priority()
+            qry.getUpdateBatchSize()
         );
     }
 
