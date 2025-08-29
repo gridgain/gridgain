@@ -1461,7 +1461,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                 try {
                     if (dataEntry instanceof MvccDataEntry) {
                         cacheCtx.offheap().mvccApplyUpdate(
-                            cacheCtx,
+                            cacheCtx.isNear() ? cacheCtx.near().dht().context() : cacheCtx,
                             dataEntry.key(),
                             dataEntry.value(),
                             dataEntry.writeVersion(),
@@ -1471,7 +1471,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                     }
                     else {
                         cacheCtx.offheap().update(
-                            cacheCtx,
+                            cacheCtx.isNear() ? cacheCtx.near().dht().context() : cacheCtx,
                             dataEntry.key(),
                             dataEntry.value(),
                             dataEntry.writeVersion(),
@@ -1504,7 +1504,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                 try {
                     if (dataEntry instanceof MvccDataEntry) {
                         cacheCtx.offheap().mvccApplyUpdate(
-                            cacheCtx,
+                            cacheCtx.isNear() ? cacheCtx.near().dht().context() : cacheCtx,
                             dataEntry.key(),
                             null,
                             dataEntry.writeVersion(),
@@ -1513,7 +1513,12 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                             ((MvccDataEntry)dataEntry).mvccVer());
                     }
                     else
-                        cacheCtx.offheap().removeWithTombstone(cacheCtx, dataEntry.key(), dataEntry.writeVersion(), locPart);
+                        cacheCtx.offheap().removeWithTombstone(
+                            cacheCtx.isNear() ? cacheCtx.near().dht().context() : cacheCtx,
+                            dataEntry.key(),
+                            dataEntry.writeVersion(),
+                            locPart
+                        );
 
                     if (dataEntry.partitionCounter() != 0)
                         cacheCtx.offheap().dataStore(locPart).updateInitialCounter(dataEntry.partitionCounter() - 1, 1);
