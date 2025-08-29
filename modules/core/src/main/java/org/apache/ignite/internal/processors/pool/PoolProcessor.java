@@ -17,13 +17,16 @@
 package org.apache.ignite.internal.processors.pool;
 
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -31,13 +34,12 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntSupplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.ExecutorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureContext;
@@ -462,13 +464,14 @@ public class PoolProcessor extends GridProcessorAdapter {
 
         validateThreadPoolSize(cfg.getQueryThreadPoolSize(), "query");
 
-        qryExecSvc = new IgniteThreadPoolExecutor(
+        int dfltInitCapacity = 11; // Copy-pasted from java.util.concurrent.PriorityBlockingQueue.DEFAULT_INITIAL_CAPACITY
+        qryExecSvc = new QueryExecutorService(
             "query",
             cfg.getIgniteInstanceName(),
             cfg.getQueryThreadPoolSize(),
             cfg.getQueryThreadPoolSize(),
             DFLT_THREAD_KEEP_ALIVE_TIME,
-            new PriorityBlockingQueueEx(new Comparator<Runnable>() {
+            new PriorityBlockingQueue<>(dfltInitCapacity, new Comparator<Runnable>() {
                 @Override public int compare(Runnable o1, Runnable o2) {
                     PriorityWrapper left = (PriorityWrapper)o1;
                     PriorityWrapper right = (PriorityWrapper)o2;
@@ -482,6 +485,8 @@ public class PoolProcessor extends GridProcessorAdapter {
             }),
             GridIoPolicy.QUERY_POOL,
             oomeHnd);
+
+        qryExecSvc.allowCoreThreadTimeOut(true);
 
         schemaExecSvc = new IgniteThreadPoolExecutor(
             "schema",
@@ -550,109 +555,64 @@ public class PoolProcessor extends GridProcessorAdapter {
         }
     }
 
-    private static class PriorityBlockingQueueEx extends PriorityBlockingQueue<Runnable> {
-        /** */
-        private static final long serialVersionUID = 0L;
+    private static class QueryExecutorService extends IgniteThreadPoolExecutor {
+        private final BlockingQueue<Runnable> inbox = new LinkedBlockingQueue<>();
 
-        /** */
-        private final LinkedBlockingQueue<Runnable> nonPriorityQueue = new LinkedBlockingQueue<>();
+        private final AtomicBoolean dispatchTaskScheduled = new AtomicBoolean();
+        private final Runnable dispatchTask = new DispatchTask();
 
-        /** */
-        private final ReentrantLock lock = new ReentrantLock();
-
-        /** */
-        private final Condition notEmpty = lock.newCondition();
-
-        /** */
-        private final AtomicInteger prioritySize = new AtomicInteger();
-
-        private final AtomicInteger nonPrioritySize = new AtomicInteger();
-
-        /**
-         * Default capacity.
-         */
-        private static final int DEFAULT_INITIAL_CAPACITY = 11;
-
-        /** */
-        PriorityBlockingQueueEx(Comparator<Runnable> comparator) {
-            super(DEFAULT_INITIAL_CAPACITY, comparator);
+        private QueryExecutorService(
+                String threadNamePrefix,
+                String igniteInstanceName,
+                int corePoolSize,
+                int maxPoolSize,
+                long keepAliveTime,
+                BlockingQueue<Runnable> workQ,
+                byte plc,
+                UncaughtExceptionHandler eHnd) {
+            super(threadNamePrefix, igniteInstanceName, corePoolSize, maxPoolSize, keepAliveTime, workQ, plc, eHnd);
         }
 
-        /** {@inheritDoc} */
-        @Override public boolean offer(Runnable exec) {
-            boolean res;
+        @Override
+        public void execute(Runnable command) {
+            if (isShutdown()) {
+                getRejectedExecutionHandler().rejectedExecution(command, this);
 
-            if (exec instanceof PriorityWrapper) {
-                res = super.offer(exec);
-
-                prioritySize.incrementAndGet();
-            }
-            else {
-                res = nonPriorityQueue.offer(exec);
-
-                nonPrioritySize.incrementAndGet();
+                return;
             }
 
-            signalNotEmpty();
+            inbox.offer(command);
 
-            return res;
+            scheduleDispatchIfNeeded();
         }
 
-        private void signalNotEmpty() {
-            lock.lock();
-            try {
-                notEmpty.signalAll();
-            } finally {
-                lock.unlock();
-            }
+        private void scheduleDispatchIfNeeded() {
+            if (dispatchTaskScheduled.compareAndSet(false, true))
+                scheduleDispatch();
         }
 
-        /** {@inheritDoc} */
-        @Override public Runnable take() throws InterruptedException {
-            Runnable res = null;
+        private void scheduleDispatch() {
+            super.execute(new PriorityWrapper(dispatchTask, (byte) SqlFieldsQuery.MAX_PRIORITY));
+        }
 
-            // Fast path attempt.
-            if (prioritySize.get() > 0) {
-                res = poll();
+        private class DispatchTask implements Runnable {
+            @Override
+            public void run() {
+                List<Runnable> jobsToDispatch = new ArrayList<>(inbox.size());
 
-                if (res != null) {
-                    prioritySize.decrementAndGet();
-                    return res;
+                inbox.drainTo(jobsToDispatch);
+
+                jobsToDispatch.forEach(QueryExecutorService.super::execute);
+
+                if (!inbox.isEmpty())
+                    scheduleDispatch();
+                else {
+                    dispatchTaskScheduled.set(false);
+
+                    if (!inbox.isEmpty())
+                        scheduleDispatchIfNeeded();
                 }
             }
-
-            if (nonPrioritySize.get() > 0) {
-                res = nonPriorityQueue.poll();
-
-                if (res != null) {
-                    nonPrioritySize.decrementAndGet();
-                    return res;
-                }
-            }
-
-            lock.lock();
-
-            try {
-                while (res == null) {
-                    while (prioritySize.get() == 0 && nonPrioritySize.get() == 0)
-                        notEmpty.await();
-
-                    res = poll();
-
-                    if (res == null) {
-                        res = nonPriorityQueue.poll();
-
-                        if (res != null)
-                            nonPrioritySize.getAndDecrement();
-                    } else {
-                        prioritySize.decrementAndGet();
-                    }
-                }
-            } finally {
-                lock.unlock();
-            }
-
-            return res;
         }
     }
 

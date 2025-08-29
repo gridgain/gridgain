@@ -1307,11 +1307,12 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
             if (plc == GridIoPolicy.QUERY_POOL) {
                 Message initMsg = msg.message();
+                byte priority = SqlFieldsQuery.MIN_PRIORITY;
                 if (initMsg instanceof GridPriorityAware) {
                     GridPriorityAware obj = (GridPriorityAware)initMsg;
-                    if (obj.priority() != SqlFieldsQuery.MIN_PRIORITY)
-                        c = new PriorityWrapper(c, obj.priority());
+                    priority = obj.priority();
                 }
+                c = new PriorityWrapper(c, priority);
             }
 
             pools.poolForPolicy(plc).execute(c);
