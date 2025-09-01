@@ -569,7 +569,7 @@ public class TcpIgniteClient implements IgniteClient {
             BinaryMetadata newMeta = ((BinaryTypeImpl)meta).metadata();
 
             // If type wasn't registered before or metadata changed, send registration request.
-            if (oldType == null || BinaryUtils.mergeMetadata(oldMeta, newMeta) != oldMeta) {
+            if (!meta.system() && (oldType == null || BinaryUtils.mergeMetadata(oldMeta, newMeta) != oldMeta)) {
                 try {
                     if (ch != null) { // Postpone binary type registration requests to server before channels initiated.
                         ch.request(
