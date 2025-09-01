@@ -16,10 +16,13 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.checkpoint;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.util.ReentrantReadWriteLockWithTracking;
 
@@ -33,8 +36,18 @@ public class CheckpointReadWriteLock {
     /** Assertion enabled. */
     private static final boolean ASSERTION_ENABLED = GridCacheDatabaseSharedManager.class.desiredAssertionStatus();
 
+    private static final long CP_ALERT_THRESHOLD_MS = IgniteSystemProperties.getLong("CP_ALERT_THRESHOLD_MS", 10_000);
+    private static final int CP_THROTTLING = IgniteSystemProperties.getInteger("CP_THROTTLING", 10);
+    private static final boolean CP_TRACE = IgniteSystemProperties.getBoolean("CP_TRACE", false);
+
     /** Checkpoint lock hold count. */
     public static final ThreadLocal<Integer> CHECKPOINT_LOCK_HOLD_COUNT = ThreadLocal.withInitial(() -> 0);
+
+    public static final ThreadLocal<Long> CHECKPOINT_LOCK_HOLD_START_TS = ThreadLocal.withInitial(() -> 0L);
+    public static final ThreadLocal<Integer> LOG_THROTTLING = ThreadLocal.withInitial(() -> 0);
+
+    private static final ConcurrentHashMap<String, Integer> READERS = new ConcurrentHashMap<>();
+    private static final AtomicBoolean writeRequested = new AtomicBoolean(false);
 
     /**
      * Any thread with a such prefix is managed by the checkpoint. So some conditions can rely on it(ex. we don't need a
@@ -42,17 +55,46 @@ public class CheckpointReadWriteLock {
      */
     static final String CHECKPOINT_RUNNER_THREAD_PREFIX = "checkpoint-runner";
 
-    /** Checkpont lock. */
+    /** Checkpoint lock. */
     private final ReentrantReadWriteLockWithTracking checkpointLock;
+
+    private final IgniteLogger log;
 
     /**
      * @param logger Logger.
      */
     CheckpointReadWriteLock(Function<Class<?>, IgniteLogger> logger) {
+        log = logger.apply(getClass());
+
         if (getBoolean(IGNITE_PDS_LOG_CP_READ_LOCK_HOLDERS))
             checkpointLock = new ReentrantReadWriteLockWithTracking(logger.apply(getClass()), 5_000);
         else
             checkpointLock = new ReentrantReadWriteLockWithTracking();
+    }
+
+    private void traceRL(String category) {
+        int hc = getReadHoldCount();
+
+        READERS.put(Thread.currentThread().getName(), hc);
+
+        if (hc == 1) {
+            CHECKPOINT_LOCK_HOLD_START_TS.set(System.nanoTime());
+        }
+
+        if (writeRequested.get()) {
+            if (CP_THROTTLING > 0) {
+                int throttling = LOG_THROTTLING.get();
+                if (throttling > CP_THROTTLING) {
+                    log("On RL " + category + " :: hc=" + hc);
+                    LOG_THROTTLING.set(0);
+
+                } else {
+                    LOG_THROTTLING.set(throttling + 1);
+                }
+            } else {
+                log("On RL " + category + " :: hc=" + hc);
+            }
+        }
     }
 
     /**
@@ -66,6 +108,7 @@ public class CheckpointReadWriteLock {
             return;
 
         checkpointLock.readLock().lock();
+        if (CP_TRACE) traceRL("readLock()");
 
         if (ASSERTION_ENABLED)
             CHECKPOINT_LOCK_HOLD_COUNT.set(CHECKPOINT_LOCK_HOLD_COUNT.get() + 1);
@@ -82,6 +125,7 @@ public class CheckpointReadWriteLock {
             return true;
 
         boolean res = checkpointLock.readLock().tryLock(timeout, unit);
+        if (res && CP_TRACE) traceRL("tryReadLock(t, u)");
 
         if (ASSERTION_ENABLED && res)
             CHECKPOINT_LOCK_HOLD_COUNT.set(CHECKPOINT_LOCK_HOLD_COUNT.get() + 1);
@@ -99,6 +143,7 @@ public class CheckpointReadWriteLock {
             return true;
 
         boolean res = checkpointLock.readLock().tryLock();
+        if (res && CP_TRACE) traceRL("tryReadLock()");
 
         if (ASSERTION_ENABLED)
             CHECKPOINT_LOCK_HOLD_COUNT.set(CHECKPOINT_LOCK_HOLD_COUNT.get() + 1);
@@ -127,6 +172,26 @@ public class CheckpointReadWriteLock {
 
         checkpointLock.readLock().unlock();
 
+        if (CP_TRACE) {
+            int hc = checkpointLock.getReadHoldCount();
+            if (hc == 0) {
+                READERS.remove(Thread.currentThread().getName());
+            } else {
+                READERS.put(Thread.currentThread().getName(), hc);
+            }
+
+            long start = CHECKPOINT_LOCK_HOLD_START_TS.get();
+            long durationMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+
+            if (durationMillis > CP_ALERT_THRESHOLD_MS) {
+                log("CP was captured for too long " + durationMillis + "ms  ");
+            }
+
+            if (writeRequested.get()) {
+                log("On RL release :: " + READERS);
+            }
+        }
+
         if (ASSERTION_ENABLED)
             CHECKPOINT_LOCK_HOLD_COUNT.set(CHECKPOINT_LOCK_HOLD_COUNT.get() - 1);
     }
@@ -135,7 +200,15 @@ public class CheckpointReadWriteLock {
      * Take the checkpoint write lock.
      */
     public void writeLock() {
+        log("On WL get :: " + READERS);
+        writeRequested.set(true);
+
         checkpointLock.writeLock().lock();
+        log("On WL acquired :: " + READERS);
+
+        if (!Thread.currentThread().getName().startsWith("db-checkpoint")) {
+            log("Trying to capture CP WL");
+        }
     }
 
     /**
@@ -143,6 +216,8 @@ public class CheckpointReadWriteLock {
      */
     public void writeUnlock() {
         checkpointLock.writeLock().unlock();
+        writeRequested.set(false);
+        log("CP WL Released");
     }
 
     /**
@@ -157,5 +232,9 @@ public class CheckpointReadWriteLock {
      */
     public int getReadHoldCount() {
         return checkpointLock.getReadHoldCount();
+    }
+
+    private void log(String message) {
+        if (log.isDebugEnabled()) log.debug(message);
     }
 }

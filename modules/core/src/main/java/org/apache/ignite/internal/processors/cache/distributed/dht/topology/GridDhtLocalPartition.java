@@ -957,6 +957,10 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 grp.offheap().partitionIterator(id, TOMBSTONES) :
                 grp.offheap().partitionIterator(id, DATA_AND_TOMBSTONES);
 
+            IgniteLogger lg = log.getLogger(PartitionsEvictManager.class);
+
+            lg.debug("Start clearAll() for part=" + id);
+
             while (it0.hasNext()) {
                 if (stopClo.getAsBoolean() || state0 != state())
                     return cleared;
@@ -994,6 +998,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     ctx.database().checkpointReadUnlock();
                 }
             }
+
+            lg.debug("Finish clearAll() for part=" + id);
 
             if (forceTestCheckpointOnEviction && partWhereTestCheckpointEnforced == null && cleared >= fullSize()) {
                 ctx.database().forceCheckpoint("test").futureFor(FINISHED).get();
@@ -1045,6 +1051,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                         null,
                         false);
                 }
+
+                return cleared;
             }
         }
         catch (GridDhtInvalidPartitionException ignored) {

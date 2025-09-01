@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
@@ -34,8 +35,10 @@ public class ReentrantReadWriteLockWithTracking implements ReadWriteLock {
     /** Lock print threshold. */
     private long readLockThreshold;
 
+    private static final boolean CP_FAIR_MODE = IgniteSystemProperties.getBoolean("CP_FAIR_MODE", false);
+
     /** Delegate instance. */
-    private final ReentrantReadWriteLock delegate = new ReentrantReadWriteLock();
+    private final ReentrantReadWriteLock delegate = new ReentrantReadWriteLock(CP_FAIR_MODE);
 
     /** Read lock holder. */
     private ReentrantReadWriteLock.ReadLock readLock;
