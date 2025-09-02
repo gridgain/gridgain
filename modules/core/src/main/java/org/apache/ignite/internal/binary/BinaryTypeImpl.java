@@ -63,6 +63,11 @@ public class BinaryTypeImpl implements BinaryType {
     }
 
     /** {@inheritDoc} */
+    @Override public boolean system() {
+        return meta.system();
+    }
+
+    /** {@inheritDoc} */
     @Override public String fieldTypeName(String fieldName) {
         return meta.fieldTypeName(fieldName);
     }

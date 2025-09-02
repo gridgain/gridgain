@@ -238,6 +238,11 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
 
         ig.cluster().active(true);
 
+        Map locCache0 = GridTestUtils.getFieldValue(
+            (CacheObjectBinaryProcessorImpl)ig.context().cacheObjects(), "metadataLocCache");
+
+        int initMetaCount = locCache0.size();
+
         IgniteCache<Object, Object> cache = ig.cache(DEFAULT_CACHE_NAME);
 
         TestAddress addr = new TestAddress(0, "RUS", "Spb", "Nevsky");
@@ -254,7 +259,8 @@ public class IgnitePdsBinaryMetadataAsyncWritingTest extends GridCommonAbstractT
         Map locCache = GridTestUtils.getFieldValue(
             (CacheObjectBinaryProcessorImpl)ig.context().cacheObjects(), "metadataLocCache");
 
-        assertTrue(GridTestUtils.waitForCondition(() -> locCache.size() == 3, 5_000));
+        // TODO ignore system types
+        assertTrue(GridTestUtils.waitForCondition(() -> locCache.size() == initMetaCount + 3, 5_000));
 
         fileWriteLatch.countDown();
     }
