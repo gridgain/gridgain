@@ -1915,9 +1915,12 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
             SystemView<BinaryMetadataView> view = g.context().systemView().view(BINARY_METADATA_VIEW);
 
             assertNotNull(view);
-            assertEquals(2, view.size());
+            assertEquals(5, view.size());
 
             for (BinaryMetadataView meta : view) {
+                if (meta.system())
+                    continue;
+
                 if (Objects.equals(TestObjectEnum.class.getName(), meta.typeName())) {
                     assertTrue(meta.isEnum());
 

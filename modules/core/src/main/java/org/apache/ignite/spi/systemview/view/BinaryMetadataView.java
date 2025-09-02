@@ -81,4 +81,10 @@ public class BinaryMetadataView {
     public boolean isEnum() {
         return meta.isEnum();
     }
+
+    /** @return {@code True} if this is system type. */
+    @Order(7)
+    public boolean system() {
+        return meta.system();
+    }
 }

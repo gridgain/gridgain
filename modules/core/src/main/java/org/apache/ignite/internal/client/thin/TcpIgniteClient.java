@@ -590,6 +590,7 @@ public class TcpIgniteClient implements IgniteClient {
         public void sendAllMeta() {
             try {
                 CompletableFuture.allOf(cache.metadata().stream()
+                        .filter(type -> !type.system())
                     .map(type -> sendMetaAsync(((BinaryTypeImpl)type).metadata()).toCompletableFuture())
                     .toArray(CompletableFuture[]::new)
                 ).get();

@@ -113,18 +113,18 @@ namespace ignite
             static void Write(BinaryWriter& writer, const AffinityKey& obj)
             {
                 writer.WriteInt32("key", obj.key);
-                writer.WriteInt32("aff", obj.aff);
+                writer.WriteInt32("affKey", obj.aff);
             }
 
             static void Read(BinaryReader& reader, AffinityKey& dst)
             {
                 dst.key = reader.ReadInt32("key");
-                dst.aff = reader.ReadInt32("aff");
+                dst.aff = reader.ReadInt32("affKey");
             }
 
             static void GetAffinityFieldName(std::string& dst)
             {
-                dst = "aff";
+                dst = "affKey";
             }
         };
     }
