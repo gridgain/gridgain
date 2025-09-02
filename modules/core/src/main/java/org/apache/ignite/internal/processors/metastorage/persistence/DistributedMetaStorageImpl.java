@@ -431,6 +431,16 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             localMetastorageUnlock();
         }
 
+        try {
+            lock.readLock().lock();
+
+            DistributedMetaStorageKeyValuePair[] data = bridge.localFullData();
+
+            log.info("Initial metastorage data [ver=" + ver + ", values=" + printPairsArray(data) + "]");
+        } finally {
+            lock.readLock().unlock();
+        }
+
         registerSystemView();
 
         notifyReadyForRead();
@@ -868,6 +878,37 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         return sb.append(']').toString();
     }
 
+    /** */
+    private String printHistoryItem(DistributedMetaStorageHistoryItem item) throws IgniteCheckedException {
+        StringBuilder sb = new StringBuilder("[");
+
+        int i = 0;
+        while (i < item.keys.length) {
+            sb.append(item.keys[i]).append('=').append(unmarshal(marshaller, item.valBytesArray[i]));
+
+            if (++i < item.keys.length)
+                sb.append(", ");
+        }
+
+        return sb.append(']').toString();    }
+
+    /** */
+    private String printPairsArray(DistributedMetaStorageKeyValuePair[] data) throws IgniteCheckedException {
+        StringBuilder sb = new StringBuilder("[");
+
+        int i = 0;
+        while (i < data.length) {
+            DistributedMetaStorageKeyValuePair pair = data[i];
+
+            sb.append(pair.key).append('=').append(unmarshal(marshaller, pair.valBytes));
+
+            if (++i < data.length)
+                sb.append(", ");
+        }
+
+        return sb.append(']').toString();
+    }
+
     /**
      * @param joiningData Joining data to validate.
      * @return {@code null} if contained data is valid otherwise error message.
@@ -1136,6 +1177,9 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                     notifyListenersBeforeReadyForWrite(nodeData.fullData);
 
                     bridge.writeFullNodeData(nodeData);
+
+                    log.info("Received metastorage common data [ver=" + nodeData.ver +
+                        ", values=" + printPairsArray(nodeData.fullData) + "]");
                 }
 
                 if (nodeData.hist != null) {
@@ -1374,14 +1418,29 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     ) throws IgniteCheckedException {
         lock.writeLock().lock();
 
+        DistributedMetaStorageHistoryItem itemToWrite;
         try {
-            if (optimize)
-                histItem = optimizeHistoryItem(histItem);
+            if (optimize) {
+                itemToWrite = optimizeHistoryItem(histItem);
 
-            if (histItem == null)
-                return;
+                if (itemToWrite == null) {
+                    log.info("Skipping metastorage history item as it matches already existing values [ver=" + ver +
+                        ", histItem=" + printHistoryItem(histItem) + ']');
 
-            ver = ver.nextVersion(histItem);
+                    return;
+                }
+            } else {
+                itemToWrite = histItem;
+            }
+
+            ver = ver.nextVersion(itemToWrite);
+
+            if (histItem.keys.length != itemToWrite.keys.length)
+                log.info("Writing optimised metastorage history item [ver= " + ver +
+                    ", histItem=" + printHistoryItem(histItem) +
+                    ", itemToWrite=" + printHistoryItem(itemToWrite) + ']');
+            else
+                log.info("Writing metastorage history item [ver=" + ver + ", itemToWrite=" + printHistoryItem(histItem) + ']');
 
             for (int i = 0, len = histItem.keys.length; i < len; i++) {
                 String key = histItem.keys[i];
@@ -1476,6 +1535,11 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
         if (!Objects.deepEquals(oldVal, expVal)) {
             msg.setMatches(false);
+
+            log.info("Failed metastorage CAS [ver=" + ver +
+                ", expVal=" + expVal +
+                ", actualVal=" + oldVal +
+                ", key=" + msg.key() + "]");
 
             // Do nothing if expected value doesn't match with the actual one.
             return;
