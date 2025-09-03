@@ -959,7 +959,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             IgniteLogger lg = log.getLogger(PartitionsEvictManager.class);
 
-            lg.debug("Start clearAll() for part=" + id);
+            lg.info("Start clearAll() for part=" + id);
 
             while (it0.hasNext()) {
                 if (stopClo.getAsBoolean() || state0 != state())
@@ -999,7 +999,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 }
             }
 
-            lg.debug("Finish clearAll() for part=" + id);
+            lg.info("Finish clearAll() for part=" + id);
 
             if (forceTestCheckpointOnEviction && partWhereTestCheckpointEnforced == null && cleared >= fullSize()) {
                 ctx.database().forceCheckpoint("test").futureFor(FINISHED).get();

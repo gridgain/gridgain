@@ -562,6 +562,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
          * @param task Partition eviction task.
          */
         private synchronized void taskScheduled(PartitionEvictionTask task) {
+            log.info("Task scheduled " + task);
+
             taskInProgress++;
 
             GridFutureAdapter<?> fut = task.finishFut;

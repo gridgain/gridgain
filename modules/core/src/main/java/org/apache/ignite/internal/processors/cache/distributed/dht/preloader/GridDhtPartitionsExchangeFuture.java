@@ -97,6 +97,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopologyImpl;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionsStateValidator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionStateValidationException;
 import org.apache.ignite.internal.processors.cache.persistence.DatabaseLifecycleListener;
@@ -3445,6 +3446,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 Long maxClearCntr = maxClearCntrs.get(p);
                 Long testCntr = clearCntrs.getOrDefault(p, 0L);
 
+                log.info(">> Node=" + U.id8(e.getKey()) + " " +
+                        "part=" + p + " " +
+                        "state=" + state + " " +
+                        "cntr=" + cntr + " " +
+                        "clearCntrs=" + clearCntrs
+                );
+
                 if (testCntr != 0 && (maxClearCntr == null || testCntr > maxClearCntr))
                     maxClearCntrs.put(p, testCntr);
             }
@@ -3500,6 +3508,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         SupplyGroupInfo supplyGroupInfo = assignHistoricalSuppliers(top, maxCntrs, varCntrs, haveHist);
 
+        log.info("Counters:\n    clear=" + maxClearCntrs + "\n    upd=" + varCntrs);
+
         if (resetOwners)
             resetOwnersByCounter(top, maxCntrs, haveHist);
 
@@ -3521,6 +3531,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     }
 
                     // Set partition as not applicable for fast full rebalancing.
+                    log.info(">> Disable fast rebalance part=" + part + " node=" + nodeId);
                     partsToReload.put(nodeId, top.groupId(), part);
                 }
             }
@@ -5771,6 +5782,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @return {@code True} if partition has to be cleared before rebalance.
      */
     public boolean isClearingPartition(CacheGroupContext grp, int part) {
+        log.info("Check clearing part=" + part);
         if (!grp.persistenceEnabled())
             return false;
 
@@ -5779,6 +5791,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 return false;
 
             Set<Integer> parts = clearingPartitions.get(grp.groupId());
+
+            if (parts != null && parts.contains(part)) {
+                log.info("Need clearing part=" + part);
+            }
 
             return parts != null && parts.contains(part);
         }
@@ -5793,6 +5809,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      */
     public void addClearingPartition(int grpId, int part) {
         synchronized (mux) {
+            log.info(">> Enforce clearing grp=" + grpId + " part=" + part);
             clearingPartitions.computeIfAbsent(grpId, k -> new HashSet()).add(part);
         }
     }
