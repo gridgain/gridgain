@@ -1439,7 +1439,8 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      *
      * @param histItem {@code <key, value>} pair to process.
      * @throws IgniteCheckedException In case of IO/unmarshalling errors.
-     */    private void completeWriteAndLog(DistributedMetaStorageHistoryItem histItem) throws IgniteCheckedException {
+     */
+    private void completeWriteAndLog(DistributedMetaStorageHistoryItem histItem) throws IgniteCheckedException {
         DistributedMetaStorageHistoryItem writtenItem = completeWrite(histItem, true);
 
         if (writtenItem == null) {
