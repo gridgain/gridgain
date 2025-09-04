@@ -1189,7 +1189,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                     worker.update(nodeData);
 
                 if (nodeData.updates != null)
-                    completeWriteAndLog("Applying received distributed metastorage updates: ", nodeData.updates, 0);
+                    completeWriteAndLog("Applying received distributed metastorage updates: [", nodeData.updates, 0);
             }
             else if (!isClient && ver.id > 0) {
                 throw new IgniteException("Cannot join the cluster because it doesn't support distributed metastorage" +
@@ -1399,26 +1399,37 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     /**
      * Store data in local metastorage or in memory and log with given prefix. Doesn't optimise history items.
      *
-     * @param prefix Prefix for log message, should end in '['.
+     * @param prefix Prefix for log message, should end with '['.
      * @param items Items to store.
-     * @param index Strarting index.
+     * @param index Starting index.
      */
     private void completeWriteAndLog(String prefix, DistributedMetaStorageHistoryItem[] items, int index) {
         StringBuilder sb = new StringBuilder(prefix);
 
-        while (index < items.length) {
+        sb.append("updates=[");
+
+        DistributedMetaStorageVersion initialVer = ver;
+
+        for (int i = index; i < items.length; i++) {
             try {
                 completeWrite(items[index], false);
+
                 sb.append(printHistoryItem(items[index]));
             } catch (IgniteCheckedException ex) {
                 log.error("Unable to unmarshal new metastore data. update=" + items[index], ex);
             }
 
-            if (++index < items.length)
-                sb.append(',');
+            if (i < items.length - 1)
+                sb.append(", ");
         }
 
-        log.info(sb.append(']').toString());
+        sb.append("], initialVer=")
+            .append(initialVer)
+            .append(", ver=")
+            .append(ver)
+            .append("]");
+
+        log.info(sb.toString());
     }
 
 
