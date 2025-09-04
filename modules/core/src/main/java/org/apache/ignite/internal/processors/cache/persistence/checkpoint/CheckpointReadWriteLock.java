@@ -92,15 +92,16 @@ public class CheckpointReadWriteLock {
     /**
      * Try to get a checkpoint read lock.
      *
-     * @return {@code True} if the checkpoint read lock is acquired.
+     * @return {@code true} if the checkpoint read lock is acquired.
+     * @throws  InterruptedException if the current thread is interrupted.
      */
-    public boolean tryReadLock() {
+    public boolean tryReadLock() throws InterruptedException {
         if (checkpointLock.writeLock().isHeldByCurrentThread())
             return true;
 
-        boolean res = checkpointLock.readLock().tryLock();
+        boolean res = checkpointLock.readLock().tryLock(0, TimeUnit.SECONDS);
 
-        if (ASSERTION_ENABLED)
+        if (ASSERTION_ENABLED && res)
             CHECKPOINT_LOCK_HOLD_COUNT.set(CHECKPOINT_LOCK_HOLD_COUNT.get() + 1);
 
         return res;

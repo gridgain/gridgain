@@ -167,10 +167,17 @@ public class CheckpointTimeoutLock {
     }
 
     /**
-     * @return {@code} True if checkpoint read lock is acquired.
+     * @return {@code true} if checkpoint read lock is acquired.
      */
     public boolean tryCheckpointReadLock() {
-        return checkpointReadWriteLock.tryReadLock();
+        try {
+            return checkpointReadWriteLock.tryReadLock();
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+
+            return false;
+        }
     }
 
     /**

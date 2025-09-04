@@ -957,10 +957,14 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 grp.offheap().partitionIterator(id, TOMBSTONES) :
                 grp.offheap().partitionIterator(id, DATA_AND_TOMBSTONES);
 
+            // The size of the batch for which the checkpoint lock will be taken.
+            int batchSize = 1_000;
+
             while (it0.hasNext()) {
                 if (stopClo.getAsBoolean() || state0 != state())
                     return cleared;
 
+                // Acquire checkpoint read lock to prevent pages being freed while we are clearing them.
                 if (!ctx.database().tryCheckpointReadLock()) { // Avoid a deadlock with a checkpointer.
                     if (stopClo.getAsBoolean()) // Check if waiting for clearing cancellation.
                         return cleared;
@@ -969,21 +973,24 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 }
 
                 try {
-                    CacheDataRow row = it0.next();
+                    int entriesCnt = 0;
+                    while (it0.hasNext() && entriesCnt++ < batchSize) {
+                        CacheDataRow row = it0.next();
 
-                    // Do not clear fresh rows in case of partition reloading.
-                    // This is required because normal updates are possible to moving partition which is currently cleared.
-                    // We can clean OWNING partition if a partition has been reset from lost state0.
-                    // In this case new updates must be preserved.
-                    // Partition state0 can be switched from RENTING to MOVING and vice versa during clearing.
-                    if (rowFilter.test(row))
-                        continue;
+                        // Do not clear fresh rows in case of partition reloading.
+                        // This is required because normal updates are possible to moving partition which is currently cleared.
+                        // We can clean OWNING partition if a partition has been reset from lost state0.
+                        // In this case new updates must be preserved.
+                        // Partition state0 can be switched from RENTING to MOVING and vice versa during clearing.
+                        if (rowFilter.test(row))
+                            continue;
 
-                    if (grp.sharedGroup() && (cctx == null || cctx.cacheId() != row.cacheId()))
-                        cctx = ctx.cacheContext(row.cacheId());
+                        if (grp.sharedGroup() && (cctx == null || cctx.cacheId() != row.cacheId()))
+                            cctx = ctx.cacheContext(row.cacheId());
 
-                    if (clearClo.apply(row, cctx, clearVer))
-                        cleared++;
+                        if (clearClo.apply(row, cctx, clearVer))
+                            cleared++;
+                    }
                 }
                 catch (GridDhtInvalidPartitionException e) {
                     assert isEmpty() && state() == EVICTED : "Invalid error [e=" + e + ", part=" + this + ']';
