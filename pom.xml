@@ -817,12 +817,13 @@
                         <configuration>
                             <includeBomSerialNumber>true</includeBomSerialNumber>
                             <includeRuntimeScope>true</includeRuntimeScope>
-                            <includeCompileScope>false</includeCompileScope>
+                            <includeCompileScope>true</includeCompileScope>
                             <includeProvidedScope>false</includeProvidedScope>
                             <includeSystemScope>false</includeSystemScope>
                             <includeTestScope>false</includeTestScope>
                             <outputFormat>all</outputFormat>
                             <outputName>bom</outputName>
+                            <skipNotDeployed>false</skipNotDeployed>
                         </configuration>
                     </plugin>
                 </plugins>
