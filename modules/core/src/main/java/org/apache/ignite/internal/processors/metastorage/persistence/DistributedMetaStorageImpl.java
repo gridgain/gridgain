@@ -961,7 +961,11 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                 DistributedMetaStorageHistoryItem[] hist = joiningData.hist;
 
                 if (remoteVer.id - locVer.id <= hist.length)
-                    completeWritesAndLog("Applying new metastore data on join: [", hist, (int) (locVer.id - remoteVer.id + hist.length));
+                    completeWritesNotOptimisedAndLog(
+                        "Applying new metastore data on join: [",
+                        hist,
+                        (int) (locVer.id - remoteVer.id + hist.length)
+                    );
                 else
                     assert false : "Joining node is too far ahead [remoteVer=" + remoteVer + "]";
             }
@@ -1189,7 +1193,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                     worker.update(nodeData);
 
                 if (nodeData.updates != null)
-                    completeWritesAndLog("Applying received distributed metastorage updates: [", nodeData.updates, 0);
+                    completeWritesNotOptimisedAndLog("Applying received distributed metastorage updates: [", nodeData.updates, 0);
             }
             else if (!isClient && ver.id > 0) {
                 throw new IgniteException("Cannot join the cluster because it doesn't support distributed metastorage" +
@@ -1403,7 +1407,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      * @param items Items to store.
      * @param startingIndex Starting index.
      */
-    private void completeWritesAndLog(String prefix, DistributedMetaStorageHistoryItem[] items, int startingIndex) {
+    private void completeWritesNotOptimisedAndLog(String prefix, DistributedMetaStorageHistoryItem[] items, int startingIndex) {
         StringBuilder sb = new StringBuilder(prefix);
 
         sb.append("updates=[");
