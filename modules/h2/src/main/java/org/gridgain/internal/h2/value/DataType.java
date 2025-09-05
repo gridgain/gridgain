@@ -59,7 +59,7 @@ public class DataType {
      * The Geometry class. This object is null if the jts jar file is not in the
      * classpath.
      */
-    public static final Class<?> GEOMETRY_CLASS = null;
+    public static final Class<?> GEOMETRY_CLASS;
 
     private static final String GEOMETRY_CLASS_NAME =
             "org.locationtech.jts.geom.Geometry";
@@ -167,6 +167,15 @@ public class DataType {
     public boolean hidden;
 
     static {
+        Class<?> g;
+        try {
+            g = JdbcUtils.loadUserClass(GEOMETRY_CLASS_NAME);
+        } catch (Exception e) {
+            // class is not in the classpath - ignore
+            g = null;
+        }
+        GEOMETRY_CLASS = g;
+
         DataType dataType = new DataType();
         dataType.defaultPrecision = dataType.maxPrecision = ValueNull.PRECISION;
         add(Value.NULL, Types.NULL,
