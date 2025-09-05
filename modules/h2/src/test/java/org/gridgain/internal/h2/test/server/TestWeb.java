@@ -74,49 +74,6 @@ public class TestWeb extends TestDb {
         testIfExists();
     }
 
-    private void testServlet() throws Exception {
-        WebServlet servlet = new WebServlet();
-        final HashMap<String, String> configMap = new HashMap<>();
-        configMap.put("ifExists", "");
-        configMap.put("", "");
-        configMap.put("", "");
-        configMap.put("", "");
-        ServletConfig config = new ServletConfig() {
-
-            @Override
-            public String getServletName() {
-                return "H2Console";
-            }
-
-            @Override
-            public Enumeration<String> getInitParameterNames() {
-                return new Vector<>(configMap.keySet()).elements();
-            }
-
-            @Override
-            public String getInitParameter(String name) {
-                return configMap.get(name);
-            }
-
-            @Override
-            public ServletContext getServletContext() {
-                return null;
-            }
-
-        };
-        servlet.init(config);
-
-
-        TestHttpServletRequest request = new TestHttpServletRequest();
-        request.setPathInfo("/");
-        TestHttpServletResponse response = new TestHttpServletResponse();
-        TestServletOutputStream out = new TestServletOutputStream();
-        response.setServletOutputStream(out);
-        servlet.doGet(request, response);
-        assertContains(out.toString(), "location.href = 'login.jsp");
-        servlet.destroy();
-    }
-
     private static void testWrongParameters() {
         new AssertThrows(ErrorCode.FEATURE_NOT_SUPPORTED_1) {
             @Override

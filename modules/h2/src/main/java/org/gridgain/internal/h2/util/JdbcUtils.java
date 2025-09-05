@@ -186,26 +186,9 @@ public class JdbcUtils {
                 }
             }
         }
-        // Use local ClassLoader
-        try {
-            return (Class<Z>) Class.forName(className);
-        } catch (ClassNotFoundException e) {
-            try {
-                return (Class<Z>) Class.forName(
-                        className, true,
-                        Thread.currentThread().getContextClassLoader());
-            } catch (Exception e2) {
-                throw DbException.get(
-                        ErrorCode.CLASS_NOT_FOUND_1, e, className);
-            }
-        } catch (NoClassDefFoundError e) {
-            throw DbException.get(
-                    ErrorCode.CLASS_NOT_FOUND_1, e, className);
-        } catch (Error e) {
-            // UnsupportedClassVersionError
-            throw DbException.get(
-                    ErrorCode.GENERAL_ERROR_1, e, className);
-        }
+
+        throw DbException.get(
+                ErrorCode.CLASS_NOT_FOUND_1, new ClassNotFoundException(className), className);
     }
 
     /**
