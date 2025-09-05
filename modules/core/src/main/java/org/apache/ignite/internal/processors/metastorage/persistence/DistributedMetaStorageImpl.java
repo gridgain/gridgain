@@ -1449,10 +1449,9 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     private void completeWriteOptimisedAndLog(DistributedMetaStorageHistoryItem histItem) throws IgniteCheckedException {
         DistributedMetaStorageHistoryItem writtenItem = completeWrite(histItem, true);
 
-        if (writtenItem == null) {
+        if (writtenItem == null)
             log.info("Skipped metastorage history item as it matches already existing values [ver=" + ver +
                 ", histItem=" + printHistoryItem(histItem) + ']');
-        }
         else if (histItem.keys.length != writtenItem.keys.length)
             log.info("Wrote optimised metastorage history item [ver= " + ver +
                 ", histItem=" + printHistoryItem(histItem) +
