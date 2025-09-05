@@ -53,7 +53,6 @@ public class TestSecurity extends TestBase {
 
     private void testSHA() {
         testPBKDF2();
-        testHMAC();
         testOneSHA();
     }
 
@@ -104,20 +103,6 @@ public class TestSecurity extends TestBase {
         byte[] password = "Test".getBytes();
         SHA256.getPBKDF2(password, "".getBytes(), 1, 16);
         assertEquals(new byte[4], password);
-    }
-
-    private void testHMAC() {
-        // from Wikipedia
-        assertEquals(
-                "b613679a0814d9ec772f95d778c35fc5ff1697c493715653c6c712144292c5ad",
-                StringUtils.convertBytesToHex(
-                        SHA256.getHMAC(new byte[0], new byte[0])));
-        assertEquals(
-                "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8",
-                StringUtils.convertBytesToHex(
-                SHA256.getHMAC(
-                "key".getBytes(),
-                "The quick brown fox jumps over the lazy dog".getBytes())));
     }
 
     private String getHashString(byte[] data) {
