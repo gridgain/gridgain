@@ -15,6 +15,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 import javax.naming.Context;
 import javax.sql.DataSource;
 import org.gridgain.internal.h2.engine.SysProperties;
@@ -67,6 +68,18 @@ public class JdbcUtils {
         "sqlserver:", "com.microsoft.sqlserver.jdbc.SQLServerDriver",
         "teradata:", "com.ncr.teradata.TeraDriver",
     };
+
+    private static final Set<String> PREDEFINED_CLASSES = new HashSet<>() {{
+            add("org.apache.ignite.internal.processors.query.h2.opt.GridH2DefaultTableEngine");
+            add("org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory");
+            add("org.apache.ignite.internal.processors.query.h2.opt.H2PlainRowFactory");
+            add("org.apache.ignite.internal.processors.query.h2.sys.SqlSystemTableEngine");
+            add("org.apache.ignite.internal.processors.query.h2.sql.GridFirstValueFunction");
+            add("org.apache.ignite.internal.processors.query.h2.sql.GridLastValueFunction");
+            add("org.apache.ignite.internal.processors.query.h2.twostep.ReduceTableEngine");
+            add("org.gridgain.internal.h2.mvstore.db.MVTableEngine");
+            add("org.apache.ignite.internal.processors.query.h2.H2TableEngine");
+    }};
 
     private static boolean allowAllClasses;
     private static HashSet<String> allowedClassNames;
@@ -186,9 +199,32 @@ public class JdbcUtils {
                 }
             }
         }
+        // Use local ClassLoader
 
-        throw DbException.get(
-                ErrorCode.CLASS_NOT_FOUND_1, new ClassNotFoundException(className), className);
+        if (!PREDEFINED_CLASSES.contains(className)) {
+            throw DbException.get(
+                    ErrorCode.CLASS_NOT_FOUND_1, new ClassNotFoundException(className), className);
+        }
+
+        try {
+            return (Class<Z>) Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            try {
+                return (Class<Z>) Class.forName(
+                        className, true,
+                        Thread.currentThread().getContextClassLoader());
+            } catch (Exception e2) {
+                throw DbException.get(
+                        ErrorCode.CLASS_NOT_FOUND_1, e, className);
+            }
+        } catch (NoClassDefFoundError e) {
+            throw DbException.get(
+                    ErrorCode.CLASS_NOT_FOUND_1, e, className);
+        } catch (Error e) {
+            // UnsupportedClassVersionError
+            throw DbException.get(
+                    ErrorCode.GENERAL_ERROR_1, e, className);
+        }
     }
 
     /**
