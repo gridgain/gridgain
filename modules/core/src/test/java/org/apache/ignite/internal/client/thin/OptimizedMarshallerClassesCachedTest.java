@@ -72,14 +72,17 @@ public class OptimizedMarshallerClassesCachedTest extends GridCommonAbstractTest
             }, new ClientConfiguration().setAddresses(Config.SERVER));
 
             try {
-                cli.cache(Config.DEFAULT_CACHE_NAME).get(1);
-                cli.cache(Config.DEFAULT_CACHE_NAME).get(1);
+                for (int i = 0; i < 10; ++i) {
+                    cli.cache(Config.DEFAULT_CACHE_NAME).get(1);
+                }
             }
             finally {
                 cli.close();
             }
 
-            assertEquals(1, cnt.get());
+            // first increment from TcpIgniteClient constructor - check compatibility
+            // second from cache.get
+            assertEquals(2, cnt.get());
         }
     }
 }
