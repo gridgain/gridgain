@@ -188,12 +188,12 @@ public class JdbcUtils {
         }
         // Use local ClassLoader
         try {
-            return (Class<Z>) Class.forName(className);
+            ClassLoader classLoader = JdbcUtils.class.getClassLoader();
+            return (Class<Z>) classLoader.loadClass(className);
         } catch (ClassNotFoundException e) {
             try {
-                return (Class<Z>) Class.forName(
-                        className, true,
-                        Thread.currentThread().getContextClassLoader());
+                ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+                return (Class<Z>) classLoader.loadClass(className);
             } catch (Exception e2) {
                 throw DbException.get(
                         ErrorCode.CLASS_NOT_FOUND_1, e, className);

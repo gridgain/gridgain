@@ -253,42 +253,8 @@ public class DefaultAuthenticator implements Authenticator {
         configureFrom(config);
     }
 
-    private void configureFrom(H2AuthConfig config) throws AuthenticationException {
-        allowUserRegistration = config.isAllowUserRegistration();
-        createMissingRoles = config.isCreateMissingRoles();
-        Map<String, CredentialsValidator> newRealms = new HashMap<>();
-        for (RealmConfig currentRealmConfig : config.getRealms()) {
-            String currentRealmName = currentRealmConfig.getName();
-            if (currentRealmName == null) {
-                throw new AuthenticationException("Missing realm name");
-            }
-            currentRealmName = currentRealmName.toUpperCase();
-            CredentialsValidator currentValidator = null;
-            try {
-                currentValidator = (CredentialsValidator) Class.forName(currentRealmConfig.getValidatorClass())
-                        .getDeclaredConstructor().newInstance();
-            } catch (Exception e) {
-                throw new AuthenticationException("invalid validator class fo realm " + currentRealmName, e);
-            }
-            currentValidator.configure(new ConfigProperties(currentRealmConfig.getProperties()));
-            if (newRealms.put(currentRealmConfig.getName().toUpperCase(), currentValidator) != null) {
-                throw new AuthenticationException("Duplicate realm " + currentRealmConfig.getName());
-            }
-        }
-        this.realms = newRealms;
-        List<UserToRolesMapper> newUserToRolesMapper = new ArrayList<>();
-        for (UserToRolesMapperConfig currentUserToRolesMapperConfig : config.getUserToRolesMappers()) {
-            UserToRolesMapper currentUserToRolesMapper = null;
-            try {
-                currentUserToRolesMapper = (UserToRolesMapper) Class
-                        .forName(currentUserToRolesMapperConfig.getClassName()).getDeclaredConstructor().newInstance();
-            } catch (Exception e) {
-                throw new AuthenticationException("Invalid class in UserToRolesMapperConfig", e);
-            }
-            currentUserToRolesMapper.configure(new ConfigProperties(currentUserToRolesMapperConfig.getProperties()));
-            newUserToRolesMapper.add(currentUserToRolesMapper);
-        }
-        this.userToRolesMappers = newUserToRolesMapper;
+    private void configureFrom(H2AuthConfig config) {
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     private boolean updateRoles(AuthenticationInfo authenticationInfo, User user, Database database)

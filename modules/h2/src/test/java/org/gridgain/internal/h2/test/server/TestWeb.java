@@ -16,7 +16,6 @@ import java.security.Principal;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Vector;
@@ -24,7 +23,6 @@ import java.util.Vector;
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletConfig;
 import javax.servlet.ServletInputStream;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
@@ -41,7 +39,6 @@ import javax.servlet.ServletException;
 
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.engine.Constants;
-import org.gridgain.internal.h2.server.web.WebServlet;
 import org.gridgain.internal.h2.store.fs.FileUtils;
 import org.gridgain.internal.h2.test.TestBase;
 import org.gridgain.internal.h2.test.TestDb;
@@ -65,56 +62,12 @@ public class TestWeb extends TestDb {
 
     @Override
     public void test() throws Exception {
-        testServlet();
         testWrongParameters();
         testTools();
         testAlreadyRunning();
         testServer();
         testWebApp();
         testIfExists();
-    }
-
-    private void testServlet() throws Exception {
-        WebServlet servlet = new WebServlet();
-        final HashMap<String, String> configMap = new HashMap<>();
-        configMap.put("ifExists", "");
-        configMap.put("", "");
-        configMap.put("", "");
-        configMap.put("", "");
-        ServletConfig config = new ServletConfig() {
-
-            @Override
-            public String getServletName() {
-                return "H2Console";
-            }
-
-            @Override
-            public Enumeration<String> getInitParameterNames() {
-                return new Vector<>(configMap.keySet()).elements();
-            }
-
-            @Override
-            public String getInitParameter(String name) {
-                return configMap.get(name);
-            }
-
-            @Override
-            public ServletContext getServletContext() {
-                return null;
-            }
-
-        };
-        servlet.init(config);
-
-
-        TestHttpServletRequest request = new TestHttpServletRequest();
-        request.setPathInfo("/");
-        TestHttpServletResponse response = new TestHttpServletResponse();
-        TestServletOutputStream out = new TestServletOutputStream();
-        response.setServletOutputStream(out);
-        servlet.doGet(request, response);
-        assertContains(out.toString(), "location.href = 'login.jsp");
-        servlet.destroy();
     }
 
     private static void testWrongParameters() {

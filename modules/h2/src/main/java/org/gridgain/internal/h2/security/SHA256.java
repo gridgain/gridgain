@@ -5,13 +5,11 @@
  */
 package org.gridgain.internal.h2.security;
 
-import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
 import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 
 import org.gridgain.internal.h2.util.Bits;
 
@@ -70,29 +68,8 @@ public class SHA256 {
         return getHash(buff, true);
     }
 
-    /**
-     * Calculate the hash-based message authentication code.
-     *
-     * @param key the key
-     * @param message the message
-     * @return the hash
-     */
-    public static byte[] getHMAC(byte[] key, byte[] message) {
-        return initMac(key).doFinal(message);
-    }
-
     private static Mac initMac(byte[] key) {
-        // Java forbids empty keys
-        if (key.length == 0) {
-            key = new byte[1];
-        }
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(key, "HmacSHA256"));
-            return mac;
-        } catch (GeneralSecurityException e) {
-            throw new RuntimeException(e);
-        }
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     /**
@@ -105,7 +82,7 @@ public class SHA256 {
      * @return the result
      */
     public static byte[] getPBKDF2(byte[] password, byte[] salt,
-            int iterations, int resultLen) {
+                                   int iterations, int resultLen) {
         byte[] result = new byte[resultLen];
         Mac mac = initMac(password);
         int len = 64 + Math.max(32, salt.length + 4);
