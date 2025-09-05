@@ -183,9 +183,6 @@ public final class IgniteNodeAttributes {
     /** Late affinity assignment mode. */
     public static final String ATTR_LATE_AFFINITY_ASSIGNMENT = ATTR_PREFIX + ".cache.lateAffinity";
 
-    /** Late affinity assignment mode. */
-    public static final String ATTR_ACTIVE_ON_START = ATTR_PREFIX + ".active.on.start";
-
     /** Ignite security compatibility mode. */
     public static final String ATTR_SECURITY_COMPATIBILITY_MODE = ATTR_PREFIX + ".security.compatibility.enabled";
 
@@ -218,6 +215,9 @@ public final class IgniteNodeAttributes {
     /** Ignite services processor mode. */
     public static final String ATTR_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED = ATTR_PREFIX +
         ".event.driven.service.processor.enabled";
+
+    /** {@link org.apache.ignite.IgniteSystemProperties#IGNITE_BINARY_SORT_OBJECT_FIELDS} option holder. */
+    public static final String ATTR_IGNITE_BINARY_SORT_OBJECT_FIELDS = ATTR_PREFIX + ".bo.sort.obj.flds";
 
     /**
      * Enforces singleton.
