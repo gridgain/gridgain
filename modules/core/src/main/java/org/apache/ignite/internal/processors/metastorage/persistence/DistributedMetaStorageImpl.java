@@ -1416,11 +1416,11 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
         for (int i = startingIndex; i < items.length; i++) {
             try {
-                completeWrite(items[startingIndex], false);
+                completeWrite(items[i], false);
 
-                sb.append(printHistoryItem(items[startingIndex]));
+                sb.append(printHistoryItem(items[i]));
             } catch (IgniteCheckedException ex) {
-                log.error("Unable to unmarshal new metastore data. update=" + items[startingIndex], ex);
+                log.error("Unable to unmarshal new metastore data. update=" + items[i], ex);
             }
 
             if (i < items.length - 1)
