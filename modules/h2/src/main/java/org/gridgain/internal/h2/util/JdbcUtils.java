@@ -69,17 +69,19 @@ public class JdbcUtils {
         "teradata:", "com.ncr.teradata.TeraDriver",
     };
 
-    private static final Set<String> PREDEFINED_CLASSES = new HashSet<>() {{
-            add("org.apache.ignite.internal.processors.query.h2.opt.GridH2DefaultTableEngine");
-            add("org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory");
-            add("org.apache.ignite.internal.processors.query.h2.opt.H2PlainRowFactory");
-            add("org.apache.ignite.internal.processors.query.h2.sys.SqlSystemTableEngine");
-            add("org.apache.ignite.internal.processors.query.h2.sql.GridFirstValueFunction");
-            add("org.apache.ignite.internal.processors.query.h2.sql.GridLastValueFunction");
-            add("org.apache.ignite.internal.processors.query.h2.twostep.ReduceTableEngine");
-            add("org.gridgain.internal.h2.mvstore.db.MVTableEngine");
-            add("org.apache.ignite.internal.processors.query.h2.H2TableEngine");
-    }};
+    private static final Set<String> PREDEFINED_CLASSES = new HashSet<>();
+
+    static {
+        PREDEFINED_CLASSES.add("org.apache.ignite.internal.processors.query.h2.opt.GridH2DefaultTableEngine");
+        PREDEFINED_CLASSES.add("org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory");
+        PREDEFINED_CLASSES.add("org.apache.ignite.internal.processors.query.h2.opt.H2PlainRowFactory");
+        PREDEFINED_CLASSES.add("org.apache.ignite.internal.processors.query.h2.sys.SqlSystemTableEngine");
+        PREDEFINED_CLASSES.add("org.apache.ignite.internal.processors.query.h2.sql.GridFirstValueFunction");
+        PREDEFINED_CLASSES.add("org.apache.ignite.internal.processors.query.h2.sql.GridLastValueFunction");
+        PREDEFINED_CLASSES.add("org.apache.ignite.internal.processors.query.h2.twostep.ReduceTableEngine");
+        PREDEFINED_CLASSES.add("org.gridgain.internal.h2.mvstore.db.MVTableEngine");
+        PREDEFINED_CLASSES.add("org.apache.ignite.internal.processors.query.h2.H2TableEngine");
+    }
 
     private static boolean allowAllClasses;
     private static HashSet<String> allowedClassNames;
@@ -200,18 +202,12 @@ public class JdbcUtils {
             }
         }
         // Use local ClassLoader
-
-        if (!PREDEFINED_CLASSES.contains(className)) {
-            throw DbException.get(
-                    ErrorCode.CLASS_NOT_FOUND_1, new ClassNotFoundException(className), className);
-        }
-
         try {
-            return (Class<Z>) Class.forName(className);
+            return (Class<Z>) Class.forName(validateClassName(className));
         } catch (ClassNotFoundException e) {
             try {
                 return (Class<Z>) Class.forName(
-                        className, true,
+                        validateClassName(className), true,
                         Thread.currentThread().getContextClassLoader());
             } catch (Exception e2) {
                 throw DbException.get(
@@ -225,6 +221,15 @@ public class JdbcUtils {
             throw DbException.get(
                     ErrorCode.GENERAL_ERROR_1, e, className);
         }
+    }
+
+    private static String validateClassName(String className) {
+        if (!PREDEFINED_CLASSES.contains(className)) {
+            throw DbException.get(
+                    ErrorCode.CLASS_NOT_FOUND_1, new ClassNotFoundException(className), className);
+        }
+
+        return className;
     }
 
     /**
