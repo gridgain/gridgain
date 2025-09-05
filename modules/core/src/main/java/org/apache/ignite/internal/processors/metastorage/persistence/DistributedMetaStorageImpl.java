@@ -888,7 +888,9 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         StringBuilder sb = new StringBuilder("[");
 
         for (int i = 0; i < item.keys.length; i++) {
-            sb.append(item.keys[i]).append('=').append(unmarshal(marshaller, item.valBytesArray[i]));
+            Serializable value = item.valBytesArray[i] == null ? null : unmarshal(marshaller, item.valBytesArray[i]);
+
+            sb.append(item.keys[i]).append('=').append(value);
 
             if (i < item.keys.length - 1)
                 sb.append(", ");
@@ -1451,8 +1453,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             log.info("Skipped metastorage history item as it matches already existing values [ver=" + ver +
                 ", histItem=" + printHistoryItem(histItem) + ']');
         }
-
-        if (histItem.keys.length != writtenItem.keys.length)
+        else if (histItem.keys.length != writtenItem.keys.length)
             log.info("Wrote optimised metastorage history item [ver= " + ver +
                 ", histItem=" + printHistoryItem(histItem) +
                 ", itemToWrite=" + printHistoryItem(writtenItem) + ']');
