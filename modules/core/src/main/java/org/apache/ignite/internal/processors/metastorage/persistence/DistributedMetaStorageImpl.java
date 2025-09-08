@@ -1438,7 +1438,6 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         log.info(sb.toString());
     }
 
-
     /**
      * Store data in local metastorage or in memory and log. Removes history item values that match already existing
      * values. Might lead to no-op.
