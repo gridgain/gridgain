@@ -1440,13 +1440,17 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
     /**
      * Store data in local metastorage or in memory and log. Removes history item values that match already existing
-     * values. Might lead to no-op.
+     * values. Might lead to no-op. Doesn't log metrics keys updates.
      *
      * @param histItem {@code <key, value>} pairs to process.
      * @throws IgniteCheckedException In case of IO/unmarshalling errors.
      */
     private void completeWriteOptimisedAndLog(DistributedMetaStorageHistoryItem histItem) throws IgniteCheckedException {
         DistributedMetaStorageHistoryItem writtenItem = completeWrite(histItem, true);
+
+        // Skip logging of metrics to reduce log noise.
+        if (Arrays.stream(histItem.keys).allMatch(key -> key.startsWith("metrics")))
+            return;
 
         if (writtenItem == null)
             log.info("Skipped metastorage history item as it matches already existing values [ver=" + ver +
