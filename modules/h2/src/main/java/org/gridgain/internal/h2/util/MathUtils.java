@@ -21,12 +21,7 @@ public class MathUtils {
     /**
      * The secure random object.
      */
-    static SecureRandom cachedSecureRandom;
-
-    /**
-     * True if the secure random object is seeded.
-     */
-    static volatile boolean seeded;
+    private static SecureRandom cachedSecureRandom;
 
     private MathUtils() {
         // utility class
@@ -65,13 +60,20 @@ public class MathUtils {
         if (cachedSecureRandom != null) {
             return cachedSecureRandom;
         }
+
+        SecureRandom cachedSecureRandom0;
         try {
-            cachedSecureRandom = SecureRandom.getInstance("SHA1PRNG");
+            cachedSecureRandom0 = SecureRandom.getInstance("SHA1PRNG");
+
+            byte[] seed = new byte[20];
+            cachedSecureRandom0.nextBytes(seed);
         } catch (Exception e) {
             // NoSuchAlgorithmException
             warn("SecureRandom", e);
-            cachedSecureRandom = new SecureRandom();
+            cachedSecureRandom0 = new SecureRandom();
         }
+        cachedSecureRandom = cachedSecureRandom0;
+
         return cachedSecureRandom;
     }
 
