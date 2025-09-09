@@ -45,11 +45,13 @@ import org.apache.ignite.client.ClientClusterGroup;
 import org.apache.ignite.client.ClientCollectionConfiguration;
 import org.apache.ignite.client.ClientCompute;
 import org.apache.ignite.client.ClientException;
+import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
 import org.apache.ignite.client.ClientIgniteSet;
 import org.apache.ignite.client.ClientServices;
 import org.apache.ignite.client.ClientTransactions;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.client.IgniteClientFuture;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientTransactionConfiguration;
@@ -181,15 +183,21 @@ public class TcpIgniteClient implements IgniteClient {
     }
 
     private void checkAttributesCompatibility(ClientClusterImpl cluster) {
-        Map<String, Object> attrs = cluster.node().attributes();
+        try {
+            ClusterNode node = cluster.node();
 
-        Boolean binaryFieldsSortAttr = attribute(ATTR_IGNITE_BINARY_SORT_OBJECT_FIELDS, attrs);
-        boolean binaryFieldsSortAttrBool = binaryFieldsSortAttr != null ? binaryFieldsSortAttr : false;
+            Map<String, Object> attrs = node.attributes();
 
-        boolean binaryFieldsSortSys = BinaryUtils.FIELDS_SORTED_ORDER;
+            Boolean binaryFieldsSortAttr = attribute(ATTR_IGNITE_BINARY_SORT_OBJECT_FIELDS, attrs);
+            boolean binaryFieldsSortAttrBool = binaryFieldsSortAttr != null ? binaryFieldsSortAttr : false;
 
-        if (binaryFieldsSortSys != binaryFieldsSortAttrBool) {
-            throw new IgniteClientException(ClientStatus.FAILED, BINARY_SORT_OBJECT_FIELDS_ERR);
+            boolean binaryFieldsSortSys = BinaryUtils.FIELDS_SORTED_ORDER;
+
+            if (binaryFieldsSortSys != binaryFieldsSortAttrBool) {
+                throw new IgniteClientException(ClientStatus.FAILED, BINARY_SORT_OBJECT_FIELDS_ERR);
+            }
+        } catch (ClientFeatureNotSupportedByServerException ex) {
+            // No op. Feature not supported.
         }
     }
 
