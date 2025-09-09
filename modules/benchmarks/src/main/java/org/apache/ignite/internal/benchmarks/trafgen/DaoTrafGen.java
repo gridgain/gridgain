@@ -237,7 +237,7 @@ public final class DaoTrafGen
     {
         CallFlow callFlow = new CallFlow(CRUD.CREATE_OR_REPLACE);
         int iterations = 100_000;
-        int parallelism = 1;
+        int parallelism = 32;
         int optPayloadSize = DEF_PAYLOAD_SIZE;
 
         for (int ii = 0; ii < args.length; ii++)

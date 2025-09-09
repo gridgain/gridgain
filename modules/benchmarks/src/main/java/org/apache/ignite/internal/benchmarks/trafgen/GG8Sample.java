@@ -192,7 +192,7 @@ public class GG8Sample
         rdvAffFunc.setPartitions(256);
 
         CacheConfiguration<K, V> cacheCfg = new CacheConfiguration<>(name.toUpperCase());
-        cacheCfg.setBackups(1);
+        cacheCfg.setBackups(2);
         cacheCfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
         cacheCfg.setPartitionLossPolicy(PartitionLossPolicy.READ_ONLY_SAFE);
         cacheCfg.setDataRegionName("default");
@@ -209,7 +209,7 @@ public class GG8Sample
         cfg.setPeerClassLoadingEnabled(true);
         cfg.setClientMode(true);
         cfg.setShutdownPolicy(ShutdownPolicy.GRACEFUL);
-        String lvAdresses = "172.25.4.101";
+        String lvAdresses = "172.25.4.33";
         int port = 47500;
         int lvComPort = 47100;
 
