@@ -231,9 +231,11 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         });
 
         assertTrue("Failed to wait for a checkpoint.", waitForCondition(checkpointFut::isDone, 180_000));
+
         assertNull("Critical failure detected [ctx=" + failureContext.get() + ']', failureContext.get());
+
         checkpointFut.get(5_000);
-    };
+    }
 
     @Test
     @WithSystemProperty(key = PRELOADER_FORCE_CLEAR, value = "true")
