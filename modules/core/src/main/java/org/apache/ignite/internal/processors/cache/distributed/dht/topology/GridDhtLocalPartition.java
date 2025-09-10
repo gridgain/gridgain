@@ -76,6 +76,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
+import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_UNLOADED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.CacheDataStore;
@@ -104,6 +105,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /** ONLY FOR TEST PURPOSES: force test checkpoint on partition eviction. */
     private static boolean forceTestCheckpointOnEviction = IgniteSystemProperties.getBoolean("TEST_CHECKPOINT_ON_EVICTION", false);
+
+    /** The size of the batch for which the checkpoint lock will be taken. */
+    private final int IGNITE_PARTITION_CLEARING_BATCH_SIZE = getInteger("IGNITE_PARTITION_CLEARING_BATCH_SIZE", 1_000);
 
     /** ONLY FOR TEST PURPOSES: partition id where test checkpoint was enforced during eviction. */
     static volatile Integer partWhereTestCheckpointEnforced;
@@ -957,9 +961,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 grp.offheap().partitionIterator(id, TOMBSTONES) :
                 grp.offheap().partitionIterator(id, DATA_AND_TOMBSTONES);
 
-            // The size of the batch for which the checkpoint lock will be taken.
-            int batchSize = 1_000;
-
             while (it0.hasNext()) {
                 if (stopClo.getAsBoolean() || state0 != state())
                     return cleared;
@@ -974,7 +975,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
                 try {
                     int entriesCnt = 0;
-                    while (it0.hasNext() && entriesCnt++ < batchSize) {
+                    while (it0.hasNext() && entriesCnt++ < IGNITE_PARTITION_CLEARING_BATCH_SIZE) {
                         CacheDataRow row = it0.next();
 
                         // Do not clear fresh rows in case of partition reloading.
