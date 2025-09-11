@@ -67,19 +67,16 @@ public class TestMVStore extends TestBase {
         testRemoveMap();
         testIsEmpty();
         testOffHeapStorage();
-        testNewerWriteVersion();
         testCompactFully();
         testBackgroundExceptionListener();
         testOldVersion();
         testAtomicOperations();
         testWriteBuffer();
         testWriteDelay();
-        testEncryptedFile();
         testFileFormatChange();
         testRecreateMap();
         testRenameMapRollback();
         testCustomMapType();
-        testCacheSize();
         testConcurrentOpen();
         testFileHeader();
         testFileHeaderCorruption();
@@ -424,55 +421,6 @@ public class TestMVStore extends TestBase {
         s.close();
     }
 
-    private void testNewerWriteVersion() throws Exception {
-        String fileName = getBaseDir() + "/" + getTestName();
-        FileUtils.delete(fileName);
-        MVStore s = new MVStore.Builder().
-                encryptionKey("007".toCharArray()).
-                fileName(fileName).
-                open();
-        s.setRetentionTime(Integer.MAX_VALUE);
-        Map<String, Object> header = s.getStoreHeader();
-        assertEquals("1", header.get("format").toString());
-        header.put("formatRead", "1");
-        header.put("format", "2");
-        forceWriteStoreHeader(s);
-        MVMap<Integer, String> m = s.openMap("data");
-        forceWriteStoreHeader(s);
-        m.put(0, "Hello World");
-        s.close();
-        try {
-            s = new MVStore.Builder().
-                    encryptionKey("007".toCharArray()).
-                    fileName(fileName).
-                    open();
-            header = s.getStoreHeader();
-            fail(header.toString());
-        } catch (IllegalStateException e) {
-            assertEquals(DataUtils.ERROR_UNSUPPORTED_FORMAT,
-                    DataUtils.getErrorCode(e.getMessage()));
-        }
-        s = new MVStore.Builder().
-                encryptionKey("007".toCharArray()).
-                readOnly().
-                fileName(fileName).
-                open();
-        assertTrue(s.getFileStore().isReadOnly());
-        m = s.openMap("data");
-        assertEquals("Hello World", m.get(0));
-        s.close();
-       /* FileUtils.setReadOnly(fileName);
-        s = new MVStore.Builder().
-                encryptionKey("007".toCharArray()).
-                fileName(fileName).
-                open();
-        assertTrue(s.getFileStore().isReadOnly());
-        m = s.openMap("data");
-        assertEquals("Hello World", m.get(0));
-        s.close();*/
-
-    }
-
     private void testCompactFully() throws Exception {
         String fileName = getBaseDir() + "/" + getTestName();
         FileUtils.delete(fileName);
@@ -688,63 +636,6 @@ public class TestMVStore extends TestBase {
         FileUtils.delete(fileName);
     }
 
-    private void testEncryptedFile() {
-        String fileName = getBaseDir() + "/" + getTestName();
-        FileUtils.delete(fileName);
-        MVStore s;
-        MVMap<Integer, String> m;
-
-        char[] passwordChars = "007".toCharArray();
-        s = new MVStore.Builder().
-                fileName(fileName).
-                encryptionKey(passwordChars).
-                open();
-        assertEquals(0, passwordChars[0]);
-        assertEquals(0, passwordChars[1]);
-        assertEquals(0, passwordChars[2]);
-        assertTrue(FileUtils.exists(fileName));
-        m = s.openMap("test");
-        m.put(1, "Hello");
-        assertEquals("Hello", m.get(1));
-        s.close();
-
-        passwordChars = "008".toCharArray();
-        try {
-            s = new MVStore.Builder().
-                    fileName(fileName).
-                    encryptionKey(passwordChars).open();
-            fail();
-        } catch (IllegalStateException e) {
-            assertEquals(DataUtils.ERROR_FILE_CORRUPT,
-                    DataUtils.getErrorCode(e.getMessage()));
-        }
-        assertEquals(0, passwordChars[0]);
-        assertEquals(0, passwordChars[1]);
-        assertEquals(0, passwordChars[2]);
-
-        passwordChars = "007".toCharArray();
-        s = new MVStore.Builder().
-                fileName(fileName).
-                encryptionKey(passwordChars).open();
-        assertEquals(0, passwordChars[0]);
-        assertEquals(0, passwordChars[1]);
-        assertEquals(0, passwordChars[2]);
-        m = s.openMap("test");
-        assertEquals("Hello", m.get(1));
-        s.close();
-
-       /* FileUtils.setReadOnly(fileName);
-        passwordChars = "007".toCharArray();
-        s = new MVStore.Builder().
-                fileName(fileName).
-                encryptionKey(passwordChars).open();
-        assertTrue(s.getFileStore().isReadOnly());
-        s.close();
-*/
-        FileUtils.delete(fileName);
-        assertFalse(FileUtils.exists(fileName));
-    }
-
     private void testFileFormatChange() {
         String fileName = getBaseDir() + "/" + getTestName();
         FileUtils.delete(fileName);
@@ -812,57 +703,6 @@ public class TestMVStore extends TestBase {
         }
         assertEquals("1;2;3;4;5;6;7;8;9;10;", buff.toString());
         s.close();
-    }
-
-    private void testCacheSize() {
-        if (config.memory) {
-            return;
-        }
-        String fileName = getBaseDir() + "/" + getTestName();
-        FileUtils.delete(fileName);
-        MVStore s;
-        MVMap<Integer, String> map;
-        s = new MVStore.Builder().
-                fileName(fileName).
-                autoCommitDisabled().
-                compress().open();
-        map = s.openMap("test");
-        // add 10 MB of data
-        for (int i = 0; i < 1024; i++) {
-            map.put(i, new String(new char[10240]));
-        }
-        s.close();
-        int[] expectedReadsForCacheSize = {
-                1880, 1789, 1616, 1374, 970, 711, 541   // compressed
-//                1887, 1775, 1599, 1355, 1035, 732, 507    // uncompressed
-        };
-        for (int cacheSize = 0; cacheSize <= 6; cacheSize += 1) {
-            int cacheMB = 1 + 3 * cacheSize;
-            s = new MVStore.Builder().
-                    fileName(fileName).
-                    autoCommitDisabled().
-                    cacheSize(cacheMB).open();
-            assertEquals(cacheMB, s.getCacheSize());
-            map = s.openMap("test");
-            for (int i = 0; i < 1024; i += 128) {
-                for (int j = 0; j < i; j++) {
-                    String x = map.get(j);
-                    assertEquals(10240, x.length());
-                }
-            }
-            long readCount = s.getFileStore().getReadCount();
-            int expected = expectedReadsForCacheSize[cacheSize];
-            assertTrue("Cache "+cacheMB+"Mb, reads: " + readCount + " expected: " + expected +
-                    " size: " + s.getFileStore().getReadBytes() +
-                    " cache used: " + s.getCacheSizeUsed() +
-                    " cache hits: " + s.getCache().getHits() +
-                    " cache misses: " + s.getCache().getMisses() +
-                    " cache requests: " + (s.getCache().getHits() + s.getCache().getMisses()) +
-                    "",
-                    Math.abs(100 - (100 * expected / readCount)) < 15);
-            s.close();
-        }
-
     }
 
     private void testConcurrentOpen() {

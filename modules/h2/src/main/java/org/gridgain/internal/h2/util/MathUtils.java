@@ -21,12 +21,7 @@ public class MathUtils {
     /**
      * The secure random object.
      */
-    static SecureRandom cachedSecureRandom;
-
-    /**
-     * True if the secure random object is seeded.
-     */
-    static volatile boolean seeded;
+    private static SecureRandom cachedSecureRandom;
 
     private MathUtils() {
         // utility class
@@ -65,63 +60,20 @@ public class MathUtils {
         if (cachedSecureRandom != null) {
             return cachedSecureRandom;
         }
-        // Workaround for SecureRandom problem as described in
-        // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6202721
-        // Can not do that in a static initializer block, because
-        // threads are not started until after the initializer block exits
+
+        SecureRandom cachedSecureRandom0;
         try {
-            cachedSecureRandom = SecureRandom.getInstance("SHA1PRNG");
-            // On some systems, secureRandom.generateSeed() is very slow.
-            // In this case it is initialized using our own seed implementation
-            // and afterwards (in the thread) using the regular algorithm.
-            Runnable runnable = new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
-                        byte[] seed = sr.generateSeed(20);
-                        synchronized (cachedSecureRandom) {
-                            cachedSecureRandom.setSeed(seed);
-                            seeded = true;
-                        }
-                    } catch (Exception e) {
-                        // NoSuchAlgorithmException
-                        warn("SecureRandom", e);
-                    }
-                }
-            };
+            cachedSecureRandom0 = SecureRandom.getInstance("SHA1PRNG");
 
-            try {
-                Thread t = new Thread(runnable, "Generate Seed");
-                // let the process terminate even if generating the seed is
-                // really slow
-                t.setDaemon(true);
-                t.start();
-                Thread.yield();
-                try {
-                    // normally, generateSeed takes less than 200 ms
-                    t.join(400);
-                } catch (InterruptedException e) {
-                    warn("InterruptedException", e);
-                }
-                if (!seeded) {
-                    byte[] seed = generateAlternativeSeed();
-                    // this never reduces randomness
-                    synchronized (cachedSecureRandom) {
-                        cachedSecureRandom.setSeed(seed);
-                    }
-                }
-            } catch (SecurityException e) {
-                // workaround for the Google App Engine: don't use a thread
-                runnable.run();
-                generateAlternativeSeed();
-            }
-
+            byte[] seed = new byte[20];
+            cachedSecureRandom0.nextBytes(seed);
         } catch (Exception e) {
             // NoSuchAlgorithmException
             warn("SecureRandom", e);
-            cachedSecureRandom = new SecureRandom();
+            cachedSecureRandom0 = new SecureRandom();
         }
+        cachedSecureRandom = cachedSecureRandom0;
+
         return cachedSecureRandom;
     }
 
