@@ -100,7 +100,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     private volatile StatisticsUsageState lastUsageState = null;
 
     /** Started flag to prevent double start on change statistics usage state and activation and vice versa. */
-    private boolean started = false;
+    private boolean started;
 
     /** Schedule to process obsolescence statistics. */
     private GridTimeoutProcessor.CancelableTask obsolescenceSchedule;
@@ -202,8 +202,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
         ctx.internalSubscriptionProcessor().registerDistributedConfigurationListener(dispatcher -> {
             usageState.addListener((name, oldVal, newVal) -> {
-                if (log.isInfoEnabled())
-                    log.info(String.format("Statistics usage state was changed from %s to %s", oldVal, newVal));
+                if (log.isInfoEnabled() && newVal != null) {
+                    log.info(String.format("Statistics usage state was changed from %s to %s",
+                        oldVal == null ? DEFAULT_STATISTICS_USAGE_STATE : oldVal, newVal));
+                }
 
                 lastUsageState = newVal;
 
@@ -340,7 +342,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     }
 
     /** {@inheritDoc} */
-    @Override public void dropAll() throws IgniteCheckedException {
+    @Override public void dropAll() {
         ensureActive("drop all statistics");
 
         statCfgMgr.dropAll();
@@ -378,7 +380,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
     }
 
     /** {@inheritDoc} */
-    @Override public void usageState(StatisticsUsageState state) throws IgniteCheckedException {
+    @Override public void usageState(StatisticsUsageState state) {
         ensureActive("change usage state of statistics");
 
         try {
