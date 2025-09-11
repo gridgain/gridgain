@@ -49,7 +49,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -72,7 +71,6 @@ import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsAbstractMessage;
 import org.apache.ignite.internal.processors.cache.mvcc.msg.MvccMessage;
-import org.apache.ignite.internal.processors.cache.query.GridPriorityAware;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.platform.message.PlatformMessageFilter;
 import org.apache.ignite.internal.processors.pool.PoolProcessor;
@@ -1303,16 +1301,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                     LT.warn(log, "Custom executor doesn't exist (message will be processed in default " +
                         "thread pool): " + execName);
                 }
-            }
-
-            if (plc == GridIoPolicy.QUERY_POOL) {
-                Message initMsg = msg.message();
-                byte priority = SqlFieldsQuery.MIN_PRIORITY;
-                if (initMsg instanceof GridPriorityAware) {
-                    GridPriorityAware obj = (GridPriorityAware)initMsg;
-                    priority = obj.priority();
-                }
-                c = new PriorityWrapper(c, priority);
             }
 
             pools.poolForPolicy(plc).execute(c);

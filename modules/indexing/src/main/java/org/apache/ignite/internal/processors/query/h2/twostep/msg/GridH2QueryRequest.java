@@ -34,7 +34,6 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMarshallable;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
-import org.apache.ignite.internal.processors.cache.query.GridPriorityAware;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -53,7 +52,7 @@ import static org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuer
  * Query request.
  */
 @IgniteCodeGeneratingFail
-public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable, GridPriorityAware {
+public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -172,9 +171,6 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable, 
     /** */
     private boolean explicitTimeout;
 
-    /** Query execution priority. */
-    private byte priority;
-
     /**
      * Required by {@link Externalizable}
      */
@@ -205,7 +201,6 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable, 
         maxMem = req.maxMem;
         runningQryId = req.runningQryId;
         explicitTimeout = req.explicitTimeout;
-        priority = req.priority;
     }
 
     /**
@@ -366,17 +361,6 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable, 
      */
     public int pageSize() {
         return pageSize;
-    }
-
-    public GridH2QueryRequest priority(byte priority) {
-        this.priority = priority;
-
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Override public byte priority() {
-        return priority;
     }
 
     /**
@@ -772,11 +756,6 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable, 
                     return false;
 
                 writer.incrementState();
-            case 18:
-                if (!writer.writeByte("priority", priority))
-                        return false;
-
-                writer.incrementState();
         }
 
         return true;
@@ -933,13 +912,6 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable, 
                     return false;
 
                 reader.incrementState();
-            case 18:
-                priority = reader.readByte("priority");
-
-                if (!reader.isLastRead())
-                    return false;
-
-                reader.incrementState();
         }
 
         return reader.afterMessageRead(GridH2QueryRequest.class);
@@ -952,7 +924,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable, 
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 19;
+        return 18;
     }
 
     /** {@inheritDoc} */
