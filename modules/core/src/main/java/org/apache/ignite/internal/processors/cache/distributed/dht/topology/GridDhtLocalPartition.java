@@ -76,6 +76,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
+import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_UNLOADED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.CacheDataStore;
@@ -104,6 +105,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /** ONLY FOR TEST PURPOSES: force test checkpoint on partition eviction. */
     private static boolean forceTestCheckpointOnEviction = IgniteSystemProperties.getBoolean("TEST_CHECKPOINT_ON_EVICTION", false);
+
+    /** The size of the batch for which the checkpoint lock will be taken. */
+    private final int IGNITE_PARTITION_CLEARING_BATCH_SIZE = getInteger("IGNITE_PARTITION_CLEARING_BATCH_SIZE", 1_000);
 
     /** ONLY FOR TEST PURPOSES: partition id where test checkpoint was enforced during eviction. */
     static volatile Integer partWhereTestCheckpointEnforced;
@@ -961,6 +965,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 if (stopClo.getAsBoolean() || state0 != state())
                     return cleared;
 
+                // Acquire checkpoint read lock to prevent pages being freed while we are clearing them.
                 if (!ctx.database().tryCheckpointReadLock()) { // Avoid a deadlock with a checkpointer.
                     if (stopClo.getAsBoolean()) // Check if waiting for clearing cancellation.
                         return cleared;
@@ -969,21 +974,24 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 }
 
                 try {
-                    CacheDataRow row = it0.next();
+                    int entriesCnt = 0;
+                    while (it0.hasNext() && entriesCnt++ < IGNITE_PARTITION_CLEARING_BATCH_SIZE) {
+                        CacheDataRow row = it0.next();
 
-                    // Do not clear fresh rows in case of partition reloading.
-                    // This is required because normal updates are possible to moving partition which is currently cleared.
-                    // We can clean OWNING partition if a partition has been reset from lost state0.
-                    // In this case new updates must be preserved.
-                    // Partition state0 can be switched from RENTING to MOVING and vice versa during clearing.
-                    if (rowFilter.test(row))
-                        continue;
+                        // Do not clear fresh rows in case of partition reloading.
+                        // This is required because normal updates are possible to moving partition which is currently cleared.
+                        // We can clean OWNING partition if a partition has been reset from lost state0.
+                        // In this case new updates must be preserved.
+                        // Partition state0 can be switched from RENTING to MOVING and vice versa during clearing.
+                        if (rowFilter.test(row))
+                            continue;
 
-                    if (grp.sharedGroup() && (cctx == null || cctx.cacheId() != row.cacheId()))
-                        cctx = ctx.cacheContext(row.cacheId());
+                        if (grp.sharedGroup() && (cctx == null || cctx.cacheId() != row.cacheId()))
+                            cctx = ctx.cacheContext(row.cacheId());
 
-                    if (clearClo.apply(row, cctx, clearVer))
-                        cleared++;
+                        if (clearClo.apply(row, cctx, clearVer))
+                            cleared++;
+                    }
                 }
                 catch (GridDhtInvalidPartitionException e) {
                     assert isEmpty() && state() == EVICTED : "Invalid error [e=" + e + ", part=" + this + ']';

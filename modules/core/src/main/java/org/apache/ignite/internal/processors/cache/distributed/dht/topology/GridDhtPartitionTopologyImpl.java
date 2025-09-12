@@ -188,7 +188,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /**
-     * Set partition factory to use. Currently is used for tests.
+     * Set partition factory to use. Currently, it is used for tests.
      *
      * @param factory Factory.
      */
