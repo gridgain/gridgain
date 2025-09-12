@@ -1045,6 +1045,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                         null,
                         false);
                 }
+
+                return cleared;
             }
         }
         catch (GridDhtInvalidPartitionException ignored) {
