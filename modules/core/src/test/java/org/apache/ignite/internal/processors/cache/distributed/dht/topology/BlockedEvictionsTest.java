@@ -37,6 +37,8 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.Event;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.IgniteEx;
@@ -48,16 +50,20 @@ import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lifecycle.LifecycleBean;
 import org.apache.ignite.lifecycle.LifecycleEventType;
 import org.apache.ignite.resources.IgniteInstanceResource;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -68,7 +74,10 @@ import org.mockito.stubbing.Answer;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader.PRELOADER_FORCE_CLEAR;
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.SCHEDULED;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Tests various scenarios while partition eviction is blocked.
@@ -119,6 +128,8 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         if (failureHandler != null)
             cfg.setFailureHandler(failureHandler);
 
+        cfg.setIncludeEventTypes(EventType.EVT_CACHE_REBALANCE_OBJECT_UNLOADED);
+
         return cfg;
     }
 
@@ -139,6 +150,91 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    @Test
+    @WithSystemProperty(key = "IGNITE_PARTITION_CLEARING_BATCH_SIZE", value = "1")
+    public void testCheckpointOnEviction() throws Exception {
+        persistence = true;
+        backups = 0;
+        AtomicReference<FailureContext> failureContext = new AtomicReference<>();
+        failureHandler = new FailureHandler() {
+            @Override public boolean onFailure(Ignite ignite, FailureContext failureCtx) {
+                failureContext.set(failureCtx);
+                return false;
+            }
+        };
+
+        IgniteEx ignite = startGrid(0);
+
+        ignite.cluster().state(ACTIVE);
+
+        IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(cacheConfiguration());
+
+        // Initial loading.
+        for (int i = 0; i < 10_000; i++)
+            cache.put(i, i);
+
+        grid(0)
+            .context()
+            .cache()
+            .context()
+            .database()
+            .forceCheckpoint("Forced checkpoint (1)")
+            .futureFor(FINISHED)
+            .get(10_000);
+
+        CountDownLatch evictLatch = new CountDownLatch(ignite.configuration().getRebalanceThreadPoolSize());
+        CountDownLatch cpLatch = new CountDownLatch(1);
+
+        grid(0).events().localListen(new IgnitePredicate<Event>() {
+            @Override public boolean apply(Event evt) {
+                try {
+                    evictLatch.countDown();
+                    // all rebalance threads are blocked here and the checkpoint lock is acquired.
+                    // it's time to trigger a checkpoint.
+                    cpLatch.await();
+                }
+                catch (InterruptedException e) {
+                    log.error("Interrupted", e);
+                }
+
+                if (failureContext.get() != null) {
+                    // There is no need to wait more, just complete the eviction.
+                    return true;
+                }
+
+                // emulate long eviction
+                doSleep(50);
+                return true;
+            }
+        }, EventType.EVT_CACHE_REBALANCE_OBJECT_UNLOADED);
+
+        startGrid(1);
+
+        resetBaselineTopology();
+
+        assertTrue("Failed to wait for eviction.", evictLatch.await(15, TimeUnit.SECONDS));
+
+        IgniteInternalFuture<?> checkpointFut = GridTestUtils.runAsync(() -> {
+            CheckpointProgress cp = grid(0)
+                .context()
+                .cache()
+                .context()
+                .database()
+                .forceCheckpoint("Forced checkpoint (2)");
+
+            GridFutureAdapter<?> checkpointScheduleFut = cp.futureFor(SCHEDULED);
+            checkpointScheduleFut.listen(f -> cpLatch.countDown());
+
+            cp.futureFor(FINISHED).get(120_000);
+        });
+
+        assertTrue("Failed to wait for a checkpoint.", waitForCondition(checkpointFut::isDone, 180_000));
+
+        assertNull("Critical failure detected [ctx=" + failureContext.get() + ']', failureContext.get());
+
+        checkpointFut.get(5_000);
     }
 
     @Test

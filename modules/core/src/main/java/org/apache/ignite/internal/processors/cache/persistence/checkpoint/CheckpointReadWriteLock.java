@@ -92,15 +92,27 @@ public class CheckpointReadWriteLock {
     /**
      * Try to get a checkpoint read lock.
      *
-     * @return {@code True} if the checkpoint read lock is acquired.
+     * @return {@code true} if the checkpoint read lock is acquired.
+     * @throws  InterruptedException if the current thread is interrupted.
      */
-    public boolean tryReadLock() {
+    public boolean tryReadLock() throws InterruptedException {
         if (checkpointLock.writeLock().isHeldByCurrentThread())
             return true;
 
-        boolean res = checkpointLock.readLock().tryLock();
+        // We don't use ReadLock#tryLock() without timeout because of the following fact:
+        // This method acquires the read lock if the write lock is not held by
+        // another thread and returns immediately with the value
+        // {@code true}. Even when this lock has been set to use a
+        // fair ordering policy, a call to {@code tryLock()}
+        // will immediately acquire the read lock if it is
+        // available, whether or not other threads are currently
+        // waiting for the read lock.
+        // So, if you want to honor the fairness setting
+        // for this lock, then use ReadLock#tryLock(0, TimeUnit.SECONDS)
+        // which is almost equivalent (it also detects interruption).
+        boolean res = checkpointLock.readLock().tryLock(0, TimeUnit.SECONDS);
 
-        if (ASSERTION_ENABLED)
+        if (ASSERTION_ENABLED && res)
             CHECKPOINT_LOCK_HOLD_COUNT.set(CHECKPOINT_LOCK_HOLD_COUNT.get() + 1);
 
         return res;
