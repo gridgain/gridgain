@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.StringJoiner;
@@ -33,6 +34,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.SystemProperty;
 import org.apache.ignite.failure.FailureContext;
@@ -267,13 +269,33 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      */
     private void showProgress() {
         if (U.millisSinceNanos(lastShowProgressTimeNanos) >= evictionProgressFreqMs && showProgressGuard.compareAndSet(false, true)) {
-            int size = executor.getQueue().size();
-
             if (log.isInfoEnabled()) {
-                log.info("Eviction in progress [groups=" + evictionGroupsMap.keySet().size() +
-                    ", remainingPartsToEvict=" + size + ']');
+                // number of tasks submitted to executor
+                AtomicInteger totalPartsToEvict = new AtomicInteger();
+                // number of tasks currently executing
+                AtomicInteger totalPartsEvictInProgress = new AtomicInteger();
 
-                evictionGroupsMap.values().forEach(GroupEvictionContext::showProgress);
+                List<GroupEvictionContext> evictionContexts = evictionGroupsMap
+                    .values()
+                    .stream()
+                    .filter(evictionCtx -> {
+                        int activeTasksToEvict = evictionCtx.activeTasksToEvict();
+                        if (activeTasksToEvict > 0) {
+                            totalPartsToEvict.addAndGet(evictionCtx.activeTasksToEvict());
+                            totalPartsEvictInProgress.addAndGet(evictionCtx.inProgressTasksToEvict());
+
+                            return true;
+                        }
+                        return false;
+                    })
+                    .collect(Collectors.toList());
+
+                log.info("Eviction in progress [groups=" + evictionContexts.size()
+                    + ", totalPartsToEvict=" + totalPartsToEvict
+                    + ", totalPartsEvictInProgress=" + totalPartsEvictInProgress
+                    + ", totalPartsToEvictInQueue=" + executor.getQueue().size() + ']');
+
+                evictionContexts.forEach(GroupEvictionContext::showProgress);
 
                 // Access to "logEvictPartByGrps" must be protected with a mutex.
                 synchronized (mux) {
@@ -330,10 +352,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * @param tombstone {@code True} for tombstones.
+     * @param tombstone {@code true} for tombstones.
      * @return The queue.
      */
-    @TestOnly
     public FastSizeDeque<PendingRow> evictQueue(boolean tombstone) {
         return tombstone ? tombstoneEvictQueue : ttlEvictQueue;
     }
@@ -539,13 +560,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         private final CacheGroupContext grp;
 
         /** Stop exception. */
-        private AtomicReference<Exception> stopExRef = new AtomicReference<>();
+        private final AtomicReference<Exception> stopExRef = new AtomicReference<>();
 
         /** Total partition to evict. Can be replaced by the metric counters. */
-        private AtomicInteger totalTasks = new AtomicInteger();
+        private final AtomicInteger totalTasks = new AtomicInteger();
 
         /** Total partition evicts in progress. */
-        private int taskInProgress;
+        private final AtomicInteger taskInProgress = new AtomicInteger();
 
         /** */
         private ReadWriteLock busyLock = new ReentrantReadWriteLock();
@@ -561,18 +582,18 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
          *
          * @param task Partition eviction task.
          */
-        private synchronized void taskScheduled(PartitionEvictionTask task) {
-            taskInProgress++;
-
+        private void taskScheduled(PartitionEvictionTask task) {
             GridFutureAdapter<?> fut = task.finishFut;
 
             fut.listen(f -> {
-                synchronized (this) {
-                    taskInProgress--;
+                updateMetrics(task.grpEvictionCtx.grp, task.reason, DECREMENT);
 
-                    totalTasks.decrementAndGet();
+                taskInProgress.decrementAndGet();
+                int total = totalTasks.decrementAndGet();
 
-                    updateMetrics(task.grpEvictionCtx.grp, task.reason, DECREMENT);
+                if (log.isInfoEnabled() && total == 0) {
+                    log.info("Group eviction completed [grpName=" + grp.cacheOrGroupName() +
+                        ", grpId=" + grp.groupId() + ']');
                 }
             });
         }
@@ -598,12 +619,34 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
          * Shows progress group of eviction.
          */
         private void showProgress() {
-            if (log.isInfoEnabled() && !grp.isLocal())
+            if (log.isInfoEnabled() && !grp.isLocal()) {
+                int inProgress = taskInProgress.get();
+                int total = totalTasks.get();
+
                 log.info("Group eviction in progress [grpName=" + grp.cacheOrGroupName() +
                     ", grpId=" + grp.groupId() +
-                    ", remainingPartsToEvict=" + (totalTasks.get() - taskInProgress) +
-                    ", partsEvictInProgress=" + taskInProgress +
-                    ", totalParts=" + grp.topology().localPartitions().size() + "]");
+                    ", remainingPartsToEvict=" + (total - inProgress) +
+                    ", partsEvictInProgress=" + total +
+                    ", localParts=" + grp.topology().localPartitions().size() + "]");
+            }
+        }
+
+        /**
+         * Returns the total number of eviction tasks.
+         *
+         * @return the total number of eviction tasks.
+         */
+        private int activeTasksToEvict() {
+            return totalTasks.get();
+        }
+
+        /**
+         * Returns the total number of eviction tasks that are in progress
+         *
+         * @return the total number of eviction tasks that are in progress
+         */
+        private int inProgressTasksToEvict() {
+            return taskInProgress.get();
         }
     }
 
@@ -615,6 +658,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         private final GridDhtLocalPartition part;
 
         /** Reason for eviction. */
+        @GridToStringExclude
         private final EvictReason reason;
 
         /** Eviction context. */
@@ -649,6 +693,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         /** {@inheritDoc} */
         @Override public void run() {
+            grpEvictionCtx.taskInProgress.incrementAndGet();
+
             if (!state.compareAndSet(null, Boolean.TRUE)) {
                 assert finishFut.isDone() : "Finish future must be completed [fut=" + finishFut + ", state=" + state + ']';
 
