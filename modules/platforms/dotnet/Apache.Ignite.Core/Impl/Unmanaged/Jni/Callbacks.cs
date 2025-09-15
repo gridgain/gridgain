@@ -288,7 +288,6 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             }
             catch (Exception e)
             {
-                // TODO: ignore, don't crash? Or do it on Java side?
                 _jvm.AttachCurrentThread(envPtr).ThrowToJava(e);
             }
         }

@@ -39,16 +39,23 @@ public class PlatformDotNetConsoleStream extends OutputStream {
 
     /** {@inheritDoc} */
     @Override public void write(byte[] b, int off, int len) throws IOException {
-        // TODO: wrong encoding? Debug this. Should we pass bytes to dotnet instead of string?
-        String s = new String(b, off, len);
+        try {
+            String s = new String(b, off, len);
 
-        PlatformCallbackGateway.consoleWrite(s, isErr);
+            PlatformCallbackGateway.consoleWrite(s, isErr);
+        } catch (Throwable ignored) {
+            // Ignore. Printing to the console should not crash the node.
+        }
     }
 
     /** {@inheritDoc} */
     @Override public void write(int b) throws IOException {
-        String s = String.valueOf((char) b);
+        try {
+            String s = String.valueOf((char) b);
 
-        PlatformCallbackGateway.consoleWrite(s, isErr);
+            PlatformCallbackGateway.consoleWrite(s, isErr);
+        } catch (Throwable ignored) {
+            // Ignore. Printing to the console should not crash the node.
+        }
     }
 }
