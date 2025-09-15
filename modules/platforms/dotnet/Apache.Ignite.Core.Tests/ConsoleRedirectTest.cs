@@ -101,12 +101,14 @@ namespace Apache.Ignite.Core.Tests
         /// Tests the exception in console writer.
         /// </summary>
         [Test]
-        public void TestExceptionInWriterPropagatesToJavaAndBack()
+        public void TestExceptionInWriterIsIgnoredInJava()
         {
             MyStringWriter.Throw = true;
 
-            var ex = Assert.Throws<IgniteException>(() => Ignition.Start(TestUtils.GetTestConfiguration()));
-            Assert.AreEqual("foo", ex.Message);
+            using (var ignite = Ignition.Start(TestUtils.GetTestConfiguration()))
+            {
+                ignite.GetCacheNames();
+            }
         }
 
         [Test]
