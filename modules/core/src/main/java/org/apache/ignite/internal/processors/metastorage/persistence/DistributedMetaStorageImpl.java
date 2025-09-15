@@ -80,6 +80,8 @@ import org.jetbrains.annotations.TestOnly;
 
 import static java.util.function.Function.identity;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOG_METASTORAGE_UPDATES;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.META_STORAGE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistenceEnabled;
 import static org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageTree.MAX_KEY_LEN;
@@ -963,7 +965,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                 DistributedMetaStorageHistoryItem[] hist = joiningData.hist;
 
                 if (remoteVer.id - locVer.id <= hist.length)
-                    completeWritesNotOptimisedAndLog(
+                    completeWritesNotOptimisedAndLogIfNeeded(
                         "Applying new metastore data on join: [",
                         hist,
                         (int) (locVer.id - remoteVer.id + hist.length)
@@ -1067,7 +1069,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             return marshaller.unmarshal(data, U.gridClassLoader());
         }
         catch (IgniteCheckedException e) {
-            log.error("Unable to unmarshal joinging node data for distributed metastorage component.", e);
+            log.error("Unable to unmarshal joining node data for distributed metastorage component.", e);
 
             return null;
         }
@@ -1195,7 +1197,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                     worker.update(nodeData);
 
                 if (nodeData.updates != null)
-                    completeWritesNotOptimisedAndLog("Applying received distributed metastorage updates: [", nodeData.updates, 0);
+                    completeWritesNotOptimisedAndLogIfNeeded("Applying received distributed metastorage updates: [", nodeData.updates, 0);
             }
             else if (!isClient && ver.id > 0) {
                 throw new IgniteException("Cannot join the cluster because it doesn't support distributed metastorage" +
@@ -1350,7 +1352,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             if (msg instanceof DistributedMetaStorageCasMessage)
                 completeCas((DistributedMetaStorageCasMessage)msg);
             else
-                completeWriteOptimisedAndLog(new DistributedMetaStorageHistoryItem(msg.key(), msg.value()));
+                completeWriteOptimisedAndLogIfNeeded(new DistributedMetaStorageHistoryItem(msg.key(), msg.value()));
         }
         catch (IgniteInterruptedCheckedException e) {
             throw U.convertException(e);
@@ -1403,13 +1405,25 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     }
 
     /**
-     * Store data in local metastorage or in memory and log with given prefix. Doesn't optimise history items.
+     * Store data in local metastorage or in memory and log with given prefix if
+     * {@link IgniteSystemProperties#IGNITE_LOG_METASTORAGE_UPDATES} is enabled. Doesn't optimise history items.
      *
      * @param prefix Prefix for log message, should end with '['.
      * @param items Items to store.
      * @param startingIndex Starting index.
      */
-    private void completeWritesNotOptimisedAndLog(String prefix, DistributedMetaStorageHistoryItem[] items, int startingIndex) {
+    private void completeWritesNotOptimisedAndLogIfNeeded(String prefix, DistributedMetaStorageHistoryItem[] items, int startingIndex) {
+        if (!shouldLogMetastoreUpdates()) {
+            for (int i = startingIndex; i < items.length; i++) {
+                try {
+                    completeWrite(items[i], false);
+                } catch (IgniteCheckedException ex) {
+                    log.error("Unable to unmarshal new metastore data. update=" + items[i], ex);
+                }
+            }
+            return;
+        }
+
         StringBuilder sb = new StringBuilder(prefix);
 
         sb.append("updates=[");
@@ -1435,32 +1449,30 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             .append(ver)
             .append("]");
 
-        log.info(sb.toString());
+        log.debug(sb.toString());
     }
 
     /**
-     * Store data in local metastorage or in memory and log. Removes history item values that match already existing
-     * values. Might lead to no-op. Doesn't log metrics keys updates.
+     * Store data in local metastorage or in memory and log if {@link IgniteSystemProperties#IGNITE_LOG_METASTORAGE_UPDATES} is enabled.
+     * Removes history item values that match already existing values. Might lead to no-op.
      *
      * @param histItem {@code <key, value>} pairs to process.
      * @throws IgniteCheckedException In case of IO/unmarshalling errors.
      */
-    private void completeWriteOptimisedAndLog(DistributedMetaStorageHistoryItem histItem) throws IgniteCheckedException {
+    private void completeWriteOptimisedAndLogIfNeeded(DistributedMetaStorageHistoryItem histItem) throws IgniteCheckedException {
         DistributedMetaStorageHistoryItem writtenItem = completeWrite(histItem, true);
 
-        // Skip logging of metrics to reduce log noise.
-        if (Arrays.stream(histItem.keys).allMatch(key -> key.startsWith("metrics")))
-            return;
-
-        if (writtenItem == null)
-            log.info("Skipped metastorage history item as it matches already existing values [ver=" + ver +
-                ", histItem=" + printHistoryItem(histItem) + ']');
-        else if (histItem.keys.length != writtenItem.keys.length)
-            log.info("Wrote optimised metastorage history item [ver= " + ver +
-                ", histItem=" + printHistoryItem(histItem) +
-                ", itemToWrite=" + printHistoryItem(writtenItem) + ']');
-        else
-            log.info("Wrote metastorage history item [ver=" + ver + ", itemToWrite=" + printHistoryItem(histItem) + ']');
+        if (shouldLogMetastoreUpdates()) {
+            if (writtenItem == null)
+                log.debug("Skipped metastorage history item as it matches already existing values [ver=" + ver +
+                    ", histItem=" + printHistoryItem(histItem) + ']');
+            else if (histItem.keys.length != writtenItem.keys.length)
+                log.debug("Wrote optimised metastorage history item [ver= " + ver +
+                    ", histItem=" + printHistoryItem(histItem) +
+                    ", itemToWrite=" + printHistoryItem(writtenItem) + ']');
+            else
+                log.debug("Wrote metastorage history item [ver=" + ver + ", itemToWrite=" + printHistoryItem(histItem) + ']');
+        }
     }
 
     /**
@@ -1582,16 +1594,18 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         if (!Objects.deepEquals(oldVal, expVal)) {
             msg.setMatches(false);
 
-            log.info("Failed metastorage CAS [ver=" + ver +
-                ", expVal=" + expVal +
-                ", actualVal=" + oldVal +
-                ", key=" + msg.key() + "]");
+            if (shouldLogMetastoreUpdates()) {
+                log.debug("Failed metastorage CAS [ver=" + ver +
+                    ", expVal=" + expVal +
+                    ", actualVal=" + oldVal +
+                    ", key=" + msg.key() + "]");
+            }
 
             // Do nothing if expected value doesn't match with the actual one.
             return;
         }
 
-        completeWriteOptimisedAndLog(new DistributedMetaStorageHistoryItem(msg.key(), msg.value()));
+        completeWriteOptimisedAndLogIfNeeded(new DistributedMetaStorageHistoryItem(msg.key(), msg.value()));
     }
 
     /**
@@ -1740,5 +1754,9 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     /** Checkpoint read unlock. */
     private void localMetastorageUnlock() {
         ctx.cache().context().database().checkpointReadUnlock();
+    }
+
+    private static boolean shouldLogMetastoreUpdates() {
+        return getBoolean(IGNITE_LOG_METASTORAGE_UPDATES);
     }
 }
