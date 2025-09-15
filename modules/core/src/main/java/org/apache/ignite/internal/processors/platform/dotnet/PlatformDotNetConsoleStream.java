@@ -39,6 +39,7 @@ public class PlatformDotNetConsoleStream extends OutputStream {
 
     /** {@inheritDoc} */
     @Override public void write(byte[] b, int off, int len) throws IOException {
+        // TODO: wrong encoding? Debug this. Should we pass bytes to dotnet instead of string?
         String s = new String(b, off, len);
 
         PlatformCallbackGateway.consoleWrite(s, isErr);
