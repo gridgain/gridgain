@@ -274,7 +274,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             {
                 if (message != IntPtr.Zero)
                 {
-                    // Each domain registers it's own writer.
+                    // Each domain registers its own writer.
                     var writer = _consoleWriters.Select(x => x.Value).FirstOrDefault();
 
                     if (writer != null)
@@ -288,6 +288,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             }
             catch (Exception e)
             {
+                // TODO: ignore, don't crash? Or do it on Java side?
                 _jvm.AttachCurrentThread(envPtr).ThrowToJava(e);
             }
         }
