@@ -37,6 +37,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteEncryption;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.WALMode;
@@ -1969,5 +1970,14 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         @Override public String toString() {
             return S.toString(KeyChangeFuture.class, this);
         }
+    }
+
+    /**
+     * Get a logger.
+     *
+     * @return Logger.
+     */
+    public IgniteLogger logger() {
+        return log;
     }
 }

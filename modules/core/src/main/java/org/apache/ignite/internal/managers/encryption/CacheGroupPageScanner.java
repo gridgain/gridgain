@@ -26,6 +26,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -89,6 +90,9 @@ public class CacheGroupPageScanner implements CheckpointListener {
     /** Stop flag. */
     private boolean stopped;
 
+    /** This is a test-only property that is used to notify a test logic before the reencryption starts. */
+    private Consumer<Integer> beforeReencriptionTaskStartLsnr = null;
+
     /**
      * @param ctx Grid kernal context.
      */
@@ -123,6 +127,15 @@ public class CacheGroupPageScanner implements CheckpointListener {
             new OomExceptionHandler(ctx));
 
         singleExecSvc.allowCoreThreadTimeOut(true);
+    }
+
+    /**
+     * This is a test-only method that is used to notify a test logic before the reencryption starts.
+     *
+     * @param beforeReencriptionTaskStartLsnr Listener.
+     */
+    public void beforeReencriptionTaskStartListener(Consumer<Integer> beforeReencriptionTaskStartLsnr) {
+        this.beforeReencriptionTaskStartLsnr = beforeReencriptionTaskStartLsnr;
     }
 
     /** {@inheritDoc} */
@@ -446,6 +459,9 @@ public class CacheGroupPageScanner implements CheckpointListener {
         /** {@inheritDoc} */
         @Override public void run() {
             try {
+                if (beforeReencriptionTaskStartLsnr != null)
+                    beforeReencriptionTaskStartLsnr.accept(grp.groupId());
+
                 for (int partId : parts) {
                     long state = ctx.encryption().getEncryptionState(grp.groupId(), partId);
 

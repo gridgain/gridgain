@@ -222,6 +222,10 @@ public class EncryptedFileIO implements FileIO {
 
         GroupKey grpKey = encMgr.getActiveKey(groupId);
 
+        if (grpKey == null) {
+            encMgr.logger().info("PVD:: No group key found, will write page without encryption [groupId=" + groupId + "]");
+        }
+
         encUtil.encrypt(srcBuf, res, grpKey);
     }
 
