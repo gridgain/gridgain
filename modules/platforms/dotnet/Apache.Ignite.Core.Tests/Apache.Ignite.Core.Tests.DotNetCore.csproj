@@ -36,6 +36,10 @@
     <ProjectReference Include="..\Apache.Ignite.Core\Apache.Ignite.Core.csproj" />
     <ProjectReference Include="..\Apache.Ignite.Linq\Apache.Ignite.Linq.csproj" />
     <ProjectReference Include="..\Apache.Ignite\Apache.Ignite.DotNetCore.csproj" />
+
+    <!-- Explicit overrides to fix vulnerable transitive deps. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
   </ItemGroup>
 
   <ItemGroup>
