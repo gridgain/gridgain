@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import javax.cache.configuration.Factory;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
@@ -132,25 +133,46 @@ public class GridJettyRestProtocol extends GridRestProtocolAdapter {
         }, log);
 
         String jettyPath = config().getJettyPath();
+        Factory<?> jettyServerFactory = config().getJettyServerFactory();
 
         final URL cfgUrl;
 
-        if (jettyPath == null) {
-            cfgUrl = null;
+        if (jettyServerFactory != null) {
+            try {
+                httpSrv = (Server) jettyServerFactory.create();
 
-            if (log.isDebugEnabled())
-                log.debug("Jetty configuration file is not provided, using defaults.");
+                if (httpSrv == null)
+                    throw new IgniteSpiException("Jetty server factory returned null instance.");
+
+                if (log.isDebugEnabled())
+                    log.debug("Jetty server has been created by the user factory.");
+
+                httpSrv.setHandler(jettyHnd);
+
+                override(getJettyConnector());
+            }
+            catch (Exception e) {
+                throw new IgniteSpiException("Failed to create Jetty HTTP server using factory.", e);
+            }
         }
         else {
-            cfgUrl = U.resolveIgniteUrl(jettyPath);
+            if (jettyPath == null) {
+                cfgUrl = null;
 
-            if (cfgUrl == null)
-                throw new IgniteSpiException("Invalid Jetty configuration file: " + jettyPath);
-            else if (log.isDebugEnabled())
-                log.debug("Jetty configuration file: " + cfgUrl);
+                if (log.isDebugEnabled())
+                    log.debug("Jetty configuration file is not provided, using defaults.");
+            }
+            else {
+                cfgUrl = U.resolveIgniteUrl(jettyPath);
+
+                if (cfgUrl == null)
+                    throw new IgniteSpiException("Invalid Jetty configuration file: " + jettyPath);
+                else if (log.isDebugEnabled())
+                    log.debug("Jetty configuration file: " + cfgUrl);
+            }
+
+            loadJettyConfiguration(cfgUrl);
         }
-
-        loadJettyConfiguration(cfgUrl);
 
         AbstractNetworkConnector connector = getJettyConnector();
 
@@ -182,7 +204,7 @@ public class GridJettyRestProtocol extends GridRestProtocolAdapter {
 
     /**
      * Checks {@link org.apache.ignite.IgniteSystemProperties#IGNITE_JETTY_PORT} system property
-     * and overrides default connector port if it present.
+     * and overrides default connector port if it is present.
      * Then initializes {@code port} with the found value.
      *
      * @param con Jetty connector.

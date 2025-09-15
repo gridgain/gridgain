@@ -126,6 +126,9 @@ public class ConnectorConfiguration {
     /** Client message interceptor. */
     private ConnectorMessageInterceptor msgInterceptor;
 
+    /** Optional factory that is used to create a custom instance of jetty server. */
+    private Factory<?> jettyServerFactory;
+
     /**
      * Creates client connection configuration with all default values.
      */
@@ -162,6 +165,7 @@ public class ConnectorConfiguration {
         sslFactory = cfg.getSslFactory();
         idleQryCurTimeout = cfg.getIdleQueryCursorTimeout();
         idleQryCurCheckFreq = cfg.getIdleQueryCursorCheckFrequency();
+        jettyServerFactory = cfg.getJettyServerFactory();
     }
 
     /**
@@ -193,6 +197,33 @@ public class ConnectorConfiguration {
      */
     public String getJettyPath() {
         return jettyPath;
+    }
+
+    /**
+     * Returns a factory that is used to create an instance of {@code Jetty} server.
+     * {@code Jetty} is used to support REST over HTTP protocol for accessing Ignite APIs remotely.
+     * If it is provided, the {@link #setJettyPath(String)} is ignored.
+     *
+     * @return Factory that creates an instance of {@code Jetty} server.
+     * @see #setJettyPath(String)
+     */
+    public Factory<?> getJettyServerFactory() {
+        return jettyServerFactory;
+    }
+
+    /**
+     * Sets a factory that is used to create an instance of {@code Jetty} server.
+     * {@code Jetty} is used to support REST over HTTP protocol for accessing Ignite APIs remotely.
+     * If it is provided, the {@link #setJettyPath(String)} is ignored.
+     *
+     * @param jettyServerFactory Factory that creates an instance of {@code Jetty} server.
+     * @return {@code this} for chaining.
+     * @see #setJettyPath(String)
+     */
+    public ConnectorConfiguration setJettyServerFactory(Factory<?> jettyServerFactory) {
+        this.jettyServerFactory = jettyServerFactory;
+
+        return this;
     }
 
     /**
