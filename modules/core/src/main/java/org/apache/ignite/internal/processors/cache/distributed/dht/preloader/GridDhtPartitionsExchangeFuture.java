@@ -1482,17 +1482,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         try {
             assert registerCachesFuture == null : "No caches registration should be scheduled before new caches have started.";
 
-            for (ExchangeActions.CacheActionData startAction : exchActions.cacheStartRequests()) {
-                DynamicCacheChangeRequest req = startAction.request();
-
-                CacheConfiguration<?, ?> ccfg = req.startCacheConfiguration();
-
-                if (ccfg.isEncryptionEnabled()) {
-                    int grpId = CU.cacheGroupId(ccfg.getName(), ccfg.getGroupName());
-
-                    cctx.kernalContext().encryption().setInitialGroupKey(grpId, req.encryptionKey());
-                }
-            }
+            initEncryptionGroupKeys();
 
             registerCachesFuture = cctx.affinity().onCacheChangeRequest(this, crd, exchActions);
         }
@@ -1514,6 +1504,23 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         }
 
         return cctx.kernalContext().clientNode() ? ExchangeType.CLIENT : ExchangeType.ALL;
+    }
+
+    /**
+     * Initializes encryption group keys for started cache groups that have encryption enabled.
+     */
+    private void initEncryptionGroupKeys() {
+        for (ExchangeActions.CacheActionData startAction : exchActions.cacheStartRequests()) {
+            DynamicCacheChangeRequest req = startAction.request();
+
+            CacheConfiguration<?, ?> ccfg = req.startCacheConfiguration();
+
+            if (ccfg.isEncryptionEnabled()) {
+                int grpId = CU.cacheGroupId(ccfg.getName(), ccfg.getGroupName());
+
+                cctx.kernalContext().encryption().setInitialGroupKey(grpId, req.encryptionKey());
+            }
+        }
     }
 
     /**

@@ -32,7 +32,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
@@ -260,11 +259,7 @@ class CacheGroupEncryptionKeys {
      * @return List of encryption keys of the removed cache group.
      */
     List<GroupKey> remove(int grpId) {
-        List<GroupKey> res = grpKeys.remove(grpId);
-
-        IgniteUtils.dumpStack(log, "PVD:: Remove encryption keys for cache group [grpId=" + grpId + ']');
-
-        return res;
+        return grpKeys.remove(grpId);
     }
 
     /**

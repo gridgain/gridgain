@@ -633,8 +633,6 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
         int i =0;
 
         while (isReencryptionInProgress(cacheGroups)) {
-            info("PVD:: iteration: " + i++);
-
             int rndNode = ThreadLocalRandom.current().nextInt(3);
 
             String gridName = "grid-" + rndNode;
@@ -650,8 +648,6 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
                 int grpId = firstNotReencrypted.grpId;
                 int partId = firstNotReencrypted.partId;
                 int idx = firstNotReencrypted.pageIdx;
-
-                info("PVD:: found page in iteration: " + i++);
 
                 // Wait until reencryption status changes.
                 boolean updated = waitForCondition(() ->
