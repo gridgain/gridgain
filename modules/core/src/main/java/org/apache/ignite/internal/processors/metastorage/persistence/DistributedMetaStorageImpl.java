@@ -1067,7 +1067,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             return marshaller.unmarshal(data, U.gridClassLoader());
         }
         catch (IgniteCheckedException e) {
-            log.error("Unable to unmarshal joinging node data for distributed metastorage component.", e);
+            log.error("Unable to unmarshal joining node data for distributed metastorage component.", e);
 
             return null;
         }
@@ -1403,44 +1403,54 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     }
 
     /**
-     * Store data in local metastorage or in memory and log with given prefix. Doesn't optimise history items.
+     * Store data in local metastorage or in memory and log to DEBUG-level with given prefix. Doesn't optimise history items.
      *
      * @param prefix Prefix for log message, should end with '['.
      * @param items Items to store.
      * @param startingIndex Starting index.
      */
     private void completeWritesNotOptimisedAndLog(String prefix, DistributedMetaStorageHistoryItem[] items, int startingIndex) {
-        StringBuilder sb = new StringBuilder(prefix);
+        if (log.isDebugEnabled()) {
+            StringBuilder sb = new StringBuilder(prefix);
 
-        sb.append("updates=[");
+            sb.append("updates=[");
 
-        DistributedMetaStorageVersion initialVer = ver;
+            DistributedMetaStorageVersion initialVer = ver;
 
-        for (int i = startingIndex; i < items.length; i++) {
-            try {
-                completeWrite(items[i], false);
+            for (int i = startingIndex; i < items.length; i++) {
+                try {
+                    completeWrite(items[i], false);
 
-                sb.append(printHistoryItem(items[i]));
-            } catch (IgniteCheckedException ex) {
-                log.error("Unable to unmarshal new metastore data. update=" + items[i], ex);
+                    sb.append(printHistoryItem(items[i]));
+                } catch (IgniteCheckedException ex) {
+                    log.error("Unable to unmarshal new metastore data [update=" + items[i] + ']', ex);
+                }
+
+                if (i < items.length - 1)
+                    sb.append(", ");
             }
 
-            if (i < items.length - 1)
-                sb.append(", ");
+            sb.append("], initialVer=")
+                .append(initialVer)
+                .append(", ver=")
+                .append(ver)
+                .append("]");
+
+            log.debug(sb.toString());
+        } else {
+            for (int i = 0; i < startingIndex; i++) {
+                try {
+                    completeWrite(items[i], false);
+                } catch (IgniteCheckedException ex) {
+                    log.error("Unable to unmarshal new metastore data. update=" + items[i], ex);
+                }
+            }
         }
-
-        sb.append("], initialVer=")
-            .append(initialVer)
-            .append(", ver=")
-            .append(ver)
-            .append("]");
-
-        log.info(sb.toString());
     }
 
     /**
-     * Store data in local metastorage or in memory and log. Removes history item values that match already existing
-     * values. Might lead to no-op. Doesn't log metrics keys updates.
+     * Store data in local metastorage or in memory and log to DEBUG-level. Removes history item values that match already existing
+     * values. Might lead to no-op.
      *
      * @param histItem {@code <key, value>} pairs to process.
      * @throws IgniteCheckedException In case of IO/unmarshalling errors.
@@ -1448,19 +1458,17 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     private void completeWriteOptimisedAndLog(DistributedMetaStorageHistoryItem histItem) throws IgniteCheckedException {
         DistributedMetaStorageHistoryItem writtenItem = completeWrite(histItem, true);
 
-        // Skip logging of metrics to reduce log noise.
-        if (Arrays.stream(histItem.keys).allMatch(key -> key.startsWith("metrics")))
-            return;
-
-        if (writtenItem == null)
-            log.info("Skipped metastorage history item as it matches already existing values [ver=" + ver +
-                ", histItem=" + printHistoryItem(histItem) + ']');
-        else if (histItem.keys.length != writtenItem.keys.length)
-            log.info("Wrote optimised metastorage history item [ver= " + ver +
-                ", histItem=" + printHistoryItem(histItem) +
-                ", itemToWrite=" + printHistoryItem(writtenItem) + ']');
-        else
-            log.info("Wrote metastorage history item [ver=" + ver + ", itemToWrite=" + printHistoryItem(histItem) + ']');
+        if (log.isDebugEnabled()) {
+            if (writtenItem == null)
+                log.debug("Skipped metastorage history item as it matches already existing values [ver=" + ver +
+                    ", histItem=" + printHistoryItem(histItem) + ']');
+            else if (histItem.keys.length != writtenItem.keys.length)
+                log.debug("Wrote optimised metastorage history item [ver= " + ver +
+                    ", histItem=" + printHistoryItem(histItem) +
+                    ", itemToWrite=" + printHistoryItem(writtenItem) + ']');
+            else
+                log.debug("Wrote metastorage history item [ver=" + ver + ", itemToWrite=" + printHistoryItem(histItem) + ']');
+        }
     }
 
     /**
@@ -1582,10 +1590,12 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         if (!Objects.deepEquals(oldVal, expVal)) {
             msg.setMatches(false);
 
-            log.info("Failed metastorage CAS [ver=" + ver +
-                ", expVal=" + expVal +
-                ", actualVal=" + oldVal +
-                ", key=" + msg.key() + "]");
+            if (log.isDebugEnabled()) {
+                log.debug("Failed metastorage CAS [ver=" + ver +
+                    ", expVal=" + expVal +
+                    ", actualVal=" + oldVal +
+                    ", key=" + msg.key() + "]");
+            }
 
             // Do nothing if expected value doesn't match with the actual one.
             return;
