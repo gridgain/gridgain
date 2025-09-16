@@ -44,6 +44,8 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
+import org.apache.ignite.internal.processors.cache.GridCacheUtils;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.util.distributed.DistributedProcess.DistributedProcessType;
 import org.apache.ignite.internal.util.distributed.InitMessage;
@@ -56,6 +58,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.discovery.tcp.TestTcpDiscoverySpi;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.GridTestUtils.DiscoveryHook;
 import org.junit.Test;
 
@@ -847,6 +850,48 @@ public class CacheGroupKeyChangeTest extends AbstractEncryptionTest {
         checkGroupKey(CU.cacheId(grpName), INITIAL_KEY_ID + 1, MAX_AWAIT_MILLIS);
 
         checkEncryptedCaches(node0, node1);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testGroupKeyReinitializedOnRestart() throws Exception {
+        T2<IgniteEx, IgniteEx> nodes = startTestGrids(true);
+
+        IgniteEx node0 = nodes.get1();
+        IgniteEx node1 = nodes.get2();
+
+        IgniteEx client = startClientGrid(getConfiguration("client"));
+
+        createEncryptedCache(client, null, cacheName(), null);
+
+        TestRecordingCommunicationSpi.spi(node0).blockMessages((node, msg) -> {
+            if (GRID_1.equals(node.consistentId())) {
+                info("Message sending to nodeId=" + node.consistentId() + " msg=" + msg.getClass().getSimpleName());
+
+                return msg instanceof GridDhtPartitionsFullMessage;
+            }
+
+            return false;
+        });
+
+        client.destroyCache(cacheName());
+
+        TestRecordingCommunicationSpi.spi(node0).waitForBlocked();
+
+        IgniteInternalFuture startCacheFut = GridTestUtils.runAsync(() -> {
+            createEncryptedCache(client, null, cacheName(), null);
+        });
+
+        assertTrue(GridTestUtils.waitForCondition(() -> node1.context().cache().cacheGroupDescriptors()
+            .get(GridCacheUtils.cacheId(cacheName())) != null, 10_000));
+
+        TestRecordingCommunicationSpi.spi(node0).stopBlock();
+
+        startCacheFut.get();
+
+        forceCheckpoint();
     }
 
     /**

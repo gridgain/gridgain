@@ -1510,16 +1510,28 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * Initializes encryption group keys for started cache groups that have encryption enabled.
      */
     private void initEncryptionGroupKeys() {
-        for (ExchangeActions.CacheActionData startAction : exchActions.cacheStartRequests()) {
-            DynamicCacheChangeRequest req = startAction.request();
+        for (ExchangeActions.CacheGroupActionData startAction : exchActions.cacheGroupsToStart()) {
+            CacheConfiguration<?, ?> ccfg = startAction.descriptor().config();
 
-            CacheConfiguration<?, ?> ccfg = req.startCacheConfiguration();
-
-            if (ccfg.isEncryptionEnabled()) {
-                int grpId = CU.cacheGroupId(ccfg.getName(), ccfg.getGroupName());
-
-                cctx.kernalContext().encryption().setInitialGroupKey(grpId, req.encryptionKey());
+            if (!ccfg.isEncryptionEnabled()) {
+                continue;
             }
+
+            int grpId = startAction.descriptor().groupId();
+
+            DynamicCacheChangeRequest req = null;
+
+            for (ExchangeActions.CacheActionData cacheAction : exchActions.cacheStartRequests()) {
+                if (grpId == cacheAction.descriptor().groupId()) {
+                    req = cacheAction.request();
+
+                    break;
+                }
+            }
+
+            assert req != null : "Failed to find cache for the group [grp=" + startAction.descriptor().groupName() + ']';
+
+            cctx.kernalContext().encryption().setInitialGroupKey(grpId, req.encryptionKey());
         }
     }
 

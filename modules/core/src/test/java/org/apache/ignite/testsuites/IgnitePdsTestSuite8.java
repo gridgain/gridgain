@@ -34,7 +34,6 @@ import org.apache.ignite.internal.processors.cache.persistence.MaintenanceClearC
 import org.apache.ignite.internal.processors.cache.persistence.MaintenancePersistenceTaskTest;
 import org.apache.ignite.internal.processors.cache.persistence.PagesPossibleCorruptionDiagnosticTest;
 import org.apache.ignite.internal.processors.cache.persistence.PendingTreeCorruptionTest;
-import org.apache.ignite.internal.processors.cache.persistence.RestartCacheWithEncriptionTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsPageReplacementDuringPartitionClearTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsTransactionsHangTest;
 import org.apache.ignite.internal.processors.cache.persistence.defragmentation.DefragmentationMXBeanTest;
@@ -98,7 +97,6 @@ public class IgnitePdsTestSuite8 {
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsDefragmentationRandomLruEvictionTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsDefragmentationEncryptionTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsDefragmentationOldCacheTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, RestartCacheWithEncriptionTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, DefragmentationMXBeanTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, PagesPossibleCorruptionDiagnosticTest.class, ignoredTests);
