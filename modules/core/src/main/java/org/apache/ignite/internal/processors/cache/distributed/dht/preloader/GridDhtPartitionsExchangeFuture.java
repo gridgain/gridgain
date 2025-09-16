@@ -1482,8 +1482,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         try {
             assert registerCachesFuture == null : "No caches registration should be scheduled before new caches have started.";
 
-            registerCachesFuture = cctx.affinity().onCacheChangeRequest(this, crd, exchActions);
-
             for (ExchangeActions.CacheActionData startAction : exchActions.cacheStartRequests()) {
                 DynamicCacheChangeRequest req = startAction.request();
 
@@ -1495,6 +1493,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     cctx.kernalContext().encryption().setInitialGroupKey(grpId, req.encryptionKey());
                 }
             }
+
+            registerCachesFuture = cctx.affinity().onCacheChangeRequest(this, crd, exchActions);
         }
         catch (Exception e) {
             if (reconnectOnError(e) || !isRollbackSupported())
