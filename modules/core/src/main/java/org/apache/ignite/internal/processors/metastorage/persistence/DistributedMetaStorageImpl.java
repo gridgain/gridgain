@@ -1438,7 +1438,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
             log.debug(sb.toString());
         } else {
-            for (int i = 0; i < startingIndex; i++) {
+            for (int i = startingIndex; i < items.length; i++) {
                 try {
                     completeWrite(items[i], false);
                 } catch (IgniteCheckedException ex) {
