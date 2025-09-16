@@ -188,6 +188,7 @@ import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
 import static org.apache.ignite.internal.IgniteFeatures.TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_BINARY_SORT_OBJECT_FIELDS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_LATE_AFFINITY_ASSIGNMENT;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER_COMPACT_FOOTER;
@@ -4708,6 +4709,44 @@ class ServerImpl extends TcpDiscoveryImpl {
                         .addLog(() -> "Ignored")
                         .setStatus(SpanStatus.ABORTED)
                         .end();
+
+                    return;
+                }
+
+                Boolean locBinarySortObjectFields = locNode.attribute(ATTR_IGNITE_BINARY_SORT_OBJECT_FIELDS);
+                Boolean rmtBinarySortObjectFields = node.attribute(ATTR_IGNITE_BINARY_SORT_OBJECT_FIELDS);
+
+                final boolean locBinarySortObjectFieldsBool = locBinarySortObjectFields != null ? locBinarySortObjectFields : false;
+                final boolean rmtBinarySortObjectFieldsBool = rmtBinarySortObjectFields != null ? rmtBinarySortObjectFields : false;
+
+                if (locBinarySortObjectFieldsBool != rmtBinarySortObjectFieldsBool) {
+                    utilityPool.execute(
+                            new Runnable() {
+                                @Override public void run() {
+                                    String errTemplate = "Local node's binary marshaller fields sort order option differs from " +
+                                            "the same property on remote node (make sure all nodes in topology have the same value " +
+                                            "of \"IGNITE_BINARY_SORT_OBJECT_FIELDS\" VM property), local node option is set in: '%b'" +
+                                            ", remote node option is set in: '%b'" +
+                                            ", [locNodeAddrs=%s, locPort=%d, rmtNodeAddrs=%s, rmtPort=%d, locNodeId=%s, rmtNodeId=%s]";
+
+                                    // Enables fields to be written by BinaryMarshaller in sorted order
+                                    String errMsg = String.format(errTemplate, locBinarySortObjectFields, rmtBinarySortObjectFields,
+                                            U.addressesAsString(locNode), locNode.discoveryPort(), U.addressesAsString(node), node.discoveryPort(),
+                                            locNode.id(), msg.creatorNodeId());
+
+                                    String sndMsg = String.format(errTemplate, rmtBinarySortObjectFields, locBinarySortObjectFields,
+                                            U.addressesAsString(node), node.discoveryPort(), U.addressesAsString(locNode), locNode.discoveryPort(),
+                                            node.id(), locNode.id());
+
+                                    nodeCheckError(node, errMsg, sndMsg);
+                                }
+                            });
+
+                    // Ignore join request.
+                    msg.spanContainer().span()
+                            .addLog(() -> "Ignored")
+                            .setStatus(SpanStatus.ABORTED)
+                            .end();
 
                     return;
                 }

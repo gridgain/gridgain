@@ -24,6 +24,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -33,6 +34,12 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.binary.BinaryUtils;
+import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.IgniteSpiException;
+import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.testframework.GridStringLogger;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -41,6 +48,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP;
+import static org.apache.ignite.client.Config.SERVER;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_BINARY_SORT_OBJECT_FIELDS;
+import static org.apache.ignite.internal.client.thin.TcpIgniteClient.BINARY_SORT_OBJECT_FIELDS_ERR;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
 import static org.junit.Assert.assertTrue;
@@ -49,6 +60,10 @@ import static org.junit.Assert.assertTrue;
  * {@link ClientConfiguration} unit tests.
  */
 public class ClientConfigurationTest {
+    static {
+        System.setProperty(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, "false");
+    }
+
     /** Per test timeout */
     @Rule
     public Timeout globalTimeout = new Timeout((int) GridTestUtils.DFLT_TEST_TIMEOUT);
@@ -149,5 +164,45 @@ public class ClientConfigurationTest {
 
         GridTestUtils.assertThrowsAnyCause(null, () -> Ignition.startClient(cfg), IllegalArgumentException.class,
                 "heartbeatInterval cannot be zero or less.");
+    }
+
+    /**
+     * Check node connection with different
+     * {@link org.apache.ignite.IgniteSystemProperties#IGNITE_BINARY_SORT_OBJECT_FIELDS}
+     */
+    @Test
+    @SuppressWarnings("ThrowableNotThrown")
+    public void testClientWithDifferentBinarySortOptions() {
+        try (Ignite ignite0 = Ignition.start(Config.getServerConfiguration())) {
+            TcpDiscoverySpi spi = (TcpDiscoverySpi)ignite0.configuration().getDiscoverySpi();
+
+            TcpDiscoveryNode localNode = (TcpDiscoveryNode)spi.getLocalNode();
+
+            Map<String, Object> prev = U.copyMap(localNode.attributes());
+
+            boolean prevValueBool = BinaryUtils.FIELDS_SORTED_ORDER;
+
+            // Change node attributes, due to statically defined BinaryUtils#FIELDS_SORTED_ORDER, the only possibility
+            // to change attributes - manually.
+            prev.put(ATTR_IGNITE_BINARY_SORT_OBJECT_FIELDS, !prevValueBool);
+
+            localNode.setAttributes(prev);
+
+            // one more cluster node
+            GridTestUtils.assertThrowsAnyCause(null, () -> Ignition.start(Config.getServerConfiguration()),
+                    IgniteSpiException.class, "Local node's binary marshaller fields sort order option differs");
+
+            // thick client
+            IgniteConfiguration ccfg = Config.getServerConfiguration().setClientMode(true);
+
+            GridTestUtils.assertThrowsAnyCause(null, () -> Ignition.start(ccfg), IgniteSpiException.class,
+                    "Local node's binary marshaller fields sort order option differs");
+
+            // thin client
+            ClientConfiguration cfg = new ClientConfiguration().setAddresses(SERVER);
+
+            GridTestUtils.assertThrowsAnyCause(null, () -> Ignition.startClient(cfg),
+                    IgniteClientException.class, BINARY_SORT_OBJECT_FIELDS_ERR);
+        }
     }
 }

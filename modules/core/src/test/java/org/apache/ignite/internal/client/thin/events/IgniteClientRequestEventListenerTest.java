@@ -128,7 +128,7 @@ public class IgniteClientRequestEventListenerTest extends AbstractThinClientTest
             fail();
         }
         catch (ClientException err) {
-            assertEquals(2, evSet.size());
+            assertEquals(3, evSet.size());
 
             RequestStartEvent startEvent = (RequestStartEvent)evSet.get(RequestStartEvent.class);
 

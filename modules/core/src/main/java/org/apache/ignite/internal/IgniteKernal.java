@@ -266,6 +266,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DATA_STREAMER
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DEPLOYMENT_MODE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DYNAMIC_CACHE_START_ROLLBACK_SUPPORTED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_BINARY_SORT_OBJECT_FIELDS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IPS;
@@ -1817,6 +1818,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         add(ATTR_IGNITE_INSTANCE_NAME, igniteInstanceName);
 
         add(ATTR_PEER_CLASSLOADING, cfg.isPeerClassLoadingEnabled());
+        add(ATTR_IGNITE_BINARY_SORT_OBJECT_FIELDS, BinaryUtils.FIELDS_SORTED_ORDER);
 
         add(ATTR_SHUTDOWN_POLICY, cfg.getShutdownPolicy().index());
 
