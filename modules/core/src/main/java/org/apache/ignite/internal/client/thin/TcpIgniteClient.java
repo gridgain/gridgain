@@ -149,8 +149,6 @@ public class TcpIgniteClient implements IgniteClient {
         try {
             ch.channelsInit();
 
-            cluster = new ClientClusterImpl(ch, marsh);
-
             retrieveBinaryConfiguration(cfg);
 
             // Metadata, binary descriptors and user types caches must be cleared so that the
@@ -160,7 +158,6 @@ public class TcpIgniteClient implements IgniteClient {
                 metadataHnd.onReconnect();
                 marshCtx.clearUserTypesCache();
                 marsh.context().unregisterUserTypeDescriptors();
-                checkAttributesCompatibility(cluster.defaultClusterGroup());
             });
 
             // Send postponed metadata after channel init.
@@ -168,6 +165,10 @@ public class TcpIgniteClient implements IgniteClient {
 
             transactions = new TcpClientTransactions(ch, marsh,
                     new ClientTransactionConfiguration(cfg.getTransactionConfiguration()));
+
+            cluster = new ClientClusterImpl(ch, marsh);
+
+            checkAttributesCompatibility(cluster);
 
             compute = new ClientComputeImpl(ch, marsh, cluster.defaultClusterGroup());
 
@@ -181,7 +182,7 @@ public class TcpIgniteClient implements IgniteClient {
         }
     }
 
-    private void checkAttributesCompatibility(ClientClusterGroup cluster) {
+    private void checkAttributesCompatibility(ClientClusterImpl cluster) {
         try {
             ClusterNode node = cluster.node();
 
@@ -589,10 +590,6 @@ public class TcpIgniteClient implements IgniteClient {
         }
 
         marsh.setBinaryConfiguration(resCfg);
-
-        assert cluster != null;
-
-        checkAttributesCompatibility(cluster);
     }
 
     /**

@@ -22,25 +22,15 @@ import org.apache.ignite.binary.BinaryBasicNameMapper;
 import org.apache.ignite.binary.BinaryNameMapper;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
-import org.apache.ignite.configuration.ClientConnectorConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
-import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.client.thin.AbstractThinClientTest;
 import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.junit.Test;
 
-import java.util.Map;
-
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_BINARY_SORT_OBJECT_FIELDS;
 import static org.apache.ignite.internal.binary.BinaryUtils.FLAG_COMPACT_FOOTER;
-import static org.apache.ignite.internal.client.thin.TcpIgniteClient.BINARY_SORT_OBJECT_FIELDS_ERR;
 
 /**
  * Tests binary configuration behavior.
@@ -96,49 +86,6 @@ public class BinaryConfigurationTest extends AbstractThinClientTest {
 
             assertTrue(listener.check());
         }
-    }
-
-    @Test
-    @SuppressWarnings("ThrowableNotThrown")
-    public void testClientReconnectWithDifferentBinarySortOptions() {
-        ClientConnectorConfiguration ccfg = new ClientConnectorConfiguration();
-        ccfg.setPort(11800);
-
-        IgniteConfiguration serverCfg = Config.getServerConfiguration().setClientConnectorConfiguration(ccfg);
-
-        Ignite ignite0 = Ignition.start(serverCfg);
-
-        ClientConfiguration cfg = new ClientConfiguration().setAddresses("127.0.0.1:11800")
-                .setReconnectThrottlingRetries(0); // Disable throttling.
-        IgniteClient cli = Ignition.startClient(cfg);
-
-        // just check availability
-        cli.cacheNames();
-
-        dropAllThinClientConnections(Ignition.allGrids().get(0));
-
-        ignite0.close();
-
-        serverCfg = Config.getServerConfiguration().setClientConnectorConfiguration(ccfg);
-
-        ignite0 = Ignition.start(serverCfg);
-
-        TcpDiscoverySpi spi = (TcpDiscoverySpi)ignite0.configuration().getDiscoverySpi();
-
-        TcpDiscoveryNode localNode = (TcpDiscoveryNode) spi.getLocalNode();
-
-        Map<String, Object> prev = U.copyMap(localNode.attributes());
-
-        boolean prevValueBool = BinaryUtils.FIELDS_SORTED_ORDER;
-
-        // Change node attributes, due to statically defined BinaryUtils#FIELDS_SORTED_ORDER, the only possibility
-        // to change attributes - manually.
-        prev.put(ATTR_IGNITE_BINARY_SORT_OBJECT_FIELDS, !prevValueBool);
-
-        localNode.setAttributes(prev);
-
-        GridTestUtils.assertThrowsAnyCause(null, cli::cacheNames,
-                IgniteClientException.class, BINARY_SORT_OBJECT_FIELDS_ERR);
     }
 
     /**
