@@ -431,9 +431,24 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             localMetastorageUnlock();
         }
 
+        logInitialMetastorageData();
+
         registerSystemView();
 
         notifyReadyForRead();
+    }
+
+    /** */
+    private void logInitialMetastorageData() throws IgniteCheckedException {
+        try {
+            lock.readLock().lock();
+
+            DistributedMetaStorageKeyValuePair[] data = bridge.localFullData();
+
+            log.info("Initial metastorage data [ver=" + ver + ", values=" + printPairsArray(data) + "]");
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     /**
@@ -868,6 +883,37 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         return sb.append(']').toString();
     }
 
+    /** */
+    private String printHistoryItem(DistributedMetaStorageHistoryItem item) throws IgniteCheckedException {
+        StringBuilder sb = new StringBuilder("[");
+
+        for (int i = 0; i < item.keys.length; i++) {
+            Serializable value = item.valBytesArray[i] == null ? null : unmarshal(marshaller, item.valBytesArray[i]);
+
+            sb.append(item.keys[i]).append('=').append(value);
+
+            if (i < item.keys.length - 1)
+                sb.append(", ");
+        }
+
+        return sb.append(']').toString();
+    }
+
+    /** */
+    private String printPairsArray(DistributedMetaStorageKeyValuePair[] data) throws IgniteCheckedException {
+        StringBuilder sb = new StringBuilder("[");
+
+        for (int i = 0; i < data.length; i++) {
+            DistributedMetaStorageKeyValuePair pair = data[i];
+            sb.append(pair.key).append('=').append(unmarshal(marshaller, pair.valBytes));
+
+            if (i < data.length - 1)
+                sb.append(", ");
+        }
+
+        return sb.append(']').toString();
+    }
+
     /**
      * @param joiningData Joining data to validate.
      * @return {@code null} if contained data is valid otherwise error message.
@@ -916,18 +962,12 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             if (remoteVer.id > locVer.id) {
                 DistributedMetaStorageHistoryItem[] hist = joiningData.hist;
 
-                if (remoteVer.id - locVer.id <= hist.length) {
-                    for (long v = locVer.id + 1; v <= remoteVer.id; v++) {
-                        int hv = (int)(v - remoteVer.id + hist.length - 1);
-
-                        try {
-                            completeWrite(hist[hv], false);
-                        }
-                        catch (IgniteCheckedException ex) {
-                            log.error("Unable to unmarshal new metastore data. update=" + hist[hv], ex);
-                        }
-                    }
-                }
+                if (remoteVer.id - locVer.id <= hist.length)
+                    completeWritesNotOptimisedAndLog(
+                        "Applying new metastore data on join: [",
+                        hist,
+                        (int) (locVer.id - remoteVer.id + hist.length)
+                    );
                 else
                     assert false : "Joining node is too far ahead [remoteVer=" + remoteVer + "]";
             }
@@ -1027,7 +1067,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             return marshaller.unmarshal(data, U.gridClassLoader());
         }
         catch (IgniteCheckedException e) {
-            log.error("Unable to unmarshal joinging node data for distributed metastorage component.", e);
+            log.error("Unable to unmarshal joining node data for distributed metastorage component.", e);
 
             return null;
         }
@@ -1136,6 +1176,9 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                     notifyListenersBeforeReadyForWrite(nodeData.fullData);
 
                     bridge.writeFullNodeData(nodeData);
+
+                    log.info("Received metastorage common data [ver=" + nodeData.ver +
+                        ", values=" + printPairsArray(nodeData.fullData) + "]");
                 }
 
                 if (nodeData.hist != null) {
@@ -1151,10 +1194,8 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                 if (isPersistenceEnabled && nodeData.fullData != null)
                     worker.update(nodeData);
 
-                if (nodeData.updates != null) {
-                    for (DistributedMetaStorageHistoryItem update : nodeData.updates)
-                        completeWrite(update, false);
-                }
+                if (nodeData.updates != null)
+                    completeWritesNotOptimisedAndLog("Applying received distributed metastorage updates: [", nodeData.updates, 0);
             }
             else if (!isClient && ver.id > 0) {
                 throw new IgniteException("Cannot join the cluster because it doesn't support distributed metastorage" +
@@ -1309,7 +1350,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             if (msg instanceof DistributedMetaStorageCasMessage)
                 completeCas((DistributedMetaStorageCasMessage)msg);
             else
-                completeWrite(new DistributedMetaStorageHistoryItem(msg.key(), msg.value()), true);
+                completeWriteOptimisedAndLog(new DistributedMetaStorageHistoryItem(msg.key(), msg.value()));
         }
         catch (IgniteInterruptedCheckedException e) {
             throw U.convertException(e);
@@ -1362,13 +1403,83 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     }
 
     /**
-     * Store data in local metastorage or in memory.
+     * Store data in local metastorage or in memory and log to DEBUG-level with given prefix. Doesn't optimise history items.
      *
-     * @param histItem {@code <key, value>} pair to process.
-     * @param optimize Remove history item values that match already existing values. Might lead to no-op.
+     * @param prefix Prefix for log message, should end with '['.
+     * @param items Items to store.
+     * @param startingIndex Starting index.
+     */
+    private void completeWritesNotOptimisedAndLog(String prefix, DistributedMetaStorageHistoryItem[] items, int startingIndex) {
+        if (log.isDebugEnabled()) {
+            StringBuilder sb = new StringBuilder(prefix);
+
+            sb.append("updates=[");
+
+            DistributedMetaStorageVersion initialVer = ver;
+
+            for (int i = startingIndex; i < items.length; i++) {
+                try {
+                    completeWrite(items[i], false);
+
+                    sb.append(printHistoryItem(items[i]));
+                } catch (IgniteCheckedException ex) {
+                    log.error("Unable to unmarshal new metastore data [update=" + items[i] + ']', ex);
+                }
+
+                if (i < items.length - 1)
+                    sb.append(", ");
+            }
+
+            sb.append("], initialVer=")
+                .append(initialVer)
+                .append(", ver=")
+                .append(ver)
+                .append("]");
+
+            log.debug(sb.toString());
+        } else {
+            for (int i = startingIndex; i < items.length; i++) {
+                try {
+                    completeWrite(items[i], false);
+                } catch (IgniteCheckedException ex) {
+                    log.error("Unable to unmarshal new metastore data. update=" + items[i], ex);
+                }
+            }
+        }
+    }
+
+    /**
+     * Store data in local metastorage or in memory and log to DEBUG-level. Removes history item values that match already existing
+     * values. Might lead to no-op.
+     *
+     * @param histItem {@code <key, value>} pairs to process.
      * @throws IgniteCheckedException In case of IO/unmarshalling errors.
      */
-    private void completeWrite(
+    private void completeWriteOptimisedAndLog(DistributedMetaStorageHistoryItem histItem) throws IgniteCheckedException {
+        DistributedMetaStorageHistoryItem writtenItem = completeWrite(histItem, true);
+
+        if (log.isDebugEnabled()) {
+            if (writtenItem == null)
+                log.debug("Skipped metastorage history item as it matches already existing values [ver=" + ver +
+                    ", histItem=" + printHistoryItem(histItem) + ']');
+            else if (histItem.keys.length != writtenItem.keys.length)
+                log.debug("Wrote optimised metastorage history item [ver= " + ver +
+                    ", histItem=" + printHistoryItem(histItem) +
+                    ", itemToWrite=" + printHistoryItem(writtenItem) + ']');
+            else
+                log.debug("Wrote metastorage history item [ver=" + ver + ", itemToWrite=" + printHistoryItem(histItem) + ']');
+        }
+    }
+
+    /**
+     * Store data in local metastorage or in memory.
+     *
+     * @param histItem {@code <key, value>} pairs to process.
+     * @param optimize Remove history item values that match already existing values. Might lead to no-op.
+     * @throws IgniteCheckedException In case of IO/unmarshalling errors.
+     * @return Actual history item that was written or null if nothing was written.
+     */
+    private @Nullable DistributedMetaStorageHistoryItem completeWrite(
         DistributedMetaStorageHistoryItem histItem,
         boolean optimize
     ) throws IgniteCheckedException {
@@ -1379,7 +1490,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                 histItem = optimizeHistoryItem(histItem);
 
             if (histItem == null)
-                return;
+                return null;
 
             ver = ver.nextVersion(histItem);
 
@@ -1406,6 +1517,8 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
             worker.update(histItem);
 
         shrinkHistory();
+
+        return histItem;
     }
 
     /**
@@ -1477,11 +1590,18 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         if (!Objects.deepEquals(oldVal, expVal)) {
             msg.setMatches(false);
 
+            if (log.isDebugEnabled()) {
+                log.debug("Failed metastorage CAS [ver=" + ver +
+                    ", expVal=" + expVal +
+                    ", actualVal=" + oldVal +
+                    ", key=" + msg.key() + "]");
+            }
+
             // Do nothing if expected value doesn't match with the actual one.
             return;
         }
 
-        completeWrite(new DistributedMetaStorageHistoryItem(msg.key(), msg.value()), true);
+        completeWriteOptimisedAndLog(new DistributedMetaStorageHistoryItem(msg.key(), msg.value()));
     }
 
     /**
