@@ -2278,10 +2278,6 @@ public final class IgniteSystemProperties {
     @SystemProperty(value = "Sets a flag to force a checkpoint at node stop", defaults = "false")
     public static final String IGNITE_PDS_FORCED_CHECKPOINT_ON_NODE_STOP = "IGNITE_PDS_FORCED_CHECKPOINT_ON_NODE_STOP";
 
-    /** Enables logging of every metastore update to debug log. */
-    @SystemProperty(value = "Enables logging of every metastore update to debug log", defaults = "false")
-    public static final String IGNITE_LOG_METASTORAGE_UPDATES = "IGNITE_LOG_METASTORAGE_UPDATES";
-
     /**
      * Enforces singleton.
      */
