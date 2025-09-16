@@ -21,6 +21,8 @@ import org.apache.ignite.internal.processors.platform.callback.PlatformCallbackG
 import java.io.IOException;
 import java.io.OutputStream;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 /**
  * Stream that writes to the .NET console.
  */
@@ -39,15 +41,23 @@ public class PlatformDotNetConsoleStream extends OutputStream {
 
     /** {@inheritDoc} */
     @Override public void write(byte[] b, int off, int len) throws IOException {
-        String s = new String(b, off, len);
+        try {
+            String s = new String(b, off, len, UTF_8);
 
-        PlatformCallbackGateway.consoleWrite(s, isErr);
+            PlatformCallbackGateway.consoleWrite(s, isErr);
+        } catch (Throwable ignored) {
+            // Ignore. Printing to the console should not crash the node.
+        }
     }
 
     /** {@inheritDoc} */
     @Override public void write(int b) throws IOException {
-        String s = String.valueOf((char) b);
+        try {
+            String s = String.valueOf((char) b);
 
-        PlatformCallbackGateway.consoleWrite(s, isErr);
+            PlatformCallbackGateway.consoleWrite(s, isErr);
+        } catch (Throwable ignored) {
+            // Ignore. Printing to the console should not crash the node.
+        }
     }
 }
