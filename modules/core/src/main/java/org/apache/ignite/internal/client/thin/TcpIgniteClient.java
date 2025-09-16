@@ -55,7 +55,6 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientTransactionConfiguration;
-import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.MarshallerPlatformIds;
 import org.apache.ignite.internal.binary.BinaryCachingMetadataHandler;
 import org.apache.ignite.internal.binary.BinaryMetadata;
@@ -202,10 +201,6 @@ public class TcpIgniteClient implements IgniteClient {
     }
 
     private static @Nullable <T> T attribute(String name, Map<String, Object> attrs) {
-        // Even though discovery SPI removes this attribute after authentication, keep this check for safety.
-        if (IgniteNodeAttributes.ATTR_SECURITY_CREDENTIALS.equals(name))
-            return null;
-
         return (T)attrs.get(name);
     }
 
