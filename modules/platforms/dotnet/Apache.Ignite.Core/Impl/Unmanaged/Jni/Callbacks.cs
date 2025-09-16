@@ -274,7 +274,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             {
                 if (message != IntPtr.Zero)
                 {
-                    // Each domain registers its own writer.
+                    // Each domain registers it's own writer.
                     var writer = _consoleWriters.Select(x => x.Value).FirstOrDefault();
 
                     if (writer != null)
