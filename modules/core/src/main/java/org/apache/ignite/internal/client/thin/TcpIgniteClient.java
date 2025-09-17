@@ -45,11 +45,13 @@ import org.apache.ignite.client.ClientClusterGroup;
 import org.apache.ignite.client.ClientCollectionConfiguration;
 import org.apache.ignite.client.ClientCompute;
 import org.apache.ignite.client.ClientException;
+import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
 import org.apache.ignite.client.ClientIgniteSet;
 import org.apache.ignite.client.ClientServices;
 import org.apache.ignite.client.ClientTransactions;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.client.IgniteClientFuture;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientTransactionConfiguration;
@@ -76,7 +78,9 @@ import org.apache.ignite.marshaller.MarshallerUtils;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_SORT_OBJECT_FIELDS;
 import static org.apache.ignite.client.ClientAtomicConfiguration.DFLT_ATOMIC_SEQUENCE_RESERVE_SIZE;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_BINARY_SORT_OBJECT_FIELDS;
 
 /**
  * Implementation of {@link IgniteClient} over TCP protocol.
@@ -108,6 +112,10 @@ public class TcpIgniteClient implements IgniteClient {
 
     /** Serializer/deserializer. */
     private final ClientUtils serDes;
+
+    public static final String BINARY_SORT_OBJECT_FIELDS_ERR = "Client node binary marshaller fields sort " +
+            "order option differs from the same option on server nodes, consider to change:" +
+            " \"" + IGNITE_BINARY_SORT_OBJECT_FIELDS + "\" VM option.";
 
     /**
      * Private constructor. Use {@link TcpIgniteClient#start(ClientConfiguration)} to create an instance of
@@ -159,6 +167,8 @@ public class TcpIgniteClient implements IgniteClient {
 
             cluster = new ClientClusterImpl(ch, marsh);
 
+            checkAttributesCompatibility(cluster);
+
             compute = new ClientComputeImpl(ch, marsh, cluster.defaultClusterGroup());
 
             services = new ClientServicesImpl(ch, marsh, cluster.defaultClusterGroup());
@@ -169,6 +179,29 @@ public class TcpIgniteClient implements IgniteClient {
             ch.close();
             throw e;
         }
+    }
+
+    private void checkAttributesCompatibility(ClientClusterImpl cluster) {
+        try {
+            ClusterNode node = cluster.node();
+
+            Map<String, Object> attrs = node.attributes();
+
+            Boolean binaryFieldsSortAttr = attribute(ATTR_IGNITE_BINARY_SORT_OBJECT_FIELDS, attrs);
+            boolean binaryFieldsSortAttrBool = binaryFieldsSortAttr != null ? binaryFieldsSortAttr : false;
+
+            boolean binaryFieldsSortSys = BinaryUtils.FIELDS_SORTED_ORDER;
+
+            if (binaryFieldsSortSys != binaryFieldsSortAttrBool) {
+                throw new IgniteClientException(ClientStatus.FAILED, BINARY_SORT_OBJECT_FIELDS_ERR);
+            }
+        } catch (ClientFeatureNotSupportedByServerException ex) {
+            // No op. Feature not supported.
+        }
+    }
+
+    private static @Nullable <T> T attribute(String name, Map<String, Object> attrs) {
+        return (T)attrs.get(name);
     }
 
     /** {@inheritDoc} */
