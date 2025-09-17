@@ -41,6 +41,8 @@ import org.xml.sax.SAXException;
 public class JettyRestProcessorCustomInitializationTest extends GridCommonAbstractTest {
     /** Path to Jetty configuration file. */
     private static final String JETTY_CFG_PATH = "modules/clients/src/test/resources/jetty/rest-jetty.xml";
+
+    /** Custom Jetty port. */
     private static final int IGNITE_CUSTOM_JETTY_PORT = 8095;
 
     /** Local host. */
@@ -87,7 +89,7 @@ public class JettyRestProcessorCustomInitializationTest extends GridCommonAbstra
 
         /** {@inheritDoc} */
         @Override public Server create() {
-            log.warning(">>>>> Using custom Jetty server initialization.");
+            log.info(">>>>> Using custom Jetty server initialization.");
 
             URL cfgUrl = U.resolveIgniteUrl(JETTY_CFG_PATH);
 
