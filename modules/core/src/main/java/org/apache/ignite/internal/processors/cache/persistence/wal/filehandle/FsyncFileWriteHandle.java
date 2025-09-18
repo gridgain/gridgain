@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -794,8 +794,6 @@ class FsyncFileWriteHandle extends AbstractFileHandle implements FileWriteHandle
                 fileIO.writeFully(buf);
 
                 written += size;
-
-                metrics.onWalBytesWritten(size);
 
                 assert written == fileIO.position();
             }
