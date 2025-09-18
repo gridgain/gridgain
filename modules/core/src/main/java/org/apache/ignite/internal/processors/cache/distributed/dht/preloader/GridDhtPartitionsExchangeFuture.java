@@ -1521,16 +1521,17 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             CacheConfiguration<?, ?> ccfg = req.startCacheConfiguration();
 
-            int grpId = cacheAction.descriptor().groupId();
-
             if (ccfg.isEncryptionEnabled()) {
-                if (exchActions.cacheGroupStarting(grpId)) {
-                    if (encryptedGrpReqs.add(grpId)) {
+                int grpId = cacheAction.descriptor().groupId();
+
+                if (encryptedGrpReqs.add(grpId)) {
+                    if (exchActions.cacheGroupStarting(grpId))
                         cctx.kernalContext().encryption().setInitialGroupKey(grpId, req.encryptionKey());
+                    else {
+                        U.warn(log, "Encryption key for this cache has already existed," +
+                            " the new key was ignored [grpId=" + grpId +
+                            ", cache=" + cacheAction.descriptor().groupDescriptor().cacheOrGroupName() + ']');
                     }
-                } else {
-                    U.warn(log, "Encryption key for this cache has already existed," +
-                        " the new key was ignored [grpId=" + grpId + ", cache=" + ccfg.getName() + ']');
                 }
             }
         }
