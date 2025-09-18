@@ -131,6 +131,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteRunnable;
+import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -1510,28 +1511,28 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * Initializes encryption group keys for started cache groups that have encryption enabled.
      */
     private void initEncryptionGroupKeys() {
-        for (ExchangeActions.CacheGroupActionData startAction : exchActions.cacheGroupsToStart()) {
-            CacheConfiguration<?, ?> ccfg = startAction.descriptor().config();
+        if (cctx.kernalContext().config().getEncryptionSpi() instanceof NoopEncryptionSpi)
+            return;
 
-            if (!ccfg.isEncryptionEnabled()) {
-                continue;
-            }
+        HashSet<Integer> encryptedGrpReqs = new HashSet<>();
 
-            int grpId = startAction.descriptor().groupId();
+        for (ExchangeActions.CacheActionData cacheAction : exchActions.cacheStartRequests()) {
+            DynamicCacheChangeRequest req = cacheAction.request();
 
-            DynamicCacheChangeRequest req = null;
+            CacheConfiguration<?, ?> ccfg = req.startCacheConfiguration();
 
-            for (ExchangeActions.CacheActionData cacheAction : exchActions.cacheStartRequests()) {
-                if (grpId == cacheAction.descriptor().groupId()) {
-                    req = cacheAction.request();
+            int grpId = cacheAction.descriptor().groupId();
 
-                    break;
+            if (ccfg.isEncryptionEnabled()) {
+                if (exchActions.cacheGroupStarting(grpId)) {
+                    if (encryptedGrpReqs.add(grpId)) {
+                        cctx.kernalContext().encryption().setInitialGroupKey(grpId, req.encryptionKey());
+                    }
+                } else {
+                    U.warn(log, "Encryption key for this cache has already existed," +
+                        " the new key was ignored [grpId=" + grpId + ", cache=" + ccfg.getName() + ']');
                 }
             }
-
-            assert req != null : "Failed to find cache for the group [grp=" + startAction.descriptor().groupName() + ']';
-
-            cctx.kernalContext().encryption().setInitialGroupKey(grpId, req.encryptionKey());
         }
     }
 

@@ -3573,7 +3573,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             (grpKeys, masterKeyDigest) -> {
                 assert ccfg == null || !ccfg.isEncryptionEnabled() || !grpKeys.isEmpty();
 
-                byte[] encCacheKey = prepareEncryptionGroupKey(cacheName, ccfg, F.first(grpKeys));
+                byte[] encCacheKey = F.first(grpKeys);
 
                 DynamicCacheChangeRequest req = prepareCacheChangeRequest(
                     ccfg,
@@ -3611,30 +3611,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         catch (Exception e) {
             return new GridFinishedFuture<>(e);
         }
-    }
-
-    /**
-     * Prepares encryption key for the cache or return {@code null}
-     * if it will use a key which is stored in the metasatorage.
-     *
-     * @param cacheName Cache name.
-     * @param ccfg Cache config or {@code null}.
-     * @param proposedKey Proposed encryption key.
-     * @return Encryption key.
-     */
-    private byte[] prepareEncryptionGroupKey(String cacheName, @Nullable CacheConfiguration ccfg, byte[] proposedKey) {
-        if (proposedKey != null) {
-            int grpId = CU.cacheGroupId(cacheName, ccfg == null ? null : ccfg.getGroupName());
-
-            if (ctx.encryption().getActiveKey(grpId) != null) {
-                U.warn(log, "Encryption key for this cache has already existed," +
-                    " the new key was ignored [grpId=" + grpId + ", cache=" + cacheName + ']');
-
-                return null;
-            }
-        }
-
-        return proposedKey;
     }
 
     /**
@@ -3822,18 +3798,26 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             Iterator<byte[]> grpKeysIter = F.isEmpty(grpKeys) ? null : grpKeys.iterator();
 
+            HashMap<String, byte[]> grpKeyMap = new HashMap<>();
+
             for (StoredCacheData ccfg : storedCacheDataList) {
-                assert grpKeysIter == null || !ccfg.config().isEncryptionEnabled() || grpKeysIter.hasNext();
+                CacheConfiguration<?, ?> cacxheCfg = ccfg.config();
 
-                byte[] encCacheKey = grpKeysIter != null && ccfg.config().isEncryptionEnabled() ? grpKeysIter.next() : null;
+                byte[] encCacheKey = grpKeyMap.get(cacxheCfg.getGroupName());
 
-                encCacheKey = prepareEncryptionGroupKey(ccfg.config().getName(), ccfg.config(), encCacheKey);
+                assert grpKeysIter == null || !cacxheCfg.isEncryptionEnabled() || grpKeysIter.hasNext() || encCacheKey != null;
+
+                if (encCacheKey == null && grpKeysIter != null && cacxheCfg.isEncryptionEnabled()) {
+                    encCacheKey = grpKeysIter.next();
+
+                    grpKeyMap.put(cacxheCfg.getGroupName(), encCacheKey);
+                }
 
                 DynamicCacheChangeRequest req = prepareCacheChangeRequest(
-                    ccfg.config(),
-                    ccfg.config().getName(),
+                    cacxheCfg,
+                    cacxheCfg.getName(),
                     null,
-                    CacheType.cacheType(ccfg.config().getName()),
+                    CacheType.cacheType(cacxheCfg.getName()),
                     ccfg.sql(),
                     failIfExists,
                     true,
@@ -3841,7 +3825,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     disabledAfterStart,
                     ccfg.queryEntities(),
                     encCacheKey,
-                    ccfg.config().isEncryptionEnabled() ? masterKeyDigest : null);
+                    cacxheCfg.isEncryptionEnabled() ? masterKeyDigest : null);
 
                 if (req != null) {
                     if (req.clientStartOnly()) {
@@ -3883,9 +3867,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         int encGrpCnt = 0;
 
+        HashSet<String> grps = new HashSet<>();
+
         if (isKeysGenerationRequired) {
             for (StoredCacheData ccfg : storedCacheDataList) {
-                if (ccfg.config().isEncryptionEnabled())
+                if (ccfg.config().isEncryptionEnabled() && grps.add(ccfg.config().getGroupName()))
                     encGrpCnt++;
             }
         }
