@@ -1019,7 +1019,10 @@ namespace Apache.Ignite.Core.Tests.Services
 
             // Test error propagation
             var ex = Assert.Throws<ServiceInvocationException>(() => prx.ErrMethod(123));
-            Assert.IsNotNull(ex.InnerException);
+
+            var inner = (ArgumentNullException)ex.InnerException;
+            Assert.IsNotNull(inner);
+            Assert.AreEqual("ExpectedException (Parameter 'arg')", inner.Message);
         }
 
         /// <summary>
