@@ -3573,7 +3573,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             (grpKeys, masterKeyDigest) -> {
                 assert ccfg == null || !ccfg.isEncryptionEnabled() || !grpKeys.isEmpty();
 
-                byte[] encCacheKey = F.first(grpKeys);
+                byte[] encCacheKey = prepareEncryptionGroupKey(cacheName, ccfg, F.first(grpKeys));
 
                 DynamicCacheChangeRequest req = prepareCacheChangeRequest(
                     ccfg,
@@ -3611,6 +3611,31 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         catch (Exception e) {
             return new GridFinishedFuture<>(e);
         }
+    }
+
+    /**
+     * Prepares encryption key for the cache or return {@code null}
+     * if it will use a key which is stored in the metasatorage.
+     *
+     * @param cacheName Cache name.
+     * @param ccfg Cache config or {@code null}.
+     * @param proposedKey Proposed encryption key.
+     * @return Encryption key.
+     */
+    private byte[] prepareEncryptionGroupKey(String cacheName, @Nullable CacheConfiguration ccfg, byte[] proposedKey) {
+        if (proposedKey != null) {
+            int grpId = CU.cacheGroupId(cacheName, ccfg == null ? null : ccfg.getGroupName());
+
+            if (ctx.cache().cacheGroup(grpId) == null && ctx.encryption().getActiveKey(grpId) != null) {
+                U.warn(log, "Encryption key already exists for the cache group but the cache group is not " +
+                    "started (most likely because of recovery after snapshot restore cancellation). " +
+                    "The existing key will be used [grpId=" + grpId + ", cache=" + cacheName + ']');
+
+                return null;
+            }
+        }
+
+        return proposedKey;
     }
 
     /**
@@ -3805,7 +3830,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                 byte[] encCacheKey = grpKeyMap.get(cacxheCfg.getGroupName());
 
-                assert grpKeysIter == null || !cacxheCfg.isEncryptionEnabled() || grpKeysIter.hasNext() || encCacheKey != null;
+                encCacheKey = prepareEncryptionGroupKey(ccfg.config().getName(), ccfg.config(), encCacheKey);
 
                 if (encCacheKey == null && grpKeysIter != null && cacxheCfg.isEncryptionEnabled()) {
                     encCacheKey = grpKeysIter.next();
