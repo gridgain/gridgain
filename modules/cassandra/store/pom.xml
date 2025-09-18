@@ -36,7 +36,7 @@
     <properties>
         <commons-beanutils.version>1.11.0</commons-beanutils.version>
         <cassandra-driver.version>3.2.0</cassandra-driver.version>
-        <cassandra-all.version>3.11.3</cassandra-all.version>
+        <cassandra-all.version>3.11.18</cassandra-all.version>
         <metrics-core.version>3.0.2</metrics-core.version>
         <guava.legacy.version>25.1-jre</guava.legacy.version>
     </properties>
