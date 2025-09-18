@@ -630,8 +630,6 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
         node0.encryption().changeCacheGroupKey(cacheGroups).get();
 
-        int i =0;
-
         while (isReencryptionInProgress(cacheGroups)) {
             int rndNode = ThreadLocalRandom.current().nextInt(3);
 
