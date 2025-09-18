@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -802,12 +802,7 @@ public class DataStorageMetricsImpl implements DataStorageMetricsMXBean {
         walLoggingRate.increment();
 
         walWrittenBytes.add(size);
-    }
 
-    /**
-     * @param size Size written.
-     */
-    public void onWalBytesWritten(int size) {
         walWritingRate.add(size);
     }
 

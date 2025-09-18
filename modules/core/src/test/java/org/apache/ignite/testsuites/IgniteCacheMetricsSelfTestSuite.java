@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.cache.CacheMetricsForClusterGroupSe
 import org.apache.ignite.internal.processors.cache.CacheMetricsTouchTest;
 import org.apache.ignite.internal.processors.cache.CacheValidatorMetricsTest;
 import org.apache.ignite.internal.processors.cache.GridEvictionPolicyMBeansTest;
+import org.apache.ignite.internal.processors.cache.IoDatastorageMetricsTest;
 import org.apache.ignite.internal.processors.cache.OffheapCacheMetricsForClusterGroupSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCacheAtomicPartitionedMetricsSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCacheAtomicPartitionedTckMetricsSelfTestImpl;
@@ -82,6 +83,7 @@ public class IgniteCacheMetricsSelfTestSuite {
         GridTestUtils.addTestIfNeeded(suite, TransactionMetricsTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, GridEvictionPolicyMBeansTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, IoDatastorageMetricsTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, CacheMetricsTouchTest.class, ignoredTests);
 
