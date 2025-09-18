@@ -1000,6 +1000,29 @@ namespace Apache.Ignite.Core.Tests.Services
         }
 
         /// <summary>
+        /// Tests service proxy.
+        /// </summary>
+        [Test]
+        public void TestRemoteExceptionPropagation()
+        {
+            // Deploy to grid1 & grid2
+            var svc = new TestIgniteServiceBinarizable();
+
+            Grid3.GetCluster()
+                .ForNodeIds(Grid2.GetCluster().GetLocalNode().Id, Grid1.GetCluster().GetLocalNode().Id)
+                .GetServices()
+                .DeployNodeSingleton(SvcName, svc);
+
+            // Make sure there is no local instance on grid3, get remote proxy
+            Assert.IsNull(Grid3.GetServices().GetService<ITestIgniteService>(SvcName));
+            var prx = Grid3.GetServices().GetServiceProxy<ITestIgniteService>(SvcName);
+
+            // Test error propagation
+            var ex = Assert.Throws<ServiceInvocationException>(() => prx.ErrMethod(123));
+            Assert.IsNotNull(ex.InnerException);
+        }
+
+        /// <summary>
         /// Tests .Net service invocation.
         /// </summary>
         public void DoTestPlatformService(IServices svcsForProxy)
