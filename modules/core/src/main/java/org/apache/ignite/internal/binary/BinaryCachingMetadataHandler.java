@@ -49,7 +49,7 @@ public class BinaryCachingMetadataHandler implements BinaryMetadataHandler {
         throws BinaryObjectException {
         BinaryType oldType = metas.put(typeId, type);
 
-        if (oldType != null) {
+        if (oldType != null && !type.system()) {
             BinaryMetadata oldMeta = ((BinaryTypeImpl)oldType).metadata();
             BinaryMetadata newMeta = ((BinaryTypeImpl)type).metadata();
 
