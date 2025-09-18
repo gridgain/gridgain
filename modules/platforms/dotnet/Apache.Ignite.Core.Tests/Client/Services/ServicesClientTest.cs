@@ -523,6 +523,7 @@ namespace Apache.Ignite.Core.Tests.Client.Services
             var ex = Assert.Throws<IgniteClientException>(() => svc.ExceptionalMethod());
 
             Assert.AreEqual("Failed to invoke platform service, see server logs for details", ex.Message);
+            Assert.IsNull(ex.InnerException);
         }
 
         /// <summary>
