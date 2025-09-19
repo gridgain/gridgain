@@ -21,6 +21,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -45,6 +46,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
+import org.apache.ignite.internal.managers.encryption.GroupKey;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
@@ -918,8 +920,12 @@ public class CacheGroupKeyChangeTest extends AbstractEncryptionTest {
 
         ArrayList<CacheConfiguration> ccfgs = new ArrayList<>(10);
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 5; i++) {
             ccfgs.add(cacheConfiguration(DEFAULT_CACHE_NAME + i, grpName));
+        }
+
+        for (int i = 5; i < 10; i++) {
+            ccfgs.add(cacheConfiguration(DEFAULT_CACHE_NAME + i, null));
         }
 
         node0.createCaches(ccfgs);
@@ -938,6 +944,33 @@ public class CacheGroupKeyChangeTest extends AbstractEncryptionTest {
         assertEquals(keysAfterCreateCaches.size(), 1);
 
         assertTrue(keysAfterCreateCaches.containsAll(keys));
+
+        HashMap<String, GroupKey> activeKeysForGroups = new HashMap(6);
+
+        activeKeysForGroups.putIfAbsent(grpName, node1.context().encryption().getActiveKey(grpId));
+
+        for (int i = 5; i < 10; i++) {
+            String curGrpName = DEFAULT_CACHE_NAME + i;
+
+            int cacheGrpId = CU.cacheGroupId(DEFAULT_CACHE_NAME + i, null);
+
+            List<Integer> encryptedKeys = node1.context().encryption().groupKeyIds(cacheGrpId);
+
+            assertEquals(encryptedKeys.size(), 1);
+
+            GroupKey curGrpKey = node1.context().encryption().getActiveKey(cacheGrpId);
+
+            for (String grp : activeKeysForGroups.keySet()) {
+                assertFalse(
+                    "Two groups have the same enryption key [grp1=" + grp + ", grp2=" + curGrpName + ']',
+                    curGrpKey.equals(activeKeysForGroups.get(grp))
+                );
+            }
+
+            activeKeysForGroups.put(curGrpName, node1.context().encryption().getActiveKey(cacheGrpId));
+        }
+
+        assertEquals(activeKeysForGroups.size(), 6);
     }
 
     @Test

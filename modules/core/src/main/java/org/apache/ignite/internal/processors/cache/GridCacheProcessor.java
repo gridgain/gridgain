@@ -3826,23 +3826,25 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             HashMap<String, byte[]> grpKeyMap = new HashMap<>();
 
             for (StoredCacheData ccfg : storedCacheDataList) {
-                CacheConfiguration<?, ?> cacxheCfg = ccfg.config();
+                CacheConfiguration<?, ?> cacheCfg = ccfg.config();
 
-                byte[] encCacheKey = grpKeyMap.get(cacxheCfg.getGroupName());
+                String grpName = cacheCfg.getGroupName() == null ? cacheCfg.getName() : cacheCfg.getGroupName();
+
+                byte[] encCacheKey = grpKeyMap.get(grpName);
 
                 encCacheKey = prepareEncryptionGroupKey(ccfg.config().getName(), ccfg.config(), encCacheKey);
 
-                if (encCacheKey == null && grpKeysIter != null && cacxheCfg.isEncryptionEnabled()) {
+                if (encCacheKey == null && grpKeysIter != null && cacheCfg.isEncryptionEnabled()) {
                     encCacheKey = grpKeysIter.next();
 
-                    grpKeyMap.put(cacxheCfg.getGroupName(), encCacheKey);
+                    grpKeyMap.put(grpName, encCacheKey);
                 }
 
                 DynamicCacheChangeRequest req = prepareCacheChangeRequest(
-                    cacxheCfg,
-                    cacxheCfg.getName(),
+                    cacheCfg,
+                    cacheCfg.getName(),
                     null,
-                    CacheType.cacheType(cacxheCfg.getName()),
+                    CacheType.cacheType(cacheCfg.getName()),
                     ccfg.sql(),
                     failIfExists,
                     true,
@@ -3850,7 +3852,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     disabledAfterStart,
                     ccfg.queryEntities(),
                     encCacheKey,
-                    cacxheCfg.isEncryptionEnabled() ? masterKeyDigest : null);
+                    cacheCfg.isEncryptionEnabled() ? masterKeyDigest : null);
 
                 if (req != null) {
                     if (req.clientStartOnly()) {
@@ -3896,7 +3898,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         if (isKeysGenerationRequired) {
             for (StoredCacheData ccfg : storedCacheDataList) {
-                if (ccfg.config().isEncryptionEnabled() && grps.add(ccfg.config().getGroupName()))
+                CacheConfiguration<?, ?> cacheCfg = ccfg.config();
+
+                String grpName = cacheCfg.getGroupName() == null ? cacheCfg.getName() : cacheCfg.getGroupName();
+
+                if (cacheCfg.isEncryptionEnabled() && grps.add(grpName))
                     encGrpCnt++;
             }
         }
