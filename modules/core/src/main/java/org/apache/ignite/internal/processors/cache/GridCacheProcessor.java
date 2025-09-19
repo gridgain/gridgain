@@ -3626,9 +3626,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         if (proposedKey != null) {
             int grpId = CU.cacheGroupId(cacheName, ccfg == null ? null : ccfg.getGroupName());
 
-            if (ctx.encryption().getActiveKey(grpId) != null) {
-                U.warn(log, "Encryption key for this cache has already existed," +
-                    " the new key was ignored [grpId=" + grpId + ", cache=" + cacheName + ']');
+            if (ctx.cache().cacheGroup(grpId) == null && ctx.encryption().getActiveKey(grpId) != null) {
+                U.warn(log, "Encryption key already exists for the cache group but the cache group is not " +
+                    "started (most likely because of recovery after snapshot restore cancellation). " +
+                    "The existing key will be used [grpId=" + grpId + ", cache=" + cacheName + ']');
 
                 return null;
             }
@@ -3822,18 +3823,28 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             Iterator<byte[]> grpKeysIter = F.isEmpty(grpKeys) ? null : grpKeys.iterator();
 
-            for (StoredCacheData ccfg : storedCacheDataList) {
-                assert grpKeysIter == null || !ccfg.config().isEncryptionEnabled() || grpKeysIter.hasNext();
+            HashMap<String, byte[]> grpKeyMap = new HashMap<>();
 
-                byte[] encCacheKey = grpKeysIter != null && ccfg.config().isEncryptionEnabled() ? grpKeysIter.next() : null;
+            for (StoredCacheData ccfg : storedCacheDataList) {
+                CacheConfiguration<?, ?> cacheCfg = ccfg.config();
+
+                String grpName = cacheCfg.getGroupName() == null ? cacheCfg.getName() : cacheCfg.getGroupName();
+
+                byte[] encCacheKey = grpKeyMap.get(grpName);
 
                 encCacheKey = prepareEncryptionGroupKey(ccfg.config().getName(), ccfg.config(), encCacheKey);
 
+                if (encCacheKey == null && grpKeysIter != null && cacheCfg.isEncryptionEnabled()) {
+                    encCacheKey = grpKeysIter.next();
+
+                    grpKeyMap.put(grpName, encCacheKey);
+                }
+
                 DynamicCacheChangeRequest req = prepareCacheChangeRequest(
-                    ccfg.config(),
-                    ccfg.config().getName(),
+                    cacheCfg,
+                    cacheCfg.getName(),
                     null,
-                    CacheType.cacheType(ccfg.config().getName()),
+                    CacheType.cacheType(cacheCfg.getName()),
                     ccfg.sql(),
                     failIfExists,
                     true,
@@ -3841,7 +3852,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     disabledAfterStart,
                     ccfg.queryEntities(),
                     encCacheKey,
-                    ccfg.config().isEncryptionEnabled() ? masterKeyDigest : null);
+                    cacheCfg.isEncryptionEnabled() ? masterKeyDigest : null);
 
                 if (req != null) {
                     if (req.clientStartOnly()) {
@@ -3883,9 +3894,15 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         int encGrpCnt = 0;
 
+        HashSet<String> grps = new HashSet<>();
+
         if (isKeysGenerationRequired) {
             for (StoredCacheData ccfg : storedCacheDataList) {
-                if (ccfg.config().isEncryptionEnabled())
+                CacheConfiguration<?, ?> cacheCfg = ccfg.config();
+
+                String grpName = cacheCfg.getGroupName() == null ? cacheCfg.getName() : cacheCfg.getGroupName();
+
+                if (cacheCfg.isEncryptionEnabled() && grps.add(grpName))
                     encGrpCnt++;
             }
         }
