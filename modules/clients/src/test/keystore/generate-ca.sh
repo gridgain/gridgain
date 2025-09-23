@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #
 # Copyright 2019 GridGain Systems, Inc. and Contributors.
@@ -72,7 +72,7 @@ new_certs_dir = \$dir/certs
 default_md = sha1
 policy = policy_match
 serial = \$dir/${ca_name}-serial
-default_days = 365
+default_days = 1095
 
 [policy_match]
 commonName = supplied" > ${ca_name}.cnf

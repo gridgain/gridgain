@@ -70,7 +70,7 @@ new_certs_dir = ./
 default_md = sha1
 policy = policy_match
 serial = ./serial
-default_days = 365
+default_days = 1095
 
 [policy_match]
 commonName = supplied
