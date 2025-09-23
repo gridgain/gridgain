@@ -880,7 +880,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
     }
 
     /**
-     * Sets new initial group key if key is not null.
+     * Sets new initial group key. If a key for the group already exists, it will be replaced.
      *
      * @param grpId Cache group ID.
      * @param encKey Encryption key

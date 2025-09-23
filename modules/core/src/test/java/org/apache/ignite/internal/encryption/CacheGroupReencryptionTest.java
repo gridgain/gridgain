@@ -44,6 +44,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureCancelledCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.managers.encryption.CacheGroupPageScanner;
 import org.apache.ignite.internal.managers.encryption.ReencryptStateUtils;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheGroupMetricsImpl;
@@ -55,6 +56,7 @@ import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -321,6 +323,19 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
         IgniteCache<?, ?> cache = node0.cache(cacheName());
 
+        CountDownLatch reencryptionLatch = new CountDownLatch(1);
+
+        CacheGroupPageScanner pageScanner = U.field(node0.context().encryption(), "pageScanner");
+
+        pageScanner.beforeReencriptionTaskStartListener(grpId -> {
+            try {
+                reencryptionLatch.await();
+            }
+            catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
         node0.encryption().changeCacheGroupKey(Collections.singleton(cacheName())).get();
 
         int grpId = CU.cacheId(cacheName());
@@ -332,6 +347,8 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
         assertTrue(isReencryptionInProgress(node0, grpId));
 
         cache.destroy();
+
+        reencryptionLatch.countDown();
 
         assertThrowsAnyCause(log, () -> {
             fut0.get();

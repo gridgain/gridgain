@@ -130,6 +130,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteRunnable;
+import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptySet;
@@ -1479,6 +1480,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         try {
             assert registerCachesFuture == null : "No caches registration should be scheduled before new caches have started.";
 
+            initEncryptionGroupKeys();
+
             registerCachesFuture = cctx.affinity().onCacheChangeRequest(this, crd, exchActions);
         }
         catch (Exception e) {
@@ -1499,6 +1502,36 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         }
 
         return cctx.kernalContext().clientNode() ? ExchangeType.CLIENT : ExchangeType.ALL;
+    }
+
+    /**
+     * Initializes encryption group keys for started cache groups that have encryption enabled.
+     */
+    private void initEncryptionGroupKeys() {
+        if (cctx.kernalContext().config().getEncryptionSpi() instanceof NoopEncryptionSpi)
+            return;
+
+        HashSet<Integer> encryptedGrpReqs = new HashSet<>();
+
+        for (ExchangeActions.CacheActionData cacheAction : exchActions.cacheStartRequests()) {
+            DynamicCacheChangeRequest req = cacheAction.request();
+
+            CacheConfiguration<?, ?> ccfg = req.startCacheConfiguration();
+
+            if (ccfg.isEncryptionEnabled()) {
+                int grpId = cacheAction.descriptor().groupId();
+
+                if (encryptedGrpReqs.add(grpId)) {
+                    if (exchActions.cacheGroupStarting(grpId))
+                        cctx.kernalContext().encryption().setInitialGroupKey(grpId, req.encryptionKey());
+                    else {
+                        U.warn(log, "Encryption key for this cache has already existed," +
+                            " the new key was ignored [grpId=" + grpId +
+                            ", cache=" + cacheAction.descriptor().groupDescriptor().cacheOrGroupName() + ']');
+                    }
+                }
+            }
+        }
     }
 
     /**

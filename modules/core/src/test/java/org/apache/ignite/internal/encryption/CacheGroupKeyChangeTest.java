@@ -18,11 +18,14 @@ package org.apache.ignite.internal.encryption;
 
 import java.io.File;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -43,12 +46,16 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
+import org.apache.ignite.internal.managers.encryption.GroupKey;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
+import org.apache.ignite.internal.processors.cache.GridCacheUtils;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.util.distributed.DistributedProcess.DistributedProcessType;
 import org.apache.ignite.internal.util.distributed.InitMessage;
 import org.apache.ignite.internal.util.distributed.SingleNodeMessage;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -56,6 +63,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.discovery.tcp.TestTcpDiscoverySpi;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.GridTestUtils.DiscoveryHook;
 import org.junit.Test;
 
@@ -853,13 +861,188 @@ public class CacheGroupKeyChangeTest extends AbstractEncryptionTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testClientJoinDuringRotation() throws Exception {
+    public void testGroupKeyReinitializedOnRestart() throws Exception {
         T2<IgniteEx, IgniteEx> nodes = startTestGrids(true);
 
         IgniteEx node0 = nodes.get1();
         IgniteEx node1 = nodes.get2();
 
-        node0.cluster().state(ClusterState.ACTIVE);
+        IgniteEx client = startClientGrid(getConfiguration("client"));
+
+        createEncryptedCache(client, null, cacheName(), null);
+
+        TestRecordingCommunicationSpi.spi(node0).blockMessages((node, msg) -> {
+            if (GRID_1.equals(node.consistentId())) {
+                info("Message sending to nodeId=" + node.consistentId() + " msg=" + msg.getClass().getSimpleName());
+
+                return msg instanceof GridDhtPartitionsFullMessage;
+            }
+
+            return false;
+        });
+
+        client.destroyCache(cacheName());
+
+        TestRecordingCommunicationSpi.spi(node0).waitForBlocked();
+
+        IgniteInternalFuture startCacheFut = GridTestUtils.runAsync(() -> {
+            createEncryptedCache(client, null, cacheName(), null);
+        });
+
+        assertTrue(GridTestUtils.waitForCondition(() -> node1.context().cache().cacheGroupDescriptors()
+            .get(GridCacheUtils.cacheId(cacheName())) != null, 10_000));
+
+        TestRecordingCommunicationSpi.spi(node0).stopBlock();
+
+        startCacheFut.get();
+
+        forceCheckpoint();
+    }
+
+    @Test
+    public void testStartSeveralCacheInSharedGroupOneBatch() throws Exception {
+        String grpName = "shared";
+
+        T2<IgniteEx, IgniteEx> nodes = startTestGrids(true);
+
+        IgniteEx node0 = nodes.get1();
+        IgniteEx node1 = nodes.get2();
+
+        createEncryptedCache(node0, node1, cacheName(), grpName);
+
+        awaitPartitionMapExchange();
+
+        int grpId = CU.cacheGroupId(cacheName(), grpName);
+
+        List<Integer> keys = node1.context().encryption().groupKeyIds(grpId);
+
+        assertEquals(keys.size(), 1);
+
+        ArrayList<CacheConfiguration> ccfgs = new ArrayList<>(10);
+
+        for (int i = 0; i < 5; i++) {
+            ccfgs.add(cacheConfiguration(DEFAULT_CACHE_NAME + i, grpName));
+        }
+
+        for (int i = 5; i < 10; i++) {
+            ccfgs.add(cacheConfiguration(DEFAULT_CACHE_NAME + i, null));
+        }
+
+        node0.createCaches(ccfgs);
+
+        for (int i = 0; i < 10; i++) {
+            IgniteCache<Integer, Object> cache = node0.cache(DEFAULT_CACHE_NAME + i);
+
+            for (int j = 0; j < 100; j++)
+                cache.put(j, generateValue(j));
+        }
+
+        forceCheckpoint();
+
+        List<Integer> keysAfterCreateCaches = node1.context().encryption().groupKeyIds(grpId);
+
+        assertEquals(keysAfterCreateCaches.size(), 1);
+
+        assertTrue(keysAfterCreateCaches.containsAll(keys));
+
+        HashMap<String, GroupKey> activeKeysForGroups = new HashMap(6);
+
+        activeKeysForGroups.putIfAbsent(grpName, node1.context().encryption().getActiveKey(grpId));
+
+        for (int i = 5; i < 10; i++) {
+            String curGrpName = DEFAULT_CACHE_NAME + i;
+
+            int cacheGrpId = CU.cacheGroupId(DEFAULT_CACHE_NAME + i, null);
+
+            List<Integer> encryptedKeys = node1.context().encryption().groupKeyIds(cacheGrpId);
+
+            assertEquals(encryptedKeys.size(), 1);
+
+            GroupKey curGrpKey = node1.context().encryption().getActiveKey(cacheGrpId);
+
+            for (String grp : activeKeysForGroups.keySet()) {
+                assertFalse(
+                    "Two groups have the same enryption key [grp1=" + grp + ", grp2=" + curGrpName + ']',
+                    curGrpKey.equals(activeKeysForGroups.get(grp))
+                );
+            }
+
+            activeKeysForGroups.put(curGrpName, node1.context().encryption().getActiveKey(cacheGrpId));
+        }
+
+        assertEquals(activeKeysForGroups.size(), 6);
+    }
+
+    @Test
+    public void testCreateDestroyCacheSimultaneously() throws Exception {
+        T2<IgniteEx, IgniteEx> nodes = startTestGrids(true);
+
+        IgniteEx node0 = nodes.get1();
+        IgniteEx node1 = nodes.get2();
+
+        awaitPartitionMapExchange();
+
+        CyclicBarrier barrier = new CyclicBarrier(2);
+
+        for (int i = 0; i < 10; i++) {
+            IgniteInternalFuture<Void> createFut = runAsync(() -> {
+                barrier.await();
+
+                try {
+                    node0.createCache(cacheConfiguration(cacheName(), null));
+                } catch (Exception e) {
+                    info("Exception while creating cache: " + e.getMessage());
+                }
+            }, "create-cache-thread");
+
+            IgniteInternalFuture<Void> removeFut = runAsync(() -> {
+                barrier.await();
+
+                try {
+                    node0.destroyCache(cacheName());
+                } catch (Exception e) {
+                    info("Exception while destroying cache: " + e.getMessage());
+                }
+            }, "destroy-cache-thread");
+
+            createFut.get(10_000);
+            removeFut.get(10_000);
+
+            barrier.reset();
+
+            awaitPartitionMapExchange();
+
+            int grpId = CU.cacheGroupId(cacheName(), null);
+
+            List<Integer> keys0 = node0.context().encryption().groupKeyIds(grpId);
+            List<Integer> keys1 = node1.context().encryption().groupKeyIds(grpId);
+
+            assertEquals(keys0, keys1);
+
+            if (node0.cache(cacheName()) != null) {
+                assertEquals(1, keys0.size());
+                assertEquals(1, keys1.size());
+
+                loadData(10_000);
+
+                forceCheckpoint();
+            }
+            else {
+                assertTrue(F.isEmpty(keys0));
+                assertTrue(F.isEmpty(keys1));
+            }
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testClientJoinDuringRotation() throws Exception {
+        T2<IgniteEx, IgniteEx> nodes = startTestGrids(true);
+
+        IgniteEx node0 = nodes.get1();
+        IgniteEx node1 = nodes.get2();
 
         createEncryptedCache(node0, node1, cacheName(), null);
 
