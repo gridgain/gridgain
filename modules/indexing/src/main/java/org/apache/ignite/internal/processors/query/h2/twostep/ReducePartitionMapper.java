@@ -176,21 +176,24 @@ public class ReducePartitionMapper {
      * @param topVer Topology version.
      * @param cacheIds Participating cache IDs.
      * @param parts Partitions.
-     * @return Data nodes or {@code null} if repartitioning started and we need to retry.
+     * @return Data nodes or {@code null} if reassignment is started and new mapping approach is need to be started.
      */
     private Map<ClusterNode, IntArray> stableDataNodesForPartitions(
         AffinityTopologyVersion topVer,
         List<Integer> cacheIds,
-        @NotNull int[] parts) {
+        @NotNull int[] parts
+    ) {
         assert parts != null;
 
         GridCacheContext<?, ?> cctx = firstPartitionedCache(cacheIds);
+
+        AffinityTopologyVersion lastAff = cctx.shared().exchange().lastAffinityChangedTopologyVersion(topVer);
 
         Map<ClusterNode, IntArray> map = stableDataNodesMap(topVer, cctx, parts);
 
         Set<ClusterNode> nodes = map.keySet();
 
-        if (narrowToCaches(cctx, nodes, cacheIds, topVer, parts, false) == null)
+        if (narrowToCaches(cctx, nodes, cacheIds, topVer, parts, false, lastAff) == null)
             return null;
 
         return map;
@@ -211,8 +214,10 @@ public class ReducePartitionMapper {
 
         Set<ClusterNode> nodes;
 
+        AffinityTopologyVersion lastAff = cctx.shared().exchange().lastAffinityChangedTopologyVersion(topVer);
+
         // Explicit partitions mapping is not applicable to replicated cache.
-        final AffinityAssignment topologyAssignment = cctx.affinity().assignment(topVer);
+        final AffinityAssignment topologyAssignment = cctx.affinity().assignment(topVer, lastAff);
 
         if (cctx.isReplicated()) {
             // Mutable collection needed for this particular case.
@@ -222,7 +227,7 @@ public class ReducePartitionMapper {
         else
             nodes = topologyAssignment.primaryPartitionNodes();
 
-        return narrowToCaches(cctx, nodes, cacheIds, topVer, null, isReplicatedOnly);
+        return narrowToCaches(cctx, nodes, cacheIds, topVer, null, isReplicatedOnly, lastAff);
     }
 
     /**
@@ -260,7 +265,8 @@ public class ReducePartitionMapper {
      * @param topVer Topology version.
      * @param parts Query partitions.
      * @param isReplicatedOnly Replicated only flag.
-     * @return
+     * @param lastAff Last topology version when affinity was modified.
+     * @return Affinity nodes for appropriate caches.
      */
     private Collection<ClusterNode> narrowToCaches(
         GridCacheContext<?, ?> cctx,
@@ -268,7 +274,9 @@ public class ReducePartitionMapper {
         List<Integer> cacheIds,
         AffinityTopologyVersion topVer,
         int[] parts,
-        boolean isReplicatedOnly) {
+        boolean isReplicatedOnly,
+        AffinityTopologyVersion lastAff
+    ) {
         if (F.isEmpty(nodes))
             throw new CacheServerNotFoundException("Failed to find data nodes for cache: " + cctx.name());
 
@@ -285,7 +293,7 @@ public class ReducePartitionMapper {
                     "with partitioned tables [replicatedCache=" + cctx.name() +
                     ", partitionedCache=" + extraCacheName + "]");
 
-            Set<ClusterNode> extraNodes = stableDataNodesSet(topVer, extraCctx, parts);
+            Set<ClusterNode> extraNodes = stableDataNodesSet(topVer, extraCctx, parts, lastAff);
 
             if (F.isEmpty(extraNodes))
                 throw new CacheServerNotFoundException("Failed to find data nodes for cache: " + extraCacheName);
@@ -314,9 +322,10 @@ public class ReducePartitionMapper {
 
                     return null; // Retry.
                 }
-                else
+                else {
                     throw new CacheException("Caches have distinct sets of data nodes [cache1=" + cctx.name() +
-                        ", cache2=" + extraCacheName + "]");
+                        ", cache2=" + extraCacheName + ", topVer=" + topVer + "]");
+                }
             }
         }
 
@@ -363,12 +372,13 @@ public class ReducePartitionMapper {
      * @param topVer Topology version.
      * @param cctx Cache context.
      * @param parts Partitions.
+     * @param lastAff Last topology version when affinity was modified.
      */
     private Set<ClusterNode> stableDataNodesSet(AffinityTopologyVersion topVer,
-        final GridCacheContext<?, ?> cctx, @Nullable final int[] parts) {
+        final GridCacheContext<?, ?> cctx, @Nullable final int[] parts, AffinityTopologyVersion lastAff) {
 
         // Explicit partitions mapping is not applicable to replicated cache.
-        final AffinityAssignment topologyAssignment = cctx.affinity().assignment(topVer);
+        final AffinityAssignment topologyAssignment = cctx.affinity().assignment(topVer, lastAff);
 
         if (cctx.isReplicated())
             return topologyAssignment.nodes();
