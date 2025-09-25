@@ -26,7 +26,7 @@ public abstract class BinaryAbstractIdentityResolver implements BinaryIdentityRe
     /** {@inheritDoc} */
     @Override public int hashCode(BinaryObject obj) {
         if (obj == null)
-            throw new BinaryObjectException("Cannot calculate hash code because binary object is null.");
+            throw new BinaryObjectException("Cannot calculate hash code because binary object is null");
 
         return hashCode0(obj);
     }
