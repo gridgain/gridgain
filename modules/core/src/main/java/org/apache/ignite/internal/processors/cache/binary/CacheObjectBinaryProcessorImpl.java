@@ -908,7 +908,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
             @Override public BinaryType apply(BinaryMetadataHolder metaHolder) {
                 return metaHolder.metadata().wrap(binaryCtx);
             }
-        });
+        }, metaHolder -> !metaHolder.metadata().system());
     }
 
     /**
@@ -920,7 +920,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
             @Override public BinaryMetadata apply(BinaryMetadataHolder metaHolder) {
                 return metaHolder.metadata();
             }
-        });
+        }, metaHolder -> !metaHolder.metadata().system());
     }
 
     /**
@@ -1447,7 +1447,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
             Map<Integer, BinaryMetadataHolder> res = U.newHashMap(metadataLocCache.size());
 
             for (Map.Entry<Integer,BinaryMetadataHolder> e : metadataLocCache.entrySet()) {
-                if (!e.getValue().removing())
+                if (!e.getValue().removing() && !e.getValue().metadata().system())
                     res.put(e.getKey(), e.getValue());
             }
 
@@ -1459,8 +1459,10 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     @Override public void collectJoiningNodeData(DiscoveryDataBag dataBag) {
         Map<Integer, BinaryMetadataHolder> res = U.newHashMap(metadataLocCache.size());
 
-        for (Map.Entry<Integer,BinaryMetadataHolder> e : metadataLocCache.entrySet())
-            res.put(e.getKey(), e.getValue());
+        for (Map.Entry<Integer,BinaryMetadataHolder> e : metadataLocCache.entrySet()) {
+            if (!e.getValue().metadata().system())
+                res.put(e.getKey(), e.getValue());
+        }
 
         dataBag.addJoiningNodeData(BINARY_PROC.ordinal(), (Serializable) res);
     }

@@ -382,7 +382,8 @@ public class IgniteBinaryTest extends GridCommonAbstractTest {
                 assertBinaryTypesEqual(refBinary.type(Person.class.getName()), binary.type(Person.class.getName()));
 
                 Collection<BinaryType> refTypes = refBinary.types();
-                Collection<BinaryType> types = binary.types();
+                Collection<BinaryType> types = binary.types().stream()
+                    .filter(t -> !t.system()).collect(Collectors.toList());
 
                 assertEquals(refTypes.size(), types.size());
 
