@@ -1370,6 +1370,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         buf.a(", nodes=").a(F.nodeIds(top.nodes(id, topVer)).stream().limit(limit).collect(Collectors.toList()));
         buf.a(", locPart=").a(toString());
 
+        // TODO not critical
         NavigableSet<AffinityTopologyVersion> versions = grp.affinity().cachedVersions();
 
         int i = 5;

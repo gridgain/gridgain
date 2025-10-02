@@ -88,7 +88,7 @@ public class GridAffinityProcessor extends GridProcessorAdapter {
     private final IgniteLogger log;
 
     /** Affinity map. */
-    private final ConcurrentSkipListMap<AffinityAssignmentKey, IgniteInternalFuture<AffinityInfo>> affMap = new ConcurrentSkipListMap<>();
+    public final ConcurrentSkipListMap<AffinityAssignmentKey, IgniteInternalFuture<AffinityInfo>> affMap = new ConcurrentSkipListMap<>();
 
     /** Listener. */
     private final GridLocalEventListener lsnr = new GridLocalEventListener() {
@@ -712,7 +712,7 @@ public class GridAffinityProcessor extends GridProcessorAdapter {
     /**
      *
      */
-    private static class AffinityInfo {
+    public static class AffinityInfo {
         /** Affinity function. */
         private AffinityFunction affFunc;
 
@@ -775,12 +775,12 @@ public class GridAffinityProcessor extends GridProcessorAdapter {
     /**
      *
      */
-    private static class AffinityAssignmentKey implements Comparable<AffinityAssignmentKey> {
+    public static class AffinityAssignmentKey implements Comparable<AffinityAssignmentKey> {
         /** */
-        private String cacheName;
+        public String cacheName;
 
         /** */
-        private AffinityTopologyVersion topVer;
+        public AffinityTopologyVersion topVer;
 
         /**
          * @param cacheName Cache name.

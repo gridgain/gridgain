@@ -945,7 +945,7 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
                                     if (affFut == null || affFut.isDone()) {
                                         affFut = null;
 
-                                        // Need asynchronosly fetch affinity if cache is not started on node .
+                                        // Need asynchronously fetch affinity if cache is not started on node .
                                         if (affCacheName != null && ctx.cache().internalCache(affCacheName) == null) {
                                             affFut = ctx.affinity().affinityCacheFuture(affCacheName, mapTopVer);
 

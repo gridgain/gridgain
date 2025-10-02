@@ -1283,6 +1283,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     aff.initialize(topVer, aff.idealAssignmentRaw());
                 else {
                     if (supportsFreeSwitch && !aff.assignments(aff.lastVersion()).equals(aff.idealAssignmentRaw())) {
+                        // TODO not critical
+
                         // This should never happen on Late Affinity Assignment switch and must trigger Failure Handler.
                         throw new AssertionError("Not an ideal distribution duplication attempt on LAA " +
                             "[grp=" + aff.cacheOrGroupName() + ", lastAffinity=" + aff.lastVersion() +

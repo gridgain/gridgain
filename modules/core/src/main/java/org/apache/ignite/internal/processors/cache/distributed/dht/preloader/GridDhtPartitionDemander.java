@@ -85,6 +85,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.IgniteSpiException;
@@ -1938,38 +1939,156 @@ public class GridDhtPartitionDemander {
             if (!p0.containsAll(p1))
                 return false;
 
-            p1 = Stream.concat(grp.affinity().cachedAffinity(newAssignments.topologyVersion())
-                .primaryPartitions(ctx.localNodeId()).stream(), grp.affinity()
-                .cachedAffinity(newAssignments.topologyVersion()).backupPartitions(ctx.localNodeId()).stream())
-                .collect(toSet());
-
-            NavigableSet<AffinityTopologyVersion> toCheck = grp.affinity().cachedVersions()
-                .headSet(newAssignments.topologyVersion(), false);
-
-            if (!toCheck.contains(topVer)) {
-                log.warning("History is not enough for checking compatible last rebalance, new rebalance started " +
-                    "[grp=" + grp.cacheOrGroupName() + ", lastTop=" + topVer + ']');
-
-                return false;
-            }
-
-            for (AffinityTopologyVersion previousTopVer : toCheck.descendingSet()) {
-                if (previousTopVer.before(topVer))
-                    break;
-
-                if (!ctx.exchange().lastAffinityChangedTopologyVersion(previousTopVer).equals(previousTopVer))
-                    continue;
-
-                p0 = Stream.concat(grp.affinity().cachedAffinity(previousTopVer).primaryPartitions(ctx.localNodeId()).stream(),
-                    grp.affinity().cachedAffinity(previousTopVer).backupPartitions(ctx.localNodeId()).stream())
+            boolean useNew = true;
+            if (!useNew) {
+                p1 = Stream.concat(grp.affinity().cachedAffinity(newAssignments.topologyVersion())
+                        .primaryPartitions(ctx.localNodeId()).stream(), grp.affinity()
+                        .cachedAffinity(newAssignments.topologyVersion()).backupPartitions(ctx.localNodeId()).stream())
                     .collect(toSet());
 
-                // Not compatible if owners are different.
-                if (!p0.equals(p1))
-                    return false;
-            }
+                NavigableSet<AffinityTopologyVersion> toCheck = grp.affinity().cachedVersions()
+                    .headSet(newAssignments.topologyVersion(), false);
 
-            return true;
+                if (!toCheck.contains(topVer)) {
+                    log.warning(">>>>> History is not enough for checking compatible last rebalance, new rebalance started " +
+                        "[grp=" + grp.cacheOrGroupName() + ", lastTop=" + topVer + ']');
+
+                    return false;
+                }
+
+                List<AffinityTopologyVersion> changedAffinityVersions = new ArrayList<>();
+
+                for (AffinityTopologyVersion previousTopVer : toCheck.descendingSet()) {
+                    if (previousTopVer.before(topVer))
+                        break;
+
+                    if (!ctx.exchange().lastAffinityChangedTopologyVersion(previousTopVer).equals(previousTopVer))
+                        continue;
+
+                    changedAffinityVersions.add(previousTopVer);
+
+                    p0 = Stream.concat(grp.affinity().cachedAffinity(previousTopVer).primaryPartitions(ctx.localNodeId()).stream(),
+                            grp.affinity().cachedAffinity(previousTopVer).backupPartitions(ctx.localNodeId()).stream())
+                        .collect(toSet());
+
+                    // Not compatible if owners are different.
+                    if (!p0.equals(p1)) {
+//                        log.warning(">>>>>> return false [topVer=" + topVer +
+//                            ", previousTopVer=" + previousTopVer +
+//                            ", newTopVer=" + newAssignments.topologyVersion() +
+//                            ", grp=" + grp.cacheOrGroupName() + ']');
+//
+//                        log.warning(">>>>> toCheck " + toCheck);
+//                        log.warning(">>>>> changed " + changedAffinityVersions);
+//
+//                        grp.affinity().dumpAssignmentsDebugInfo();
+                        return false;
+                    }
+                }
+
+//                log.warning(">>>>> return true [topVer=" + topVer +
+//                    ", newTopVer=" + newAssignments.topologyVersion() +
+//                    ", grp=" + grp.cacheOrGroupName() + ']');
+                return true;
+            }
+            else {
+                // TODO reuse cached affinity
+                NavigableSet<AffinityTopologyVersion> cachedAffinityHistory = grp.affinity().cachedVersions();
+                AffinityAssignment cachedAffinity = grp.affinity().cachedAffinity(newAssignments.topologyVersion());
+
+                NavigableSet<AffinityTopologyVersion> toCheck = cachedAffinityHistory
+                    .headSet(newAssignments.topologyVersion(), false);
+                List<IgniteBiTuple<AffinityTopologyVersion, AffinityTopologyVersion>> toCheck2 =
+                    grp.affinity().cachedVersions2();
+
+//            if (!toCheck.contains(topVer)) {
+//                log.warning("History is not enough for checking compatible last rebalance, new rebalance started " +
+//                    "[grp=" + grp.cacheOrGroupName() + ", lastTop=" + topVer + ']');
+//
+//                return false;
+//            }
+                // the smallest left boundary of the range
+                if (toCheck2.isEmpty() || toCheck2.get(0).getKey().after(topVer) || toCheck2.get(toCheck2.size() - 1).getValue().before(topVer)) {
+                    log.warning(">>>>> History is not enough for checking compatible last rebalance, new rebalance started (2)" +
+                        "[grp=" + grp.cacheOrGroupName() + ", lastTop=" + topVer + ']');
+
+                    return false;
+                }
+                // TODO need to reduce the number of versions to check (headSet(newAssignments.topologyVersion(), false))
+
+                p1 = Stream.concat(
+                        cachedAffinity.primaryPartitions(ctx.localNodeId()).stream(),
+                        cachedAffinity.backupPartitions(ctx.localNodeId()).stream())
+                    .collect(toSet());
+
+//            for (AffinityTopologyVersion previousTopVer : toCheck.descendingSet()) {
+//                if (previousTopVer.before(topVer))
+//                    break;
+//
+//                if (!ctx.exchange().lastAffinityChangedTopologyVersion(previousTopVer).equals(previousTopVer))
+//                    continue;
+//
+//                AffinityAssignment assignment = grp.affinity().cachedAffinity(previousTopVer);
+//
+//                p0 = Stream.concat(
+//                    assignment.primaryPartitions(ctx.localNodeId()).stream(),
+//                    assignment.backupPartitions(ctx.localNodeId()).stream())
+//                    .collect(toSet());
+//
+//                // Not compatible if owners are different.
+//                if (!p0.equals(p1))
+//                    return false;
+//            }
+
+                Collections.reverse(toCheck2);
+                AffinityTopologyVersion newTopVer = newAssignments.topologyVersion();
+                List<AffinityTopologyVersion> changedAffinityVersions = new ArrayList<>();
+
+                // the range should be excluded if start ver >= newTopVer
+                // the iteration should be stopped when the range < topVer
+                for (IgniteBiTuple<AffinityTopologyVersion, AffinityTopologyVersion> range : toCheck2) {
+                    // end of the range is less than the topVer of rebalancing start
+                    if (range.getKey().after(newTopVer))
+                        continue;
+
+                    boolean stopIteration = range.getValue().before(topVer);
+                    if (stopIteration)
+                        break;
+
+                    // assignments are not changed in the range. so we can check only the start version.
+
+//                if (!ctx.exchange().lastAffinityChangedTopologyVersion(previousTopVer).equals(previousTopVer))
+//                    continue;
+
+                    AffinityAssignment assignment = grp.affinity().cachedAffinity(/*previousTopVer*/range.getKey());
+                    changedAffinityVersions.add(range.getKey());
+
+                    p0 = Stream.concat(
+                            assignment.primaryPartitions(ctx.localNodeId()).stream(),
+                            assignment.backupPartitions(ctx.localNodeId()).stream())
+                        .collect(toSet());
+
+                    // Not compatible if owners are different.
+                    if (!p0.equals(p1)) {
+//                        log.warning(">>>>> return false [topVer=" + topVer +
+//                            ", range=[" + range.getKey() + ", " + range.getValue() + "]" +
+//                            ", newTopVer=" + newAssignments.topologyVersion() +
+//                            ", grp=" + grp.cacheOrGroupName() + ']');
+//
+//                        log.warning(">>>>> toCheck " + toCheck);
+//                        log.warning(">>>>> toCheck2 " + toCheck2);
+//                        log.warning(">>>>> changed " + changedAffinityVersions);
+//
+//                        grp.affinity().dumpAssignmentsDebugInfo();
+                        return false;
+                    }
+                }
+
+//                log.warning(">>>> return true [topVer=" + topVer +
+//                    ", newTopVer=" + newAssignments.topologyVersion() +
+//                    ", grp=" + grp.cacheOrGroupName() + ']');
+                return true;
+            }
         }
 
         /**

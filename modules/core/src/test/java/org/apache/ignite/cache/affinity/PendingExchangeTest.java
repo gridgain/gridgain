@@ -94,7 +94,7 @@ public class PendingExchangeTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Thats starts one cache and several clients in one moment in order leading to pending client exchanges.
+     * That starts one cache and several clients in one moment in order leading to pending client exchanges.
      *
      * @throws Exception If failed.
      */
