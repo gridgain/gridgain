@@ -938,8 +938,15 @@ public class GridAffinityAssignmentCache {
             // I think it always should be startVer == lastAffChangeTopVer
             Map.Entry<AffinityTopologyVersion, RangeHistoryAffinityAssignment> en = affCache2.floorEntry(lastAffChangeTopVer);
 
-            if (e != null)
+            if (e != null) {
                 cache = e.getValue();
+//                log.warning(">>>>> e is NOT null [cahetopver=" + cache.topologyVersion() + ']');
+            } else {
+//                log.warning(">>>>> e is null in affCache [lastAffChangeTopVer=" + lastAffChangeTopVer
+//                    + ", topVer=" + topVer
+//                    + ", affCache=" + affCache.keySet()
+//                    + ']');
+            }
 
             if (en != null) {
                 //*topver??? lastAffChangeTopVer??*/
@@ -949,11 +956,28 @@ public class GridAffinityAssignmentCache {
                 }
                 else {
                     /// should we do anything?
+//                log.warning(">>>>> NOT FOUND in affCache2 [enKey=" + en.getKey()
+//                        + ", start=" + en.getValue().startVer
+//                        + ", end=" + en.getValue().endVer
+//                        + ", lastAffChangeTopVer=" + lastAffChangeTopVer
+//                        + ", topVer=" + topVer
+//                        + ']');
                 }
-                if (cacheOrGrpName.equalsIgnoreCase("static-cache-3")) {
-                    log.warning(">>>>> test message [enTopVer=" + en.getKey() + ", start=" + en.getValue().startVer +
-                        ", end=" + en.getValue().endVer +
-                        ", found=" + found + ", topVer=" + topVer + ']');
+//                if (cacheOrGrpName.equalsIgnoreCase("static-cache-3")) {
+//                    log.warning(">>>>> test message [enTopVer=" + en.getKey() + ", start=" + en.getValue().startVer +
+//                        ", end=" + en.getValue().endVer +
+//                        ", found=" + found + ", topVer=" + topVer + ']');
+//                }
+            } else {
+//                log.warning(">>>>> en is null in affCache2 [lastAffChangeTopVer=" + lastAffChangeTopVer
+//                    + ", topVer=" + topVer
+//                    + ", affCache2=" + affCache2.keySet()
+//                    + ']');
+                en = affCache2.firstEntry();
+                boolean found = true;//lastAffChangeTopVer.isBetween(en.getValue().startVer, en.getValue().endVer);
+                if (found) {
+//                    log.warning(">>>>> en is null found [en=" + en + ']');
+                    cache2 = new HistoryAffinityAssignmentShallowCopy(en.getValue().histAssignment, en.getValue().startVer/*???*/);
                 }
             }
 
@@ -973,16 +997,21 @@ public class GridAffinityAssignmentCache {
                     ']');
             }
 
+
+            if (!cache.topologyVersion().equals(cache2.topologyVersion())) {
+                log.warning(">>>>> WARNING: different cached affinity instances: " +
+                    "[topVer=" + topVer + ", affChangd=" + lastAffChangeTopVer + ", cache=" + cache + ", cache2=" + cache2 + ']');
+                boolean r1 = cache.topologyVersion().compareTo(topVer) > 0;
+                boolean r2 = cache2.topologyVersion().compareTo(topVer) > 0;
+                log.warning(">>>>> WARNING head = [" + head.get() + ", r1=" + r1 + ", r2=" + r2 + ']');
+                this.dumpAssignmentsDebugInfo();
+            }
+
             assert cache.topologyVersion().equals(cache2.topologyVersion()) :
                 "Different cached affinity instances: [topVer=" + topVer +
                     ", affChangd=" + lastAffChangeTopVer +
                     ", cache=" + cache +
                     ", cache2=" + cache2 + ']';
-
-            if (!cache.topologyVersion().equals(cache2.topologyVersion())) {
-                log.warning(">>>>> WARNING: different cached affinity instances: " +
-                    "[topVer=" + topVer + ", affChangd=" + lastAffChangeTopVer + ", cache=" + cache + ", cache2=" + cache2 + ']');
-            }
 
             if (cache.topologyVersion().compareTo(topVer) > 0 || cache2.topologyVersion().compareTo(topVer) > 0) {
                 throw new IllegalStateException("Getting affinity for too old topology version that is already " +
