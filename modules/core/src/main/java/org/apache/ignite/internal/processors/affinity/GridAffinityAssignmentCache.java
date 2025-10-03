@@ -860,13 +860,26 @@ public class GridAffinityAssignmentCache {
         if (!cache.topologyVersion().equals(topVer)) {
             cache = affCache.get(topVer);
 
+            // empty affCache2?
             Map.Entry<AffinityTopologyVersion,RangeHistoryAffinityAssignment> entry = affCache2.floorEntry(topVer);
 
             if (entry != null) {
                 boolean found = topVer.isBetween(entry.getValue().startVer, entry.getValue().endVer);
                 if (found) {
                     cache2 = new HistoryAffinityAssignmentShallowCopy(entry.getValue().histAssignment, topVer);
+                } else {
+                    cache2 = null;
                 }
+            } else {
+                cache2 = null;
+            }
+
+            if (!((cache != null && cache2 != null) || (cache == null && cache2 == null))) {
+                log.warning(">>>>> cache and cache2 mismatch [cache=" + cache + ", cache2=" + cache2 +
+                    ", topVer=" + topVer +
+                    ", head=" + head.get().topologyVersion() + ']');
+
+                dumpAssignmentsDebugInfo();
             }
 
             assert (cache != null && cache2 != null) || (cache == null && cache2 == null) :
