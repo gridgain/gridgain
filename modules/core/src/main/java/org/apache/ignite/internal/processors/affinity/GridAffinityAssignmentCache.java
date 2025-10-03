@@ -152,7 +152,11 @@ public class GridAffinityAssignmentCache {
 //            assert startVer.topologyVersion() == endVer.topologyVersion() :
 //                "startVer=" + startVer + ", endVer=" + endVer;
         }
-    };
+        @Override
+        public String toString() {
+            return S.toString(RangeHistoryAffinityAssignment.class, this);
+        }
+    }
     private final ConcurrentNavigableMap<AffinityTopologyVersion, RangeHistoryAffinityAssignment> affCache2;
 
     /** */
@@ -1048,13 +1052,26 @@ public class GridAffinityAssignmentCache {
         // TODO
         AffinityAssignment aff = affCache.get(startVer);
         AffinityAssignment aff2 = null;
-        Map.Entry<AffinityTopologyVersion, RangeHistoryAffinityAssignment> range = affCache2.ceilingEntry(startVer);
+        Map.Entry<AffinityTopologyVersion, RangeHistoryAffinityAssignment> range = affCache2.floorEntry(startVer);
 
         if (range != null) {
             boolean found = startVer.isBetween(range.getValue().startVer, range.getValue().endVer);
             if (found) {
                 aff2 = range.getValue().histAssignment;
             }
+        } else {
+            range = affCache2.firstEntry();
+            if (range != null && startVer.isBetween(range.getValue().startVer, range.getValue().endVer)) {
+                aff2 = range.getValue().histAssignment;
+            }
+        }
+
+        if (!((aff == null && aff2 == null) || (aff != null && aff2 != null))) {
+            log.warning(">>>>> One of the caches is null: [aff=" + aff + ", aff2=" + aff2
+                + ", part=" + part + ", startVer=" + startVer + ", endVer=" + endVer
+                + ']');
+
+            dumpAssignmentsDebugInfo();
         }
 
         assert (aff == null && aff2 == null) || (aff != null && aff2 != null) :
@@ -1077,7 +1094,10 @@ public class GridAffinityAssignmentCache {
         assert primary.equals(primary2) : "Different primaries [primary=" + primary + ", primary2=" + primary2 + ']';
 
         boolean ret1 = true;
-        boolean ret2 = true;
+
+        assert range != null;
+
+        boolean ret2 = !range.getValue().endVer.after(startVer);
 
         for (AffinityAssignment assignment : affCache.tailMap(startVer, false).values()) {
             List<ClusterNode> nodes0 = assignment.assignment().get(part);
@@ -1118,6 +1138,15 @@ public class GridAffinityAssignmentCache {
             }
         }
 
+        if (ret1 != ret2) {
+            log.warning(">>>>> Different results: [ret1=" + ret1 + ", ret2=" + ret2
+                + ", part=" + part + ", startVer=" + startVer + ", endVer=" + endVer
+                + ", range=" + range
+                + ", size=" + affCache2.tailMap(startVer, false).size()
+                + ']');
+
+            dumpAssignmentsDebugInfo();
+        }
         assert ret1 == ret2 : "Different results [ret1=" + ret1 + ", ret2=" + ret2 + ']';
         return ret2;
     }
