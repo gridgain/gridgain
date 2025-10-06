@@ -83,7 +83,7 @@ public class GridCommandLineLoaderTest extends GridCommonAbstractTest {
      */
     public static class KillerLifecycleBean implements LifecycleBean {
         /**
-         * Latch for wainting start both nodes from sping xml config.
+         * The latch that is used to wait for the start of both nodes from the spring XML config.
          */
         private static final CountDownLatch INIT_TWO_NODES_LATCH = new CountDownLatch(2);
 
