@@ -206,16 +206,18 @@ public final class GridJavaProcess {
      * @throws Exception If any problem occurred.
      */
     public void kill() throws Exception {
-        Process killProc = U.isWindows() ?
-            Runtime.getRuntime().exec(new String[] {"taskkill", "/pid", pid, "/f", "/t"}) :
-            Runtime.getRuntime().exec(new String[] {"kill", "-9", pid});
+        if (!pid.equals(DFLT_PID)) {
+            Process killProc = U.isWindows() ?
+                Runtime.getRuntime().exec(new String[] {"taskkill", "/pid", pid, "/f", "/t"}) :
+                Runtime.getRuntime().exec(new String[] {"kill", "-9", pid});
 
-        killProc.waitFor();
+            killProc.waitFor();
 
-        int exitVal = killProc.exitValue();
+            int exitVal = killProc.exitValue();
 
-        if (exitVal != 0 && log != null && log.isInfoEnabled())
-            log.info(String.format("Abnormal exit value of %s for pid %s", exitVal, pid));
+            if (exitVal != 0 && log != null && log.isInfoEnabled())
+                log.info(String.format("Abnormal exit value of %s for pid %s", exitVal, pid));
+        }
 
         if (procKilledC != null)
             procKilledC.apply();
