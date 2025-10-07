@@ -16,6 +16,9 @@
 
 package org.apache.ignite.client;
 
+import java.io.Serializable;
+import javax.cache.expiry.ExpiryPolicy;
+
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.CacheMode;
@@ -27,9 +30,6 @@ import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.S;
-
-import javax.cache.expiry.ExpiryPolicy;
-import java.io.Serializable;
 
 /** Cache configuration. */
 public final class ClientCacheConfiguration implements Serializable {
