@@ -435,7 +435,8 @@ public final class ClientUtils {
                 }
 
                 itemWriter.accept(CfgItem.AFFINITY, w -> {
-                    // TODO: All props.
+                    w.writeInt(rendezvous.partitions());
+                    w.writeBoolean(rendezvous.isExcludeNeighbors());
                 });
             }
 
