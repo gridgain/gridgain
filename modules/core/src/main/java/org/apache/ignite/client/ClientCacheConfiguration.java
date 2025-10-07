@@ -190,6 +190,7 @@ public final class ClientCacheConfiguration implements Serializable {
         statisticsEnabled = ccfg.isStatisticsEnabled();
         writeSynchronizationMode = ccfg.getWriteSynchronizationMode();
         pluginCfgs = ccfg.getPluginConfigurations();
+        affinity = ccfg.getAffinity();
     }
 
     /**

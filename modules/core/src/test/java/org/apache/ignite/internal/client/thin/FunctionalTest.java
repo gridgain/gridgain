@@ -57,6 +57,7 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.client.ClientCache;
 import org.apache.ignite.client.ClientCacheConfiguration;
 import org.apache.ignite.client.ClientConnectionException;
@@ -251,7 +252,8 @@ public class FunctionalTest extends GridCommonAbstractTest {
                     .setSqlEscapeAll(true)
                     .setSqlIndexMaxInlineSize(1024)
                     .setSqlSchema("functional-test-schema")
-                    .setStatisticsEnabled(true);
+                    .setStatisticsEnabled(true)
+                    .setAffinity(new RendezvousAffinityFunction().setPartitions(456).setExcludeNeighbors(true));
 
             ClientCacheConfiguration cacheCfg = new ClientCacheConfiguration(cacheCfgTemplate);
 
@@ -265,6 +267,14 @@ public class FunctionalTest extends GridCommonAbstractTest {
             QueryEntity clientQueryEntity = clientCfg.getQueryEntities()[0];
             QueryEntity serverQueryEntity = (QueryEntity) serverCfg.getQueryEntities().iterator().next();
             assertEquals(clientQueryEntity.getIndexes(), serverQueryEntity.getIndexes());
+
+            RendezvousAffinityFunction clientAffinity = (RendezvousAffinityFunction)clientCfg.getAffinity();
+            assertEquals(456, clientAffinity.getPartitions());
+            assertTrue(clientAffinity.isExcludeNeighbors());
+
+            RendezvousAffinityFunction serverAffinity = (RendezvousAffinityFunction)serverCfg.getAffinity();
+            assertEquals(456, serverAffinity.getPartitions());
+            assertTrue(serverAffinity.isExcludeNeighbors());
         }
     }
 
