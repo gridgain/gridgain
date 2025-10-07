@@ -578,7 +578,12 @@ public final class ClientUtils {
                     .setExpiryPolicy(!protocolCtx.isFeatureSupported(EXPIRY_POLICY) ?
                              null : reader.readBoolean() ?
                                     new PlatformExpiryPolicy(reader.readLong(), reader.readLong(), reader.readLong()) : null
-                    );
+                    )
+                    .setAffinity(!protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.CACHE_CFG_AFFINITY)
+                            ? null
+                            : new RendezvousAffinityFunction()
+                            .setPartitions(reader.readInt())
+                            .setExcludeNeighbors(reader.readBoolean()));
         }
     }
 
