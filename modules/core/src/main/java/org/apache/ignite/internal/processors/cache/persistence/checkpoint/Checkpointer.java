@@ -513,8 +513,6 @@ public class Checkpointer extends GridWorker {
 
             if (chp.hasDelta() || destroyedPartitionsCnt > 0) {
                 if (log.isInfoEnabled()) {
-                    float avgWriteSpeedInBytes = storageCfg.getPageSize() * chp.pagesSize / tracker.totalDurationInSeconds();
-
                     log.info(String.format("Checkpoint finished [cpId=%s, pages=%d, markPos=%s, " +
                             "walSegmentsCovered=%s, markDuration=%dms, pagesWrite=%dms, fsync=%dms, total=%dms, avgWriteSpeed=%sMB/s]",
                         chp.cpEntry != null ? chp.cpEntry.checkpointId() : "",
@@ -525,7 +523,7 @@ public class Checkpointer extends GridWorker {
                         tracker.pagesWriteDuration(),
                         tracker.fsyncDuration(),
                         tracker.totalDuration(),
-                        WriteSpeedFormatter.formatWriteSpeed(avgWriteSpeedInBytes)
+                        WriteSpeedFormatter.calculateAndFormatWriteSpeed(chp.pagesSize, storageCfg.getPageSize(), tracker.totalDurationInSeconds())
                     ));
                 }
             }
@@ -1137,6 +1135,11 @@ public class Checkpointer extends GridWorker {
         /** Constructor */
         private WriteSpeedFormatter() {
             // no-op
+        }
+
+        /** Calculate write speed and return it formatted */
+        public static String calculateAndFormatWriteSpeed(long pages, long pageSize, float durationSeconds) {
+            return formatWriteSpeed(pages * pageSize / durationSeconds);
         }
 
         /**
