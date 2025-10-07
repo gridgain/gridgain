@@ -46,6 +46,8 @@ import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
+import org.apache.ignite.cache.affinity.AffinityFunction;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.SimilarityFunction;
 import org.apache.ignite.client.ClientCacheConfiguration;
@@ -409,6 +411,31 @@ public final class ClientUtils {
                         w.writeString(cfg0.pluginName());
                         cfg0.write(w);
                     }
+                });
+            }
+
+            AffinityFunction aff = cfg.getAffinity();
+            if (aff != null) {
+                if (!protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.CACHE_CFG_AFFINITY)) {
+                    throw new ClientProtocolError("Affinity functions are not supported by the server");
+                }
+
+                if (!(aff instanceof RendezvousAffinityFunction)) {
+                    throw new ClientProtocolError("Only RendezvousAffinityFunction is supported");
+                }
+
+                RendezvousAffinityFunction rendezvous = (RendezvousAffinityFunction)aff;
+
+                if (rendezvous.getAffinityBackupFilter() != null) {
+                    throw new ClientProtocolError("AffinityBackupFilter is not supported");
+                }
+
+                if (rendezvous.getBackupFilter() != null) {
+                    throw new ClientProtocolError("BackupFilter is not supported");
+                }
+
+                itemWriter.accept(CfgItem.AFFINITY, w -> {
+                    // TODO: All props.
                 });
             }
 
