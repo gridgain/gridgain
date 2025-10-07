@@ -874,6 +874,10 @@ public final class ClientUtils {
          * Expire policy.
          */
         EXPIRE_POLICY(407),
+        /**
+         * Affinity.
+         */
+        AFFINITY(408),
 
         /**
          * Plugin configurations.

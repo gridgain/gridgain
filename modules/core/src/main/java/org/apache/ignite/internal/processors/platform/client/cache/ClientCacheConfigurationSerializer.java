@@ -147,6 +147,9 @@ public class ClientCacheConfigurationSerializer {
     private static final short EXPIRY_POLICY = 407;
 
     /** */
+    private static final short AFFINITY = 408;
+
+    /** */
     private static final short PLUGIN_CONFIGURATIONS = 500;
 
     /**
