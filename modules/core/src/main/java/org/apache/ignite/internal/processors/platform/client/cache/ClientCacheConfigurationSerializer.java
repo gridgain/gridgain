@@ -482,6 +482,15 @@ public class ClientCacheConfigurationSerializer {
                     readCachePluginConfigurations(reader, cfg, pluginProc);
 
                     break;
+
+                case AFFINITY:
+                    assert protocolCtx.isFeatureSupported(ClientBitmaskFeature.CACHE_CFG_AFFINITY);
+
+                    cfg.setAffinity(new RendezvousAffinityFunction()
+                            .setPartitions(reader.readInt())
+                            .setExcludeNeighbors(reader.readBoolean()));
+
+                    break;
             }
         }
 
