@@ -38,6 +38,7 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.internal.client.thin.AbstractThinClientTest;
@@ -84,7 +85,8 @@ public class ClientCacheConfigurationTest extends AbstractThinClientTest {
                 .setDefaultFieldValues(Collections.singletonMap("id", 0))
                 .setIndexes(Collections.singletonList(new QueryIndex("id", true, "IDX_EMPLOYEE_ID")))
                 .setAliases(Stream.of("id", "orgId").collect(Collectors.toMap(f -> f, String::toUpperCase)))
-            );
+            )
+            .setAffinity(new RendezvousAffinityFunction().setPartitions(1234).setExcludeNeighbors(true));
 
         ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
 
