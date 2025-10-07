@@ -25,6 +25,8 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
+import org.apache.ignite.cache.affinity.AffinityFunction;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 
@@ -222,6 +224,18 @@ public class ClientCacheConfigurationSerializer {
 
         if (protocolCtx.isFeatureSupported(ClientProtocolVersionFeature.EXPIRY_POLICY))
             PlatformConfigurationUtils.writeExpiryPolicyFactory(writer, cfg.getExpiryPolicyFactory());
+
+        if (protocolCtx.isFeatureSupported(ClientBitmaskFeature.CACHE_CFG_AFFINITY)) {
+            AffinityFunction affinity = cfg.getAffinity();
+            if (affinity instanceof RendezvousAffinityFunction) {
+                writer.writeBoolean(true);
+                RendezvousAffinityFunction rendezvous = (RendezvousAffinityFunction) affinity;
+                writer.writeInt(rendezvous.partitions());
+                writer.writeBoolean(rendezvous.isExcludeNeighbors());
+            } else {
+                writer.writeBoolean(false);
+            }
+        }
 
         // Write length (so that part of the config can be skipped).
         writer.writeInt(pos, writer.out().position() - pos - 4);

@@ -579,11 +579,11 @@ public final class ClientUtils {
                              null : reader.readBoolean() ?
                                     new PlatformExpiryPolicy(reader.readLong(), reader.readLong(), reader.readLong()) : null
                     )
-                    .setAffinity(!protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.CACHE_CFG_AFFINITY)
-                            ? null
-                            : new RendezvousAffinityFunction()
+                    .setAffinity(protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.CACHE_CFG_AFFINITY) && reader.readBoolean()
+                            ? new RendezvousAffinityFunction()
                             .setPartitions(reader.readInt())
-                            .setExcludeNeighbors(reader.readBoolean()));
+                            .setExcludeNeighbors(reader.readBoolean())
+                            : null);
         }
     }
 
