@@ -30,7 +30,6 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.processor.EntryProcessor;
 import javax.management.MBeanServer;
 import javax.net.ssl.SSLContext;
-import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -1152,7 +1151,7 @@ public class IgniteConfiguration {
 
     /**
      * Gets shutdown policy.
-     * If policy was not set default policy will be return {@link IgniteCluster.DEFAULT_SHUTDOWN_POLICY}.
+     * If policy was not set default policy will be return {@link IgniteConfiguration#DFLT_SHUTDOWN_POLICY}.
      *
      * @return Shutdown policy.
      */
