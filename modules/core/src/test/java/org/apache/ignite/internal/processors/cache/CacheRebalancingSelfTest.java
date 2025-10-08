@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
+import javax.cache.Cache;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
@@ -39,6 +40,8 @@ import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction.DFLT_PARTITION_COUNT;
+
 /**
  * Test for rebalancing.
  */
@@ -47,7 +50,10 @@ public class CacheRebalancingSelfTest extends GridCommonAbstractTest {
     private static final String REBALANCE_TEST_CACHE_NAME = "rebalanceCache";
 
     /** Test logger. */
-    ListeningTestLogger logger = null;
+    private ListeningTestLogger logger = null;
+
+    /** Flag showing wheather to use small rebalance batch size. */
+    private boolean useSmallRebalanceBatchSize;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -63,12 +69,17 @@ public class CacheRebalancingSelfTest extends GridCommonAbstractTest {
         if (logger != null)
             cfg.setGridLogger(logger);
 
+        if (useSmallRebalanceBatchSize)
+            cfg.setRebalanceBatchSize(512);
+
         return cfg;
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
+
+        useSmallRebalanceBatchSize = false;
 
         super.afterTest();
     }
@@ -123,31 +134,52 @@ public class CacheRebalancingSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalanceLog() throws Exception {
+        // This ensures that rebalace will contain several supply messages.
+        useSmallRebalanceBatchSize = true;
+
+        int entriesNum = 1000;
+
+        LogListener finishRebalanceSupplyLogLsnr = LogListener.matches(logStr ->
+            logStr.contains("Finished supplying rebalancing [partitions=" + DFLT_PARTITION_COUNT + ", entries=" + entriesNum + ",")
+        ).build();
+
+        logger = new ListeningTestLogger(log);
+
+        logger.registerListener(finishRebalanceSupplyLogLsnr);
+
         IgniteEx ignite0 = startGrid(0);
 
-        logger = new ListeningTestLogger(false, log);
+        Cache<Integer, Integer> rebalanceCache = ignite0.cache(REBALANCE_TEST_CACHE_NAME);
 
-        int countOfCaches = ignite0.context().cache().cacheGroups().size();
+        for (int i = 0; i < entriesNum; i++)
+            rebalanceCache.put(i, i);
 
-        info("Count of caches which will be rebalanced: " + countOfCaches);
+        logger = new ListeningTestLogger(log);
 
-        LogListener prepareRebalanceLogListener = LogListener.matches(logStr ->
+        int cachesNum = ignite0.context().cache().cacheGroups().size();
+
+        info("Count of caches which will be rebalanced: " + cachesNum);
+
+        LogListener prepareRebalanceLogLsnr = LogListener.matches(logStr ->
             logStr.contains("Prepared rebalancing")
-        ).times(countOfCaches).build();
+        ).times(cachesNum).build();
 
-        LogListener completeRebalanceLogListener = LogListener.matches(logStr ->
+        LogListener completeRebalanceLogLsnr = LogListener.matches(logStr ->
             logStr.contains("Completed rebalance future: RebalanceFuture") &&
                 !logStr.contains("next=RebalanceFuture")
-        ).times(countOfCaches).build();
+        ).times(cachesNum).build();
 
-        logger.registerAllListeners(completeRebalanceLogListener, prepareRebalanceLogListener);
+        logger.registerAllListeners(completeRebalanceLogLsnr, prepareRebalanceLogLsnr);
 
-        IgniteEx ignite1 = startGrid(1);
+        startGrid(1);
 
         awaitPartitionMapExchange();
 
         assertTrue("Rebalance was not logged or did not even run.",
-            prepareRebalanceLogListener.check() && completeRebalanceLogListener.check());
+            prepareRebalanceLogLsnr.check() && completeRebalanceLogLsnr.check());
+
+        assertTrue("Wrong finish rebalance supply message. PartsNum=" + DFLT_PARTITION_COUNT + ", entries=" + entriesNum,
+            finishRebalanceSupplyLogLsnr.check());
     }
 
     /**
