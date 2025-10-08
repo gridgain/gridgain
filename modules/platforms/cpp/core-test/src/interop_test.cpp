@@ -53,14 +53,14 @@ struct AffinityKey
     int32_t key;
 
     /** Affinity key */
-    int32_t aff;
+    int32_t affKey;
 
     /**
      * Default constructor.
      */
     AffinityKey() :
             key(0),
-            aff(0)
+            affKey(0)
     {
         // No-op.
     }
@@ -72,7 +72,7 @@ struct AffinityKey
      */
     AffinityKey(int32_t key, int32_t aff) :
             key(key),
-            aff(aff)
+            affKey(aff)
     {
         // No-op.
     }
@@ -93,18 +93,18 @@ namespace ignite
             static void Write(BinaryWriter& writer, const AffinityKey& obj)
             {
                 writer.WriteInt32("key", obj.key);
-                writer.WriteInt32("aff", obj.aff);
+                writer.WriteInt32("affKey", obj.affKey);
             }
 
             static void Read(BinaryReader& reader, AffinityKey& dst)
             {
                 dst.key = reader.ReadInt32("key");
-                dst.aff = reader.ReadInt32("aff");
+                dst.affKey = reader.ReadInt32("affKey");
             }
 
             static void GetAffinityFieldName(std::string& dst)
             {
-                dst = "aff";
+                dst = "affKey";
             }
         };
     }
@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE(PutObjectByCppThenByJava)
     AffinityKey val = cache.Get(key2);
 
     BOOST_CHECK_EQUAL(val.key, 1);
-    BOOST_CHECK_EQUAL(val.aff, 2);
+    BOOST_CHECK_EQUAL(val.affKey, 2);
 }
 
 BOOST_AUTO_TEST_CASE(PutObjectPointerByCppThenByJava)
@@ -235,7 +235,7 @@ BOOST_AUTO_TEST_CASE(PutObjectPointerByCppThenByJava)
     AffinityKey* val = cache.Get(key2);
 
     BOOST_CHECK_EQUAL(val->key, 1);
-    BOOST_CHECK_EQUAL(val->aff, 2);
+    BOOST_CHECK_EQUAL(val->affKey, 2);
 
     delete key2;
     delete val;
