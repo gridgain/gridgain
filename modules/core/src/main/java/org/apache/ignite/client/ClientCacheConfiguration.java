@@ -26,6 +26,7 @@ import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -141,6 +142,11 @@ public final class ClientCacheConfiguration implements Serializable {
      */
     private ClientCachePluginConfiguration[] pluginCfgs;
 
+    /**
+     * @serial Affinity function.
+     */
+    private AffinityFunction affinity;
+
     /** Default constructor. */
     public ClientCacheConfiguration() {
         // No-op.
@@ -184,6 +190,7 @@ public final class ClientCacheConfiguration implements Serializable {
         statisticsEnabled = ccfg.isStatisticsEnabled();
         writeSynchronizationMode = ccfg.getWriteSynchronizationMode();
         pluginCfgs = ccfg.getPluginConfigurations();
+        affinity = ccfg.getAffinity();
     }
 
     /**
@@ -744,6 +751,40 @@ public final class ClientCacheConfiguration implements Serializable {
     public ClientCacheConfiguration setPluginConfigurations(ClientCachePluginConfiguration... pluginCfgs) {
         this.pluginCfgs = pluginCfgs;
 
+        return this;
+    }
+
+    /**
+     * Gets the affinity function. See {@link AffinityFunction} for more details.
+     *
+     * <p>
+     *     Limitations:
+     *     <ul>
+     *         <li>Only {@link org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction RendezvousAffinityFunction} is supported.</li>
+     *         <li>Backup filters are not supported</li>
+     *     </ul>
+     *
+     * @return Affinity function.
+     */
+    public AffinityFunction getAffinity() {
+        return affinity;
+    }
+
+    /**
+     * Sets the affinity function. See {@link AffinityFunction} for more details.
+     *
+     * <p>
+     *     Limitations:
+     *     <ul>
+     *         <li>Only {@link org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction RendezvousAffinityFunction} is supported.</li>
+     *         <li>Backup filters are not supported</li>
+     *     </ul>
+     *
+     * @param affinity Affinity function.
+     * @return {@code this} for chaining.
+     */
+    public ClientCacheConfiguration setAffinity(AffinityFunction affinity) {
+        this.affinity = affinity;
         return this;
     }
 

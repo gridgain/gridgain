@@ -46,6 +46,8 @@ import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
+import org.apache.ignite.cache.affinity.AffinityFunction;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.SimilarityFunction;
 import org.apache.ignite.client.ClientCacheConfiguration;
@@ -412,6 +414,32 @@ public final class ClientUtils {
                 });
             }
 
+            AffinityFunction aff = cfg.getAffinity();
+            if (aff != null) {
+                if (!protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.CACHE_CFG_AFFINITY)) {
+                    throw new ClientProtocolError("Affinity functions are not supported by the server");
+                }
+
+                if (!(aff instanceof RendezvousAffinityFunction)) {
+                    throw new ClientProtocolError("Only RendezvousAffinityFunction is supported");
+                }
+
+                RendezvousAffinityFunction rendezvous = (RendezvousAffinityFunction)aff;
+
+                if (rendezvous.getAffinityBackupFilter() != null) {
+                    throw new ClientProtocolError("AffinityBackupFilter is not supported");
+                }
+
+                if (rendezvous.getBackupFilter() != null) {
+                    throw new ClientProtocolError("BackupFilter is not supported");
+                }
+
+                itemWriter.accept(CfgItem.AFFINITY, w -> {
+                    w.writeInt(rendezvous.partitions());
+                    w.writeBoolean(rendezvous.isExcludeNeighbors());
+                });
+            }
+
             writer.writeInt(origPos, out.position() - origPos - 4); // configuration length
             writer.writeInt(origPos + 4, propCnt.get()); // properties count
         }
@@ -550,7 +578,12 @@ public final class ClientUtils {
                     .setExpiryPolicy(!protocolCtx.isFeatureSupported(EXPIRY_POLICY) ?
                              null : reader.readBoolean() ?
                                     new PlatformExpiryPolicy(reader.readLong(), reader.readLong(), reader.readLong()) : null
-                    );
+                    )
+                    .setAffinity(protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.CACHE_CFG_AFFINITY) && reader.readBoolean()
+                            ? new RendezvousAffinityFunction()
+                            .setPartitions(reader.readInt())
+                            .setExcludeNeighbors(reader.readBoolean())
+                            : null);
         }
     }
 
@@ -874,6 +907,10 @@ public final class ClientUtils {
          * Expire policy.
          */
         EXPIRE_POLICY(407),
+        /**
+         * Affinity.
+         */
+        AFFINITY(408),
 
         /**
          * Plugin configurations.
