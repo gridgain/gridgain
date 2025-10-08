@@ -129,10 +129,10 @@ public class OffheapReadWriteLock {
 
         if (writeWaitCnt == 0) {
             for (int i = 0; i < SPIN_CNT; i++) {
-                if (!checkTag(state, tag))
-                    return false;
-
                 if (canReadLock(state)) {
+                    if (!checkTag(state, tag))
+                        return false;
+
                     if (GridUnsafe.compareAndSwapLong(null, lock, state, updateState(state, 1, 0, 0)))
                         return true;
                     else
@@ -426,20 +426,23 @@ public class OffheapReadWriteLock {
                 try {
                     long state = GridUnsafe.getLongVolatile(null, lock);
 
-                    if (!checkTag(state, tag)) {
-                        // We cannot lock with this tag, release waiter.
-                        long updated = updateState(state, 0, -1, 0);
+                    if (canReadLock(state)) {
+                        if (!checkTag(state, tag)) {
+                            // We cannot lock with this tag, release waiter.
+                            long updated = updateState(state, 0, -1, 0);
 
-                        if (GridUnsafe.compareAndSwapLong(null, lock, state, updated)) {
-                            int writeWaitCnt = writersWaitCount(updated);
-                            int readWaitCnt = readersWaitCount(updated);
+                            if (GridUnsafe.compareAndSwapLong(null, lock, state, updated)) {
+                                int writeWaitCnt = writersWaitCount(updated);
+                                int readWaitCnt = readersWaitCount(updated);
 
-                            signalNextWaiter(writeWaitCnt, readWaitCnt, lockIdx);
+                                signalNextWaiter(writeWaitCnt, readWaitCnt, lockIdx);
 
-                            return false;
+                                return false;
+                            } else {
+                                continue;
+                            }
                         }
-                    }
-                    else if (canReadLock(state)) {
+
                         long updated = updateState(state, 1, -1, 0);
 
                         if (GridUnsafe.compareAndSwapLong(null, lock, state, updated))
