@@ -48,6 +48,7 @@ public class ContinuousQueryViewWalker implements SystemViewRowAttributeWalker<C
         v.accept(16, "oldValueRequired", boolean.class);
         v.accept(17, "routineId", UUID.class);
         v.accept(18, "topic", String.class);
+        v.accept(19, "nodeConsistentId", String.class);
     }
 
     /** {@inheritDoc} */
@@ -71,10 +72,11 @@ public class ContinuousQueryViewWalker implements SystemViewRowAttributeWalker<C
         v.acceptBoolean(16, "oldValueRequired", row.oldValueRequired());
         v.accept(17, "routineId", UUID.class, row.routineId());
         v.accept(18, "topic", String.class, row.topic());
+        v.accept(19, "nodeConsistentId", String.class, row.nodeConsistentId());
     }
 
     /** {@inheritDoc} */
     @Override public int count() {
-        return 19;
+        return 20;
     }
 }
