@@ -97,6 +97,13 @@ public interface CommunicationSpi<T extends Serializable> extends IgniteSpi {
     public int getOutboundMessagesQueueSize();
 
     /**
+     * Gets unacknowledged messages queue size.
+     *
+     * @return Unacknowledged messages queue size.
+     */
+    public int getUnacknowledgedMessagesQueueSize();
+
+    /**
      * Resets metrics for this SPI instance.
      */
     public void resetMetrics();

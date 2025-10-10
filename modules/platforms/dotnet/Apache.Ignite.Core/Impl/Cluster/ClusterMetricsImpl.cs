@@ -106,6 +106,8 @@ namespace Apache.Ignite.Core.Impl.Cluster
             OutboundMessagesQueueSize = reader.ReadInt();
 
             TotalNodes = reader.ReadInt();
+
+            UnacknowledgedMessagesQueueSize = reader.ReadInt();
         }
 
         /// <summary>
@@ -289,5 +291,8 @@ namespace Apache.Ignite.Core.Impl.Cluster
 
         /** <inheritDoc /> */
         public int TotalNodes { get; private set; }
+
+        /** <inheritDoc /> */
+        public int UnacknowledgedMessagesQueueSize { get; private set; }
     }
 }
