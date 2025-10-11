@@ -878,7 +878,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
             "UPTIME, JVM_START_TIME, NODE_START_TIME, LAST_DATA_VERSION, " +
             "CUR_THREAD_COUNT, MAX_THREAD_COUNT, TOTAL_THREAD_COUNT, CUR_DAEMON_THREAD_COUNT, " +
             "SENT_MESSAGES_COUNT, SENT_BYTES_COUNT, RECEIVED_MESSAGES_COUNT, RECEIVED_BYTES_COUNT, " +
-            "OUTBOUND_MESSAGES_QUEUE FROM " + sysSchemaName() + ".NODE_METRICS";
+            "OUTBOUND_MESSAGES_QUEUE, UNACKNOWLEDGED_MESSAGES_QUEUE FROM " + sysSchemaName() + ".NODE_METRICS";
 
         List<List<?>> resMetrics = execSql(sqlAllMetrics);
 
@@ -1012,6 +1012,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
                     assertEquals(metrics.getReceivedMessagesCount(), resMetrics.get(0).get(54));
                     assertEquals(metrics.getReceivedBytesCount(), resMetrics.get(0).get(55));
                     assertEquals(metrics.getOutboundMessagesQueueSize(), resMetrics.get(0).get(56));
+                    assertEquals(metrics.getUnacknowledgedMessagesQueueSize(), resMetrics.get(0).get(57));
 
                     break;
                 }

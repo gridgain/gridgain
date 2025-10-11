@@ -96,7 +96,8 @@ public class SqlSystemViewNodeMetrics extends SqlAbstractLocalSystemView {
             newColumn("SENT_BYTES_COUNT", Value.LONG),
             newColumn("RECEIVED_MESSAGES_COUNT", Value.INT),
             newColumn("RECEIVED_BYTES_COUNT", Value.LONG),
-            newColumn("OUTBOUND_MESSAGES_QUEUE", Value.INT)
+            newColumn("OUTBOUND_MESSAGES_QUEUE", Value.INT),
+            newColumn("UNACKNOWLEDGED_MESSAGES_QUEUE", Value.INT)
         );
     }
 
@@ -189,7 +190,8 @@ public class SqlSystemViewNodeMetrics extends SqlAbstractLocalSystemView {
                         metrics.getSentBytesCount(),
                         metrics.getReceivedMessagesCount(),
                         metrics.getReceivedBytesCount(),
-                        metrics.getOutboundMessagesQueueSize()
+                        metrics.getOutboundMessagesQueueSize(),
+                        metrics.getUnacknowledgedMessagesQueueSize()
                     )
                 );
             }

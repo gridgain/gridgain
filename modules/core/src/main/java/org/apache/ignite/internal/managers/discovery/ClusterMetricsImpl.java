@@ -38,6 +38,7 @@ import static org.apache.ignite.internal.managers.communication.GridIoManager.RC
 import static org.apache.ignite.internal.managers.communication.GridIoManager.RCVD_MSGS_CNT;
 import static org.apache.ignite.internal.managers.communication.GridIoManager.SENT_BYTES_CNT;
 import static org.apache.ignite.internal.managers.communication.GridIoManager.SENT_MSG_CNT;
+import static org.apache.ignite.internal.managers.communication.GridIoManager.UNACKED_MSG_QUEUE_CNT;
 import static org.apache.ignite.internal.processors.cache.CacheMetricsImpl.CACHE_METRICS;
 import static org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager.LAST_DATA_VER;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.CPU_LOAD;
@@ -171,6 +172,9 @@ public class ClusterMetricsImpl implements ClusterMetrics {
     /** Outbound message queue size metric. */
     private final IntMetric outboundMsgCnt;
 
+    /** Unacknowledged message queue size metric. */
+    private final IntMetric unackedMsgCnt;
+
     /**
      * Metric reflecting {@link ThreadMXBean#getPeakThreadCount()}.
      *
@@ -240,6 +244,7 @@ public class ClusterMetricsImpl implements ClusterMetrics {
         rcvdMsgsCnt = ioReg.findMetric(RCVD_MSGS_CNT);
         rcvdBytesCnt = ioReg.findMetric(RCVD_BYTES_CNT);
         outboundMsgCnt = ioReg.findMetric(OUTBOUND_MSG_QUEUE_CNT);
+        unackedMsgCnt = ioReg.findMetric(UNACKED_MSG_QUEUE_CNT);
     }
 
     /** {@inheritDoc} */
@@ -539,6 +544,11 @@ public class ClusterMetricsImpl implements ClusterMetrics {
     /** {@inheritDoc} */
     @Override public long getCurrentPmeDuration() {
         return pmeDuration.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getUnacknowledgedMessagesQueueSize() {
+        return unackedMsgCnt.value();
     }
 
     /**

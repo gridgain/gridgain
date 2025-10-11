@@ -249,6 +249,10 @@ public interface ClusterMetricsMXBean extends ClusterMetrics {
     public int getOutboundMessagesQueueSize();
 
     /** {@inheritDoc} */
+    @Override @MXBeanDescription("Unacknowledged messages queue size.")
+    public int getUnacknowledgedMessagesQueueSize();
+
+    /** {@inheritDoc} */
     @Override @MXBeanDescription("Start time of the grid node in milliseconds.")
     public long getNodeStartTime();
 

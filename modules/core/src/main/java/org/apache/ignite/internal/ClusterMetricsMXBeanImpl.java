@@ -380,6 +380,11 @@ public class ClusterMetricsMXBeanImpl implements ClusterMetricsMXBean {
     }
 
     /** {@inheritDoc} */
+    @Override public int getUnacknowledgedMessagesQueueSize() {
+        return metrics().getUnacknowledgedMessagesQueueSize();
+    }
+
+    /** {@inheritDoc} */
     @Override public int getTotalNodes() {
         return metrics().getTotalNodes();
     }

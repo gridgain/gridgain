@@ -870,6 +870,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".NODE_METRICS.RECEIVED_MESSAGES_COUNT.null.10",
                 sysSchemaName() + ".NODE_METRICS.RECEIVED_BYTES_COUNT.null.19",
                 sysSchemaName() + ".NODE_METRICS.OUTBOUND_MESSAGES_QUEUE.null.10",
+                sysSchemaName() + ".NODE_METRICS.UNACKNOWLEDGED_MESSAGES_QUEUE.null.10",
                 sysSchemaName() + ".SCHEMAS.SCHEMA_NAME.null.2147483647",
                 sysSchemaName() + ".SCHEMAS.PREDEFINED.null.1",
                 sysSchemaName() + ".TABLES.CACHE_GROUP_ID.null.10",

@@ -154,6 +154,13 @@ public class ClusterStateProvider {
     }
 
     /**
+     * @return Unacknowledged messages queue size.
+     */
+    public int getUnacknowledgedMessagesQueueSize() {
+        return tcpCommSpi.getUnacknowledgedMessagesQueueSize();
+    }
+
+    /**
      * Makes dump of {@link TcpCommunicationSpi} stats.
      */
     public void dumpStats() {

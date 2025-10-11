@@ -335,7 +335,7 @@ public class CommunicationWorker extends GridWorker {
 
         if (recovery != null &&
             recovery.nodeAlive(nodeGetter.apply(nodeId)) &&
-            !recovery.messagesRequests().isEmpty()) {
+            !recovery.isMessageRequestsEmpty()) {
             if (log.isDebugEnabled())
                 log.debug("Node connection is idle, but there are unacknowledged messages, " +
                     "will wait: " + nodeId);

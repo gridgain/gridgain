@@ -332,6 +332,8 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
             writer.writeInt(metrics.getOutboundMessagesQueueSize());
 
             writer.writeInt(metrics.getTotalNodes());
+
+            writer.writeInt(metrics.getUnacknowledgedMessagesQueueSize());
         }
     }
 

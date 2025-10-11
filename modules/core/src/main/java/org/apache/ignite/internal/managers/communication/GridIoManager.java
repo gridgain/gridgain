@@ -174,6 +174,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     /** Received bytes count metric name. */
     public static final String RCVD_BYTES_CNT = "ReceivedBytesCount";
 
+    /** Unacknowledged message queue size metric name. */
+    public static final String UNACKED_MSG_QUEUE_CNT = "UnacknowledgedMessagesQueueSize";
+
     /** Empty array of message factories. */
     public static final MessageFactory[] EMPTY = {};
 
@@ -378,6 +381,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 "Received messages count.");
 
         ioMetric.register(RCVD_BYTES_CNT, spi::getReceivedBytesCount, "Received bytes count.");
+
+        ioMetric.register(UNACKED_MSG_QUEUE_CNT, spi::getUnacknowledgedMessagesQueueSize,
+            "Unacknowledged messages queue size.");
 
         getSpi().setListener(commLsnr = new CommunicationListener<Serializable>() {
             @Override public void onMessage(UUID nodeId, Serializable msg, IgniteRunnable msgC) {

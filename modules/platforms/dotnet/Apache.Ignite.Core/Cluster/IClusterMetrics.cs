@@ -25,7 +25,7 @@ namespace Apache.Ignite.Core.Cluster
     /// in combination with fail-over SPI could check if other nodes don't have
     /// any active or waiting jobs and fail-over some jobs to those nodes.
     /// <para />
-    /// Node metrics for any node can be accessed via <see cref="IClusterNode.GetMetrics"/> 
+    /// Node metrics for any node can be accessed via <see cref="IClusterNode.GetMetrics"/>
     /// method. Keep in mind that there will be a certain network delay (usually
     /// equal to heartbeat delay) for the accuracy of node metrics. However, when accessing
     /// metrics on local node the metrics are always accurate and up to date.
@@ -48,7 +48,7 @@ namespace Apache.Ignite.Core.Cluster
         int CurrentActiveJobs { get; }
 
         /// <summary>
-        /// Average number of active jobs. 
+        /// Average number of active jobs.
         /// </summary>
         float AverageActiveJobs { get; }
 
@@ -143,7 +143,7 @@ namespace Apache.Ignite.Core.Cluster
         double AverageJobExecuteTime { get; }
 
         /// <summary>
-        /// Total number of jobs handled by the node. 
+        /// Total number of jobs handled by the node.
         /// </summary>
         int TotalExecutedTasks { get; }
 
@@ -224,7 +224,7 @@ namespace Apache.Ignite.Core.Cluster
         /// Mmaximum amount of heap memory in bytes that can be used for memory management.
         /// This method returns <c>-1</c> if the maximum memory size is undefined.
         /// <para />
-        /// This amount of memory is not guaranteed to be available for memory management if 
+        /// This amount of memory is not guaranteed to be available for memory management if
         /// it is greater than the amount of committed memory. The JVM may fail to allocate
         /// memory even if the amount of used memory does not exceed this maximum size.
         /// <para />
@@ -237,8 +237,8 @@ namespace Apache.Ignite.Core.Cluster
         /// Total amount of heap memory in bytes. This method returns <c>-1</c>
         /// if the total memory size is undefined.
         /// <para />
-        /// This amount of memory is not guaranteed to be available for memory management if it is 
-        /// greater than the amount of committed memory. The JVM may fail to allocate memory even 
+        /// This amount of memory is not guaranteed to be available for memory management if it is
+        /// greater than the amount of committed memory. The JVM may fail to allocate memory even
         /// if the amount of used memory does not exceed this maximum size.
         /// <para />
         /// This value represents a setting of the heap memory for Java VM and is
@@ -247,7 +247,7 @@ namespace Apache.Ignite.Core.Cluster
         long HeapMemoryTotal { get; }
 
         /// <summary>
-        /// Amount of non-heap memory in bytes that the JVM initially requests from the operating 
+        /// Amount of non-heap memory in bytes that the JVM initially requests from the operating
         /// system for memory management.
         /// </summary>
         long NonHeapMemoryInitialized { get; }
@@ -258,7 +258,7 @@ namespace Apache.Ignite.Core.Cluster
         long NonHeapMemoryUsed { get; }
 
         /// <summary>
-        /// Amount of non-heap memory in bytes that is committed for the JVM to use. 
+        /// Amount of non-heap memory in bytes that is committed for the JVM to use.
         /// </summary>
         long NonHeapMemoryCommitted { get; }
 
@@ -268,7 +268,7 @@ namespace Apache.Ignite.Core.Cluster
         long NonHeapMemoryMaximum { get; }
 
         /// <summary>
-        /// Total amount of non-heap memory in bytes that can be used for memory management. 
+        /// Total amount of non-heap memory in bytes that can be used for memory management.
         /// </summary>
         long NonHeapMemoryTotal { get; }
 
@@ -314,7 +314,7 @@ namespace Apache.Ignite.Core.Cluster
         long LastDataVersion { get; }
 
         /// <summary>
-        /// Sent messages count 
+        /// Sent messages count
         /// </summary>
         int SentMessagesCount { get; }
 
@@ -342,5 +342,10 @@ namespace Apache.Ignite.Core.Cluster
         /// Gets total number of nodes.
         /// </summary>
         int TotalNodes { get; }
+
+        /// <summary>
+        /// Unacknowledged messages queue size.
+        /// </summary>
+        int UnacknowledgedMessagesQueueSize { get; }
     }
 }

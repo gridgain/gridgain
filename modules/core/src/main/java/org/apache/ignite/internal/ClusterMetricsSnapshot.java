@@ -92,7 +92,8 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
         4/*outbound messages queue size*/ +
         4/*total nodes*/ +
         8/*total jobs execution time*/ +
-        8/*current PME time*/;
+        8/*current PME time*/ +
+        4/*unacknowledged messages queue size*/;
 
     /** */
     private long lastUpdateTime = -1;
@@ -259,6 +260,9 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
     /** */
     private long currentPmeDuration = -1;
 
+    /** */
+    private int unackedMsgQueueSize = -1;
+
     /**
      * Create empty snapshot.
      */
@@ -333,6 +337,7 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
         heapTotal = 0;
         totalNodes = nodes.size();
         currentPmeDuration = 0;
+        unackedMsgQueueSize = 0;
 
         for (ClusterNode node : nodes) {
             ClusterMetrics m = node.metrics();
@@ -411,6 +416,8 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
             avgLoad += m.getCurrentCpuLoad();
 
             currentPmeDuration = max(currentPmeDuration, m.getCurrentPmeDuration());
+
+            unackedMsgQueueSize += m.getUnacknowledgedMessagesQueueSize();
         }
 
         curJobExecTime /= size;
@@ -971,6 +978,11 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
         return currentPmeDuration;
     }
 
+    /** {@inheritDoc} */
+    @Override public int getUnacknowledgedMessagesQueueSize() {
+        return unackedMsgQueueSize;
+    }
+
     /**
      * Sets available processors.
      *
@@ -1215,6 +1227,15 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
     }
 
     /**
+     * Sets unacknowledged messages queue size.
+     *
+     * @param unackedMsgQueueSize Unacknowledged messages queue size.
+     */
+    public void setUnacknowledgedMessagesQueueSize(int unackedMsgQueueSize) {
+        this.unackedMsgQueueSize = unackedMsgQueueSize;
+    }
+
+    /**
      * @param neighborhood Cluster neighborhood.
      * @return CPU count.
      */
@@ -1367,6 +1388,7 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
         buf.putInt(metrics.getTotalNodes());
         buf.putLong(metrics.getTotalJobsExecutionTime());
         buf.putLong(metrics.getCurrentPmeDuration());
+        buf.putInt(metrics.getUnacknowledgedMessagesQueueSize());
 
         assert !buf.hasRemaining() : "Invalid metrics size [expected=" + METRICS_SIZE + ", actual="
             + (buf.position() - off) + ']';
@@ -1453,6 +1475,11 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
             metrics.setCurrentPmeDuration(buf.getLong());
         else
             metrics.setCurrentPmeDuration(0);
+
+        if (buf.remaining() >= 4)
+            metrics.setUnacknowledgedMessagesQueueSize(buf.getInt());
+        else
+            metrics.setUnacknowledgedMessagesQueueSize(0);
 
         return metrics;
     }

@@ -2326,6 +2326,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 .a("%, comm=").a(dblFmt.format(heapCommInMBytes)).a("MB]").nl()
                 .a(dataStorageInfo)
                 .a("    ^-- Outbound messages queue [size=").a(m.getOutboundMessagesQueueSize()).a("]").nl()
+                .a("    ^-- Unacknowledged messages queue [size=").a(m.getUnacknowledgedMessagesQueueSize()).a("]").nl()
                 .a("    ^-- ").a(createExecutorDescription("Public thread pool", execSvc)).nl()
                 .a("    ^-- ").a(createExecutorDescription("System thread pool", sysExecSvc)).nl()
                 .a("    ^-- ").a(createExecutorDescription("Striped thread pool", stripedExecSvc));

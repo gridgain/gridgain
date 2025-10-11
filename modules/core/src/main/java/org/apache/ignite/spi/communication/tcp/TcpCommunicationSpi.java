@@ -530,6 +530,13 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     }
 
     /** {@inheritDoc} */
+    @Override public int getUnacknowledgedMessagesQueueSize() {
+        GridNioServer<Message> srv = nioSrvWrapper.nio();
+
+        return srv != null ? srv.unacknowledgedMessagesQueueSize() : 0;
+    }
+
+    /** {@inheritDoc} */
     @Override public void resetMetrics() {
         if (metricsLsnr != null)
             metricsLsnr.resetMetrics();

@@ -442,7 +442,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
                 if (outDesc != null) {
                     if (outDesc.nodeAlive(nodeGetter.apply(id))) {
-                        if (!outDesc.messagesRequests().isEmpty()) {
+                        if (!outDesc.isMessageRequestsEmpty()) {
                             if (log.isDebugEnabled()) {
                                 log.debug("Session was closed but there are unacknowledged messages, " +
                                     "will try to reconnect [rmtNode=" + outDesc.node().id() + ']');

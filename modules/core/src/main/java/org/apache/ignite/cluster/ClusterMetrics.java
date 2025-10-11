@@ -700,4 +700,11 @@ public interface ClusterMetrics {
      * @return Gets execution duration for current partition map exchange in milliseconds. {@code 0} if there is no running PME.
      */
     public long getCurrentPmeDuration();
+
+    /**
+     * Gets unacknowledged messages queue size.
+     *
+     * @return Unacknowledged messages queue size.
+     */
+    public int getUnacknowledgedMessagesQueueSize();
 }

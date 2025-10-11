@@ -37,7 +37,6 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -729,8 +728,8 @@ public class GridNioServer<T> {
 
         GridNioRecoveryDescriptor recoveryDesc = ses.outRecoveryDescriptor();
 
-        if (recoveryDesc != null && !recoveryDesc.messagesRequests().isEmpty()) {
-            Deque<SessionWriteRequest> futs = recoveryDesc.messagesRequests();
+        if (recoveryDesc != null && !recoveryDesc.isMessageRequestsEmpty()) {
+            Collection<SessionWriteRequest> futs = recoveryDesc.messagesRequests();
 
             if (log.isDebugEnabled())
                 log.debug("Resend messages [rmtNode=" + recoveryDesc.node().id() + ", msgCnt=" + futs.size() + ']');
@@ -2444,7 +2443,7 @@ public class GridNioServer<T> {
                             .append(", msgsAckedByRmt=").append(outDesc.acked())
                             .append(", descIdHash=").append(System.identityHashCode(outDesc));
 
-                        if (!outDesc.messagesRequests().isEmpty()) {
+                        if (!outDesc.isMessageRequestsEmpty()) {
                             int cnt = 0;
 
                             sb.append(", unackedMsgs=[");
@@ -3002,6 +3001,35 @@ public class GridNioServer<T> {
             return -1;
 
         return (int) outboundMessagesQueueSizeMetric.value();
+    }
+
+    /**
+     * Gets unacknowledged messages queue size.
+     *
+     * @return Unacknowledged messages queue size.
+     */
+    public int unacknowledgedMessagesQueueSize() {
+        // Implementation note: unacknowledged message queues in recovery descriptors are always written
+        // without synchronization; those writes don't use volatile accesses. They work because they are always
+        // made from the same thread (for the same descriptor), namely, the network I/O thread.
+        // Here, we read sizes of those queues without synchronization, too. We don't apply additional measures
+        // to guarantee non-staleness of those values as we are piggy-backing the existing volatile writes and reads
+        // along both message write path and metric read path. In worst case, we might miss information about
+        // last message write/ack, but this seems to be ok for metrics.
+
+        int total = 0;
+
+        for (GridSelectorNioSessionImpl session : sessions) {
+            GridNioRecoveryDescriptor inRecoveryDescriptor = session.inRecoveryDescriptor();
+            if (inRecoveryDescriptor != null)
+                total += inRecoveryDescriptor.messageRequestsCount();
+
+            GridNioRecoveryDescriptor outRecoveryDescriptor = session.outRecoveryDescriptor();
+            if (outRecoveryDescriptor != null && outRecoveryDescriptor != inRecoveryDescriptor)
+                total += outRecoveryDescriptor.messageRequestsCount();
+        }
+
+        return total;
     }
 
     /**
