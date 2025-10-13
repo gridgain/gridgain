@@ -101,7 +101,7 @@ public class CommunicationMessageAcknowledgeTest extends GridCommonAbstractTest 
     }
 
     /***/
-    private static void disableAcksForTestDuration(TcpCommunicationSpi communicationSpi) {
+    static void disableAcksForTestDuration(TcpCommunicationSpi communicationSpi) {
         long oneYearInMillis = TimeUnit.DAYS.toMillis(365);
 
         communicationSpi.setIdleConnectionTimeout(oneYearInMillis);

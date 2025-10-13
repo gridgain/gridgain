@@ -254,4 +254,9 @@ public class TcpCommunicationSpiMBeanImpl extends IgniteSpiMBeanAdapter implemen
     @Override public int getOutboundMessagesQueueSize() {
         return stateProvider.getOutboundMessagesQueueSize();
     }
+
+    /** {@inheritDoc} */
+    @Override public int getUnacknowledgedMessagesQueueSize() {
+        return stateProvider.getUnacknowledgedMessagesQueueSize();
+    }
 }

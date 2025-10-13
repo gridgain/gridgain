@@ -71,6 +71,11 @@ public class StandaloneNoopCommunicationSpi extends IgniteSpiAdapter implements 
     }
 
     /** {@inheritDoc} */
+    @Override public int getUnacknowledgedMessagesQueueSize() {
+        return 0;
+    }
+
+    /** {@inheritDoc} */
     @Override public void resetMetrics() {
 
     }

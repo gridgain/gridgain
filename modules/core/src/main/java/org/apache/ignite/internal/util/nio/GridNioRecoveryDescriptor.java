@@ -18,7 +18,7 @@ package org.apache.ignite.internal.util.nio;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.Collection;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -27,6 +27,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Collections.unmodifiableCollection;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_NIO_RECOVERY_DESCRIPTOR_RESERVATION_TIMEOUT;
 
 /**
@@ -44,8 +45,21 @@ public class GridNioRecoveryDescriptor {
     /** Number of acknowledged messages. */
     private long acked;
 
-    /** Unacknowledged messages. */
+    /**
+     * Unacknowledged messages.
+     * <p>
+     * {@link #msgReqsSize} MUST be updated whenever size of this queue is updated!
+     */
     private final ArrayDeque<SessionWriteRequest> msgReqs;
+
+    /**
+     * Size of {@link #msgReqs}. Used to access queue size via race. It is safer than calling msgReqs.size() via race
+     * as field read is atomic and size() is not guaranteed to be atomic. Visibility concerns are handled using
+     * external mechanisms.
+     * <p>
+     * This MUST be updated whenever {@link #msgReqs} size is updated!
+     */
+    private int msgReqsSize = 0;
 
     /** Number of messages to resend. */
     private int resendCnt;
@@ -220,6 +234,7 @@ public class GridNioRecoveryDescriptor {
         if (!req.skipRecovery()) {
             if (resendCnt == 0) {
                 msgReqs.addLast(req);
+                msgReqsSize = msgReqs.size();
 
                 sentCnt++;
 
@@ -249,6 +264,7 @@ public class GridNioRecoveryDescriptor {
 
         while (acked < rcvCnt) {
             SessionWriteRequest req = msgReqs.pollFirst();
+            msgReqsSize = msgReqs.size();
 
             assert req != null : "Missed message [rcvCnt=" + rcvCnt +
                 ", acked=" + acked +
@@ -288,6 +304,7 @@ public class GridNioRecoveryDescriptor {
                 reqs = msgReqs.toArray(new SessionWriteRequest[msgReqs.size()]);
 
                 msgReqs.clear();
+                msgReqsSize = msgReqs.size();
             }
         }
 
@@ -300,8 +317,27 @@ public class GridNioRecoveryDescriptor {
     /**
      * @return Requests for unacknowledged messages.
      */
-    public Deque<SessionWriteRequest> messagesRequests() {
-        return msgReqs;
+    public Collection<SessionWriteRequest> messagesRequests() {
+        return unmodifiableCollection(msgReqs);
+    }
+
+    /**
+     * Returns {@code true} if and only if the unacknowledged messages queue is empty.
+     *
+     * @return {@code true} if and only if the unacknowledged messages queue is empty.
+     */
+    public boolean isMessageRequestsEmpty() {
+        return msgReqs.isEmpty();
+    }
+
+    /**
+     * Returns number of messages that are not acknowledged yet. Without proper synchronization by the caller,
+     * this might return a stale value.
+     *
+     * @return Number of messages that are not acknowledged yet.
+     */
+    public int messageRequestsCount() {
+        return msgReqsSize;
     }
 
     /**
@@ -405,6 +441,7 @@ public class GridNioRecoveryDescriptor {
                 futs = msgReqs.toArray(new SessionWriteRequest[msgReqs.size()]);
 
                 msgReqs.clear();
+                msgReqsSize = msgReqs.size();
             }
         }
 

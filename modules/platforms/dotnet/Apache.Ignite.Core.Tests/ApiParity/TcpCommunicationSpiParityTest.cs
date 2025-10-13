@@ -50,6 +50,7 @@ namespace Apache.Ignite.Core.Tests.ApiParity
             "ReceivedMessagesCount",
             "ReceivedBytesCount",
             "OutboundMessagesQueueSize",
+            "UnacknowledgedMessagesQueueSize",
             "resetMetrics",
             "dumpStats",
             "boundPort",

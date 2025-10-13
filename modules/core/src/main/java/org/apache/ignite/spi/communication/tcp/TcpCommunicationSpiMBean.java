@@ -188,6 +188,14 @@ public interface TcpCommunicationSpiMBean extends IgniteSpiManagementMBean {
     public int getOutboundMessagesQueueSize();
 
     /**
+     * Gets unacknowledged messages queue size.
+     *
+     * @return Unacknowledged messages queue size.
+     */
+    @MXBeanDescription("Unacknowledged messages queue size.")
+    public int getUnacknowledgedMessagesQueueSize();
+
+    /**
      * Gets connect timeout used when establishing connection
      * with remote nodes.
      *
