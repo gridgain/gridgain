@@ -36,11 +36,6 @@ import static org.hamcrest.Matchers.is;
  */
 public class CommunicationMetricsTest extends GridCommonAbstractTest {
     /**
-     * Name of the test cache.
-     */
-    private static final String CACHE_NAME = "cache1";
-
-    /**
      * Whether acks sending is enabled in all nodes that are started.
      * This flag only influences nodes started after it is assigned.
      */
@@ -57,7 +52,7 @@ public class CommunicationMetricsTest extends GridCommonAbstractTest {
 
         CacheConfiguration<?, ?> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
-        ccfg.setName(CACHE_NAME);
+        ccfg.setName(DEFAULT_CACHE_NAME);
         ccfg.setCacheMode(PARTITIONED);
         ccfg.setBackups(1);
 
@@ -117,8 +112,8 @@ public class CommunicationMetricsTest extends GridCommonAbstractTest {
     }
 
     private static void provokeMessageSends(IgniteEx firstNode, IgniteEx secondNode) {
-        firstNode.getOrCreateCache(CACHE_NAME);
-        IgniteCache<Object, Object> cache = secondNode.cache(CACHE_NAME);
+        firstNode.getOrCreateCache(DEFAULT_CACHE_NAME);
+        IgniteCache<Object, Object> cache = secondNode.cache(DEFAULT_CACHE_NAME);
 
         cache.put("key", "value");
     }
