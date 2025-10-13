@@ -16,6 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.util.typedef.internal.U;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -24,10 +29,6 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.Paths;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Abstract file lock holder.
@@ -91,14 +92,19 @@ public abstract class FileLockHolder implements AutoCloseable {
 
         FileChannel ch = lockFile.getChannel();
 
-        String failMsg;
-
         try {
             String content = null;
 
             // Try to get lock, if not available wait 1 sec and re-try.
             for (int i = 0; i < lockWaitTimeMillis; i += 1000) {
                 try {
+                    // Under the hood calls following sys call (Java 8, Linux 6.12):
+                    // fcntl(fd_number, F_SETLK, {l_type=F_WRLCK, l_whence=SEEK_SET, l_start=0, l_len=1})
+                    //
+                    // Useful commands for monitoring locks:
+                    // lsof %filename%
+                    // lslocks | grep %filename%
+
                     lock = ch.tryLock(0, 1, false);
 
                     if (lock != null && lock.isValid()) {
@@ -116,19 +122,20 @@ public abstract class FileLockHolder implements AutoCloseable {
 
                 U.sleep(1000);
             }
-
-            if (content == null)
-                content = readContent();
-
-            failMsg = "Failed to acquire file lock [holder=" + content + ", time=" + (lockWaitTimeMillis / 1000) +
-                " sec, path=" + file.getAbsolutePath() + ']';
         }
         catch (Exception e) {
-            throw new IgniteCheckedException(e);
+            throw new IgniteCheckedException(failMsg(lockWaitTimeMillis), e);
         }
 
-        if (failMsg != null)
-            throw new IgniteCheckedException(failMsg);
+        throw new IgniteCheckedException(failMsg(lockWaitTimeMillis));
+    }
+
+    private String failMsg(long lockWaitTimeMillis) {
+        return "Failed to acquire file lock [" +
+                "holder=" + readContentSafely("N/A") + ", " +
+                "time=" + (lockWaitTimeMillis / 1000) + " sec, " +
+                "path=" + file.getAbsolutePath() +
+                ']';
     }
 
     /**
@@ -153,12 +160,12 @@ public abstract class FileLockHolder implements AutoCloseable {
     }
 
     /**
-     *
+     * Read holder info from lock file
      */
     private String readContent() throws IOException {
         FileChannel ch = lockFile.getChannel();
 
-        ByteBuffer buf = ByteBuffer.allocate((int)(ch.size() - 1));
+        ByteBuffer buf = ByteBuffer.allocate((int) (ch.size() - 1));
 
         ch.read(buf, 1);
 
@@ -167,6 +174,16 @@ public abstract class FileLockHolder implements AutoCloseable {
         buf.clear();
 
         return content;
+    }
+
+    private String readContentSafely(String fallback) {
+        try {
+            return readContent();
+        }
+        catch (IOException e) {
+            log.warning("Failed to read holder info from lock file [" + file.getAbsolutePath() + "]", e);
+            return fallback;
+        }
     }
 
     /**
