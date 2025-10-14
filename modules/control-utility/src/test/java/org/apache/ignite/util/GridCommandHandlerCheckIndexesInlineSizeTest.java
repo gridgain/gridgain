@@ -39,7 +39,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 public class GridCommandHandlerCheckIndexesInlineSizeTest extends GridCommandHandlerAbstractTest {
     /** */
     private static final String INDEX_PROBLEM_FMT =
-        "Full index name: PUBLIC#TEST_TABLE#%s nodes: [%s] inline size: 1, nodes: [%s] inline size:";
+        "Full index name: PUBLIC#TEST_TABLE#%s nodes: [%s] inline size: 1, nodes: [%s] inline size: 2";
 
     /** Nodes count. */
     private static final int NODES_CNT = 2;
@@ -141,10 +141,10 @@ public class GridCommandHandlerCheckIndexesInlineSizeTest extends GridCommandHan
      */
     public static void checkUtilityOutput(IgniteLogger log, String output, UUID localNodeId, UUID remoteNodeId) {
         assertContains(log, output, "Found 4 secondary indexes.");
-        assertContains(log, output, "4 index(es) have different effective inline size on nodes. It can lead to performance degradation in SQL queries.");
+        // S0_IDX has explicit configured inline size, so ignores limit.
+        assertContains(log, output, "3 index(es) have different effective inline size on nodes. It can lead to performance degradation in SQL queries.");
         assertContains(log, output, "Index(es):");
         assertContains(log, output, format(INDEX_PROBLEM_FMT, "L_IDX", localNodeId, remoteNodeId));
-        assertContains(log, output, format(INDEX_PROBLEM_FMT, "S0_IDX", localNodeId, remoteNodeId));
         assertContains(log, output, format(INDEX_PROBLEM_FMT, "S1_IDX", localNodeId, remoteNodeId));
         assertContains(log, output, format(INDEX_PROBLEM_FMT, "I_IDX", localNodeId, remoteNodeId));
         assertContains(log, output, "  Check that value of property IGNITE_MAX_INDEX_PAYLOAD_SIZE are the same on all nodes.");
