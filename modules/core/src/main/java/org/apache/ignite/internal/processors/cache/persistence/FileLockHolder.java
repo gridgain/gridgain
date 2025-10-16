@@ -28,6 +28,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Abstract file lock holder.
@@ -91,9 +92,9 @@ public abstract class FileLockHolder implements AutoCloseable {
 
         FileChannel ch = lockFile.getChannel();
 
-        try {
-            String content = null;
+        String content = null;
 
+        try {
             // Try to get lock, if not available wait 1 sec and re-try.
             for (int i = 0; i < lockWaitTimeMillis; i += 1000) {
                 try {
@@ -123,15 +124,15 @@ public abstract class FileLockHolder implements AutoCloseable {
             }
         }
         catch (Exception e) {
-            throw new IgniteCheckedException(failMsg(lockWaitTimeMillis), e);
+            throw new IgniteCheckedException(failMsg(resolveHolderInfo(content), lockWaitTimeMillis), e);
         }
 
-        throw new IgniteCheckedException(failMsg(lockWaitTimeMillis));
+        throw new IgniteCheckedException(failMsg(resolveHolderInfo(content), lockWaitTimeMillis));
     }
 
-    private String failMsg(long lockWaitTimeMillis) {
+    private String failMsg(String holderInfo, long lockWaitTimeMillis) {
         return String.format("Failed to acquire file lock [holder=%s, time=%d sec, path=%s]",
-            readContentSafely("N/A"),
+            holderInfo,
             lockWaitTimeMillis / 1000,
             file.getAbsolutePath()
         );
@@ -175,13 +176,16 @@ public abstract class FileLockHolder implements AutoCloseable {
         return content;
     }
 
-    private String readContentSafely(String fallback) {
+    private String resolveHolderInfo(@Nullable String cached) {
+        if (cached != null)
+            return cached;
+
         try {
             return readContent();
         }
         catch (IOException e) {
             log.warning("Failed to read holder info from lock file [" + file.getAbsolutePath() + "]", e);
-            return fallback;
+            return "N/A";
         }
     }
 
