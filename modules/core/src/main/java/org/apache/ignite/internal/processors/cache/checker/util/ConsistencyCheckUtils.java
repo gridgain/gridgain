@@ -421,8 +421,8 @@ public class ConsistencyCheckUtils {
             objToString = obj.value(ctx, false);
 
         if (objToString instanceof BinaryObjectEx)
-            return ((BinaryObjectEx)obj).toString(sensitiveDataLogging);
+            return ((BinaryObjectEx)objToString).toString(sensitiveDataLogging);
 
-        return Objects.toString(obj);
+        return Objects.toString(objToString);
     }
 }
