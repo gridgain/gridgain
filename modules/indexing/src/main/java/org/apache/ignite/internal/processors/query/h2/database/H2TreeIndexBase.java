@@ -150,11 +150,12 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
                 return computedInlineSize;
             }
 
-            if (cfgInlineSize > maxInlineSize)
+            // Explicitly configured inline size ignores user-defined limits, but can't exceed safe maximum.
+            if (cfgInlineSize > MAX_INLINE_SIZE)
                 U.warn(log, "Explicit INLINE_SIZE exceeds maximum size. Ignoring " +
-                        "[index=" + name + ", explicitInlineSize=" + cfgInlineSize + ", maxInlineSize=" + maxInlineSize + ']');
+                        "[index=" + name + ", explicitInlineSize=" + cfgInlineSize + ", maxInlineSize=" + MAX_INLINE_SIZE + ']');
 
-            return Math.min(cfgInlineSize, maxInlineSize);
+            return Math.min(cfgInlineSize, MAX_INLINE_SIZE);
         }
 
         return computedInlineSize;
