@@ -16,11 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.util.typedef.internal.U;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -29,6 +24,10 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.Paths;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Abstract file lock holder.
@@ -131,11 +130,11 @@ public abstract class FileLockHolder implements AutoCloseable {
     }
 
     private String failMsg(long lockWaitTimeMillis) {
-        return "Failed to acquire file lock [" +
-                "holder=" + readContentSafely("N/A") + ", " +
-                "time=" + (lockWaitTimeMillis / 1000) + " sec, " +
-                "path=" + file.getAbsolutePath() +
-                ']';
+        return String.format("Failed to acquire file lock [holder=%s, time=%d sec, path=%s]",
+            readContentSafely("N/A"),
+            lockWaitTimeMillis / 1000,
+            file.getAbsolutePath()
+        );
     }
 
     /**
@@ -165,7 +164,7 @@ public abstract class FileLockHolder implements AutoCloseable {
     private String readContent() throws IOException {
         FileChannel ch = lockFile.getChannel();
 
-        ByteBuffer buf = ByteBuffer.allocate((int) (ch.size() - 1));
+        ByteBuffer buf = ByteBuffer.allocate((int)(ch.size() - 1));
 
         ch.read(buf, 1);
 
