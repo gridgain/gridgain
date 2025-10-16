@@ -63,6 +63,7 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliatio
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -70,9 +71,12 @@ import static java.io.File.separatorChar;
 import static org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries.getConflictsAsString;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.createLocalResultFile;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.mapPartitionReconciliation;
+import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.objectStringView;
 import static org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder.SkippingReason.KEY_WAS_NOT_REPAIRED;
 import static org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder.SkippingReason.LOST_PARTITION;
 import static org.apache.ignite.internal.util.IgniteUtils.EMPTY_BYTES;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.getSensitiveDataLogging;
 
 /**
  * Defines a contract for collecting of inconsistent and repaired entries.
@@ -232,8 +236,10 @@ public interface ReconciliationResultCollector {
             synchronized (ReconciliationResultCollector.class) {
                 reconciliationDir = new File(U.defaultWorkDirectory() + separatorChar + ConsistencyCheckUtils.RECONCILIATION_DIR);
 
-                if (!reconciliationDir.exists())
+                if (!reconciliationDir.exists()) {
+                    // TODO returned value is ignored
                     reconciliationDir.mkdir();
+                }
             }
         }
 
@@ -250,13 +256,18 @@ public interface ReconciliationResultCollector {
 
             CacheObjectContext ctx = cachex.context().cacheObjectContext();
 
+            SensitiveDataLogging sensitiveDataLogging = includeSensitive ? PLAIN : getSensitiveDataLogging();
+
             synchronized (skippedEntries) {
                 Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>> data = new HashSet<>();
 
                 for (VersionedKey keyVersion : keys.keySet()) {
                     try {
                         byte[] bytes = keyVersion.key().valueBytes(ctx);
-                        String strVal = ConsistencyCheckUtils.objectStringView(ctx, keyVersion.key().value(ctx, false));
+                        String strVal = objectStringView(
+                            ctx,
+                            keyVersion.key().value(ctx, false),
+                            sensitiveDataLogging);
 
                         PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta> holder
                             = new PartitionReconciliationSkippedEntityHolder<>(
@@ -309,11 +320,13 @@ public interface ReconciliationResultCollector {
 
             CacheObjectContext ctx = cachex.context().cacheObjectContext();
 
+            SensitiveDataLogging sensitiveDataLogging = includeSensitive ? PLAIN : getSensitiveDataLogging();
+
             synchronized (inconsistentKeys) {
                 try {
                     inconsistentKeys.computeIfAbsent(cacheName, k -> new HashMap<>())
                         .computeIfAbsent(partId, k -> new TreeSet<>(ROW_META_COMPARATOR))
-                        .addAll(mapPartitionReconciliation(conflicts, actualKeys, ctx));
+                        .addAll(mapPartitionReconciliation(conflicts, actualKeys, ctx, sensitiveDataLogging));
                 }
                 catch (IgniteCheckedException e) {
                     log.error("Broken key can't be added to result. ", e);
@@ -381,6 +394,8 @@ public interface ReconciliationResultCollector {
 
             CacheObjectContext ctx = cachex.context().cacheObjectContext();
 
+            SensitiveDataLogging sensitiveDataLogging = includeSensitive ? PLAIN : getSensitiveDataLogging();
+
             synchronized (inconsistentKeys) {
                 try {
                     List<PartitionReconciliationDataRowMeta> res = new ArrayList<>();
@@ -396,7 +411,7 @@ public interface ReconciliationResultCollector {
                                 cacheObjOpt.isPresent() ?
                                     new PartitionReconciliationValueMeta(
                                         cacheObjOpt.get().valueBytes(ctx),
-                                        cacheObjOpt.map(o -> ConsistencyCheckUtils.objectStringView(ctx, o)).orElse(null),
+                                        cacheObjOpt.map(o -> objectStringView(ctx, o, sensitiveDataLogging)).orElse(null),
                                         uuidBasedEntry.getValue().version())
                                     :
                                     null);
@@ -414,14 +429,14 @@ public interface ReconciliationResultCollector {
                             new PartitionReconciliationDataRowMeta(
                                 new PartitionReconciliationKeyMeta(
                                     key.valueBytes(ctx),
-                                    ConsistencyCheckUtils.objectStringView(ctx, key)),
+                                    objectStringView(ctx, key, sensitiveDataLogging)),
                                 valMap,
                                 new PartitionReconciliationRepairMeta(
                                     repairMeta.fixed(),
                                     cacheObjRepairValOpt.isPresent() ?
                                         new PartitionReconciliationValueMeta(
                                             cacheObjRepairValOpt.get().valueBytes(ctx),
-                                            cacheObjRepairValOpt.map(o -> ConsistencyCheckUtils.objectStringView(ctx, o)).orElse(null),
+                                            cacheObjRepairValOpt.map(o -> objectStringView(ctx, o, sensitiveDataLogging)).orElse(null),
                                             null)
                                         :
                                         null,
@@ -703,6 +718,7 @@ public interface ReconciliationResultCollector {
             String fileName = tmpFiles.computeIfAbsent(cacheName, d -> {
                 File file = new File(reconciliationDir.getPath() + separatorChar + maskId + '-' + sesId + '-' + cacheName + ".txt");
                 try {
+                    // TODO handle a returned value
                     file.createNewFile();
                 }
                 catch (IOException e) {

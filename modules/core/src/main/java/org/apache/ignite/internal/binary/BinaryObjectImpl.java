@@ -44,7 +44,6 @@ import org.apache.ignite.internal.processors.cache.compress.EntryCompressionStra
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
@@ -1020,14 +1019,12 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     }
 
     /** {@inheritDoc} */
-    @Override public String toString() {
-        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
-
+    @Override public String toString(GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging) {
         if (sensitiveDataLogging == PLAIN) {
             if (arr == null || ctx == null)
                 return "BinaryObjectImpl [arr=" + (arr != null) + ", ctx=" + (ctx != null) + ", start=" + start + "]";
 
-            return super.toString();
+            return super.toString(sensitiveDataLogging);
         }
         else if (sensitiveDataLogging == HASH)
             return String.valueOf(IgniteUtils.hash(this));

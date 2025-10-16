@@ -364,7 +364,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         }
 
         /**
-         * Build metod.
+         * Build method.
          */
         public VisorPartitionReconciliationTaskArg build() {
             return new VisorPartitionReconciliationTaskArg(this);
@@ -412,7 +412,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         }
 
         /**
-         * @param locOutput The result will be primted to output if {@code locOutput} equals to {@code true}.
+         * @param locOutput The result will be printed to output if {@code locOutput} equals to {@code true}.
          * @return Builder for chaining.
          */
         public Builder locOutput(boolean locOutput) {

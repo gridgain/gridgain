@@ -19,6 +19,7 @@ package org.apache.ignite.internal.binary;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -47,7 +48,27 @@ public interface BinaryObjectEx extends BinaryObject {
     public boolean isFlagSet(short flag);
 
     /**
-     * @return String representation of holding object or {@code null} if inapplicable.
+     * Returns a string representation of deserialized underlying object.
+     * This method may return {@code null} if the underlying object cannot be deserialized for some reason.
+     *
+     * @return String representation of the underlying object.
      */
-    @Nullable public String getString();
+    @Nullable String deserializedRepresentation();
+
+    /**
+     * Returns a string representation of this binary object.
+     * This method is equivalent to {@code toString(GridToStringBuilder.getSensitiveDataLogging()}.
+     *
+     * @return String representation of this binary object.
+     */
+    @Override String toString();
+
+    /**
+     * Returns a string representation of this binary object based on the provided sensitive data logging flag.
+     *
+     * @param sensitiveDataLogging Sensitive data logging flag.
+     * @return String representation of this binary object.
+     * @see GridToStringBuilder.SensitiveDataLogging
+     */
+    @Nullable String toString(GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging);
 }
