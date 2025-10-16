@@ -1143,7 +1143,7 @@ public final class IgniteSystemProperties {
      */
     @SystemProperty(
         value = "Maximum auto-calcultated payload size in bytes for H2TreeIndex. 0 means that inline index store is disabled. " +
-            "Ignored if inline size is provided when index is created.", type = Integer.class,
+            "Ignored if inline size is provided when index is created", type = Integer.class,
         defaults = "" + IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT)
     public static final String IGNITE_MAX_INDEX_PAYLOAD_SIZE = "IGNITE_MAX_INDEX_PAYLOAD_SIZE";
 
