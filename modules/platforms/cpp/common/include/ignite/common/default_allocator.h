@@ -67,10 +67,13 @@ namespace ignite
                 return static_cast<PointerType>(::operator new(len * sizeof(ValueType)));
             }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdangling-pointer"
             void Deallocate(PointerType ptr, SizeType)
             {
                 ::operator delete(ptr);
             }
+#pragma GCC diagnostic pop
 
             void Construct(PointerType p, ConstReferenceType val)
             {
