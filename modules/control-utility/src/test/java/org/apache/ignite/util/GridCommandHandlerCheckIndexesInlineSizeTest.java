@@ -141,8 +141,8 @@ public class GridCommandHandlerCheckIndexesInlineSizeTest extends GridCommandHan
      */
     public static void checkUtilityOutput(IgniteLogger log, String output, UUID localNodeId, UUID remoteNodeId) {
         assertContains(log, output, "Found 4 secondary indexes.");
-        // S0_IDX has explicit configured inline size, so ignores limit.
-        assertContains(log, output, "3 index(es) have different effective inline size on nodes. It can lead to performance degradation in SQL queries.");
+        // S0_IDX has explicit configured inline size. Ignores limit in all versions except versions 8.9.24 and 8.9.25.
+        assertContains(log, output, "index(es) have different effective inline size on nodes. It can lead to performance degradation in SQL queries.");
         assertContains(log, output, "Index(es):");
         assertContains(log, output, format(INDEX_PROBLEM_FMT, "L_IDX", localNodeId, remoteNodeId));
         assertContains(log, output, format(INDEX_PROBLEM_FMT, "S1_IDX", localNodeId, remoteNodeId));
