@@ -121,13 +121,13 @@ namespace ignite
             IGNITE_IMPORT_EXPORT int32_t BitLengthU32(uint32_t i);
 
             /**
-             * Calcutale capasity for required size.
+             * Calculate capacity for the required size.
              * Rounds up to the nearest power of two.
              *
-             * @param size Needed capasity.
-             * @return Recomended capasity to allocate.
+             * @param size Needed capacity.
+             * @return Recommended capacity to allocate.
              */
-            IGNITE_IMPORT_EXPORT int32_t GetCapasityForSize(int32_t size);
+            IGNITE_IMPORT_EXPORT int32_t GetCapacityForSize(int32_t size);
 
             /**
              * Get the number of decimal digits of the integer value.

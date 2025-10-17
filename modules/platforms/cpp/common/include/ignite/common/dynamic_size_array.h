@@ -17,7 +17,6 @@
 #define _IGNITE_COMMON_DYNAMIC_SIZE_ARRAY
 
 #include <stdint.h>
-#include <cstring>
 #include <cassert>
 
 #include <utility>
@@ -50,12 +49,12 @@ namespace ignite
             /**
              * Default constructor.
              *
-             * Constructs zero-size and zero-capasity array.
+             * Constructs zero-size and zero-capacity array.
              */
             DynamicSizeArray(const AllocatorType& allocator = AllocatorType()) :
                 alloc(allocator),
                 size(0),
-                capasity(0),
+                capacity(0),
                 data(0)
             {
                 // No-op.
@@ -63,16 +62,16 @@ namespace ignite
 
             /**
              * Constructor.
-             * Constructs empty array with the specified capacity.
+             * Constructs an empty array with the specified capacity.
              *
              * @param len Array length.
-             * @param alloc Allocator.
+             * @param allocator Allocator.
              */
             DynamicSizeArray(SizeType len, const AllocatorType& allocator = AllocatorType()) :
                 alloc(allocator),
                 size(0),
-                capasity(bits::GetCapasityForSize(len)),
-                data(alloc.Allocate(capasity))
+                capacity(bits::GetCapacityForSize(len)),
+                data(alloc.Allocate(capacity))
             {
                 // No-op.
             }
@@ -87,7 +86,7 @@ namespace ignite
                 const AllocatorType& allocator = AllocatorType()) :
                 alloc(allocator),
                 size(0),
-                capasity(0),
+                capacity(0),
                 data(0)
             {
                 Assign(arr, len);
@@ -101,7 +100,7 @@ namespace ignite
             DynamicSizeArray(const DynamicSizeArray<T>& other) :
                 alloc(),
                 size(0),
-                capasity(0),
+                capacity(0),
                 data(0)
             {
                 Assign(other);
@@ -112,10 +111,7 @@ namespace ignite
              */
             ~DynamicSizeArray()
             {
-                for (PointerType it = data; it != data + size; ++it)
-                    alloc.Destruct(it);
-
-                alloc.Deallocate(data, capasity);
+                Deallocate();
             }
 
             /**
@@ -154,21 +150,34 @@ namespace ignite
              */
             void Assign(ConstPointerType src, SizeType len)
             {
-                for (PointerType it = data; it != data + size; ++it)
-                    alloc.Destruct(it);
+                assert(src);
 
-                if (capasity < len)
+                if (data == src) {
+                    assert(len <= size);
+
+                    Resize(len);
+                    return;
+                }
+
+                if (capacity < len)
                 {
-                    alloc.Deallocate(data, capasity);
+                    Deallocate();
 
-                    capasity = bits::GetCapasityForSize(len);
-                    data = alloc.Allocate(capasity);
+                    capacity = bits::GetCapacityForSize(len);
+                    data = alloc.Allocate(capacity);
+
+                    assert(data);
+                }
+
+                for (SizeType i = 0; i < len; ++i) {
+                    if (i < size) {
+                        data[i] = src[i];
+                    } else {
+                        alloc.Construct(data + i, src[i]);
+                    }
                 }
 
                 size = len;
-
-                for (SizeType i = 0; i < size; ++i)
-                    alloc.Construct(data + i, src[i]);
             }
 
             /**
@@ -179,6 +188,8 @@ namespace ignite
              */
             void Append(ConstPointerType src, SizeType len)
             {
+                assert(src);
+
                 Reserve(size + len);
 
                 for (SizeType i = 0; i < len; ++i)
@@ -188,7 +199,7 @@ namespace ignite
             }
 
             /**
-             * Swap contents of the array with another instance.
+             * Swap the content of the array with another instance.
              *
              * @param other Instance to swap with.
              */
@@ -198,7 +209,7 @@ namespace ignite
                 {
                     std::swap(alloc, other.alloc);
                     std::swap(size, other.size);
-                    std::swap(capasity, other.capasity);
+                    std::swap(capacity, other.capacity);
                     std::swap(data, other.data);
                 }
             }
@@ -234,13 +245,13 @@ namespace ignite
             }
 
             /**
-             * Get capasity.
+             * Get capacity.
              *
-             * @return Array capasity.
+             * @return Array capacity.
              */
-            SizeType GetCapasity() const
+            SizeType Getcapacity() const
             {
-                return capasity;
+                return capacity;
             }
 
             /**
@@ -294,11 +305,11 @@ namespace ignite
              * Reserves not less than specified elements number so array is not
              * going to grow on append.
              *
-             * @param newCapacity Desired capasity.
+             * @param newCapacity Desired capacity.
              */
             void Reserve(SizeType newCapacity)
             {
-                if (capasity < newCapacity)
+                if (capacity < newCapacity)
                 {
                     DynamicSizeArray<T> tmp(newCapacity);
 
@@ -309,7 +320,7 @@ namespace ignite
             }
 
             /**
-             * Resizes array. Destructs elements if the specified size is less
+             * Resizes the array. Destructs elements if the specified size is less
              * than the array's size. Default-constructs elements if the
              * specified size is more than the array's size.
              *
@@ -317,7 +328,7 @@ namespace ignite
              */
             void Resize(SizeType newSize)
             {
-                if (capasity < newSize)
+                if (capacity < newSize)
                     Reserve(newSize);
 
                 if (newSize > size)
@@ -396,14 +407,24 @@ namespace ignite
             }
 
         private:
+            /**
+             * Deallocate the internal buffer leaving the array in the valid state.
+             */
+            void Deallocate() {
+                Clear();
+
+                alloc.Deallocate(data, capacity);
+                capacity = 0;
+            }
+
             /** Allocator */
             AllocatorType alloc;
 
             /** Array size. */
             SizeType size;
 
-            /** Array capasity. */
-            SizeType capasity;
+            /** Array capacity. */
+            SizeType capacity;
 
             /** Data. */
             PointerType data;
