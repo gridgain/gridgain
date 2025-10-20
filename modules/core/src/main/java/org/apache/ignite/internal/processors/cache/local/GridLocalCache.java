@@ -95,6 +95,9 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
 
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
+        log.warning("LOCAL cache mode is deprecated. It is recommended to switch to PARTITIONED mode. [cacheName=" +
+            name() + "]");
+
         if (map == null)
             map = new GridCacheLocalConcurrentMap(ctx, entryFactory(), DFLT_START_CACHE_SIZE);
     }

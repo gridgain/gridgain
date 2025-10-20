@@ -19,6 +19,7 @@ package org.apache.ignite.testsuites;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import org.apache.ignite.cache.LocalCacheWarningsTest;
 import org.apache.ignite.internal.metric.CacheMetricsAddRemoveTest;
 import org.apache.ignite.internal.metric.IoStatisticsCachePersistenceSelfTest;
 import org.apache.ignite.internal.metric.IoStatisticsCacheSelfTest;
@@ -127,6 +128,8 @@ public class IgniteCacheTestSuite13 {
         GridTestUtils.addTestIfNeeded(suite, CacheClearAsyncDeadlockTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, TransactionCommitTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, LocalCacheWarningsTest.class, ignoredTests);
 
         return suite;
     }
