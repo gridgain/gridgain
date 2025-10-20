@@ -34,7 +34,12 @@ public enum CacheMode {
      * querying, etc... This mode is very useful when caching read-only data
      * or data that automatically expires at a certain interval and
      * then automatically reloaded from persistence store.
+     *
+     * @deprecated Local caches confuse users. The users mostly need either replicated caches or simple hash maps.
+     * Local caches don't provide usefulness expected by the users (like SQL join support). Also, behavior of local
+     * caches can be trivially implemented by the users themselves. Hence the deprecation.
      */
+    @Deprecated
     LOCAL,
 
     /**
