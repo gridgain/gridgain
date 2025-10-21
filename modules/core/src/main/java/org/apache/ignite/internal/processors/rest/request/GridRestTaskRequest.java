@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.rest.request;
 
 import java.util.List;
+import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -106,6 +107,11 @@ public class GridRestTaskRequest extends GridRestRequest {
      */
     public void timeout(long timeout) {
         this.timeout = timeout;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean canBeProcessedBeforeNodeStart() {
+        return command() == GridRestCommand.NOOP;
     }
 
     /** {@inheritDoc} */

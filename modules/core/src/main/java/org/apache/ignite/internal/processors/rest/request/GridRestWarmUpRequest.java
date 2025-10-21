@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,20 @@
 
 package org.apache.ignite.internal.processors.rest.request;
 
+import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Grid warm-up request.
  */
-public class GridRestWarmUpRequest extends GridRestNodeStateBeforeStartRequest {
+public class GridRestWarmUpRequest extends GridRestRequest {
+    /**
+     * Constructor.
+     */
+    public GridRestWarmUpRequest() {
+        command(GridRestCommand.WARM_UP);
+    }
+
     /** Stop warm-up. */
     private boolean stopWarmUp;
 
@@ -44,6 +52,11 @@ public class GridRestWarmUpRequest extends GridRestNodeStateBeforeStartRequest {
         this.stopWarmUp = stopWarmUp;
 
         return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean canBeProcessedBeforeNodeStart() {
+        return true;
     }
 
     /** {@inheritDoc} */
