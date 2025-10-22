@@ -48,7 +48,7 @@ public class JettyRestBeforeNodeStartTest extends GridCommonAbstractTest {
 
         cfg.setConnectorConfiguration(new ConnectorConfiguration().setHost("localhost"));
 
-        IgniteInternalFuture<IgniteEx> fut = runAsync(() -> startGrid(cfg));
+        IgniteInternalFuture<IgniteEx> startFut = runAsync(() -> startGrid(cfg));
 
         BlockedWarmUpStrategy blockedWarmUpStgy = (BlockedWarmUpStrategy)provider.strats.get(1);
 
@@ -62,7 +62,7 @@ public class JettyRestBeforeNodeStartTest extends GridCommonAbstractTest {
         finally {
             blockedWarmUpStgy.stopLatch.countDown();
 
-            fut.get(60_000);
+            startFut.get(60_000);
         }
     }
 }
