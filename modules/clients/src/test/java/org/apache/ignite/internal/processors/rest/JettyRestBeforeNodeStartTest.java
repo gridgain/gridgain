@@ -1,6 +1,8 @@
 package org.apache.ignite.internal.processors.rest;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -12,6 +14,8 @@ import org.apache.ignite.internal.processors.cache.warmup.BlockedWarmUpConfigura
 import org.apache.ignite.internal.processors.cache.warmup.BlockedWarmUpStrategy;
 import org.apache.ignite.internal.processors.cache.warmup.WarmUpTestPluginProvider;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.plugin.AbstractTestPluginProvider;
+import org.apache.ignite.plugin.PluginContext;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -35,7 +39,7 @@ public class JettyRestBeforeNodeStartTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testBasicCommands() throws Exception {
+    public void testBasicDuringWarmup() throws Exception {
         WarmUpTestPluginProvider provider = new WarmUpTestPluginProvider();
 
         String consistentId = getTestIgniteInstanceName(0);
@@ -61,6 +65,53 @@ public class JettyRestBeforeNodeStartTest extends GridCommonAbstractTest {
         }
         finally {
             blockedWarmUpStgy.stopLatch.countDown();
+
+            startFut.get(60_000);
+        }
+    }
+
+
+    /**
+     * Tests that {@link GridRestCommand#NAME}, {@link GridRestCommand#VERSION} and {@link GridRestCommand#NODE_STATE_BEFORE_START}
+     * return valid responses even if the node is not fully started yet.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testBasicDuringPluginStart() throws Exception {
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch stopLatch = new CountDownLatch(1);
+
+        AbstractTestPluginProvider provider = new AbstractTestPluginProvider() {
+            @Override public String name() {
+                return "BlockNodeStartPluginProvider";
+            }
+
+            @Override public void start(PluginContext ctx) throws IgniteCheckedException {
+                super.start(ctx);
+
+                startLatch.countDown();
+
+                U.await(stopLatch, 30, TimeUnit.SECONDS);
+            }
+        };
+
+        String consistentId = getTestIgniteInstanceName(0);
+
+        IgniteConfiguration cfg = getConfiguration(consistentId).setPluginProviders(provider);
+        cfg.setConnectorConfiguration(new ConnectorConfiguration().setHost("localhost"));
+
+        IgniteInternalFuture<IgniteEx> startFut = runAsync(() -> startGrid(cfg));
+
+        try {
+            U.await(startLatch, 60, TimeUnit.SECONDS);
+
+            assertContains(log, restClient.content(null, GridRestCommand.NAME), consistentId);
+            assertContains(log, restClient.content(null, GridRestCommand.VERSION), IgniteVersionUtils.VER_STR);
+            assertContains(log, restClient.content(null, GridRestCommand.NODE_STATE_BEFORE_START), "\"successStatus\":0");
+        }
+        finally {
+            stopLatch.countDown();
 
             startFut.get(60_000);
         }
