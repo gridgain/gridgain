@@ -32,6 +32,9 @@ public class GridQueryCancelRequest implements Message {
     /** */
     private long qryReqId;
 
+    /** Query finalization query flag. */
+    private boolean releaseResources;
+
     /**
      * Default constructor.
      */
@@ -47,10 +50,24 @@ public class GridQueryCancelRequest implements Message {
     }
 
     /**
+     * @param qryReqId Query request ID.
+     * @param releaseResources Query finalization flag.
+     */
+    public GridQueryCancelRequest(long qryReqId, boolean releaseResources) {
+        this.qryReqId = qryReqId;
+        this.releaseResources = releaseResources;
+    }
+
+    /**
      * @return Query request ID.
      */
     public long queryRequestId() {
         return qryReqId;
+    }
+
+    /** @return {@code true} if release resources related request. */
+    public boolean releaseResources() {
+        return releaseResources;
     }
 
     /** {@inheritDoc} */
@@ -80,6 +97,11 @@ public class GridQueryCancelRequest implements Message {
                     return false;
 
                 writer.incrementState();
+            case 1:
+                if (!writer.writeBoolean("releaseResources", releaseResources))
+                    return false;
+
+                writer.incrementState();
 
         }
 
@@ -101,6 +123,13 @@ public class GridQueryCancelRequest implements Message {
                     return false;
 
                 reader.incrementState();
+            case 1:
+                releaseResources = reader.readBoolean("releaseResources");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
 
         }
 
@@ -114,6 +143,6 @@ public class GridQueryCancelRequest implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 1;
+        return 2;
     }
 }

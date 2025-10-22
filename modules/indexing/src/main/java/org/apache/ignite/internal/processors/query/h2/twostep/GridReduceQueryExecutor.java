@@ -1081,7 +1081,7 @@ public class GridReduceQueryExecutor {
             for (Reducer idx : r.reducers()) {
                 if (!idx.fetchedAll()) {
                     if (!distributedJoins) // cancel request has been already sent for distributed join.
-                        send(nodes, new GridQueryCancelRequest(qryReqId), null, true);
+                        send(nodes, new GridQueryCancelRequest(qryReqId, true), null, true);
 
                     r.setStateOnException(ctx.localNodeId(),
                         new CacheException("Query is canceled.", new QueryCancelledException()));
