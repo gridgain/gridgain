@@ -97,6 +97,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SECURITY_TOKE
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SESSION_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_START_ON_CLIENT;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.AUTHENTICATE;
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.NODE_STATE_BEFORE_START;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.PROBE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.VERSION;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_AUTH_FAILED;
@@ -114,7 +115,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
         "org.apache.ignite.internal.processors.rest.protocols.http.jetty.GridJettyRestProtocol";
 
     /** Commands, that are not required to be authenticated. */
-    private static final Set<GridRestCommand> SKIP_AUTHENTICATION_COMMANDS = EnumSet.of(VERSION, PROBE);
+    private static final Set<GridRestCommand> SKIP_AUTHENTICATION_COMMANDS = EnumSet.of(VERSION, PROBE, NODE_STATE_BEFORE_START);
 
     /** Delay between sessions timeout checks. */
     private static final int SES_TIMEOUT_CHECK_DELAY = 1_000;
@@ -978,6 +979,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             case REMOVE_USER:
             case UPDATE_USER:
             case PROBE:
+            case WARM_UP:
                 break;
 
             default:
