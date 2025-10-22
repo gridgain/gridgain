@@ -32,6 +32,24 @@ public class JettyRestBeforeNodeStartTest extends GridCommonAbstractTest {
     /** Rest client. */
     private final TestRestClient restClient = new TestRestClient(() -> null);
 
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        stopAllGrids();
+
+        cleanPersistenceDir();
+
+        super.beforeTest();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
     /**
      * Tests that {@link GridRestCommand#NAME}, {@link GridRestCommand#VERSION} and {@link GridRestCommand#NODE_STATE_BEFORE_START}
      * return valid responses even if the node is not fully started yet.
