@@ -70,7 +70,6 @@ public class JettyRestBeforeNodeStartTest extends GridCommonAbstractTest {
         }
     }
 
-
     /**
      * Tests that {@link GridRestCommand#NAME}, {@link GridRestCommand#VERSION} and {@link GridRestCommand#NODE_STATE_BEFORE_START}
      * return valid responses even if the node is not fully started yet.
