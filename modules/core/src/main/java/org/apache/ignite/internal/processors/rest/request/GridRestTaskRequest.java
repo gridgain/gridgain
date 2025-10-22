@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.rest.request;
 
 import java.util.List;
-import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -111,7 +110,7 @@ public class GridRestTaskRequest extends GridRestRequest {
 
     /** {@inheritDoc} */
     @Override public boolean canBeProcessedBeforeNodeStart() {
-        return command() == GridRestCommand.NOOP;
+        return false;
     }
 
     /** {@inheritDoc} */
