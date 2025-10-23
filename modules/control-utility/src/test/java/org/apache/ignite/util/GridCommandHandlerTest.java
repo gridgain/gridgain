@@ -3270,20 +3270,20 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Check that command will not be executed because node has already started.
+     * Check that command will be successfully executed if node has already started.
      * <p/>
      * Steps:
      * 1)Starting node;
      * 2)Attempt to stop warm-up;
-     * 3)Waiting for an error because node has already started.
+     * 3)Waiting for the OK status.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testFailStopWarmUp() throws Exception {
+    public void testStopCompletedWarmUp() throws Exception {
         startGrid(0);
 
-        assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--warm-up", "--stop", "--yes"));
+        assertEquals(EXIT_CODE_OK, execute("--warm-up", "--stop", "--yes"));
     }
 
     /**

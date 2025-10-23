@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.NODE_STATE_BEFORE_START;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.PROBE;
 
 /**
@@ -41,7 +42,7 @@ public class GridProbeCommandHandler extends GridRestCommandHandlerAdapter {
     }
 
     /** Supported commands. */
-    private static final Collection<GridRestCommand> SUPPORTED_COMMANDS = U.sealList(PROBE);
+    private static final Collection<GridRestCommand> SUPPORTED_COMMANDS = U.sealList(PROBE, NODE_STATE_BEFORE_START);
 
     /** {@inheritDoc} */
     @Override public Collection<GridRestCommand> supportedCommands() {
@@ -60,7 +61,13 @@ public class GridProbeCommandHandler extends GridRestCommandHandlerAdapter {
                     log.debug("probe command handler invoked.");
 
                 return new GridFinishedFuture<>(IgnitionEx.hasKernalStarted(ctx.igniteInstanceName()) ? new GridRestResponse("grid has started") : new GridRestResponse(GridRestResponse.SERVICE_UNAVAILABLE, "grid has not started"));
+            }
 
+            case NODE_STATE_BEFORE_START: {
+                if (log.isDebugEnabled())
+                    log.debug(NODE_STATE_BEFORE_START.key() + " command handler invoked.");
+
+                return new GridFinishedFuture<>(new GridRestResponse());
             }
         }
 

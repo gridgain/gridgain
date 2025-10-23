@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,6 @@ import org.apache.ignite.internal.processors.authentication.AuthorizationContext
 import org.apache.ignite.internal.processors.rest.client.message.GridClientTaskResultBean;
 import org.apache.ignite.internal.processors.rest.handlers.GridRestCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.auth.AuthenticationCommandHandler;
-import org.apache.ignite.internal.processors.rest.handlers.beforeStart.NodeStateBeforeStartCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.cache.GridCacheCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridBaselineCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridChangeClusterStateCommandHandler;
@@ -64,10 +63,9 @@ import org.apache.ignite.internal.processors.rest.handlers.task.GridTaskCommandH
 import org.apache.ignite.internal.processors.rest.handlers.top.GridTopologyCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.user.UserActionCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.version.GridVersionCommandHandler;
+import org.apache.ignite.internal.processors.rest.handlers.warmup.NodeWarmupCommandHandler;
 import org.apache.ignite.internal.processors.rest.protocols.tcp.GridTcpRestProtocol;
-import org.apache.ignite.internal.processors.rest.request.GridRestAuthenticationRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestCacheRequest;
-import org.apache.ignite.internal.processors.rest.request.GridRestNodeStateBeforeStartRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTaskRequest;
 import org.apache.ignite.internal.processors.rest.request.RestQueryRequest;
@@ -99,6 +97,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SECURITY_TOKE
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SESSION_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_START_ON_CLIENT;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.AUTHENTICATE;
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.NODE_STATE_BEFORE_START;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.PROBE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.VERSION;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_AUTH_FAILED;
@@ -116,7 +115,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
         "org.apache.ignite.internal.processors.rest.protocols.http.jetty.GridJettyRestProtocol";
 
     /** Commands, that are not required to be authenticated. */
-    private static final Set<GridRestCommand> SKIP_AUTHENTICATION_COMMANDS = EnumSet.of(VERSION, PROBE);
+    private static final Set<GridRestCommand> SKIP_AUTHENTICATION_COMMANDS = EnumSet.of(VERSION, PROBE, NODE_STATE_BEFORE_START);
 
     /** Delay between sessions timeout checks. */
     private static final int SES_TIMEOUT_CHECK_DELAY = 1_000;
@@ -241,11 +240,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
      * @return Future.
      */
     private IgniteInternalFuture<GridRestResponse> handleRequest(final GridRestRequest req) {
-        if (req instanceof GridRestNodeStateBeforeStartRequest) {
-            if (startLatch.getCount() == 0)
-                return new GridFinishedFuture<>(new IgniteCheckedException("Node has already started."));
-        }
-        else if (!(req instanceof GridRestAuthenticationRequest) && startLatch.getCount() > 0) {
+        if (!req.canBeProcessedBeforeNodeStart() && startLatch.getCount() > 0) {
             try {
                 startLatch.await();
             }
@@ -584,7 +579,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             addHandler(new UserActionCommandHandler(ctx));
             addHandler(new GridBaselineCommandHandler(ctx));
             addHandler(new MemoryMetricsCommandHandler(ctx));
-            addHandler(new NodeStateBeforeStartCommandHandler(ctx));
+            addHandler(new NodeWarmupCommandHandler(ctx));
             addHandler(new GridProbeCommandHandler(ctx));
 
             // Start protocols.
@@ -984,6 +979,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             case REMOVE_USER:
             case UPDATE_USER:
             case PROBE:
+            case WARM_UP:
                 break;
 
             default:

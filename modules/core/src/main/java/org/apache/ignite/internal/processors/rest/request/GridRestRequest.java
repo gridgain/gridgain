@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -198,6 +198,23 @@ public class GridRestRequest {
      */
     public void userAttributes(Map<String, String> userAttrs) {
         this.userAttrs = userAttrs;
+    }
+
+    /**
+     * Indicates whether this request can be processed before node start.
+     *
+     * @return {@code True} if request can be processed before node start.
+     */
+    public boolean canBeProcessedBeforeNodeStart() {
+        switch (command()) {
+            case VERSION:
+            case NAME:
+            case PROBE:
+                return true;
+
+            default:
+                return false;
+        }
     }
 
     /** {@inheritDoc} */

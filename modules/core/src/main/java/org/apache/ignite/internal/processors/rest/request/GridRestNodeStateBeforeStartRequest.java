@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,25 @@
 
 package org.apache.ignite.internal.processors.rest.request;
 
+import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Request to manage and obtain information about node before its start.
  */
 public class GridRestNodeStateBeforeStartRequest extends GridRestRequest {
+    /**
+     * Constructor.
+     */
+    public GridRestNodeStateBeforeStartRequest() {
+        command(GridRestCommand.NODE_STATE_BEFORE_START);
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean canBeProcessedBeforeNodeStart() {
+        return true;
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridRestNodeStateBeforeStartRequest.class, this, super.toString());
