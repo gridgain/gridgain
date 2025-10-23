@@ -66,7 +66,7 @@ public class GridQueryCancelRequest implements Message {
     }
 
     /** @return {@code true} if release resources related request. */
-    public boolean releaseResources() {
+    public boolean queryFinished() {
         return releaseResources;
     }
 
