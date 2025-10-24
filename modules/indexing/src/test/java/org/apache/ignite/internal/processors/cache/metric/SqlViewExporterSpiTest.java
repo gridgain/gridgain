@@ -1093,7 +1093,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
                 execute(ignite0, "SELECT TYPE_NAME, FIELDS_COUNT, FIELDS, IS_ENUM FROM SYS.BINARY_METADATA");
 
         assertNotNull(view);
-        assertEquals(3, view.size());
+        assertEquals(6, view.size());
 
         for (List<?> meta : view) {
             if (Objects.equals(TestObjectEnum.class.getName(), meta.get(0))) {
@@ -1111,7 +1111,8 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
                 for (Field field : fields)
                     assertTrue(meta.get(2).toString().contains(field.getName()));
             }
-            else {
+            // TODO filter system types
+            else if (((String)meta.get(0)).contains("SQL_PUBLIC_T1")) {
                 assertFalse((Boolean)meta.get(3));
 
                 assertEquals(2, meta.get(1));

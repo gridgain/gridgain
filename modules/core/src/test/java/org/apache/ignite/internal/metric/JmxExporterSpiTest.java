@@ -1087,17 +1087,22 @@ public class JmxExporterSpiTest extends AbstractExporterSpiTest {
         TabularDataSupport view = systemView(BINARY_METADATA_VIEW);
 
         assertNotNull(view);
-        assertEquals(2, view.size());
+        assertEquals(5, view.size());
 
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 5; i++) {
             CompositeData meta = view.get(new Object[] {i});
 
-            if (Objects.equals(TestObjectEnum.class.getName(), meta.get("typeName"))) {
+            Object typeName = meta.get("typeName");
+
+            // TODO system attr
+            //boolean system = (boolean) meta.get("system");
+
+            if (Objects.equals(TestObjectEnum.class.getName(), typeName)) {
                 assertTrue((Boolean)meta.get("isEnum"));
 
                 assertEquals(0, meta.get("fieldsCount"));
             }
-            else {
+            else if (Objects.equals(TestObjectAllTypes.class.getName(), typeName)) {
                 assertFalse((Boolean)meta.get("isEnum"));
 
                 Field[] fields = TestObjectAllTypes.class.getDeclaredFields();

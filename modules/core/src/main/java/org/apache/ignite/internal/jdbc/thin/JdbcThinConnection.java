@@ -2370,6 +2370,11 @@ public class JdbcThinConnection implements Connection {
         /** {@inheritDoc} */
         @Override public void addMeta(int typeId, BinaryType meta, boolean failIfUnregistered)
             throws BinaryObjectException {
+
+            // TODO
+            if (meta.system())
+                return;
+
             try {
                 doRequest(new JdbcBinaryTypePutRequest(((BinaryTypeImpl)meta).metadata()));
             }
