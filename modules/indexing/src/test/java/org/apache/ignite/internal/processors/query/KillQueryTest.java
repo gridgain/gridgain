@@ -675,6 +675,19 @@ public class KillQueryTest extends GridCommonAbstractTest {
         assertTrue(processorErrLsnr.check());
         assertTrue(mapperErrLsnr.check());
         assertTrue(reducerErrLsnr.check());
+
+        processorErrLsnr.reset();
+        mapperErrLsnr.reset();
+        reducerErrLsnr.reset();
+
+        FieldsQueryCursor<List<?>> res = ignite.context().query()
+                .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer LIMIT 1"), false);
+        res.getAll();
+
+        // Cancellation is not logged for ordinary query.
+        assertFalse(processorErrLsnr.check());
+        assertFalse(mapperErrLsnr.check());
+        assertFalse(reducerErrLsnr.check());
     }
 
     /**

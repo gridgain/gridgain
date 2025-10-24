@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2024 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,11 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Grid authentication request.
  */
 public class GridRestAuthenticationRequest extends GridRestTaskRequest {
+    /** {@inheritDoc} */
+    @Override public boolean canBeProcessedBeforeNodeStart() {
+        return true;
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridRestAuthenticationRequest.class, this, super.toString());

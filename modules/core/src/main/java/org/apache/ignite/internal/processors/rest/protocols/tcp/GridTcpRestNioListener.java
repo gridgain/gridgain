@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2025 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,10 +90,8 @@ import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CLUSTER_STATE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.EXE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.NODE;
-import static org.apache.ignite.internal.processors.rest.GridRestCommand.NODE_STATE_BEFORE_START;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.NOOP;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.TOPOLOGY;
-import static org.apache.ignite.internal.processors.rest.GridRestCommand.WARM_UP;
 import static org.apache.ignite.internal.processors.rest.client.message.GridClientCacheRequest.GridCacheOperation.APPEND;
 import static org.apache.ignite.internal.processors.rest.client.message.GridClientCacheRequest.GridCacheOperation.CAS;
 import static org.apache.ignite.internal.processors.rest.client.message.GridClientCacheRequest.GridCacheOperation.GET;
@@ -534,22 +532,13 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
         }
         else if (msg instanceof GridClientClusterNameRequest)
             restReq = new GridRestClusterNameRequest();
-        else if (msg instanceof GridClientNodeStateBeforeStartRequest) {
-            GridClientNodeStateBeforeStartRequest reqClient = (GridClientNodeStateBeforeStartRequest)msg;
+        else if (msg instanceof GridClientWarmUpRequest) {
+            GridClientWarmUpRequest warmUpReqClient = (GridClientWarmUpRequest)msg;
 
-            if (reqClient instanceof GridClientWarmUpRequest) {
-                GridClientWarmUpRequest warmUpReqClient = (GridClientWarmUpRequest)reqClient;
-
-                restReq = new GridRestWarmUpRequest().stopWarmUp(warmUpReqClient.stopWarmUp());
-
-                restReq.command(WARM_UP);
-            }
-            else {
-                restReq = new GridRestNodeStateBeforeStartRequest();
-
-                restReq.command(NODE_STATE_BEFORE_START);
-            }
+            restReq = new GridRestWarmUpRequest().stopWarmUp(warmUpReqClient.stopWarmUp());
         }
+        else if (msg instanceof GridClientNodeStateBeforeStartRequest)
+            restReq = new GridRestNodeStateBeforeStartRequest();
 
         if (restReq != null) {
             restReq.destinationId(msg.destinationId());

@@ -165,7 +165,7 @@ public class GridMapQueryExecutor {
      */
     public void onCancel(ClusterNode node, GridQueryCancelRequest msg) {
         try (TraceSurroundings ignored = MTC.support(ctx.tracing().create(SQL_QRY_CANCEL_REQ, MTC.span()))) {
-            if (log.isInfoEnabled())
+            if (log.isInfoEnabled() && !msg.queryFinished())
                 log.info("Start to process query cancel on MAP phase: [localNodeId=" + ctx.localNodeId()
                         + ", qryId=" + msg.queryRequestId() + ']');
 
