@@ -361,6 +361,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             repair = false;
             locOutput = true;
             includeSensitive = true;
+            sensitiveMode = SensitiveMode.defaultValue();
             fastCheck = false;
             parallelism = 4;
             batchSize = 100;
