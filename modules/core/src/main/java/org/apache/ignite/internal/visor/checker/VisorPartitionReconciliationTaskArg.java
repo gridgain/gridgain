@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
+import org.apache.ignite.internal.processors.cache.verify.SensitiveMode;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
@@ -74,6 +75,9 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     /** Recheck delay seconds. */
     private int recheckDelay;
 
+    /** Sensitive mode. */
+    SensitiveMode sensitiveMode;
+
     /**
      * Default constructor.
      */
@@ -96,6 +100,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      * @param recheckAttempts Amount of potentially inconsistent keys recheck attempts.
      * @param repairAlg Partition reconciliation repair algorithm to be used.
      * @param recheckDelay Recheck delay in seconds.
+     * @param sensitiveMode The mode that is used to provide sensitive information.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public VisorPartitionReconciliationTaskArg(
@@ -108,7 +113,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         int batchSize,
         int recheckAttempts,
         RepairAlgorithm repairAlg,
-        int recheckDelay
+        int recheckDelay,
+        SensitiveMode sensitiveMode
     ) {
         this.caches = caches;
         this.fastCheck = fastCheck;
@@ -120,6 +126,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         this.recheckAttempts = recheckAttempts;
         this.repairAlg = repairAlg;
         this.recheckDelay = recheckDelay;
+        this.sensitiveMode = sensitiveMode;
     }
 
     /**
@@ -137,7 +144,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
              b.batchSize,
              b.recheckAttempts,
              b.repairAlg,
-             b.recheckDelay);
+             b.recheckDelay,
+             b.sensitiveMode);
 
         if (b.partsToRepair != null) {
             partsToRepair = b.partsToRepair
@@ -149,7 +157,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V2;
+        return V3;
     }
 
     /** {@inheritDoc} */
@@ -176,6 +184,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         out.writeBoolean(fastCheck);
 
         U.writeIntKeyMap(out, partsToRepair);
+
+        U.writeEnum(out, sensitiveMode);
     }
 
     /** {@inheritDoc} */
@@ -203,6 +213,10 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             fastCheck = in.readBoolean();
 
             partsToRepair = U.readIntKeyMap(in);
+        }
+
+        if (protoVer >= V3) {
+            sensitiveMode = SensitiveMode.fromOrdinal(in.readByte());
         }
     }
 
@@ -285,6 +299,14 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     }
 
     /**
+     * @return Sensitive mode.
+     * @see SensitiveMode
+     */
+    public SensitiveMode sensitiveMode() {
+        return sensitiveMode;
+    }
+
+    /**
      * Builder class for test purposes.
      */
     public static class Builder {
@@ -328,6 +350,9 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         /** Recheck delay seconds. */
         private int recheckDelay;
 
+        /** Sensitive mode. */
+        private SensitiveMode sensitiveMode;
+
         /**
          * Default constructor.
          */
@@ -361,6 +386,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             recheckAttempts = cpFrom.recheckAttempts;
             recheckDelay = cpFrom.recheckDelay;
             repairAlg = cpFrom.repairAlg;
+            sensitiveMode = cpFrom.sensitiveMode;
         }
 
         /**
@@ -477,6 +503,16 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
          */
         public Builder recheckDelay(int recheckDelay) {
             this.recheckDelay = recheckDelay;
+
+            return this;
+        }
+
+        /**
+         * @param mode Sensitive mode.
+         * @return Builder for chaining.
+         */
+        public Builder sensitiveMode(SensitiveMode mode) {
+            this.sensitiveMode = mode;
 
             return this;
         }

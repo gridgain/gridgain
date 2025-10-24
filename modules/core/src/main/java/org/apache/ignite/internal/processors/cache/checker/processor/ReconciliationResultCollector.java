@@ -62,8 +62,9 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliatio
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
+import org.apache.ignite.internal.processors.cache.verify.SensitiveMode;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -75,8 +76,6 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
 import static org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder.SkippingReason.KEY_WAS_NOT_REPAIRED;
 import static org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder.SkippingReason.LOST_PARTITION;
 import static org.apache.ignite.internal.util.IgniteUtils.EMPTY_BYTES;
-import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
-import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.getSensitiveDataLogging;
 
 /**
  * Defines a contract for collecting of inconsistent and repaired entries.
@@ -196,6 +195,9 @@ public interface ReconciliationResultCollector {
         /** Indicates that sensitive information should be stored. */
         protected final boolean includeSensitive;
 
+        /** Sensitive mode. */
+        protected final GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging;
+
         /** Root folder. */
         protected final File reconciliationDir;
 
@@ -222,16 +224,33 @@ public interface ReconciliationResultCollector {
          * @param ignite Ignite instance.
          * @param log Ignite logger.
          * @param includeSensitive {@code true} if sensitive information should be preserved.
+         * @param sensitiveMode Sensitive mode.
          * @throws IgniteCheckedException If reconciliation parent directory cannot be created/resolved.
          */
         public Simple(
             IgniteEx ignite,
             IgniteLogger log,
-            boolean includeSensitive
+            boolean includeSensitive,
+            SensitiveMode sensitiveMode
         ) throws IgniteCheckedException {
             this.ignite = ignite;
             this.log = log;
             this.includeSensitive = includeSensitive;
+
+            if (includeSensitive) {
+                switch (sensitiveMode) {
+                    case HASH:
+                        sensitiveDataLogging = GridToStringBuilder.SensitiveDataLogging.HASH;
+                        break;
+                    case PLAIN:
+                        sensitiveDataLogging = GridToStringBuilder.SensitiveDataLogging.PLAIN;
+                        break;
+                    default:
+                        sensitiveDataLogging = GridToStringBuilder.getSensitiveDataLogging();
+                }
+            }
+            else
+                sensitiveDataLogging = GridToStringBuilder.SensitiveDataLogging.NONE;
 
             synchronized (ReconciliationResultCollector.class) {
                 reconciliationDir = new File(U.defaultWorkDirectory() + separatorChar + ConsistencyCheckUtils.RECONCILIATION_DIR);
@@ -255,8 +274,6 @@ public interface ReconciliationResultCollector {
                 throw new IgniteException("Cache not found (was stopped) [name=" + cacheName + ']');
 
             CacheObjectContext ctx = cachex.context().cacheObjectContext();
-
-            SensitiveDataLogging sensitiveDataLogging = includeSensitive ? PLAIN : getSensitiveDataLogging();
 
             synchronized (skippedEntries) {
                 Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>> data = new HashSet<>();
@@ -319,8 +336,6 @@ public interface ReconciliationResultCollector {
                 throw new IgniteException("Cache not found (was stopped) [name=" + cacheName + ']');
 
             CacheObjectContext ctx = cachex.context().cacheObjectContext();
-
-            SensitiveDataLogging sensitiveDataLogging = includeSensitive ? PLAIN : getSensitiveDataLogging();
 
             synchronized (inconsistentKeys) {
                 try {
@@ -393,8 +408,6 @@ public interface ReconciliationResultCollector {
                 throw new IgniteException("Cache not found (was stopped) [name=" + cacheName + ']');
 
             CacheObjectContext ctx = cachex.context().cacheObjectContext();
-
-            SensitiveDataLogging sensitiveDataLogging = includeSensitive ? PLAIN : getSensitiveDataLogging();
 
             synchronized (inconsistentKeys) {
                 try {
@@ -553,15 +566,17 @@ public interface ReconciliationResultCollector {
          * @param ignite Ignite instance.
          * @param log Ignite logger.
          * @param includeSensitive {@code true} if sensitive information should be preserved.
+         * @param sensitiveMode Sensitive mode.
          * @throws IgniteCheckedException If reconciliation parent directory cannot be created/resolved.
          */
         Compact(
             IgniteEx ignite,
             IgniteLogger log,
             long sesId,
-            boolean includeSensitive
+            boolean includeSensitive,
+            SensitiveMode sensitiveMode
         ) throws IgniteCheckedException {
-            super(ignite, log, includeSensitive);
+            super(ignite, log, includeSensitive, sensitiveMode);
 
             this.sesId = sesId;
         }

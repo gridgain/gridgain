@@ -43,6 +43,7 @@ import org.apache.ignite.internal.commandline.cache.argument.PartitionReconcilia
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
+import org.apache.ignite.internal.processors.cache.verify.SensitiveMode;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTask;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
@@ -62,6 +63,7 @@ import static org.apache.ignite.internal.commandline.cache.argument.PartitionRec
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_ATTEMPTS;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_DELAY;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.REPAIR;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.SENSITIVE_MODE;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_SKIP_MISSING_PRIMARY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST_TRUST_MISSING_PRIMARY;
 
@@ -126,6 +128,10 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             "Print data to result with sensitive information: keys and values." +
                 " Default value is " + INCLUDE_SENSITIVE.defaultValue() + '.');
 
+        paramsDesc.put(SENSITIVE_MODE.toString(),
+            "This parameter determines the output mode of sensitive information." +
+                " Default value is " + SENSITIVE_MODE.defaultValue().toString().toLowerCase() + '.');
+
         // RECHECK_DELAY arg intentionally skipped.
 
         usageCache(
@@ -139,6 +145,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             optional(BATCH_SIZE),
             optional(RECHECK_ATTEMPTS),
             optional(INCLUDE_SENSITIVE),
+            optional(SENSITIVE_MODE),
             optional(caches));
     }
 
@@ -188,7 +195,8 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             args.batchSize,
             args.recheckAttempts,
             args.repairAlg,
-            args.recheckDelay
+            args.recheckDelay,
+            args.sensitiveMode
         );
 
         List<GridClientNode> srvNodes = client.compute().nodes().stream()
@@ -250,6 +258,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
         boolean repair = false;
         boolean fastCheck = (boolean)FAST_CHECK.defaultValue();
         boolean includeSensitive = (boolean)INCLUDE_SENSITIVE.defaultValue();
+        SensitiveMode sensitiveMode = (SensitiveMode)SENSITIVE_MODE.defaultValue();
         boolean locOutput = (boolean)LOCAL_OUTPUT.defaultValue();
         int parallelism = (int)PARALLELISM.defaultValue();
         int batchSize = (int)BATCH_SIZE.defaultValue();
@@ -303,6 +312,26 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
 
                     case INCLUDE_SENSITIVE:
                         includeSensitive = true;
+
+                        break;
+
+                    case SENSITIVE_MODE:
+                        String peekedArg = argIter.peekNextArg();
+
+                        if (!PartitionReconciliationCommandArg.args().contains(peekedArg)) {
+                            strVal = argIter.nextArg(
+                                "The sensitive mode should be specified. The following " +
+                                    "values can be used: " + Arrays.toString(SensitiveMode.values()) + '.');
+
+                            try {
+                                sensitiveMode = SensitiveMode.fromString(strVal);
+                            }
+                            catch (IllegalArgumentException e) {
+                                throw new IllegalArgumentException(
+                                    "Invalid sensitive mode: " + strVal + ". The following " +
+                                        "values can be used: " + Arrays.toString(SensitiveMode.values()) + '.');
+                            }
+                        }
 
                         break;
 
@@ -379,6 +408,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             repair,
             fastCheck,
             includeSensitive,
+            sensitiveMode,
             locOutput,
             parallelism,
             batchSize,
@@ -413,6 +443,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             .a("], repair=[" + args.repair)
             .a("], fast-check=[" + args.fastCheck)
             .a("], includeSensitive=[" + args.includeSensitive)
+            .a("], sensitiveMode=[" + args.sensitiveMode)
             .a("], parallelism=[" + args.parallelism)
             .a("], batch-size=[" + args.batchSize)
             .a("], recheck-attempts=[" + args.recheckAttempts)
@@ -509,6 +540,9 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
         /** Flag indicates that the result should include sensitive information such as key and value. */
         private final boolean includeSensitive;
 
+        /** Sensitive mode. */
+        private final SensitiveMode sensitiveMode;
+
         /** Flag indicates that the result is printed to the console. */
         private final boolean locOutput;
 
@@ -536,6 +570,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
          *                  on the last partition map exchange will be checked and repaired.
          *                  Otherwise, all partitions will be taken into account.
          * @param includeSensitive Print key and value to result log if {@code true}.
+         * @param sensitiveMode Sensitive mode.
          * @param locOutput Print result to local console.
          * @param parallelism Maximum number of threads that can be involved in reconciliation activities.
          * @param batchSize Batch size.
@@ -548,6 +583,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             boolean repair,
             boolean fastCheck,
             boolean includeSensitive,
+            SensitiveMode sensitiveMode,
             boolean locOutput,
             int parallelism,
             int batchSize,
@@ -559,6 +595,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             this.repair = repair;
             this.fastCheck = fastCheck;
             this.includeSensitive = includeSensitive;
+            this.sensitiveMode = sensitiveMode;
             this.locOutput = locOutput;
             this.parallelism = parallelism;
             this.batchSize = batchSize;
@@ -615,6 +652,13 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
          */
         public boolean includeSensitive() {
             return includeSensitive;
+        }
+
+        /**
+         * @return Sensitive mode.
+         */
+        public SensitiveMode sensitiveMode() {
+            return sensitiveMode;
         }
 
         /**

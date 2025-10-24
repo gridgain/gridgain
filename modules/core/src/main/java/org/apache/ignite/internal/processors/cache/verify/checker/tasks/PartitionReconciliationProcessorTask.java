@@ -258,7 +258,8 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     reconciliationTaskArg.recheckAttempts(),
                     reconciliationTaskArg.recheckDelay(),
                     !reconciliationTaskArg.locOutput(),
-                    reconciliationTaskArg.includeSensitive());
+                    reconciliationTaskArg.includeSensitive(),
+                    reconciliationTaskArg.sensitiveMode());
 
                 ExecutionResult<ReconciliationAffectedEntries> reconciliationRes = proc.execute();
 
