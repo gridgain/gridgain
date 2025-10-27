@@ -98,13 +98,8 @@ public abstract class FileLockHolder implements AutoCloseable {
             // Try to get lock, if not available wait 1 sec and re-try.
             for (int i = 0; i < lockWaitTimeMillis; i += 1000) {
                 try {
-                    // Under the hood calls following sys call (Java 8, Linux 6.12):
-                    // fcntl(fd_number, F_SETLK, {l_type=F_WRLCK, l_whence=SEEK_SET, l_start=0, l_len=1})
-                    //
-                    // Useful commands for monitoring locks:
-                    // lsof %filename%
-                    // lslocks | grep %filename%
-
+                    // For more details about file locks internals and troubleshooting see
+                    // https://ggsystems.atlassian.net/wiki/spaces/CS/pages/5625020419/PDS+folder+locking
                     lock = ch.tryLock(0, 1, false);
 
                     if (lock != null && lock.isValid()) {
