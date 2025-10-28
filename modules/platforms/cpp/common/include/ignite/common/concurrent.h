@@ -273,9 +273,10 @@ namespace ignite
                         deleter(ptr0);
 
                         delete impl;
-
-                        ptr = 0;
                     }
+
+                    ptr = 0;
+                    impl = 0;
                 }
 
                 /**

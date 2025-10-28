@@ -23,7 +23,7 @@ using namespace ignite;
 using namespace ignite::common;
 
 /**
- * Utility to make auto pointer from value.
+ * Utility to make an auto pointer from value.
  *
  * @param val Value.
  * @return Auto pointer.
