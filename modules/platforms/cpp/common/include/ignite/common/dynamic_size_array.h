@@ -249,7 +249,7 @@ namespace ignite
              *
              * @return Array capacity.
              */
-            SizeType Getcapacity() const
+            SizeType GetCapacity() const
             {
                 return capacity;
             }

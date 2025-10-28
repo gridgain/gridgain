@@ -201,12 +201,12 @@ BOOST_AUTO_TEST_CASE(ReserveMore)
 
     BOOST_CHECK_EQUAL(test.GetSize(), 4);
 
-    int32_t capasity = test.GetCapacity();
+    int32_t capacity = test.GetCapacity();
 
-    test.Reserve(capasity + 1);
+    test.Reserve(capacity + 1);
 
-    BOOST_CHECK(test.GetCapacity() > capasity);
-    BOOST_CHECK(test.GetCapacity() >= capasity + 1);
+    BOOST_CHECK(test.GetCapacity() > capacity);
+    BOOST_CHECK(test.GetCapacity() >= capacity + 1);
     BOOST_CHECK_EQUAL(test.GetSize(), 4);
 
     BOOST_CHECK_EQUAL(test[0].one, 3);
@@ -231,11 +231,11 @@ BOOST_AUTO_TEST_CASE(ReserveLess)
 
     BOOST_CHECK_EQUAL(test.GetSize(), 4);
 
-    int32_t capasity = test.GetCapacity();
+    int32_t capacity = test.GetCapacity();
 
-    test.Reserve(capasity - 1);
+    test.Reserve(capacity - 1);
 
-    BOOST_CHECK(test.GetCapacity() == capasity);
+    BOOST_CHECK(test.GetCapacity() == capacity);
     BOOST_CHECK_EQUAL(test.GetSize(), 4);
 
     BOOST_CHECK_EQUAL(test[0].one, 3);
