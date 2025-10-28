@@ -150,6 +150,11 @@ namespace ignite
              */
             void Assign(ConstPointerType src, SizeType len)
             {
+                if (len == 0) {
+                    Clear();
+                    return;
+                }
+
                 assert(src);
 
                 if (data == src) {
