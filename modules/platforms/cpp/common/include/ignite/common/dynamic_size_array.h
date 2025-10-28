@@ -415,6 +415,7 @@ namespace ignite
 
                 alloc.Deallocate(data, capacity);
                 capacity = 0;
+                data = 0;
             }
 
             /** Allocator */
