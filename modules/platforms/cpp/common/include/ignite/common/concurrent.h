@@ -258,6 +258,8 @@ namespace ignite
                     return *this;
                 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuse-after-free"
                 /**
                  * Destructor.
                  */
@@ -278,6 +280,7 @@ namespace ignite
                     ptr = 0;
                     impl = 0;
                 }
+#pragma GCC diagnostic pop
 
                 /**
                  * Get raw pointer.
@@ -396,9 +399,9 @@ namespace ignite
                 }
 
                 /**
-                 * Create shared pointer for this instance.
+                 * Create a shared pointer for this instance.
                  *
-                 * Can only be called on already shared object.
+                 * Can only be called on an already shared object.
                  * @return New shared pointer instance.
                  */
                 SharedPointer<T> SharedFromThis()
