@@ -178,7 +178,7 @@ namespace ignite
                 return 32 - NumberOfLeadingZerosU32(i);
             }
 
-            int32_t GetCapasityForSize(int32_t size)
+            int32_t GetCapacityForSize(int32_t size)
             {
                 assert(size > 0);
 

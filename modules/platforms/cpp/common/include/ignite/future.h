@@ -24,7 +24,6 @@
 #define _IGNITE_FUTURE
 
 #include <ignite/common/shared_state.h>
-#include <ignite/ignite_error.h>
 
 namespace ignite
 {
@@ -42,7 +41,7 @@ namespace ignite
      */
 
     /**
-     * Future class template. Used to get result of the asynchroniously
+     * Future class template. Used to get result of the asynchronously
      * started computation.
      *
      * @tparam T Future value type.

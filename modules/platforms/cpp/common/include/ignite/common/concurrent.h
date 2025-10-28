@@ -128,6 +128,11 @@ namespace ignite
                 // No-op.
             }
 
+#ifndef _MSC_VER
+#   pragma GCC diagnostic push
+#   pragma GCC diagnostic ignored "-Wuse-after-free"
+#endif // _MSC_VER
+
             /**
              * Shared pointer.
              */
@@ -273,9 +278,10 @@ namespace ignite
                         deleter(ptr0);
 
                         delete impl;
-
-                        ptr = 0;
                     }
+
+                    ptr = 0;
+                    impl = 0;
                 }
 
                 /**
@@ -342,6 +348,10 @@ namespace ignite
                 SharedPointerImpl* impl;
             };
 
+#ifndef _MSC_VER
+#   pragma GCC diagnostic pop
+#endif // _MSC_VER
+
             /**
              * Enables static-cast semantics for SharedPointer.
              *
@@ -395,9 +405,9 @@ namespace ignite
                 }
 
                 /**
-                 * Create shared pointer for this instance.
+                 * Create a shared pointer for this instance.
                  *
-                 * Can only be called on already shared object.
+                 * Can only be called on an already shared object.
                  * @return New shared pointer instance.
                  */
                 SharedPointer<T> SharedFromThis()
