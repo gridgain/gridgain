@@ -128,6 +128,8 @@ namespace ignite
                 // No-op.
             }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuse-after-free"
             /**
              * Shared pointer.
              */
@@ -258,8 +260,6 @@ namespace ignite
                     return *this;
                 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuse-after-free"
                 /**
                  * Destructor.
                  */
@@ -280,7 +280,6 @@ namespace ignite
                     ptr = 0;
                     impl = 0;
                 }
-#pragma GCC diagnostic pop
 
                 /**
                  * Get raw pointer.
@@ -345,6 +344,7 @@ namespace ignite
                 /** Implementation. */
                 SharedPointerImpl* impl;
             };
+#pragma GCC diagnostic pop
 
             /**
              * Enables static-cast semantics for SharedPointer.
