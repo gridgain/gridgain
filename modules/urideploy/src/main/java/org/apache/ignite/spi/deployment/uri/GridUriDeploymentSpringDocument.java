@@ -23,7 +23,7 @@ import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.xml.XmlBeanFactory;
+import org.springframework.context.ApplicationContext;
 
 /**
  * Helper class which helps to read deployer and tasks information from
@@ -31,7 +31,7 @@ import org.springframework.beans.factory.xml.XmlBeanFactory;
  */
 class GridUriDeploymentSpringDocument {
     /** Initialized springs beans factory. */
-    private final XmlBeanFactory factory;
+    private final ApplicationContext appCtx;
 
     /** List of tasks from package description. */
     private List<Class<? extends ComputeTask<?, ?>>> tasks;
@@ -39,12 +39,12 @@ class GridUriDeploymentSpringDocument {
     /**
      * Creates new instance of configuration helper with given configuration.
      *
-     * @param factory Configuration factory.
+     * @param appCtx Application context.
      */
-    GridUriDeploymentSpringDocument(XmlBeanFactory factory) {
-        assert factory != null;
+    GridUriDeploymentSpringDocument(ApplicationContext appCtx) {
+        assert appCtx != null;
 
-        this.factory = factory;
+        this.appCtx = appCtx;
     }
 
     /**
@@ -63,7 +63,7 @@ class GridUriDeploymentSpringDocument {
             if (tasks == null) {
                 tasks = new ArrayList<>();
 
-                Map<String, List> beans = factory.getBeansOfType(List.class);
+                Map<String, List> beans = appCtx.getBeansOfType(List.class);
 
                 if (!beans.isEmpty()) {
                     for (List<String> list : beans.values()) {

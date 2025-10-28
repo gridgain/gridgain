@@ -43,7 +43,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
-import org.springframework.util.Assert;
 
 /**
  * Unit tests for grid resource processor.
@@ -451,7 +450,7 @@ public class GridResourceProcessorSelfTest extends GridCommonAbstractTest {
 
         try {
             // Should not be null if task has been completed successfully (meaning all resources have been injected).
-            Assert.notNull(g.compute().execute(TestTask.class, null));
+            assertNotNull(g.compute().execute(TestTask.class, null));
         }
         finally {
             stopGrid();
