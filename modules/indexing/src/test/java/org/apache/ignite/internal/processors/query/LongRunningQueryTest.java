@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
@@ -29,6 +30,9 @@ import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.LongRunningQueryManager;
@@ -39,6 +43,7 @@ import org.apache.ignite.testframework.LogListener;
 import org.junit.Test;
 
 import static java.lang.Thread.currentThread;
+import static org.apache.ignite.internal.processors.query.h2.LongRunningQueryManager.LONG_QUERY_ERROR_MSG;
 import static org.apache.ignite.internal.processors.query.h2.LongRunningQueryManager.LONG_QUERY_EXEC_MSG;
 import static org.gridgain.internal.h2.engine.Constants.DEFAULT_PAGE_SIZE;
 
@@ -66,6 +71,16 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
 
     /** Lazy query mode. */
     private boolean lazy;
+
+    private static final long LONG_QRY_TIMEOUT = 1_000L;
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+                .setSqlConfiguration(new SqlConfiguration()
+                        .setLongQueryWarningTimeout(LONG_QRY_TIMEOUT)
+                );
+    }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -189,6 +204,29 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
         lazy = true;
 
         checkBigResultSet();
+    }
+
+    /** Validates long running error message. */
+    @Test
+    public void testLongRunningWithError() throws IgniteCheckedException {
+        long moreThanLongTimeout = LONG_QRY_TIMEOUT + 500;
+
+        LogListener logLsnr = LogListener.matches(LONG_QUERY_ERROR_MSG).build();
+
+        testLog().registerListener(logLsnr);
+
+        IgniteInternalFuture<FieldsQueryCursor<List<?>>> fut = GridTestUtils.runAsync(() ->
+                sql("SELECT sleep_with_err_func(" + moreThanLongTimeout + ")"));
+
+        FieldsQueryCursor<List<?>> res = fut.get();
+
+        try {
+            res.getAll();
+        } catch (Exception ignore) {
+            // no op.
+        }
+
+        assertTrue(logLsnr.check());
     }
 
     /**
@@ -359,6 +397,22 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
                 // No-op
             }
             return val;
+        }
+
+        /**
+         * @param sleep amount of milliseconds to sleep
+         */
+        @SuppressWarnings("unused")
+        @QuerySqlFunction
+        public static void sleep_with_err_func(int sleep) {
+            try {
+                Thread.sleep(sleep);
+
+                throw new RuntimeException();
+            }
+            catch (InterruptedException ignored) {
+                // No-op
+            }
         }
     }
 
