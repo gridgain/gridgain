@@ -128,8 +128,11 @@ namespace ignite
                 // No-op.
             }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuse-after-free"
+#ifndef _MSC_VER
+#   pragma GCC diagnostic push
+#   pragma GCC diagnostic ignored "-Wuse-after-free"
+#endif // _MSC_VER
+
             /**
              * Shared pointer.
              */
@@ -344,7 +347,10 @@ namespace ignite
                 /** Implementation. */
                 SharedPointerImpl* impl;
             };
-#pragma GCC diagnostic pop
+
+#ifndef _MSC_VER
+#   pragma GCC diagnostic pop
+#endif // _MSC_VER
 
             /**
              * Enables static-cast semantics for SharedPointer.
