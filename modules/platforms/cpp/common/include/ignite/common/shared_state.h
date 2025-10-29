@@ -377,7 +377,7 @@ namespace ignite
         };
 
         /**
-         * Specialization for shared pointer type.
+         * Specialization for a shared pointer type.
          */
         template<typename T>
         class SharedState< concurrent::SharedPointer<T> >

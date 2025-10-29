@@ -21,7 +21,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.thread.IgniteThread;
@@ -140,9 +139,9 @@ public final class LongRunningQueryManager {
 
         if (qrys.remove(qryInfo) != null && qryInfo.time() > timeout) {
             if (err == null)
-                LT.warn(log, LONG_QUERY_FINISHED_MSG + qryInfo.description());
+                qryInfo.printLogMessage(log, LONG_QUERY_FINISHED_MSG, null);
             else
-                LT.warn(log, LONG_QUERY_ERROR_MSG + err.getMessage() + qryInfo.description());
+                qryInfo.printLogMessage(log, LONG_QUERY_ERROR_MSG + err.getMessage(), null, false);
         }
     }
 

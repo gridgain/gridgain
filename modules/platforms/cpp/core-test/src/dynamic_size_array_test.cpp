@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(BasicConstruction)
     DynamicSizeArray<int> test(16);
 
     BOOST_CHECK_EQUAL(test.GetSize(), 0);
-    BOOST_CHECK(test.GetCapasity() >= 16);
+    BOOST_CHECK(test.GetCapacity() >= 16);
 }
 
 BOOST_AUTO_TEST_CASE(ResizeInt)
@@ -101,7 +101,7 @@ BOOST_AUTO_TEST_CASE(PushBack)
     test.PushBack(88);
 
     BOOST_CHECK_EQUAL(test.GetSize(), 4);
-    BOOST_CHECK(test.GetCapasity() >= 4);
+    BOOST_CHECK(test.GetCapacity() >= 4);
 
     BOOST_CHECK_EQUAL(test[0], 1);
     BOOST_CHECK_EQUAL(test[1], 2);
@@ -201,12 +201,12 @@ BOOST_AUTO_TEST_CASE(ReserveMore)
 
     BOOST_CHECK_EQUAL(test.GetSize(), 4);
 
-    int32_t capasity = test.GetCapasity();
+    int32_t capacity = test.GetCapacity();
 
-    test.Reserve(capasity + 1);
+    test.Reserve(capacity + 1);
 
-    BOOST_CHECK(test.GetCapasity() > capasity);
-    BOOST_CHECK(test.GetCapasity() >= capasity + 1);
+    BOOST_CHECK(test.GetCapacity() > capacity);
+    BOOST_CHECK(test.GetCapacity() >= capacity + 1);
     BOOST_CHECK_EQUAL(test.GetSize(), 4);
 
     BOOST_CHECK_EQUAL(test[0].one, 3);
@@ -231,11 +231,11 @@ BOOST_AUTO_TEST_CASE(ReserveLess)
 
     BOOST_CHECK_EQUAL(test.GetSize(), 4);
 
-    int32_t capasity = test.GetCapasity();
+    int32_t capacity = test.GetCapacity();
 
-    test.Reserve(capasity - 1);
+    test.Reserve(capacity - 1);
 
-    BOOST_CHECK(test.GetCapasity() == capasity);
+    BOOST_CHECK(test.GetCapacity() == capacity);
     BOOST_CHECK_EQUAL(test.GetSize(), 4);
 
     BOOST_CHECK_EQUAL(test[0].one, 3);

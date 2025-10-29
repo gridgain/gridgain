@@ -170,12 +170,17 @@ public class H2QueryInfo {
         return type;
     }
 
+    public void printLogMessage(IgniteLogger log, String msg, @Nullable String additionalInfo) {
+        printLogMessage(log, msg, additionalInfo, true);
+    }
+
     /**
      * @param log Logger.
      * @param msg Log message
      * @param additionalInfo Additional query info.
+     * @param throttlingAllowed {@code true} if message throttling is allowed.
      */
-    public void printLogMessage(IgniteLogger log, String msg, String additionalInfo) {
+    public void printLogMessage(IgniteLogger log, String msg, @Nullable String additionalInfo, boolean throttlingAllowed) {
         String globalQueryId = runningQryId == null ? "(unknown)" // compatibility with old versions.
             : QueryUtils.globalQueryId(node, runningQryId);
 
@@ -204,7 +209,11 @@ public class H2QueryInfo {
 
         // Include 'sql' text into key for compatibility with older versions.
         String throttleKey = globalQueryId + "#" + (runningQryId == null ? sql : type);
-        LT.warn(log, throttleKey, msgSb.toString());
+
+        if (throttlingAllowed)
+            LT.warn(log, throttleKey, msgSb.toString());
+        else
+            log.warning(msgSb.toString());
     }
 
     /** */
