@@ -1,9 +1,9 @@
 GridGain Community Edition
 ===========================
 
-The GridGain Community Edition (GCE) is a source-available in-memory computing platform built on Apache Ignite. 
-GCE includes the Apache Ignite code base plus improvements and additional functionality developed by GridGain Systems 
-to enhance the performance and reliability of Apache Ignite. GCE is a hardened, high-performance version of Apache Ignite 
+The GridGain Community Edition (GCE) is a source-available in-memory computing platform built on Apache Ignite.
+GCE includes the Apache Ignite code base plus improvements and additional functionality developed by GridGain Systems
+to enhance the performance and reliability of Apache Ignite. GCE is a hardened, high-performance version of Apache Ignite
 for mission-critical in-memory computing applications.
 
 
