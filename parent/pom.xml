@@ -1111,6 +1111,46 @@
         </profile>
 
         <profile>
+            <id>spotbugs</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs-maven-plugin</artifactId>
+                        <version>4.8.3.0</version>
+
+                        <configuration>
+                            <effort>Max</effort>
+                            <threshold>Low</threshold>
+                            <includeTests>false</includeTests>
+                            <includeFilterFile>${maven.multiModuleProjectDirectory}/checkrules/spotbugs-security-include.xml</includeFilterFile>
+                            <htmlOutput>true</htmlOutput>
+                            <!--                            <sarifOutput>true</sarifOutput>-->
+                            <!--                            <xmlOutput>true</xmlOutput>-->
+
+                            <plugins>
+                                <plugin>
+                                    <groupId>com.h3xstream.findsecbugs</groupId>
+                                    <artifactId>findsecbugs-plugin</artifactId>
+                                    <version>1.14.0</version>
+                                </plugin>
+                            </plugins>
+                        </configuration>
+
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>spotbugs</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
             <id>m2e</id>
             <!--This profile is activated when eclipse interacts with maven (using m2e).-->
             <activation>
