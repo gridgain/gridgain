@@ -99,6 +99,8 @@ public class TestFileSystem extends TestBase {
             testFileSystem("nio:" + getBaseDir() + "/fs");
             testFileSystem("cache:nio:" + getBaseDir() + "/fs");
             testFileSystem("nioMapped:" + getBaseDir() + "/fs");
+            testFileSystem("encrypt:0007:" + getBaseDir() + "/fs");
+            testFileSystem("cache:encrypt:0007:" + getBaseDir() + "/fs");
             if (!config.splitFileSystem) {
                 testFileSystem("split:" + getBaseDir() + "/fs");
                 testFileSystem("split:nioMapped:" + getBaseDir() + "/fs");

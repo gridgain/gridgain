@@ -5,6 +5,7 @@
  */
 package org.gridgain.internal.h2.security.auth;
 
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,6 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.xml.parsers.ParserConfigurationException;
 import org.gridgain.internal.h2.api.CredentialsValidator;
 import org.gridgain.internal.h2.api.UserToRolesMapper;
 import org.gridgain.internal.h2.engine.Database;
@@ -25,6 +27,7 @@ import org.gridgain.internal.h2.message.Trace;
 import org.gridgain.internal.h2.security.auth.impl.AssignRealmNameRole;
 import org.gridgain.internal.h2.security.auth.impl.JaasCredentialsValidator;
 import org.gridgain.internal.h2.util.StringUtils;
+import org.xml.sax.SAXException;
 
 /**
  * Default authenticator implementation.
@@ -215,7 +218,7 @@ public class DefaultAuthenticator implements Authenticator {
                     }
                     defaultConfiguration();
                 } else {
-                    throw new UnsupportedOperationException("Not implemented");
+                    configureFromUrl(h2AuthenticatorConfigurationUrl);
                 }
             } catch (Exception e) {
                 trace.error(e, "DefaultAuthenticator.config: an error occurred during configuration from {0} ",
@@ -237,6 +240,55 @@ public class DefaultAuthenticator implements Authenticator {
         UserToRolesMapper assignRealmNameRole = new AssignRealmNameRole();
         assignRealmNameRole.configure(new ConfigProperties());
         userToRolesMappers.add(assignRealmNameRole);
+    }
+
+    /**
+     * Configure the authenticator from a configuration file
+     *
+     * @param configUrl URL of configuration file
+     */
+    public void configureFromUrl(URL configUrl) throws AuthenticationException,
+            SAXException, IOException, ParserConfigurationException {
+        H2AuthConfig config = H2AuthConfigXml.parseFrom(configUrl);
+        configureFrom(config);
+    }
+
+    private void configureFrom(H2AuthConfig config) throws AuthenticationException {
+        allowUserRegistration = config.isAllowUserRegistration();
+        createMissingRoles = config.isCreateMissingRoles();
+        Map<String, CredentialsValidator> newRealms = new HashMap<>();
+        for (RealmConfig currentRealmConfig : config.getRealms()) {
+            String currentRealmName = currentRealmConfig.getName();
+            if (currentRealmName == null) {
+                throw new AuthenticationException("Missing realm name");
+            }
+            currentRealmName = currentRealmName.toUpperCase();
+            CredentialsValidator currentValidator = null;
+            try {
+                currentValidator = (CredentialsValidator) Class.forName(currentRealmConfig.getValidatorClass())
+                        .getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
+                throw new AuthenticationException("invalid validator class fo realm " + currentRealmName, e);
+            }
+            currentValidator.configure(new ConfigProperties(currentRealmConfig.getProperties()));
+            if (newRealms.put(currentRealmConfig.getName().toUpperCase(), currentValidator) != null) {
+                throw new AuthenticationException("Duplicate realm " + currentRealmConfig.getName());
+            }
+        }
+        this.realms = newRealms;
+        List<UserToRolesMapper> newUserToRolesMapper = new ArrayList<>();
+        for (UserToRolesMapperConfig currentUserToRolesMapperConfig : config.getUserToRolesMappers()) {
+            UserToRolesMapper currentUserToRolesMapper = null;
+            try {
+                currentUserToRolesMapper = (UserToRolesMapper) Class
+                        .forName(currentUserToRolesMapperConfig.getClassName()).getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
+                throw new AuthenticationException("Invalid class in UserToRolesMapperConfig", e);
+            }
+            currentUserToRolesMapper.configure(new ConfigProperties(currentUserToRolesMapperConfig.getProperties()));
+            newUserToRolesMapper.add(currentUserToRolesMapper);
+        }
+        this.userToRolesMappers = newUserToRolesMapper;
     }
 
     private boolean updateRoles(AuthenticationInfo authenticationInfo, User user, Database database)
