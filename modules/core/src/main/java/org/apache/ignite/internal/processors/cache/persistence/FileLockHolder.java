@@ -28,6 +28,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Abstract file lock holder.
@@ -91,14 +92,14 @@ public abstract class FileLockHolder implements AutoCloseable {
 
         FileChannel ch = lockFile.getChannel();
 
-        String failMsg;
+        String content = null;
 
         try {
-            String content = null;
-
             // Try to get lock, if not available wait 1 sec and re-try.
             for (int i = 0; i < lockWaitTimeMillis; i += 1000) {
                 try {
+                    // For more details about file locks internals and troubleshooting see
+                    // https://ggsystems.atlassian.net/wiki/spaces/CS/pages/5625020419/PDS+folder+locking
                     lock = ch.tryLock(0, 1, false);
 
                     if (lock != null && lock.isValid()) {
@@ -116,19 +117,20 @@ public abstract class FileLockHolder implements AutoCloseable {
 
                 U.sleep(1000);
             }
-
-            if (content == null)
-                content = readContent();
-
-            failMsg = "Failed to acquire file lock [holder=" + content + ", time=" + (lockWaitTimeMillis / 1000) +
-                " sec, path=" + file.getAbsolutePath() + ']';
         }
         catch (Exception e) {
-            throw new IgniteCheckedException(e);
+            throw new IgniteCheckedException(failMsg(resolveHolderInfo(content), lockWaitTimeMillis), e);
         }
 
-        if (failMsg != null)
-            throw new IgniteCheckedException(failMsg);
+        throw new IgniteCheckedException(failMsg(resolveHolderInfo(content), lockWaitTimeMillis));
+    }
+
+    private String failMsg(String holderInfo, long lockWaitTimeMillis) {
+        return String.format("Failed to acquire file lock [holder=%s, time=%d sec, path=%s]",
+            holderInfo,
+            lockWaitTimeMillis / 1000,
+            file.getAbsolutePath()
+        );
     }
 
     /**
@@ -153,7 +155,7 @@ public abstract class FileLockHolder implements AutoCloseable {
     }
 
     /**
-     *
+     * Read holder info from lock file
      */
     private String readContent() throws IOException {
         FileChannel ch = lockFile.getChannel();
@@ -167,6 +169,19 @@ public abstract class FileLockHolder implements AutoCloseable {
         buf.clear();
 
         return content;
+    }
+
+    private String resolveHolderInfo(@Nullable String cached) {
+        if (cached != null)
+            return cached;
+
+        try {
+            return readContent();
+        }
+        catch (IOException e) {
+            log.warning("Failed to read holder info from lock file [" + file.getAbsolutePath() + "]", e);
+            return "N/A";
+        }
     }
 
     /**
