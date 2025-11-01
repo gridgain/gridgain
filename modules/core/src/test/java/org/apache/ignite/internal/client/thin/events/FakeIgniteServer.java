@@ -18,6 +18,7 @@ package org.apache.ignite.internal.client.thin.events;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.EnumSet;
@@ -124,6 +125,11 @@ public class FakeIgniteServer extends JUnitAssertAware implements GridNioServerL
     /** */
     public void stop() {
         srv.stop();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onConnectedRaw(Socket socket) {
+
     }
 
     /** {@inheritDoc} */

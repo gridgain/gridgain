@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.client.thin.io.gridnioserver;
 
+import java.net.Socket;
 import java.nio.ByteBuffer;
 
 import org.apache.ignite.failure.FailureType;
@@ -27,6 +28,11 @@ import org.jetbrains.annotations.Nullable;
  * Client event listener.
  */
 class GridNioClientListener implements GridNioServerListener<ByteBuffer> {
+    /** {@inheritDoc} */
+    @Override public void onConnectedRaw(Socket socket) {
+        // No-op.
+    }
+
     /** {@inheritDoc} */
     @Override public void onConnected(GridNioSession ses) {
         // No-op.
