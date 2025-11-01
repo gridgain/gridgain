@@ -58,7 +58,7 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
                 GridTestUtils.assertThrows(log(),
                         () -> startClient(0),
                         ClientConnectionException.class,
-                        "Connection limit reached: " + MAX_CONNECTIONS);
+                        "connection was closed");
             }
             finally {
                 clients.forEach(IgniteClient::close);
@@ -84,14 +84,14 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
                 GridTestUtils.assertThrows(log(),
                         () -> startClient(0),
                         ClientConnectionException.class,
-                        "Connection limit reached: " + MAX_CONNECTIONS);
+                        "connection was closed");
 
                 mxBean.setMaxConnectionsPerNode(MAX_CONNECTIONS - 2);
 
                 GridTestUtils.assertThrows(log(),
                         () -> startClient(0),
                         ClientConnectionException.class,
-                        "Connection limit reached: " + (MAX_CONNECTIONS - 2));
+                        "connection was closed");
             }
             finally {
                 clients.forEach(IgniteClient::close);
@@ -117,7 +117,7 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
                 GridTestUtils.assertThrows(log(),
                         () -> startClient(0),
                         ClientConnectionException.class,
-                        "Connection limit reached: " + MAX_CONNECTIONS);
+                        "connection was closed");
 
                 mxBean.setMaxConnectionsPerNode(MAX_CONNECTIONS + 2);
 
@@ -128,7 +128,7 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
                 GridTestUtils.assertThrows(log(),
                         () -> startClient(0),
                         ClientConnectionException.class,
-                        "Connection limit reached: " + (MAX_CONNECTIONS + 2));
+                        "connection was closed");
             }
             finally {
                 clients.forEach(IgniteClient::close);
@@ -173,7 +173,11 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
             List<IgniteClient> clients = new ArrayList<>();
             try {
                 for (int i = 0; i < connectionLimit; ++i) {
-                    clients.add(startClient(ignite));
+                    IgniteClient client = startClient(ignite);
+
+                    // Just checking that the client is functioning
+                    client.cluster().forRandom().node();
+                    clients.add(client);
                 }
             }
             finally {
