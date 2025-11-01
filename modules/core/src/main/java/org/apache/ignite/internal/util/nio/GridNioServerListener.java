@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface GridNioServerListener<T> extends EventListener {
     /**
-     * This method is called whenever a new client is but before a session is created.
+     * This method is called whenever a new client is connected but before a session is created.
      *
      * @param socket The socket for remote client.
      */

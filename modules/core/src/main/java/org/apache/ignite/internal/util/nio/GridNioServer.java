@@ -2714,7 +2714,7 @@ public class GridNioServer<T> {
                     lsnr.onConnectedRaw(sock);
                 }
                 catch (IgniteException err) {
-                    sock.close();
+                    sock.shutdownInput();
 
                     fut.onDone(err);
                     return;

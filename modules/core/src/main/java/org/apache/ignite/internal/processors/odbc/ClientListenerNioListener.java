@@ -156,7 +156,13 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     @Override public void onConnectedRaw(Socket socket) {
         int maxConn = distrThinCfg.maxConnectionsPerNode();
         if (maxConn > 0 && connectionsCnt.get() >= maxConn) {
-            throw new IgniteException("Connection limit reached: " + maxConn);
+            String msg = "Connection is rejected due to connection limit is reached [addr=" +
+                    socket.getInetAddress() + ", limit=" + maxConn + ']';
+
+            if (log.isDebugEnabled())
+                log.debug(msg);
+
+            throw new IgniteException(msg);
         }
     }
 
@@ -167,13 +173,6 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
         // It means connection was already processed.
         if (connState != null)
             return;
-
-        int maxConn = distrThinCfg.maxConnectionsPerNode();
-        if (maxConn > 0 && connectionsCnt.get() >= maxConn) {
-            ses.close();
-
-            return;
-        }
 
         ses.addMeta(CONN_STATE_META_KEY, CONN_STATE_PHYSICAL_CONNECTED);
         connectionsCnt.incrementAndGet();
