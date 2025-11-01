@@ -645,6 +645,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
         private NioListener(Logger log) {
             this.log = log;
         }
+
         /** {@inheritDoc} */
         @Override public void onConnectedRaw(Socket socket) {
             // No-op.
