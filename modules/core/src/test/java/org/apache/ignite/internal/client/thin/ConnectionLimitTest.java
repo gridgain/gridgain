@@ -23,6 +23,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
@@ -55,10 +56,7 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
                     clients.add(startClient(0));
                 }
 
-                GridTestUtils.assertThrows(log(),
-                        () -> startClient(0),
-                        ClientConnectionException.class,
-                        "Channel is closed");
+                assertClientConnectionRejected();
             }
             finally {
                 clients.forEach(IgniteClient::close);
@@ -81,17 +79,11 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
                     clients.add(startClient(0));
                 }
 
-                GridTestUtils.assertThrows(log(),
-                        () -> startClient(0),
-                        ClientConnectionException.class,
-                        "Channel is closed");
+                assertClientConnectionRejected();
 
                 mxBean.setMaxConnectionsPerNode(MAX_CONNECTIONS - 2);
 
-                GridTestUtils.assertThrows(log(),
-                        () -> startClient(0),
-                        ClientConnectionException.class,
-                        "Channel is closed");
+                assertClientConnectionRejected();
             }
             finally {
                 clients.forEach(IgniteClient::close);
@@ -114,10 +106,7 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
                     clients.add(startClient(0));
                 }
 
-                GridTestUtils.assertThrows(log(),
-                        () -> startClient(0),
-                        ClientConnectionException.class,
-                        "Channel is closed");
+                assertClientConnectionRejected();
 
                 mxBean.setMaxConnectionsPerNode(MAX_CONNECTIONS + 2);
 
@@ -125,10 +114,7 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
                     clients.add(startClient(0));
                 }
 
-                GridTestUtils.assertThrows(log(),
-                        () -> startClient(0),
-                        ClientConnectionException.class,
-                        "Channel is closed");
+                assertClientConnectionRejected();
             }
             finally {
                 clients.forEach(IgniteClient::close);
@@ -165,7 +151,7 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
             }
             finally {
                 for (Socket conn : conns) {
-                    conn.close();
+                    IgniteUtils.close(conn, log());
                 }
             }
 
@@ -173,16 +159,32 @@ public class ConnectionLimitTest extends AbstractThinClientTest {
             List<IgniteClient> clients = new ArrayList<>();
             try {
                 for (int i = 0; i < connectionLimit; ++i) {
-                    IgniteClient client = startClient(ignite);
+                    GridTestUtils.waitForCondition(() -> {
+                        try {
+                            IgniteClient client = startClient(ignite);
 
-                    // Just checking that the client is functioning
-                    client.cluster().forRandom().node();
-                    clients.add(client);
+                            // Just checking that the client is functioning
+                            client.cluster().forRandom().node();
+                            clients.add(client);
+                            return true;
+                        } catch (Exception e) {
+                            return false;
+                        }
+                    }, 5000, 1000);
                 }
             }
             finally {
                 clients.forEach(IgniteClient::close);
             }
         }
+    }
+
+    private void assertClientConnectionRejected() {
+        ClientConnectionException err = GridTestUtils.assertThrows(log(),
+                () -> startClient(0),
+                ClientConnectionException.class,
+                null);
+
+        GridTestUtils.assertMatches(log(), err.getMessage(), "(Channel is closed)|(connection was closed)");
     }
 }

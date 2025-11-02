@@ -159,8 +159,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
             String msg = "Connection is rejected due to connection limit is reached [addr=" +
                     socket.getInetAddress() + ", limit=" + maxConn + ']';
 
-            if (log.isDebugEnabled())
-                log.debug(msg);
+            log.warning(msg);
 
             throw new IgniteException(msg);
         }
