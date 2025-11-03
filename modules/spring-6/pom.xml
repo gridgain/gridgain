@@ -55,6 +55,7 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-core</artifactId>
+            <version>${modern.spring.version}</version>
         </dependency>
 
         <dependency>
