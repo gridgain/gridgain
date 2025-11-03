@@ -646,8 +646,8 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
             this.log = log;
         }
 
-        /** {@inheritDoc} */
-        @Override public void onConnectedRaw(Socket socket) {
+        @Override
+        public void onConnectedSocket(Socket socket, int sessionNum) {
             // No-op.
         }
 

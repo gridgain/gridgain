@@ -29,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
  */
 class GridNioClientListener implements GridNioServerListener<ByteBuffer> {
     /** {@inheritDoc} */
-    @Override public void onConnectedRaw(Socket socket) {
+    @Override public void onConnectedSocket(Socket socket, int sessionNum) {
         // No-op.
     }
 

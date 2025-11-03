@@ -109,7 +109,7 @@ public abstract class GridTcpRouterNioListenerAdapter implements GridNioServerLi
     protected abstract void init();
 
     /** {@inheritDoc} */
-    @Override public void onConnectedRaw(Socket socket) {
+    @Override public void onConnectedSocket(Socket socket, int sessionNum) {
         // No-op.
     }
 

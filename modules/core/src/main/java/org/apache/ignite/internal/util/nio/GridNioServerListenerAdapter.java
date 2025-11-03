@@ -25,7 +25,8 @@ import java.net.Socket;
  */
 public abstract class GridNioServerListenerAdapter<T> implements GridNioServerListener<T> {
     /** {@inheritDoc} */
-    @Override public void onConnectedRaw(Socket socket) {
+    @Override public void onConnectedSocket(Socket socket, int sessionNum) {
+        // No-op.
     }
 
     /** {@inheritDoc} */

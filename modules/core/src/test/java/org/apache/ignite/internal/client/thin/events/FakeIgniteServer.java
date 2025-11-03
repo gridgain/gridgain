@@ -128,7 +128,7 @@ public class FakeIgniteServer extends JUnitAssertAware implements GridNioServerL
     }
 
     /** {@inheritDoc} */
-    @Override public void onConnectedRaw(Socket socket) {
+    @Override public void onConnectedSocket(Socket socket, int sessionNum) {
 
     }
 

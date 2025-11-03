@@ -2711,7 +2711,7 @@ public class GridNioServer<T> {
 
             try {
                 try {
-                    lsnr.onConnectedRaw(sock);
+                    lsnr.onConnectedSocket(sock, sessions.size());
                 }
                 catch (IgniteException err) {
                     U.close(sock, log);

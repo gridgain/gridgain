@@ -94,9 +94,6 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     /** Next connection id. */
     private static final AtomicInteger nextConnId = new AtomicInteger(1);
 
-    /** Current count of active connections. */
-    private static final AtomicInteger connectionsCnt = new AtomicInteger(0);
-
     /** Busy lock. */
     private final GridSpinBusyLock busyLock;
 
@@ -153,12 +150,13 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     }
 
     /** {@inheritDoc} */
-    @Override public void onConnectedRaw(Socket socket) {
+    @Override public void onConnectedSocket(Socket socket, int sessionNum) {
         int maxConn = distrThinCfg.maxConnectionsPerNode();
-        if (maxConn > 0 && connectionsCnt.get() >= maxConn) {
+        if (maxConn > 0 && sessionNum >= maxConn) {
+            metrics.onGeneralReject();
+
             String msg = "Connection is rejected due to connection limit is reached [addr=" +
                     socket.getInetAddress() + ", limit=" + maxConn + ']';
-
             log.warning(msg);
 
             throw new IgniteException(msg);
@@ -174,7 +172,6 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
             return;
 
         ses.addMeta(CONN_STATE_META_KEY, CONN_STATE_PHYSICAL_CONNECTED);
-        connectionsCnt.incrementAndGet();
 
         if (log.isDebugEnabled())
             log.debug("Client connected: " + ses.remoteAddress());
@@ -194,7 +191,6 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
             return;
 
         ses.addMeta(CONN_STATE_META_KEY, CONN_STATE_DISCONNECTED);
-        connectionsCnt.decrementAndGet();
 
         ClientListenerConnectionContext connCtx = ses.meta(CONN_CTX_META_KEY);
 
