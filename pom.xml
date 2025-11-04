@@ -90,7 +90,6 @@
         <module>modules/geospatial</module>
         <module>modules/schedule</module>
         <module>modules/control-utility</module>
-        <module>modules/spring-6</module>
     </modules>
 
     <profiles>
@@ -112,6 +111,15 @@
             <modules>
                 <module>modules/lucene-9</module>
                 <module>modules/lucene-8</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>target-java-17+</id>
+            <activation>
+                <jdk>[17,)</jdk>
+            </activation>
+            <modules>
+                <module>modules/spring-6</module>
             </modules>
         </profile>
         <profile>
