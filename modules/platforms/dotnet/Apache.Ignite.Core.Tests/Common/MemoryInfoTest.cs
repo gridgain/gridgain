@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Common
 {
     using System;
+    using System.IO;
     using Apache.Ignite.Core.Impl;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Unmanaged;
@@ -39,6 +40,8 @@ namespace Apache.Ignite.Core.Tests.Common
             }
 
             Console.WriteLine("GC info: " + GC.GetGCMemoryInfo().TotalAvailableMemoryBytes);
+            PrintFile("/sys/fs/cgroup/memory/memory.limit_in_bytes");
+            PrintFile("/sys/fs/cgroup/memory.max");
 
             Assert.IsNotNull(MemoryInfo.TotalPhysicalMemory);
             Assert.Greater(MemoryInfo.TotalPhysicalMemory, 655360);
@@ -58,6 +61,18 @@ namespace Apache.Ignite.Core.Tests.Common
             {
                 Assert.AreEqual(CGroup.MemoryLimitInBytes, MemoryInfo.MemoryLimit,
                     "When cgroup limit is set, memory limit is equal to cgroup limit.");
+            }
+        }
+
+        private static void PrintFile(string path)
+        {
+            try
+            {
+                Console.WriteLine("Contents of " + path + ":" + File.ReadAllText(path));
+            }
+            catch (IOException)
+            {
+                Console.WriteLine("Failed to read file: " + path);
             }
         }
     }
