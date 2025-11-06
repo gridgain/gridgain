@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Common
 {
+    using System;
     using Apache.Ignite.Core.Impl;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Unmanaged;
@@ -36,6 +37,8 @@ namespace Apache.Ignite.Core.Tests.Common
             {
                 return;
             }
+
+            Console.WriteLine("GC info: " + GC.GetGCMemoryInfo().TotalAvailableMemoryBytes);
 
             Assert.IsNotNull(MemoryInfo.TotalPhysicalMemory);
             Assert.Greater(MemoryInfo.TotalPhysicalMemory, 655360);
