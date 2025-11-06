@@ -126,7 +126,7 @@ public class PartitionReconciliationSensitiveInformationTest extends PartitionRe
             // The broken value is just a string.
             // It is not 'obfuscated' in any way. See ConsistencyCheckUtils#objectStringView
             assertTrue(
-                "Val1 view is incorrect [val1=" + valView1 +']',
+                "Val1 view is incorrect [val1=" + valView1 + ']',
                 valView1.contains("BinaryObject_broken hex=["));
 
             switch (mode) {
@@ -136,7 +136,7 @@ public class PartitionReconciliationSensitiveInformationTest extends PartitionRe
                         keyView.contains("BinaryObject hex=["));
 
                     assertTrue(
-                        "Val0 view is incorrect [val0=" + valView0 +']',
+                        "Val0 view is incorrect [val0=" + valView0 + ']',
                         valView0.contains("BinaryObject hex=["));
 
                     break;
@@ -147,7 +147,7 @@ public class PartitionReconciliationSensitiveInformationTest extends PartitionRe
                         checkHashView(keyView.split(" ")[0]));
 
                     assertTrue(
-                        "Val0 view is incorrect [val0=" + valView0 +']',
+                        "Val0 view is incorrect [val0=" + valView0 + ']',
                         checkHashView(valView0.split(" ")[0]));
 
                     break;
@@ -158,7 +158,7 @@ public class PartitionReconciliationSensitiveInformationTest extends PartitionRe
                         keyView.contains("CustomKey"));
 
                     assertTrue(
-                        "Val0 view is incorrect [val0=" + valView0 +']',
+                        "Val0 view is incorrect [val0=" + valView0 + ']',
                         valView0.contains("CustomValue"));
 
                     break;
