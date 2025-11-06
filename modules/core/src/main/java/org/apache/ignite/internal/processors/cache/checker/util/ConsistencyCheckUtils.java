@@ -393,13 +393,13 @@ public class ConsistencyCheckUtils {
         File dir = new File(U.defaultWorkDirectory() + separatorChar + RECONCILIATION_DIR);
 
         if (!dir.exists())
-            dir.mkdir(); // TODO
+            dir.mkdir();
 
         File file = new File(dir.getPath() + separatorChar + maskId + "_" + startTime.format(TIME_FORMATTER) +
             ".txt");
 
         if (!file.exists())
-            file.createNewFile(); // TODO
+            file.createNewFile();
 
         return file;
     }

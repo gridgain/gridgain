@@ -733,7 +733,6 @@ public interface ReconciliationResultCollector {
             String fileName = tmpFiles.computeIfAbsent(cacheName, d -> {
                 File file = new File(reconciliationDir.getPath() + separatorChar + maskId + '-' + sesId + '-' + cacheName + ".txt");
                 try {
-                    // TODO handle a returned value
                     file.createNewFile();
                 }
                 catch (IOException e) {
