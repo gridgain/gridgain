@@ -18,6 +18,7 @@ package org.apache.ignite.internal.client.impl.connection;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -643,6 +644,10 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
          */
         private NioListener(Logger log) {
             this.log = log;
+        }
+
+        @Override public void onConnectedSocket(Socket socket, int sessionNum) {
+            // No-op.
         }
 
         /** {@inheritDoc} */

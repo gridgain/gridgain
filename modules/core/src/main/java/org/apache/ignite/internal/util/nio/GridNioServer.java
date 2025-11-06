@@ -2711,6 +2711,16 @@ public class GridNioServer<T> {
             Socket sock = sockCh.socket();
 
             try {
+                try {
+                    lsnr.onConnectedSocket(sock, sessions.size());
+                }
+                catch (IgniteException err) {
+                    U.close(sock, log);
+
+                    fut.onDone(err);
+                    return;
+                }
+
                 ByteBuffer writeBuf = null;
                 ByteBuffer readBuf = null;
 

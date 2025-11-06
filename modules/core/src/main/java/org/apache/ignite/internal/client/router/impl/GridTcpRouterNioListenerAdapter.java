@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.client.router.impl;
 
+import java.net.Socket;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -106,6 +107,11 @@ public abstract class GridTcpRouterNioListenerAdapter implements GridNioServerLi
     /**
      */
     protected abstract void init();
+
+    /** {@inheritDoc} */
+    @Override public void onConnectedSocket(Socket socket, int sessionNum) {
+        // No-op.
+    }
 
     /** {@inheritDoc} */
     @Override public void onConnected(GridNioSession ses) {

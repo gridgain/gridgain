@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.util.nio;
 
+import java.net.Socket;
 import java.util.EventListener;
 import org.apache.ignite.failure.FailureType;
 import org.jetbrains.annotations.Nullable;
@@ -24,6 +25,14 @@ import org.jetbrains.annotations.Nullable;
  * Listener passed in to the {@link GridNioServer} that will be notified on client events.
  */
 public interface GridNioServerListener<T> extends EventListener {
+    /**
+     * This method is called whenever a new connection is accepted but before a session is created.
+     *
+     * @param socket The socket for remote client.
+     * @param sessionNum The number of the current sessions.
+     */
+    public void onConnectedSocket(Socket socket, int sessionNum);
+
     /**
      * This method is called whenever a new client is connected and session is created.
      *

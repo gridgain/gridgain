@@ -18,10 +18,17 @@ package org.apache.ignite.internal.util.nio;
 
 import org.apache.ignite.failure.FailureType;
 
+import java.net.Socket;
+
 /**
  * Server listener adapter providing empty methods implementation for rarely used methods.
  */
 public abstract class GridNioServerListenerAdapter<T> implements GridNioServerListener<T> {
+    /** {@inheritDoc} */
+    @Override public void onConnectedSocket(Socket socket, int sessionNum) {
+        // No-op.
+    }
+
     /** {@inheritDoc} */
     @Override public void onSessionWriteTimeout(GridNioSession ses) {
         // No-op.

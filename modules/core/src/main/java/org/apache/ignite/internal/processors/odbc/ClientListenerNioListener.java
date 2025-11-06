@@ -17,9 +17,11 @@
 package org.apache.ignite.internal.processors.odbc;
 
 import java.io.Closeable;
+import java.net.Socket;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
@@ -92,9 +94,6 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     /** Next connection id. */
     private static final AtomicInteger nextConnId = new AtomicInteger(1);
 
-    /** Current count of active connections. */
-    private static final AtomicInteger connectionsCnt = new AtomicInteger(0);
-
     /** Busy lock. */
     private final GridSpinBusyLock busyLock;
 
@@ -151,6 +150,20 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     }
 
     /** {@inheritDoc} */
+    @Override public void onConnectedSocket(Socket socket, int sessionNum) {
+        int maxConn = distrThinCfg.maxConnectionsPerNode();
+        if (maxConn > 0 && sessionNum >= maxConn) {
+            metrics.onGeneralReject();
+
+            String msg = "Connection is rejected due to connection limit is reached [addr=" +
+                    socket.getInetAddress() + ", limit=" + maxConn + ']';
+            log.warning(msg);
+
+            throw new IgniteException(msg);
+        }
+    }
+
+    /** {@inheritDoc} */
     @Override public void onConnected(GridNioSession ses) {
         Integer connState = ses.meta(CONN_STATE_META_KEY);
 
@@ -178,8 +191,6 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
             return;
 
         ses.addMeta(CONN_STATE_META_KEY, CONN_STATE_DISCONNECTED);
-        if (connState.equals(CONN_STATE_HANDSHAKE_ACCEPTED))
-            connectionsCnt.decrementAndGet();
 
         ClientListenerConnectionContext connCtx = ses.meta(CONN_CTX_META_KEY);
 
@@ -417,10 +428,6 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
         ClientListenerConnectionContext connCtx = null;
 
         try {
-            int maxConn = distrThinCfg.maxConnectionsPerNode();
-            if (maxConn > 0 && connectionsCnt.get() >= maxConn)
-                throw new IgniteCheckedException("Connection limit reached: " + maxConn);
-
             connCtx = prepareContext(clientType, ses);
 
             ensureClientPermissions(clientType);
@@ -438,7 +445,6 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
             connCtx.handler().writeHandshake(writer);
 
             ses.addMeta(CONN_STATE_META_KEY, CONN_STATE_HANDSHAKE_ACCEPTED);
-            connectionsCnt.incrementAndGet();
 
             metrics.onHandshakeAccept(clientType);
 
