@@ -64,17 +64,23 @@ namespace Apache.Ignite.Core.Impl.Common
                 var memMount = FindHierarchyMount(MemorySubsystem);
                 if (memMount == null)
                 {
+                    Console.WriteLine("GetMemoryLimitInBytes: memMount is null");
                     return null;
                 }
 
                 var cgroupPathRelativeToMount = FindCGroupPath(MemorySubsystem);
                 if (cgroupPathRelativeToMount == null)
                 {
+                    Console.WriteLine("GetMemoryLimitInBytes: cgroupPathRelativeToMount is null");
                     return null;
                 }
 
                 var hierarchyMount = memMount.Value.Key;
                 var hierarchyRoot = memMount.Value.Value;
+
+                Console.WriteLine("GetMemoryLimitInBytes: hierarchyMount=" + hierarchyMount +
+                                  ", hierarchyRoot=" + hierarchyRoot +
+                                  ", cgroupPathRelativeToMount=" + cgroupPathRelativeToMount);
 
                 // Host CGroup: append the relative path
                 // In Docker: root and relative path are the same
@@ -85,7 +91,11 @@ namespace Apache.Ignite.Core.Impl.Common
 
                 var memLimitFilePath = Path.Combine(groupPath, MemoryLimitFileName);
 
+                Console.WriteLine("GetMemoryLimitInBytes: memLimitFilePath=" + memLimitFilePath);
+
                 var memLimitText = File.ReadAllText(memLimitFilePath);
+
+                Console.WriteLine("GetMemoryLimitInBytes: memLimitText=" + memLimitText);
 
                 ulong memLimit;
                 if (ulong.TryParse(memLimitText, out memLimit))
@@ -106,12 +116,17 @@ namespace Apache.Ignite.Core.Impl.Common
         /// </summary>
         private static KeyValuePair<string, string>? FindHierarchyMount(string subsystem)
         {
+            Console.WriteLine("FindHierarchyMount start: " + subsystem);
+
             foreach (var line in File.ReadAllLines(ProcMountInfoFileName))
             {
+                Console.WriteLine("FindHierarchyMount: " + line);
+
                 var mount = GetHierarchyMount(line, subsystem);
 
                 if (mount != null)
                 {
+                    Console.WriteLine("FindHierarchyMount success: " + mount);
                     return mount;
                 }
             }
@@ -159,6 +174,8 @@ namespace Apache.Ignite.Core.Impl.Common
 
             foreach (var line in lines)
             {
+                Console.WriteLine("FindCGroupPath: " + line);
+
                 var parts = line.Split(new[] {':'}, 3);
 
                 if (parts.Length == 3 && parts[1].Split(',').Contains(subsystem, StringComparer.Ordinal))
