@@ -59,6 +59,20 @@ namespace Apache.Ignite.Core.Impl.Common
                 return null;
             }
 
+            var cgroupV2Text = TryReadFile("/sys/fs/cgroup/memory.max");
+            if (cgroupV2Text != null)
+            {
+                if (string.Equals(cgroupV2Text.Trim(), "max", StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+
+                if (ulong.TryParse(cgroupV2Text, out var memLimitV2))
+                {
+                    return memLimitV2;
+                }
+            }
+
             try
             {
                 var memMount = FindHierarchyMount(MemorySubsystem);
@@ -185,6 +199,19 @@ namespace Apache.Ignite.Core.Impl.Common
             }
 
             return null;
+        }
+
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Reviewed")]
+        private static string TryReadFile(string file)
+        {
+            try
+            {
+                return File.ReadAllText(file);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
     }
 }
