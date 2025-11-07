@@ -30,6 +30,7 @@ namespace Apache.Ignite.Core.Tests.Common
         /// Tests that cgroup limit can be always determined on Linux.
         /// </summary>
         [Test]
+        [Explicit("Requires cgroup limits.")]
         public void TestMemoryInfoReturnsNonNullLimitOnLinux()
         {
             if (Os.IsWindows)
