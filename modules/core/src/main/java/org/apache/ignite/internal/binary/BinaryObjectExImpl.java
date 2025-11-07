@@ -254,7 +254,7 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
         }
 
         if (meta == null || sensitiveDataLogging != PLAIN)
-            return S.toString(S.includeSensitive() ? BinaryObject.class.getSimpleName() : "BinaryObject",
+            return S.toString(sensitiveDataLogging == PLAIN ? BinaryObject.class.getSimpleName() : "BinaryObject",
                 "idHash", idHash, false,
                 "hash", hash, false,
                 "typeId", typeId(), true);
