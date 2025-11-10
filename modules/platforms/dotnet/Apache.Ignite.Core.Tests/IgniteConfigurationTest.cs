@@ -655,11 +655,15 @@ namespace Apache.Ignite.Core.Tests
                 var physMem = MemoryInfo.TotalPhysicalMemory;
                 Assert.IsNotNull(physMem);
 
-                var expected = (long) physMem / 5;
+                // If MaxSize from Java is more than physical memory, then Java ignored cgroups and we skip the check.
+                if (cfg.MaxSize < (long)physMem)
+                {
+                    var expected = (long)physMem / 5;
 
-                Assert.AreEqual(expected, cfg.MaxSize,
-                    string.Format("Expected max size with cgroup limit: '{0}', without: '{1}'",
-                        DataRegionConfiguration.DefaultMaxSize, expected));
+                    Assert.AreEqual(expected, cfg.MaxSize,
+                        string.Format("Expected max size with cgroup limit: '{0}', without: '{1}'",
+                            DataRegionConfiguration.DefaultMaxSize, expected));
+                }
             }
         }
 
