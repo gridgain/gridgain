@@ -34,6 +34,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.binary.BinaryObjectEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
@@ -47,6 +48,7 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliatio
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
@@ -339,7 +341,8 @@ public class ConsistencyCheckUtils {
     public static List<PartitionReconciliationDataRowMeta> mapPartitionReconciliation(
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> conflicts,
         Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys,
-        CacheObjectContext ctx
+        CacheObjectContext ctx,
+        SensitiveDataLogging sensitiveDataLogging
     ) throws IgniteCheckedException {
         List<PartitionReconciliationDataRowMeta> brokenKeys = new ArrayList<>();
 
@@ -360,7 +363,7 @@ public class ConsistencyCheckUtils {
                     cacheObjOpt.isPresent() ?
                         new PartitionReconciliationValueMeta(
                             cacheObjOpt.get().valueBytes(ctx),
-                            cacheObjOpt.map(o -> objectStringView(ctx, o)).orElse(null),
+                            cacheObjOpt.map(o -> objectStringView(ctx, o, sensitiveDataLogging)).orElse(null),
                             versionEntry.getValue())
                         :
                         null);
@@ -370,7 +373,7 @@ public class ConsistencyCheckUtils {
                 new PartitionReconciliationDataRowMeta(
                     new PartitionReconciliationKeyMeta(
                         key.valueBytes(ctx),
-                        objectStringView(ctx, key)),
+                        objectStringView(ctx, key, sensitiveDataLogging)),
                     valMap
                 ));
         }
@@ -406,11 +409,20 @@ public class ConsistencyCheckUtils {
      *
      * @param ctx Context.
      * @param obj Object.
+     * @param sensitiveDataLogging Sensitive data logging flag.
      */
-    public static String objectStringView(CacheObjectContext ctx, CacheObject obj) {
+    public static String objectStringView(
+        CacheObjectContext ctx,
+        CacheObject obj,
+        SensitiveDataLogging sensitiveDataLogging
+    ) {
+        Object objToString = obj;
         if (obj instanceof KeyCacheObjectImpl || obj instanceof CacheObjectImpl)
-            return Objects.toString(obj.value(ctx, false));
+            objToString = obj.value(ctx, false);
 
-        return Objects.toString(obj);
+        if (objToString instanceof BinaryObjectEx)
+            return ((BinaryObjectEx)objToString).toString(sensitiveDataLogging);
+
+        return Objects.toString(objToString);
     }
 }

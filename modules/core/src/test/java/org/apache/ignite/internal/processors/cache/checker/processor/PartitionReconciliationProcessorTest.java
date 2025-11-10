@@ -62,6 +62,7 @@ import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTa
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
+import org.apache.ignite.internal.processors.cache.verify.SensitiveMode;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.diagnostic.ReconciliationExecutionContext;
@@ -438,7 +439,8 @@ public class PartitionReconciliationProcessorTest {
                 recheckAttempts,
                 recheckDelay,
                 false,
-                true);
+                true,
+                SensitiveMode.HASH);
         }
 
         /** {@inheritDoc} */

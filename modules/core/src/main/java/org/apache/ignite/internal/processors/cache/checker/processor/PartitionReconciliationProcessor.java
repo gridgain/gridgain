@@ -60,6 +60,7 @@ import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTa
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTaskV2;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
+import org.apache.ignite.internal.processors.cache.verify.SensitiveMode;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.diagnostic.ReconciliationExecutionContext.ReconciliationStatisticsUpdateListener;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -172,6 +173,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      * @param recheckDelay Specifies the time interval between two consequent attempts to check keys.
      * @param compact {@code true} if the result should be returned in compact form.
      * @param includeSensitive {@code true} if sensitive information should be included in the result.
+     * @param sensitiveMode Sensitive mode.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public PartitionReconciliationProcessor(
@@ -186,7 +188,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         int recheckAttempts,
         int recheckDelay,
         boolean compact,
-        boolean includeSensitive
+        boolean includeSensitive,
+        SensitiveMode sensitiveMode
     ) throws IgniteCheckedException {
         super(sesId, ignite, parallelismLevel);
 
@@ -201,8 +204,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         registerListener(workloadTracker.andThen(evtLsnr));
 
         collector = (compact) ?
-            new ReconciliationResultCollector.Compact(ignite, log, sesId, includeSensitive) :
-            new ReconciliationResultCollector.Simple(ignite, log, includeSensitive);
+            new ReconciliationResultCollector.Compact(ignite, log, sesId, includeSensitive, sensitiveMode) :
+            new ReconciliationResultCollector.Simple(ignite, log, includeSensitive, sensitiveMode);
 
         boolean latestAlgSupported = allNodesSupport(
             ctx,

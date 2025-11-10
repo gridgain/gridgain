@@ -16,6 +16,11 @@
 
 package org.apache.ignite.internal.binary;
 
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.nio.ByteBuffer;
 import java.util.Objects;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.binary.BinaryObject;
@@ -35,12 +40,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
-
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
-import java.nio.ByteBuffer;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.internal.processors.cache.CacheObjectAdapter.objectPutSize;
@@ -272,7 +271,7 @@ public class BinaryEnumObjectImpl implements BinaryObjectEx, Externalizable, Cac
     }
 
     /** {@inheritDoc} */
-    @Override public String getString() {
+    @Override public String deserializedRepresentation() {
         // 1. Try deserializing the object.
         try {
             Object val = deserialize();
@@ -303,10 +302,12 @@ public class BinaryEnumObjectImpl implements BinaryObjectEx, Externalizable, Cac
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
+        return toString(S.getSensitiveDataLogging());
+    }
 
+    @Override public String toString(GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging) {
         if (sensitiveDataLogging == PLAIN) {
-            return getString();
+            return deserializedRepresentation();
         }
         if (sensitiveDataLogging == HASH)
             return String.valueOf(IgniteUtils.hash(this));

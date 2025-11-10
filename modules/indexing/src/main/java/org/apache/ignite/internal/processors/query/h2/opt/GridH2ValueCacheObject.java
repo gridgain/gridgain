@@ -103,7 +103,7 @@ public class GridH2ValueCacheObject extends Value {
     @Override public String getString() {
         Object obj0 = getObject();
         if (obj0 instanceof BinaryObjectEx) {
-            String str = ((BinaryObjectEx) obj0).getString();
+            String str = ((BinaryObjectEx) obj0).deserializedRepresentation();
             return str == null ? obj0.toString() : str;
         }
         return obj0.toString();

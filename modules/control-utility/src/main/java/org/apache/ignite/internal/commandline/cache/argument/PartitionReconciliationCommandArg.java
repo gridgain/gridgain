@@ -23,6 +23,7 @@ import org.apache.ignite.internal.commandline.argument.CommandArg;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationRepairMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
+import org.apache.ignite.internal.processors.cache.verify.SensitiveMode;
 
 /**
  * {@link CacheSubcommands#PARTITION_RECONCILIATION} command arguments.
@@ -44,6 +45,9 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
 
     /** If {@code true} - print data to result with sensitive information: keys and values. */
     INCLUDE_SENSITIVE("--include-sensitive", Boolean.FALSE),
+
+    /** Defines a sensitive mode to print keys and values. */
+    SENSITIVE_MODE("--sensitive-mode", SensitiveMode.DEFAULT),
 
     /** Maximum number of threads that can be involved in reconciliation activities. */
     PARALLELISM("--parallelism", 0),

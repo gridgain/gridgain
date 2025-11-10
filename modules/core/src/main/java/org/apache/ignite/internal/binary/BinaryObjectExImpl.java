@@ -193,7 +193,7 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
     }
 
     /** {@inheritDoc} */
-    @Override public String getString() {
+    @Override public String deserializedRepresentation() {
         try {
             return deserialize().toString();
         } catch (IgniteException ex) {
@@ -203,15 +203,18 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
+        return toString(S.getSensitiveDataLogging());
+    }
 
+    /** {@inheritDoc} */
+    @Override public String toString(GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging) {
         if (sensitiveDataLogging == PLAIN) {
             try {
                 BinaryReaderHandles ctx = new BinaryReaderHandles();
 
                 ctx.put(start(), this);
 
-                return toString(ctx, new IdentityHashMap<BinaryObject, Integer>());
+                return toString(ctx, new IdentityHashMap<BinaryObject, Integer>(), sensitiveDataLogging);
             } catch (BinaryObjectException e) {
                 throw new IgniteException("Failed to create string representation of binary object.", e);
             }
@@ -225,9 +228,14 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
     /**
      * @param ctx Reader context.
      * @param handles Handles for already traversed objects.
+     * @param sensitiveDataLogging Sensitive data logging flag.
      * @return String representation.
      */
-    private String toString(BinaryReaderHandles ctx, IdentityHashMap<BinaryObject, Integer> handles) {
+    private String toString(
+        BinaryReaderHandles ctx,
+        IdentityHashMap<BinaryObject, Integer> handles,
+        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging
+    ) {
         int idHash = System.identityHashCode(this);
         int hash = hashCode();
 
@@ -245,8 +253,8 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
             IgniteThread.onForbidBinaryMetadataRequestSectionLeft();
         }
 
-        if (meta == null || !S.includeSensitive())
-            return S.toString(S.includeSensitive() ? BinaryObject.class.getSimpleName() : "BinaryObject",
+        if (meta == null || sensitiveDataLogging != PLAIN)
+            return S.toString(sensitiveDataLogging == PLAIN ? BinaryObject.class.getSimpleName() : "BinaryObject",
                 "idHash", idHash, false,
                 "hash", hash, false,
                 "typeId", typeId(), true);
@@ -263,7 +271,7 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
 
                 buf.a(", ").a(name).a('=');
 
-                appendValue(val, buf, ctx, handles);
+                appendValue(val, buf, ctx, handles, sensitiveDataLogging);
             }
 
             buf.a(']');
@@ -294,9 +302,15 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
      * @param buf Buffer to append to.
      * @param ctx Reader context.
      * @param handles Handles for already traversed objects.
+     * @param sensitiveDataLogging Sensitive data logging flag.
      */
-    private void appendValue(Object val, SB buf, BinaryReaderHandles ctx,
-        IdentityHashMap<BinaryObject, Integer> handles) {
+    private void appendValue(
+        Object val,
+        SB buf,
+        BinaryReaderHandles ctx,
+        IdentityHashMap<BinaryObject, Integer> handles,
+        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging
+    ) {
         if (val instanceof byte[])
             buf.a(Arrays.toString((byte[])val));
         else if (val instanceof short[])
@@ -330,7 +344,7 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
                 buf.a(meta0.typeName()).a(" [hash=").a(idHash0).a(", ...]");
             }
             else
-                buf.a(po.toString(ctx, handles));
+                buf.a(po.toString(ctx, handles, sensitiveDataLogging));
         }
         else if (val instanceof Object[]) {
             Object[] arr = (Object[])val;
@@ -340,7 +354,7 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
             for (int i = 0; i < arr.length; i++) {
                 Object o = arr[i];
 
-                appendValue(o, buf, ctx, handles);
+                appendValue(o, buf, ctx, handles, sensitiveDataLogging);
 
                 if (i < arr.length - 1)
                     buf.a(", ");
@@ -356,7 +370,7 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
             while (it.hasNext()) {
                 Object o = it.next();
 
-                appendValue(o, buf, ctx, handles);
+                appendValue(o, buf, ctx, handles, sensitiveDataLogging);
 
                 if (it.hasNext())
                     buf.a(", ");
@@ -374,11 +388,11 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
             while (it.hasNext()) {
                 Map.Entry<Object, Object> e = it.next();
 
-                appendValue(e.getKey(), buf, ctx, handles);
+                appendValue(e.getKey(), buf, ctx, handles, sensitiveDataLogging);
 
                 buf.a('=');
 
-                appendValue(e.getValue(), buf, ctx, handles);
+                appendValue(e.getValue(), buf, ctx, handles, sensitiveDataLogging);
 
                 if (it.hasNext())
                     buf.a(", ");
