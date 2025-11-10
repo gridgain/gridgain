@@ -62,7 +62,9 @@ namespace Apache.Ignite.Core.Impl.Common
             var cgroupV2Text = TryReadFile("/sys/fs/cgroup/memory.max");
             if (cgroupV2Text != null)
             {
-                if (string.Equals(cgroupV2Text.Trim(), "max", StringComparison.OrdinalIgnoreCase))
+                cgroupV2Text = cgroupV2Text.Trim();
+
+                if (string.Equals(cgroupV2Text, "max", StringComparison.OrdinalIgnoreCase))
                 {
                     return null;
                 }
