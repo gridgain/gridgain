@@ -3544,7 +3544,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             // cleared tombstone to restore consistency.
             Long maxClearCntr = maxClearCntrs.getOrDefault(part, 0L);
 
-            if (!haveHist.contains(part) && maxClearCntr != 0 && sortedCnrs.getValue().firstKey() <= maxClearCntr) {
+            if (!haveHist.contains(part) && maxClearCntr != 0 && sortedCnrs.getValue().firstKey() < maxClearCntr) {
                 for (UUID nodeId : msgs.keySet()) {
                     if (nodeId.equals(cctx.localNodeId())) {
                         GridDhtLocalPartition locPart = top.localPartition(part);
