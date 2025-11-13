@@ -89,6 +89,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
+import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.StateChangeRequest;
 import org.apache.ignite.internal.processors.cache.WalStateAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter;
@@ -3566,36 +3567,121 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             // cleared tombstone to restore consistency.
             Long maxClearCntr = maxClearCntrs.getOrDefault(part, 0L);
 
-//            if (!haveHist.contains(part) && maxClearCntr != 0 && sortedCnrs.getValue().firstKey() <= maxClearCntr) {
-//                for (UUID nodeId : msgs.keySet()) {
-//                    log.warning(">>>>> partition should be added to reload [node=" + nodeId
-//                        + ", grp=" + top.groupId() + ", part=" + part
-//                        + ", firstKey=" + sortedCnrs.getValue().firstKey() + ", maxClearCnt=" + maxClearCntr
-//                        + ']');
-//                }
-//            } else {
-//                if (part == 0 && top.groupId() == 1544803905) {
-//                    for (UUID nodeId : msgs.keySet()) {
-//                        log.warning(">>>>> partition should NOT be added to reload [node=" + nodeId
-//                            + ", grp=" + top.groupId() + ", part=" + part
-//                            + ", firstKey=" + sortedCnrs.getValue().firstKey() + ", maxClearCnt=" + maxClearCntr
-//                            + ']');
-//                    }
-//                }
-//            }
             if (!haveHist.contains(part) && maxClearCntr != 0 && sortedCnrs.getValue().firstKey() <= maxClearCntr) {
+                for (UUID nodeId : msgs.keySet()) {
+                    log.warning(">>>>> partition should be added to reload [node=" + nodeId
+                        + ", grp=" + top.groupId() + ", part=" + part
+                        + ", firstKey=" + sortedCnrs.getValue().firstKey() + ", maxClearCnt=" + maxClearCntr
+                        + ']');
+                }
+            } else {
+                if (part == 0 && top.groupId() == 1544803905) {
+                    for (UUID nodeId : msgs.keySet()) {
+                        log.warning(">>>>> partition should NOT be added to reload [node=" + nodeId
+                            + ", grp=" + top.groupId() + ", part=" + part
+                            + ", hasHist=" + haveHist.contains(part)
+                            + ", firstKey=" + sortedCnrs.getValue().firstKey() + ", maxClearCnt=" + maxClearCntr
+                            + ']');
+                    }
+                }
+            }
+            if (!haveHist.contains(part) && maxClearCntr != 0 && sortedCnrs.getValue().firstKey() <= maxClearCntr) {
+                // partition should be reloaded when there is at least one owner
+                // that has tombstone clear counter which is incompatible with the node counter.
+                List<UUID> partOwners = new ArrayList<>();
+                long maxclearcntr = 0;
+                if (/*nodeId.equals(locNodeId)*/top.localPartition(part) != null) {
+                    GridDhtLocalPartition locPart = top.localPartition(part);
+
+                    assert locPart != null;// && locPart.state() == GridDhtPartitionState.OWNING;
+
+                    if (locPart.state() == GridDhtPartitionState.OWNING) {
+                        if (part == 0 && top.groupId() == 1544803905) {
+                            log.warning(">>>>> calculating local maxclearcntr [" +
+                                "maxclearcntr=" + maxclearcntr
+                                + ", clearCntr=" + locPart.dataStore().partUpdateCounter().tombstoneClearCounter() + ']');
+                        }
+                        maxclearcntr = Math.max(maxclearcntr, locPart.dataStore().partUpdateCounter().tombstoneClearCounter());
+                    }
+                }
+
+                for (UUID nodeId : msgs.keySet()) {
+                    // filter all owners
+//                    if (nodeId.equals(locNodeId)) {
+//                        GridDhtLocalPartition locPart = top.localPartition(part);
+//                        if (locPart != null && locPart.state() == GridDhtPartitionState.OWNING) {
+//                            maxclearcntr = Math.max(maxclearcntr, locPart.dataStore().partUpdateCounter().tombstoneClearCounter());
+//                        }
+//                    }
+//                    else {
+//
+//                    }
+                    if (top.partitionState(nodeId, part) == GridDhtPartitionState.OWNING) {
+                        partOwners.add(nodeId);
+
+                        if (nodeId.equals(locNodeId)) {
+                            GridDhtLocalPartition locPart = top.localPartition(part);
+
+                            assert locPart != null && locPart.state() == GridDhtPartitionState.OWNING;
+
+                            if (part == 0 && top.groupId() == 1544803905) {
+                                log.warning(">>>>> calculating local maxclearcntr [" +
+                                    "maxclearcntr=" + maxclearcntr
+                                    + ", clearCntr=" + locPart.dataStore().partUpdateCounter().tombstoneClearCounter() + ']');
+                            }
+                            maxclearcntr = Math.max(maxclearcntr, locPart.dataStore().partUpdateCounter().tombstoneClearCounter());
+                        }
+                        else {
+                            GridDhtPartitionsSingleMessage m = msgs.get(nodeId);
+                            Map<Integer, Long> clrscntrs = m.partitionClearCounters(top.groupId());
+                            if (part == 0 && top.groupId() == 1544803905) {
+                                log.warning(">>>>> calculating remote maxclearcntr [" +
+                                    "remoteId=" + nodeId +
+                                    ", maxclearcntr=" + maxclearcntr + ", clearCntr=" + clrscntrs.getOrDefault(part, 0L) + ']');
+                            }
+                            maxclearcntr = Math.max(maxclearcntr, clrscntrs.getOrDefault(part, 0L));
+                        }
+                    }
+                    else {
+                        if (part == 0 && top.groupId() == 1544803905) {
+                            log.warning(">>>>> not an owner [nodeId=" + nodeId + ", state=" + top.partitionState(nodeId, part) + ']');
+                        }
+                    }
+                }
+
+                if (part == 0 && top.groupId() == 1544803905) {
+                    log.warning(">>>>> part 0 maxclearcntr [maxclearcntr=" + maxclearcntr + ']');
+                }
+
                 for (UUID nodeId : msgs.keySet()) {
                     if (nodeId.equals(cctx.localNodeId())) {
                         GridDhtLocalPartition locPart = top.localPartition(part);
 
-                        if (locPart != null && locPart.state() == GridDhtPartitionState.MOVING)
+                        if (locPart != null
+                            && locPart.state() == GridDhtPartitionState.MOVING
+                            && locPart.dataStore().partUpdateCounter().tombstoneClearCounter() < maxclearcntr
+                        ) {
                             addClearingPartition(top.groupId(), part);
+                            partsToReload.put(nodeId, top.groupId(), part);
+                            continue;
+                        }
                     }
 
                     // Set partition as not applicable for fast full rebalancing.
                     GridDhtPartitionState state = top.partitionState(nodeId, part);
-                    if (state != null && state == GridDhtPartitionState.MOVING)
+                    GridDhtPartitionsSingleMessage m = msgs.get(nodeId);
+                    Map<Integer, Long> clrscntrs = m.partitionClearCounters(top.groupId());
+                    if (state != null
+                        && state == GridDhtPartitionState.MOVING
+                        && clrscntrs.getOrDefault(part, 0L) < maxclearcntr
+                    ) {
+                        if (part == 0 && top.groupId() == 1544803905) {
+                            log.warning(">>>>> part 0 was added to partsToReload [nodeId=" + nodeId + ", state=" + state
+                                + ", clearCnt=" + clrscntrs.getOrDefault(part, 0L)
+                                + ']');
+                        }
                         partsToReload.put(nodeId, top.groupId(), part);
+                    }
                 }
             }
         }

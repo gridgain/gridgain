@@ -1452,6 +1452,12 @@ public class GridDhtPartitionDemander {
                         part.dataStore().resetInitialUpdateCounter();
 
                         if (grp.mvccEnabled() || assignments.forceClear() || exchFut.isClearingPartition(grp, partId)) {
+                            if (part.id() == 0) {
+                                log.warning(">>>>> demander. clearing part [part=" + part.id()
+                                    + ", forceClear=" + assignments.forceClear()
+                                    + ", clearPart=" + exchFut.isClearingPartition(grp, partId)
+                                    + ']');
+                            }
                             IgniteInternalFuture<Void> fut0 = part.clearAsync();
 
                             fut0.listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
