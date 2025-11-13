@@ -3463,6 +3463,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     .computeIfAbsent(cntr, c -> new ArrayList<>())
                     .add(remoteNodeId);
 
+//                if (p == 0 && top.groupId() == 1544803905) {
+//                    log.warning(">>>>> part state [remoteNode=" + remoteNodeId + ", state=" + state
+//                        + ", cntr=" + cntr
+//                        + ", init=" + nodeCntrs.initialUpdateCounterAt(i)
+//                        + ", updCnt=" + nodeCntrs.updateCounterAt(i)
+//                        + ", clearCntr=" + clearCntrs.get(0) + ']');
+//                }
+
                 if (state != GridDhtPartitionState.OWNING)
                     continue;
 
@@ -3499,6 +3507,20 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             varCntrs.computeIfAbsent(part.id(), key -> new TreeMap<>())
                 .computeIfAbsent(cntr, c -> new ArrayList<>())
                 .add(locNodeId);
+
+//            if (part.id() == 0 && top.groupId() == 1544803905) {
+//                if (part.dataStore().partUpdateCounter() != null) {
+//                    PartitionUpdateCounter c2 = part.dataStore().partUpdateCounter();
+//
+//                    long testCntr2 = c2.tombstoneClearCounter();
+//
+//                    log.warning(">>>>> part state [crd=" + locNodeId + ", state=" + state
+//                        + ", cntr=" + cntr
+//                        + ", init=" + c2.initial()//.initialUpdateCounterAt(i)
+//                        + ", updCnt=" + c2.get()
+//                        + ", clearCntr=" + testCntr2 + ']');
+//                }
+//            }
 
             if (state != GridDhtPartitionState.OWNING)
                 continue;
@@ -3544,7 +3566,24 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             // cleared tombstone to restore consistency.
             Long maxClearCntr = maxClearCntrs.getOrDefault(part, 0L);
 
-            if (!haveHist.contains(part) && maxClearCntr != 0 && sortedCnrs.getValue().firstKey() < maxClearCntr) {
+//            if (!haveHist.contains(part) && maxClearCntr != 0 && sortedCnrs.getValue().firstKey() <= maxClearCntr) {
+//                for (UUID nodeId : msgs.keySet()) {
+//                    log.warning(">>>>> partition should be added to reload [node=" + nodeId
+//                        + ", grp=" + top.groupId() + ", part=" + part
+//                        + ", firstKey=" + sortedCnrs.getValue().firstKey() + ", maxClearCnt=" + maxClearCntr
+//                        + ']');
+//                }
+//            } else {
+//                if (part == 0 && top.groupId() == 1544803905) {
+//                    for (UUID nodeId : msgs.keySet()) {
+//                        log.warning(">>>>> partition should NOT be added to reload [node=" + nodeId
+//                            + ", grp=" + top.groupId() + ", part=" + part
+//                            + ", firstKey=" + sortedCnrs.getValue().firstKey() + ", maxClearCnt=" + maxClearCntr
+//                            + ']');
+//                    }
+//                }
+//            }
+            if (!haveHist.contains(part) && maxClearCntr != 0 && sortedCnrs.getValue().firstKey() <= maxClearCntr) {
                 for (UUID nodeId : msgs.keySet()) {
                     if (nodeId.equals(cctx.localNodeId())) {
                         GridDhtLocalPartition locPart = top.localPartition(part);
@@ -3554,7 +3593,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     }
 
                     // Set partition as not applicable for fast full rebalancing.
-                    partsToReload.put(nodeId, top.groupId(), part);
+                    GridDhtPartitionState state = top.partitionState(nodeId, part);
+                    if (state != null && state == GridDhtPartitionState.MOVING)
+                        partsToReload.put(nodeId, top.groupId(), part);
                 }
             }
         }
@@ -5755,7 +5796,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         /**
          * @param cnt Count.
-         * @param Partiton size.
+         * @param size Partition size.
          * @param firstNode Node ID.
          */
         private CounterWithNodes(long cnt, @Nullable Long size, UUID firstNode) {
