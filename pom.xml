@@ -114,6 +114,15 @@
             </modules>
         </profile>
         <profile>
+            <id>target-java-17+</id>
+            <activation>
+                <jdk>[17,)</jdk>
+            </activation>
+            <modules>
+                <module>modules/spring-6</module>
+            </modules>
+        </profile>
+        <profile>
             <id>java-8</id>
             <activation>
                 <jdk>1.8</jdk>
