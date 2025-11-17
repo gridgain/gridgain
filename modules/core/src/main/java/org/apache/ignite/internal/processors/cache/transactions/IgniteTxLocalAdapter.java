@@ -1516,8 +1516,6 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                 old.addEntryProcessor(entryProcessor, invokeArgs);
             }
             else {
-                assert old.op() != TRANSFORM;
-
                 old.op(op);
                 old.value(val, op == CREATE || op == UPDATE || op == DELETE, op == READ);
             }
