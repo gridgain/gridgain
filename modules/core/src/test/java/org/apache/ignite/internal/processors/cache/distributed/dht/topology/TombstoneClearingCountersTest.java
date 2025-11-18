@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -34,6 +35,7 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
@@ -88,8 +90,9 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         cfg.setDataStorageConfiguration(dsCfg);
 
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).
+            setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC).
             setAtomicityMode(atomicityMode).
-            setBackups(1).
+            setBackups(1/*2*/).
             setAffinity(new RendezvousAffinityFunction(false, 64)));
 
         return cfg;
@@ -431,6 +434,12 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
     }
 
+    private void printUpdCntr(String prefixMsg, IgniteEx ignite, int grpId, int partId) {
+        GridDhtLocalPartition part = ignite.context().cache().cacheGroup(grpId).topology().localPartition(partId);
+        PartitionUpdateCounter cntr = part.dataStore().partUpdateCounter();
+        log.warning(">>>>> " + prefixMsg + ", [cntr=" + cntr + ", state=" + part.state() + ']');
+    }
+
     /**
      * @throws Exception If failed.
      */
@@ -440,18 +449,26 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         IgniteEx crd = startGrids(2);
         crd.cluster().state(ClusterState.ACTIVE);
 
+//        crd.cluster().disableWal(DEFAULT_CACHE_NAME);
+
         int testPart = 0;
 
         IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+        int grpId = crd.context().cache().cacheDescriptor(DEFAULT_CACHE_NAME).groupId();
 
         cache.put(testPart, 0);
 
         forceCheckpoint();
 
+        printUpdCntr("0 crd", crd, grpId, testPart);
+        printUpdCntr("0 n1", grid(1), grpId, testPart);
+
         stopGrid(1);
         awaitPartitionMapExchange();
 
         crd.cache(DEFAULT_CACHE_NAME).remove(testPart);
+
+        printUpdCntr("1 crd", crd, grpId, testPart);
 
         IgniteConfiguration cfg1 = getConfiguration(getTestIgniteInstanceName(1));
         TestRecordingCommunicationSpi spi1 = (TestRecordingCommunicationSpi) cfg1.getCommunicationSpi();
@@ -459,19 +476,92 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
 
         IgniteEx g2 = startGrid(cfg1);
         spi1.waitForBlocked();
+
+        printUpdCntr("2 crd", crd, grpId, testPart);
+        printUpdCntr("2 n1", g2, grpId, testPart);
+
         forceCheckpoint(g2); // Write adjusted counters to enforce full rebalancing after restart.
         g2.close(); // Stop before rebalancing for default is starting.
 
         clearTombstones(cache);
 
+        printUpdCntr("3 crd", crd, grpId, testPart);
+
         TrackingResolver rslvr = new TrackingResolver(testPart);
-        startGrid(1, rslvr);
+        IgniteEx g3 = startGrid(1, rslvr);
 
         awaitPartitionMapExchange();
 
+        printUpdCntr("4 crd", crd, grpId, testPart);
+        printUpdCntr("4 n1", g3, grpId, testPart);
+
         // Expecting full rebalancing, because LWM on joining node is adjusted to supplier LWM during previous PME.
         assertFalse(historical(1).contains(testPart));
-        assertTrue(rslvr.reason == PartitionsEvictManager.EvictReason.CLEARING);
+        assertTrue("Reason [msg=" + rslvr.reason + ']', rslvr.reason == PartitionsEvictManager.EvictReason.CLEARING);
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+//    @Test
+    @WithSystemProperty(key = "IGNITE_PREFER_WAL_REBALANCE", value = "true")
+    public void testConsistencyOnCounterTriggeredRebalanceHistoricalRestartDemanderClearTombstones2() throws Exception {
+        IgniteEx crd = startGrids(3);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        crd.cluster().disableWal(DEFAULT_CACHE_NAME);
+
+        int testPart = 0;
+
+        IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+        int grpId = crd.context().cache().cacheDescriptor(DEFAULT_CACHE_NAME).groupId();
+
+        cache.put(testPart, 0);
+
+        forceCheckpoint();
+
+        printUpdCntr("0 crd", crd, grpId, testPart);
+        printUpdCntr("0 n1", grid(1), grpId, testPart);
+        printUpdCntr("0 n2", grid(2), grpId, testPart);
+
+        stopGrid(1);
+        awaitPartitionMapExchange();
+
+        crd.cache(DEFAULT_CACHE_NAME).remove(testPart);
+
+        printUpdCntr("1 crd", crd, grpId, testPart);
+        printUpdCntr("1 n2", grid(2), grpId, testPart);
+
+//        IgniteConfiguration cfg1 = getConfiguration(getTestIgniteInstanceName(1));
+//        TestRecordingCommunicationSpi spi1 = (TestRecordingCommunicationSpi) cfg1.getCommunicationSpi();
+//        spi1.blockMessages(TestRecordingCommunicationSpi.blockDemandMessageForGroup(CU.cacheId(DEFAULT_CACHE_NAME)));
+//
+//        IgniteEx g2 = startGrid(cfg1);
+//        spi1.waitForBlocked();
+//
+//        printUpdCntr("2 crd", crd, grpId, testPart);
+//        printUpdCntr("2 n1", g2, grpId, testPart);
+//
+//        forceCheckpoint(g2); // Write adjusted counters to enforce full rebalancing after restart.
+//        g2.close(); // Stop before rebalancing for default is starting.
+
+//        clearTombstones(cache);
+        clearTombstones(grid(2).cache(DEFAULT_CACHE_NAME));
+
+        printUpdCntr("3 crd", crd, grpId, testPart);
+        printUpdCntr("3 n2", grid(2), grpId, testPart);
+
+        TrackingResolver rslvr = new TrackingResolver(testPart);
+        IgniteEx g3 = startGrid(1, rslvr);
+
+        awaitPartitionMapExchange();
+
+        printUpdCntr("4 crd", crd, grpId, testPart);
+        printUpdCntr("4 n1", g3, grpId, testPart);
+        printUpdCntr("4 n2", grid(2), grpId, testPart);
+
+        // Expecting full rebalancing, because LWM on joining node is adjusted to supplier LWM during previous PME.
+//        assertFalse(historical(1).contains(testPart));
+//        assertTrue("Reason [msg=" + rslvr.reason + ']', rslvr.reason == PartitionsEvictManager.EvictReason.CLEARING);
 
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
     }
