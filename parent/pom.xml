@@ -34,7 +34,7 @@
 
     <groupId>org.gridgain</groupId>
     <artifactId>ignite-parent</artifactId>
-    <version>8.9.127-SNAPSHOT</version>
+    <version>8.9.23-p1</version>
     <packaging>pom</packaging>
     <url>http://www.gridgain.com</url>
 
@@ -277,7 +277,7 @@
                         <dependency>
                             <groupId>org.gridgain</groupId>
                             <artifactId>ignite-tools</artifactId>
-                            <version>8.9.127-SNAPSHOT</version>
+                            <version>8.9.23-p1</version>
                         </dependency>
                     </dependencies>
                 </plugin>

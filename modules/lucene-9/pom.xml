@@ -25,12 +25,12 @@
     <parent>
         <groupId>org.gridgain</groupId>
         <artifactId>ignite-parent-internal</artifactId>
-        <version>8.9.127-SNAPSHOT</version>
+        <version>8.9.23-p1</version>
         <relativePath>../../parent-internal/pom.xml</relativePath>
     </parent>
 
     <artifactId>ignite-lucene-9</artifactId>
-    <version>8.9.127-SNAPSHOT</version>
+    <version>8.9.23-p1</version>
 
     <properties>
         <maven.compiler.target>11</maven.compiler.target>
