@@ -201,9 +201,41 @@ if (!$skipNuGet) {
     $nupkgDir = "nupkg"
     Make-Dir($nupkgDir)
 
+    # Inputs
+    Write-Host "=== INPUTS ==="
+    Write-Host "version:        $version"
+    Write-Host "versionSuffix:  $versionSuffix"
+    Write-Host ""
+
     # Detect version
-    $ver = if ($version) { $version } else { (gi Apache.Ignite.Core\bin\Release\netstandard2.0\Apache.Ignite.Core.dll).VersionInfo.ProductVersion }
+    if ($version) {
+        Write-Host "Using provided version: $version"
+        $ver = $version
+    } else {
+        Write-Host "Reading version from GridGain.Core.dll..."
+        $dllPath = "GridGain.Core\bin\Release\netstandard2.0\GridGain.Core.dll"
+
+        Write-Host "DLL path: $dllPath"
+        $dll = Get-Item $dllPath
+        $dllVersion = $dll.VersionInfo.ProductVersion
+
+        Write-Host "DLL ProductVersion: $dllVersion"
+
+        $ver = $dllVersion
+    }
+
+    # Intermediate before suffix
+    Write-Host ""
+    Write-Host "=== INTERMEDIATE ==="
+    Write-Host "Version before suffix: $ver"
+
+    # Apply suffix
     $ver = "$ver$versionSuffix"
+
+    # Final
+    Write-Host ""
+    Write-Host "=== FINAL RESULT ==="
+    Write-Host "Final version: $ver"
 
     Exec "dotnet pack Apache.Ignite.sln -c Release -o $nupkgDir /p:Version=$ver"
 
