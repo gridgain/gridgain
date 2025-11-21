@@ -104,7 +104,9 @@ import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.pagemem.FullPageId.NULL_PAGE;
 import static org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl.DATAREGION_METRICS_PREFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
+import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageHeader.headerIsValid;
 import static org.apache.ignite.internal.util.GridUnsafe.wrapPointer;
+import static org.apache.ignite.internal.util.OffheapReadWriteLock.TAG_LOCK_ALWAYS;
 
 /**
  * Page header structure is described by the following diagram.
@@ -605,6 +607,9 @@ public class PageMemoryImpl implements PageMemoryEx {
             PageHeader.writeTimestamp(absPtr, U.currentTimeMillis());
             rwLock.init(absPtr + PAGE_LOCK_OFFSET, PageIdUtils.tag(pageId));
 
+            // Header initialization is finished.
+            headerIsValid(absPtr, true);
+
             assert PageIO.getCrc(absPtr + PAGE_OVERHEAD) == 0; //TODO GG-11480
 
             assert !PageHeader.isAcquired(absPtr) :
@@ -754,6 +759,8 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                 statHolder.trackLogicalRead(absPtr + PAGE_OVERHEAD);
 
+                waitUntilPageIsFullyInitialized(absPtr);
+
                 return absPtr;
             }
         }
@@ -827,6 +834,10 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                 rwLock.init(absPtr + PAGE_LOCK_OFFSET, PageIdUtils.tag(pageId));
 
+                // Mark page header as invalid if it's not a restore. We have not yet read the real value of "pageId" from the page, thus
+                // the state of "rwLock" can be inconsistent. Please see "waitUntilPageIsFullyInitialized" for more details.
+                headerIsValid(absPtr, restore);
+
                 if (readPageFromStore) {
                     boolean locked = rwLock.writeLock(absPtr + PAGE_LOCK_OFFSET, OffheapReadWriteLock.TAG_LOCK_ALWAYS);
 
@@ -867,8 +878,11 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             seg.acquirePage(absPtr);
 
-            if (!readPageFromStore)
+            if (!readPageFromStore) {
                 statHolder.trackLogicalRead(absPtr + PAGE_OVERHEAD);
+
+                waitUntilPageIsFullyInitialized(absPtr);
+            }
 
             return absPtr;
         }
@@ -928,9 +942,30 @@ public class PageMemoryImpl implements PageMemoryEx {
                 finally {
                     rwLock.writeUnlock(lockedPageAbsPtr + PAGE_LOCK_OFFSET,
                         actualPageId == 0 ? OffheapReadWriteLock.TAG_LOCK_ALWAYS : PageIdUtils.tag(actualPageId));
+
+                    // At this point we guarantee that after write lock is released, page will have a valid header that's consistent with
+                    // page content. Eventual consistency of "headerIsValid" flag is accounted for in "waitUntilPageIsFullyInitialized".
+                    headerIsValid(lockedPageAbsPtr, true);
                 }
             }
         }
+    }
+
+    /**
+     * This method is called when the thread finishes acquiring the page, but this thread is not the one that reads page data from the
+     * storage. Such a waiting is required to receive a valid state of page header, in particular we need a valid state of {@link #rwLock}
+     * for a given page.
+     */
+    private void waitUntilPageIsFullyInitialized(long absPtr) {
+        if (!headerIsValid(absPtr)) {
+            long lockAddr = absPtr + PAGE_LOCK_OFFSET;
+
+            rwLock.readLock(lockAddr, TAG_LOCK_ALWAYS);
+            rwLock.readUnlock(lockAddr);
+        }
+
+        // Validity flag can still be false even after we release the read lock, but we do guarantee that "writeUnlock" with a proper tag
+        // had happened, thus we're free to finish the execution of "acquirePage".
     }
 
     /** */
