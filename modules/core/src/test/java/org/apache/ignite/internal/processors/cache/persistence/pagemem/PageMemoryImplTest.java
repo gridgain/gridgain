@@ -562,7 +562,6 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         }
     }
 
-
     /**
      * @param mem Page memory.
      * @param fullPageId Full page ID to write.
