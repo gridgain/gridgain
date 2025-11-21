@@ -25,6 +25,7 @@ import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -261,7 +262,9 @@ public class ConnectionClientPool {
                                 }
                             }
                             else {
-                                U.sleep(200);
+                                // Randomize the retry timeout, so that there's less of a chance of simultaneous retries from both sides
+                                // in certain edge cases.
+                                U.sleep(ThreadLocalRandom.current().nextInt(120, 200));
 
                                 if (nodeGetter.apply(node.id()) == null)
                                     throw new ClusterTopologyCheckedException("Failed to send message " +
