@@ -738,6 +738,9 @@ public class PageMemoryImpl implements PageMemoryEx {
 
         Segment seg = segment(grpId, pageId);
 
+        boolean waitUntilPageIsFullyInitialized = false;
+        long resPointer = -1;
+
         seg.readLock().lock();
 
         try {
@@ -759,13 +762,18 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                 statHolder.trackLogicalRead(absPtr + PAGE_OVERHEAD);
 
-                waitUntilPageIsFullyInitialized(absPtr);
+                resPointer = absPtr;
+                waitUntilPageIsFullyInitialized = true;
 
                 return absPtr;
             }
         }
         finally {
             seg.readLock().unlock();
+
+            if (waitUntilPageIsFullyInitialized) {
+                waitUntilPageIsFullyInitialized(resPointer);
+            }
         }
 
         FullPageId fullId = new FullPageId(pageId, grpId);
@@ -881,7 +889,8 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (!readPageFromStore) {
                 statHolder.trackLogicalRead(absPtr + PAGE_OVERHEAD);
 
-                waitUntilPageIsFullyInitialized(absPtr);
+                resPointer = absPtr;
+                waitUntilPageIsFullyInitialized = true;
             }
 
             return absPtr;
@@ -893,6 +902,10 @@ public class PageMemoryImpl implements PageMemoryEx {
         }
         finally {
             seg.writeLock().unlock();
+
+            if (waitUntilPageIsFullyInitialized) {
+                waitUntilPageIsFullyInitialized(resPointer);
+            }
 
             if (delayedPageReplacementTracker != null)
                 delayedPageReplacementTracker.delayedPageWrite().flushCopiedPageIfExists();
