@@ -152,12 +152,12 @@ public enum ClientOperationType {
     CACHE_GET_AND_PUT_IF_ABSENT,
 
     /**
-     * Get and put if absent ({@link ClientCache#invoke(Object, EntryProcessor, Object...)}).
+     * Invoke entry processor ({@link ClientCache#invoke(Object, EntryProcessor, Object...)}).
      */
     CACHE_INVOKE,
 
     /**
-     * Get and put if absent ({@link ClientCache#invokeAll(Set, EntryProcessor, Object...)}).
+     * Invoke entry processor ({@link ClientCache#invokeAll(Set, EntryProcessor, Object...)}).
      */
     CACHE_INVOKE_ALL,
 
