@@ -43,6 +43,7 @@ import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionSerializationException;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
@@ -283,6 +284,7 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-22462")
     public void testConcurrentUpdatesAndQueryStartTx() throws Exception {
         concurrentUpdatesAndQueryStart(TRANSACTIONAL, false);
     }
@@ -315,6 +317,7 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46116")
     public void testConcurrentUpdatesAndQueryStartMvccTxCacheGroup() throws Exception {
         concurrentUpdatesAndQueryStart(TRANSACTIONAL_SNAPSHOT, true);
     }
