@@ -23,6 +23,9 @@ public class ClientServerError extends ClientError {
     /** Server error code. */
     private final int code;
 
+    /** Server error message. */
+    private final String msg;
+
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
@@ -34,6 +37,7 @@ public class ClientServerError extends ClientError {
             String.format("Ignite failed to process request [%s]: %s (server status code [%s])", reqId, srvMsg, srvCode)
         );
 
+        msg = srvMsg;
         code = srvCode;
     }
 
@@ -42,5 +46,12 @@ public class ClientServerError extends ClientError {
      */
     public int getCode() {
         return code;
+    }
+
+    /**
+     * @return Server error message.
+     */
+    public String getServerErrorMessage() {
+        return msg;
     }
 }

@@ -55,6 +55,8 @@ import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheGe
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheGetRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheGetSizeRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheIndexQueryRequest;
+import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheInvokeAllRequest;
+import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheInvokeRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheLocalPeekRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheNodePartitionsRequest;
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCachePartitionsRequest;
@@ -196,6 +198,12 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
     /** */
     private static final short OP_CACHE_LOCAL_PEEK = 1021;
+
+    /** */
+    private static final short OP_CACHE_INVOKE = 1024;
+
+    /** */
+    private static final short OP_CACHE_INVOKE_ALL = 1025;
 
     /* Cache create / destroy, configuration. */
     /** */
@@ -575,6 +583,12 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
             case OP_CACHE_REMOVE_ALL:
                 return new ClientCacheRemoveAllRequest(reader);
+
+            case OP_CACHE_INVOKE:
+                return new ClientCacheInvokeRequest(reader);
+
+            case OP_CACHE_INVOKE_ALL:
+                return new ClientCacheInvokeAllRequest(reader);
 
             case OP_CACHE_CREATE_WITH_NAME:
                 return new ClientCacheCreateWithNameRequest(reader);

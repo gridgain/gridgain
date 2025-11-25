@@ -176,6 +176,7 @@ import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertArrayEquals;
 
 /**
  * Super class for all common tests.
@@ -2668,6 +2669,21 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
             cntr0 = cntr.get2();
         }
+    }
+
+    /**
+     * Assert values equals (deep equals for arrays).
+     *
+     * @param exp Expected value.
+     * @param actual Actual value.
+     */
+    protected void assertEqualsArraysAware(Object exp, Object actual) {
+        if (exp instanceof Object[])
+            assertArrayEquals((Object[])exp, (Object[])actual);
+        else if (U.isPrimitiveArray(exp))
+            assertArrayEquals(new Object[] {exp}, new Object[] {actual}); // Hack to compare primitive arrays.
+        else
+            assertEquals(exp, actual);
     }
 
     /**

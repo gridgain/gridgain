@@ -73,6 +73,9 @@ public enum ClientBitmaskFeature implements ThinProtocolFeature {
     /** Cache configuration affinity function. */
     CACHE_CFG_AFFINITY(17),
 
+    /** Cache invoke/invokeAll operations. */
+    CACHE_INVOKE(19),
+
     /** Cache plugin configurations. GG-specific, use higher id to avoid conflicts. */
     CACHE_PLUGIN_CONFIGURATIONS(32),
 

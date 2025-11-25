@@ -481,21 +481,6 @@ public class FunctionalTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Assert values equals (deep equals for arrays).
-     *
-     * @param exp Expected value.
-     * @param actual Actual value.
-     */
-    private void assertEqualsArraysAware(Object exp, Object actual) {
-        if (exp instanceof Object[])
-            assertArrayEquals((Object[])exp, (Object[])actual);
-        else if (U.isPrimitiveArray(exp))
-            assertArrayEquals(new Object[] {exp}, new Object[] {actual}); // Hack to compare primitive arrays.
-        else
-            assertEquals(exp, actual);
-    }
-
-    /**
      * Test that thin client generates valid typeId for system types.
      */
     @Test
