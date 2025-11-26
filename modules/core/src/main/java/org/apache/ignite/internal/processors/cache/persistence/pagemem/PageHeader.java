@@ -29,6 +29,9 @@ class PageHeader {
     /** Dirty flag. */
     private static final long DIRTY_FLAG = 0x0100000000000000L;
 
+    /** Page header validity flag. */
+    private static final long HEADER_IS_VALID_FLAG = 0x0200000000000000L;
+
     /** Page relative pointer. Does not change once a page is allocated. */
     private static final int RELATIVE_PTR_OFFSET = 8;
 
@@ -62,7 +65,7 @@ class PageHeader {
      * @return Dirty flag.
      */
     public static boolean dirty(long absPtr) {
-        return flag(absPtr, DIRTY_FLAG);
+        return flag(absPtr, DIRTY_FLAG, false);
     }
 
     /**
@@ -71,19 +74,41 @@ class PageHeader {
      * @return Previous value of dirty flag.
      */
     public static boolean dirty(long absPtr, boolean dirty) {
-        return flag(absPtr, DIRTY_FLAG, dirty);
+        return flag(absPtr, DIRTY_FLAG, dirty, false);
+    }
+
+    /**
+     * Reads the value of a header validity flag. Does it using a volatile memory access.
+     *
+     * @param absPtr Page absolute pointer.
+     */
+    public static boolean headerIsValid(long absPtr) {
+        return flag(absPtr, HEADER_IS_VALID_FLAG, true);
+    }
+
+    /**
+     * Updates the value of a header validity flag. Does it using a volatile memory access.
+     *
+     * @param absPtr Page absolute pointer.
+     * @param valid Flag value.
+     */
+    public static void headerIsValid(long absPtr, boolean valid) {
+        flag(absPtr, HEADER_IS_VALID_FLAG, valid, true);
     }
 
     /**
      * @param absPtr Absolute pointer.
      * @param flag Flag mask.
+     * @param volatileAccess Whether to use volatile memory access.
      * @return Flag value.
      */
-    private static boolean flag(long absPtr, long flag) {
+    private static boolean flag(long absPtr, long flag, boolean volatileAccess) {
         assert (flag & 0xFFFFFFFFFFFFFFL) == 0;
         assert Long.bitCount(flag) == 1;
 
-        long relPtrWithFlags = GridUnsafe.getLong(absPtr + RELATIVE_PTR_OFFSET);
+        long relPtrWithFlags = volatileAccess
+            ? GridUnsafe.getLongVolatile(null, absPtr + RELATIVE_PTR_OFFSET)
+            : GridUnsafe.getLong(absPtr + RELATIVE_PTR_OFFSET);
 
         return (relPtrWithFlags & flag) != 0;
     }
@@ -94,13 +119,16 @@ class PageHeader {
      * @param absPtr Absolute pointer.
      * @param flag Flag mask.
      * @param set New flag value.
+     * @param volatileAccess Whether to use volatile memory access.
      * @return Previous flag value.
      */
-    private static boolean flag(long absPtr, long flag, boolean set) {
+    private static boolean flag(long absPtr, long flag, boolean set, boolean volatileAccess) {
         assert (flag & 0xFFFFFFFFFFFFFFL) == 0;
         assert Long.bitCount(flag) == 1;
 
-        long relPtrWithFlags = GridUnsafe.getLong(absPtr + RELATIVE_PTR_OFFSET);
+        long relPtrWithFlags = volatileAccess
+            ? GridUnsafe.getLongVolatile(null, absPtr + RELATIVE_PTR_OFFSET)
+            : GridUnsafe.getLong(absPtr + RELATIVE_PTR_OFFSET);
 
         boolean was = (relPtrWithFlags & flag) != 0;
 
@@ -109,7 +137,10 @@ class PageHeader {
         else
             relPtrWithFlags &= ~flag;
 
-        GridUnsafe.putLong(absPtr + RELATIVE_PTR_OFFSET, relPtrWithFlags);
+        if (volatileAccess)
+            GridUnsafe.putLongVolatile(null, absPtr + RELATIVE_PTR_OFFSET, relPtrWithFlags);
+        else
+            GridUnsafe.putLong(absPtr + RELATIVE_PTR_OFFSET, relPtrWithFlags);
 
         return was;
     }
