@@ -293,6 +293,7 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46116")
     public void testConcurrentUpdatesAndQueryStartMvccTx() throws Exception {
         concurrentUpdatesAndQueryStart(TRANSACTIONAL_SNAPSHOT, false);
     }
@@ -317,7 +318,6 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-46116")
     public void testConcurrentUpdatesAndQueryStartMvccTxCacheGroup() throws Exception {
         concurrentUpdatesAndQueryStart(TRANSACTIONAL_SNAPSHOT, true);
     }

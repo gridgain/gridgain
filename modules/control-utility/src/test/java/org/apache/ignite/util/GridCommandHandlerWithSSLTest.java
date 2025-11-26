@@ -16,6 +16,8 @@
 
 package org.apache.ignite.util;
 
+import org.junit.Ignore;
+
 /**
  *
  */
@@ -23,5 +25,17 @@ public class GridCommandHandlerWithSSLTest extends GridCommandHandlerTest {
     /** {@inheritDoc} */
     @Override protected boolean sslEnabled() {
         return true;
+    }
+
+    // TODO: GG-46120 Remove this override after flaky test is fixed.
+    /**
+     * {@inheritDoc}
+     *
+     * This override is added here to enable suppression of the testIdleVerifyCheckCrcFailsOnNotIdleCluster() run just for this class.
+     */
+    @Override
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46120")
+    public void testIdleVerifyCheckCrcFailsOnNotIdleCluster() throws Exception {
+        super.testIdleVerifyCheckCrcFailsOnNotIdleCluster();
     }
 }

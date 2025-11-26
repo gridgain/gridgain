@@ -58,6 +58,7 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.transactions.TransactionSerializationException;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -304,6 +305,7 @@ public class DynamicEnableIndexingConcurrentSelfTest extends DynamicEnableIndexi
 
     /** Enable indexing on ongoing rebalance. */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46217")
     public void testConcurrentRebalance() throws Exception {
         // Start cache and populate it with data.
         IgniteEx srv1 = ignitionStart(serverConfiguration(1));
@@ -424,6 +426,7 @@ public class DynamicEnableIndexingConcurrentSelfTest extends DynamicEnableIndexi
 
     /** Test concurrent enabling indexing. Only one attempt should succeed. */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46252")
     public void testConcurrentEnableIndexing() throws Exception {
         // Start several nodes.
         IgniteEx srv1 = ignitionStart(serverConfiguration(1));

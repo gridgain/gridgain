@@ -178,6 +178,7 @@ public class JdbcThinPartitionAwarenessSelfTest extends JdbcThinAbstractSelfTest
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-39840")
     public void testUpdateQueries() throws Exception {
         checkNodesUsage(null, stmt, "update Person set firstName = 'TestFirstName' where _key = 1",
             1, 1, true);

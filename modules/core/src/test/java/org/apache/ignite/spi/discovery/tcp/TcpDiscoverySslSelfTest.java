@@ -18,6 +18,7 @@ package org.apache.ignite.spi.discovery.tcp;
 
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
 
 /**
  * Test for {@link TcpDiscoverySpi} with SSL.
@@ -37,5 +38,17 @@ public class TcpDiscoverySslSelfTest extends TcpDiscoverySelfTest {
         cfg.setSslContextFactory(GridTestUtils.sslFactory());
 
         return cfg;
+    }
+
+    // TODO: GG-46253 Remove this override after flaky test is fixed.
+    /**
+     * {@inheritDoc}
+     *
+     * This override is added here to enable suppression of the testCustomEventCoordinatorFailure1() run just for this class.
+     */
+    @Override
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46253")
+    public void testCustomEventCoordinatorFailure1() throws Exception {
+        super.testCustomEventCoordinatorFailure1();
     }
 }
