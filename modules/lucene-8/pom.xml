@@ -25,12 +25,12 @@
     <parent>
         <groupId>org.gridgain</groupId>
         <artifactId>ignite-parent-internal</artifactId>
-        <version>8.9.127-SNAPSHOT</version>
+        <version>8.9.27</version>
         <relativePath>../../parent-internal/pom.xml</relativePath>
     </parent>
 
     <artifactId>ignite-lucene-8</artifactId>
-    <version>8.9.127-SNAPSHOT</version>
+    <version>8.9.27</version>
 
     <dependencies>
         <dependency>

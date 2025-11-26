@@ -25,7 +25,7 @@
     <parent>
         <groupId>org.gridgain</groupId>
         <artifactId>ignite-parent-internal</artifactId>
-        <version>8.9.127-SNAPSHOT</version>
+        <version>8.9.27</version>
         <relativePath>../../parent-internal/pom.xml</relativePath>
     </parent>
 
@@ -41,7 +41,7 @@
     </repositories>
 
     <properties>
-        <ignite.update.notifier.product>apache-ignite</ignite.update.notifier.product>
+        <ignite.update.notifier.product>gridgain-community</ignite.update.notifier.product>
 
         <!-- Imports:
                 - com.sun.jmx.mbeanserver => only used from TCKMBeanServerBuilder which has no usages within Ignite's
