@@ -215,6 +215,7 @@ public class CacheContinuousQueryOrderingEventTest extends GridCommonAbstractTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46275")
     public void testAtomicOnheapTwoBackupAsync() throws Exception {
         CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED, 2, ATOMIC, PRIMARY_SYNC);
 

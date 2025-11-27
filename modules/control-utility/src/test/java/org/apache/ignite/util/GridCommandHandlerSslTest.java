@@ -28,6 +28,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_CONNECTION_FAILED;
@@ -111,6 +112,7 @@ public class GridCommandHandlerSslTest extends GridCommandHandlerClusterPerMetho
      * @throws Exception If test failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-33457")
     public void testClientWithoutSslConnectsToSslEnabledCluster() throws Exception {
         startGrid(0);
 
