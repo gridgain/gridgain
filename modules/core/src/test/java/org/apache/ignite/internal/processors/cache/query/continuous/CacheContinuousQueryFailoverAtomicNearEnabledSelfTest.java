@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.query.continuous;
 
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.junit.Ignore;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 
@@ -34,5 +35,17 @@ public class CacheContinuousQueryFailoverAtomicNearEnabledSelfTest
     /** {@inheritDoc} */
     @Override protected NearCacheConfiguration nearCacheConfiguration() {
         return super.nearCacheConfiguration();
+    }
+
+    // TODO: GG-46281 Remove this override after flaky test is fixed.
+    /**
+     * {@inheritDoc}
+     *
+     * This override is added here to enable suppression of the testOneBackup() run just for this class.
+     */
+    @Override
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46281")
+    public void testOneBackup() throws Exception {
+        super.testOneBackup();
     }
 }
