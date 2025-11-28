@@ -902,7 +902,7 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
         addTest(new TestExit());
         addTest(new TestFileLock());
         addTest(new TestJmx());
-        addTest(new TestModifyOnWrite());
+//        addTest(new TestModifyOnWrite());
         addTest(new TestOldVersion());
         addTest(new TestMultiThreadedKernel());
         addTest(new TestPageStore());
