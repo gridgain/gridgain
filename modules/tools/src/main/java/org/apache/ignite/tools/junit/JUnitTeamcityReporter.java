@@ -28,6 +28,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 import org.junit.Ignore;
 import org.junit.runner.Description;
+import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 
@@ -72,7 +73,7 @@ public class JUnitTeamcityReporter extends RunListener {
 
     /** */
     @Override public synchronized void testAssumptionFailure(Failure failure) {
-        System.out.println(String.format("##teamcity[progressMessage 'Assumption failure test %s']", escapeForTeamcity(failure.getDescription().getDisplayName())));
+        System.err.println(String.format("## Assumption failure: %s", escapeForTeamcity(failure.getDescription().getDisplayName())));
 
         if (curXmlStream == null)
             testStarted(failure.getDescription());
@@ -91,6 +92,8 @@ public class JUnitTeamcityReporter extends RunListener {
     }
 
     @Override public void testRunStarted(Description description) throws Exception {
+        System.err.println(String.format("## Run started: %s", escapeForTeamcity(description.getDisplayName())));
+
         renewStream(description);
     }
 
@@ -100,7 +103,7 @@ public class JUnitTeamcityReporter extends RunListener {
             System.out.println(String.format("##teamcity[progressMessage 'Running %s']",
                 escapeForTeamcity(desc.getClassName())));
 
-        System.out.println(String.format("##teamcity[progressMessage 'Started test %s']", escapeForTeamcity(desc.getDisplayName())));
+        System.err.println(String.format("## Test started: %s", escapeForTeamcity(desc.getDisplayName())));
         try {
             if (afterFlush(desc.getClassName())) {
                 prevSuite = suite;
@@ -124,7 +127,7 @@ public class JUnitTeamcityReporter extends RunListener {
 
     /** */
     @Override public synchronized void testFinished(Description desc) {
-        System.out.println(String.format("##teamcity[progressMessage 'Finished test %s']", escapeForTeamcity(desc.getDisplayName())));
+        System.err.println(String.format("## Test finished: %s", escapeForTeamcity(desc.getDisplayName())));
         if (curXmlStream == null)
             testStarted(desc);
 
@@ -139,7 +142,7 @@ public class JUnitTeamcityReporter extends RunListener {
 
     /** */
     @Override public synchronized void testFailure(Failure failure) {
-        System.out.println(String.format("##teamcity[progressMessage 'Failed test %s']", escapeForTeamcity(failure.getMessage())));
+        System.err.println(String.format("## Test failed: %s", escapeForTeamcity(failure.getDescription().getDisplayName())));
         try {
             curXmlStream.writeStartElement("failure");
 
@@ -165,7 +168,7 @@ public class JUnitTeamcityReporter extends RunListener {
 
     /** */
     @Override public synchronized void testIgnored(Description desc) {
-        System.out.println(String.format("##teamcity[progressMessage 'Ignored test %s']", escapeForTeamcity(desc.getDisplayName())));
+        System.err.println(String.format("## Test ignored: %s", escapeForTeamcity(desc.getDisplayName())));
         testStarted(desc);
 
         Ignore annotation = desc.getAnnotation(Ignore.class);
@@ -186,6 +189,11 @@ public class JUnitTeamcityReporter extends RunListener {
         testFinished(desc);
     }
 
+    @Override public void testRunFinished(Result result) throws Exception {
+        System.err.println(String.format("## Test run finished: %s", "" +result.getFailureCount()));
+
+        closeWriter();
+    }
 
     private void renewStream(Description desc) throws FileNotFoundException, XMLStreamException {
         prevFlush = System.currentTimeMillis();
@@ -205,17 +213,8 @@ public class JUnitTeamcityReporter extends RunListener {
         if ((!Objects.equals(prevSuite, suite)) ||
             (!Objects.equals(prevTestCls, testCls)) ||
             (System.currentTimeMillis() - prevFlush) > FLUSH_THRESHOLD) {
-            try {
-                curXmlStream.writeEndElement();
-                curXmlStream.writeEndDocument();
-                curXmlStream.close();
-                curStream.close();
-            }
-            catch (XMLStreamException | IOException ex) {
-                ex.printStackTrace(System.out);
 
-                throw new RuntimeException(ex);
-            }
+            closeWriter();
 
             File report = reportDir.resolve(fileName()).toFile();
 
@@ -228,6 +227,20 @@ public class JUnitTeamcityReporter extends RunListener {
         }
 
         return false;
+    }
+
+    private void closeWriter() {
+        try {
+            curXmlStream.writeEndElement();
+            curXmlStream.writeEndDocument();
+            curXmlStream.close();
+            curStream.close();
+        }
+        catch (XMLStreamException | IOException ex) {
+            ex.printStackTrace(System.out);
+
+            throw new RuntimeException(ex);
+        }
     }
 
     /** */
