@@ -22,11 +22,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 import org.junit.Ignore;
 import org.junit.runner.Description;
+import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 
@@ -162,6 +164,42 @@ public class JUnitTeamcityReporter extends RunListener {
         }
     }
 
+    @Override public void testRunStarted(Description description) throws Exception {
+        prevFlush = System.currentTimeMillis();
+
+        curStream = new FileOutputStream(reportDir.resolve(fileName()).toFile());
+
+        curXmlStream = outputFactory.createXMLStreamWriter(curStream);
+
+        curXmlStream.writeStartDocument();
+        curXmlStream.writeStartElement("testsuite");
+        curXmlStream.writeAttribute("version", "3.0");
+        curXmlStream.writeAttribute("name", suite != null ? suite : description.getClassName());
+    }
+
+    @Override public void testRunFinished(Result result) throws Exception {
+        try {
+            curXmlStream.writeEndElement();
+            curXmlStream.writeEndDocument();
+            curXmlStream.close();
+            curStream.close();
+        }
+        catch (XMLStreamException | IOException ex) {
+            ex.printStackTrace(System.out);
+
+            throw new RuntimeException(ex);
+        }
+
+        File report = reportDir.resolve(fileName()).toFile();
+
+        assert report.exists();
+
+        System.out.println(String.format("##teamcity[importData type='surefire' path='%s']",
+            escapeForTeamcity(report.getAbsolutePath())));
+
+        curStream = null;
+    }
+
     /** */
     @Override public synchronized void testIgnored(Description desc) {
         testStarted(desc);
@@ -188,8 +226,8 @@ public class JUnitTeamcityReporter extends RunListener {
         if (curStream == null)
             return true;
 
-        if ((prevSuite == null ? suite != null : !prevSuite.equals(suite)) ||
-            (prevTestCls == null ? testCls != null : !prevTestCls.equals(testCls)) ||
+        if ((!Objects.equals(prevSuite, suite)) ||
+            (!Objects.equals(prevTestCls, testCls)) ||
             (System.currentTimeMillis() - prevFlush) > FLUSH_THRESHOLD) {
             try {
                 curXmlStream.writeEndElement();
@@ -198,6 +236,8 @@ public class JUnitTeamcityReporter extends RunListener {
                 curStream.close();
             }
             catch (XMLStreamException | IOException ex) {
+                ex.printStackTrace(System.out);
+
                 throw new RuntimeException(ex);
             }
 
