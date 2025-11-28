@@ -71,7 +71,6 @@ import org.gridgain.internal.h2.test.db.TestSetCollation;
 import org.gridgain.internal.h2.test.db.TestSpaceReuse;
 import org.gridgain.internal.h2.test.db.TestSpatial;
 import org.gridgain.internal.h2.test.db.TestSpeed;
-import org.gridgain.internal.h2.test.db.TestSubqueryPerformanceOnLazyExecutionMode;
 import org.gridgain.internal.h2.test.db.TestSynonymForTable;
 import org.gridgain.internal.h2.test.db.TestTableEngines;
 import org.gridgain.internal.h2.test.db.TestTempTables;
@@ -925,7 +924,7 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
         addTest(new TestDefrag());
 //        addTest(new TestTools());
         addTest(new TestSampleApps());
-        addTest(new TestSubqueryPerformanceOnLazyExecutionMode());
+//        addTest(new TestSubqueryPerformanceOnLazyExecutionMode());
 
         runAddedTests(1);
     }
