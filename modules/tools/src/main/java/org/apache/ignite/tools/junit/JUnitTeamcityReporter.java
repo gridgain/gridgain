@@ -72,6 +72,8 @@ public class JUnitTeamcityReporter extends RunListener {
 
     /** */
     @Override public synchronized void testAssumptionFailure(Failure failure) {
+        System.out.println(String.format("##teamcity[progressMessage 'Assumption failure test %s']", escapeForTeamcity(failure.getDescription().getDisplayName())));
+
         if (curXmlStream == null)
             testStarted(failure.getDescription());
 
@@ -98,7 +100,7 @@ public class JUnitTeamcityReporter extends RunListener {
             System.out.println(String.format("##teamcity[progressMessage 'Running %s']",
                 escapeForTeamcity(desc.getClassName())));
 
-        System.out.println(String.format("##teamcity[Started test %s]", escapeForTeamcity(desc.getDisplayName())));
+        System.out.println(String.format("##teamcity[progressMessage 'Started test %s']", escapeForTeamcity(desc.getDisplayName())));
         try {
             if (afterFlush(desc.getClassName())) {
                 prevSuite = suite;
@@ -122,7 +124,7 @@ public class JUnitTeamcityReporter extends RunListener {
 
     /** */
     @Override public synchronized void testFinished(Description desc) {
-        System.out.println(String.format("##teamcity[Finished test %s]", escapeForTeamcity(desc.getDisplayName())));
+        System.out.println(String.format("##teamcity[progressMessage 'Finished test %s']", escapeForTeamcity(desc.getDisplayName())));
         if (curXmlStream == null)
             testStarted(desc);
 
@@ -137,7 +139,7 @@ public class JUnitTeamcityReporter extends RunListener {
 
     /** */
     @Override public synchronized void testFailure(Failure failure) {
-        System.out.println(String.format("##teamcity[Failed test %s]", escapeForTeamcity(failure.getMessage())));
+        System.out.println(String.format("##teamcity[progressMessage 'Failed test %s']", escapeForTeamcity(failure.getMessage())));
         try {
             curXmlStream.writeStartElement("failure");
 
@@ -163,7 +165,7 @@ public class JUnitTeamcityReporter extends RunListener {
 
     /** */
     @Override public synchronized void testIgnored(Description desc) {
-        System.out.println(String.format("##teamcity[Ignored test %s]", escapeForTeamcity(desc.getDisplayName())));
+        System.out.println(String.format("##teamcity[progressMessage 'Ignored test %s']", escapeForTeamcity(desc.getDisplayName())));
         testStarted(desc);
 
         Ignore annotation = desc.getAnnotation(Ignore.class);
