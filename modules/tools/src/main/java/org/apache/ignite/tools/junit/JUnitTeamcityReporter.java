@@ -22,11 +22,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 import org.junit.Ignore;
 import org.junit.runner.Description;
+import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 
@@ -96,16 +98,7 @@ public class JUnitTeamcityReporter extends RunListener {
         try {
             if (afterFlush(desc.getClassName())) {
                 prevSuite = suite;
-                prevFlush = System.currentTimeMillis();
-
-                curStream = new FileOutputStream(reportDir.resolve(fileName()).toFile());
-
-                curXmlStream = outputFactory.createXMLStreamWriter(curStream);
-
-                curXmlStream.writeStartDocument();
-                curXmlStream.writeStartElement("testsuite");
-                curXmlStream.writeAttribute("version", "3.0");
-                curXmlStream.writeAttribute("name", suite != null ? suite : desc.getClassName());
+                renewWriter(desc);
             }
 
             prevTestCls = desc.getClassName();
@@ -183,27 +176,41 @@ public class JUnitTeamcityReporter extends RunListener {
         testFinished(desc);
     }
 
+    @Override public synchronized void testRunFinished(Result result) {
+        closeWriter(false);
+    }
+
+    private void renewWriter(Description desc) throws FileNotFoundException, XMLStreamException {
+        prevFlush = System.currentTimeMillis();
+
+        File file = reportDir.resolve(fileName()).toFile();
+        file.getParentFile().mkdirs();
+
+        curStream = new FileOutputStream(file);
+        curXmlStream = outputFactory.createXMLStreamWriter(curStream);
+
+        curXmlStream.writeStartDocument();
+        curXmlStream.writeStartElement("testsuite");
+        curXmlStream.writeAttribute("version", "3.0");
+        curXmlStream.writeAttribute("name", suite != null ? suite : desc.getClassName());
+
+        curXmlStream.flush();
+    }
+
     /** */
     private boolean afterFlush(String testCls) {
-        if (curStream == null)
+        if (curXmlStream == null)
             return true;
 
-        if ((prevSuite == null ? suite != null : !prevSuite.equals(suite)) ||
-            (prevTestCls == null ? testCls != null : !prevTestCls.equals(testCls)) ||
+        if ((!Objects.equals(prevSuite, suite)) ||
+            (!Objects.equals(prevTestCls, testCls)) ||
             (System.currentTimeMillis() - prevFlush) > FLUSH_THRESHOLD) {
-            try {
-                curXmlStream.writeEndElement();
-                curXmlStream.writeEndDocument();
-                curXmlStream.close();
-                curStream.close();
-            }
-            catch (XMLStreamException | IOException ex) {
-                throw new RuntimeException(ex);
-            }
+
+            closeWriter(true);
 
             File report = reportDir.resolve(fileName()).toFile();
 
-            assert report.exists();
+            assert report.exists() : "Report file does not exist: " + report.getAbsolutePath();
 
             System.out.println(String.format("##teamcity[importData type='surefire' path='%s']",
                 escapeForTeamcity(report.getAbsolutePath())));
@@ -212,6 +219,25 @@ public class JUnitTeamcityReporter extends RunListener {
         }
 
         return false;
+    }
+
+    private void closeWriter(boolean fromRenew) {
+        if (curXmlStream == null)
+            return;
+
+        try {
+            if (fromRenew)
+                curXmlStream.writeEndElement();
+
+            curXmlStream.writeEndDocument();
+            curXmlStream.close();
+            curStream.close();
+            curXmlStream = null;
+            curStream = null;
+        }
+        catch (XMLStreamException | IOException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     /** */
