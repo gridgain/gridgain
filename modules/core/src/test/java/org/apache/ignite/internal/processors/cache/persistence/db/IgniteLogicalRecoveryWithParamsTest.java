@@ -57,6 +57,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -143,6 +144,7 @@ public class IgniteLogicalRecoveryWithParamsTest extends GridCommonAbstractTest 
     /**Tests partially commited transactions with further recovery. */
     @Test
     @WithSystemProperty(key = IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP, value = "true")
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46332")
     public void testPartiallyCommitedTx_WithCpOnNodeStop() throws Exception {
         testPartiallyCommitedTx();
     }
