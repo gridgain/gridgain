@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.query.continuous;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.junit.Ignore;
+import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 
@@ -44,6 +45,7 @@ public class CacheContinuousQueryFailoverAtomicNearEnabledSelfTest
      * This override is added here to enable suppression of the testOneBackup() run just for this class.
      */
     @Override
+    @Test
     @Ignore("https://ggsystems.atlassian.net/browse/GG-46281")
     public void testOneBackup() throws Exception {
         super.testOneBackup();

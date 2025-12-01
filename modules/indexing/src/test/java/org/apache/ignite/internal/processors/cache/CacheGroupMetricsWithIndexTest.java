@@ -452,6 +452,7 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
      * This override is added here to enable suppression of the testCacheGroupMetrics() run just for this class.
      */
     @Override
+    @Test
     @Ignore("https://ggsystems.atlassian.net/browse/GG-46251")
     public void testCacheGroupMetrics() throws Exception {
         super.testCacheGroupMetrics();

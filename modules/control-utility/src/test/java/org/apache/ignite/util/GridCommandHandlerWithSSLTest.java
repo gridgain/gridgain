@@ -17,6 +17,7 @@
 package org.apache.ignite.util;
 
 import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  *
@@ -34,6 +35,7 @@ public class GridCommandHandlerWithSSLTest extends GridCommandHandlerTest {
      * This override is added here to enable suppression of the testIdleVerifyCheckCrcFailsOnNotIdleCluster() run just for this class.
      */
     @Override
+    @Test
     @Ignore("https://ggsystems.atlassian.net/browse/GG-46120")
     public void testIdleVerifyCheckCrcFailsOnNotIdleCluster() throws Exception {
         super.testIdleVerifyCheckCrcFailsOnNotIdleCluster();
