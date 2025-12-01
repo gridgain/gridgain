@@ -131,6 +131,7 @@ public class DynamicEnableIndexingConcurrentSelfTest extends DynamicEnableIndexi
      * Test pending operation when coordinator change.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46342")
     public void testCoordinatorChange() throws Exception {
         // Start servers.
         IgniteEx srv1 = ignitionStart(serverConfiguration(1));
