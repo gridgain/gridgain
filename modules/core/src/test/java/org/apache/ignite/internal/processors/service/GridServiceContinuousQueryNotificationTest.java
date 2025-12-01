@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridTaskNameHashKey;
@@ -31,10 +32,8 @@ import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START;
-import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
-import static org.junit.Assume.assumeFalse;
 
 /**
  * Tests that unnecessary CQ events are not transferred to the thick client
@@ -56,32 +55,39 @@ public class GridServiceContinuousQueryNotificationTest extends GridCommonAbstra
     }
 
     /**
+     * Tests that system cache based service framework does not send unnecessary CQ messages to remote nodes.
      * @throws Exception If failed.
      */
     @Test
     @WithSystemProperty(key = IGNITE_SERVICES_SET_REMOTE_FILTER_ON_START, value = "true")
+    @WithSystemProperty(key = IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED, value = "false")
     public void testFilteringUnnecessaryEvents() throws Exception {
-        assumeFalse(
-            "This test is only for cache-based implementation of the service framework.",
-            getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED, false));
-
         IgniteEx ignite = startGrid(0);
         startClientGrid(1);
 
         TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(ignite);
         spi.record(GridContinuousMessage.class);
 
-        IgniteInternalCache utilityCache = ignite.context().cache().utilityCache();
+        IgniteInternalCache<GridTaskNameHashKey, String> utilityCache = ignite.context().cache().utilityCache();
         try (Transaction tx = utilityCache.txStart(PESSIMISTIC, SERIALIZABLE)) {
             utilityCache.put(new GridTaskNameHashKey(123), "test-value");
 
             tx.commit();
         }
 
-        GridTestUtils.waitForCondition(() -> !spi.recordedMessages(false).isEmpty(), 500);
+        List<Object> recordedMsgs = new ArrayList<>();
+        GridTestUtils.waitForCondition(() -> {
+            // This call drains already recorded messages,
+            // so the messages should be accumulated in an external collection.
+            List<Object> msgs = spi.recordedMessages(false);
 
-        List<Object> messages = spi.recordedMessages(true);
+            recordedMsgs.addAll(msgs);
 
-        assertTrue("Unexpected GridContinuousMessage was delivered to the thick client.", messages.isEmpty());
+            return !recordedMsgs.isEmpty();
+        }, 500);
+
+        recordedMsgs.addAll(spi.recordedMessages(true));
+
+        assertTrue("Unexpected GridContinuousMessage was delivered to the thick client.", recordedMsgs.isEmpty());
     }
 }
