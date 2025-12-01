@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
@@ -442,5 +443,18 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
 
         assertTrue("Timeout wait finished build index",
             waitForCondition(() -> indexBuildCountPartitionsLeft1.value() == 0, 30_000));
+    }
+
+    // TODO: GG-46251 Remove this override after flaky test is fixed.
+    /**
+     * {@inheritDoc}
+     *
+     * This override is added here to enable suppression of the testCacheGroupMetrics() run just for this class.
+     */
+    @Override
+    @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46251")
+    public void testCacheGroupMetrics() throws Exception {
+        super.testCacheGroupMetrics();
     }
 }

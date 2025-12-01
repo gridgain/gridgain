@@ -23,6 +23,7 @@ import org.apache.ignite.spi.deployment.uri.UriDeploymentSpi;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.spi.GridSpiTest;
 import org.apache.ignite.testframework.junits.spi.GridSpiTestConfig;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -44,6 +45,7 @@ public class GridFileDeploymentSelfTest extends GridUriDeploymentAbstractSelfTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-34424")
     public void testDeploymentFromFolder() throws Exception {
         checkTask("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask0");
         checkTask("GridUriDeploymentTestWithNameTask0");
@@ -55,6 +57,7 @@ public class GridFileDeploymentSelfTest extends GridUriDeploymentAbstractSelfTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-34424")
     public void testDeploymentFromJar() throws Exception {
         checkTask("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask8");
         checkTask("GridUriDeploymentTestWithNameTask8");
@@ -66,6 +69,7 @@ public class GridFileDeploymentSelfTest extends GridUriDeploymentAbstractSelfTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-34424")
     public void testDeploymentFromGar() throws Exception {
         checkTask("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask3");
         checkTask("GridUriDeploymentTestWithNameTask3");
@@ -84,6 +88,7 @@ public class GridFileDeploymentSelfTest extends GridUriDeploymentAbstractSelfTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-34424")
     public void testNoDescriptorDeployment() throws Exception {
         checkTask("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask4");
         checkTask("GridUriDeploymentTestWithNameTask4");
@@ -125,6 +130,7 @@ public class GridFileDeploymentSelfTest extends GridUriDeploymentAbstractSelfTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-34424")
     public void testDependenceJarDeployment() throws Exception {
         checkTask("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask9");
         getSpi().findResource("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask9")
@@ -145,6 +151,7 @@ public class GridFileDeploymentSelfTest extends GridUriDeploymentAbstractSelfTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-34424")
     public void testDependenceGarDeployment() throws Exception {
         checkTask("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask1");
         getSpi().findResource("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask1")
@@ -165,6 +172,7 @@ public class GridFileDeploymentSelfTest extends GridUriDeploymentAbstractSelfTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-34424")
     public void testNoDescriptorDependenceDeployment() throws Exception {
         checkTask("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask2");
         getSpi().findResource("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask2")

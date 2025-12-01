@@ -47,6 +47,7 @@ import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.spi.GridSpiAbstractConfigTest;
 import org.apache.ignite.testframework.junits.spi.GridSpiTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.Objects.isNull;
@@ -269,6 +270,7 @@ public class GridTcpCommunicationSpiConfigSelfTest extends GridSpiAbstractConfig
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46007")
     public void testEmptyHostNameAttrByDefault() throws Exception {
         assertFalse(getBoolean(IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, false));
 

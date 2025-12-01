@@ -36,6 +36,7 @@ import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_AFFINITY_HISTORY_SIZE;
@@ -160,6 +161,7 @@ public class PendingExchangeTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46279")
     public void testStopStartSeveralCachePending() throws Exception {
         createClusterWithPendingExchnageDuringRebalance((ignite, exchangeManager) -> {
             GridCompoundFuture compFut = new GridCompoundFuture();

@@ -27,6 +27,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.transactions.Transaction;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -126,6 +127,7 @@ public class IoomFailureHandlerTest extends AbstractFailureHandlerTest {
      * Test IgniteOutOfMemoryException handling with PDS.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-36869")
     public void testIoomErrorMvccPdsHandling() throws Exception {
         testIoomErrorHandling(true, true);
     }

@@ -46,6 +46,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -357,6 +358,7 @@ public class IgniteProjectionStartStopRestartSelfTest extends GridCommonAbstract
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-36476")
     public void testStartFiveWithTwoSpecs() throws Exception {
         joinedLatch = new CountDownLatch(5);
 

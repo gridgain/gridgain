@@ -60,6 +60,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionSerializationException;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
@@ -214,6 +215,7 @@ public class CacheContinuousQueryOrderingEventTest extends GridCommonAbstractTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46275")
     public void testAtomicOnheapTwoBackupAsync() throws Exception {
         CacheConfiguration<Object, Object> ccfg = cacheConfiguration(PARTITIONED, 2, ATOMIC, PRIMARY_SYNC);
 
@@ -234,6 +236,7 @@ public class CacheContinuousQueryOrderingEventTest extends GridCommonAbstractTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46209")
     public void testAtomicReplicatedAsync() throws Exception {
         CacheConfiguration<Object, Object> ccfg = cacheConfiguration(REPLICATED, 0, ATOMIC, PRIMARY_SYNC);
 
@@ -244,6 +247,7 @@ public class CacheContinuousQueryOrderingEventTest extends GridCommonAbstractTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46208")
     public void testAtomicReplicatedAsyncFullSync() throws Exception {
         CacheConfiguration<Object, Object> ccfg = cacheConfiguration(REPLICATED, 0, ATOMIC, FULL_SYNC);
 

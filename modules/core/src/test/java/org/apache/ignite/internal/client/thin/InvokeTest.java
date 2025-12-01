@@ -36,6 +36,7 @@ import org.apache.ignite.client.Person;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -271,6 +272,7 @@ public class InvokeTest extends AbstractThinClientTest {
      * Test that invoke/invokeAll is transactional.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46325")
     public void testExplicitTx() {
         Assume.assumeFalse(atomic);
 

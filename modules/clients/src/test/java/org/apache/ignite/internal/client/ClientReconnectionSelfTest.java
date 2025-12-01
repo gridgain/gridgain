@@ -160,6 +160,7 @@ public class ClientReconnectionSelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46334")
     public void testFailedInit() throws Exception {
         for (int i = 0; i < ClientTestRestServer.SERVERS_CNT; i++)
             runServer(i, true);

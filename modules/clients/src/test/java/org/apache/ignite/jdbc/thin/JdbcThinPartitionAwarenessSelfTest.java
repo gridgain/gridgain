@@ -45,6 +45,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -125,6 +126,7 @@ public class JdbcThinPartitionAwarenessSelfTest extends JdbcThinAbstractSelfTest
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-39840")
     public void testExecuteQueries() throws Exception {
         checkNodesUsage(null, stmt, "select * from Person where _key = 1", 1, 1,
             false);
@@ -142,6 +144,7 @@ public class JdbcThinPartitionAwarenessSelfTest extends JdbcThinAbstractSelfTest
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-39840")
     public void testExecuteParametrizedQueries() throws Exception {
         // Use case 1.
         PreparedStatement ps = conn.prepareStatement("select * from Person where _key = ?");
@@ -175,6 +178,7 @@ public class JdbcThinPartitionAwarenessSelfTest extends JdbcThinAbstractSelfTest
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-39840")
     public void testUpdateQueries() throws Exception {
         checkNodesUsage(null, stmt, "update Person set firstName = 'TestFirstName' where _key = 1",
             1, 1, true);

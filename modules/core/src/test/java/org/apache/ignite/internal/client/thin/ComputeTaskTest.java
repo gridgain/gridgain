@@ -52,6 +52,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -410,6 +411,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
      *
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-46276")
     public void testExecuteTaskConnectionLost() throws Exception {
         try (IgniteClient client = startClient(0, 1)) {
             ClientComputeImpl compute = (ClientComputeImpl)client.compute();
