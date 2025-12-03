@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.distributed.util.PartitionCalculator;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.GridLongList;
@@ -126,6 +127,9 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
     /** Partition. */
     private GridLongList updateCntrs;
 
+    /** Partition id. */
+    private int partId;
+
     /**
      * Empty constructor required by {@link Externalizable}.
      */
@@ -193,7 +197,8 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
     }
 
     /** {@inheritDoc} */
-    @Override public void addWriteValue(KeyCacheObject key,
+    @Override public void addWriteValue(
+        KeyCacheObject key,
         @Nullable CacheObject val,
         EntryProcessor<Object, Object, Object> entryProcessor,
         long ttl,
@@ -202,7 +207,8 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
         boolean addPrevVal,
         @Nullable CacheObject prevVal,
         long updateCntr,
-        GridCacheOperation cacheOp) {
+        GridCacheOperation cacheOp
+    ) {
         assert key.partition() >= 0 : key;
 
         keys.add(key);
@@ -267,11 +273,13 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
     }
 
     /** {@inheritDoc} */
-    @Override public void addNearWriteValue(KeyCacheObject key,
+    @Override public void addNearWriteValue(
+        KeyCacheObject key,
         @Nullable CacheObject val,
         EntryProcessor<Object, Object, Object> entryProcessor,
         long ttl,
-        long expireTime) {
+        long expireTime
+    ) {
         assert key.partition() >= 0 : key;
 
         if (hasKey(key)) {
@@ -327,6 +335,15 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
 
         if (nearExpireTimes != null)
             nearExpireTimes.add(expireTime);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void recalculatePartition() {
+        assert !F.isEmpty(keys) || !F.isEmpty(nearKeys);
+
+        partId = !keys.isEmpty() ? PartitionCalculator.calculate(keys) : PartitionCalculator.calculate(nearKeys);
+
+        assert partId >= 0;
     }
 
     /** {@inheritDoc} */
@@ -448,11 +465,9 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
     @Override public int partition() {
         assert !F.isEmpty(keys) || !F.isEmpty(nearKeys);
 
-        int p = !keys.isEmpty() ? keys.get(0).partition() : nearKeys.get(0).partition();
+        assert partId >= 0;
 
-        assert p >= 0;
-
-        return p;
+        return partId;
     }
 
     /** {@inheritDoc} */
@@ -630,24 +645,30 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
                 writer.incrementState();
 
             case 26:
-                if (!writer.writeCollection("prevVals", prevVals, MessageCollectionItemType.MSG))
+                if (!writer.writeInt("partId", partId))
                     return false;
 
                 writer.incrementState();
 
             case 27:
-                if (!writer.writeMessage("ttls", ttls))
+                if (!writer.writeCollection("prevVals", prevVals, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
             case 28:
-                if (!writer.writeMessage("updateCntrs", updateCntrs))
+                if (!writer.writeMessage("ttls", ttls))
                     return false;
 
                 writer.incrementState();
 
             case 29:
+                if (!writer.writeMessage("updateCntrs", updateCntrs))
+                    return false;
+
+                writer.incrementState();
+
+            case 30:
                 if (!writer.writeCollection("vals", vals, MessageCollectionItemType.MSG))
                     return false;
 
@@ -766,7 +787,7 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
                 reader.incrementState();
 
             case 26:
-                prevVals = reader.readCollection("prevVals", MessageCollectionItemType.MSG);
+                partId = reader.readInt("partId");
 
                 if (!reader.isLastRead())
                     return false;
@@ -774,7 +795,7 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
                 reader.incrementState();
 
             case 27:
-                ttls = reader.readMessage("ttls");
+                prevVals = reader.readCollection("prevVals", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
                     return false;
@@ -782,7 +803,7 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
                 reader.incrementState();
 
             case 28:
-                updateCntrs = reader.readMessage("updateCntrs");
+                ttls = reader.readMessage("ttls");
 
                 if (!reader.isLastRead())
                     return false;
@@ -790,6 +811,14 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
                 reader.incrementState();
 
             case 29:
+                updateCntrs = reader.readMessage("updateCntrs");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 30:
                 vals = reader.readCollection("vals", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -815,7 +844,7 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 30;
+        return 31;
     }
 
     /** {@inheritDoc} */

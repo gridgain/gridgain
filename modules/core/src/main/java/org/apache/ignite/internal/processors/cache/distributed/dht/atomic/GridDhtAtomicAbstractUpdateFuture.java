@@ -416,6 +416,9 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
                 return;
             }
 
+            for (GridDhtAtomicAbstractUpdateRequest dhtReq : mappings.values())
+                dhtReq.recalculatePartition();
+
             boolean needReplyToNear = updateReq.writeSynchronizationMode() == PRIMARY_SYNC ||
                 !ret.emptyResult() ||
                 updateReq.nearCache() ||
