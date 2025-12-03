@@ -184,7 +184,7 @@ public class JUnitTeamcityReporter extends RunListener {
     }
 
     /** */
-    private boolean afterFlush(String testCls) {
+    private synchronized boolean afterFlush(String testCls) {
         if (curStream == null)
             return true;
 
