@@ -44,10 +44,9 @@ public class CacheContinuousQueryFailoverAtomicNearEnabledSelfTest
      *
      * This override is added here to enable suppression of the testOneBackup() run just for this class.
      */
-    @Override
     @Test
     @Ignore("https://ggsystems.atlassian.net/browse/GG-46281")
-    public void testOneBackup() throws Exception {
+    @Override public void testOneBackup() throws Exception {
         super.testOneBackup();
     }
 }

@@ -47,10 +47,9 @@ public class TcpDiscoverySslSelfTest extends TcpDiscoverySelfTest {
      *
      * This override is added here to enable suppression of the testCustomEventCoordinatorFailure1() run just for this class.
      */
-    @Override
     @Test
     @Ignore("https://ggsystems.atlassian.net/browse/GG-46253")
-    public void testCustomEventCoordinatorFailure1() throws Exception {
+    @Override public void testCustomEventCoordinatorFailure1() throws Exception {
         super.testCustomEventCoordinatorFailure1();
     }
 }
