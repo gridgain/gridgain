@@ -128,7 +128,7 @@ namespace ignite
                 // No-op.
             }
 
-#if defined(__GNUC__) && !defined(__llvm__) && !defined(__INTEL_COMPILER)
+#if defined(__GNUC__) && !defined(__clang__)
 #   pragma GCC diagnostic push
 #   pragma GCC diagnostic ignored "-Wuse-after-free"
 #endif
