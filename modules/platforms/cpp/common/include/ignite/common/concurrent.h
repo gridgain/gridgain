@@ -128,10 +128,10 @@ namespace ignite
                 // No-op.
             }
 
-#ifndef _MSC_VER
+#ifdef __GNUC__
 #   pragma GCC diagnostic push
 #   pragma GCC diagnostic ignored "-Wuse-after-free"
-#endif // _MSC_VER
+#endif // __GNUC__
 
             /**
              * Shared pointer.
