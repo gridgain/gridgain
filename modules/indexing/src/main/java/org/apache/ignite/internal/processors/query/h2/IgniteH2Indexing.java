@@ -200,8 +200,10 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiClosure;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.security.SecurityPermission;
@@ -2111,7 +2113,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         // key object can't be created and used for COPY FROM operation.
         // Note: QueryEntity can't be properly validated due to compatibility reasons, and a warning can't be printed
         // from inside QueryEntity class due to absence of the logger.
-        if (isSql && type.keyClass() == Object.class && F.isEmpty(type.primaryKeyFields())) {
+        if (type.keyClass() == Object.class && F.isEmpty(type.primaryKeyFields())) {
             log.warning("Key of user type has no fields configured for table=" + type.tableName());
         }
 

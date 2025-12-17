@@ -31,6 +31,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -677,8 +678,19 @@ public class QueryUtils {
             d.addProperty(prop, false);
         }
 
-        if (!isKeyClsSqlType && qryEntity instanceof QueryEntityEx && ((QueryEntityEx)qryEntity).isPreserveKeysOrder())
-            d.primaryKeyFields(keyFields);
+        if (!isKeyClsSqlType) {
+            if (qryEntity instanceof QueryEntityEx && ((QueryEntityEx)qryEntity).isPreserveKeysOrder())
+                d.primaryKeyFields(keyFields);
+            else if (hasKeyFields) {
+                Set<String> keys = new LinkedHashSet<>();
+                for (String field : fields.keySet()) {
+                    if (keyFields.contains(field)) {
+                        keys.add(field);
+                    }
+                }
+                d.primaryKeyFields(keys);
+            }
+        }
 
         if (qryEntity instanceof QueryEntityEx)
             d.setFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).fillAbsentPKsWithDefaults());
