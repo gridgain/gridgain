@@ -33,7 +33,7 @@
     <url>http://ignite.apache.org</url>
 
     <properties>
-        <hadoop-yarn.version>2.8.5</hadoop-yarn.version>
+        <hadoop-yarn.version>3.4.0</hadoop-yarn.version>
     </properties>
 
     <dependencies>
