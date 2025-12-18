@@ -232,7 +232,7 @@ public class SchemaOperationManager {
 
                 crdFinished = true;
 
-                qryProc.onCoordinatorFinished(worker.operation(), err);
+                qryProc.onCoordinatorFinished(worker.operation(), worker.nop(), err);
             }
         }
     }
