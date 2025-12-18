@@ -762,7 +762,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             assert proposeMsg != null;
 
             // Apply changes to public cache schema if operation is successful and original cache is still there.
-            if (!msg.hasError()) {
+            if (!msg.hasError() && !msg.isNoop()) {
                 DynamicCacheDescriptor cacheDesc = ctx.cache().cacheDescriptor(msg.operation().cacheName());
 
                 if (cacheDesc != null && F.eq(cacheDesc.deploymentId(), proposeMsg.deploymentId())) {
@@ -1745,12 +1745,13 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     /**
      * Invoked when coordinator finished ensuring that all participants are ready.
      *
-     * @param op Operation.
+     * @param op  Operation.
+     * @param nop
      * @param err Error (if any).
      */
-    public void onCoordinatorFinished(SchemaAbstractOperation op, @Nullable SchemaOperationException err) {
+    public void onCoordinatorFinished(SchemaAbstractOperation op, boolean nop, @Nullable SchemaOperationException err) {
         synchronized (stateMux) {
-            SchemaFinishDiscoveryMessage msg = new SchemaFinishDiscoveryMessage(op, err);
+            SchemaFinishDiscoveryMessage msg = new SchemaFinishDiscoveryMessage(op, nop, err);
 
             try {
                 ctx.discovery().sendCustomEvent(msg);
