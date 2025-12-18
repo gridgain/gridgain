@@ -167,8 +167,11 @@ public class GridNioServer<T> {
     /** The name of the metric that indicates whether SSL is enabled for the connector. */
     public static final String SSL_ENABLED_METRIC_NAME = "SslEnabled";
 
+    /** The name of the metric that provides the accepted TCP sessions count. */
+    public static final String ACCEPTED_SESSIONS_CNT_METRIC_NAME = "AcceptedSessionsCount";
+
     /** The name of the metric that provides the active TCP sessions count. */
-    public static final String SESSIONS_CNT_METRIC_NAME = "ActiveSessionsCount";
+    public static final String ACTIVE_SESSIONS_CNT_METRIC_NAME = "ActiveSessionsCount";
 
     /** Defines how many times selector should do {@code selectNow()} before doing {@code select(long)}. */
     private long selectorSpins;
@@ -251,6 +254,9 @@ public class GridNioServer<T> {
 
     /** Outbound messages queue size. */
     @Nullable private final LongAdderMetric outboundMessagesQueueSizeMetric;
+
+    /** Number of accepted TCP sessions. */
+    @Nullable private final LongAdderMetric acceptedTcpSessions;
 
     /** Sessions. */
     private final GridConcurrentHashSet<GridSelectorNioSessionImpl> sessions = new GridConcurrentHashSet<>();
@@ -459,8 +465,11 @@ public class GridNioServer<T> {
             OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_DESC
         );
 
+        acceptedTcpSessions = mreg == null ?
+            null : mreg.longAdderMetric(ACCEPTED_SESSIONS_CNT_METRIC_NAME, "Count of accepted TCP sessions.");
+
         if (mreg != null) {
-            mreg.register(SESSIONS_CNT_METRIC_NAME, sessions::size, "Active TCP sessions count.");
+            mreg.register(ACTIVE_SESSIONS_CNT_METRIC_NAME, sessions::size, "Active TCP sessions count.");
 
             boolean sslEnabled = Arrays.stream(filters).anyMatch(filter -> filter instanceof GridNioSslFilter);
 
@@ -2790,6 +2799,10 @@ public class GridNioServer<T> {
 
                 sessions.add(ses);
                 workerSessions.add(ses);
+
+                if (acceptedTcpSessions != null) {
+                    acceptedTcpSessions.increment();
+                }
 
                 try {
                     filterChain.onSessionOpened(ses);
