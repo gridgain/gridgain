@@ -209,6 +209,16 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
     @Override public void onMessage(GridNioSession ses, ClientMessage msg) {
         assert msg != null;
 
+        // Discard messages from the queue for already closed connections.
+        // This can happen if the queue is flooded with tasks, we cannot process them in timely manner and clients start
+        // to disconnect with timeout, but there is still a plenty of tasks from them in the queue.
+        if (ses.closeTime() != 0) {
+            if (log.isTraceEnabled()) {
+                log.trace("Discarding message for closed session [addr=" + ses.remoteAddress() + ']');
+            }
+            return;
+        }
+
         ClientListenerConnectionContext connCtx = ses.meta(CONN_CTX_META_KEY);
 
         if (connCtx == null) {
