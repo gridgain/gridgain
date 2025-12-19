@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.database.IgniteTwoRegionsRebuildInd
 import org.apache.ignite.internal.processors.database.RebuildIndexTest;
 import org.apache.ignite.internal.processors.database.RebuildIndexWithHistoricalRebalanceTest;
 import org.apache.ignite.internal.processors.database.RebuildIndexWithMVCCTest;
+import org.apache.ignite.internal.processors.query.IndexWithSameNameTest;
 import org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtilsSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -75,7 +76,8 @@ import org.junit.runners.Suite;
     DropIndexTest.class,
     AffinityIndexShadowingTest.class,
     MaintenanceRebuildIndexUtilsSelfTest.class,
-    DestroyIndexWithoutCheckpointTest.class
+    DestroyIndexWithoutCheckpointTest.class,
+    IndexWithSameNameTest.class,
 })
 public class IgnitePdsWithIndexingTestSuite {
 }

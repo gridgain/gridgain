@@ -762,7 +762,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             assert proposeMsg != null;
 
             // Apply changes to public cache schema if operation is successful and original cache is still there.
-            if (!msg.hasError() && !msg.isNoop()) {
+            if (!msg.hasError() && !msg.nop()) {
                 DynamicCacheDescriptor cacheDesc = ctx.cache().cacheDescriptor(msg.operation().cacheName());
 
                 if (cacheDesc != null && F.eq(cacheDesc.deploymentId(), proposeMsg.deploymentId())) {
@@ -1746,12 +1746,12 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * Invoked when coordinator finished ensuring that all participants are ready.
      *
      * @param op  Operation.
-     * @param nop
      * @param err Error (if any).
+     * @param nop
      */
-    public void onCoordinatorFinished(SchemaAbstractOperation op, boolean nop, @Nullable SchemaOperationException err) {
+    public void onCoordinatorFinished(SchemaAbstractOperation op, @Nullable SchemaOperationException err, boolean nop) {
         synchronized (stateMux) {
-            SchemaFinishDiscoveryMessage msg = new SchemaFinishDiscoveryMessage(op, nop, err);
+            SchemaFinishDiscoveryMessage msg = new SchemaFinishDiscoveryMessage(op, err, nop);
 
             try {
                 ctx.discovery().sendCustomEvent(msg);
@@ -3611,16 +3611,17 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @param destNodeId Destination node ID.
      * @param opId Operation ID.
      * @param err Error.
+     * @param nop No-op flag.
      */
-    public void sendStatusMessage(UUID destNodeId, UUID opId, SchemaOperationException err) {
+    public void sendStatusMessage(UUID destNodeId, UUID opId, SchemaOperationException err, boolean nop) {
         if (log.isDebugEnabled())
             log.debug("Sending schema operation status message [opId=" + opId + ", crdNode=" + destNodeId +
-                ", err=" + err + ']');
+                ", err=" + err + ", nop=" + nop + ']');
 
         try {
             byte[] errBytes = marshalSchemaError(opId, err);
 
-            SchemaOperationStatusMessage msg = new SchemaOperationStatusMessage(opId, errBytes);
+            SchemaOperationStatusMessage msg = new SchemaOperationStatusMessage(opId, errBytes, nop);
 
             // Messages must go to dedicated schema pool. We cannot push them to query pool because in this case
             // they could be blocked with other query requests.
@@ -3629,7 +3630,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         catch (IgniteCheckedException e) {
             if (log.isDebugEnabled())
                 log.debug("Failed to send schema status response [opId=" + opId + ", destNodeId=" + destNodeId +
-                    ", err=" + e + ']');
+                    ", err=" + e + ", nop=" + nop + ']');
         }
     }
 
@@ -3661,7 +3662,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                         log.debug("Received status message [opId=" + msg.operationId() +
                             ", sndNodeId=" + msg.senderNodeId() + ']');
 
-                    op.manager().onNodeFinished(msg.senderNodeId(), unmarshalSchemaError(msg.errorBytes()));
+                    op.manager().onNodeFinished(msg.senderNodeId(), unmarshalSchemaError(msg.errorBytes()), msg.nop());
 
                     return;
                 }
@@ -3691,7 +3692,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             SchemaOperationStatusMessage msg = it.next();
 
             if (F.eq(msg.operationId(), opId)) {
-                mgr.onNodeFinished(msg.senderNodeId(), unmarshalSchemaError(msg.errorBytes()));
+                mgr.onNodeFinished(msg.senderNodeId(), unmarshalSchemaError(msg.errorBytes()), msg.nop());
 
                 it.remove();
             }

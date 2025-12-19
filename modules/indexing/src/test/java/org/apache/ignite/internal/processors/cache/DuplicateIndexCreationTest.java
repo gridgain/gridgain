@@ -103,7 +103,6 @@ public class DuplicateIndexCreationTest extends GridCommonAbstractTest {
         }
     }
 
-
     /** Repeatedly create index with the default name, rerun cluster. */
     @Test
     public void testIndexCreationViaAnnotations() throws Exception {
