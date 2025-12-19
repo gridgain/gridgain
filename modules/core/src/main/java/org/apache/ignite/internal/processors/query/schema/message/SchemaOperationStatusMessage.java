@@ -45,6 +45,9 @@ public class SchemaOperationStatusMessage implements Message {
     @GridDirectTransient
     private UUID sndNodeId;
 
+    /** No-op flag. */
+    private boolean nop;
+
     /**
      * Default constructor.
      */
@@ -57,10 +60,12 @@ public class SchemaOperationStatusMessage implements Message {
      *
      * @param opId Operation ID.
      * @param errBytes Error bytes.
+     * @param nop No-op flag.
      */
-    public SchemaOperationStatusMessage(UUID opId, byte[] errBytes) {
+    public SchemaOperationStatusMessage(UUID opId, byte[] errBytes, boolean nop) {
         this.opId = opId;
         this.errBytes = errBytes;
+        this.nop = nop;
     }
 
     /**
@@ -91,6 +96,13 @@ public class SchemaOperationStatusMessage implements Message {
         this.sndNodeId = sndNodeId;
     }
 
+    /**
+     * @return <code>True</code> if message is no-op.
+     */
+    public boolean nop() {
+        return nop;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean writeTo(ByteBuffer buf, MessageWriter writer) {
         writer.setBuffer(buf);
@@ -111,6 +123,12 @@ public class SchemaOperationStatusMessage implements Message {
 
             case 1:
                 if (!writer.writeByteArray("errBytes", errBytes))
+                    return false;
+
+                writer.incrementState();
+
+            case 2:
+                if (!writer.writeBoolean("nop", nop))
                     return false;
 
                 writer.incrementState();
@@ -142,6 +160,14 @@ public class SchemaOperationStatusMessage implements Message {
                     return false;
 
                 reader.incrementState();
+
+            case 2:
+                nop = reader.readBoolean("nop");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
         }
 
         return reader.afterMessageRead(SchemaOperationStatusMessage.class);
@@ -154,7 +180,7 @@ public class SchemaOperationStatusMessage implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 2;
+        return 3;
     }
 
     /** {@inheritDoc} */

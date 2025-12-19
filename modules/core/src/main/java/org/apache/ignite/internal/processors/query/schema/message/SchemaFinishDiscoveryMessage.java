@@ -35,20 +35,20 @@ public class SchemaFinishDiscoveryMessage extends SchemaAbstractDiscoveryMessage
     /** Original propose message. */
     private transient SchemaProposeDiscoveryMessage proposeMsg;
 
-    private boolean noop = false;
+    private boolean nop = false;
 
     /**
      * Constructor.
      *
      * @param op  Original operation.
-     * @param nop
      * @param err Error.
+     * @param nop No-op flag.
      */
-    public SchemaFinishDiscoveryMessage(SchemaAbstractOperation op, boolean nop, SchemaOperationException err) {
+    public SchemaFinishDiscoveryMessage(SchemaAbstractOperation op, SchemaOperationException err, boolean nop) {
         super(op);
 
-        this.noop = nop;
         this.err = err;
+        this.nop = nop;
     }
 
     /** {@inheritDoc} */
@@ -66,8 +66,11 @@ public class SchemaFinishDiscoveryMessage extends SchemaAbstractDiscoveryMessage
         return false;
     }
 
-    public boolean isNoop() {
-        return noop;
+    /**
+     * @return <code>True</code> if message in no-op.
+     */
+    public boolean nop() {
+        return nop;
     }
 
     /** {@inheritDoc} */
