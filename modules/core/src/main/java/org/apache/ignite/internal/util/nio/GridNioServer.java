@@ -465,10 +465,8 @@ public class GridNioServer<T> {
             OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_DESC
         );
 
-        acceptedTcpSessions = mreg == null ?
-            null : mreg.longAdderMetric(ACCEPTED_SESSIONS_CNT_METRIC_NAME, "Count of accepted TCP sessions.");
-
         if (mreg != null) {
+            acceptedTcpSessions = mreg.longAdderMetric(ACCEPTED_SESSIONS_CNT_METRIC_NAME, "Count of accepted TCP sessions.");
             mreg.register(ACTIVE_SESSIONS_CNT_METRIC_NAME, sessions::size, "Active TCP sessions count.");
 
             boolean sslEnabled = Arrays.stream(filters).anyMatch(filter -> filter instanceof GridNioSslFilter);
