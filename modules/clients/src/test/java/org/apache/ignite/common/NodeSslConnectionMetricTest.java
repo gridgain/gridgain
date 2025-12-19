@@ -54,7 +54,7 @@ import static org.apache.ignite.internal.processors.odbc.ClientListenerProcessor
 import static org.apache.ignite.internal.processors.rest.protocols.tcp.GridTcpRestProtocol.REST_CONNECTOR_METRIC_REGISTRY_NAME;
 import static org.apache.ignite.internal.util.nio.GridNioServer.RECEIVED_BYTES_METRIC_NAME;
 import static org.apache.ignite.internal.util.nio.GridNioServer.SENT_BYTES_METRIC_NAME;
-import static org.apache.ignite.internal.util.nio.GridNioServer.SESSIONS_CNT_METRIC_NAME;
+import static org.apache.ignite.internal.util.nio.GridNioServer.ACTIVE_SESSIONS_CNT_METRIC_NAME;
 import static org.apache.ignite.internal.util.nio.GridNioServer.SSL_ENABLED_METRIC_NAME;
 import static org.apache.ignite.internal.util.nio.ssl.GridNioSslFilter.SSL_HANDSHAKE_DURATION_HISTOGRAM_METRIC_NAME;
 import static org.apache.ignite.internal.util.nio.ssl.GridNioSslFilter.SSL_REJECTED_SESSIONS_CNT_METRIC_NAME;
@@ -106,21 +106,21 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         assertFalse(commReg.<BooleanMetric>findMetric(SSL_ENABLED_METRIC_NAME).value());
         assertNull(commReg.<IntMetric>findMetric(SSL_REJECTED_SESSIONS_CNT_METRIC_NAME));
         assertNull(commReg.<HistogramMetric>findMetric(SSL_HANDSHAKE_DURATION_HISTOGRAM_METRIC_NAME));
-        assertEquals(0, commReg.<IntMetric>findMetric(SESSIONS_CNT_METRIC_NAME).value());
+        assertEquals(0, commReg.<IntMetric>findMetric(ACTIVE_SESSIONS_CNT_METRIC_NAME).value());
 
         MetricRegistry cliConnReg = mreg(srv, CLIENT_CONNECTOR_METRICS);
 
         assertFalse(cliConnReg.<BooleanMetric>findMetric(SSL_ENABLED_METRIC_NAME).value());
         assertNull(cliConnReg.<IntMetric>findMetric(SSL_REJECTED_SESSIONS_CNT_METRIC_NAME));
         assertNull(cliConnReg.<HistogramMetric>findMetric(SSL_HANDSHAKE_DURATION_HISTOGRAM_METRIC_NAME));
-        assertEquals(0, cliConnReg.<IntMetric>findMetric(SESSIONS_CNT_METRIC_NAME).value());
+        assertEquals(0, cliConnReg.<IntMetric>findMetric(ACTIVE_SESSIONS_CNT_METRIC_NAME).value());
 
         MetricRegistry restConnReg = mreg(srv, REST_CONNECTOR_METRIC_REGISTRY_NAME);
 
         assertNull(restConnReg.<BooleanMetric>findMetric(SSL_ENABLED_METRIC_NAME));
         assertNull(restConnReg.<IntMetric>findMetric(SSL_REJECTED_SESSIONS_CNT_METRIC_NAME));
         assertNull(restConnReg.<HistogramMetric>findMetric(SSL_HANDSHAKE_DURATION_HISTOGRAM_METRIC_NAME));
-        assertNull(restConnReg.<IntMetric>findMetric(SESSIONS_CNT_METRIC_NAME));
+        assertNull(restConnReg.<IntMetric>findMetric(ACTIVE_SESSIONS_CNT_METRIC_NAME));
 
         stopAllGrids();
 
@@ -129,7 +129,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         restConnReg = mreg(srv, REST_CONNECTOR_METRIC_REGISTRY_NAME);
 
         assertFalse(restConnReg.<BooleanMetric>findMetric(SSL_ENABLED_METRIC_NAME).value());
-        assertEquals(0, restConnReg.<IntMetric>findMetric(SESSIONS_CNT_METRIC_NAME).value());
+        assertEquals(0, restConnReg.<IntMetric>findMetric(ACTIVE_SESSIONS_CNT_METRIC_NAME).value());
     }
 
     /** Tests SSL metrics produced by JDBC connection. */
@@ -434,7 +434,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
     ) throws Exception {
         assertEquals(true, mreg.<BooleanMetric>findMetric(SSL_ENABLED_METRIC_NAME).value());
 
-        waitForMetric(SESSIONS_CNT_METRIC_NAME, sesCnt, () -> mreg.<IntMetric>findMetric(SESSIONS_CNT_METRIC_NAME).value());
+        waitForMetric(ACTIVE_SESSIONS_CNT_METRIC_NAME, sesCnt, () -> mreg.<IntMetric>findMetric(ACTIVE_SESSIONS_CNT_METRIC_NAME).value());
 
         waitForMetric(SSL_HANDSHAKE_DURATION_HISTOGRAM_METRIC_NAME, handshakeCnt, () -> (int) Arrays.stream(
                 mreg.<HistogramMetric>findMetric(SSL_HANDSHAKE_DURATION_HISTOGRAM_METRIC_NAME).value()).sum());

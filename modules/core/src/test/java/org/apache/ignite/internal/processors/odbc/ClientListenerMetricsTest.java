@@ -33,7 +33,9 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
+import org.apache.ignite.internal.util.nio.GridNioServer;
 import org.apache.ignite.spi.metric.IntMetric;
+import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -215,6 +217,8 @@ public class ClientListenerMetricsTest extends GridCommonAbstractTest {
         throws IgniteInterruptedCheckedException {
         waitForMetricValue(mreg, MetricUtils.metricName("thin", METRIC_ACTIVE), active, 10_000);
         assertEquals(accepted, mreg.<IntMetric>findMetric(MetricUtils.metricName("thin", METRIC_ACEPTED)).value());
+        assertEquals(accepted, mreg.<LongMetric>findMetric(MetricUtils.metricName(GridNioServer.ACCEPTED_SESSIONS_CNT_METRIC_NAME)).value());
+        assertEquals(active, mreg.<IntMetric>findMetric(MetricUtils.metricName(GridNioServer.ACTIVE_SESSIONS_CNT_METRIC_NAME)).value());
         assertEquals(0, mreg.<IntMetric>findMetric(METRIC_REJECTED_TIMEOUT).value());
         assertEquals(0, mreg.<IntMetric>findMetric(METRIC_REJECTED_AUTHENTICATION).value());
         assertEquals(0, mreg.<IntMetric>findMetric(METRIC_REJECTED_TOTAL).value());
