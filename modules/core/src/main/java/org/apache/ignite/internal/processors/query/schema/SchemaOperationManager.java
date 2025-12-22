@@ -237,7 +237,6 @@ public class SchemaOperationManager {
                 // In case of no-op operation results from all nodes must be the same.
                 assert err != null || !nop || nodeRess.entrySet().stream().allMatch(e -> e.getValue().get2()) : nodeRess;
 
-
                 crdFinished = true;
 
                 qryProc.onCoordinatorFinished(worker.operation(), err, nop);

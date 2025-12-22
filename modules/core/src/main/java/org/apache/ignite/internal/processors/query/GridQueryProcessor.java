@@ -1747,7 +1747,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      *
      * @param op  Operation.
      * @param err Error (if any).
-     * @param nop
+     * @param nop No-op flag.
      */
     public void onCoordinatorFinished(SchemaAbstractOperation op, @Nullable SchemaOperationException err, boolean nop) {
         synchronized (stateMux) {
