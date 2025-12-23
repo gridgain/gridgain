@@ -229,7 +229,6 @@ public class DuplicateIndexCreationTest extends GridCommonAbstractTest {
         public String name;
     }
 
-
     /**
      * Department class.
      */
