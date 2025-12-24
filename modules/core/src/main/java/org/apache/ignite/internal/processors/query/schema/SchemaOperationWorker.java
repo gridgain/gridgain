@@ -109,6 +109,8 @@ public class SchemaOperationWorker extends GridWorker {
     /** {@inheritDoc} */
     @Override protected void body() throws InterruptedException, IgniteInterruptedCheckedException {
         try {
+            assert !nop;
+
             // Execute.
             qryProc.processSchemaOperationLocal(op, type, depId, cancelToken);
 

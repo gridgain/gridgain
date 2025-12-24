@@ -30,7 +30,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
-import static java.lang.String.format;
 
 /** Duplicate index tests. */
 public class DuplicateIndexCreationTest extends GridCommonAbstractTest {
@@ -46,7 +45,11 @@ public class DuplicateIndexCreationTest extends GridCommonAbstractTest {
             new CacheConfiguration<>()
                 .setName(DEFAULT_CACHE_NAME)
                 .setSqlSchema("PUBLIC")
-                .setIndexedTypes(Integer.class, Person.class));
+                .setIndexedTypes(Integer.class, Person.class),
+            new CacheConfiguration<>()
+                .setName("CACHE_2")
+                .setSqlSchema("PUBLIC")
+                .setIndexedTypes(Integer.class, Department.class));
         return cfg;
     }
 
@@ -64,36 +67,157 @@ public class DuplicateIndexCreationTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
-    /** Repedeatly create index with the same name, rerun cluster. */
+    /** Repeatedly create index with the default name, rerun cluster. */
     @Test
-    public void testIndexCreation() throws Exception {
+    public void testIndexCreationDefaultName() throws Exception {
+        SqlFieldsQuery queryCreateIndex = new SqlFieldsQuery("CREATE INDEX ON PUBLIC.PERSON (NAME)");
+        SqlFieldsQuery queryCreateIndexIfNotExist = new SqlFieldsQuery("CREATE INDEX IF NOT EXISTS ON PUBLIC.PERSON (NAME)");
+
         IgniteEx node = startGrid(0);
         node.cluster().state(ClusterState.ACTIVE);
+        {
+            IgniteCache<Object, Object> cache = node.cache(DEFAULT_CACHE_NAME);
 
-        IgniteCache<Object, Object> cache = node.cache(DEFAULT_CACHE_NAME);
-        String sqlCreateIndexTemplate = "CREATE INDEX %s ON PUBLIC.PERSON (NAME)";
+            cache.query(queryCreateIndex).getAll();
 
-        SqlFieldsQuery queryCreateIndex = new SqlFieldsQuery(format(sqlCreateIndexTemplate, ""));
-        SqlFieldsQuery queryCreateIndexIfNotExist = new SqlFieldsQuery(format(sqlCreateIndexTemplate, "IF NOT EXISTS"));
+            GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndex).getAll(), CacheException.class, null);
+            GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndexIfNotExist).getAll(), CacheException.class, null);
 
-        cache.query(queryCreateIndex).getAll();
+            stopGrid(0);
+            startGrid(0);
 
-        GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndex).getAll(), CacheException.class, null);
-        GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndexIfNotExist).getAll(), CacheException.class, null);
-
-        stopGrid(0);
-        startGrid(0);
-
-        stopGrid(0);
-        cleanPersistenceDir();
+            stopGrid(0);
+            cleanPersistenceDir();
+        }
 
         node = startGrid(0);
         node.cluster().state(ClusterState.ACTIVE);
-        IgniteCache<Object, Object> cache1 = node.cache(DEFAULT_CACHE_NAME);
-        cache1.query(queryCreateIndexIfNotExist).getAll();
+        {
+            IgniteCache<Object, Object> cache = node.cache(DEFAULT_CACHE_NAME);
 
-        stopGrid(0);
-        startGrid(0);
+            cache.query(queryCreateIndexIfNotExist).getAll();
+            GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndex).getAll(), CacheException.class, null);
+
+            stopGrid(0);
+            startGrid(0);
+        }
+    }
+
+    /** Repeatedly create index with the default name, rerun cluster. */
+    @Test
+    public void testIndexCreationViaAnnotations() throws Exception {
+        SqlFieldsQuery queryCreateIndex = new SqlFieldsQuery("CREATE INDEX PERSON_NAME_IDX ON PUBLIC.PERSON (NAME)");
+        SqlFieldsQuery queryCreateIndexIfNotExist = new SqlFieldsQuery("CREATE INDEX PERSON_NAME_IDX IF NOT EXISTS ON PUBLIC.PERSON (NAME)");
+
+        IgniteEx node = startGrid(0);
+        node.cluster().state(ClusterState.ACTIVE);
+        {
+            IgniteCache<Object, Object> cache = node.cache(DEFAULT_CACHE_NAME);
+
+            GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndex).getAll(), CacheException.class, null);
+            GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndexIfNotExist).getAll(), CacheException.class, null);
+
+            stopGrid(0);
+            startGrid(0);
+
+            stopGrid(0);
+            cleanPersistenceDir();
+        }
+
+        node = startGrid(0);
+        node.cluster().state(ClusterState.ACTIVE);
+        {
+            IgniteCache<Object, Object> cache = node.cache(DEFAULT_CACHE_NAME);
+
+            GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndex).getAll(), CacheException.class, null);
+            GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndexIfNotExist).getAll(), CacheException.class, null);
+
+            stopGrid(0);
+            startGrid(0);
+        }
+    }
+
+    /** Repeatedly create index with the same name, rerun cluster. */
+    @Test
+    public void testIndexCreation() throws Exception {
+        SqlFieldsQuery queryCreateIndex = createIndexQuery("PERSON", false);
+        SqlFieldsQuery queryCreateIndexIfNotExist = createIndexQuery("PERSON", true);
+
+        IgniteEx node = startGrid(0);
+        node.cluster().state(ClusterState.ACTIVE);
+        {
+            IgniteCache<Object, Object> cache = node.cache(DEFAULT_CACHE_NAME);
+
+            cache.query(queryCreateIndex).getAll();
+
+            GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndex).getAll(), CacheException.class, null);
+            cache.query(queryCreateIndexIfNotExist).getAll();
+
+            stopGrid(0);
+            startGrid(0);
+
+            stopGrid(0);
+            cleanPersistenceDir();
+        }
+
+        node = startGrid(0);
+        node.cluster().state(ClusterState.ACTIVE);
+        {
+            IgniteCache<Object, Object> cache = node.cache(DEFAULT_CACHE_NAME);
+            cache.query(queryCreateIndexIfNotExist).getAll();
+            GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndex).getAll(), CacheException.class, null);
+
+            stopGrid(0);
+            startGrid(0);
+        }
+    }
+
+    /** Create index with the same name on different caches + rerun cluster. */
+    @Test
+    public void testIndexCreationDifferentCaches() throws Exception {
+        SqlFieldsQuery queryCreateIndex = createIndexQuery("DEPARTMENT", false);
+        SqlFieldsQuery queryCreateIndexIfNotExist = createIndexQuery("DEPARTMENT", true);
+
+        IgniteEx node = startGrid(0);
+        node.cluster().state(ClusterState.ACTIVE);
+        {
+            IgniteCache<Object, Object> cache = node.cache(DEFAULT_CACHE_NAME);
+
+            cache.query(createIndexQuery("PERSON", false)).getAll();
+
+            GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndex).getAll(), CacheException.class, null);
+            cache.query(queryCreateIndexIfNotExist).getAll();
+
+            stopGrid(0);
+            startGrid(0);
+
+            stopGrid(0);
+            cleanPersistenceDir();
+        }
+
+        node = startGrid(0);
+        node.cluster().state(ClusterState.ACTIVE);
+        {
+            IgniteCache<Object, Object> cache = node.cache(DEFAULT_CACHE_NAME);
+
+            cache.query(queryCreateIndexIfNotExist).getAll();
+            GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndex).getAll(), CacheException.class, null);
+
+            stopGrid(0);
+            startGrid(0);
+        }
+    }
+
+    private static SqlFieldsQuery createIndexQuery(String tableName, boolean ifNotExists) {
+        assert !tableName.isEmpty();
+
+        return new SqlFieldsQuery(
+            "CREATE INDEX " +
+                (ifNotExists ? "IF NOT EXISTS " : "") +
+                " NAME_IDX ON PUBLIC." +
+                tableName +
+                " (NAME)"
+        );
     }
 
     /**
@@ -102,6 +226,15 @@ public class DuplicateIndexCreationTest extends GridCommonAbstractTest {
     private static class Person implements Serializable {
         /** Indexed name. */
         @QuerySqlField(index = true)
+        public String name;
+    }
+
+    /**
+     * Department class.
+     */
+    private static class Department implements Serializable {
+        /** Indexed name. */
+        @QuerySqlField
         public String name;
     }
 }
