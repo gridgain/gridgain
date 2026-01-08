@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -706,6 +707,62 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         assertFalse("Expecting tombstones are not removed during PME", wasEmpty);
 
         CU.unwindEvicts(ctx0);
+    }
+
+    /**
+     * Tests that eviction of a partition should not be triggered when the clear tombstone counter value is applicable.
+     */
+    @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "1000")
+    public void testEvictionOnRebalance() throws Exception {
+        IgniteEx crd = startGrids(2);
+
+        crd.cluster().state(ClusterState.ACTIVE);
+
+
+        IgniteCache<Integer, Integer> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+        int testPart = 0;
+        int cnt = 100;
+        List<Integer> keys = new ArrayList<>(cnt);
+        Affinity<Integer> aff = affinity(cache);
+        int tmp = 0;
+
+        while (keys.size() < cnt) {
+            if (aff.partition(tmp) == testPart) {
+                keys.add(tmp);
+                cache.put(tmp, tmp);
+            }
+
+            tmp++;
+        }
+
+        cache.remove(keys.get(0));
+
+        // Wait for tombstone expiration. The partition clear counter should be "moved" to cnt + 1 value.
+        doSleep(2_000);
+
+        stopGrid(1);
+
+        for (int i = 0; i < cnt / 2; ++i)
+            cache.remove(keys.get(i));
+
+        TrackingResolver rslvr = new TrackingResolver(testPart);
+        IgniteConfiguration cfg1 = getConfiguration(getTestIgniteInstanceName(1));
+        TestRecordingCommunicationSpi spi1 = (TestRecordingCommunicationSpi) cfg1.getCommunicationSpi();
+        spi1.blockMessages(TestRecordingCommunicationSpi.blockDemandMessageForGroup(CU.cacheGroupId(DEFAULT_CACHE_NAME, null)));
+
+        startGrid(cfg1, rslvr);
+
+        spi1.waitForBlocked();
+
+        assertNull("Unexpected clearing a partition on rebalance [reason=" + rslvr.reason + ']', rslvr.reason);
+
+        spi1.stopBlock();
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
     }
 
     /**

@@ -3549,12 +3549,25 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     if (nodeId.equals(cctx.localNodeId())) {
                         GridDhtLocalPartition locPart = top.localPartition(part);
 
-                        if (locPart != null && locPart.state() == GridDhtPartitionState.MOVING)
+                        if (locPart != null
+                            && locPart.state() == GridDhtPartitionState.MOVING
+                            && locPart.dataStore().partUpdateCounter().tombstoneClearCounter() < maxClearCntr) {
+                            // Set partition as not applicable for fast full rebalancing.
                             addClearingPartition(top.groupId(), part);
+                            partsToReload.put(nodeId, top.groupId(), part);
+                        }
                     }
+                    else {
+                        GridDhtPartitionState state = top.partitionState(nodeId, part);
+                        GridDhtPartitionsSingleMessage m = msgs.get(nodeId);
+                        Map<Integer, Long> clearCntrs = m.partitionClearCounters(top.groupId());
 
-                    // Set partition as not applicable for fast full rebalancing.
-                    partsToReload.put(nodeId, top.groupId(), part);
+                        if (state == GridDhtPartitionState.MOVING
+                            && clearCntrs.getOrDefault(part, 0L) < maxClearCntr) {
+                            // Set partition as not applicable for fast full rebalancing.
+                            partsToReload.put(nodeId, top.groupId(), part);
+                        }
+                    }
                 }
             }
         }
@@ -5755,7 +5768,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         /**
          * @param cnt Count.
-         * @param Partiton size.
+         * @param size Partition size.
          * @param firstNode Node ID.
          */
         private CounterWithNodes(long cnt, @Nullable Long size, UUID firstNode) {
