@@ -16,7 +16,11 @@
 
 package org.apache.ignite.internal;
 
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
+import java.util.Locale;
+import java.util.TimeZone;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -28,10 +32,18 @@ public class IgniteVersionUtilsSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testIgniteCopyrights() throws Exception {
-
-        final String COPYRIGHT = String.valueOf(Calendar.getInstance().get(Calendar.YEAR)) + " Copyright(C) GridGain Systems, Inc. and Contributors";
+        final String COPYRIGHT = Calendar.getInstance().get(Calendar.YEAR) +
+            " Copyright(C) GridGain Systems, Inc. and Contributors";
 
         assertNotNull(IgniteVersionUtils.COPYRIGHT);
+
+        log.warning(">>>>> COPYRIGHT = " + COPYRIGHT);
+        log.warning(">>>>> COPYRIGHT = " + IgniteVersionUtils.COPYRIGHT);
+        log.warning(">>>>> BUILD_TSTAMP_FROM_PROPERTY = " + IgniteVersionUtils.BUILD_TSTAMP_FROM_PROPERTY);
+        log.warning(">>>>> BUILD_TSTAMP = " + IgniteVersionUtils.BUILD_TSTAMP);
+        log.warning(">>>>> BUILD_TSTAMP_STR = " + IgniteVersionUtils.BUILD_TSTAMP_STR);
+        log.warning(">>>>> BUILD_TSTAMP_STR = " + IgniteVersionUtils.BUILD_TSTAMP_STR);
+        log.warning(">>>>> TimeZone = " + TimeZone.getDefault() + ", locale = " + Locale.getDefault(Locale.Category.FORMAT));
 
         assertTrue(COPYRIGHT.equals(IgniteVersionUtils.COPYRIGHT));
     }
