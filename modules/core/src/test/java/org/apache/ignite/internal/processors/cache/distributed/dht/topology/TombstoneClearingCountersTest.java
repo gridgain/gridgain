@@ -719,7 +719,6 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
 
         crd.cluster().state(ClusterState.ACTIVE);
 
-
         IgniteCache<Integer, Integer> cache = crd.cache(DEFAULT_CACHE_NAME);
 
         int testPart = 0;
