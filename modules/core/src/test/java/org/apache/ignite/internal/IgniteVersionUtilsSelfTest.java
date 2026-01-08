@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal;
 
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -42,9 +40,8 @@ public class IgniteVersionUtilsSelfTest extends GridCommonAbstractTest {
         log.warning(">>>>> BUILD_TSTAMP_FROM_PROPERTY = " + IgniteVersionUtils.BUILD_TSTAMP_FROM_PROPERTY);
         log.warning(">>>>> BUILD_TSTAMP = " + IgniteVersionUtils.BUILD_TSTAMP);
         log.warning(">>>>> BUILD_TSTAMP_STR = " + IgniteVersionUtils.BUILD_TSTAMP_STR);
-        log.warning(">>>>> BUILD_TSTAMP_STR = " + IgniteVersionUtils.BUILD_TSTAMP_STR);
         log.warning(">>>>> TimeZone = " + TimeZone.getDefault() + ", locale = " + Locale.getDefault(Locale.Category.FORMAT));
 
-        assertTrue(COPYRIGHT.equals(IgniteVersionUtils.COPYRIGHT));
+        assertEquals(COPYRIGHT, IgniteVersionUtils.COPYRIGHT);
     }
 }
