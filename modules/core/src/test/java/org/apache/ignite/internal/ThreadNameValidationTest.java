@@ -50,7 +50,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.majorJavaVersion;
  * 1) A lot of tests with default Threads/ThreadPools
  * 2) Part of functionality uses integrations, which may creates Threads/ThreadPools without name specification.
  */
-@WithSystemProperty(key = IGNITE_USE_ASYNC_FILE_IO_FACTORY, value ="false")
+@WithSystemProperty(key = IGNITE_USE_ASYNC_FILE_IO_FACTORY, value = "false")
 public class ThreadNameValidationTest extends GridCommonAbstractTest {
     /** {@link Executors.DefaultThreadFactory} count before test. */
     private static transient int defaultThreadFactoryCountBeforeTest;
