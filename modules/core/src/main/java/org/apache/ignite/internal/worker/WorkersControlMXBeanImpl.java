@@ -74,7 +74,12 @@ public class WorkersControlMXBeanImpl implements WorkersControlMXBean {
         if (threads.length != 1)
             return false;
 
-        threads[0].stop();
+        try {
+            threads[0].stop();
+        }
+        catch (UnsupportedOperationException e) {
+            return false;
+        }
 
         return true;
     }
@@ -88,7 +93,12 @@ public class WorkersControlMXBeanImpl implements WorkersControlMXBean {
         if (threads.length != 1)
             return false;
 
-        threads[0].stop();
+        try {
+            threads[0].stop();
+        }
+        catch (UnsupportedOperationException e) {
+            return false;
+        }
 
         return true;
     }

@@ -18,10 +18,14 @@ package org.apache.ignite.util.mbeans;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.internal.worker.WorkersControlMXBeanImpl;
 import org.apache.ignite.mxbean.WorkersControlMXBean;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.util.IgniteUtils.jdkVersion;
+import static org.apache.ignite.internal.util.IgniteUtils.majorJavaVersion;
 
 /**
  * {@link WorkersControlMXBean} test.
@@ -34,10 +38,36 @@ public class WorkersControlMXBeanTest extends GridCommonAbstractTest {
      * @throws Exception Thrown if test fails.
      */
     @Test
-    public void testStopThreadByUniqueName() throws Exception {
+    public void testStopThreadJdk21() throws Exception {
+        if (majorJavaVersion(jdkVersion()) < 21)
+            return;
+
         WorkersControlMXBean workersCtrlMXBean = new WorkersControlMXBeanImpl(null);
 
-        Thread t = startTestThread();
+        AtomicBoolean stop = new AtomicBoolean();
+
+        Thread t = startTestThread(stop);
+
+        assertFalse(workersCtrlMXBean.stopThreadByUniqueName(TEST_THREAD_NAME));
+        assertFalse(workersCtrlMXBean.stopThreadById(t.getId()));
+
+        stop.set(true);
+        t.join(5000);
+    }
+
+    /**
+     * @throws Exception Thrown if test fails.
+     */
+    @Test
+    public void testStopThreadByUniqueName() throws Exception {
+        if (majorJavaVersion(jdkVersion()) >= 21)
+            return;
+
+        WorkersControlMXBean workersCtrlMXBean = new WorkersControlMXBeanImpl(null);
+
+        AtomicBoolean stop = new AtomicBoolean();
+
+        Thread t = startTestThread(stop);
 
         assertTrue(workersCtrlMXBean.stopThreadByUniqueName(TEST_THREAD_NAME));
 
@@ -45,13 +75,14 @@ public class WorkersControlMXBeanTest extends GridCommonAbstractTest {
 
         assertFalse(workersCtrlMXBean.stopThreadByUniqueName(TEST_THREAD_NAME));
 
-        Thread t1 = startTestThread();
-        Thread t2 = startTestThread();
+        Thread t1 = startTestThread(stop);
+        Thread t2 = startTestThread(stop);
 
         assertFalse(workersCtrlMXBean.stopThreadByUniqueName(TEST_THREAD_NAME));
 
-        t1.stop();
-        t2.stop();
+        stop.set(true);
+        t1.join(5000);
+        t1.join(5000);
     }
 
     /**
@@ -59,10 +90,15 @@ public class WorkersControlMXBeanTest extends GridCommonAbstractTest {
      */
     @Test
     public void testStopThreadById() throws Exception {
+        if (majorJavaVersion(jdkVersion()) >= 21)
+            return;
+
         WorkersControlMXBean workersCtrlMXBean = new WorkersControlMXBeanImpl(null);
 
-        Thread t1 = startTestThread();
-        Thread t2 = startTestThread();
+        AtomicBoolean stop = new AtomicBoolean();
+
+        Thread t1 = startTestThread(stop);
+        Thread t2 = startTestThread(stop);
 
         assertTrue(workersCtrlMXBean.stopThreadById(t1.getId()));
         assertTrue(workersCtrlMXBean.stopThreadById(t2.getId()));
@@ -77,15 +113,16 @@ public class WorkersControlMXBeanTest extends GridCommonAbstractTest {
     /**
      * @return Started thread.
      */
-    private static Thread startTestThread() throws InterruptedException {
+    private static Thread startTestThread(AtomicBoolean stop) throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
 
         Thread t = new Thread(TEST_THREAD_NAME) {
             @Override public void run() {
                 latch.countDown();
 
-                for (;;)
-                    ;
+                while (!stop.get()) {
+                    // No-op
+                }
             }
         };
 
