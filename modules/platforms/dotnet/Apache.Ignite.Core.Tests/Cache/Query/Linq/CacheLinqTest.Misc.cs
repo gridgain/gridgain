@@ -225,13 +225,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Linq
             var qry = cache.AsCacheQueryable();
 
             // Populate
-            const int count = 100;
+            const int count = 10000;
             cache.PutAll(Enumerable.Range(0, count).ToDictionary(x => x, x => x.ToString()));
 
             // Test
             Assert.AreEqual(count, qry.ToArray().Length);
             Assert.AreEqual(10, qry.Where(x => x.Key < 10).ToArray().Length);
-            Assert.AreEqual(1, qry.Count(x => x.Value.Contains("99")));
+            Assert.AreEqual(1, qry.Count(x => x.Value.Contains("9999")));
         }
 
         /// <summary>
