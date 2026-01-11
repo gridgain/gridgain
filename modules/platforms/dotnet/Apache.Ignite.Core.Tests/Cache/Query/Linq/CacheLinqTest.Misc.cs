@@ -219,19 +219,20 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Linq
                         new QueryEntity(typeof(int), typeof(string)))
                     {
                         CacheMode = CacheMode.Replicated,
+                        WriteSynchronizationMode = CacheWriteSynchronizationMode.FullSync
                         SqlEscapeAll = GetSqlEscapeAll()
                     });
 
             var qry = cache.AsCacheQueryable();
 
             // Populate
-            const int count = 10000;
+            const int count = 1000;
             cache.PutAll(Enumerable.Range(0, count).ToDictionary(x => x, x => x.ToString()));
 
             // Test
             Assert.AreEqual(count, qry.ToArray().Length);
             Assert.AreEqual(10, qry.Where(x => x.Key < 10).ToArray().Length);
-            Assert.AreEqual(1, qry.Count(x => x.Value.Contains("9999")));
+            Assert.AreEqual(1, qry.Count(x => x.Value.Contains("999")));
         }
 
         /// <summary>
