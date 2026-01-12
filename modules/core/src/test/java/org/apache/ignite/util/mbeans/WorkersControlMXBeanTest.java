@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.internal.util.IgniteUtils.jdkVersion;
 import static org.apache.ignite.internal.util.IgniteUtils.majorJavaVersion;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * {@link WorkersControlMXBean} test.
@@ -39,8 +40,7 @@ public class WorkersControlMXBeanTest extends GridCommonAbstractTest {
      */
     @Test
     public void testStopThreadJdk21() throws Exception {
-        if (majorJavaVersion(jdkVersion()) < 21)
-            return;
+        assumeTrue(majorJavaVersion(jdkVersion()) >= 21);
 
         WorkersControlMXBean workersCtrlMXBean = new WorkersControlMXBeanImpl(null);
 
@@ -60,8 +60,7 @@ public class WorkersControlMXBeanTest extends GridCommonAbstractTest {
      */
     @Test
     public void testStopThreadByUniqueName() throws Exception {
-        if (majorJavaVersion(jdkVersion()) >= 21)
-            return;
+        assumeTrue(majorJavaVersion(jdkVersion()) < 21);
 
         WorkersControlMXBean workersCtrlMXBean = new WorkersControlMXBeanImpl(null);
 
@@ -82,7 +81,7 @@ public class WorkersControlMXBeanTest extends GridCommonAbstractTest {
 
         stop.set(true);
         t1.join(5000);
-        t1.join(5000);
+        t2.join(5000);
     }
 
     /**
@@ -90,8 +89,7 @@ public class WorkersControlMXBeanTest extends GridCommonAbstractTest {
      */
     @Test
     public void testStopThreadById() throws Exception {
-        if (majorJavaVersion(jdkVersion()) >= 21)
-            return;
+        assumeTrue(majorJavaVersion(jdkVersion()) < 21);
 
         WorkersControlMXBean workersCtrlMXBean = new WorkersControlMXBeanImpl(null);
 

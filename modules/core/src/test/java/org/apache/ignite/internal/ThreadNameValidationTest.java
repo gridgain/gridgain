@@ -19,16 +19,17 @@ package org.apache.ignite.internal;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -199,11 +200,11 @@ public class ThreadNameValidationTest extends GridCommonAbstractTest {
      * Gets pools count with {@link Executors.DefaultThreadFactory}.
      * @return count
      */
-    private static int getDefaultPoolCount() throws ReflectiveOperationException {
-        Class<?> defaultThreadFactory = Class.forName("java.util.concurrent.Executors$DefaultThreadFactory");
-        Field poolNumber = defaultThreadFactory.getDeclaredField("poolNumber");
-        poolNumber.setAccessible(true);
-        AtomicInteger counter = (AtomicInteger)poolNumber.get(null);
+    private static int getDefaultPoolCount() throws IgniteCheckedException, ClassNotFoundException {
+        AtomicInteger counter = IgniteUtils.field(
+            Class.forName("java.util.concurrent.Executors$DefaultThreadFactory"),
+            "poolNumber");
+
         return counter.get();
     }
 
@@ -211,20 +212,16 @@ public class ThreadNameValidationTest extends GridCommonAbstractTest {
      * Gets anonymous threads count since JVM start.
      * @return count
      */
-    private static int getAnonymousThreadCount() throws ReflectiveOperationException {
+    private static int getAnonymousThreadCount() throws IgniteCheckedException, ClassNotFoundException {
         int javaVersion = majorJavaVersion(jdkVersion());
+        int anonymousThreadCount;
 
-        if (javaVersion > 17) {
-            Class<?> threadNumberingCls = Class.forName("java.lang.Thread$ThreadNumbering");
-            Field next = threadNumberingCls.getDeclaredField("next");
-            next.setAccessible(true);
-            return (Integer) next.get(null);
-        }
-        else {
-            Field threadInitNumberField = Thread.class.getDeclaredField("threadInitNumber");
-            threadInitNumberField.setAccessible(true);
-            return threadInitNumberField.getInt(null);
-        }
+        if (javaVersion > 17)
+            anonymousThreadCount = IgniteUtils.field(Class.forName("java.lang.Thread$ThreadNumbering"), "next");
+        else
+            anonymousThreadCount = IgniteUtils.field(Thread.class, "threadInitNumber");
+
+        return anonymousThreadCount;
     }
 
     /** Entity for tests.  */
