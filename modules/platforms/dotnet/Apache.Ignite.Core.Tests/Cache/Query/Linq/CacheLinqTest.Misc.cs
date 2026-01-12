@@ -219,7 +219,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Linq
                         new QueryEntity(typeof(int), typeof(string)))
                     {
                         CacheMode = CacheMode.Replicated,
-                        WriteSynchronizationMode = CacheWriteSynchronizationMode.FullSync
+                        WriteSynchronizationMode = CacheWriteSynchronizationMode.FullSync,
                         SqlEscapeAll = GetSqlEscapeAll()
                     });
 
