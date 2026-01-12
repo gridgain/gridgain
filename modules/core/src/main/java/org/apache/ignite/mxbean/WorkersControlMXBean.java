@@ -35,7 +35,7 @@ public interface WorkersControlMXBean {
      * Terminates worker.
      *
      * @param name Worker name.
-     * @return {@code True} if worker has been terminated successfully, {@code false} otherwise.
+     * @return {@code true} if worker has been terminated successfully, {@code false} otherwise.
      */
     @MXBeanDescription("Terminates worker.")
     public boolean terminateWorker(
@@ -46,8 +46,9 @@ public interface WorkersControlMXBean {
      * Stops thread by {@code name}, if exists and unique.
      *
      * @param name Thread name.
-     * @return {@code True} if thread has been stopped successfully, {@code false} otherwise.
+     * @return {@code true} if thread has been stopped successfully, {@code false} otherwise.
      */
+    @Deprecated
     @MXBeanDescription("Stops thread by unique name.")
     public boolean stopThreadByUniqueName(
         @MXBeanParameter(name = "name", description = "Name of thread to stop.") String name
@@ -57,8 +58,9 @@ public interface WorkersControlMXBean {
      * Stops thread by {@code id}, if exists.
      *
      * @param id Thread id.
-     * @return {@code True} if thread has been stopped successfully, {@code false} otherwise.
+     * @return {@code true} if thread has been stopped successfully, {@code false} otherwise.
      */
+    @Deprecated
     @MXBeanDescription("Stops thread by id.")
     public boolean stopThreadById(
         @MXBeanParameter(name = "id", description = "Id of thread to stop.") long id

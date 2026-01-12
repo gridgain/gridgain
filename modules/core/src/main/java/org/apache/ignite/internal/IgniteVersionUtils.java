@@ -44,7 +44,7 @@ public class IgniteVersionUtils {
     public static final long BUILD_TSTAMP;
 
     /** Build timestamp string property value. */
-    private static final String BUILD_TSTAMP_FROM_PROPERTY;
+    public static final String BUILD_TSTAMP_FROM_PROPERTY;
 
     /** Revision hash. */
     public static final String REV_HASH_STR;
