@@ -90,7 +90,7 @@ public class ConnectionManager {
     private final Set<H2Connection> usedConns = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /** Connection pool. */
-    private final ConcurrentStripedPool<H2Connection> connPool;
+    private final ConcurrentPool<H2Connection> connPool;
 
     /** H2 connection for INFORMATION_SCHEMA. Holds H2 open until node is stopped. */
     private final Connection sysConn;
@@ -110,7 +110,7 @@ public class ConnectionManager {
         String localResultFactoryClass = System.getProperty(
             IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, H2LocalResultFactory.class.getName());
 
-        connPool = new ConcurrentStripedPool<>(ctx.config().getQueryThreadPoolSize(), DFLT_CONNECTION_POOL_SIZE);
+        connPool = new ConcurrentPool<>(Math.max(ctx.config().getQueryThreadPoolSize(), DFLT_CONNECTION_POOL_SIZE));
 
         dbUrl = "jdbc:gg-h2:mem:" + ctx.localNodeId() + DEFAULT_DB_OPTIONS +
             ";LOCAL_RESULT_FACTORY=\"" + localResultFactoryClass + "\"";
@@ -191,7 +191,7 @@ public class ConnectionManager {
         busyLock.block();
 
         connPool.forEach(c -> U.close(c.connection(), log));
-        connPool.clear();
+        connPool.stop();
 
         usedConns.forEach(c -> U.close(c.connection(), log));
         usedConns.clear();
