@@ -29,7 +29,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.spi.communication.tcp.messages.ConnectionCheckMessage;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -156,18 +155,9 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
     }
 
     /**
-     * Sends special {@link ConnectionCheckMessage} through the channel to check if connection still alive.
+     * Returns {@code true} if an additional check should be performed when a stale connection is detected.
      */
-    public void checkConnectionIfEnabled() {
-        if (!enableConnectionCheckMessage)
-            return;
-
-        ConnectionCheckMessage msg = new ConnectionCheckMessage();
-
-        ses.send(msg);
-
-        if (log.isDebugEnabled())
-            log.debug("Connection check message was sent [rmtAddr=" + ses.remoteAddress()
-                    + ", locAddr=" + ses.localAddress() + "]");
+    public boolean enableConnectionCheckMessage() {
+        return enableConnectionCheckMessage;
     }
 }
