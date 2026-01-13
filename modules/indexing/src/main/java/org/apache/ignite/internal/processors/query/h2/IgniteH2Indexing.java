@@ -756,8 +756,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     catch (IgniteCheckedException | RuntimeException | Error e) {
                         conn.close();
 
-                        if (qryInfo != null)
+                        if (qryInfo != null) {
                             longRunningQryMgr.unregisterQuery(qryInfo, e);
+                            H2Utils.clearStatmentParametersQuietly(qryInfo.statement(), e);
+                        }
 
                         try {
                             if (mvccTracker != null)

@@ -598,8 +598,10 @@ public class GridReduceQueryExecutor {
                 catch (IgniteCheckedException | RuntimeException e) {
                     release = true;
 
-                    if (qryInfo != null)
+                    if (qryInfo != null) {
                         h2.longRunningQueries().unregisterQuery(qryInfo, e);
+                        H2Utils.clearStatmentParametersQuietly(qryInfo.statement(), e);
+                    }
 
                     if (e instanceof CacheException) {
                         if (QueryUtils.wasCancelled(e))

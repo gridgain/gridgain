@@ -628,8 +628,10 @@ public class GridMapQueryExecutor {
                     qryIdx++;
                 }
                 catch (Throwable e) {
-                    if (qryInfo != null)
+                    if (qryInfo != null) {
                         h2.longRunningQueries().unregisterQuery(qryInfo, e);
+                        H2Utils.clearStatmentParametersQuietly(qryInfo.statement(), e);
+                    }
 
                     throw e;
                 }
@@ -1001,8 +1003,10 @@ public class GridMapQueryExecutor {
                     }
                 }
                 catch (Exception e) {
-                    if (res.qryInfo() != null)
+                    if (res.qryInfo() != null) {
                         h2.longRunningQueries().unregisterQuery(res.qryInfo(), e);
+                        H2Utils.clearStatmentParametersQuietly(res.qryInfo().statement(), e);
+                    }
 
                     QueryRetryException retryEx = X.cause(e, QueryRetryException.class);
 
@@ -1057,10 +1061,12 @@ public class GridMapQueryExecutor {
             boolean last = res.fetchNextPage(rows, pageSize, dataPageScanEnabled);
 
             if (last) {
-                qr.closeResult(qry);
-
-                if (res.qryInfo() != null)
+                if (res.qryInfo() != null) {
                     h2.longRunningQueries().unregisterQuery(res.qryInfo(), null);
+                    H2Utils.clearStatmentParametersQuietly(res.qryInfo().statement(), null);
+                }
+
+                qr.closeResult(qry);
 
                 if (qr.isAllClosed()) {
                     nodeRess.remove(qr.queryRequestId(), segmentId, qr);

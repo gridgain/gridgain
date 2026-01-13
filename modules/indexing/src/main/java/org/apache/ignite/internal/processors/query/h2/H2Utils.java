@@ -1482,4 +1482,24 @@ public class H2Utils {
         if (log != null && log.isDebugEnabled())
             log.debug("Aggregation function " + fnName + "(" + cls.getName() + ") has been registered.");
     }
+
+    /**
+     * Clears statement parameters and suppress exception if occurs.
+     *
+     * @param statement Prepared statement.
+     * @param parentThrowable Throwable to add suppressed exception when occurs, or {@code null}.
+     */
+    public static void clearStatmentParametersQuietly(PreparedStatement statement, @Nullable Throwable parentThrowable) {
+        try {
+            if (!statement.isClosed()) {
+                statement.clearParameters();
+            }
+        }
+        catch (SQLException e) {
+            // Suppress exception or ignore otherwise.
+            if (parentThrowable != null) {
+                parentThrowable.addSuppressed(e);
+            }
+        }
+    }
 }
