@@ -3547,6 +3547,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (!haveHist.contains(part) && maxClearCntr != 0 && sortedCnrs.getValue().firstKey() <= maxClearCntr) {
                 for (UUID nodeId : msgs.keySet()) {
                     if (nodeId.equals(cctx.localNodeId())) {
+                        // Test assertion
+                        assert false : ">>>>> Single partition message from coordinator [" +
+                            "locNode=" + cctx.localNodeId() + ']';
+
                         GridDhtLocalPartition locPart = top.localPartition(part);
 
                         if (locPart != null
