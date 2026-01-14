@@ -571,6 +571,14 @@ public class H2Utils {
         boolean enforceJoinOrder,
         boolean lazy
     ) {
+        try {
+            // Force catalog initialization.
+            conn.connection().getCatalog();
+        }
+        catch (SQLException e) {
+            throw new IgniteSQLException("Failed to setup connection", e);
+        }
+
         Session s = session(conn);
 
         s.setForceJoinOrder(enforceJoinOrder);
