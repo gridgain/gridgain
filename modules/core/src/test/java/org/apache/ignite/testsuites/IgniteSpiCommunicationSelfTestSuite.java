@@ -41,6 +41,7 @@ import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiStartStopS
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiTcpFailureDetectionSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiTcpNoDelayOffSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiTcpSelfTest;
+import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiWriteSemaphoreDeadlockTest;
 import org.apache.ignite.spi.communication.tcp.GridTotallyUnreachableClientTest;
 import org.apache.ignite.spi.communication.tcp.IgniteTcpCommunicationConnectOnInitTest;
 import org.apache.ignite.spi.communication.tcp.IgniteTcpCommunicationHandshakeWaitSslTest;
@@ -138,7 +139,9 @@ import org.junit.runners.Suite;
     CommunicationMetricsTest.class,
 
     NetworkInterfaceMatcherTest.class,
-    BlacklistNetwokInterfacesTest.class
+    BlacklistNetwokInterfacesTest.class,
+
+    GridTcpCommunicationSpiWriteSemaphoreDeadlockTest.class
 })
 public class IgniteSpiCommunicationSelfTestSuite {
 }

@@ -178,8 +178,9 @@ public class TcpCommunicationConfiguration implements Serializable {
     /** */
     private boolean forceClientToSrvConnections;
 
-    /** Allows to send heartbeat messages for tcp communication connections. */
-    private boolean enableConnectionCheck = true;
+    /** Enables connection check for stale connections. */
+    // TODO: consider removing this code, https://ggsystems.atlassian.net/browse/GG-46827.
+    private boolean enableConnectionCheck = false;
 
     /** Collection of network interfaces that should not be used by Ignite when local address is wildcard. */
     private Collection<String> blacklist;
