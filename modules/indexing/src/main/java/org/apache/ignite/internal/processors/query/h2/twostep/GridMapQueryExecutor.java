@@ -530,6 +530,7 @@ public class GridMapQueryExecutor {
                     enforceJoinOrder,
                     lazy
                 );
+                H2Utils.initializeCatalog(conn);
 
                 MapQueryResult res = new MapQueryResult(h2, mainCctx, node.id(), qry, params, conn, log);
 

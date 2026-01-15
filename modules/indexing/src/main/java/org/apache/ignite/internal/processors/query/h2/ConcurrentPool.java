@@ -105,7 +105,7 @@ public class ConcurrentPool<E> {
     /**
      * Removes all the elements from the pool on stop.
      */
-    public void stop() {
+    public void clear() {
         pool.clear();
         size.set(0);
     }

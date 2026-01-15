@@ -571,14 +571,6 @@ public class H2Utils {
         boolean enforceJoinOrder,
         boolean lazy
     ) {
-        try {
-            // Force catalog initialization.
-            conn.connection().getCatalog();
-        }
-        catch (SQLException e) {
-            throw new IgniteSQLException("Failed to setup connection", e);
-        }
-
         Session s = session(conn);
 
         s.setForceJoinOrder(enforceJoinOrder);
@@ -592,6 +584,18 @@ public class H2Utils {
         assert oldCtx == null || oldCtx == qctx || s.memoryTracker() == null : oldCtx;
 
         s.setQueryContext(qctx);
+    }
+
+    /** Initialize connection catalog name. */
+    public static void initializeCatalog(H2PooledConnection conn) {
+        try {
+            // Force catalog initialization.
+            conn.connection().getCatalog();
+        }
+        catch (Throwable e) {
+            throw new IgniteSQLException("Failed to setup connection", e);
+        }
+
     }
 
     /**

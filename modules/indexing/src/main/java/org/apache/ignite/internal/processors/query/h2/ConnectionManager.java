@@ -195,7 +195,7 @@ public class ConnectionManager {
         busyLock.block();
 
         connPool.forEach(c -> U.close(c.connection(), log));
-        connPool.stop();
+        connPool.clear();
 
         usedConns.forEach(c -> U.close(c.connection(), log));
         usedConns.clear();
