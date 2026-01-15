@@ -606,14 +606,14 @@ public class GridNioServer<T> {
         if (createFut) {
             NioOperationFuture<?> fut = new NioOperationFuture<Void>(impl, NioOperation.REQUIRE_WRITE, msg, ackC);
 
-            send0(impl, fut);
+            send(impl, fut);
 
             return fut;
         }
         else {
             SessionWriteRequest req = new WriteRequestImpl(ses, msg, true, ackC);
 
-            send0(impl, req);
+            send(impl, req);
 
             return null;
         }
@@ -638,14 +638,14 @@ public class GridNioServer<T> {
             NioOperationFuture<?> fut = new NioOperationFuture<Void>(impl, NioOperation.REQUIRE_WRITE, msg,
                 skipRecoveryPred.apply(msg), ackC);
 
-            send0(impl, fut);
+            send(impl, fut);
 
             return fut;
         }
         else {
             SessionWriteRequest req = new WriteRequestImpl(ses, msg, skipRecoveryPred.apply(msg), ackC);
 
-            send0(impl, req);
+            send(impl, req);
 
             return null;
         }
@@ -656,7 +656,7 @@ public class GridNioServer<T> {
      * @param req Request.
      * @throws IgniteCheckedException If session was closed.
      */
-    private void send0(GridSelectorNioSessionImpl ses, SessionWriteRequest req) throws IgniteCheckedException {
+    private void send(GridSelectorNioSessionImpl ses, SessionWriteRequest req) throws IgniteCheckedException {
         assert ses != null;
         assert req != null;
 
@@ -756,7 +756,9 @@ public class GridNioServer<T> {
 
         int msgCnt = impl.checkConnection(req);
 
-        handleSend(impl, req, msgCnt);
+        if (msgCnt != -1) {
+            handleSend(impl, req, msgCnt);
+        }
     }
 
     /**

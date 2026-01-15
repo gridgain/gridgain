@@ -46,7 +46,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import static org.apache.ignite.testframework.GridTestUtils.assertTimeout;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 import static org.apache.ignite.testframework.GridTestUtils.invoke;
 
@@ -113,7 +116,7 @@ public class GridTcpCommunicationSpiWriteSemaphoreDeadlockTest extends GridCommo
         // Force the client to abandon the existing connection and issue a bunch of handshakes to establish a new one.
         breakConnection(client, server);
 
-        assertEquals("1", cache.get(1));
+        assertTimeout(10, TimeUnit.SECONDS, () -> assertEquals("1", cache.get(1)));
     }
 
     /**
@@ -187,6 +190,7 @@ public class GridTcpCommunicationSpiWriteSemaphoreDeadlockTest extends GridCommo
      * A special filter that blocks writing of ConnectionCheckMessage.
      */
     private static class BlockingNioFilter extends GridNioFilterAdapter {
+        // Barrier needed to block all selector threads on a node.
         private final CyclicBarrier barrier = new CyclicBarrier(SERVER_SELECTORS_COUNT);
 
         BlockingNioFilter() {
@@ -208,13 +212,13 @@ public class GridTcpCommunicationSpiWriteSemaphoreDeadlockTest extends GridCommo
         @Override public GridNioFuture<?> onSessionWrite(GridNioSession ses, Object msg, boolean fut, IgniteInClosure<IgniteException> ackC) throws IgniteCheckedException {
             if (msg instanceof ConnectionCheckMessage) {
                 try {
-                    // Block all selector threads.
-                    barrier.await();
+                    // Block the current selector thread.
+                    barrier.await(10, TimeUnit.SECONDS);
 
                     // Use an arbitrary sleep to increase the number of incoming handshake messages, which in turn
                     // increases the possibility of the deadlock.
                     Thread.sleep(1000);
-                } catch (InterruptedException | BrokenBarrierException e) {
+                } catch (InterruptedException | BrokenBarrierException | TimeoutException e) {
                     throw new RuntimeException(e);
                 }
             }
