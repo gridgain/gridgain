@@ -3545,32 +3545,25 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             Long maxClearCntr = maxClearCntrs.getOrDefault(part, 0L);
 
             if (!haveHist.contains(part) && maxClearCntr != 0 && sortedCnrs.getValue().firstKey() <= maxClearCntr) {
+                // Process local partition.
+                GridDhtLocalPartition locPart0 = top.localPartition(part);
+                if (locPart0 != null
+                    && locPart0.state() == GridDhtPartitionState.MOVING
+                    && locPart0.dataStore().partUpdateCounter().tombstoneClearCounter() < maxClearCntr) {
+                    // Set partition as not applicable for fast full rebalancing.
+                    addClearingPartition(top.groupId(), part);
+                }
+
+                // Process remote partitions.
                 for (UUID nodeId : msgs.keySet()) {
-                    if (nodeId.equals(cctx.localNodeId())) {
-                        // Test assertion
-                        assert false : ">>>>> Single partition message from coordinator [" +
-                            "locNode=" + cctx.localNodeId() + ']';
+                    GridDhtPartitionState state = top.partitionState(nodeId, part);
+                    GridDhtPartitionsSingleMessage m = msgs.get(nodeId);
+                    Map<Integer, Long> clearCntrs = m.partitionClearCounters(top.groupId());
 
-                        GridDhtLocalPartition locPart = top.localPartition(part);
-
-                        if (locPart != null
-                            && locPart.state() == GridDhtPartitionState.MOVING
-                            && locPart.dataStore().partUpdateCounter().tombstoneClearCounter() < maxClearCntr) {
-                            // Set partition as not applicable for fast full rebalancing.
-                            addClearingPartition(top.groupId(), part);
-                            partsToReload.put(nodeId, top.groupId(), part);
-                        }
-                    }
-                    else {
-                        GridDhtPartitionState state = top.partitionState(nodeId, part);
-                        GridDhtPartitionsSingleMessage m = msgs.get(nodeId);
-                        Map<Integer, Long> clearCntrs = m.partitionClearCounters(top.groupId());
-
-                        if (state == GridDhtPartitionState.MOVING
-                            && clearCntrs.getOrDefault(part, 0L) < maxClearCntr) {
-                            // Set partition as not applicable for fast full rebalancing.
-                            partsToReload.put(nodeId, top.groupId(), part);
-                        }
+                    if (state == GridDhtPartitionState.MOVING
+                        && clearCntrs.getOrDefault(part, 0L) < maxClearCntr) {
+                        // Set partition as not applicable for fast full rebalancing.
+                        partsToReload.put(nodeId, top.groupId(), part);
                     }
                 }
             }
