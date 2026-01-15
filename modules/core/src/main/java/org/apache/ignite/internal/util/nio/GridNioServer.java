@@ -750,7 +750,7 @@ public class GridNioServer<T> {
      */
     // TODO: consider removing this code, https://ggsystems.atlassian.net/browse/GG-46827.
     public void checkConnection(GridNioSession ses) throws IgniteCheckedException {
-        SessionWriteRequest req = new WriteRequestSystemImpl(ses, new ConnectionCheckMessage());
+        SessionWriteRequest req = new WriteRequestImpl(ses, new ConnectionCheckMessage(), false, null);
 
         GridSelectorNioSessionImpl impl = (GridSelectorNioSessionImpl)ses;
 

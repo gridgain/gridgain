@@ -329,13 +329,6 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
                 return;
             }
-            else if (msg instanceof ConnectionCheckMessage) {
-                if (log.isDebugEnabled())
-                    log.debug("Heartbeat message received [rmtNode=" + connKey.nodeId() +
-                            ", connIdx=" + connKey.connectionIndex() + "]");
-
-                return;
-            }
             else {
                 GridNioRecoveryDescriptor recovery = ses.inRecoveryDescriptor();
 
@@ -369,6 +362,14 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                     fut.onConnected(U.bytesToUuid(((NodeIdMessage)msg).nodeIdBytes(), 0));
 
                     nioSrvWrapper.nio().closeFromWorkerThread(ses);
+
+                    return;
+                }
+
+                if (msg instanceof ConnectionCheckMessage) {
+                    if (log.isDebugEnabled())
+                        log.debug("Heartbeat message received [rmtNode=" + connKey.nodeId() +
+                                ", connIdx=" + connKey.connectionIndex() + "]");
 
                     return;
                 }

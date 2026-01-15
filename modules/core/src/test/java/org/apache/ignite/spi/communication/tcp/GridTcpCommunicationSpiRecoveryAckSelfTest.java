@@ -314,6 +314,9 @@ public class GridTcpCommunicationSpiRecoveryAckSelfTest<T extends CommunicationS
 
         for (int i = 0; i < 1280; i++) {
             try {
+                if (i % 100 == 0)
+                    spi0.sendMessage(node1, new ConnectionCheckMessage());
+
                 spi0.sendMessage(node1, new GridTestMessage(node0.id(), ++msgId, 0));
 
                 sentMsgs++;

@@ -314,8 +314,7 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
         // There is a race condition here because we check the queue size and add the future without synchronization.
         // This may result in a redundant ping message being sent, which we don't really care about.
         if (size == 0) {
-            // Sending the request as a system request to bypass the queue semaphore.
-            return offerSystemFuture(writeFut);
+            return offerFuture(writeFut);
         }
 
         return -1;
