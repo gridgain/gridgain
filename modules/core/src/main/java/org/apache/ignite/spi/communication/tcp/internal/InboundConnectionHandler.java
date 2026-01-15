@@ -844,7 +844,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
      */
     // TODO: consider removing this code, https://ggsystems.atlassian.net/browse/GG-46827.
     private void checkConnectionIfEnabled(GridTcpNioCommunicationClient client) {
-        if (!client.enableConnectionCheckMessage())
+        if (!client.isConnectionCheckMessageEnabled())
             return;
 
         GridNioSession ses = client.session();

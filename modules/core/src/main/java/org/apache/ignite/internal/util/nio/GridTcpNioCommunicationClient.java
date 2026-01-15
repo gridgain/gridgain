@@ -157,7 +157,7 @@ public class GridTcpNioCommunicationClient extends GridAbstractCommunicationClie
     /**
      * Returns {@code true} if an additional check should be performed when a stale connection is detected.
      */
-    public boolean enableConnectionCheckMessage() {
+    public boolean isConnectionCheckMessageEnabled() {
         return enableConnectionCheckMessage;
     }
 }
