@@ -1916,7 +1916,7 @@ public final class IgniteSystemProperties {
     /**
      * Defines connection pool size for H2-based engine.
      */
-    @SystemProperty(value = "Defines connection pool size for H2-based SQL engine", type = String.class)
+    @SystemProperty(value = "Defines connection pool size for H2-based SQL engine", type = Integer.class)
     public static final String IGNITE_H2_CONNECTION_POOL_SIZE = "IGNITE_H2_CONNECTION_POOL_SIZE";
 
     /**
