@@ -56,7 +56,7 @@ public class ConcurrentPool<E> {
         do {
              poolSize = size.get();
 
-            if (poolSize > maxPoolSize)
+            if (poolSize >= maxPoolSize)
                 return false;
 
         } while (!size.compareAndSet(poolSize, poolSize + 1));
@@ -108,12 +108,5 @@ public class ConcurrentPool<E> {
     public void clear() {
         pool.clear();
         size.set(0);
-    }
-
-    /**
-     * @param newSize New max pool size.
-     */
-    public void resize(int newSize) {
-        maxPoolSize = newSize;
     }
 }

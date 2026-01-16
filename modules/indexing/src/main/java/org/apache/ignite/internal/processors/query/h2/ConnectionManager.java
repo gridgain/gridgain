@@ -258,18 +258,6 @@ public class ConnectionManager {
     }
 
     /**
-     * Resize the connection pool.
-     *
-     * @param size New size the connection pool.
-     */
-    void poolSize(int size) {
-        if (size <= 0)
-            throw new IllegalArgumentException("Invalid connection pool size: " + size);
-
-        connPool.resize(size);
-    }
-
-    /**
      * @return H2 connection wrapper.
      */
     public H2PooledConnection connection() {
