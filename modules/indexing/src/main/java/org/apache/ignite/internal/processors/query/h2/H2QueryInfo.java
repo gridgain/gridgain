@@ -28,7 +28,6 @@ import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.gridgain.internal.h2.command.Prepared;
 import org.gridgain.internal.h2.engine.Session;
 import org.jetbrains.annotations.Nullable;
 
@@ -64,7 +63,7 @@ public class H2QueryInfo {
     private final boolean lazy;
 
     /** Prepared statement. */
-    private final Prepared stmt;
+    private final PreparedStatement stmt;
 
     /** Originator node uid. */
     private final UUID node;
@@ -95,7 +94,7 @@ public class H2QueryInfo {
             enforceJoinOrder = s.isForceJoinOrder();
             distributedJoin = s.isJoinBatchEnabled();
             lazy = s.isLazyQueryExecution();
-            this.stmt = GridSqlQueryParser.prepared(stmt);
+            this.stmt = stmt;
             this.label = label;
         }
         catch (SQLException e) {
@@ -164,7 +163,7 @@ public class H2QueryInfo {
             .append(", lazy=").append(lazy)
             .append(", schema=").append(schema)
             .append(", sql='").append(sql)
-            .append("', plan=").append(stmt.getPlanSQL(false));
+            .append("', plan=").append(GridSqlQueryParser.prepared(stmt).getPlanSQL(false));
 
         printInfo(msgSb);
 

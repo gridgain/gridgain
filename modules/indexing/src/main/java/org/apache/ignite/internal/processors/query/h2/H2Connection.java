@@ -21,6 +21,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
@@ -35,7 +36,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public class H2Connection implements AutoCloseable {
     /** */
-    private static final int STATEMENT_CACHE_SIZE = 256;
+    private static final int STATEMENT_CACHE_SIZE = IgniteSystemProperties.getInteger(
+        IgniteSystemProperties.IGNITE_H2_STATEMENT_CACHE_SIZE, 256);
 
     /** */
     private final Connection conn;

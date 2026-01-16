@@ -629,7 +629,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     try (TraceSurroundings ignored = MTC.support(ctx.tracing().create(SQL_ITER_OPEN, MTC.span()))) {
                         H2Utils.setupConnection(conn, qctx,
                             qryDesc.distributedJoins(), qryDesc.enforceJoinOrder(), qryParams.lazy());
-
+                        H2Utils.initializeCatalog(conn);
+                        
                         List<Object> args = F.asList(qryParams.arguments());
 
                         PreparedStatement stmt = conn.prepareStatement(qry, H2StatementCache.queryFlags(qryDesc));

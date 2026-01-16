@@ -1912,6 +1912,20 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_H2_LOCAL_RESULT_FACTORY = "IGNITE_H2_LOCAL_RESULT_FACTORY";
 
     /**
+     * Defines connection pool size for H2-based engine.
+     */
+    @SystemProperty(value = "Defines connection pool size for H2-based SQL engine", type = Integer.class)
+    public static final String IGNITE_H2_CONNECTION_POOL_SIZE = "IGNITE_H2_CONNECTION_POOL_SIZE";
+
+    /**
+     * Defines prepared statements cache size for H2-based engine. The cache is created on per-connection basis.
+     *
+     * @see #IGNITE_H2_CONNECTION_POOL_SIZE
+     */
+    @SystemProperty(value = "Defines prepared statements cache size for H2-based SQL engine", type = Integer.class)
+    public static final String IGNITE_H2_STATEMENT_CACHE_SIZE = "IGNITE_H2_STATEMENT_CACHE_SIZE";
+
+    /**
      * Defines default memory reservation block size.
      *
      * Default: 512K.

@@ -539,6 +539,7 @@ public class GridReduceQueryExecutor {
                             true);
 
                         H2Utils.setupConnection(conn, qctx, false, enforceJoinOrder);
+                        H2Utils.initializeCatalog(conn);
 
                         if (qry.explain())
                             return explainPlan(conn, qry, params);
