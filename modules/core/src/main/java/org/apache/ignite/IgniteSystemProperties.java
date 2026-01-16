@@ -1924,7 +1924,7 @@ public final class IgniteSystemProperties {
      *
      * @see #IGNITE_H2_CONNECTION_POOL_SIZE
      */
-    @SystemProperty(value = "Defines prepared statements cache size for H2-based SQL engine", type = String.class)
+    @SystemProperty(value = "Defines prepared statements cache size for H2-based SQL engine", type = Integer.class)
     public static final String IGNITE_H2_STATEMENT_CACHE_SIZE = "IGNITE_H2_STATEMENT_CACHE_SIZE";
 
     /**
