@@ -336,8 +336,10 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
 
         lockTables();
 
-        if (qryInfo != null)
+        if (qryInfo != null) {
             h2.longRunningQueries().unregisterQuery(qryInfo, null);
+            H2Utils.clearStatmentParametersQuietly(qryInfo.statement(), null);
+        }
 
         try {
             fetchSizeInterceptor.checkOnClose();

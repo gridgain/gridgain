@@ -40,6 +40,7 @@ import org.gridgain.internal.h2.engine.Database;
 import org.gridgain.internal.h2.jdbc.JdbcConnection;
 import org.gridgain.internal.h2.store.DataHandler;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_H2_CONNECTION_POOL_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_H2_INDEXING_CACHE_CLEANUP_PERIOD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_H2_INDEXING_CACHE_THREAD_USAGE_TIMEOUT;
 
@@ -90,7 +91,7 @@ public class ConnectionManager {
     private final Set<H2Connection> usedConns = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /** Connection pool. */
-    private final ConcurrentStripedPool<H2Connection> connPool;
+    private final ConcurrentPool<H2Connection> connPool;
 
     /** H2 connection for INFORMATION_SCHEMA. Holds H2 open until node is stopped. */
     private final Connection sysConn;
@@ -110,7 +111,10 @@ public class ConnectionManager {
         String localResultFactoryClass = System.getProperty(
             IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, H2LocalResultFactory.class.getName());
 
-        connPool = new ConcurrentStripedPool<>(ctx.config().getQueryThreadPoolSize(), DFLT_CONNECTION_POOL_SIZE);
+        int defaultConnectionPoolSize = Math.max(ctx.config().getQueryThreadPoolSize() * 2, DFLT_CONNECTION_POOL_SIZE);
+        int connectionPoolSize = IgniteSystemProperties.getInteger(IGNITE_H2_CONNECTION_POOL_SIZE, defaultConnectionPoolSize);
+
+        connPool = new ConcurrentPool<>(connectionPoolSize);
 
         dbUrl = "jdbc:gg-h2:mem:" + ctx.localNodeId() + DEFAULT_DB_OPTIONS +
             ";LOCAL_RESULT_FACTORY=\"" + localResultFactoryClass + "\"";
@@ -251,18 +255,6 @@ public class ConnectionManager {
 
             throw e;
         }
-    }
-
-    /**
-     * Resize the connection pool.
-     *
-     * @param size New size the connection pool.
-     */
-    void poolSize(int size) {
-        if (size <= 0)
-            throw new IllegalArgumentException("Invalid connection pool size: " + size);
-
-        connPool.resize(size);
     }
 
     /**
