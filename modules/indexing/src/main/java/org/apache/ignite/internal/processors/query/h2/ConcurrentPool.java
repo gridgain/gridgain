@@ -33,7 +33,7 @@ public class ConcurrentPool<E> {
     private final AtomicInteger size = new AtomicInteger(0);
 
     /** Max pool size. */
-    private volatile int maxPoolSize;
+    private final int maxPoolSize;
 
     /**
      * Constructor.
