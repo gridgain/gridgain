@@ -2385,8 +2385,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /** */
-    private static String dataStorageReport(IgniteCacheDatabaseSharedManager db, DecimalFormat dblFmt,
-        boolean includeMemoryStatistics) {
+    private static String dataStorageReport(
+        IgniteCacheDatabaseSharedManager db,
+        DecimalFormat dblFmt,
+        boolean includeMemoryStatistics
+    ) {
         // Off-heap params.
         Collection<DataRegion> regions = db.dataRegions();
 

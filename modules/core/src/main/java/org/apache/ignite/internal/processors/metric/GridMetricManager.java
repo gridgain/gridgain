@@ -229,6 +229,10 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
         MetricRegistry sysreg = registry(SYS_METRICS);
 
+        {
+            MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
+//            sysreg.register(metricName("memory", "direct", "buffer", "used"), )
+        }
         gcCpuLoad = sysreg.doubleMetric(GC_CPU_LOAD, GC_CPU_LOAD_DESCRIPTION);
         cpuLoad = sysreg.doubleMetric(CPU_LOAD, CPU_LOAD_DESCRIPTION);
 
