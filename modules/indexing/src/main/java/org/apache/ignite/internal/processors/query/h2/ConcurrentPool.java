@@ -29,7 +29,7 @@ public class ConcurrentPool<E> {
     /** Pool. */
     private final ConcurrentLinkedQueue<E> pool = new ConcurrentLinkedQueue<>();
 
-    /** Ppool size (calculates fast, optimistic and approximate). */
+    /** Pool size (calculates fast, optimistic and approximate). */
     private final AtomicInteger size = new AtomicInteger(0);
 
     /** Max pool size. */
