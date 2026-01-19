@@ -19,14 +19,17 @@ package org.apache.ignite.internal.util.lang;
 import com.sun.management.OperatingSystemMXBean;
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.BufferPoolMXBean;
 import java.lang.management.ManagementFactory;
-import javax.management.AttributeNotFoundException;
-import javax.management.InstanceNotFoundException;
+import java.util.List;
 import javax.management.MBeanServer;
-import javax.management.ObjectName;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.logger.java.JavaLogger;
 
 public class IgniteMBeanUtils {
+    private static final IgniteLogger LOG = new JavaLogger().getLogger(IgniteMBeanUtils.class);
+
     /** This is the name of the HotSpot Diagnostic MBean */
     private static final String HOTSPOT_BEAN_NAME = "com.sun.management:type=HotSpotDiagnostic";
 
@@ -36,41 +39,38 @@ public class IgniteMBeanUtils {
     /** Platform-specific management interface for the operating system. */
     private static final String OS_BEAN_NAME = "java.lang:type=OperatingSystem";
 
-    private static final String DIRECT_BUFFER_BEAN_NAME = "java.nio:type=BufferPool,name=direct";
+    /** HotSpot diagnostic MBean */
+    private static Object hotspotMBean;
 
-    /** field to store the hotspot diagnostic MBean */
-    private static volatile Object hotspotMBean;
+    /** Platform-specific operating system bean. */
+    private static OperatingSystemMXBean osMBean;
 
-    /** Call to {@link #initOSMBean()} before accessing. */
-    private static volatile OperatingSystemMXBean osMBean;
+    /** Buffer pool bean. */
+    private static BufferPoolMXBean bufferPoolMXBean;
 
-    /**
-     * Initialize field to store OperatingSystem MXBean.
-     */
-    private static void initOSMBean() {
-        if (osMBean == null) {
-            synchronized (IgniteMBeanUtils.class) {
-                if (osMBean == null)
-                    osMBean = getMBean(OS_BEAN_NAME, OperatingSystemMXBean.class);
+    static {
+        List<BufferPoolMXBean> pools = ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class);
+        for (BufferPoolMXBean pool : pools) {
+            if (pool.getName().equals("direct")) {
+                bufferPoolMXBean = pool;
+                break;
             }
         }
-    }
 
-    /**
-     * Initialize the hotspot diagnostic MBean field.
-     */
-    private static void initHotspotMBean() {
-        if (hotspotMBean == null) {
-            synchronized (IgniteMBeanUtils.class) {
-                if (hotspotMBean == null) {
-                    try {
-                        hotspotMBean = getMBean(HOTSPOT_BEAN_NAME, Class.forName(HOTSPOT_BEAN_CLASS));
-                    }
-                    catch (ClassNotFoundException e) {
-                        throw new IgniteException(e);
-                    }
-                }
-            }
+        try {
+            hotspotMBean = getMBean(HOTSPOT_BEAN_NAME, Class.forName(HOTSPOT_BEAN_CLASS));
+        }
+        catch (Exception e) {
+            // hotspot diagnostic bean is not supported.
+            LOG.info("HotSpot diagnostic bean is not supported [err=" + e + ']');
+        }
+
+        try {
+            osMBean = getMBean(OS_BEAN_NAME, OperatingSystemMXBean.class);
+        }
+        catch (Exception e) {
+            // operating system bean is not supported.
+            LOG.info("Operating system bean is not supported [err=" + e + ']');
         }
     }
 
@@ -93,35 +93,18 @@ public class IgniteMBeanUtils {
     }
 
     /**
-     * Returns {@code true} if HotSpotDiagnosticBean is supported by this JVM, and {@code false} otherwise.
-     *
-     * @return {@code true} if HotSpotDiagnosticBean is supported by this JVM.
-     */
-    public static boolean isHotSpotDiagnosticBeanSupported() {
-       try {
-           initHotspotMBean();
-       }
-       catch (Exception e) {
-           // No-op
-       }
-
-       return hotspotMBean != null;
-    }
-
-    /**
      * Returns a limit on the amount of memory that can be reserved for all Direct Byte Buffers.
      * If this limit is not explicitly set using JVM option {@code -XX:MaxDirectMemorySize}, for instance,
      * then this method returns {@link Runtime#maxMemory()} value. Note that is this case the real limit may depend on
      * JVM version and its internal implementation. For example, it might be limited to 87.5% of the maximum heap size
      * (Java 8), or limited to the maximum heap size (Java 11+).
-     *
      * Returns {@code -1} if HotSpot diagnostic bean is not supported.
      *
      * @return a limit on the amount of memory that can be reserved for all Direct Byte Buffers.
      * @throws IgniteException if getting a limit is failed for some reason.
      */
     public static long maxDirectMemorySize() throws IgniteException {
-        if (!isHotSpotDiagnosticBeanSupported())
+        if (hotspotMBean == null)
             return -1;
 
         try {
@@ -132,7 +115,7 @@ public class IgniteMBeanUtils {
 
             long res = Long.parseLong(val);
 
-            return res == 0? Runtime.getRuntime().maxMemory() : res;
+            return res == 0 ? Runtime.getRuntime().maxMemory() : res;
         }
         catch (Exception e) {
             throw new IgniteException(e);
@@ -148,20 +131,10 @@ public class IgniteMBeanUtils {
      * @return Estimated total capacity of all buffers in direct pool, measured in bytes.
      */
     public static long directMemoryTotalCapacity() {
-        if (!isHotSpotDiagnosticBeanSupported())
+        if (bufferPoolMXBean == null)
             return -1;
 
-        try {
-            ObjectName directMemoryPool = new ObjectName("java.nio:type=BufferPool,name=direct");
-            MBeanServer srv = ManagementFactory.getPlatformMBeanServer();
-            return (Long) srv.getAttribute(directMemoryPool, "TotalCapacity");
-        }
-        catch (AttributeNotFoundException | InstanceNotFoundException e) {
-            return -1;
-        }
-        catch (Exception e) {
-            throw new IgniteException(e);
-        }
+        return bufferPoolMXBean.getTotalCapacity();
     }
 
     /**
@@ -174,27 +147,18 @@ public class IgniteMBeanUtils {
      * @return Estimated amount of memory (in bytes) that the JVM is using for direct buffer pool.
      */
     public static long directMemoryUsed() {
-        if (!isHotSpotDiagnosticBeanSupported())
+        if (bufferPoolMXBean == null)
             return -1;
 
-        try {
-            ObjectName directMemoryPool = new ObjectName("java.nio:type=BufferPool,name=direct");
-            MBeanServer srv = ManagementFactory.getPlatformMBeanServer();
-            return (Long) srv.getAttribute(directMemoryPool, "MemoryUsed");
-        }
-        catch (AttributeNotFoundException | InstanceNotFoundException e) {
-            return -1;
-        }
-        catch (Exception e) {
-            throw new IgniteException(e);
-        }
+        return bufferPoolMXBean.getMemoryUsed();
     }
 
     /**
      * @return Committed VM size in bits.
      */
     public static long getCommittedVirtualMemorySize() {
-        initOSMBean();
+        if (osMBean == null)
+            return -1;
 
         return osMBean.getCommittedVirtualMemorySize();
     }
@@ -209,13 +173,8 @@ public class IgniteMBeanUtils {
      */
     public static void dumpHeap(String fileName, boolean live) {
         // initialize hotspot diagnostic MBean
-        try {
-            initHotspotMBean();
-        }
-        catch (IgniteException e) {
-            // Hotspot diagnostic bean is not supported.
+        if (hotspotMBean == null)
             return;
-        }
 
         File f = new File(fileName);
 
@@ -232,11 +191,5 @@ public class IgniteMBeanUtils {
         catch (Exception exp) {
             throw new RuntimeException(exp);
         }
-    }
-
-    public static void main(String[] args) {
-        System.out.println(">>>>> max: " + IgniteMBeanUtils.maxDirectMemorySize());
-        System.out.println(">>>>> total: " + IgniteMBeanUtils.directMemoryTotalCapacity());
-        System.out.println(">>>>> used: " + IgniteMBeanUtils.directMemoryUsed());
     }
 }
