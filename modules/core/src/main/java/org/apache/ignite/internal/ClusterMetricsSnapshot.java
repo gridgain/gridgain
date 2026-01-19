@@ -93,7 +93,10 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
         4/*total nodes*/ +
         8/*total jobs execution time*/ +
         8/*current PME time*/ +
-        4/*unacknowledged messages queue size*/;
+        4/*unacknowledged messages queue size*/ +
+        8/* max direct buffers memory*/ +
+        8/* direct buffers capacity*/ +
+        8/* direct buffers used*/;
 
     /** */
     private long lastUpdateTime = -1;
@@ -263,6 +266,15 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
     /** */
     private int unackedMsgQueueSize = -1;
 
+    /** */
+    private long directMemoryMax = -1;
+
+    /** */
+    private long directMemoryCapacity = -1;
+
+    /** */
+    private long directMemoryUsed = -1;
+
     /**
      * Create empty snapshot.
      */
@@ -338,6 +350,9 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
         totalNodes = nodes.size();
         currentPmeDuration = 0;
         unackedMsgQueueSize = 0;
+        directMemoryMax = 0;
+        directMemoryCapacity = 0;
+        directMemoryUsed = 0;
 
         for (ClusterNode node : nodes) {
             ClusterMetrics m = node.metrics();
@@ -418,6 +433,10 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
             currentPmeDuration = max(currentPmeDuration, m.getCurrentPmeDuration());
 
             unackedMsgQueueSize += m.getUnacknowledgedMessagesQueueSize();
+
+            directMemoryMax += m.getMaxDirectMemorySize();
+            directMemoryCapacity += m.getDirectMemoryTotalCapacity();
+            directMemoryUsed += m.getDirectMemoryUsed();
         }
 
         curJobExecTime /= size;
@@ -983,6 +1002,21 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
         return unackedMsgQueueSize;
     }
 
+    /** {@inheritDoc} */
+    @Override public long getMaxDirectMemorySize() {
+        return directMemoryMax;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getDirectMemoryTotalCapacity() {
+        return directMemoryCapacity;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getDirectMemoryUsed() {
+        return directMemoryUsed;
+    }
+
     /**
      * Sets available processors.
      *
@@ -1236,6 +1270,32 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
     }
 
     /**
+     * Sets a limit on the amount of memory that can be reserved for all Direct Byte Buffers.
+     *
+     * @param max Limit on the amount of memory that can be reserved for all Direct Byte Buffers.
+     */
+    public void setDirectMemoryMax(long max) {
+        this.directMemoryMax = max;
+    }
+
+    /**
+     * Sets total capacity of all buffers in direct pool.
+     *
+     * @param capacity total capacity of all buffers in direct pool.
+     */
+    public void setDirectMemoryCapacity(long capacity) {
+        this.directMemoryCapacity = capacity;
+    }
+
+    /**
+     * Sets amount of memory that the JVM is using for direct buffer pool.
+     * @param used Amount of memory that the JVM is using for direct buffer pool.
+     */
+    public void setDirectMemoryUsed(long used) {
+        this.directMemoryUsed = used;
+    }
+
+    /**
      * @param neighborhood Cluster neighborhood.
      * @return CPU count.
      */
@@ -1389,6 +1449,9 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
         buf.putLong(metrics.getTotalJobsExecutionTime());
         buf.putLong(metrics.getCurrentPmeDuration());
         buf.putInt(metrics.getUnacknowledgedMessagesQueueSize());
+        buf.putLong(metrics.getMaxDirectMemorySize());
+        buf.putLong(metrics.getDirectMemoryTotalCapacity());
+        buf.putLong(metrics.getDirectMemoryUsed());
 
         assert !buf.hasRemaining() : "Invalid metrics size [expected=" + METRICS_SIZE + ", actual="
             + (buf.position() - off) + ']';
@@ -1480,6 +1543,17 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
             metrics.setUnacknowledgedMessagesQueueSize(buf.getInt());
         else
             metrics.setUnacknowledgedMessagesQueueSize(0);
+
+        if (buf.remaining() >= 24) {
+            metrics.setDirectMemoryMax(buf.getLong());
+            metrics.setDirectMemoryCapacity(buf.getLong());
+            metrics.setDirectMemoryUsed(buf.getLong());
+        }
+        else {
+            metrics.setDirectMemoryMax(0);
+            metrics.setDirectMemoryCapacity(0);
+            metrics.setDirectMemoryUsed(0);
+        }
 
         return metrics;
     }

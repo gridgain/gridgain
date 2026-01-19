@@ -336,4 +336,16 @@ public interface ClusterMetricsMXBean extends ClusterMetrics {
          @MXBeanParameter(name = "includeSrvs", description = "Include server nodes.") boolean includeSrvs,
          @MXBeanParameter(name = "includeClients", description = "Include client nodes.") boolean includeClients
      );
+
+    /** {@inheritDoc} */
+    @Override @MXBeanDescription("Limit on the amount of memory that can be reserved for all Direct Byte Buffers.")
+    public long getMaxDirectMemorySize();
+
+    /** {@inheritDoc} */
+    @Override @MXBeanDescription("Estimated total capacity of all buffers in direct pool, measured in bytes.")
+    public long getDirectMemoryTotalCapacity();
+
+    /** {@inheritDoc} */
+    @Override @MXBeanDescription("Estimated amount of memory (in bytes) that the JVM is using for direct buffer pool.")
+    public long getDirectMemoryUsed();
 }

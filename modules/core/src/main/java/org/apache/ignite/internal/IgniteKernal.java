@@ -2257,6 +2257,16 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             double freeHeapPct = heapMax > 0 ? ((double)((heapMax - heapUsed) * 100)) / heapMax : -1;
 
+            long directMax = m.getMaxDirectMemorySize();
+            long directCapacity = m.getDirectMemoryTotalCapacity();
+            long directUsed = m.getDirectMemoryUsed();
+            double freeDirectPct = directMax > 0 && directUsed > 0 ? ((double)((directMax - directUsed) * 100)) / directMax : -1;
+
+            String directMaxInMBytes = directMax > 0 ? dblFmt.format(directMax / MEGABYTE) + "MB": "N/A";
+            String directCapacityInMBytes = directCapacity > 0 ? dblFmt.format(directCapacity / MEGABYTE) + "MB": "N/A";
+            String directUsedInMBytes = directUsed > 0 ? dblFmt.format(directUsed / MEGABYTE) + "MB" : "N/A";
+            String freeDirectPctStr = freeDirectPct > 0 ? dblFmt.format(freeDirectPct) : "N/A";
+
             int hosts = 0;
             int servers = 0;
             int clients = 0;
@@ -2324,6 +2334,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 .a("    ^-- Heap [used=").a(dblFmt.format(heapUsedInMBytes))
                 .a("MB, free=").a(dblFmt.format(freeHeapPct))
                 .a("%, comm=").a(dblFmt.format(heapCommInMBytes)).a("MB]").nl()
+                .a("    ^-- Direct memory [max=").a(directMaxInMBytes)
+                .a(", capacity=").a(directCapacityInMBytes)
+                .a(", used=").a(directUsedInMBytes)
+                .a(", free=").a(freeDirectPctStr).a("%]").nl()
                 .a(dataStorageInfo)
                 .a("    ^-- Outbound messages queue [size=").a(m.getOutboundMessagesQueueSize()).a("]").nl()
                 .a("    ^-- Unacknowledged messages queue [size=").a(m.getUnacknowledgedMessagesQueueSize()).a("]").nl()

@@ -47,6 +47,7 @@ import org.apache.ignite.internal.processors.metric.impl.HistogramMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
+import org.apache.ignite.internal.util.lang.IgniteMBeanUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.A;
@@ -194,6 +195,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** Nonheap memory metrics. */
     private final MemoryUsageMetrics nonHeap;
 
+    /** Direct buffers memory metrics. */
+    private final DirectMemoryUsageMetrics directMem;
+
     /**
      * @param ctx Kernal context.
      */
@@ -223,16 +227,14 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
         heap = new MemoryUsageMetrics(SYS_METRICS, metricName("memory", "heap"));
         nonHeap = new MemoryUsageMetrics(SYS_METRICS, metricName("memory", "nonheap"));
+        directMem = new DirectMemoryUsageMetrics(SYS_METRICS, metricName("memory", "direct", "buffers"));
 
         heap.update(mem.getHeapMemoryUsage());
         nonHeap.update(mem.getNonHeapMemoryUsage());
+        directMem.update();
 
         MetricRegistry sysreg = registry(SYS_METRICS);
 
-        {
-            MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
-//            sysreg.register(metricName("memory", "direct", "buffer", "used"), )
-        }
         gcCpuLoad = sysreg.doubleMetric(GC_CPU_LOAD, GC_CPU_LOAD_DESCRIPTION);
         cpuLoad = sysreg.doubleMetric(CPU_LOAD, CPU_LOAD_DESCRIPTION);
 
@@ -586,6 +588,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         @Override public void run() {
             heap.update(heapMemoryUsage());
             nonHeap.update(nonHeapMemoryUsage());
+            directMem.update();
 
             gcCpuLoad.value(getGcCpuLoad());
             cpuLoad.value(getCpuLoad());
@@ -654,6 +657,40 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(MetricsUpdater.class, this, super.toString());
+        }
+    }
+
+    /** Direct buffers memory metrics. */
+    public class DirectMemoryUsageMetrics {
+        private final AtomicLongMetric max;
+        private final AtomicLongMetric used;
+        private final AtomicLongMetric capacity;
+
+        /**
+         * @param group Metric registry.
+         * @param metricNamePrefix Metric name prefix.
+         */
+        public DirectMemoryUsageMetrics(String group, String metricNamePrefix) {
+            MetricRegistry mreg = registry(group);
+
+            max = mreg.longMetric(
+                metricName(metricNamePrefix, "max"),
+                "The maximum size of direct buffer allocations.");
+
+            capacity = mreg.longMetric(
+                metricName(metricNamePrefix, "capacity"),
+                "The estimated total capacity of all buffers in direct pool, measured in bytes.");
+
+            used = mreg.longMetric(
+                metricName(metricNamePrefix, "used"),
+                "The estimated amount of memory (in bytes) that the JVM is using for direct buffer pool.");
+        }
+
+        void update() {
+            max.value(IgniteMBeanUtils.maxDirectMemorySize());
+            capacity.value(IgniteMBeanUtils.directMemoryTotalCapacity());
+            used.value(IgniteMBeanUtils.directMemoryUsed());
+            log.warning(">>>>> max = " + max.value() + ", capacity=" + capacity.value() + ", used=" + used.value());
         }
     }
 

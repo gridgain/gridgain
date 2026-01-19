@@ -194,6 +194,7 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
         assertTrue(msg, fullLog.matches("(?s).*CPU \\[CPUs=.*, curLoad=.*, avgLoad=.*, GC=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*Page memory \\[pages=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*Heap \\[used=.*, free=.*, comm=.*].*"));
+        assertTrue(msg, fullLog.matches("(?s).*Direct memory \\[max=.*, capacity=.*, used=.*, free=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).*Off-heap memory \\[sizeUsedByData=.*, used=.*, free=.*, allocated=.*].*"));
         assertTrue(msg, fullLog.matches("(?s).* region \\[type=internal, persistence=(true|false), lazyAlloc=(true|false).*"));
         assertTrue(msg, fullLog.matches("(?s).* region \\[type=default, persistence=(true|false), lazyAlloc=(true|false).*"));
