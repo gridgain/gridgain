@@ -690,7 +690,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
             max.value(IgniteMBeanUtils.maxDirectMemorySize());
             capacity.value(IgniteMBeanUtils.directMemoryTotalCapacity());
             used.value(IgniteMBeanUtils.directMemoryUsed());
-            log.warning(">>>>> max = " + max.value() + ", capacity=" + capacity.value() + ", used=" + used.value());
         }
     }
 
