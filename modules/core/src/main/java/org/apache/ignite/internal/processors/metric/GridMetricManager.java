@@ -663,7 +663,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** Direct buffers memory metrics. */
     public class DirectMemoryUsageMetrics {
         private final AtomicLongMetric max;
+
         private final AtomicLongMetric used;
+
         private final AtomicLongMetric capacity;
 
         /**

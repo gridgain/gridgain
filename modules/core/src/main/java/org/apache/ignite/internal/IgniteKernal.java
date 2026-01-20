@@ -2262,8 +2262,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             long directUsed = m.getDirectMemoryUsed();
             double freeDirectPct = directMax > 0 && directUsed > 0 ? ((double)((directMax - directUsed) * 100)) / directMax : -1;
 
-            String directMaxInMBytes = directMax > 0 ? dblFmt.format(directMax / MEGABYTE) + "MB": "N/A";
-            String directCapacityInMBytes = directCapacity > 0 ? dblFmt.format(directCapacity / MEGABYTE) + "MB": "N/A";
+            String directMaxInMBytes = directMax > 0 ? dblFmt.format(directMax / MEGABYTE) + "MB" : "N/A";
+            String directCapacityInMBytes = directCapacity > 0 ? dblFmt.format(directCapacity / MEGABYTE) + "MB" : "N/A";
             String directUsedInMBytes = directUsed > 0 ? dblFmt.format(directUsed / MEGABYTE) + "MB" : "N/A";
             String freeDirectPctStr = freeDirectPct > 0 ? dblFmt.format(freeDirectPct) : "N/A";
 
