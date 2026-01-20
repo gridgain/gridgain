@@ -29,6 +29,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -49,6 +50,7 @@ import org.junit.runners.Parameterized;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Tests fast full rebalancing optimization correctness.
@@ -706,6 +708,148 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         assertFalse("Expecting tombstones are not removed during PME", wasEmpty);
 
         CU.unwindEvicts(ctx0);
+    }
+
+    /**
+     * Tests that the coordinator node trigger eviction of a partition before rebalancing.
+     */
+    @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "5000")
+    public void testEvictionOnRebalanceOnCoordinator() throws Exception {
+        IgniteEx crd = startGrids(2);
+
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        IgniteCache<Integer, Integer> cache = grid(1).cache(DEFAULT_CACHE_NAME);
+
+        int testPart = 0;
+        int cnt = 100;
+
+        List<Integer> testPartKeys = partitionKeys(cache, testPart, cnt, 0);
+        testPartKeys.forEach(key -> cache.put(key, key));
+
+        cache.remove(testPartKeys.get(0));
+
+        assertTrue(
+            "Failed to wait for tombstones expiration",
+            waitForClearTombstones(cache, testPart, cnt + 1, 30_000));
+        assertTrue(
+            "Failed to wait for tombstones expiration",
+            waitForClearTombstones(grid(0).cache(DEFAULT_CACHE_NAME), testPart, cnt + 1, 30_000));
+
+        // Stop coordinator node.
+        stopGrid(0);
+
+        for (int i = 0; i < cnt / 2; ++i)
+            cache.remove(testPartKeys.get(i));
+
+        clearTombstones(cache);
+
+        stopGrid(1);
+
+        TrackingResolver rslvr0 = new TrackingResolver(testPart);
+        IgniteConfiguration cfg0 = getConfiguration(getTestIgniteInstanceName(0));
+        TestRecordingCommunicationSpi spi0 = (TestRecordingCommunicationSpi) cfg0.getCommunicationSpi();
+        spi0.blockMessages(TestRecordingCommunicationSpi.blockDemandMessageForGroup(CU.cacheGroupId(DEFAULT_CACHE_NAME, null)));
+
+        crd = startGrid(cfg0, rslvr0);
+
+        startGrid(1);
+
+        spi0.waitForBlocked();
+
+        assertEquals(
+            "Partition was not cleaned up on coordinator before rebalancing [reason=" + rslvr0.reason + ']',
+            PartitionsEvictManager.EvictReason.CLEARING,
+            rslvr0.reason);
+
+        spi0.stopBlock();
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * Tests that eviction of a partition should not be triggered when the clear tombstone counter value is applicable.
+     */
+    @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "500")
+    public void testEvictionOnRebalance() throws Exception {
+        IgniteEx crd = startGrids(2);
+
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        IgniteCache<Integer, Integer> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+        int testPart = 0;
+        int cnt = 100;
+
+        List<Integer> testPartKeys = partitionKeys(cache, testPart, cnt, 0);
+        testPartKeys.forEach(key -> cache.put(key, key));
+
+        cache.remove(testPartKeys.get(0));
+
+        assertTrue(
+            "Failed to wait for tombstones expiration",
+            waitForClearTombstones(grid(0).cache(DEFAULT_CACHE_NAME), testPart, cnt + 1, 30_000));
+        assertTrue(
+            "Failed to wait for tombstones expiration",
+            waitForClearTombstones(grid(1).cache(DEFAULT_CACHE_NAME), testPart, cnt + 1, 30_000));
+
+        stopGrid(1);
+
+        for (int i = 0; i < cnt / 2; ++i)
+            cache.remove(testPartKeys.get(i));
+
+        TrackingResolver rslvr = new TrackingResolver(testPart);
+        IgniteConfiguration cfg1 = getConfiguration(getTestIgniteInstanceName(1));
+        TestRecordingCommunicationSpi spi1 = (TestRecordingCommunicationSpi) cfg1.getCommunicationSpi();
+        spi1.blockMessages(TestRecordingCommunicationSpi.blockDemandMessageForGroup(CU.cacheGroupId(DEFAULT_CACHE_NAME, null)));
+
+        startGrid(cfg1, rslvr);
+
+        spi1.waitForBlocked();
+
+        assertNull("Unexpected clearing a partition on rebalance [reason=" + rslvr.reason + ']', rslvr.reason);
+
+        spi1.stopBlock();
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * Returns {@code true} if tombstone clear counter equals to {@code expectedClearCntr} and {@code false} otherwise.
+     *
+     * @param cache Cache to check
+     * @param partId Partition identifier to check.
+     * @param expectedClearCntr Expected tombstones clear counter.
+     * @param timeout Timeout to wait.
+     * @return {@code true} if tombstone clear counter equals to {@code expectedClearCntr}.
+     * @throws IgniteInterruptedCheckedException If interrupted.
+     */
+    private boolean waitForClearTombstones(
+        IgniteCache<?, ?> cache,
+        int partId,
+        long expectedClearCntr,
+        long timeout
+    ) throws IgniteInterruptedCheckedException {
+        IgniteEx ignite = cache.unwrap(IgniteEx.class);
+
+        GridCacheContext<?, ?> grpCtx = ignite.cachex(cache.getName()).context();
+
+        assertTrue("Cache " + cache.getName() + " does not support tombstones", grpCtx.group().supportsTombstone());
+
+        GridDhtLocalPartition locPart = grpCtx.topology().localPartition(partId);
+        assertNotNull(
+            "Node is not an affinity node for a partition [" +
+                "node=" + ignite.context().localNodeId() + ", part=" + partId + ']',
+            locPart);
+
+        return waitForCondition(
+            () -> locPart.dataStore().partUpdateCounter().tombstoneClearCounter() == expectedClearCntr, timeout);
     }
 
     /**

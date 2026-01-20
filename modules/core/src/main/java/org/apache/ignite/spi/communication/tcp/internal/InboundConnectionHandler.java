@@ -369,7 +369,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 if (msg instanceof ConnectionCheckMessage) {
                     if (log.isDebugEnabled())
                         log.debug("Heartbeat message received [rmtNode=" + connKey.nodeId() +
-                            ", connIdx=" + connKey.connectionIndex() + "]");
+                                ", connIdx=" + connKey.connectionIndex() + "]");
 
                     return;
                 }
@@ -620,8 +620,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
                     ses.send(new RecoveryLastReceivedMessage(ALREADY_CONNECTED));
 
-                    // We are sending ConectionCheckMessage through old session to validate if session is alive.
-                    ((GridTcpNioCommunicationClient) oldClient).checkConnectionIfEnabled();
+                    checkConnectionIfEnabled((GridTcpNioCommunicationClient) oldClient);
 
                     closeStaleConnections(connKey);
 
@@ -745,8 +744,16 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
             if (key0 != null &&
                 key0.nodeId().equals(connKey.nodeId()) &&
                 key0.connectionIndex() == connKey.connectionIndex() &&
-                key0.connectCount() < connKey.connectCount())
+                key0.connectCount() < connKey.connectCount()) {
+                if (log.isInfoEnabled())
+                    log.info(String.format(
+                            "Closing stale connection [locNode=%s, locAddr=%s, rmtNode=%s, rmtAddr=%s]",
+                            locNodeSupplier.get().id(), ses0.localAddress(),
+                            connKey.nodeId(), ses0.remoteAddress()
+                    ));
+
                 ses0.close();
+            }
         }
     }
 
@@ -830,5 +837,27 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
      */
     public void communicationWorker(CommunicationWorker commWorker) {
         this.commWorker = commWorker;
+    }
+
+    /**
+     * Issues a connection check message through the given client's session.
+     */
+    // TODO: consider removing this code, https://ggsystems.atlassian.net/browse/GG-46827.
+    private void checkConnectionIfEnabled(GridTcpNioCommunicationClient client) {
+        if (!client.isConnectionCheckMessageEnabled())
+            return;
+
+        GridNioSession ses = client.session();
+
+        try {
+            nioSrvWrapper.nio().checkConnection(ses);
+
+            if (log.isDebugEnabled())
+                log.debug("Connection check message sent [rmtAddr=" + ses.remoteAddress()
+                        + ", locAddr=" + ses.localAddress() + "]");
+        } catch (IgniteCheckedException e) {
+            log.warning("Failed to send connection check message [rmtAddr=" + ses.remoteAddress()
+                    + ", locAddr=" + ses.localAddress() + "]", e);
+        }
     }
 }

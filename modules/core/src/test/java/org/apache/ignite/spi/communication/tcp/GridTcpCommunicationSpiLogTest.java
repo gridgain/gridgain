@@ -61,7 +61,7 @@ public class GridTcpCommunicationSpiLogTest extends GridCommonAbstractTest {
 
         setRootLoggerDebugLevel();
 
-        srvTestLog = new ListeningTestLogger(true, log);
+        srvTestLog = new ListeningTestLogger(log);
     }
 
     /** {@inheritDoc} */
@@ -180,10 +180,16 @@ public class GridTcpCommunicationSpiLogTest extends GridCommonAbstractTest {
             .atMost(1)
             .build();
 
+        LogListener logLsnr4 = LogListener.matches("Closing stale connection")
+            .atLeast(1)
+            .atMost(1)
+            .build();
+
         srvTestLog.registerListener(logLsnr0);
         srvTestLog.registerListener(logLsnr1);
         srvTestLog.registerListener(logLsnr2);
         srvTestLog.registerListener(logLsnr3);
+        srvTestLog.registerListener(logLsnr4);
 
         Ignite srv = startGrid(0);
         Ignite client = startClientGrid(1);
@@ -230,5 +236,6 @@ public class GridTcpCommunicationSpiLogTest extends GridCommonAbstractTest {
         assertTrue(logLsnr1.check());
         assertTrue(logLsnr2.check());
         assertTrue(logLsnr3.check());
+        assertTrue(logLsnr4.check());
     }
 }

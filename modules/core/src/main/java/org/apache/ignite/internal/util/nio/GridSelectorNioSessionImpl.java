@@ -302,6 +302,25 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
     }
 
     /**
+     * Tries to write a ping message to check this session's availability. If the outgoing queue of the
+     * session is not empty, then no additional messages are written.
+     *
+     * @return The number of messages in the outgoing queue or {@code -1} if the ping message was not written.
+     */
+    // TODO: consider removing this code, https://ggsystems.atlassian.net/browse/GG-46827.
+    int checkConnection(SessionWriteRequest writeFut) {
+        int size = queue.sizex();
+
+        // There is a race condition here because we check the queue size and add the future without synchronization.
+        // This may result in a redundant ping message being sent, which we don't really care about.
+        if (size == 0) {
+            return offerFuture(writeFut);
+        }
+
+        return -1;
+    }
+
+    /**
      * Adds write future to the pending list and returns the size of the queue.
      * <p>
      * Note that separate counter for the queue size is needed because in case of concurrent

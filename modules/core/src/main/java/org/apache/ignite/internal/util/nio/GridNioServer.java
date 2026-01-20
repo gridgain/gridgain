@@ -86,6 +86,7 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.spi.communication.tcp.messages.ConnectionCheckMessage;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
@@ -174,7 +175,7 @@ public class GridNioServer<T> {
     public static final String ACTIVE_SESSIONS_CNT_METRIC_NAME = "ActiveSessionsCount";
 
     /** Defines how many times selector should do {@code selectNow()} before doing {@code select(long)}. */
-    private long selectorSpins;
+    private final long selectorSpins;
 
     /** Accept worker. */
     @GridToStringExclude
@@ -266,14 +267,14 @@ public class GridNioServer<T> {
 
     /** */
     @GridToStringExclude
-    private GridNioMessageWriterFactory writerFactory;
+    private final GridNioMessageWriterFactory writerFactory;
 
     /** */
     @GridToStringExclude
-    private IgnitePredicate<Message> skipRecoveryPred;
+    private final IgnitePredicate<Message> skipRecoveryPred;
 
     /** Optional listener to monitor outbound message queue size. */
-    private IgniteBiInClosure<GridNioSession, Integer> msgQueueLsnr;
+    private final IgniteBiInClosure<GridNioSession, Integer> msgQueueLsnr;
 
     /** */
     private final AtomicLong readerMoveCnt = new AtomicLong();
@@ -291,7 +292,7 @@ public class GridNioServer<T> {
     private final boolean readWriteSelectorsAssign;
 
     /** Tracing processor. */
-    private Tracing tracing;
+    private final Tracing tracing;
 
     /**
      * @param addr Address.
@@ -605,14 +606,14 @@ public class GridNioServer<T> {
         if (createFut) {
             NioOperationFuture<?> fut = new NioOperationFuture<Void>(impl, NioOperation.REQUIRE_WRITE, msg, ackC);
 
-            send0(impl, fut, false);
+            send(impl, fut);
 
             return fut;
         }
         else {
             SessionWriteRequest req = new WriteRequestImpl(ses, msg, true, ackC);
 
-            send0(impl, req, false);
+            send(impl, req);
 
             return null;
         }
@@ -637,14 +638,14 @@ public class GridNioServer<T> {
             NioOperationFuture<?> fut = new NioOperationFuture<Void>(impl, NioOperation.REQUIRE_WRITE, msg,
                 skipRecoveryPred.apply(msg), ackC);
 
-            send0(impl, fut, false);
+            send(impl, fut);
 
             return fut;
         }
         else {
             SessionWriteRequest req = new WriteRequestImpl(ses, msg, skipRecoveryPred.apply(msg), ackC);
 
-            send0(impl, req, false);
+            send(impl, req);
 
             return null;
         }
@@ -653,15 +654,29 @@ public class GridNioServer<T> {
     /**
      * @param ses Session.
      * @param req Request.
-     * @param sys System message flag.
      * @throws IgniteCheckedException If session was closed.
      */
-    private void send0(GridSelectorNioSessionImpl ses, SessionWriteRequest req, boolean sys) throws IgniteCheckedException {
+    private void send(GridSelectorNioSessionImpl ses, SessionWriteRequest req) throws IgniteCheckedException {
         assert ses != null;
         assert req != null;
 
-        int msgCnt = sys ? ses.offerSystemFuture(req) : ses.offerFuture(req);
+        int msgCnt = ses.offerFuture(req);
 
+        handleSend(ses, req, msgCnt);
+    }
+
+    private void sendSystem(GridSelectorNioSessionImpl ses, SessionWriteRequest req)
+            throws IgniteCheckedException {
+        assert ses != null;
+        assert req != null;
+
+        int msgCnt = ses.offerSystemFuture(req);
+
+        handleSend(ses, req, msgCnt);
+    }
+
+    private void handleSend(GridSelectorNioSessionImpl ses, SessionWriteRequest req, int queueSize)
+            throws IgniteCheckedException {
         if (ses.closed()) {
             if (ses.removeFuture(req)) {
                 IOException err = new IOException("Failed to send message (connection was closed): " + ses);
@@ -680,7 +695,7 @@ public class GridNioServer<T> {
         }
 
         if (msgQueueLsnr != null)
-            msgQueueLsnr.apply(ses, msgCnt);
+            msgQueueLsnr.apply(ses, queueSize);
     }
 
     /**
@@ -720,12 +735,29 @@ public class GridNioServer<T> {
 
             assert !fut.isDone();
 
-            send0(impl, fut, true);
+            sendSystem(impl, fut);
         }
         else {
             SessionWriteRequest req = new WriteRequestSystemImpl(ses, msg);
 
-            send0(impl, req, true);
+            sendSystem(impl, req);
+        }
+    }
+
+    /**
+     * Tries to write a ping message into the given session to check its availability. If the outgoing queue of the
+     * session is not empty, then no additional messages are written.
+     */
+    // TODO: consider removing this code, https://ggsystems.atlassian.net/browse/GG-46827.
+    public void checkConnection(GridNioSession ses) throws IgniteCheckedException {
+        SessionWriteRequest req = new WriteRequestImpl(ses, new ConnectionCheckMessage(), false, null);
+
+        GridSelectorNioSessionImpl impl = (GridSelectorNioSessionImpl)ses;
+
+        int msgCnt = impl.checkConnection(req);
+
+        if (msgCnt != -1) {
+            handleSend(impl, req, msgCnt);
         }
     }
 
@@ -3306,7 +3338,7 @@ public class GridNioServer<T> {
         private final GridNioSession ses;
 
         /** */
-        private Span span;
+        private final Span span;
 
         /**
          * @param ses Session.
@@ -3404,7 +3436,7 @@ public class GridNioServer<T> {
         private final IgniteInClosure<IgniteException> ackC;
 
         /** Span for tracing. */
-        private Span span;
+        private final Span span;
 
         /**
          * @param ses Session.
@@ -3523,7 +3555,7 @@ public class GridNioServer<T> {
         private boolean skipRecovery;
 
         /** */
-        private Span span;
+        private final Span span;
 
         /**
          * @param sockCh Socket channel.
