@@ -40,9 +40,6 @@ public class ShmemAcceptWorker extends GridWorker {
     /** Worker name. */
     private static final String WORKER_NAME = "shmem-communication-acceptor";
 
-    /** Shared memory workers. */
-    private final Collection<ShmemWorker> shmemWorkers = new ConcurrentLinkedDeque<>();
-
     /** Server. */
     private final IpcSharedMemoryServerEndpoint srv;
 
@@ -118,10 +115,6 @@ public class ShmemAcceptWorker extends GridWorker {
                     writerFactory,
                     msgFactory
                 );
-
-                e.onFinish(() -> shmemWorkers.remove(e));
-
-                shmemWorkers.add(e);
 
                 new IgniteThread(e).start();
             }
