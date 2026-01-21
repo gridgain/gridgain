@@ -264,7 +264,7 @@ public class MultiDimension implements Comparator<long[]> {
 
     @Override
     public int compare(long[] a, long[] b) {
-        return a[0] > b[0] ? 1 : -1;
+        return Long.compare(a[0], b[0]);
     }
 
     private void addMortonRanges(ArrayList<long[]> list, int[] min, int[] max,
