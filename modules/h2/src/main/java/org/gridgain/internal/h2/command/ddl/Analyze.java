@@ -127,16 +127,17 @@ public class Analyze extends DefineCommand {
             ArrayList<Parameter> params = command.getParameters();
             params.get(0).setValue(ValueInt.get(sample));
         }
-        ResultInterface result = command.query(0);
-        result.next();
-        for (int j = 0; j < columns.length; j++) {
-            Value v = result.currentRow()[j];
-            if (v != ValueNull.INSTANCE) {
-                int selectivity = v.getInt();
-                columns[j].setSelectivity(selectivity);
+        try(ResultInterface result = command.query(0)) {
+            result.next();
+            for (int j = 0; j < columns.length; j++) {
+                Value v = result.currentRow()[j];
+                if (v != ValueNull.INSTANCE) {
+                    int selectivity = v.getInt();
+                    columns[j].setSelectivity(selectivity);
+                }
             }
+            db.updateMeta(session, table);
         }
-        db.updateMeta(session, table);
     }
 
     public void setTop(int top) {
