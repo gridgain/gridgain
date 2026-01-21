@@ -66,9 +66,9 @@ public class MutateTask extends ComputeTaskAdapter<List<Long>, Boolean> {
      */
     private List<Long> getMutatedGenes() {
         List<Long> mutatedGenes = new ArrayList<Long>();
-        cfg.getChromosomeLen();
+        int chromosomeLen = cfg.getChromosomeLen();
 
-        for (int i = 0; i < cfg.getChromosomeLen(); i++)
+        for (int i = 0; i < chromosomeLen; i++)
             mutatedGenes.add(selectGene(i));
 
         return mutatedGenes;
