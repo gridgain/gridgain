@@ -716,7 +716,7 @@ public interface ClusterMetrics {
      * (Java 8), or limited to the maximum heap size (Java 11+).
      * Returns {@code -1} if HotSpot diagnostic bean is not supported.
      *
-     * @return a limit on the amount of memory that can be reserved for all Direct Byte Buffers.
+     * @return A limit on the amount of memory that can be reserved for all Direct Byte Buffers.
      */
     public long getMaxDirectMemorySize();
 
