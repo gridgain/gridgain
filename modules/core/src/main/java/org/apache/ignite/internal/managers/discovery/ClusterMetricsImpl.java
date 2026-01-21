@@ -42,10 +42,10 @@ import static org.apache.ignite.internal.managers.communication.GridIoManager.UN
 import static org.apache.ignite.internal.processors.cache.CacheMetricsImpl.CACHE_METRICS;
 import static org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager.LAST_DATA_VER;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.CPU_LOAD;
-import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_DURATION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.DAEMON_THREAD_CNT;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.GC_CPU_LOAD;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PEAK_THREAD_CNT;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_DURATION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_METRICS;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.SYS_METRICS;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.THREAD_CNT;
@@ -199,6 +199,15 @@ public class ClusterMetricsImpl implements ClusterMetrics {
     /** Current PME duration in milliseconds. */
     private final LongMetric pmeDuration;
 
+    /** */
+    private final LongMetric directMaxMemory;
+
+    /** */
+    private final LongMetric directTotalCapacity;
+
+    /** */
+    private final LongMetric directMemoryUsed;
+
     /**
      * @param ctx Kernel context.
      * @param nodeStartTime Node start time.
@@ -230,6 +239,10 @@ public class ClusterMetricsImpl implements ClusterMetrics {
         nonHeapUsed = mreg.findMetric(metricName("memory", "nonheap", "used"));
         nonHeapCommitted = mreg.findMetric(metricName("memory", "nonheap", "committed"));
         nonHeapMax = mreg.findMetric(metricName("memory", "nonheap", "max"));
+
+        directMaxMemory = mreg.findMetric(metricName("memory", "direct", "buffers", "max"));
+        directTotalCapacity = mreg.findMetric(metricName("memory", "direct", "buffers", "capacity"));
+        directMemoryUsed = mreg.findMetric(metricName("memory", "direct", "buffers", "used"));
 
         MetricRegistry pmeReg = ctx.metric().registry(PME_METRICS);
 
@@ -549,6 +562,21 @@ public class ClusterMetricsImpl implements ClusterMetrics {
     /** {@inheritDoc} */
     @Override public int getUnacknowledgedMessagesQueueSize() {
         return unackedMsgCnt.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getMaxDirectMemorySize() {
+        return directMaxMemory.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getDirectMemoryTotalCapacity() {
+        return directTotalCapacity.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getDirectMemoryUsed() {
+        return directMemoryUsed.value();
     }
 
     /**

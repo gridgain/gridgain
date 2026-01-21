@@ -707,4 +707,37 @@ public interface ClusterMetrics {
      * @return Unacknowledged messages queue size.
      */
     public int getUnacknowledgedMessagesQueueSize();
+
+    /**
+     * Returns a limit on the amount of memory that can be reserved for all Direct Byte Buffers.
+     * If this limit is not explicitly set using JVM option {@code -XX:MaxDirectMemorySize}, for instance,
+     * then this method returns {@link Runtime#maxMemory()} value. Note that is this case the real limit may depend on
+     * JVM version and its internal implementation. For example, it might be limited to 87.5% of the maximum heap size
+     * (Java 8), or limited to the maximum heap size (Java 11+).
+     * Returns {@code -1} if HotSpot diagnostic bean is not supported.
+     *
+     * @return A limit on the amount of memory that can be reserved for all Direct Byte Buffers.
+     */
+    public long getMaxDirectMemorySize();
+
+    /**
+     * Returns the estimated total capacity of all buffers in direct pool, measured in bytes.
+     * This is the sum of the capacities of all buffer instances in the pool.
+     * The capacity is the maximum amount of data a buffer can hold, regardless of how much is currently used.
+     * Returns {@code -1} if the total capacity cannot be determined.
+     *
+     * @return Estimated total capacity of all buffers in direct pool, measured in bytes.
+     */
+    public long getDirectMemoryTotalCapacity();
+
+    /**
+     * Returns the estimated amount of memory (in bytes) that the JVM is using for direct buffer pool.
+     * The returned value represents the actual native memory consumed outside the Java heap.
+     * This value may differ from {@link #getDirectMemoryTotalCapacity()} because it reflects the actual memory footprint,
+     * which can include overhead.
+     * Returns {@code -1} if the memory usage cannot be determined.
+     *
+     * @return Estimated amount of memory (in bytes) that the JVM is using for direct buffer pool.
+     */
+    public long getDirectMemoryUsed();
 }

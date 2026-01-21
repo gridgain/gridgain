@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.util;
 
-import com.sun.management.OperatingSystemMXBean;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -33,8 +32,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.management.MBeanServer;
-import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.util.lang.IgniteMBeanUtils;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -63,21 +61,6 @@ public class GridDebug {
 
     /** */
     private static boolean allowLog;
-
-    /** This is the name of the HotSpot Diagnostic MBean */
-    private static final String HOTSPOT_BEAN_NAME = "com.sun.management:type=HotSpotDiagnostic";
-
-    /** This is the type of the HotSpot Diagnostic MBean */
-    private static final String HOTSPOT_BEAN_CLASS = "com.sun.management.HotSpotDiagnosticMXBean";
-
-    /** field to store the hotspot diagnostic MBean */
-    private static volatile Object hotspotMBean;
-
-    /** Platform-specific management interface for the operating system. */
-    private static final String OS_BEAN_NAME = "java.lang:type=OperatingSystem";
-
-    /** Call to {@link #initOSMBean()} before accessing. */
-    private static volatile OperatingSystemMXBean osMBean;
 
     /* */
     static {
@@ -326,81 +309,14 @@ public class GridDebug {
      * only the live objects
      */
     public static void dumpHeap(String fileName, boolean live) {
-        // initialize hotspot diagnostic MBean
-        initHotspotMBean();
-
-        File f = new File(fileName);
-
-        if (f.exists())
-            f.delete();
-
-        try {
-            hotspotMBean.getClass().getMethod("dumpHeap", String.class, boolean.class)
-                .invoke(hotspotMBean, fileName, live);
-        }
-        catch (RuntimeException re) {
-            throw re;
-        }
-        catch (Exception exp) {
-            throw new RuntimeException(exp);
-        }
+        IgniteMBeanUtils.dumpHeap(fileName, live);
     }
 
     /**
      * @return Committed VM size in bits.
      */
     public static long getCommittedVirtualMemorySize() {
-        initOSMBean();
-
-        return osMBean.getCommittedVirtualMemorySize();
-    }
-
-    /**
-     * Initialize the hotspot diagnostic MBean field.
-     */
-    private static void initHotspotMBean() {
-        if (hotspotMBean == null) {
-            synchronized (GridDebug.class) {
-                if (hotspotMBean == null) {
-                    try {
-                        hotspotMBean = getMBean(HOTSPOT_BEAN_NAME, Class.forName(HOTSPOT_BEAN_CLASS));
-                    }
-                    catch (ClassNotFoundException e) {
-                        throw new IgniteException(e);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Initialize field to store OperatingSystem MXBean.
-     */
-    private static void initOSMBean() {
-        if (osMBean == null) {
-            synchronized (GridDebug.class) {
-                if (osMBean == null)
-                    osMBean = getMBean(OS_BEAN_NAME, OperatingSystemMXBean.class);
-            }
-        }
-    }
-
-    /**
-     * Get MXBean from the platform MBeanServer.
-     *
-     * @param mxbeanName The name for uniquely identifying the MXBean within an MBeanServer.
-     * @param mxbeanItf The MXBean interface.
-     * @return A proxy for a platform MXBean interface.
-     */
-    private static <T> T getMBean(String mxbeanName, Class<T> mxbeanItf) {
-        try {
-            MBeanServer srv = ManagementFactory.getPlatformMBeanServer();
-
-            return ManagementFactory.newPlatformMXBeanProxy(srv, mxbeanName, mxbeanItf);
-        }
-        catch (IOException e) {
-            throw new IgniteException(e);
-        }
+        return IgniteMBeanUtils.getCommittedVirtualMemorySize();
     }
 
     /**

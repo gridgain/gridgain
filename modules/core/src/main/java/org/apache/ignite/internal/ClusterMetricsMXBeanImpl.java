@@ -477,6 +477,18 @@ public class ClusterMetricsMXBeanImpl implements ClusterMetricsMXBean {
         return nodes;
     }
 
+    @Override public long getMaxDirectMemorySize() {
+        return metrics().getMaxDirectMemorySize();
+    }
+
+    @Override public long getDirectMemoryTotalCapacity() {
+        return metrics().getDirectMemoryTotalCapacity();
+    }
+
+    @Override public long getDirectMemoryUsed() {
+        return metrics().getDirectMemoryUsed();
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(ClusterMetricsMXBeanImpl.class, this);
