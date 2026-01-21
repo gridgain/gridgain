@@ -580,7 +580,7 @@ public class IndexStorageImpl implements IndexStorage {
     public static void checkIndexName(byte[] idxName) {
         if (idxName.length > MAX_IDX_NAME_LEN) {
             throw new IllegalArgumentException("Too long encoded indexName [maxAllowed=" + MAX_IDX_NAME_LEN +
-                ", currentLength=" + idxName.length + ", name=" + idxName + "]");
+                ", currentLength=" + idxName.length + ", name=" + new String(idxName) + "]");
         }
     }
 }
