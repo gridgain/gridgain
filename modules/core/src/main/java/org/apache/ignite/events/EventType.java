@@ -278,9 +278,9 @@ public interface EventType {
      * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
      * internal Ignite events and should not be used by user-defined events.
      *
-     * @see ManagementActionStartedEvent
+     * @see ControlCenterActionStartedEvent
      */
-    public static final int EVT_MANAGEMENT_ACTION_STARTED = 27;
+    public static final int EVT_CONTROL_CENTER_ACTION_EVT = 27;
 
     /**
      * Built-in event type: non-task class deployed.

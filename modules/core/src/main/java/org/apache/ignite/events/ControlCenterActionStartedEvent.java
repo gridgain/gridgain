@@ -16,19 +16,20 @@
 
 package org.apache.ignite.events;
 
+import java.util.UUID;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.events.EventType.EVT_MANAGEMENT_ACTION_STARTED;
+import static org.apache.ignite.events.EventType.EVT_CONTROL_CENTER_ACTION_EVT;
 
 /**
  * Event type indicating that the management action is started.
  *
- * @see EventType#EVT_MANAGEMENT_ACTION_STARTED
+ * @see EventType#EVT_CONTROL_CENTER_ACTION_EVT
  */
-public class ManagementActionStartedEvent extends EventAdapter {
+public class ControlCenterActionStartedEvent extends EventAdapter {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -36,14 +37,15 @@ public class ManagementActionStartedEvent extends EventAdapter {
     private final String actionName;
 
     /** */
-    private final String actionClass;
+    private final String actionClassName;
 
     /** Subject ID. */
     @Nullable
-    private final Object subjId;
+    private final UUID subjId;
 
     /** Username in Control Center. */
-    private final Object ccUsername;
+    @Nullable
+    private final String ccUsername;
 
 
     /** {@inheritDoc} */
@@ -56,15 +58,15 @@ public class ManagementActionStartedEvent extends EventAdapter {
      *
      * @param node Node.
      * @param actionName Action name.
-     * @param actionClass Action class name.
-     * @param subjId Subject ID.
+     * @param actionClassName Action class name.
+     * @param subjId Security subject ID.
      * @param ccUsername Username in Control Center.
      */
-    public ManagementActionStartedEvent(ClusterNode node, String actionName, String actionClass, @Nullable Object subjId, Object ccUsername) {
-        super(node, null, EVT_MANAGEMENT_ACTION_STARTED);
+    public ControlCenterActionStartedEvent(ClusterNode node, String actionName, String actionClassName, @Nullable UUID subjId, @Nullable String ccUsername) {
+        super(node, null, EVT_CONTROL_CENTER_ACTION_EVT);
 
         this.actionName = actionName;
-        this.actionClass = actionClass;
+        this.actionClassName = actionClassName;
 
         this.subjId = subjId;
         this.ccUsername = ccUsername;
@@ -82,18 +84,19 @@ public class ManagementActionStartedEvent extends EventAdapter {
     /**
      * Gets name of action class that triggered this event.
      *
-     * @return Name of action class name that triggered the event.
+     * @return Name of the action class that triggered the event.
      */
-    public String actionClass() {
-        return actionClass;
+    public String actionClassName() {
+        return actionClassName;
     }
 
     /**
-     * Gets subject ID.
+     * Gets security subject ID.
      *
-     * @return Subject ID.
+     * @return Security subject ID.
      */
-    @Nullable public Object subjectId() {
+    @Nullable
+    public UUID subjectId() {
         return subjId;
     }
 
@@ -102,13 +105,14 @@ public class ManagementActionStartedEvent extends EventAdapter {
      *
      * @return Username in Control Center.
      */
-    public Object ccUsername() {
+    @Nullable
+    public String ccUsername() {
         return ccUsername;
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(ManagementActionStartedEvent.class, this,
+        return S.toString(ControlCenterActionStartedEvent.class, this,
             "nodeId8", U.id8(node().id()),
             "type", name(),
             "tstamp", timestamp());
