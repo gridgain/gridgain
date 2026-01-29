@@ -3075,7 +3075,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         GridKernalContext kernalCtx,
         Collection<CacheStoreSessionListener> storeSesLsnrs
     ) throws IgniteCheckedException {
-        IgniteTxManager tm = new IgniteTxManager();
+        IgniteTxManager tm = kernalCtx.resource().resolve(new IgniteTxManager());
         GridCacheMvccManager mvccMgr = new GridCacheMvccManager();
         GridCacheVersionManager verMgr = new GridCacheVersionManager();
         GridCacheDeploymentManager depMgr = new GridCacheDeploymentManager();

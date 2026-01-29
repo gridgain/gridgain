@@ -120,7 +120,7 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
                 }
 
                 if (block) {
-                    ignite.log().info("Block message [node=" + node.id() + ", order=" + node.order() +
+                    ignite.log().warning(">>>>> Block message [node=" + node.id() + ", order=" + node.order() +
                         ", msg=" + ioMsg.message() + ']');
 
                     blockedMsgs.add(new BlockedMessageDescriptor(node, ioMsg, MTC.span()));

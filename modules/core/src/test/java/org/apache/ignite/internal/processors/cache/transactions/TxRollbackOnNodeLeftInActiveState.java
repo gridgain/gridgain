@@ -42,7 +42,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 /**
- * If a primary node for a transaction key left, a transaction must rollback imminently.
+ * If a primary node for a transaction key left, a transaction must be rolled back imminently.
  */
 public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
     /** Tx timeout. */

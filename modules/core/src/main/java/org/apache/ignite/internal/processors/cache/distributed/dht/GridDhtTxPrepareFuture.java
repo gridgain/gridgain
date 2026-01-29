@@ -904,15 +904,15 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                 }
             }
             catch (ClusterTopologyCheckedException e) {
-                if (msgLog.isDebugEnabled()) {
-                    msgLog.debug("Failed to send prepare response, node left [txId=" + tx.nearXidVersion() + "," +
+                if (msgLog.isInfoEnabled()) {
+                    msgLog.warning(">>>>> Failed to send prepare response, node left [txId=" + tx.nearXidVersion() + "," +
                         ", dhtTxId=" + tx.xidVersion() +
                         ", node=" + tx.nearNodeId() +
                         ", res=" + res + ']');
                 }
             }
             catch (IgniteCheckedException e) {
-                U.error(msgLog, "Failed to send prepare response [txId=" + tx.nearXidVersion() + "," +
+                U.error(msgLog, ">>>>> Failed to send prepare response [txId=" + tx.nearXidVersion() + "," +
                     ", dhtTxId=" + tx.xidVersion() +
                     ", node=" + tx.nearNodeId() +
                     ", res=" + res,

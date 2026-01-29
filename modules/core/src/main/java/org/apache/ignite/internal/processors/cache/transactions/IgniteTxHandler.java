@@ -162,6 +162,15 @@ public class IgniteTxHandler {
 
             ClusterNode nearNode = ctx.node(nearNodeId);
 
+            log.warning(">>>>> Received near prepare request... [nearNode=" + nearNode.id() + ']');
+//            try {
+//                Thread.sleep(15_000);
+//            }
+//            catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
+            log.warning(">>>>> Processing near prepare request... [nearNode=" + nearNode.id() + ']');
+
             if (nearNode == null) {
                 if (txPrepareMsgLog.isDebugEnabled()) {
                     txPrepareMsgLog.debug("Received near prepare from node that left grid (will ignore) [" +
@@ -907,7 +916,16 @@ public class IgniteTxHandler {
                 txFinishMsgLog.debug("Received near finish request [txId=" + req.version() + ", node=" + nodeId +
                     ']');
 
+//            log.warning(">>>>> received GridNearTxFinishRequest request [req=" + req + ']');
+//            try {
+//                Thread.sleep(15_000);
+//            }
+//            catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
+            log.warning(">>>>> received GridNearTxFinishRequest request processing... [req=" + req + ']');
             IgniteInternalFuture<IgniteInternalTx> fut = finish(nodeId, null, req);
+            log.warning(">>>>> received GridNearTxFinishRequest request processed [req=" + req + ']');
 
             assert req.txState() != null || fut == null || fut.error() != null ||
                 (ctx.tm().tx(req.version()) == null && ctx.tm().nearTx(req.version()) == null) :

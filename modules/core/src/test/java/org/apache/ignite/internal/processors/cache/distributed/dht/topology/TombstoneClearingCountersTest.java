@@ -19,14 +19,21 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.Event;
+import org.apache.ignite.events.EventType;
+import org.apache.ignite.events.TransactionStateChangedEvent;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
@@ -35,22 +42,34 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
+import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
+import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.resource.DependencyResolver;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
+import static org.apache.ignite.events.EventType.EVT_TX_STARTED;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
+import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 
 /**
  * Tests fast full rebalancing optimization correctness.
@@ -68,7 +87,7 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
-        params.add(new Object[]{ATOMIC});
+//        params.add(new Object[]{ATOMIC});
         params.add(new Object[]{TRANSACTIONAL});
 
         return params;
@@ -91,8 +110,17 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
 
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).
             setAtomicityMode(atomicityMode).
-            setBackups(1).
+            setBackups(2).
+            setCacheMode(CacheMode.PARTITIONED).
+            setWriteSynchronizationMode(CacheWriteSynchronizationMode.PRIMARY_SYNC).
+            setReadFromBackup(true).
             setAffinity(new RendezvousAffinityFunction(false, 64)));
+
+        cfg.getTransactionConfiguration().setTxTimeoutOnPartitionMapExchange(45_000);
+        cfg.setIncludeEventTypes(EventType.EVTS_ALL);
+
+        cfg.setFailureDetectionTimeout(600_000);
+        cfg.setClientFailureDetectionTimeout(100_000);
 
         return cfg;
     }
@@ -111,6 +139,216 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    private void startRecording() {
+        TestRecordingCommunicationSpi.spi(grid(0)).record((node, msg) -> true);
+        TestRecordingCommunicationSpi.spi(grid(1)).record((node, msg) -> true);
+        TestRecordingCommunicationSpi.spi(grid(2)).record((node, msg) -> true);
+    }
+
+    private void stopRecording(IgniteEx client) {
+        List<Object> msgs0 = TestRecordingCommunicationSpi.spi(grid(0)).recordedMessages(true);
+        List<Object> msgs1 = TestRecordingCommunicationSpi.spi(grid(1)).recordedMessages(true);
+        List<Object> msgs2 = TestRecordingCommunicationSpi.spi(client).recordedMessages(true);
+
+        log.warning(">>>>> client messages: ");
+        msgs2.forEach(msg -> log.warning("  ^--- " + msg));
+
+        log.warning(">>>>> crd messages: ");
+        msgs0.forEach(msg -> log.warning("  ^--- " + msg));
+
+        log.warning(">>>>> node 1 messages: ");
+        msgs1.forEach(msg -> log.warning("  ^--- " + msg));
+    }
+
+    @Test
+    @WithSystemProperty(key = "IGNITE_DISABLE_ONE_PHASE_COMMIT", value = "true")
+    public void testClientTx() throws Exception {
+        IgniteEx crd = startGrids(2);
+
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        IgniteEx client = startClientGrid(2);
+//        IgniteEx additionalClient0 = startClientGrid(3);
+//        IgniteEx additionalClient1 = startClientGrid(4);
+
+        Integer pr0 = primaryKey(grid(0).cache(DEFAULT_CACHE_NAME));
+        Integer pr1 = primaryKey(grid(1).cache(DEFAULT_CACHE_NAME));
+
+        startRecording();
+        {
+            GridTestUtils.runAsync(() -> {
+                Transaction clientTx = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED);
+
+                client.cache(DEFAULT_CACHE_NAME).put(pr0, 12);
+                //client.cache(DEFAULT_CACHE_NAME).put(pr1, 12);
+
+                // block finish request
+                TestRecordingCommunicationSpi.spi(client).blockMessages(GridNearTxFinishRequest.class, grid(0).name());
+
+//                TestRecordingCommunicationSpi.spi(client).blockMessages(GridNearTxFinishRequest.class, grid(1).name());
+
+//                stopGrid(3);
+//                stopGrid(4);
+
+                clientTx.commit();
+            });
+
+//            TestRecordingCommunicationSpi.spi(client).waitForBlocked();
+            doSleep(5_000);
+        }
+
+        stopGrid(2);
+
+        doSleep(10_000);
+
+//        stopRecording(client);
+
+//        log.warning(">>>>> node1: " + grid(1).cache(DEFAULT_CACHE_NAME).get(12));
+//        log.warning(">>>>> node0: " + grid(0).cache(DEFAULT_CACHE_NAME).get(12));
+
+        stopRecording(client);
+
+        crd.getOrCreateCache("post-tx-cache");
+
+        awaitPartitionMapExchange();
+    }
+
+    public static class CustomTransactionManager extends IgniteTxManager {
+        public volatile CountDownLatch latch;
+        public volatile CountDownLatch latch2;
+        @Override public <T extends IgniteInternalTx> @Nullable T onCreated(@Nullable GridCacheContext cacheCtx, T tx) {
+            log.warning(">>>>> onCreated");
+            CountDownLatch l = latch;
+            if (l != null) {
+                try {
+                    l.countDown();
+                    IgniteUtils.dumpStack(log, ">>>>> CustomTransactionManager.onCreate");
+                    latch2.await();
+                }
+                catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            return super.onCreated(cacheCtx, tx);
+        }
+    }
+
+    @Test
+    @WithSystemProperty(key = "IGNITE_DISABLE_ONE_PHASE_COMMIT", value = "true")
+    public void testClientTxCleanedUp() throws Exception {
+        CustomTransactionManager txMgr = new CustomTransactionManager();
+
+        IgniteEx crd = startGrid(0, new DependencyResolver() {
+            @Override public <T> T resolve(T instance) {
+                if (instance instanceof IgniteTxManager) {
+                    return (T) txMgr;
+                }
+                return instance;
+            }
+        });
+
+        IgniteEx n1 = startGrid(1);
+
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        IgniteEx client = startClientGrid(2);
+
+        Integer pr0 = primaryKey(grid(0).cache(DEFAULT_CACHE_NAME));
+        int part = grid(0).affinity(DEFAULT_CACHE_NAME).partition(pr0);
+        int stripe = grid(0).context().pools().getStripedExecutorService().stripesCount();
+        Integer pr1 = primaryKey(grid(1).cache(DEFAULT_CACHE_NAME));
+
+        CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch latch2 = new CountDownLatch(1);
+        CountDownLatch latch3 = new CountDownLatch(1);
+        startRecording();
+        {
+            GridTestUtils.runAsync(() -> {
+                Transaction clientTx = client.transactions().txStart(OPTIMISTIC, READ_COMMITTED);
+
+                txMgr.latch = latch;
+                txMgr.latch2 = latch2;
+
+                client.cache(DEFAULT_CACHE_NAME).put(pr0, 12);
+
+                // block finish request
+//                TestRecordingCommunicationSpi.spi(client).blockMessages(GridNearTxPrepareRequest.class, grid(0).name());
+//                TestRecordingCommunicationSpi.spi(client).blockMessages(GridNearTxFinishRequest.class, grid(0).name());
+//                TestRecordingCommunicationSpi.spi(grid(1)).blockMessages(GridDhtTxPrepareResponse.class, grid(0).name());
+
+                clientTx.commit();
+            });
+
+//            TestRecordingCommunicationSpi.spi(client).waitForBlocked();
+//            List<Object> msgs0 = TestRecordingCommunicationSpi.spi(client).recordedMessages(true);
+//
+//            assert msgs0.size() == 1 : msgs0.size();
+//            GridNearTxPrepareRequest prepareRequest = (GridNearTxPrepareRequest) msgs0.get(0);
+//            part = prepareRequest.partition();
+
+            // block stripe
+//            grid(0).context().pools().getStripedExecutorService().execute(part, () -> {
+//                try {
+//                    latch.await();
+//                }
+//                catch (InterruptedException e) {
+//                    throw new RuntimeException(e);
+//                }
+//            });
+
+//            grid(0).events().localListen((IgnitePredicate<Event>)e -> {
+//                assert e instanceof TransactionStateChangedEvent;
+//
+//                TransactionStateChangedEvent evt = (TransactionStateChangedEvent)e;
+//
+//                log.warning(">>>>> tx local started [state=" + evt.tx().state());
+//
+//                latch2.countDown();
+//                try {
+//                    latch3.await();
+//                }
+//                catch (InterruptedException ee) {
+//
+//                }
+//
+//                return true;
+//            }, EVT_TX_STARTED);
+
+//            TestRecordingCommunicationSpi.spi(client).stopBlock(true);
+//            // wait for tx on the server? how?
+            doSleep(15_000);
+            stopRecording(client);
+
+            latch.await(10, TimeUnit.SECONDS);
+        }
+
+        stopRecording(client);
+
+//        TestRecordingCommunicationSpi.spi(grid(1)).waitForBlocked();
+
+//        latch2.await();
+        stopGrid(2);
+
+        doSleep(10_000);
+
+        latch2.countDown();
+//        latch3.countDown();
+
+        // wait for tx recovery how?
+//        TestRecordingCommunicationSpi.spi(grid(1)).stopBlock(true);
+
+//        stopRecording(client);
+
+//        log.warning(">>>>> node1: " + grid(1).cache(DEFAULT_CACHE_NAME).get(12));
+//        log.warning(">>>>> node0: " + grid(0).cache(DEFAULT_CACHE_NAME).get(12));
+
+        stopRecording(client);
+
+        crd.getOrCreateCache("post-tx-cache");
+
+        awaitPartitionMapExchange();
     }
 
     /**

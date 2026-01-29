@@ -508,8 +508,8 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
      * @return Commit future.
      */
     public IgniteInternalFuture<IgniteInternalTx> commitDhtLocalAsync() {
-        if (log.isDebugEnabled())
-            log.debug("Committing dht local tx: " + this);
+        if (log.isInfoEnabled())
+            log.warning(">>>>> Committing dht local tx: " + this);
 
         final GridDhtTxFinishFuture fut = new GridDhtTxFinishFuture<>(cctx, this, true);
 
@@ -518,6 +518,7 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
         GridDhtTxPrepareFuture prep = prepFut;
 
         if (prep != null) {
+            log.warning(">>>>> GridDhtTxLocal prepare [isDone=" + prep.isDone() + ']');
             if (prep.isDone())
                 finishTx(true, prep, fut);
             else {
@@ -531,6 +532,7 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
         else {
             assert optimistic();
 
+            log.warning(">>>>> GridDhtTxLocal prepare optimistic [isDone=" + "prep.is.null" + ']');
             finishTx(true, null, fut);
         }
 
@@ -609,8 +611,8 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
     @Override protected void sendFinishReply(@Nullable Throwable err) {
         if (nearFinFutId != null) {
             if (nearNodeId.equals(cctx.localNodeId())) {
-                if (log.isDebugEnabled())
-                    log.debug("Skipping response sending to local node: " + this);
+                if (log.isInfoEnabled())
+                    log.warning(">>>>> Skipping response sending to local node: " + this);
 
                 return;
             }
@@ -626,15 +628,15 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
             try {
                 cctx.io().send(nearNodeId, res, ioPolicy());
 
-                if (cctx.txFinishMessageLogger().isDebugEnabled()) {
-                    cctx.txFinishMessageLogger().debug("Sent near finish response [txId=" + nearXidVersion() +
+                if (cctx.txFinishMessageLogger().isInfoEnabled()) {
+                    cctx.txFinishMessageLogger().warning(">>>>> Sent near finish response [txId=" + nearXidVersion() +
                         ", dhtTxId=" + xidVersion() +
                         ", node=" + nearNodeId + ']');
                 }
             }
             catch (ClusterTopologyCheckedException ignored) {
-                if (cctx.txFinishMessageLogger().isDebugEnabled()) {
-                    cctx.txFinishMessageLogger().debug("Failed to send near finish response, node left [txId=" + nearXidVersion() +
+                if (cctx.txFinishMessageLogger().isInfoEnabled()) {
+                    cctx.txFinishMessageLogger().warning("Failed to send near finish response, node left [txId=" + nearXidVersion() +
                         ", dhtTxId=" + xidVersion() +
                         ", node=" + nearNodeId() + ']');
                 }
@@ -651,8 +653,8 @@ public class GridDhtTxLocal extends GridDhtTxLocalAdapter implements GridCacheMa
             }
         }
         else {
-            if (cctx.txFinishMessageLogger().isDebugEnabled()) {
-                cctx.txFinishMessageLogger().debug("Will not send finish reply because sender node has not sent finish " +
+            if (cctx.txFinishMessageLogger().isInfoEnabled()) {
+                cctx.txFinishMessageLogger().warning(">>>>> Will not send finish reply because sender node has not sent finish " +
                     "request yet [txId=" + nearXidVersion() +
                     ", dhtTxId=" + xidVersion() +
                     ", node=" + nearNodeId() + ']');

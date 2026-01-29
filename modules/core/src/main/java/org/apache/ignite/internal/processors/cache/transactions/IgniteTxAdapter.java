@@ -634,12 +634,12 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         }
 
         if (res) {
-            if (log.isDebugEnabled())
-                log.debug("Marked transaction as finalized: " + this);
+            if (log.isInfoEnabled())
+                log.warning(">>>>> Marked transaction as finalized: [status=" + status + ", res=" + res + ", adapter=" + this + ']');
         }
         else {
-            if (log.isDebugEnabled())
-                log.debug("Transaction was not marked finalized: " + this);
+            if (log.isInfoEnabled())
+                log.warning(">>>>> Transaction was not marked finalized: [status=" + status + ", res=" + res + ", adapter=" + this + ']');
         }
 
         return res;
@@ -1136,6 +1136,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
      * @return {@code True} if state changed.
      */
     protected final boolean state(TransactionState state, boolean timedOut) {
+        log.warning(">>>>> changing tx state = " + state);
         boolean valid = false;
 
         TransactionState prev;
@@ -1276,8 +1277,11 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
 
     /** */
     private void recordStateChangedEvent(TransactionState state) {
-        if (!near() || !local()) // Covers only GridNearTxLocal's state changes.
+        // Covers only GridNearTxLocal's state changes.
+        log.warning(">>>>> recordStateChangedEvent [newsate=" + state + ", tx=" + this + ']');
+        if (!near() || !local()) {
             return;
+        }
 
         switch (state) {
             case ACTIVE: {

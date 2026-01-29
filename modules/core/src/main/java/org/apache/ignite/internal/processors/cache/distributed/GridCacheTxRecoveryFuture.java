@@ -97,8 +97,9 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
     public GridCacheTxRecoveryFuture(GridCacheSharedContext<?, ?> cctx,
         IgniteInternalTx tx,
         Set<UUID> failedNodeIds,
-        Map<UUID, Collection<UUID>> txNodes)
-    {
+        Map<UUID, Collection<UUID>> txNodes,
+        IgniteLogger log1
+    ) {
         super(CU.boolReducer());
 
         this.cctx = cctx;
@@ -106,10 +107,12 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
         this.txNodes = txNodes;
         this.failedNodeIds = failedNodeIds;
 
-        if (log == null) {
-            msgLog = cctx.txRecoveryMessageLogger();
-            log = U.logger(cctx.kernalContext(), logRef, GridCacheTxRecoveryFuture.class);
-        }
+//        if (log == null) {
+//            msgLog = cctx.txRecoveryMessageLogger();
+//            log = U.logger(cctx.kernalContext(), logRef, GridCacheTxRecoveryFuture.class);
+//        }
+        msgLog = log1;
+        log = log1;
 
         nodes = new GridLeanMap<>();
 
@@ -123,7 +126,7 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
                     if (node != null)
                         nodes.put(node.id(), node);
                     else if (log.isInfoEnabled())
-                        log.info("Transaction node left (will ignore) " + nodeId);
+                        log.info(">>>>> Transaction node left (will ignore) " + nodeId);
                 }
             }
         }
@@ -131,6 +134,8 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
         UUID nearNodeId = tx.eventNodeId();
 
         nearTxCheck = !failedNodeIds.contains(nearNodeId) && cctx.discovery().alive(nearNodeId);
+
+        log.warning(">>>>> GridCacheTxRecoveryFuture [tx=" + tx + ", nearTxCheck=" + nearTxCheck + ", nodes=" + nodes.size() + ']');
     }
 
     /**
@@ -171,7 +176,7 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
                     cctx.io().send(nearNodeId, req, tx.ioPolicy());
 
                     if (msgLog.isInfoEnabled()) {
-                        msgLog.info("Recovery fut, sent request near tx [txId=" + tx.nearXidVersion() +
+                        msgLog.info(">>>>> Recovery fut, sent request near tx [txId=" + tx.nearXidVersion() +
                                 ", dhtTxId=" + tx.xidVersion() +
                                 ", node=" + nearNodeId + ']');
                     }
@@ -181,7 +186,7 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
                 }
                 catch (IgniteCheckedException e) {
                     if (msgLog.isInfoEnabled()) {
-                        msgLog.info("Recovery fut, failed to send request near tx [txId=" + tx.nearXidVersion() +
+                        msgLog.info(">>>>> Recovery fut, failed to send request near tx [txId=" + tx.nearXidVersion() +
                                 ", dhtTxId=" + tx.xidVersion() +
                                 ", node=" + nearNodeId +
                                 ", err=" + e + ']');
@@ -198,6 +203,8 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
 
         // First check transactions on local node.
         int locTxNum = nodeTransactions(cctx.localNodeId());
+
+        log.warning(">>>>> Recovery fut [locTxNum=" + locTxNum + ']');
 
         if (locTxNum > 1) {
             IgniteInternalFuture<Boolean> fut = cctx.tm().txsPreparedOrCommitted(tx.nearXidVersion(), locTxNum);
@@ -261,8 +268,12 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
             UUID nodeId = entry.getKey();
 
             // Skip left nodes and local node.
-            if (!nodes.containsKey(nodeId) && nodeId.equals(cctx.localNodeId()))
+            if (!nodes.containsKey(nodeId) && nodeId.equals(cctx.localNodeId())) {
+                log.warning(">>>>> Recovery fut proceedPrepare [continue]");
                 continue;
+            }
+
+            log.warning(">>>>> Recovery fut proceedPrepare [nodeId=" + nodeId + ']');
 
             /*
              * If primary node failed then send message to all backups, otherwise
@@ -271,7 +282,7 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
 
             if (failedNodeIds.contains(nodeId)) {
                 for (UUID id : entry.getValue()) {
-                    // Skip backup node if it is local node or if it is also was mapped as primary.
+                    // Skip backup node if it is local node or if it was also mapped as primary.
                     if (txNodes.containsKey(id) || id.equals(cctx.localNodeId()))
                         continue;
 
@@ -290,7 +301,7 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
                         cctx.io().send(id, req, tx.ioPolicy());
 
                         if (msgLog.isInfoEnabled()) {
-                            msgLog.info("Recovery fut, sent request to backup [txId=" + tx.nearXidVersion() +
+                            msgLog.info(">>>>> Recovery fut, sent request to backup [txId=" + tx.nearXidVersion() +
                                     ", dhtTxId=" + tx.xidVersion() +
                                     ", node=" + id + ']');
                         }
@@ -300,7 +311,7 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
                     }
                     catch (IgniteCheckedException e) {
                         if (msgLog.isInfoEnabled()) {
-                            msgLog.info("Recovery fut, failed to send request to backup [txId=" + tx.nearXidVersion() +
+                            msgLog.info(">>>>> Recovery fut, failed to send request to backup [txId=" + tx.nearXidVersion() +
                                     ", dhtTxId=" + tx.xidVersion() +
                                     ", node=" + id +
                                     ", err=" + e + ']');
@@ -329,7 +340,7 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
                     cctx.io().send(nodeId, req, tx.ioPolicy());
 
                     if (msgLog.isInfoEnabled()) {
-                        msgLog.info("Recovery fut, sent request to primary [txId=" + tx.nearXidVersion() +
+                        msgLog.info(">>>>> Recovery fut, sent request to primary [txId=" + tx.nearXidVersion() +
                                 ", dhtTxId=" + tx.xidVersion() +
                                 ", node=" + nodeId + ']');
                     }
@@ -339,7 +350,7 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
                 }
                 catch (IgniteCheckedException e) {
                     if (msgLog.isInfoEnabled()) {
-                        msgLog.info("Recovery fut, failed to send request to primary [txId=" + tx.nearXidVersion() +
+                        msgLog.info(">>>>> Recovery fut, failed to send request to primary [txId=" + tx.nearXidVersion() +
                                 ", dhtTxId=" + tx.xidVersion() +
                                 ", node=" + nodeId +
                                 ", err=" + e + ']');
@@ -390,7 +401,7 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
             }
             else {
                 if (msgLog.isInfoEnabled()) {
-                    msgLog.info("Tx recovery fut, failed to find mini future [txId=" + tx.nearXidVersion() +
+                    msgLog.info(">>>>> Tx recovery fut, failed to find mini future [txId=" + tx.nearXidVersion() +
                             ", dhtTxId=" + tx.xidVersion() +
                             ", node=" + nodeId +
                             ", res=" + res +
@@ -400,7 +411,7 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
         }
         else {
             if (msgLog.isInfoEnabled()) {
-                msgLog.info("Tx recovery fut, response for finished future [txId=" + tx.nearXidVersion() +
+                msgLog.info(">>>>> Tx recovery fut, response for finished future [txId=" + tx.nearXidVersion() +
                         ", dhtTxId=" + tx.xidVersion() +
                         ", node=" + nodeId +
                         ", res=" + res +
@@ -498,18 +509,19 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
             if (err == null) {
                 assert res != null;
 
+                log.warning(">>>>> recovery fut ondone [res=" + res + ']');
                 cctx.tm().finishTxOnRecovery(tx, res);
             }
             else {
                 if (err instanceof ClusterTopologyCheckedException && nearTxCheck) {
                     if (log.isInfoEnabled()) {
-                        log.info("Failed to check transaction on near node, " +
+                        log.info(">>>>> Failed to check transaction on near node, " +
                                 "ignoring [err=" + err + ", tx=" + tx + ']');
                     }
                 }
                 else {
                     if (log.isInfoEnabled()) {
-                        log.info("Failed to check prepared transactions, " +
+                        log.info(">>>>> Failed to check prepared transactions, " +
                                 "invalidating transaction [err=" + err + ", tx=" + tx + ']');
                     }
 
@@ -580,7 +592,7 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
          */
         private void onError(Throwable e) {
             if (log.isInfoEnabled())
-                log.info("Failed to get future result [fut=" + this + ", err=" + e + ']');
+                log.info(">>>>> Failed to get future result [fut=" + this + ", err=" + e + ']');
 
             onDone(e);
         }
@@ -590,7 +602,7 @@ public class GridCacheTxRecoveryFuture extends GridCacheCompoundIdentityFuture<B
          */
         private void onNodeLeft(UUID nodeId) {
             if (msgLog.isInfoEnabled()) {
-                msgLog.info("Tx recovery fut, mini future node left [txId=" + tx.nearXidVersion() +
+                msgLog.info(">>>>> Tx recovery fut, mini future node left [txId=" + tx.nearXidVersion() +
                         ", dhtTxId=" + tx.xidVersion() +
                         ", node=" + nodeId +
                         ", nearTxCheck=" + nearTxCheck + ']');
