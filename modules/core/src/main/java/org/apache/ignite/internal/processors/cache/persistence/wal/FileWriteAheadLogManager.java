@@ -951,13 +951,14 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** {@inheritDoc} */
     @Override public WALIterator replay(WALPointer start) throws IgniteCheckedException, StorageException {
-        return replay(start, null);
+        return replay(start, null, null);
     }
 
     /** {@inheritDoc} */
     @Override public WALIterator replay(
         WALPointer start,
-        @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter
+        @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter,
+        @Nullable IterationReason reason
     ) throws IgniteCheckedException, StorageException {
         assert start == null || start instanceof FileWALPointer : "Invalid start pointer: " + start;
 
@@ -982,7 +983,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             log,
             segmentAware,
             segmentRouter,
-            lockedSegmentFileInputFactory
+            lockedSegmentFileInputFactory,
+            reason
         );
 
         try {
@@ -2804,20 +2806,24 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         /** Holder of actual information of latest manipulation on WAL segments. */
         private final SegmentAware segmentAware;
 
+        /** Reason to iterate WAL. */
+        private final IterationReason iterationReason;
+
         /**
-         * @param cctx Shared context.
-         * @param walArchiveDir WAL archive dir.
-         * @param walWorkDir WAL dir.
-         * @param start Optional start pointer.
-         * @param end Optional end pointer.
-         * @param dsCfg Database configuration.
-         * @param serializerFactory Serializer factory.
-         * @param archiver File Archiver.
-         * @param decompressor Decompressor.
-         * @param log Logger  @throws IgniteCheckedException If failed to initialize WAL segment.
-         * @param segmentAware Segment aware.
-         * @param segmentRouter Segment router.
+         * @param cctx                    Shared context.
+         * @param walArchiveDir           WAL archive dir.
+         * @param walWorkDir              WAL dir.
+         * @param start                   Optional start pointer.
+         * @param end                     Optional end pointer.
+         * @param dsCfg                   Database configuration.
+         * @param serializerFactory       Serializer factory.
+         * @param archiver                File Archiver.
+         * @param decompressor            Decompressor.
+         * @param log                     Logger  @throws IgniteCheckedException If failed to initialize WAL segment.
+         * @param segmentAware            Segment aware.
+         * @param segmentRouter           Segment router.
          * @param segmentFileInputFactory Factory to provide I/O interfaces for read primitives with files.
+         * @param reason Reason to iterate WAL.
          */
         private RecordsIterator(
             GridCacheSharedContext<?, ?> cctx,
@@ -2833,7 +2839,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             IgniteLogger log,
             SegmentAware segmentAware,
             SegmentRouter segmentRouter,
-            SegmentFileInputFactory segmentFileInputFactory
+            SegmentFileInputFactory segmentFileInputFactory,
+            @Nullable IterationReason reason
         ) throws IgniteCheckedException {
             super(
                 log,
@@ -2854,6 +2861,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             this.decompressor = decompressor;
             this.segmentRouter = segmentRouter;
             this.segmentAware = segmentAware;
+            this.iterationReason = reason;
         }
 
         /** {@inheritDoc} */
@@ -2935,7 +2943,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             curWalSegmIdx--;
 
             if (log.isDebugEnabled())
-                log.debug("Initialized WAL cursor [start=" + start + ", end=" + end + ", curWalSegmIdx=" + curWalSegmIdx + ']');
+                log.debug("Initialized WAL cursor [start=" + start + ", end=" + end + ", curWalSegmIdx=" +
+                    curWalSegmIdx + ", reason=" + iterationReason + ']');
 
             advance();
         }
@@ -2966,9 +2975,14 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 try {
                     fd = segmentRouter.findSegment(curWalSegmIdx);
 
-                    if (log.isDebugEnabled()) {
-                        log.debug("Reading next file [absIdx=" + curWalSegmIdx +
-                            ", file=" + fd.file.getAbsolutePath() + ']');
+                    if (log.isDebugEnabled() || log.isInfoEnabled()) {
+                        String msg = "Reading next file [absIdx=" + curWalSegmIdx +
+                            ", file=" + fd.file.getAbsolutePath() + ", reason=" + iterationReason + ']';
+
+                        if (log.isInfoEnabled() && iterationReason != null && iterationReason.shouldLogToInfo())
+                            log.info(msg);
+                        else if (log.isDebugEnabled())
+                            log.debug(msg);
                     }
 
                     nextHandle = initReadHandle(fd, start != null && curWalSegmIdx == start.index() ? start : null);

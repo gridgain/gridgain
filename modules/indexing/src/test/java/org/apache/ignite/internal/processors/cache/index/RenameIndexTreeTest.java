@@ -264,7 +264,7 @@ public class RenameIndexTreeTest extends AbstractRebuildIndexTest {
         WALPointer start = new FileWALPointer(currSegIdx, 0, 0);
         IgniteBiPredicate<WALRecord.RecordType, WALPointer> pred = (t, p) -> t == INDEX_ROOT_PAGE_RENAME_RECORD;
 
-        try (WALIterator it = walMgr(n).replay(start, pred)) {
+        try (WALIterator it = walMgr(n).replay(start, pred, null)) {
             List<WALRecord> records = stream(it.spliterator(), false).map(IgniteBiTuple::get2).collect(toList());
 
             assertEquals(1, records.size());

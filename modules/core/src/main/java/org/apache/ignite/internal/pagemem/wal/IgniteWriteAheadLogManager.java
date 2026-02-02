@@ -23,6 +23,7 @@ import org.apache.ignite.internal.pagemem.wal.record.RolloverType;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
+import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.jetbrains.annotations.Nullable;
@@ -119,13 +120,15 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      *
      * @param start Optional WAL pointer from which to start iteration.
      * @param recordDeserializeFilter Specify a filter to skip WAL records. Those records will not be explicitly deserialized.
+     * @param reason Reason to iterate WAL.
      * @return Records iterator.
      * @throws IgniteException If failed to start iteration.
      * @throws StorageException If IO error occurred while reading WAL entries.
      */
     public WALIterator replay(
         WALPointer start,
-        @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter
+        @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter,
+        @Nullable IterationReason reason
     ) throws IgniteCheckedException, StorageException;
 
     /**
