@@ -108,10 +108,10 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
     /**
      * Invoke this method to iterate over the written log entries.
      *
-     * @param start  Optional WAL pointer from which to start iteration.
+     * @param start Optional WAL pointer from which to start iteration.
      * @param reason Reason to iterate WAL.
      * @return Records iterator.
-     * @throws IgniteException  If failed to start iteration.
+     * @throws IgniteException If failed to start iteration.
      * @throws StorageException If IO error occurred while reading WAL entries.
      */
     WALIterator replay(WALPointer start, IterationReason reason) throws IgniteCheckedException, StorageException;

@@ -952,7 +952,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** {@inheritDoc} */
     @Override public WALIterator replay(WALPointer start, IterationReason reason) throws IgniteCheckedException, StorageException {
-        return replay(start, null, null);
+        return replay(start, null, reason);
     }
 
     /** {@inheritDoc} */
@@ -2947,7 +2947,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 String msg = "Initialized WAL cursor [start=" + start + ", end=" + end + ", curWalSegmIdx=" +
                     curWalSegmIdx + ", reason=" + iterationReason + ']';
 
-                if (iterationReason != null && iterationReason.shouldLogToInfo())
+                if (iterationReason.shouldLogToInfo())
                     log.info(msg);
                 else if (log.isDebugEnabled())
                     log.debug(msg);
@@ -2986,7 +2986,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         String msg = "Reading next file [absIdx=" + curWalSegmIdx +
                             ", file=" + fd.file.getAbsolutePath() + ", reason=" + iterationReason + ']';
 
-                        if (iterationReason != null && iterationReason.shouldLogToInfo())
+                        if (iterationReason.shouldLogToInfo())
                             log.info(msg);
                         else if (log.isDebugEnabled())
                             log.debug(msg);
