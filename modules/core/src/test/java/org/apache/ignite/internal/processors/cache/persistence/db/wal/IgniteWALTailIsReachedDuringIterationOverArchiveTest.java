@@ -39,7 +39,6 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactor
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
-import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.IgniteWalIteratorFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.IgniteWalIteratorFactory.IteratorParametersBuilder;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -51,7 +50,6 @@ import org.junit.Test;
 import static java.nio.ByteBuffer.allocate;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.concurrent.ThreadLocalRandom.current;
-import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.UNSPECIFIED;
 
 /**
  *
@@ -134,7 +132,7 @@ public class IgniteWALTailIsReachedDuringIterationOverArchiveTest extends GridCo
 
         IgniteWriteAheadLogManager wal = ig.context().cache().context().wal();
 
-        doTest(wal, wal.replay(null, UNSPECIFIED));
+        doTest(wal, wal.replay(null));
     }
 
     /**

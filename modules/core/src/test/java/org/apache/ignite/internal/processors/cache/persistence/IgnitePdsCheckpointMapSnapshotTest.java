@@ -119,7 +119,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
             if (Arrays.stream(trace).anyMatch(el -> el.getClassName().equals(clsName)))
                 replayCount.incrementAndGet();
 
-            return super.replay(start, recordDeserializeFilter, null);
+            return super.replay(start, recordDeserializeFilter, reason);
         }
     }
 

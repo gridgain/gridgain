@@ -49,7 +49,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTre
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
-import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.processors.cache.persistence.wal.SegmentRouter;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
@@ -71,7 +70,6 @@ import static org.apache.ignite.internal.pagemem.PageIdAllocator.OLD_METASTORE_P
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CACHE_DATA_FILENAME;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
-import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.UNSPECIFIED;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.corruptedPagesFile;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.walDirs;
@@ -466,7 +464,7 @@ public class DiagnosticProcessorTest extends GridCommonAbstractTest {
     @Nullable private T2<Integer, Long> findAnyPageId(IgniteEx n) throws IgniteCheckedException {
         int cacheId = GridCacheUtils.cacheId(DEFAULT_CACHE_NAME);
 
-        try (WALIterator walIter = n.context().cache().context().wal().replay(new FileWALPointer(0, 0, 0), UNSPECIFIED)) {
+        try (WALIterator walIter = n.context().cache().context().wal().replay(new FileWALPointer(0, 0, 0))) {
             while (walIter.hasNextX()) {
                 WALRecord walRecord = walIter.nextX().get2();
 

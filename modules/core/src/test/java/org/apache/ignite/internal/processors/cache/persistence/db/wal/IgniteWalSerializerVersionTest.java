@@ -32,7 +32,6 @@ import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TimeStampRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
-import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordSerializer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV2Serializer;
@@ -47,7 +46,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_SERIALIZER_VERSION;
-import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.UNSPECIFIED;
 import static org.apache.ignite.transactions.TransactionState.PREPARED;
 
 /**
@@ -263,7 +261,7 @@ public class IgniteWalSerializerVersionTest extends GridCommonAbstractTest {
 
         Iterator<Long> itToCheck = checker.getTimeStamps().iterator();
 
-        try (TimestampRecordIterator it = new TimestampRecordIterator(wal.replay(p, UNSPECIFIED))) {
+        try (TimestampRecordIterator it = new TimestampRecordIterator(wal.replay(p))) {
             while (it.hasNext()) {
                 IgniteBiTuple<WALPointer, WALRecord> tup0 = it.next();
 
