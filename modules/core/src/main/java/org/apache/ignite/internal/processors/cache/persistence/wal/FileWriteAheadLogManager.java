@@ -2943,15 +2943,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             curWalSegmIdx--;
 
-            if (log.isInfoEnabled()) {
-                String msg = "Initialized WAL cursor [start=" + start + ", end=" + end + ", curWalSegmIdx=" +
-                    curWalSegmIdx + ", reason=" + iterationReason + ']';
-
-                if (iterationReason.shouldLogToInfo())
-                    log.info(msg);
-                else if (log.isDebugEnabled())
-                    log.debug(msg);
-            }
+            iterationReason.logIfNeeded(log, () -> "Initialized WAL cursor [start=" + start + ", end=" + end + ", curWalSegmIdx=" +
+                curWalSegmIdx + ", reason=" + iterationReason + ']');
 
             advance();
         }
@@ -2982,15 +2975,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 try {
                     fd = segmentRouter.findSegment(curWalSegmIdx);
 
-                    if (log.isInfoEnabled()) {
-                        String msg = "Reading next file [absIdx=" + curWalSegmIdx +
-                            ", file=" + fd.file.getAbsolutePath() + ", reason=" + iterationReason + ']';
-
-                        if (iterationReason.shouldLogToInfo())
-                            log.info(msg);
-                        else if (log.isDebugEnabled())
-                            log.debug(msg);
-                    }
+                    File file = fd.file;
+                    iterationReason.logIfNeeded(log, () -> "Reading next file [absIdx=" + curWalSegmIdx +
+                        ", file=" + file.getAbsolutePath() + ", reason=" + iterationReason + ']');
 
                     nextHandle = initReadHandle(fd, start != null && curWalSegmIdx == start.index() ? start : null);
                 }

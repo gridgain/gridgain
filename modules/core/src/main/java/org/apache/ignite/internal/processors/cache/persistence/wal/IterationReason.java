@@ -9,6 +9,9 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.wal;
 
+import java.util.function.Supplier;
+import org.apache.ignite.IgniteLogger;
+
 /**
  * Reason for WAL iteration.
  */
@@ -55,15 +58,17 @@ public enum IterationReason {
         this.name = name;
     }
 
-    /**
-     * If true, info-level logging should be used when reporting iteration progress.
-     */
-    public boolean shouldLogToInfo() {
-        return logToInfo;
-    }
-
     @Override
     public String toString() {
         return name;
+    }
+
+    /** Logs message provided by supplier at appropriate level, if needed. */
+    public void logIfNeeded(IgniteLogger log, Supplier<String> message) {
+        if (logToInfo && log.isInfoEnabled()) {
+            log.info(message.get());
+        } else if (log.isDebugEnabled()) {
+            log.debug(message.get());
+        }
     }
 }
