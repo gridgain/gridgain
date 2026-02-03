@@ -107,6 +107,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageParti
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseListImpl;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
+import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataRowStore;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
@@ -139,6 +140,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler.isWalDeltaRecordNeeded;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.HISTORICAL;
 import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
 
 /**
@@ -1273,7 +1275,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             if (latestReservedPointer == null)
                 log.warning("History for the preloading has not reserved yet.");
 
-            WALIterator it = grp.shared().wal().replay(minPtr);
+            WALIterator it = grp.shared().wal().replay(minPtr, HISTORICAL);
 
             WALHistoricalIterator iterator = new WALHistoricalIterator(log, grp, partCntrs, partsCounters, it);
 

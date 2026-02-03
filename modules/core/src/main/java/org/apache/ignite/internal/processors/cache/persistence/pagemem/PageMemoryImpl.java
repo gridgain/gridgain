@@ -74,6 +74,7 @@ import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPa
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
@@ -105,6 +106,7 @@ import static org.apache.ignite.internal.pagemem.FullPageId.NULL_PAGE;
 import static org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl.DATAREGION_METRICS_PREFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageHeader.headerIsValid;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.RESTORE_PAGE;
 import static org.apache.ignite.internal.util.GridUnsafe.wrapPointer;
 import static org.apache.ignite.internal.util.OffheapReadWriteLock.TAG_LOCK_ALWAYS;
 
@@ -1005,7 +1007,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             ByteBuffer curPage = null;
             ByteBuffer lastValidPage = null;
 
-            try (WALIterator it = walMgr.replay(null)) {
+            try (WALIterator it = walMgr.replay(null, RESTORE_PAGE)) {
                 for (IgniteBiTuple<WALPointer, WALRecord> tuple : it) {
                     switch (tuple.getValue().type()) {
                         case PAGE_RECORD:

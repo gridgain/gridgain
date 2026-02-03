@@ -9,30 +9,61 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.wal;
 
-/** Reason for WAL iteration. */
+/**
+ * Reason for WAL iteration.
+ */
 public enum IterationReason {
-    /** Applying lost metastore / cache updates since last checkpoint record. */
-    LOST_UPDATES(true, "apply lost updates"),
+    UNSPECIFIED(false, "unspecified"),
 
-    /** Restore memory state if node stopped in the middle of checkpoint. */
-    RESTORE_BINARY_STATE(true, "restore binary state");
+    /**
+     * Applying logical metastore / cache updates since last checkpoint record.
+     */
+    LOGICAL_UPDATES(true, "apply logical updates"),
+
+    /**
+     * Restore memory state if node stopped in the middle of checkpoint.
+     */
+    RESTORE_BINARY_STATE(true, "restore binary state"),
+
+    PITR(false, "PITR"),
+
+    APPLY_CONSISTENT_CUT(false, "apply consistent cut"),
+
+    HANDLE_CONSISTENT_CUT(false, "handle consistent cut"),
+
+    PRINT(false, "print WAL records"),
+
+    READ_VALUE(false, "read value from WAL"),
+
+    UPDATE_COUNTERS(false, "collect update counters"),
+
+    HISTORICAL(false, "historical WAL iterator"),
+
+    GROUP_STATE_STORE_INIT(false, "group state store init"),
+
+    RESTORE_PAGE(false, "restore page");
 
     private final boolean logToInfo;
 
     private final String name;
 
-    /** */
+    /**
+     *
+     */
     IterationReason(boolean logToInfo, String name) {
         this.logToInfo = logToInfo;
         this.name = name;
     }
 
-    /** If true, info-level logging should be used when reporting iteration progress. */
+    /**
+     * If true, info-level logging should be used when reporting iteration progress.
+     */
     public boolean shouldLogToInfo() {
         return logToInfo;
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
         return name;
     }
 }

@@ -148,6 +148,7 @@ import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.TMP_SUFFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.ZIP_SUFFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor.fileName;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.READ_VALUE;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordSerializerFactory.LATEST_SERIALIZER_VERSION;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.HEADER_RECORD_SIZE;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.readPosition;
@@ -939,7 +940,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** {@inheritDoc} */
     @Override public WALRecord read(WALPointer ptr) throws IgniteCheckedException {
-        try (WALIterator it = replay(ptr)) {
+        try (WALIterator it = replay(ptr, READ_VALUE)) {
             IgniteBiTuple<WALPointer, WALRecord> rec = it.next();
 
             if (rec != null && rec.get2().position().equals(ptr))
@@ -950,7 +951,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /** {@inheritDoc} */
-    @Override public WALIterator replay(WALPointer start) throws IgniteCheckedException, StorageException {
+    @Override public WALIterator replay(WALPointer start, IterationReason reason) throws IgniteCheckedException, StorageException {
         return replay(start, null, null);
     }
 
@@ -958,7 +959,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     @Override public WALIterator replay(
         WALPointer start,
         @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter,
-        @Nullable IterationReason reason
+        IterationReason reason
     ) throws IgniteCheckedException, StorageException {
         assert start == null || start instanceof FileWALPointer : "Invalid start pointer: " + start;
 
@@ -2810,18 +2811,18 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         private final IterationReason iterationReason;
 
         /**
-         * @param cctx                    Shared context.
-         * @param walArchiveDir           WAL archive dir.
-         * @param walWorkDir              WAL dir.
-         * @param start                   Optional start pointer.
-         * @param end                     Optional end pointer.
-         * @param dsCfg                   Database configuration.
-         * @param serializerFactory       Serializer factory.
-         * @param archiver                File Archiver.
-         * @param decompressor            Decompressor.
-         * @param log                     Logger  @throws IgniteCheckedException If failed to initialize WAL segment.
-         * @param segmentAware            Segment aware.
-         * @param segmentRouter           Segment router.
+         * @param cctx Shared context.
+         * @param walArchiveDir WAL archive dir.
+         * @param walWorkDir WAL dir.
+         * @param start Optional start pointer.
+         * @param end Optional end pointer.
+         * @param dsCfg Database configuration.
+         * @param serializerFactory Serializer factory.
+         * @param archiver File Archiver.
+         * @param decompressor Decompressor.
+         * @param log Logger  @throws IgniteCheckedException If failed to initialize WAL segment.
+         * @param segmentAware Segment aware.
+         * @param segmentRouter Segment router.
          * @param segmentFileInputFactory Factory to provide I/O interfaces for read primitives with files.
          * @param reason Reason to iterate WAL.
          */
@@ -2840,7 +2841,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             SegmentAware segmentAware,
             SegmentRouter segmentRouter,
             SegmentFileInputFactory segmentFileInputFactory,
-            @Nullable IterationReason reason
+            IterationReason reason
         ) throws IgniteCheckedException {
             super(
                 log,
@@ -2942,9 +2943,15 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             curWalSegmIdx--;
 
-            if (log.isDebugEnabled())
-                log.debug("Initialized WAL cursor [start=" + start + ", end=" + end + ", curWalSegmIdx=" +
-                    curWalSegmIdx + ", reason=" + iterationReason + ']');
+            if (log.isInfoEnabled()) {
+                String msg = "Initialized WAL cursor [start=" + start + ", end=" + end + ", curWalSegmIdx=" +
+                    curWalSegmIdx + ", reason=" + iterationReason + ']';
+
+                if (iterationReason != null && iterationReason.shouldLogToInfo())
+                    log.info(msg);
+                else if (log.isDebugEnabled())
+                    log.debug(msg);
+            }
 
             advance();
         }
@@ -2975,11 +2982,11 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 try {
                     fd = segmentRouter.findSegment(curWalSegmIdx);
 
-                    if (log.isDebugEnabled() || log.isInfoEnabled()) {
+                    if (log.isInfoEnabled()) {
                         String msg = "Reading next file [absIdx=" + curWalSegmIdx +
                             ", file=" + fd.file.getAbsolutePath() + ", reason=" + iterationReason + ']';
 
-                        if (log.isInfoEnabled() && iterationReason != null && iterationReason.shouldLogToInfo())
+                        if (iterationReason != null && iterationReason.shouldLogToInfo())
                             log.info(msg);
                         else if (log.isDebugEnabled())
                             log.debug(msg);

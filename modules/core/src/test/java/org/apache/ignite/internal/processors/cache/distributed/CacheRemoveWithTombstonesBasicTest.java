@@ -75,6 +75,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Part
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearAtomicCache;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -103,6 +104,7 @@ import static org.apache.ignite.cache.CachePeekMode.NEAR;
 import static org.apache.ignite.cache.CachePeekMode.ONHEAP;
 import static org.apache.ignite.cache.CachePeekMode.PRIMARY;
 import static org.apache.ignite.cache.CacheRebalanceMode.ASYNC;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.UNSPECIFIED;
 import static org.junit.Assume.assumeTrue;
 
 /** */
@@ -1297,7 +1299,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         IgniteWriteAheadLogManager walMgr = crd.context().cache().context().wal();
 
-        WALIterator iter = walMgr.replay(null);
+        WALIterator iter = walMgr.replay(null, UNSPECIFIED);
 
         List<DataRecord> tmp = new ArrayList<>();
 
@@ -1337,7 +1339,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         IgniteWriteAheadLogManager walMgr = crd.context().cache().context().wal();
 
-        WALIterator iter = walMgr.replay(null);
+        WALIterator iter = walMgr.replay(null, UNSPECIFIED);
 
         List<DataRecord> tmp = new ArrayList<>();
 

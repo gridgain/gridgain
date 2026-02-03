@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactor
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsFolderSettings;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsFoldersResolver;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
+import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.jetbrains.annotations.Nullable;
 import org.mockito.Mockito;
 
@@ -130,6 +131,6 @@ public class MockWalIteratorFactory {
 
         mgr.start(sctx);
 
-        return mgr.replay(null);
+        return mgr.replay(null, IterationReason.UNSPECIFIED);
     }
 }

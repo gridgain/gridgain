@@ -75,7 +75,7 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     }
 
     /** {@inheritDoc} */
-    @Override public WALIterator replay(WALPointer start) throws IgniteCheckedException, StorageException {
+    @Override public WALIterator replay(WALPointer start, IterationReason reason) throws IgniteCheckedException, StorageException {
         return null;
     }
 
@@ -83,7 +83,7 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     @Override public WALIterator replay(
         WALPointer start,
         @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter,
-        @Nullable IterationReason reason
+        IterationReason reason
     ) throws IgniteCheckedException, StorageException {
         return null;
     }

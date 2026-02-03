@@ -38,6 +38,7 @@ import org.apache.ignite.internal.pagemem.wal.WALIterator;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
+import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer;
 import org.apache.ignite.internal.util.lang.IgniteThrowableConsumer;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -55,6 +56,7 @@ import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConve
 import static org.apache.ignite.internal.commandline.walconverter.ProcessSensitiveData.HASH;
 import static org.apache.ignite.internal.commandline.walconverter.ProcessSensitiveData.HIDE;
 import static org.apache.ignite.internal.commandline.walconverter.ProcessSensitiveData.SHOW;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.UNSPECIFIED;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /**
@@ -577,7 +579,7 @@ public class IgniteWalConverterTest extends GridCommonAbstractTest {
         List<T2<PageSnapshot, String>> walRecords = new ArrayList<>();
 
         String nodeDir = createWal(new ArrayList<>(), n -> {
-            try (WALIterator walIter = n.context().cache().context().wal().replay(new FileWALPointer(0, 0, 0))) {
+            try (WALIterator walIter = n.context().cache().context().wal().replay(new FileWALPointer(0, 0, 0), UNSPECIFIED)) {
                 while (walIter.hasNextX()) {
                     WALRecord walRecord = walIter.nextX().get2();
 

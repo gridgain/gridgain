@@ -20,6 +20,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
+import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
@@ -42,7 +43,7 @@ public class IgniteReplayWalIteratorInvalidCrcTest extends IgniteAbstractWalIter
                 "Cannot invoke \"getWalIterator\" with true \"ignoreArchiveDir\" parameter value."
             );
         else
-            return walMgr.replay(null);
+            return walMgr.replay(null, IterationReason.UNSPECIFIED);
     }
 
     /**

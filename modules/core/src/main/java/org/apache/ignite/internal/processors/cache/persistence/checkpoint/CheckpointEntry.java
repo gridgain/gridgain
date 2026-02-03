@@ -32,12 +32,14 @@ import org.apache.ignite.internal.pagemem.wal.record.CacheState;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
+import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_GRP_STATE_LAZY_STORE;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.GROUP_STATE_STORE_INIT;
 
 /**
  * Class represents checkpoint state.
@@ -404,7 +406,7 @@ public class CheckpointEntry {
             WALPointer ptr
         ) throws IgniteCheckedException {
             if (initGuardUpdater.compareAndSet(this, 0, 1)) {
-                try (WALIterator it = wal.replay(ptr)) {
+                try (WALIterator it = wal.replay(ptr, GROUP_STATE_STORE_INIT)) {
                     if (it.hasNextX()) {
                         IgniteBiTuple<WALPointer, WALRecord> tup = it.nextX();
 

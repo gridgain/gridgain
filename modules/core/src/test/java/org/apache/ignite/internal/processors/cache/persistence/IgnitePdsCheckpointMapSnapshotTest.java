@@ -109,7 +109,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
         @Override public WALIterator replay(
             WALPointer start,
             @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter,
-            @Nullable IterationReason reason
+            IterationReason reason
         ) throws IgniteCheckedException, StorageException {
             Exception exception = new Exception();
             StackTraceElement[] trace = exception.getStackTrace();
