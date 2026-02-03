@@ -32,7 +32,6 @@ import org.apache.ignite.internal.pagemem.wal.WALIterator;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
-import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
@@ -45,7 +44,6 @@ import org.mockito.internal.matchers.apachecommons.ReflectionEquals;
 
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_PAGE_SIZE;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.ZIP_SUFFIX;
-import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.UNSPECIFIED;
 import static org.apache.ignite.testframework.wal.record.RecordUtils.TEST_CACHE_NAME;
 
 /**
@@ -177,7 +175,7 @@ public class WALRecordSerializationTest extends GridCommonAbstractTest {
         Iterator<ReflectionEquals> serializedIter = serializedRecords.iterator();
         ReflectionEquals curExpRecord = serializedIter.hasNext() ? serializedIter.next() : null;
 
-        try (WALIterator iter = wal.replay(null, UNSPECIFIED)) {
+        try (WALIterator iter = wal.replay(null)) {
             while (iter.hasNext()) {
                 WALRecord record = iter.nextX().get2();
 
@@ -269,7 +267,7 @@ public class WALRecordSerializationTest extends GridCommonAbstractTest {
         Iterator<ReflectionEquals> serializedIter = serializedRecords.iterator();
         ReflectionEquals curExpRecord = serializedIter.hasNext() ? serializedIter.next() : null;
 
-        try (WALIterator iter = wal.replay(null, UNSPECIFIED)) {
+        try (WALIterator iter = wal.replay(null)) {
             while (iter.hasNext()) {
                 WALRecord record = iter.nextX().get2();
 

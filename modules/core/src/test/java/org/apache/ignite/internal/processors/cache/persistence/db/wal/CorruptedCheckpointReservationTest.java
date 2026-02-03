@@ -27,7 +27,6 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -46,7 +45,6 @@ import org.apache.ignite.internal.processors.cache.persistence.db.wal.crc.WalTes
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
-import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.FilteredWalIterator;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.IgniteWalIteratorFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.WalFilters;
@@ -61,7 +59,6 @@ import org.junit.Test;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_GRP_STATE_LAZY_STORE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
-import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.UNSPECIFIED;
 import static org.apache.ignite.testframework.GridTestUtils.wal;
 
 /**
@@ -307,7 +304,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         List<IgniteBiTuple<WALPointer, WALRecord>> checkpoints;
 
-        try (FilteredWalIterator iter = new FilteredWalIterator(walMgr.replay(null, UNSPECIFIED), WalFilters.checkpoint())) {
+        try (FilteredWalIterator iter = new FilteredWalIterator(walMgr.replay(null), WalFilters.checkpoint())) {
             checkpoints = Lists.newArrayList((Iterable<? extends IgniteBiTuple<WALPointer, WALRecord>>)iter);
         }
 

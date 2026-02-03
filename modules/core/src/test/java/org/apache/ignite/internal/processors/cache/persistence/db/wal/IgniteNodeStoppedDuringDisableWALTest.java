@@ -39,7 +39,6 @@ import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxLog;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsFoldersResolver;
-import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -195,7 +194,7 @@ public class IgniteNodeStoppedDuringDisableWALTest extends GridCommonAbstractTes
 
         boolean fail = false;
 
-        try (WALIterator it = sharedContext.wal().replay(null, IterationReason.UNSPECIFIED)) {
+        try (WALIterator it = sharedContext.wal().replay(null)) {
             dbMgr.applyUpdatesOnRecovery(it, (ptr, rec) -> true, (rec, entry) -> true);
         }
         catch (IgniteCheckedException e) {

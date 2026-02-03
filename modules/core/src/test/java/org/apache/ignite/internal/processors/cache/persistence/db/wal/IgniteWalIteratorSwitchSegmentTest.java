@@ -45,7 +45,6 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
-import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.processors.cache.persistence.wal.aware.SegmentAware;
 import org.apache.ignite.internal.processors.cache.persistence.wal.io.FileInput;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.StandaloneGridKernalContext;
@@ -63,7 +62,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.METASTORE_DATA_RECORD;
-import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.UNSPECIFIED;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.HEADER_RECORD_SIZE;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValueHierarchy;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -305,7 +303,7 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
         int actualRecords = 0;
 
         // Check that switch segment works as expected and all record is reachable.
-        try (WALIterator it = walMgr.replay(null, UNSPECIFIED)) {
+        try (WALIterator it = walMgr.replay(null)) {
             while (it.hasNext()) {
                 IgniteBiTuple<WALPointer, WALRecord> tup = it.next();
 
@@ -359,7 +357,7 @@ public class IgniteWalIteratorSwitchSegmentTest extends GridCommonAbstractTest {
 
         IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() -> {
             // Check that switch segment works as expected and all record is reachable.
-            try (WALIterator it = walMgr.replay(null, UNSPECIFIED)) {
+            try (WALIterator it = walMgr.replay(null)) {
                 Object handle = getFieldValueHierarchy(it, "currWalSegment");
                 FileInput in = getFieldValueHierarchy(handle, "in");
                 Object delegate = getFieldValueHierarchy(in.io(), "delegate");

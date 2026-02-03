@@ -98,7 +98,6 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemor
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.CompactablePageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
-import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.lang.IgniteInClosureX;
@@ -134,7 +133,6 @@ import static org.apache.ignite.internal.processors.cache.persistence.Checkpoint
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CACHE_DATA_FILENAME;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 import static org.apache.ignite.internal.processors.cache.persistence.filename.PdsFolderResolver.genNewStyleSubfolderName;
-import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.UNSPECIFIED;
 
 /**
  *
@@ -1356,7 +1354,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
         CountDownLatch insertFinished = new CountDownLatch(1);
         GridTestUtils.runAsync(
             () -> {
-                try (WALIterator it = sharedCtx.wal().replay(ptr, UNSPECIFIED)) {
+                try (WALIterator it = sharedCtx.wal().replay(ptr)) {
                     if (it.hasNext()) {
                         it.next();
 
@@ -1434,7 +1432,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
         buf.order(ByteOrder.nativeOrder());
 
         // Now check that deltas can be correctly applied.
-        try (WALIterator it = sharedCtx.wal().replay(ptr, UNSPECIFIED)) {
+        try (WALIterator it = sharedCtx.wal().replay(ptr)) {
             while (it.hasNext()) {
                 IgniteBiTuple<WALPointer, WALRecord> tup = it.next();
 
@@ -1691,7 +1689,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
         Set<GridCacheVersion> activeTransactions = new HashSet<>();
 
         // Check that all DataRecords are within PREPARED and COMMITTED tx records.
-        try (WALIterator it = sharedCtx.wal().replay(startPtr, UNSPECIFIED)) {
+        try (WALIterator it = sharedCtx.wal().replay(startPtr)) {
             while (it.hasNext()) {
                 IgniteBiTuple<WALPointer, WALRecord> tup = it.next();
 
