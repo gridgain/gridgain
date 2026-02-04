@@ -40,6 +40,7 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.EarliestCheckpointMapSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
+import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.AbstractTestPluginProvider;
@@ -93,7 +94,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
 
     /** WAL manager that counts how many times replay has been called. */
     private static class TestFileWriteAheadLogManager extends FileWriteAheadLogManager {
-        /** Count of times that {@link #replay(WALPointer, IgniteBiPredicate)} has been called. */
+        /** Count of times that {@link #replay(WALPointer, IgniteBiPredicate, IterationReason)} has been called. */
         private final AtomicInteger replayCount = new AtomicInteger();
 
         /** Constructor. */
@@ -107,7 +108,8 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
         /** {@inheritDoc} */
         @Override public WALIterator replay(
             WALPointer start,
-            @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter
+            @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter,
+            IterationReason reason
         ) throws IgniteCheckedException, StorageException {
             Exception exception = new Exception();
             StackTraceElement[] trace = exception.getStackTrace();
@@ -117,7 +119,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
             if (Arrays.stream(trace).anyMatch(el -> el.getClassName().equals(clsName)))
                 replayCount.incrementAndGet();
 
-            return super.replay(start, recordDeserializeFilter);
+            return super.replay(start, recordDeserializeFilter, reason);
         }
     }
 
