@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
+import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason;
 import org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
@@ -264,7 +265,7 @@ public class RenameIndexTreeTest extends AbstractRebuildIndexTest {
         WALPointer start = new FileWALPointer(currSegIdx, 0, 0);
         IgniteBiPredicate<WALRecord.RecordType, WALPointer> pred = (t, p) -> t == INDEX_ROOT_PAGE_RENAME_RECORD;
 
-        try (WALIterator it = walMgr(n).replay(start, pred, null)) {
+        try (WALIterator it = walMgr(n).replay(start, pred, IterationReason.UNSPECIFIED)) {
             List<WALRecord> records = stream(it.spliterator(), false).map(IgniteBiTuple::get2).collect(toList());
 
             assertEquals(1, records.size());
