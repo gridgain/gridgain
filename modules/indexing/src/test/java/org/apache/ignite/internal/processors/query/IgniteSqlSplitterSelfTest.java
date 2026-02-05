@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -2071,6 +2072,45 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
             "ON PMC.CO_ID = VPMC.CO_ID ")).getAll();
 
         assertFalse(res.isEmpty());
+    }
+
+    /**
+     * Ensure we do not pushdown where condition into right branch of left-outer join.
+     */
+    @Test
+    public void testLeftJoinWithSubquery() {
+        IgniteCache<Integer, Contract> c1 = ignite(0).createCache(
+            cacheConfig("cache", true, Integer.class, Integer.class));
+
+        c1.query(new SqlFieldsQuery("CREATE TABLE Person (id INTEGER PRIMARY KEY, depid INTEGER, name VARCHAR(100))")).getAll();
+        c1.query(new SqlFieldsQuery("INSERT INTO Person (id, depId, name) VALUES (1, 1, 'Emma');")).getAll();
+        c1.query(new SqlFieldsQuery("CREATE TABLE DEPARTMENT (id INTEGER PRIMARY KEY, name VARCHAR(100))")).getAll();
+        c1.query(new SqlFieldsQuery("INSERT INTO DEPARTMENT (id, name) VALUES (2, 'TX')")).getAll();
+
+        String query1 = "SELECT p.id as person_id, p.name as person_name, o.id as department_id\n" +
+            "  FROM Person p\n" +
+            "  LEFT JOIN DEPARTMENT o\n" +
+            "    ON p.depId = o.id\n" +
+            " WHERE o.name = 'SQL'";
+        String query2 = "SELECT p.id as person_id, p.name as person_name, o.id as department_id\n" +
+            "  FROM (SELECT distinct * FROM Person) p\n" +
+            "  LEFT JOIN DEPARTMENT o\n" +
+            "    ON p.depId = o.id\n" +
+            " WHERE o.name = 'SQL'";
+
+        assertTrue(c1.query(new SqlFieldsQuery(query1).setDistributedJoins(true)).getAll().isEmpty());
+        assertTrue(c1.query(new SqlFieldsQuery(query1).setDistributedJoins(false)).getAll().isEmpty());
+
+        List<List<?>> res = c1.query(new SqlFieldsQuery(query2)).getAll();
+
+        String result = res.stream()
+            .map(row -> row.stream()
+                .map(Objects::toString)
+                .collect(Collectors.joining(",", "[", "]")))
+            .collect(Collectors.joining("\n"));
+        System.out.println(result);
+
+        assertTrue(res.isEmpty());
     }
 
     /** @throws Exception if failed. */

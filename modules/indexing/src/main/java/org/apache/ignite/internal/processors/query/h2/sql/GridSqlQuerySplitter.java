@@ -1073,11 +1073,15 @@ public class GridSqlQuerySplitter {
 
         SplitterAndCondition.collectAndConditions(andConditions, select, WHERE_CHILD);
 
+        // Can't pushdown non-join condition to the right child in case of left outer join.
+        // Otherwise, a filtered row could have a pair that will be emitted as unmatched-row.
+        boolean hasLeftJoin = SplitterUtils.hasLeftJoin(select.from());
+
         for (int i = 0; i < andConditions.size(); i++) {
             SplitterAndCondition c = andConditions.get(i);
             GridSqlAst condition = c.ast();
 
-            if (isAllRelatedToTables(tblAliases, U.newIdentityHashSet(), condition)) {
+            if (isAllRelatedToTables(tblAliases, U.newIdentityHashSet(), condition) && !hasLeftJoin) {
                 if (!SplitterUtils.isTrue(condition)) {
                     // Replace the original condition with `true` and move it to the wrap query.
                     c.parent().child(c.childIndex(), TRUE);
