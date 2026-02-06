@@ -20,7 +20,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -719,16 +718,11 @@ public class GridSqlQuerySplitter {
             tblAliases.add(uniqueTblAlias);
         }
 
-        // In case of left-outer-join we can't push down any conditions to right branch (except maybe by join columns).
-        // Here, we allow push nothing to right branch, because it is hard to detect conditions on join columns.
-        Set<GridSqlAlias> tblAliasesToPushdownConditions = !SplitterUtils.hasLeftJoin(select.from()) ? tblAliases :
-            (begin == 0 ? Collections.singleton(model.childModel(0).uniqueAlias()) : Collections.emptySet());
-
         // Push down columns in SELECT clause.
         pushDownSelectColumns(tblAliases, cols, wrapAlias, select);
 
         // Move all the related WHERE conditions to wrap query.
-        pushDownWhereConditions(tblAliases, cols, wrapAlias, select, tblAliasesToPushdownConditions);
+        pushDownWhereConditions(tblAliases, cols,  wrapAlias, model, begin, end);
 
         // Push down to a subquery all the JOIN elements and process ON conditions.
         pushDownJoins(tblAliases, cols, model, begin, end, wrapAlias);
@@ -741,6 +735,47 @@ public class GridSqlQuerySplitter {
 
         // Move pushed down child models to the newly created model.
         model.moveChildModelsToWrapModel(wrapModel, begin, end);
+    }
+
+    /**
+     * Return table aliases which conditions are safe to push down.
+     * Note: Tables in a left branch of left-outer-join are safe to pushdown conditions. In model, they are in a range
+     * from 0 to the first LOJ occurs.
+     * Here, we intersect such tables and desired tables (begin-end range).
+     *
+     * @see #pushDownJoins(Set, Map, SplitterQueryModel, int, int, GridSqlAlias)
+     */
+    private static Set<GridSqlAlias> tblAliasesToPushdownConditions(
+        SplitterQueryModel model,
+        int begin,
+        int end,
+        Set<GridSqlAlias> tblAliases
+    ) {
+        int leftBranchEnd = -1;
+        // Find full left branch for the first left-outer-join.
+        for (int i = 1; i <= end; i++) {
+            if (model.findJoin(i).isLeftOuter()) {
+                leftBranchEnd = i - 1;
+                break;
+            }
+        }
+
+        if (leftBranchEnd == -1) {
+            // No left-outer-join or we are in the left branch.
+            return tblAliases;
+        }
+
+        // Collect desired tables with respect to the safe range.
+        Set<GridSqlAlias> aliases = U.newIdentityHashSet();;
+        for (int i = Math.max(0, begin); i <= Math.min(leftBranchEnd, end); i++) {
+            GridSqlAlias uniqueTblAlias = model.childModel(i).uniqueAlias();
+
+            assert uniqueTblAlias != null : model.ast().getSQL();
+
+            aliases.add(uniqueTblAlias);
+        }
+
+        return aliases;
     }
 
     /**
@@ -1062,17 +1097,25 @@ public class GridSqlQuerySplitter {
      * @param tblAliases Table aliases for push down.
      * @param cols Columns with generated aliases.
      * @param wrapAlias Alias of the wrap query.
-     * @param select The original select.
+     * @param model Query model.
+     * @param begin The first child model in range to push down.
+     * @param end The last child model in range to push down.
      */
     private void pushDownWhereConditions(
         Set<GridSqlAlias> tblAliases,
         Map<String,GridSqlAlias> cols,
         GridSqlAlias wrapAlias,
-        GridSqlSelect select,
-        Set<GridSqlAlias> tableToPushDownConditions
+        SplitterQueryModel model,
+        int begin,
+        int end
     ) {
+        GridSqlSelect select = model.ast();
+
         if (select.where() == null)
             return;
+
+        // In case of left-outer-join, we can't push down WHERE conditions to right branch.
+        Set<GridSqlAlias> tblAliasesToPushdownConditions = tblAliasesToPushdownConditions(model, begin, end, tblAliases);
 
         GridSqlSelect wrapSelect = GridSqlAlias.<GridSqlSubquery>unwrap(wrapAlias).subquery();
 
@@ -1084,7 +1127,7 @@ public class GridSqlQuerySplitter {
             SplitterAndCondition c = andConditions.get(i);
             GridSqlAst condition = c.ast();
 
-            if (isAllRelatedToTables(tableToPushDownConditions, U.newIdentityHashSet(), condition)) {
+            if (isAllRelatedToTables(tblAliasesToPushdownConditions, U.newIdentityHashSet(), condition)) {
                 if (!SplitterUtils.isTrue(condition)) {
                     // Replace the original condition with `true` and move it to the wrap query.
                     c.parent().child(c.childIndex(), TRUE);
