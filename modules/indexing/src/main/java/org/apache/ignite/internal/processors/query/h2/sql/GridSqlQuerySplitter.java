@@ -722,7 +722,7 @@ public class GridSqlQuerySplitter {
         pushDownSelectColumns(tblAliases, cols, wrapAlias, select);
 
         // Move all the related WHERE conditions to wrap query.
-        pushDownWhereConditions(tblAliases, cols,  wrapAlias, model, begin, end);
+        pushDownWhereConditions(tblAliases, cols, wrapAlias, model, begin, end);
 
         // Push down to a subquery all the JOIN elements and process ON conditions.
         pushDownJoins(tblAliases, cols, model, begin, end, wrapAlias);
@@ -766,7 +766,7 @@ public class GridSqlQuerySplitter {
         }
 
         // Collect desired tables with respect to the safe range.
-        Set<GridSqlAlias> aliases = U.newIdentityHashSet();;
+        Set<GridSqlAlias> aliases = U.newIdentityHashSet();
         for (int i = Math.max(0, begin); i <= Math.min(leftBranchEnd, end); i++) {
             GridSqlAlias uniqueTblAlias = model.childModel(i).uniqueAlias();
 
