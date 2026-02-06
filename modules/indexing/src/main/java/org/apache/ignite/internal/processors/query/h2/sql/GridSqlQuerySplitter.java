@@ -20,6 +20,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -718,11 +719,16 @@ public class GridSqlQuerySplitter {
             tblAliases.add(uniqueTblAlias);
         }
 
+        // In case of left-outer-join we can't push down any conditions to right branch (except maybe by join columns).
+        // Here, we allow push nothing to right branch, because it is hard to detect conditions on join columns.
+        Set<GridSqlAlias> tblAliasesToPushdownConditions = !SplitterUtils.hasLeftJoin(select.from()) ? tblAliases :
+            (begin == 0 ? Collections.singleton(model.childModel(0).uniqueAlias()) : Collections.emptySet());
+
         // Push down columns in SELECT clause.
         pushDownSelectColumns(tblAliases, cols, wrapAlias, select);
 
         // Move all the related WHERE conditions to wrap query.
-        pushDownWhereConditions(tblAliases, cols, wrapAlias, select);
+        pushDownWhereConditions(tblAliases, cols, wrapAlias, select, tblAliasesToPushdownConditions);
 
         // Push down to a subquery all the JOIN elements and process ON conditions.
         pushDownJoins(tblAliases, cols, model, begin, end, wrapAlias);
@@ -1062,7 +1068,8 @@ public class GridSqlQuerySplitter {
         Set<GridSqlAlias> tblAliases,
         Map<String,GridSqlAlias> cols,
         GridSqlAlias wrapAlias,
-        GridSqlSelect select
+        GridSqlSelect select,
+        Set<GridSqlAlias> tableToPushDownConditions
     ) {
         if (select.where() == null)
             return;
@@ -1073,15 +1080,11 @@ public class GridSqlQuerySplitter {
 
         SplitterAndCondition.collectAndConditions(andConditions, select, WHERE_CHILD);
 
-        // Can't pushdown non-join condition to the right child in case of left outer join.
-        // Otherwise, a filtered row could have a pair that will be emitted as unmatched-row.
-        boolean hasLeftJoin = SplitterUtils.hasLeftJoin(select.from());
-
         for (int i = 0; i < andConditions.size(); i++) {
             SplitterAndCondition c = andConditions.get(i);
             GridSqlAst condition = c.ast();
 
-            if (isAllRelatedToTables(tblAliases, U.newIdentityHashSet(), condition) && !hasLeftJoin) {
+            if (isAllRelatedToTables(tableToPushDownConditions, U.newIdentityHashSet(), condition)) {
                 if (!SplitterUtils.isTrue(condition)) {
                     // Replace the original condition with `true` and move it to the wrap query.
                     c.parent().child(c.childIndex(), TRUE);
