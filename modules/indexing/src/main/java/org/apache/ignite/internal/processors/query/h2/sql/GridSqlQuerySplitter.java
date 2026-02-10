@@ -75,12 +75,12 @@ import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlSelect.c
 @SuppressWarnings("ForLoopReplaceableByForEach")
 public class GridSqlQuerySplitter {
     /**
-     * Compatibility flag that forces pushing down conditions even if query contains left outer join.
-     * The option might be helpful for some queries to avoid performance regression, when a left outer join wrapped
-     * around an inner join. In this case the condition can't be pushed down to the right branch of inner join,
-     * which is valid transformation.
+     * Compatibility flag that forces pushing down conditions even if a query contains left outer join.
+     * The option might be helpful in some cases to avoid performance regression, when a left outer join wrapped
+     * around an inner join and there is a condition, which can be pushed down into the right branch of inner join.
      *
-     * <p>Warning: this option may lead to incorrect results in some cases, when condition pushed to right LOJ branch.
+     * <p>Warning: this option may lead to incorrect results in cases, when condition pushed into the right branch of
+     * left outer join.
      */
     private static final boolean FORCE_PUSHDOWN_CONDITIONS_TO_LEFT_JOIN = Boolean.getBoolean("IGNITE_FORCE_PUSHDOWN_CONDITIONS_TO_LEFT_JOIN");
 
