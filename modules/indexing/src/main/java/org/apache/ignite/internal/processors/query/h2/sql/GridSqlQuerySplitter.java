@@ -74,6 +74,16 @@ import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlSelect.c
  */
 @SuppressWarnings("ForLoopReplaceableByForEach")
 public class GridSqlQuerySplitter {
+    /**
+     * Compatibility flag that forces pushing down conditions even if query contains left outer join.
+     * The option might be helpful for some queries to avoid performance regression, when a left outer join wrapped
+     * around an inner join. In this case the condition can't be pushed down to the right branch of inner join,
+     * which is valid transformation.
+     *
+     * <p>Warning: this option may lead to incorrect results in some cases, when condition pushed to right LOJ branch.
+     */
+    private static final boolean FORCE_PUSHDOWN_CONDITIONS_TO_LEFT_JOIN = Boolean.getBoolean("IGNITE_FORCE_PUSHDOWN_CONDITIONS_TO_LEFT_JOIN");
+
     /** */
     private static final String MERGE_TABLE_SCHEMA = "PUBLIC"; // Schema PUBLIC must always exist.
 
@@ -751,6 +761,10 @@ public class GridSqlQuerySplitter {
         int end,
         Set<GridSqlAlias> tblAliases
     ) {
+        if (FORCE_PUSHDOWN_CONDITIONS_TO_LEFT_JOIN) {
+            return tblAliases;
+        }
+
         int leftBranchEnd = -1;
         // Find full left branch for the first left-outer-join.
         for (int i = 1; i <= end; i++) {
