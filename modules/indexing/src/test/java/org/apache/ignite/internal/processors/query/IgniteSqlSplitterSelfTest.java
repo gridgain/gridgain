@@ -2073,6 +2073,30 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
         assertFalse(res.isEmpty());
     }
 
+    /**
+     * Regression test. Ensure we do not pushdown where condition into the right branch of left-outer join.
+     */
+    @Test
+    public void testLeftJoinWithSubquery() {
+        IgniteCache<Integer, Contract> c1 = ignite(0).createCache(
+            cacheConfig("cache", true, Integer.class, Integer.class));
+
+        c1.query(new SqlFieldsQuery("CREATE TABLE Person (id INTEGER PRIMARY KEY, depid INTEGER, name VARCHAR(100))")).getAll();
+        c1.query(new SqlFieldsQuery("INSERT INTO Person (id, depId, name) VALUES (1, 1, 'Emma');")).getAll();
+        c1.query(new SqlFieldsQuery("CREATE TABLE DEPARTMENT (id INTEGER PRIMARY KEY, name VARCHAR(100))")).getAll();
+        c1.query(new SqlFieldsQuery("INSERT INTO DEPARTMENT (id, name) VALUES (2, 'TX')")).getAll();
+
+        String query = "SELECT p.id as person_id, p.name as person_name, o.id as department_id\n" +
+            "  FROM (SELECT distinct * FROM Person) p\n" +
+            "  LEFT JOIN DEPARTMENT o\n" +
+            "    ON p.depId = o.id\n" +
+            " WHERE o.name = 'SQL'";
+
+        List<List<?>> res = c1.query(new SqlFieldsQuery(query)).getAll();
+
+        assertTrue(res.isEmpty());
+    }
+
     /** @throws Exception if failed. */
     @Test
     public void testDistributedAggregates() throws Exception {
