@@ -730,3 +730,4 @@ This view exposes the contents of the metastorage cache.
 |NAME | string | Name
 |VALUE | string | String or raw binary (if data could not be deserialized for some reason) representation of an element
 |===
+
