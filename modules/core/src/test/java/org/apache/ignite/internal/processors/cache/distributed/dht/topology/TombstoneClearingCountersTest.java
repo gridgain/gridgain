@@ -17,9 +17,13 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
+import java.util.stream.Collectors;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -27,6 +31,9 @@ import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureHandler;
+import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
@@ -60,6 +67,9 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
     /** */
     @Parameterized.Parameter(value = 0)
     public CacheAtomicityMode atomicityMode;
+
+    /** {@code true} is one of the cluster nodes triggered a failure handler. */
+    private volatile boolean isFailureDetected;
 
     /**
      * @return List of test parameters.
@@ -111,6 +121,17 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected FailureHandler getFailureHandler(String igniteInstanceName) {
+        return new NoOpFailureHandler() {
+            @Override protected boolean handle(Ignite ignite, FailureContext failureCtx) {
+                isFailureDetected = true;
+
+                return super.handle(ignite, failureCtx);
+            }
+        };
     }
 
     /**
@@ -766,6 +787,56 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         spi0.stopBlock();
 
         awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+    }
+
+    @Test
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "5000")
+    public void testEvictionOnRebalanceOnCoordinatorWithBaselineChange() throws Exception {
+        IgniteEx crd = startGrids(3);
+
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        IgniteCache<Integer, Integer> cache = grid(1).cache(DEFAULT_CACHE_NAME);
+
+        // Find a partition that is not held by the coordinator node.
+        int cnt = 100;
+        int testPart = -1;
+        Set<Integer> primariesAndBackups0 = new HashSet<>();
+        primariesAndBackups0.addAll(
+            Arrays.stream(crd.affinity(DEFAULT_CACHE_NAME)
+                .primaryPartitions(crd.localNode())).boxed().collect(Collectors.toSet()));
+        primariesAndBackups0.addAll(
+            Arrays.stream(crd.affinity(DEFAULT_CACHE_NAME)
+                .backupPartitions(crd.localNode())).boxed().collect(Collectors.toSet()));
+
+        for (int i = 0; i < crd.affinity(DEFAULT_CACHE_NAME).partitions(); ++i){
+            if (!primariesAndBackups0.contains(i)) {
+                testPart = i;
+                break;
+            }
+        }
+
+        assertTrue("Failed to find a partition that is not held by the coordinator", testPart != -1);
+
+        List<Integer> testPartKeys = partitionKeys(cache, testPart, cnt, 0);
+        testPartKeys.forEach(key -> cache.put(key, key));
+
+        cache.remove(testPartKeys.get(0));
+
+        for (int i = 0; i < cnt / 2; ++i)
+            cache.remove(testPartKeys.get(i));
+
+        clearTombstones(cache);
+
+        stopGrid(2);
+
+        crd.cluster().setBaselineTopology(crd.cluster().topologyVersion());
+
+        awaitPartitionMapExchange();
+
+        assertFalse("Unexpected critical failure.", isFailureDetected);
 
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
     }
