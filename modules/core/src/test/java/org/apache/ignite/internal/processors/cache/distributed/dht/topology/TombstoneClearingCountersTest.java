@@ -811,7 +811,7 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
             Arrays.stream(crd.affinity(DEFAULT_CACHE_NAME)
                 .backupPartitions(crd.localNode())).boxed().collect(Collectors.toSet()));
 
-        for (int i = 0; i < crd.affinity(DEFAULT_CACHE_NAME).partitions(); ++i){
+        for (int i = 0; i < crd.affinity(DEFAULT_CACHE_NAME).partitions(); ++i) {
             if (!primariesAndBackups0.contains(i)) {
                 testPart = i;
                 break;
