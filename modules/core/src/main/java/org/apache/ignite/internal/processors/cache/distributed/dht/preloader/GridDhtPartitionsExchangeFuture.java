@@ -89,6 +89,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
+import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.StateChangeRequest;
 import org.apache.ignite.internal.processors.cache.WalStateAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter;
@@ -3547,11 +3548,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (!haveHist.contains(part) && maxClearCntr != 0 && sortedCnrs.getValue().firstKey() <= maxClearCntr) {
                 // Process local partition.
                 GridDhtLocalPartition locPart0 = top.localPartition(part);
-                if (locPart0 != null
-                    && locPart0.state() == GridDhtPartitionState.MOVING
-                    && locPart0.dataStore().partUpdateCounter().tombstoneClearCounter() < maxClearCntr) {
-                    // Set partition as not applicable for fast full rebalancing.
-                    addClearingPartition(top.groupId(), part);
+                if (locPart0 != null) {
+                    PartitionUpdateCounter partCntr = locPart0.dataStore().partUpdateCounter();
+
+                    if (locPart0.state() == GridDhtPartitionState.MOVING
+                        && (partCntr == null || partCntr.tombstoneClearCounter() < maxClearCntr)) {
+                        addClearingPartition(top.groupId(), part);
+                    }
                 }
 
                 // Process remote partitions.
