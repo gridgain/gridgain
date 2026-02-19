@@ -334,7 +334,6 @@
                                             <fileset dir="assembly/docfiles">
                                                 <include name="img/**" />
                                                 <include name="*.js" />
-                                                <include name="favicon.ico" />
                                             </fileset>
                                         </copy>
 
