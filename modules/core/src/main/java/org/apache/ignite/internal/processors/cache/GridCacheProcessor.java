@@ -310,7 +310,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     private ConcurrentMap<UUID, EnableStatisticsFuture> manageStatisticsFuts = new ConcurrentHashMap<>();
 
     /** */
-    private ClusterCachesInfo cachesInfo;
+    public ClusterCachesInfo cachesInfo;
 
     /** */
     private GridLocalConfigManager locCfgMgr;
@@ -1793,6 +1793,21 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         List<DynamicCacheDescriptor> receivedCaches = cachesInfo.cachesReceivedFromJoin(nodeId);
 
         List<StartCacheInfo> startCacheInfos = receivedCaches.stream()
+            .map(desc -> {
+                // Probably, we have to do the same on the server node as well,
+                // when this node is not an affinity node for the provided cache.
+                if (!isLocalAffinity(desc.groupDescriptor().config())) {
+                    try {
+                        ctx.query().initQueryStructuresForNotStartedCache(desc);
+                    }
+                    catch (IgniteCheckedException e) {
+                        throw new RuntimeException(
+                            ">>>>> Failed to init query engine [cacheName=" + desc.cacheName() + ']',
+                            e);
+                    }
+                }
+                return desc;
+            })
             .filter(desc -> isLocalAffinity(desc.groupDescriptor().config()))
             .map(desc -> new StartCacheInfo(desc, null, exchTopVer, false))
             .collect(toList());
@@ -1932,6 +1947,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                         GridCacheContext cctx = cacheContexts.get(cacheInfo);
 
                         if (!cctx.isRecoveryMode()) {
+//                            log.warning(">>>>> starting a cache on node [cache=" + cctx.config().getName() + ", node=" + ctx.discovery().localNode().consistentId()
+//                                + "instanceName=" + ctx.config().getIgniteInstanceName() + ']');
+//                            if (cctx.config().getName().equalsIgnoreCase("TESTTABLE")) {
+//                                IgniteUtils.dumpStack(log, ">>>>> starting a cache on node [name=" + cctx.config().getName() + ']');
+//                            }
                             ctx.query().onCacheStart(
                                 new GridCacheContextInfo(cctx, cacheInfo.isClientCache()),
                                 cacheInfo.getCacheDescriptor().schema() != null
@@ -3509,6 +3529,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         boolean failIfNotStarted,
         boolean checkThreadTx
     ) {
+////        log.warning(">>>>> starting cacheproxy [name=" + cacheName + ']');
+//        IgniteUtils.dumpStack(log, ">>>>> starting cacheproxy [node="
+//            + ctx.config().getIgniteInstanceName() + ", cachename=" + cacheName
+//            + ", failIfNotStarted=" + failIfNotStarted
+//            + ", failIfExists=" + failIfExists
+//            + ']');
         return dynamicStartCache(ccfg,
             cacheName,
             nearCfg,
@@ -3590,13 +3616,18 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     ccfg != null && ccfg.isEncryptionEnabled() ? masterKeyDigest : null);
 
                 if (req != null) {
-                    if (req.clientStartOnly())
+                    if (req.clientStartOnly()) {
+//                        log.warning(">>>>> creating a cache start request [client only]");
                         return startClientCacheChange(F.asMap(req.cacheName(), req), null);
+                    }
 
+//                    log.warning(">>>>> creating a cache start request [reg]");
                     return F.first(initiateCacheChanges(F.asList(req)));
                 }
-                else
+                else {
+//                    log.warning(">>>>> creating a cache start request [request is null]");
                     return new GridFinishedFuture<>();
+                }
             };
 
         try {
