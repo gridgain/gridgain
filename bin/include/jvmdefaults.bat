@@ -38,7 +38,6 @@ if %java_version% GEQ 9 if %java_version% LSS 11 (
     --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED ^
     --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED ^
     --illegal-access=permit ^
-    --add-modules=java.xml.bind ^
     %current_value%
 )
 
