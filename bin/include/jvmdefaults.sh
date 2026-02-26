@@ -47,7 +47,6 @@ getJavaSpecificOpts() {
           --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
           --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
           --illegal-access=permit \
-          --add-modules=java.xml.bind \
           $current_value"
 
   elif [ "$version" -ge 11 ]; then
