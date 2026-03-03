@@ -29,10 +29,6 @@
 
     <artifactId>ignite-examples</artifactId>
 
-    <properties>
-        <syft.skip>true</syft.skip>
-    </properties>
-
     <!--
      Need to override this transitive dependency to fix vulnerabilities.
      List of CVEs fixed:
@@ -192,6 +188,7 @@
         <!-- will be changed by profile activation. allows to combine profiles. -->
         <lgpl.folder>src/main/java</lgpl.folder>
         <lgpl.test.folder>src/test/java</lgpl.test.folder>
+        <syft.skip>true</syft.skip>
     </properties>
 
     <profiles>
