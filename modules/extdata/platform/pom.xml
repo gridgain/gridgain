@@ -36,6 +36,10 @@
 
     <url>http://ignite.apache.org</url>
 
+    <properties>
+        <syft.skip>true</syft.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.gridgain</groupId>

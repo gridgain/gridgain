@@ -35,6 +35,10 @@
     <artifactId>ignite-ml</artifactId>
     <url>http://ignite.apache.org</url>
 
+    <properties>
+        <syft.skip>true</syft.skip>
+    </properties>
+
     <build>
         <plugins>
             <plugin>

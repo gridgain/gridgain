@@ -35,6 +35,10 @@
 
     <url>http://ignite.apache.org</url>
 
+    <properties>
+        <syft.skip>true</syft.skip>
+    </properties>
+
     <dependencies>
         <!-- Note: when adding new Ignite module dependency please register it in
         org.apache.ignite.compatibility.testframework.junits.IgniteCompatibilityAbstractTest.getDependencies()

@@ -32,6 +32,10 @@
 
     <artifactId>ignite-extdata-uri</artifactId>
 
+    <properties>
+        <syft.skip>true</syft.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.gridgain</groupId>
