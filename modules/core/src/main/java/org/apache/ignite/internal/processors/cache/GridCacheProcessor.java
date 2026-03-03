@@ -1757,8 +1757,9 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     ctx.query().initQueryStructuresForNotStartedCache(cacheDesc);
                 }
                 catch (Exception e) {
+                    // See https://ggsystems.atlassian.net/browse/GG-29395
                     log.error("Can't initialize query structures for not started cache [cacheName=" +
-                        cacheDesc.cacheName() + "]", e);
+                        cacheDesc.cacheName() + ']', e);
                 }
             });
 
@@ -1788,14 +1789,27 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @return Started caches descriptors.
      * @throws IgniteCheckedException If failed.
      */
-    public Collection<DynamicCacheDescriptor> startReceivedCaches(UUID nodeId, AffinityTopologyVersion exchTopVer)
-        throws IgniteCheckedException {
+    public Collection<DynamicCacheDescriptor> startReceivedCaches(
+        UUID nodeId,
+        AffinityTopologyVersion exchTopVer
+    ) throws IgniteCheckedException {
         List<DynamicCacheDescriptor> receivedCaches = cachesInfo.cachesReceivedFromJoin(nodeId);
 
-        List<StartCacheInfo> startCacheInfos = receivedCaches.stream()
-            .filter(desc -> isLocalAffinity(desc.groupDescriptor().config()))
-            .map(desc -> new StartCacheInfo(desc, null, exchTopVer, false))
-            .collect(toList());
+        List<StartCacheInfo> startCacheInfos = new ArrayList<>(receivedCaches.size());
+        receivedCaches.forEach(desc -> {
+            if (isLocalAffinity(desc.groupDescriptor().config()))
+                startCacheInfos.add(new StartCacheInfo(desc, null, exchTopVer, false));
+            else {
+                try {
+                    ctx.query().initQueryStructuresForNotStartedCache(desc);
+                }
+                catch (IgniteCheckedException e) {
+                    // See https://ggsystems.atlassian.net/browse/GG-29395
+                    log.error("Can't initialize query structures for not started cache [cacheName=" +
+                        desc.cacheName() + ']', e);
+                }
+            }
+        });
 
         prepareStartCaches(startCacheInfos);
 
