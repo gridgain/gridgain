@@ -36,6 +36,10 @@
     <version>8.9.127-SNAPSHOT</version>
     <packaging>pom</packaging>
 
+    <properties>
+        <syft.skip>true</syft.skip>
+    </properties>
+
     <developers>
         <developer>
             <id>dsetrakyan</id>

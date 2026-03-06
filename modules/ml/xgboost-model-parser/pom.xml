@@ -25,6 +25,7 @@
 
     <properties>
         <antlr.version>4.7.1</antlr.version>
+        <syft.skip>true</syft.skip>
     </properties>
 
     <parent>

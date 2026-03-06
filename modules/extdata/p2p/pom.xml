@@ -31,6 +31,10 @@
 
     <artifactId>ignite-extdata-p2p</artifactId>
 
+    <properties>
+        <syft.skip>true</syft.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.gridgain</groupId>

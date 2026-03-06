@@ -34,6 +34,7 @@
 
     <properties>
         <mesos.version>1.5.3</mesos.version>
+        <syft.skip>true</syft.skip>
     </properties>
 
     <dependencies>

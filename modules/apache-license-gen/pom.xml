@@ -33,6 +33,10 @@
     <version>8.9.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
+    <properties>
+        <syft.skip>true</syft.skip>
+    </properties>
+
     <build>
         <plugins>
             <plugin>

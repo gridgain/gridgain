@@ -34,6 +34,10 @@
 
     <artifactId>ignite-examples-ml</artifactId>
 
+    <properties>
+        <syft.skip>true</syft.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>javax.cache</groupId>

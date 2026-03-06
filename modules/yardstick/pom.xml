@@ -32,6 +32,10 @@
     <artifactId>ignite-yardstick</artifactId>
     <url>http://ignite.apache.org</url>
 
+    <properties>
+        <syft.skip>true</syft.skip>
+    </properties>
+
     <!-- Need to override this transitive dependency to fix vulnerabilities. -->
     <dependencyManagement>
         <dependencies>

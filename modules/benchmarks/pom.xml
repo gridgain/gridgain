@@ -35,6 +35,7 @@
 
     <properties>
         <uberjar.name>benchmarks</uberjar.name>
+        <syft.skip>true</syft.skip>
     </properties>
 
     <dependencies>
