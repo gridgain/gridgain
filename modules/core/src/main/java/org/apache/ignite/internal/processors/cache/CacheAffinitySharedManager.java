@@ -304,6 +304,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                         List<ClusterNode> owners = top.owners(part, waitInfo.topVer);
                         List<ClusterNode> ideal = waitInfo.assignments.get(checkGrpId).get(part);
+                        log.debug("check rebalance state, partition: " + part + " owners: " + owners + " ideal: " + ideal);
 
                         if (!owners.containsAll(ideal)) {
                             rebalanced = false;

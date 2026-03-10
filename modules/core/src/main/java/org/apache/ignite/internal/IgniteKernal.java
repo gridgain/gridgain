@@ -1864,6 +1864,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 ctx.addNodeAttribute(e.getKey(), e.getValue());
             }
+            log.info("user attributes for current node: " + cfg.getUserAttributes());
         }
 
         ctx.addNodeAttribute(ATTR_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED,
