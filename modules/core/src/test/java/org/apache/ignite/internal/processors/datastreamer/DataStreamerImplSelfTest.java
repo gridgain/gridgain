@@ -35,6 +35,7 @@ import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheServerNotFoundException;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -287,6 +288,34 @@ public class DataStreamerImplSelfTest extends GridCommonAbstractTest {
         finally {
             noNodesFilter = false;
 
+            assertTrue(failed);
+        }
+    }
+
+    /**
+     * Test failure on {@code DataStreamer.flush()} method when cluster is inactive.
+     *
+     * @throws Exception If fail.
+     */
+    @Test
+    public void testInactiveClusterOnFlush() throws Exception {
+        boolean failed = false;
+
+        try {
+            Ignite ignite = startGrid(1);
+
+            try (IgniteDataStreamer<Integer, String> streamer = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
+                ignite.cluster().state(ClusterState.INACTIVE);
+
+                streamer.addData(1, "1");
+
+                streamer.flush();
+            }
+            catch (IllegalStateException ignored) {
+                failed = true;
+            }
+        }
+        finally {
             assertTrue(failed);
         }
     }
