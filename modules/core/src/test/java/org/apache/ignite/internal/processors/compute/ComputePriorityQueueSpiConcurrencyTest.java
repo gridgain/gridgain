@@ -51,8 +51,7 @@ public class ComputePriorityQueueSpiConcurrencyTest extends GridCommonAbstractTe
     /**
      * {@inheritDoc}
      */
-    @Override
-    protected void beforeTestsStarted() throws Exception {
+    @Override protected void beforeTestsStarted() throws Exception {
         startGrids(GRID_CNT);
 
         spi.setParallelJobsNumber(20);
@@ -64,8 +63,7 @@ public class ComputePriorityQueueSpiConcurrencyTest extends GridCommonAbstractTe
     /**
      * {@inheritDoc}
      */
-    @Override
-    protected void afterTestsStopped() throws Exception {
+    @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
 
         stopAllGrids();
@@ -74,8 +72,7 @@ public class ComputePriorityQueueSpiConcurrencyTest extends GridCommonAbstractTe
     /**
      * {@inheritDoc}
      */
-    @Override
-    protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setFailureHandler(new StopNodeFailureHandler())
             .setCollisionSpi(spi)
@@ -112,8 +109,7 @@ public class ComputePriorityQueueSpiConcurrencyTest extends GridCommonAbstractTe
         }
     }
 
-    @Override
-    protected long getTestTimeout() {
+    @Override protected long getTestTimeout() {
         return 30_000L;
     }
 
@@ -122,15 +118,13 @@ public class ComputePriorityQueueSpiConcurrencyTest extends GridCommonAbstractTe
         @TaskSessionResource
         private ComputeTaskSession taskSes = null;
 
-        @Override
-        protected Collection<ComputeJob> split(int gridSize, Object arg) {
+        @Override protected Collection<ComputeJob> split(int gridSize, Object arg) {
             taskSes.setAttribute("grid.task.priority", new Random().nextInt(10));
 
             List<ComputeJob> jobs = new ArrayList<>(gridSize);
 
             jobs.add(new ComputeJobAdapter() {
-                @Override
-                public Object execute() throws IgniteException {
+                @Override public Object execute() throws IgniteException {
                     try {
                         Thread.sleep(5);
                     } catch (InterruptedException e) {
@@ -144,8 +138,7 @@ public class ComputePriorityQueueSpiConcurrencyTest extends GridCommonAbstractTe
             return jobs;
         }
 
-        @Override
-        public Object reduce(List<ComputeJobResult> results) throws IgniteException {
+        @Override public Object reduce(List<ComputeJobResult> results) throws IgniteException {
             return null;
         }
     }
