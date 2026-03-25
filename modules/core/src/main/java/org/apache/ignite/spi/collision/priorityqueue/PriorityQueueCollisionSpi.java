@@ -502,49 +502,54 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized void onCollision(CollisionContext ctx) {
+    @Override public void onCollision(CollisionContext ctx) {
         assert ctx != null;
 
-        Collection<CollisionJobContext> waitJobs = ctx.waitingJobs();
         int activeSize = ctx.activeJobs().size();
+
+        Collection<CollisionJobContext> waitJobs = ctx.waitingJobs();
+
         int waitSize = waitJobs.size();
-        int activateCnt = parallelJobsNum - activeSize;
 
         runningCnt = activeSize;
         waitingCnt = waitSize;
 
-        if (waitSize == 0 || activateCnt <= 0) {
-            return;
-        }
-
         heldCnt = ctx.heldJobs().size();
+
+        int activateCnt = parallelJobsNum - activeSize;
+
+        int waitJobsNum = this.waitJobsNum;
+
+        if (waitSize == 0 && activateCnt <= 0 && waitSize < waitJobsNum)
+            return;
 
         // Temporary snapshot of waitJobs.
         ArrayList<GridCollisionJobContextWrapper> waitSnap = slice(waitJobs, waitSize);
 
         boolean waitSnapSorted = false;
 
-        if (waitSize <= activateCnt) {
-            for (GridCollisionJobContextWrapper cntx: waitSnap) {
-                cntx.getContext().activate();
-                waitSize--;
+        if (activateCnt > 0 && waitSize > 0) {
+            if (waitSize <= activateCnt) {
+                for (GridCollisionJobContextWrapper cntx: waitSnap) {
+                    cntx.getContext().activate();
+                    waitSize--;
+                }
             }
-        } else {
-            waitSnap.sort(priComp);
-            waitSnapSorted = true;
+            else {
+                waitSnap.sort(priComp);
+                waitSnapSorted = true;
 
-            if (preventStarvation)
-                bumpPriority(waitSnap);
+                if (preventStarvation)
+                    bumpPriority(waitSnap);
 
-            // Passive list could have less then waitSize elements.
-            for (int i = 0; i < activateCnt && i < waitSnap.size(); i++) {
-                waitSnap.get(i).getContext().activate();
+                // Passive list could have less then waitSize elements.
+                for (int i = 0; i < activateCnt && i < waitSnap.size(); i++) {
+                    waitSnap.get(i).getContext().activate();
 
-                waitSize--;
+                    waitSize--;
+                }
             }
         }
-
-        int waitJobsNum = this.waitJobsNum;
 
         if (waitSize > waitJobsNum) {
             int skip = waitSnap.size() - waitSize;

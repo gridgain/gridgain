@@ -20,7 +20,6 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -182,7 +181,7 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
         WaitJob.waitFut.onDone();
 
         for (Ignite n : G.allGrids()) {
-            GridFutureAdapter<Void> fut = PriorityQueueCollisionSpiEx.spiEx(n).onChangeTaskAttrsFut;
+            GridFutureAdapter<Void> fut = PriorityQueueCollisionSpiEx.spiEx(n).onHandleCollisionFut;
 
             if (expHandleCollisionOnChangeTaskAttrs)
                 fut.get(getTestTimeout());
@@ -205,7 +204,7 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
         final GridFutureAdapter<CollisionJobContext> waitJobFut = new GridFutureAdapter<>();
 
         /** */
-        final GridFutureAdapter<Void> onChangeTaskAttrsFut = new GridFutureAdapter<>();
+        final GridFutureAdapter<Void> onHandleCollisionFut = new GridFutureAdapter<>();
 
         /** {@inheritDoc} */
         @Override public void onCollision(CollisionContext ctx) {
@@ -217,15 +216,7 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
             }
 
             if (handleCollision) {
-                if (!onChangeTaskAttrsFut.isDone()) {
-                    Stream.of(new Exception().getStackTrace())
-                        .filter(el ->
-                            ON_CHANGE_TASK_ATTRS_MTD.getDeclaringClass().getName().equals(el.getClassName()) &&
-                                ON_CHANGE_TASK_ATTRS_MTD.getName().equals(el.getMethodName())
-                        )
-                        .findAny()
-                        .ifPresent(el -> onChangeTaskAttrsFut.onDone());
-                }
+                    onHandleCollisionFut.onDone();
 
                 super.onCollision(ctx);
             }
@@ -237,7 +228,7 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
 
             waitJobFut.reset();
 
-            onChangeTaskAttrsFut.reset();
+            onHandleCollisionFut.reset();
         }
 
         /** */
