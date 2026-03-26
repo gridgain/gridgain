@@ -139,6 +139,7 @@ public class ComputePriorityQueueSpiConcurrencyTest extends GridCommonAbstractTe
 
         @Override public void onCollision(CollisionContext ctx) {
             collisionCounter.incrementAndGet();
+            super.onCollision(ctx);
         }
     }
 }
