@@ -171,6 +171,14 @@ namespace Apache.Ignite.Core.Cache.Query
         public int UpdateBatchSize { get; set; }
 
         /// <summary>
+        /// Gets or sets the query label.
+        /// <para />
+        /// The specified label can be used to identify the running query in system views
+        /// and in the log when printing warnings about long-running queries.
+        /// </summary>
+        public string Label { get; set; }
+
+        /// <summary>
         /// Returns a <see cref="string" /> that represents this instance.
         /// </summary>
         /// <returns>
@@ -188,9 +196,9 @@ namespace Apache.Ignite.Core.Cache.Query
 
             return string.Format("SqlFieldsQuery [Sql={0}, Arguments=[{1}], Local={2}, PageSize={3}, " +
                                  "EnableDistributedJoins={4}, EnforceJoinOrder={5}, Timeout={6}, Partitions=[{7}], " +
-                                 "UpdateBatchSize={8}, Colocated={9}, Schema={10}, Lazy={11}]", Sql, args, Local,
+                                 "UpdateBatchSize={8}, Colocated={9}, Schema={10}, Lazy={11}, Label={12}]", Sql, args, Local,
                                  PageSize, EnableDistributedJoins, EnforceJoinOrder, Timeout, parts,
-                                 UpdateBatchSize, Colocated, Schema, Lazy);
+                                 UpdateBatchSize, Colocated, Schema, Lazy, Label);
         }
 
         /** <inheritdoc /> */
@@ -221,6 +229,7 @@ namespace Apache.Ignite.Core.Cache.Query
             writer.WriteString(Schema); // Schema
             writer.WriteIntArray(Partitions);
             writer.WriteInt(UpdateBatchSize);
+            writer.WriteString(Label); // Label
         }
 
         /** <inheritdoc /> */
