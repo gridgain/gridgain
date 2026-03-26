@@ -35,6 +35,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.job.GridJobWorker;
 import org.apache.ignite.internal.processors.job.JobWorkerInterruptionTimeoutObject;
@@ -155,6 +156,8 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
 
         ComputeTaskFuture<Void> taskFut = node.compute().executeAsync(new ComputeTask(CountDownLatchJob.class), null);
 
+        waitForCollisionHandling();
+
         GridJobWorker jobWorker = jobWorker(node, taskFut.getTaskSession());
 
         cancelWitchChecks(jobWorker);
@@ -177,6 +180,8 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
         computeJobWorkerInterruptTimeout(node).propagate(100L);
 
         ComputeTaskFuture<Void> taskFut = node.compute().executeAsync(new ComputeTask(CountDownLatchJob.class), null);
+
+        waitForCollisionHandling();
 
         GridJobWorker jobWorker = jobWorker(node, taskFut.getTaskSession());
 
@@ -205,6 +210,8 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
 
         ComputeTaskFuture<Void> taskFut = node.compute().executeAsync(new ComputeTask(CountDownLatchJob.class), null);
 
+        waitForCollisionHandling();
+
         GridJobWorker jobWorker = jobWorker(node, taskFut.getTaskSession());
 
         cancelBeforeStartWitchChecks(jobWorker);
@@ -220,6 +227,10 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
         assertThat(jobWorker.isCancelled(), equalTo(true));
         assertThat(countDownLatchJobInterrupted(jobWorker), equalTo(false));
         assertThat(jobWorkerInterrupters(timeoutObjects(node), jobWorker), hasSize(2));
+    }
+
+    private static void waitForCollisionHandling() throws IgniteInterruptedCheckedException {
+        waitForCondition(() -> !node.compute().activeTaskFutures().isEmpty(), 1000);
     }
 
     /**
