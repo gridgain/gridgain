@@ -963,6 +963,70 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
         }
 
         /// <summary>
+        /// Tests <see cref="SqlFieldsQuery.Label"/> property propagation to running queries system view.
+        /// </summary>
+        [Test]
+        public void TestSqlFieldsQueryLabel()
+        {
+            var cache = Cache();
+
+            const string systemViewSql = "SELECT SQL, QUERY_ID, SCHEMA_NAME, LOCAL, START_TIME, DURATION, " +
+                                         "ENFORCE_JOIN_ORDER, DISTRIBUTED_JOINS, LAZY, LABEL FROM SYS.SQL_QUERIES";
+
+            const string label0 = "test-label-0";
+            const string label1 = "test-label-1";
+
+            // Start the first query with label0 (don't close the cursor to keep it running)
+            var notClosedCursor = cache.Query(new SqlFieldsQuery(systemViewSql)
+            {
+                Label = label0,
+                Local = true
+            });
+
+            // Start the second query with label1 and get all results
+            var results = cache.Query(new SqlFieldsQuery(systemViewSql)
+            {
+                Label = label1,
+                Local = true
+            }).GetAll();
+
+            // Should see 2 running queries
+            Assert.AreEqual(2, results.Count);
+
+            var res0 = results[0];
+            var res1 = results[1];
+
+            // Verify SQL matches
+            Assert.AreEqual(systemViewSql, res0[0]);
+            Assert.AreEqual(systemViewSql, res1[0]);
+
+            // Verify LOCAL flag is true
+            Assert.IsTrue((bool)res0[3]);
+            Assert.IsTrue((bool)res1[3]);
+
+            // Verify query IDs are different
+            var id0 = (string)res0[1];
+            var id1 = (string)res1[1];
+            Assert.AreNotEqual(id0, id1);
+
+            // Verify labels are correctly set (index 9 is LABEL column)
+            var actualLabel0 = (string)res0[9];
+            var actualLabel1 = (string)res1[9];
+
+            // Labels should match (one should be label0, other should be label1)
+            Assert.IsTrue((actualLabel0 == label0 && actualLabel1 == label1) ||
+                          (actualLabel0 == label1 && actualLabel1 == label0),
+                $"Expected labels '{label0}' and '{label1}', but got '{actualLabel0}' and '{actualLabel1}'");
+
+            // Close the first cursor
+            notClosedCursor.Dispose();
+
+            // Now should only see 1 running query
+            var remainingResults = cache.Query(new SqlFieldsQuery(systemViewSql)).GetAll();
+            Assert.AreEqual(1, remainingResults.Count);
+        }
+
+        /// <summary>
         /// Validates fields metadata collection
         /// </summary>
         /// <param name="metadata">Metadata</param>
