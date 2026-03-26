@@ -211,7 +211,8 @@ namespace Apache.Ignite.Linq.Impl
                 Arguments = args,
                 Lazy = _options.Lazy,
                 UpdateBatchSize = _options.UpdateBatchSize,
-                Partitions = _options.Partitions
+                Partitions = _options.Partitions,
+                Label = _options.Label
             };
         }
 
