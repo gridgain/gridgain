@@ -57,8 +57,7 @@ public class ComputePriorityQueueSpiConcurrencyTest extends GridCommonAbstractTe
     /**
      * {@inheritDoc}
      */
-    @Override
-    protected void beforeTestsStarted() throws Exception {
+    @Override protected void beforeTestsStarted() throws Exception {
         startGrids(GRID_CNT);
 
         spi.setParallelJobsNumber(PARALLEL_JOBS_COUNT);
@@ -70,8 +69,7 @@ public class ComputePriorityQueueSpiConcurrencyTest extends GridCommonAbstractTe
     /**
      * {@inheritDoc}
      */
-    @Override
-    protected void afterTestsStopped() throws Exception {
+    @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
 
         stopAllGrids();
@@ -80,8 +78,7 @@ public class ComputePriorityQueueSpiConcurrencyTest extends GridCommonAbstractTe
     /**
      * {@inheritDoc}
      */
-    @Override
-    protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setCollisionSpi(spi);
     }
@@ -140,8 +137,7 @@ public class ComputePriorityQueueSpiConcurrencyTest extends GridCommonAbstractTe
     private static class PriorityQueueCollisionSpiEx extends PriorityQueueCollisionSpi {
         private AtomicLong collisionCounter = new AtomicLong();
 
-        @Override
-        public void onCollision(CollisionContext ctx) {
+        @Override public void onCollision(CollisionContext ctx) {
             collisionCounter.incrementAndGet();
         }
     }
