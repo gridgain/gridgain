@@ -116,6 +116,28 @@ namespace Apache.Ignite.Core.Tests.Client.Compatibility
         }
 
         /// <summary>
+        /// Tests that SqlFieldsQuery with Label property set to non-empty value fails on old versions.
+        /// </summary>
+        [Test]
+        public void TestSqlFieldsQueryLabelThrowsOnOldVersions()
+        {
+            var version = new ClientProtocolVersion(1, 1, 0);
+
+            using (var client = GetClient(version))
+            {
+                var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
+
+                var query = new SqlFieldsQuery("SELECT 1")
+                {
+                    Label = "test-compatibility-label"
+                };
+
+                var ex = Assert.Throws<IgniteClientException>(() => cache.Query(query).GetAll());
+                Assert.AreEqual("Query label is not supported by the server.", ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Tests that old client with new server can negotiate a protocol version.
         /// </summary>
         [Test]
