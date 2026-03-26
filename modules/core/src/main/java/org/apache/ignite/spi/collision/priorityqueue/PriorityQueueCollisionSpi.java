@@ -542,7 +542,7 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
                 if (preventStarvation)
                     bumpPriority(waitSnap);
 
-                // Passive list could have less then waitSize elements.
+                // Passive list could have less than waitSize elements.
                 for (int i = 0; i < activateCnt && i < waitSnap.size(); i++) {
                     waitSnap.get(i).getContext().activate();
 
