@@ -963,7 +963,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 
             writer.WriteInt(qry.UpdateBatchSize);
 
-            if (ctx.Features.HasFeature(ClientBitmaskFeature.SqlFieldsQueryLabel))
+            if (ctx.Features.HasFeature(ClientBitmaskFeature.QryLabel))
             {
                 writer.WriteString(qry.Label);
             }
