@@ -33,6 +33,7 @@ namespace Apache.Ignite.Core.Impl.Client
         BinaryConfiguration = 8,
         ServiceInvokeCtx = 10,
         Heartbeat = 11,
-        CachePluginConfigurations = 32
+        CachePluginConfigurations = 32,
+        SqlFieldsQueryLabel = 34
     }
 }

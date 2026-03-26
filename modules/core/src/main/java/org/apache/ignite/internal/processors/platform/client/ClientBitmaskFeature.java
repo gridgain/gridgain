@@ -80,7 +80,10 @@ public enum ClientBitmaskFeature implements ThinProtocolFeature {
     CACHE_PLUGIN_CONFIGURATIONS(32),
 
     /** Vector Similarty function for VECTOR INDEX. */
-    QUERY_INDEX_VECTOR_SIMILARITY(33);
+    QUERY_INDEX_VECTOR_SIMILARITY(33),
+
+    /** {@link org.apache.ignite.cache.query.SqlFieldsQuery#setLabel(String)} support. */
+    SQL_FIELDS_QUERY_LABEL(34);
 
     /** */
     private static final EnumSet<ClientBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =
