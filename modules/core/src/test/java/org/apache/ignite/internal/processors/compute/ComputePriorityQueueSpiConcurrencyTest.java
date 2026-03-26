@@ -38,6 +38,7 @@ import org.junit.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.lessThan;
 
 /**
  * Tests related to how priority queue collision SPI handles high concurrency cases.
@@ -91,8 +92,12 @@ public class ComputePriorityQueueSpiConcurrencyTest extends GridCommonAbstractTe
 
         int taskCount = 200_000;
 
+        long started = System.currentTimeMillis();
+        long timeout = 20_000L;
+
         for (int i = 0; i < taskCount; i++) {
             ignite.compute().executeAsync(new RandomPriorityTask(), "");
+            assertThat(System.currentTimeMillis() - started, lessThan(timeout));
         }
 
         assertThat(spi.collisionCounter.get(), greaterThan(0L));
