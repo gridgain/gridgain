@@ -967,6 +967,10 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             {
                 writer.WriteString(qry.Label);
             }
+            else if (!string.IsNullOrEmpty(qry.Label))
+            {
+                throw new IgniteClientException("Query label is not supported by the server.");
+            }
         }
 
         /// <summary>
