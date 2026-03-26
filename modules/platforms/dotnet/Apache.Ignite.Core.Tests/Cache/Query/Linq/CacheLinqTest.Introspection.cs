@@ -155,7 +155,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Linq
                   "(((_T0.\"_KEY\" > ?) and (_T0.\"age1\" > ?)) " +
                   "and (_T0.\"Name\" like \'%\' || ? || \'%\') ), Arguments=[10, 20, x], Local=False, " +
                   "PageSize=1024, EnableDistributedJoins=True, EnforceJoinOrder=False, " +
-                  "Timeout=00:00:00, Partitions=[], UpdateBatchSize=1, Colocated=False, Schema=, Lazy=False]]"
+                  "Timeout=00:00:00, Partitions=[], UpdateBatchSize=1, Colocated=False, Schema=, Lazy=False, Label=]]"
                 : "CacheQueryable [CacheName=person_org, TableName=Person, Query=SqlFieldsQuery " +
                   "[Sql=select _T0._KEY, _T0._VAL from PERSON_ORG_SCHEMA.Person as _T0 where " +
                   "(((_T0._KEY > ?) and (_T0.AGE1 > ?)) " +
