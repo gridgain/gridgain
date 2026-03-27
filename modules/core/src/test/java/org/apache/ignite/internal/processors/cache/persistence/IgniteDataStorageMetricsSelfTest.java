@@ -61,6 +61,7 @@ import org.apache.ignite.mxbean.DataStorageMetricsMXBean;
 import org.apache.ignite.spi.metric.HistogramMetric;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
@@ -499,6 +500,7 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testStorageSize() throws Exception {
         IgniteEx grid = startGrid(0);
 

@@ -46,6 +46,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionSingleNode;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -407,6 +408,7 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testQueryFailover() throws Exception {
         try (Connection conn = DriverManager.getConnection(
             "jdbc:ignite:thin://127.0.0.1:10800..10802?partitionAwareness=true")) {

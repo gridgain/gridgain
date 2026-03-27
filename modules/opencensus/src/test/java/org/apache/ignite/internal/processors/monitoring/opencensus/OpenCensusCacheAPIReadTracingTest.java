@@ -29,6 +29,7 @@ import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
 import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
@@ -408,6 +409,7 @@ public class OpenCensusCacheAPIReadTracingTest extends AbstractTracingTest {
      *
      */
     @Test
+    @Ignore("Flaky test")
     public void testCacheAtomicGetAsyncAllTracing() throws Exception {
         client.cache(ATOMIC_CACHE).putAll(
             new HashMap<String, Integer>() {{

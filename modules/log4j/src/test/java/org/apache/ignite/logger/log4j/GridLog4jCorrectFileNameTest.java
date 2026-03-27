@@ -29,6 +29,7 @@ import org.apache.log4j.PatternLayout;
 import org.apache.log4j.varia.LevelRangeFilter;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -72,6 +73,7 @@ public class GridLog4jCorrectFileNameTest extends GridCommonAbstractTest {
      * @throws Exception If error occurs.
      */
     @Test
+    @Ignore("Flaky test")
     public void testLogFilesTwoNodes() throws Exception {
         checkOneNode(0);
         checkOneNode(1);

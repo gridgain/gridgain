@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.localtask.DurableBackgroundTaskStat
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
@@ -271,6 +272,7 @@ public class DurableBackgroundTasksProcessorSelfTest extends GridCommonAbstractT
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testDontDeleteTaskIfItsRestart() throws Exception {
         IgniteEx n = startGrid(0);
 

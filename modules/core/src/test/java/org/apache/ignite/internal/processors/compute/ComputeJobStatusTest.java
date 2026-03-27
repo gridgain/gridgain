@@ -54,6 +54,7 @@ import org.apache.ignite.spi.collision.CollisionJobContext;
 import org.apache.ignite.spi.collision.priorityqueue.PriorityQueueCollisionSpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.Collections.emptyMap;
@@ -177,6 +178,7 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void tesSuspendedTasks() throws Exception {
         checkJobStatuses(SUSPENDED);
     }

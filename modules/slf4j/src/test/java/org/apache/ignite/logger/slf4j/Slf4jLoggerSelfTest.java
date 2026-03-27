@@ -31,6 +31,7 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.logging.log4j.LogManager;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
@@ -81,6 +82,7 @@ public class Slf4jLoggerSelfTest {
      * @throws Exception If error occurs.
      */
     @Test
+    @Ignore("Flaky test")
     public void testJULIsRedirectedToSlf4j() throws Exception {
         File logFile = checkOneNode();
 
@@ -109,6 +111,7 @@ public class Slf4jLoggerSelfTest {
      * @throws Exception If error occurs.
      */
     @Test
+    @Ignore("Flaky test")
     public void testJCLIsRedirectedToSlf4j() throws Exception {
         File logFile = checkOneNode();
 

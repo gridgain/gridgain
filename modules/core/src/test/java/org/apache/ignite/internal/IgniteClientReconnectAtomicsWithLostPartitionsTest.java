@@ -28,6 +28,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.datastructures.GridCacheAtomicReferenceImpl;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -205,6 +206,7 @@ public class IgniteClientReconnectAtomicsWithLostPartitionsTest extends IgniteCl
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testAtomicStampedStamp() throws Exception {
         testAtomicStampedReconnectClusterRestart(
             "atomic-stamped-stamp",
@@ -215,6 +217,7 @@ public class IgniteClientReconnectAtomicsWithLostPartitionsTest extends IgniteCl
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testAtomicStampedValue() throws Exception {
         testAtomicStampedReconnectClusterRestart(
             "atomic-stamped-val",

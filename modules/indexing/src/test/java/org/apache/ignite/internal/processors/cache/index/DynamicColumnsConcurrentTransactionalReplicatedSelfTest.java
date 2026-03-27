@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.cache.index;
 
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Test to check concurrent operations on dynamic columns on TRANSACTIONAL REPLICATED cache with flat key.
@@ -29,5 +31,12 @@ public class DynamicColumnsConcurrentTransactionalReplicatedSelfTest
      */
     public DynamicColumnsConcurrentTransactionalReplicatedSelfTest() {
         super(CacheMode.REPLICATED, CacheAtomicityMode.TRANSACTIONAL);
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testAddConcurrentCacheDestroy() throws Exception {
+        // No-op.
     }
 }

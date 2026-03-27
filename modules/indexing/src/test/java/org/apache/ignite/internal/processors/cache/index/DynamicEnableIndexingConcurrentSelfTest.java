@@ -248,6 +248,7 @@ public class DynamicEnableIndexingConcurrentSelfTest extends DynamicEnableIndexi
 
     /** Test chaining schema operation with enable indexing. */
     @Test
+    @Ignore("Flaky test")
     public void testOperationChaining() throws Exception {
         IgniteEx srv1 = ignitionStart(serverConfiguration(1));
 

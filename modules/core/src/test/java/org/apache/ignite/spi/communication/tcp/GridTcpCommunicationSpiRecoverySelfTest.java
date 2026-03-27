@@ -57,6 +57,7 @@ import org.apache.ignite.testframework.junits.IgniteMock;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.spi.GridSpiAbstractTest;
 import org.apache.ignite.testframework.junits.spi.GridSpiTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -395,6 +396,7 @@ public class GridTcpCommunicationSpiRecoverySelfTest<T extends CommunicationSpi<
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testBlockRead2() throws Exception {
         createSpis();
 

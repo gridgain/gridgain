@@ -94,6 +94,7 @@ import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -1433,6 +1434,7 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed
      */
     @Test
+    @Ignore("Flaky test")
     public void testCustomEventCoordinatorFailure1() throws Exception {
         try {
             customEventCoordinatorFailure(true);

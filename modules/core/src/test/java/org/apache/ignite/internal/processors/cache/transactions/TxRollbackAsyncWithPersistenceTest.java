@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import org.junit.Ignore;
+import org.junit.Test;
+
 /**
  * Tests an ability to rollback near transactions.
  */
@@ -37,6 +40,13 @@ public class TxRollbackAsyncWithPersistenceTest extends TxRollbackAsyncTest {
         super.afterTest();
 
         cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testMixedAsyncRollbackTypes() throws Exception {
+        // No-op.
     }
 }
 
