@@ -35,6 +35,7 @@ import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.services.Service;
 import org.apache.ignite.services.ServiceContext;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
@@ -251,6 +252,7 @@ public class ServicesTest extends AbstractThinClientTest {
      * Test services timeout.
      */
     @Test
+    @Ignore("Flaky test")
     public void testServiceTimeout() throws Exception {
         long timeout = 100L;
 

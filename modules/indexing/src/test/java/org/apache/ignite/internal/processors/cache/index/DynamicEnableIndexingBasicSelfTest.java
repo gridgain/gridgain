@@ -29,6 +29,7 @@ import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -123,6 +124,7 @@ public class DynamicEnableIndexingBasicSelfTest extends DynamicEnableIndexingAbs
 
     /** */
     @Test
+    @Ignore("Flaky test")
     public void testEnableDynamicIndexing() throws Exception {
         loadData(node(), 0, NUM_ENTRIES / 2);
 

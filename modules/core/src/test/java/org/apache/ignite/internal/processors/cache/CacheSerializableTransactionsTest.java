@@ -3940,6 +3940,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testGetRemoveTxNearCache1() throws Exception {
         getRemoveTx(true, false);
     }

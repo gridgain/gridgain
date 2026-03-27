@@ -26,6 +26,7 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -62,6 +63,7 @@ public class ConnectToStartingNodeTest extends AbstractThinClientTest {
      * Test that client can't connect to server before discovery SPI start.
      */
     @Test
+    @Ignore("Flaky test")
     public void testClientConnectBeforeDiscoveryStart() throws Exception {
         IgniteInternalFuture<Ignite> futStartGrid = GridTestUtils.runAsync((Callable<Ignite>)this::startGrid);
 

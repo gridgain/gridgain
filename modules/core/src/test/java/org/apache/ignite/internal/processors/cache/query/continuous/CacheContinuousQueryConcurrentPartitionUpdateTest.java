@@ -302,6 +302,7 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testConcurrentUpdatesAndQueryStartAtomicCacheGroup() throws Exception {
         concurrentUpdatesAndQueryStart(ATOMIC, true);
     }

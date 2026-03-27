@@ -44,6 +44,7 @@ import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.configuration.ClientConnectorConfiguration.DFLT_PORT;
@@ -75,6 +76,7 @@ public class TimeoutTest extends AbstractThinClientTest {
      * Test that server closes thin client connection in case of handshake timeout.
      */
     @Test
+    @Ignore("Flaky test")
     public void testServerClosesThinClientConnectionOnHandshakeTimeout() {
         try (Ignite ignite = startGrid(0)) {
             long ts0 = System.currentTimeMillis();

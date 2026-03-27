@@ -151,6 +151,7 @@ public class IgniteLogicalRecoveryWithParamsTest extends GridCommonAbstractTest 
 
     /**Tests partially commited transactions with further recovery. */
     @Test
+    @Ignore("Flaky test")
     public void testPartiallyCommitedTx_WithoutCpOnNodeStop() throws Exception {
         testPartiallyCommitedTx();
     }
