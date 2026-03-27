@@ -33,6 +33,7 @@ namespace Apache.Ignite.Core.Impl.Client
         BinaryConfiguration = 8,
         ServiceInvokeCtx = 10,
         Heartbeat = 11,
+        QryLabel = 16,
         CachePluginConfigurations = 32
     }
 }

@@ -963,6 +963,32 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
         }
 
         /// <summary>
+        /// Tests <see cref="SqlFieldsQuery.Label"/> property propagation to running queries system view.
+        /// </summary>
+        [Test]
+        public void TestSqlFieldsQueryLabel()
+        {
+            var cache = Cache();
+
+            const string systemViewSql = "SELECT SQL, LOCAL, LABEL FROM SYS.SQL_QUERIES";
+            const string label = "test-label-0";
+
+            var results = cache.Query(new SqlFieldsQuery(systemViewSql)
+            {
+                Label = label,
+                Local = true
+            }).GetAll();
+
+            // Should see 1 running query (itself)
+            Assert.AreEqual(1, results.Count);
+            var res = results[0];
+
+            Assert.AreEqual(systemViewSql, res[0]);
+            Assert.IsTrue((bool)res[1]);
+            Assert.AreEqual(label, (string)res[2]);
+        }
+
+        /// <summary>
         /// Validates fields metadata collection
         /// </summary>
         /// <param name="metadata">Metadata</param>
