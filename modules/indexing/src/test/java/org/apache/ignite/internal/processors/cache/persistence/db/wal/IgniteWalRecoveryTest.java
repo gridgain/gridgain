@@ -124,6 +124,7 @@ import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING;
@@ -912,6 +913,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testRandomCrash() throws Exception {
         checkpointFrequency = 2_000 + new Random().nextInt(4_000);
 

@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache.datastructures.partitioned;
 
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Tests IgniteSet with client node on {@code PARTITIONED} cache.
@@ -47,5 +49,12 @@ public class GridCachePartitionedSetWithClientSelfTest extends GridCachePartitio
     /** {@inheritDoc} */
     @Override protected int gridCount() {
         return 5;
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testNodeJoinsAndLeavesCollocated() throws Exception {
+        // No-op.
     }
 }

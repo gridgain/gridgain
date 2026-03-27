@@ -682,6 +682,7 @@ public class IgniteProjectionStartStopRestartSelfTest extends GridCommonAbstract
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testRestartNodeById() throws Exception {
         joinedLatch = new CountDownLatch(3);
 

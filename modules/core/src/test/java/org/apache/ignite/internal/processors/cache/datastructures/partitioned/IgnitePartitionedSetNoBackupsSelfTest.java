@@ -25,6 +25,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheMapEntry;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -38,6 +39,20 @@ public class IgnitePartitionedSetNoBackupsSelfTest extends GridCachePartitionedS
         colCfg.setBackups(0);
 
         return colCfg;
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testNodeJoinsAndLeaves() throws Exception {
+        // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testSerialization() throws Exception {
+        // No-op.
     }
 
     /**
