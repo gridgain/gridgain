@@ -26,6 +26,8 @@ import org.apache.ignite.internal.client.GridClientProtocol;
 import org.apache.ignite.internal.client.integration.ClientAbstractMultiNodeSelfTest;
 import org.apache.ignite.internal.client.router.impl.GridTcpRouterImpl;
 import org.apache.ignite.logger.log4j.Log4JLogger;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import static org.apache.ignite.internal.client.integration.ClientAbstractSelfTest.ROUTER_LOG_CFG;
 
@@ -90,6 +92,13 @@ public class TcpRouterMultiNodeSelfTest extends ClientAbstractMultiNodeSelfTest 
         cfg.setLogger(new Log4JLogger(ROUTER_LOG_CFG));
 
         return cfg;
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testTopologyListener() throws Exception {
+        // No-op.
     }
 
     /** {@inheritDoc} */

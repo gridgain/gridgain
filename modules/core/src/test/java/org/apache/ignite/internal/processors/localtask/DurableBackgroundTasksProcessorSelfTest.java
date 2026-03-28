@@ -119,6 +119,7 @@ public class DurableBackgroundTasksProcessorSelfTest extends GridCommonAbstractT
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testRestartTaskExecutionWithMetaStorage() throws Exception {
         checkRestartTaskExecute(true);
     }

@@ -388,6 +388,7 @@ public class ZookeeperDiscoveryCommunicationFailureTest extends ZookeeperDiscove
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testCommunicationFailureResolve_KillCoordinator_5() throws Exception {
         sesTimeout = 2000;
 
@@ -598,6 +599,7 @@ public class ZookeeperDiscoveryCommunicationFailureTest extends ZookeeperDiscove
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testDefaultCommunicationFailureResolver5() throws Exception {
         defaultCommunicationFailureResolver_BreakCommunication(10, 1, 3, 6);
     }

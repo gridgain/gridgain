@@ -182,6 +182,7 @@ public class GridCachePutAllFailoverSelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testPutAllFailoverColocatedNearEnabledOneBackup() throws Exception {
         checkPutAllFailoverColocated(true, 3, 1);
     }

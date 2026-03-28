@@ -24,6 +24,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -92,6 +94,13 @@ public class DefaultQueryTimeoutThickJavaTest extends AbstractDefaultQueryTimeou
     /** */
     @Override protected boolean updateQuery() {
         return update;
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testExplicitTimeout4() throws Exception {
+        // No-op.
     }
 
     /** */

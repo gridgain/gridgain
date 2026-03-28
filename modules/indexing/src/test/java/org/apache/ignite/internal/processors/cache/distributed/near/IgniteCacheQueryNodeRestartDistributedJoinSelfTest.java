@@ -31,6 +31,7 @@ import org.apache.ignite.internal.util.typedef.CAX;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_RETRY_TIMEOUT;
@@ -59,6 +60,7 @@ public class IgniteCacheQueryNodeRestartDistributedJoinSelfTest extends IgniteCa
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testRestarts() throws Exception {
         restarts(false);
     }

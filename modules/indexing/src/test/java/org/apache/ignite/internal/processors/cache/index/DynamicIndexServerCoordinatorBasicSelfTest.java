@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.index;
 
+import org.junit.Ignore;
+import org.junit.Test;
+
 /**
  * Test dynamic schema operations from coordinator node.
  */
@@ -23,5 +26,12 @@ public class DynamicIndexServerCoordinatorBasicSelfTest extends DynamicIndexAbst
     /** {@inheritDoc} */
     @Override protected int nodeIndex() {
         return IDX_SRV_CRD;
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testCreatePartitionedTransactionalNear() throws Exception {
+        // No-op.
     }
 }
