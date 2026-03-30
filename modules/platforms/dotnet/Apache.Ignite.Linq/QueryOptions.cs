@@ -143,5 +143,13 @@ namespace Apache.Ignite.Linq
         /// Default is 1 (<see cref="DefaultUpdateBatchSize"/>.
         /// </summary>
         public int UpdateBatchSize { get; set; }
+
+        /// <summary>
+        /// Gets or sets the query label.
+        /// <para />
+        /// The specified label can be used to identify the running query in system views
+        /// and in the log when printing warnings about long-running queries.
+        /// </summary>
+        public string Label { get; set; }
     }
 }

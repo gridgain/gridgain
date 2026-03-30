@@ -285,7 +285,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(sqlFieldsQuery.Sql, "sqlFieldsQuery.Sql");
 
             return DoOutInOp(ClientOp.QuerySqlFields,
-                ctx => WriteSqlFieldsQuery(ctx.Writer, sqlFieldsQuery),
+                ctx => WriteSqlFieldsQuery(ctx, sqlFieldsQuery),
                 ctx => GetFieldsCursor(ctx));
         }
 
@@ -293,7 +293,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         public IQueryCursor<T> Query<T>(SqlFieldsQuery sqlFieldsQuery, Func<IBinaryRawReader, int, T> readerFunc)
         {
             return DoOutInOp(ClientOp.QuerySqlFields,
-                ctx => WriteSqlFieldsQuery(ctx.Writer, sqlFieldsQuery, false),
+                ctx => WriteSqlFieldsQuery(ctx, sqlFieldsQuery, false),
                 ctx => GetFieldsCursorNoColumnNames(ctx, readerFunc));
         }
 
@@ -919,10 +919,12 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Writes the SQL fields query.
         /// </summary>
-        private static void WriteSqlFieldsQuery(IBinaryRawWriter writer, SqlFieldsQuery qry,
+        private static void WriteSqlFieldsQuery(ClientRequestContext ctx, SqlFieldsQuery qry,
             bool includeColumns = true)
         {
             Debug.Assert(qry != null);
+
+            var writer = ctx.Writer;
 
             writer.WriteString(qry.Schema);
             writer.WriteInt(qry.PageSize);
@@ -960,6 +962,15 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             }
 
             writer.WriteInt(qry.UpdateBatchSize);
+
+            if (ctx.Features.HasFeature(ClientBitmaskFeature.QryLabel))
+            {
+                writer.WriteString(qry.Label);
+            }
+            else if (!string.IsNullOrEmpty(qry.Label))
+            {
+                throw new IgniteClientException("Query label is not supported by the server.");
+            }
         }
 
         /// <summary>

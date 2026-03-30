@@ -112,5 +112,22 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             Assert.AreEqual(1, qry(1).Single().Key);
             Assert.AreEqual(3, qry(3).Single().Key);
         }
+
+        /// <summary>
+        /// Tests <see cref="QueryOptions.Label"/> property propagation to SqlFieldsQuery.
+        /// </summary>
+        [Test]
+        public void TestQueryLabel()
+        {
+            var cache = GetClientCache<Person>();
+
+            const string label = "test-client-linq-label";
+            var query = cache.AsCacheQueryable(new QueryOptions { Label = label })
+                .Where(x => x.Key > 5)
+                .ToCacheQueryable();
+
+            var fieldsQuery = query.GetFieldsQuery();
+            Assert.AreEqual(label, fieldsQuery.Label);
+        }
     }
 }
