@@ -268,8 +268,7 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
         }
     }
 
-    @Override
-    protected long getTestTimeout() {
+    @Override protected long getTestTimeout() {
         return 30_000;
     }
 
