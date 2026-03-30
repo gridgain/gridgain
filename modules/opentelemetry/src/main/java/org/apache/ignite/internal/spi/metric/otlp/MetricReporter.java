@@ -24,8 +24,10 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.resources.ResourceBuilder;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -36,6 +38,7 @@ import org.apache.ignite.spi.metric.DoubleMetric;
 import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
+import org.apache.ignite.spi.metric.ObjectMetric;
 import org.apache.ignite.spi.metric.ReadOnlyMetricManager;
 import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
 import org.jetbrains.annotations.Nullable;
@@ -48,19 +51,19 @@ import static io.opentelemetry.sdk.common.export.MemoryMode.REUSABLE_DATA;
 public class MetricReporter implements AutoCloseable {
     /**
      * Service namespace attribute.
-     * @link https://opentelemetry.io/docs/specs/semconv/resource/service/
+     * @see <a href="https://opentelemetry.io/docs/specs/semconv/resource/service">Service semantic conventions</a>
      */
     private static final String SERVICE_NAMESPACE = "service.namespace";
 
     /**
      * Service name attribute.
-     * @link https://opentelemetry.io/docs/specs/semconv/resource/service/
+     * @see <a href="https://opentelemetry.io/docs/specs/semconv/resource/service">Service semantic conventions</a>
      */
     private static final String SERVICE_NAME = "service.name";
 
     /**
      * Service instance identifier represented by the local node consistentId.
-     * @link https://opentelemetry.io/docs/specs/semconv/resource/service/
+     * @see <a href="https://opentelemetry.io/docs/specs/semconv/resource/service">Service semantic conventions</a>
      */
     private static final String SERVICE_INSTANCE_ID = "service.instance.id";
 
@@ -216,12 +219,19 @@ public class MetricReporter implements AutoCloseable {
         if (metric instanceof DoubleMetric)
             return new IgniteDoubleMetricData(resource, scope, (DoubleMetric) metric);
 
-        if (metric instanceof BooleanMetric) {
+        if (metric instanceof BooleanMetric)
             return new IgniteBooleanMetricData(resource, scope, (BooleanMetric) metric);
+
+        if (metric instanceof ObjectMetric) {
+            ObjectMetric<?> objectMetric = (ObjectMetric<?>) metric;
+
+            if (objectMetric.type() == java.util.Date.class)
+                return new IgniteDateMetricData(resource, scope, (ObjectMetric<Date>) metric);
+            else if (objectMetric.type() == java.time.OffsetDateTime.class)
+                return new IgniteOffsetDateTimeMetricData(resource, scope, (ObjectMetric<OffsetDateTime>) metric);
         }
 
         // TODO
-        // object metric
         // HistogramMetric
 
         if (log.isDebugEnabled()) {
