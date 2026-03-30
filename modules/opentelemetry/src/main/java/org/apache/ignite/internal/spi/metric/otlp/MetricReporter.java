@@ -31,6 +31,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;
 import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
@@ -206,17 +207,22 @@ public class MetricReporter implements AutoCloseable {
     }
 
     private @Nullable MetricData toMetricData(Resource resource, InstrumentationScopeInfo scope, Metric metric) {
-        if (metric instanceof IntMetric) {
+        if (metric instanceof IntMetric)
             return new IgniteIntMetricData(resource, scope, (IntMetric) metric);
-        }
 
-        if (metric instanceof LongMetric) {
+        if (metric instanceof LongMetric)
             return new IgniteLongMetricData(resource, scope, (LongMetric) metric);
+
+        if (metric instanceof DoubleMetric)
+            return new IgniteDoubleMetricData(resource, scope, (DoubleMetric) metric);
+
+        if (metric instanceof BooleanMetric) {
+            return new IgniteBooleanMetricData(resource, scope, (BooleanMetric) metric);
         }
 
-        if (metric instanceof DoubleMetric) {
-            return new IgniteDoubleMetricData(resource, scope, (DoubleMetric) metric);
-        }
+        // TODO
+        // object metric
+        // HistogramMetric
 
         if (log.isDebugEnabled()) {
             log.debug("Unknown metric class for export [" +
