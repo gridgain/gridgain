@@ -35,6 +35,7 @@ import java.util.function.Predicate;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;
+import org.apache.ignite.spi.metric.HistogramMetric;
 import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
@@ -209,6 +210,7 @@ public class MetricReporter implements AutoCloseable {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private @Nullable MetricData toMetricData(Resource resource, InstrumentationScopeInfo scope, Metric metric) {
         if (metric instanceof IntMetric)
             return new IgniteIntMetricData(resource, scope, (IntMetric) metric);
@@ -231,8 +233,8 @@ public class MetricReporter implements AutoCloseable {
                 return new IgniteOffsetDateTimeMetricData(resource, scope, (ObjectMetric<OffsetDateTime>) metric);
         }
 
-        // TODO
-        // HistogramMetric
+        if (metric instanceof HistogramMetric)
+            return new IgniteDistributionMetricData(resource, scope, (HistogramMetric) metric);
 
         if (log.isDebugEnabled()) {
             log.debug("Unknown metric class for export [" +
