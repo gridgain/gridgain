@@ -14,22 +14,28 @@
  * limitations under the License.
  */
 
-import org.apache.ignite.internal.processors.metric.PushMetricsExporterAdapter;
-import org.apache.ignite.spi.IgniteSpiException;
-import org.jetbrains.annotations.Nullable;
+package org.apache.ignite.internal.spi.metric.otlp;
 
-public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.sdk.common.Clock;
+import io.opentelemetry.sdk.metrics.data.PointData;
+
+/**
+ * Base class for a point in the metric data model.
+ */
+abstract class IgnitePointData implements PointData {
     /** {@inheritDoc} */
-    @Override public void export() {
+    @Override public long getStartEpochNanos() {
+        return Clock.getDefault().now();
     }
 
     /** {@inheritDoc} */
-    @Override public void spiStart(@Nullable String igniteInstanceName) throws IgniteSpiException {
-        super.spiStart(igniteInstanceName);
+    @Override public long getEpochNanos() {
+        return Clock.getDefault().now();
     }
 
     /** {@inheritDoc} */
-    @Override public void spiStop() throws IgniteSpiException {
-        super.spiStop();
+    @Override public Attributes getAttributes() {
+        return Attributes.empty();
     }
 }
