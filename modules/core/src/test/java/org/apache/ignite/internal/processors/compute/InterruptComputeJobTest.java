@@ -35,7 +35,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.job.GridJobWorker;
 import org.apache.ignite.internal.processors.job.JobWorkerInterruptionTimeoutObject;
@@ -156,7 +155,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
 
         ComputeTaskFuture<Void> taskFut = node.compute().executeAsync(new ComputeTask(CountDownLatchJob.class), null);
 
-        waitForCollisionHandling();
+        forceHandleCollisions();
 
         GridJobWorker jobWorker = jobWorker(node, taskFut.getTaskSession());
 
@@ -177,18 +176,18 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
      */
     @Test
     public void testInterrupt() throws Exception {
-        computeJobWorkerInterruptTimeout(node).propagate(100L);
+        computeJobWorkerInterruptTimeout(node).propagate(1_000L);
 
         ComputeTaskFuture<Void> taskFut = node.compute().executeAsync(new ComputeTask(CountDownLatchJob.class), null);
 
-        waitForCollisionHandling();
+        forceHandleCollisions();
 
         GridJobWorker jobWorker = jobWorker(node, taskFut.getTaskSession());
 
         cancelWitchChecks(jobWorker);
 
         // We are waiting for the GridJobWorkerInterrupter to interrupt the worker.
-        taskFut.get(1_000L);
+        taskFut.get(getTestTimeout());
 
         assertThat(jobWorker.isCancelled(), equalTo(true));
         assertThat(countDownLatchJobInterrupted(jobWorker), equalTo(true));
@@ -210,7 +209,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
 
         ComputeTaskFuture<Void> taskFut = node.compute().executeAsync(new ComputeTask(CountDownLatchJob.class), null);
 
-        waitForCollisionHandling();
+        forceHandleCollisions();
 
         GridJobWorker jobWorker = jobWorker(node, taskFut.getTaskSession());
 
@@ -229,8 +228,8 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
         assertThat(jobWorkerInterrupters(timeoutObjects(node), jobWorker), hasSize(2));
     }
 
-    private static void waitForCollisionHandling() throws IgniteInterruptedCheckedException {
-        waitForCondition(() -> !node.compute().activeTaskFutures().isEmpty(), 1000);
+    private static void forceHandleCollisions() {
+        node.context().job().handleCollisionsSync();
     }
 
     /**

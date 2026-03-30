@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.compute;
 
-import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -34,10 +33,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
-import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.G;
-import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.spi.collision.CollisionContext;
 import org.apache.ignite.spi.collision.CollisionJobContext;
 import org.apache.ignite.spi.collision.priorityqueue.PriorityQueueCollisionSpi;
@@ -49,6 +46,7 @@ import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.testframework.GridTestUtils.DFLT_TEST_TIMEOUT;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Class for testing job priority change.
@@ -56,9 +54,6 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
     /** Coordinator. */
     private static IgniteEx CRD;
-
-    /** */
-    private static Method ON_CHANGE_TASK_ATTRS_MTD;
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -73,13 +68,6 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
         awaitPartitionMapExchange();
 
         CRD = crd;
-
-        ON_CHANGE_TASK_ATTRS_MTD = GridJobProcessor.class.getDeclaredMethod(
-            "onChangeTaskAttributes",
-            IgniteUuid.class,
-            IgniteUuid.class,
-            Map.class
-        );
     }
 
     /** {@inheritDoc} */
@@ -89,7 +77,6 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         CRD = null;
-        ON_CHANGE_TASK_ATTRS_MTD = null;
     }
 
     /** {@inheritDoc} */
@@ -98,6 +85,23 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
 
         for (Ignite n : G.allGrids())
             PriorityQueueCollisionSpiEx.spiEx(n).reset();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        for (Ignite n : G.allGrids())
+            PriorityQueueCollisionSpiEx.spiEx(n).handleCollision = true;
+
+        // Release any WaitJobs already executing (blocked on waitFut.get()).
+        WaitJob.waitFut.onDone();
+
+        // Force collision handling to activate any passive WaitJobs.
+        for (Ignite n : G.allGrids())
+            ((IgniteEx)n).context().job().handleCollisionsSync();
+
+        assertTrue(waitForCondition(() -> CRD.compute().activeTaskFutures().isEmpty(), getTestTimeout()));
     }
 
     /** {@inheritDoc} */
@@ -163,36 +167,43 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
 
         ComputeTaskFuture<Void> taskFut = CRD.compute().executeAsync(new NoopTask(), null);
 
-        for (Ignite n : G.allGrids())
-            PriorityQueueCollisionSpiEx.spiEx(n).waitJobFut.get(getTestTimeout());
+        try {
+            for (Ignite n : G.allGrids())
+                PriorityQueueCollisionSpiEx.spiEx(n).waitJobFut.get(getTestTimeout());
 
-        for (Ignite n : G.allGrids())
-            PriorityQueueCollisionSpiEx.spiEx(n).handleCollision = true;
+            for (Ignite n : G.allGrids())
+                PriorityQueueCollisionSpiEx.spiEx(n).handleCollision = true;
 
-        taskFut.getTaskSession().setAttribute(key, val);
+            taskFut.getTaskSession().setAttribute(key, val);
 
-        for (Ignite n : G.allGrids()) {
-            assertEquals(
-                val,
-                PriorityQueueCollisionSpiEx.spiEx(n).waitJobFut.result()
-                    .getTaskSession().waitForAttribute(key, getTestTimeout()));
+            for (Ignite n : G.allGrids()) {
+                assertEquals(
+                    val,
+                    PriorityQueueCollisionSpiEx.spiEx(n).waitJobFut.result()
+                        .getTaskSession().waitForAttribute(key, getTestTimeout()));
+            }
+
+            WaitJob.waitFut.onDone();
+
+            for (Ignite n : G.allGrids()) {
+                GridFutureAdapter<Void> fut = PriorityQueueCollisionSpiEx.spiEx(n).onHandleCollisionFut;
+
+                if (expHandleCollisionOnChangeTaskAttrs)
+                    fut.get(getTestTimeout());
+                else
+                    assertThrows(log, () -> fut.get(100), IgniteFutureTimeoutCheckedException.class, null);
+            }
+
+            if (!expHandleCollisionOnChangeTaskAttrs) {
+                CRD.compute().execute(new NoopTask(), null);
+            }
+
+            taskFut.get(getTestTimeout());
+        } finally {
+            // Ensure WaitJobs never block indefinitely if the test fails before reaching
+            // the explicit WaitJob.waitFut.onDone() call above.
+            WaitJob.waitFut.onDone();
         }
-
-        WaitJob.waitFut.onDone();
-
-        for (Ignite n : G.allGrids()) {
-            GridFutureAdapter<Void> fut = PriorityQueueCollisionSpiEx.spiEx(n).onHandleCollisionFut;
-
-            if (expHandleCollisionOnChangeTaskAttrs)
-                fut.get(getTestTimeout());
-            else
-                assertThrows(log, () -> fut.get(100), IgniteFutureTimeoutCheckedException.class, null);
-        }
-
-        if (!expHandleCollisionOnChangeTaskAttrs)
-            CRD.compute().execute(new NoopTask(), null);
-
-        taskFut.get(getTestTimeout());
     }
 
     /** */
@@ -200,25 +211,28 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
         /** */
         volatile boolean handleCollision;
 
-        /** */
-        final GridFutureAdapter<CollisionJobContext> waitJobFut = new GridFutureAdapter<>();
+        /** Volatile so that a captured reference in onCollision() outlives a reset(). */
+        volatile GridFutureAdapter<CollisionJobContext> waitJobFut = new GridFutureAdapter<>();
 
-        /** */
-        final GridFutureAdapter<Void> onHandleCollisionFut = new GridFutureAdapter<>();
+        /** Volatile so that a captured reference in onCollision() outlives a reset(). */
+        volatile GridFutureAdapter<Void> onHandleCollisionFut = new GridFutureAdapter<>();
 
         /** {@inheritDoc} */
         @Override public void onCollision(CollisionContext ctx) {
-            if (!waitJobFut.isDone()) {
+            GridFutureAdapter<CollisionJobContext> wFut = waitJobFut;
+            GridFutureAdapter<Void> hFut = onHandleCollisionFut;
+
+            if (handleCollision) {
+                hFut.onDone();
+
+                super.onCollision(ctx);
+            }
+
+            if (!wFut.isDone()) {
                 ctx.waitingJobs().stream()
                     .filter(collisionJobCtx -> collisionJobCtx.getJob() instanceof WaitJob)
                     .findAny()
-                    .ifPresent(waitJobFut::onDone);
-            }
-
-            if (handleCollision) {
-                    onHandleCollisionFut.onDone();
-
-                super.onCollision(ctx);
+                    .ifPresent(wFut::onDone);
             }
         }
 
@@ -226,9 +240,9 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
         void reset() {
             handleCollision = false;
 
-            waitJobFut.reset();
+            waitJobFut = new GridFutureAdapter<>();
 
-            onHandleCollisionFut.reset();
+            onHandleCollisionFut = new GridFutureAdapter<>();
         }
 
         /** */
@@ -252,6 +266,11 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
         @Override public Void reduce(List<ComputeJobResult> results) throws IgniteException {
             return null;
         }
+    }
+
+    @Override
+    protected long getTestTimeout() {
+        return 30_000;
     }
 
     /** */

@@ -102,6 +102,7 @@ import org.apache.ignite.spi.systemview.view.ComputeJobView;
 import org.apache.ignite.spi.systemview.view.ComputeJobView.ComputeJobState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 import org.jsr166.ConcurrentLinkedHashMap;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -918,8 +919,21 @@ public class GridJobProcessor extends GridProcessorAdapter {
         }
     }
 
-    private void handleCollisionsInternal() {
+    @TestOnly
+    /** Synchronised version of {@link #handleCollisions()} for testing purposes. */
+    public void handleCollisionsSync() {
         if (!rwLock.tryReadLock()) {
+            if (log.isDebugEnabled())
+                log.debug("Skipping handling collisions because node is stopping");
+
+            handlingCollisionFut.completeExceptionally(new NodeStoppingException("Node is stopping"));
+
+            return;
+        }
+
+        if (stopping) {
+            rwLock.readUnlock();
+
             if (log.isDebugEnabled())
                 log.debug("Skipping handling collisions because node is stopping");
 
@@ -1107,7 +1121,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
             if (shouldHandleCollision && (handlingCollisionFut == null || handlingCollisionFut.isDone())) {
                 handlingCollisionFut = new CompletableFuture<>();
 
-                ctx.pools().getManagementExecutorService().submit(this::handleCollisionsInternal);
+                ctx.pools().getManagementExecutorService().submit(this::handleCollisionsSync);
 
                 handlingCollisionFut.whenComplete((res, err) -> {
                     if (err != null) {
