@@ -167,43 +167,37 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
 
         ComputeTaskFuture<Void> taskFut = CRD.compute().executeAsync(new NoopTask(), null);
 
-        try {
-            for (Ignite n : G.allGrids())
-                PriorityQueueCollisionSpiEx.spiEx(n).waitJobFut.get(getTestTimeout());
+        for (Ignite n : G.allGrids())
+            PriorityQueueCollisionSpiEx.spiEx(n).waitJobFut.get(getTestTimeout());
 
-            for (Ignite n : G.allGrids())
-                PriorityQueueCollisionSpiEx.spiEx(n).handleCollision = true;
+        for (Ignite n : G.allGrids())
+            PriorityQueueCollisionSpiEx.spiEx(n).handleCollision = true;
 
-            taskFut.getTaskSession().setAttribute(key, val);
+        taskFut.getTaskSession().setAttribute(key, val);
 
-            for (Ignite n : G.allGrids()) {
-                assertEquals(
-                    val,
-                    PriorityQueueCollisionSpiEx.spiEx(n).waitJobFut.result()
-                        .getTaskSession().waitForAttribute(key, getTestTimeout()));
-            }
-
-            WaitJob.waitFut.onDone();
-
-            for (Ignite n : G.allGrids()) {
-                GridFutureAdapter<Void> fut = PriorityQueueCollisionSpiEx.spiEx(n).onHandleCollisionFut;
-
-                if (expHandleCollisionOnChangeTaskAttrs)
-                    fut.get(getTestTimeout());
-                else
-                    assertThrows(log, () -> fut.get(100), IgniteFutureTimeoutCheckedException.class, null);
-            }
-
-            if (!expHandleCollisionOnChangeTaskAttrs) {
-                CRD.compute().execute(new NoopTask(), null);
-            }
-
-            taskFut.get(getTestTimeout());
-        } finally {
-            // Ensure WaitJobs never block indefinitely if the test fails before reaching
-            // the explicit WaitJob.waitFut.onDone() call above.
-            WaitJob.waitFut.onDone();
+        for (Ignite n : G.allGrids()) {
+            assertEquals(
+                val,
+                PriorityQueueCollisionSpiEx.spiEx(n).waitJobFut.result()
+                    .getTaskSession().waitForAttribute(key, getTestTimeout()));
         }
+
+        WaitJob.waitFut.onDone();
+
+        for (Ignite n : G.allGrids()) {
+            GridFutureAdapter<Void> fut = PriorityQueueCollisionSpiEx.spiEx(n).onHandleCollisionFut;
+
+            if (expHandleCollisionOnChangeTaskAttrs)
+                fut.get(getTestTimeout());
+            else
+                assertThrows(log, () -> fut.get(100), IgniteFutureTimeoutCheckedException.class, null);
+        }
+
+        if (!expHandleCollisionOnChangeTaskAttrs) {
+            CRD.compute().execute(new NoopTask(), null);
+        }
+
+        taskFut.get(getTestTimeout());
     }
 
     /** */
@@ -211,19 +205,17 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
         /** */
         volatile boolean handleCollision;
 
-        /** Volatile so that a captured reference in onCollision() outlives a reset(). */
         volatile GridFutureAdapter<CollisionJobContext> waitJobFut = new GridFutureAdapter<>();
 
-        /** Volatile so that a captured reference in onCollision() outlives a reset(). */
         volatile GridFutureAdapter<Void> onHandleCollisionFut = new GridFutureAdapter<>();
 
         /** {@inheritDoc} */
         @Override public void onCollision(CollisionContext ctx) {
             GridFutureAdapter<CollisionJobContext> wFut = waitJobFut;
-            GridFutureAdapter<Void> hFut = onHandleCollisionFut;
+            GridFutureAdapter<Void> handleCollisionFut = onHandleCollisionFut;
 
             if (handleCollision) {
-                hFut.onDone();
+                handleCollisionFut.onDone();
 
                 super.onCollision(ctx);
             }

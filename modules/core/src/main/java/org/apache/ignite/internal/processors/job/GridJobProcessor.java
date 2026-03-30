@@ -920,7 +920,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
     }
 
     @TestOnly
-    /** Synchronised version of {@link #handleCollisions()} for testing purposes. */
+    /** Synchronised version of {@link #handleCollisions()}. Made public for testing purposes. */
     public void handleCollisionsSync() {
         if (!rwLock.tryReadLock()) {
             if (log.isDebugEnabled())

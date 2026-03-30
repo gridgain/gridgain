@@ -176,7 +176,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
      */
     @Test
     public void testInterrupt() throws Exception {
-        computeJobWorkerInterruptTimeout(node).propagate(1_000L);
+        computeJobWorkerInterruptTimeout(node).propagate(100L);
 
         ComputeTaskFuture<Void> taskFut = node.compute().executeAsync(new ComputeTask(CountDownLatchJob.class), null);
 

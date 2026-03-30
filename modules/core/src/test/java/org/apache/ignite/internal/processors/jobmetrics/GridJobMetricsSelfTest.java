@@ -124,7 +124,7 @@ public class GridJobMetricsSelfTest extends GridCommonAbstractTest {
             assertEquals(0, rejected.value());
             assertEquals(0, finished.value());
 
-            waitForCondition(() -> collisionSpi.jobs.size() == 3, 100);
+            g.context().job().handleCollisionsSync();
 
             // Activating 2 of 3 jobs. Rejecting 1 of them.
             Iterator<CollisionJobContext> iter = collisionSpi.jobs.values().iterator();
