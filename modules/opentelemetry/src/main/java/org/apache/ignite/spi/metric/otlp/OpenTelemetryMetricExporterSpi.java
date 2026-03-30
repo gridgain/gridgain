@@ -16,6 +16,7 @@
 
 package org.apache.ignite.spi.metric.otlp;
 
+import java.util.Arrays;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.metric.PushMetricsExporterAdapter;
 import org.apache.ignite.internal.spi.metric.otlp.MetricReporter;
@@ -24,6 +25,12 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.jetbrains.annotations.Nullable;
 
 public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
+    /** Default protocol type that is used to export metrics. */
+    public static final Protocol DEFAULT_PROTOCOL = Protocol.GRPC;
+
+    /** Default endpoint URL. */
+    public static final String DEFAULT_ENDPOINT = "http://localhost:4317";
+
     /** Logical name of a system or application under a common namespace. This a namespace for {@link #srvcName}. */
     private String srvcNamespace;
 
@@ -42,11 +49,14 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
      */
     private String srvcName;
 
-    /** OTLP endpoint to connect to. */
-    private String endpoint;
+    /** Service identifier (node consistent id). */
+    private String srvcId;
 
-    // TODO OTLP protocol.
-    // grpc, http(s)
+    /** OTLP endpoint to connect to. */
+    private String endpoint = DEFAULT_ENDPOINT;
+
+    /** Protocol that is used to export metrics. */
+    private Protocol protocol = DEFAULT_PROTOCOL;
 
     // TODO connection headers
 
@@ -57,35 +67,38 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
     // gzip, none
 
     /** Otlp metric exporter. */
-    private MetricReporter exporter;
+    private volatile MetricReporter exporter;
 
     /** {@inheritDoc} */
     @Override public void export() {
-        if (exporter != null) {
-            exporter.report(mreg, filter);
+        MetricReporter exporter0 = exporter;
+
+        if (exporter0 != null) {
+            exporter0.report(mreg, filter);
         }
     }
 
     /** {@inheritDoc} */
     @Override public void spiStart(@Nullable String igniteInstanceName) throws IgniteSpiException {
         super.spiStart(igniteInstanceName);
-
-        // Is it the right place to create a reporter?
-        this.exporter = createExporter();
     }
 
     /** {@inheritDoc} */
     @Override public void spiStop() throws IgniteSpiException {
         super.spiStop();
 
-        if (exporter != null) {
-            exporter.close();
+        MetricReporter exporter0 = exporter;
+
+        if (exporter0 != null) {
+            exporter0.close();
             exporter = null;
         }
     }
 
     /** {@inheritDoc} */
     @Override protected void onContextInitialized0(IgniteSpiContext spiCtx) throws IgniteSpiException {
+        super.onContextInitialized0(spiCtx);
+
         if (srvcName == null || srvcName.isEmpty()) {
             // TODO
             // fix deadlock - srvcName = ((IgniteEx)ignite()).context().cluster().clusterName();
@@ -93,18 +106,17 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
             srvcName = "cluster.name";
         }
 
-        // TODO setup service identifier.
-        String srvcId = ((IgniteEx)ignite()).context().discovery().localNode().consistentId().toString();
+        srvcId = ((IgniteEx)ignite()).context().discovery().localNode().consistentId().toString();
 
-        // Start executor service to push metrics.
-        super.onContextInitialized0(spiCtx);
+        exporter = createExporter();
     }
 
     /**
      * Sets a logical name of a system or application under a common namespace. This a namespace for the service name.
      * 
      * @param srvcNamespace Service namespace.
-     * @see #setServiceName(String) 
+     * @see #setServiceName(String)
+     * @see <a href="https://opentelemetry.io/docs/specs/semconv/resource/service">Service semantic conventions</a>
      */
     public void setServiceNamespace(String srvcNamespace) {
         this.srvcNamespace = srvcNamespace;
@@ -123,9 +135,11 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
     /**
      * Sets a logical name of the service.
      * If {@code srvcName} is {@code null} then the cluster name is used.
+     * The default value is {@code null}.
      * 
-     * @param srvcName
-     * @see #setServiceNamespace(String) 
+     * @param srvcName Service name.
+     * @see #setServiceNamespace(String)
+     * @see <a href="https://opentelemetry.io/docs/specs/semconv/resource/service">Service semantic conventions</a>
      */
     public void setServiceName(String srvcName) {
         this.srvcName = srvcName;
@@ -144,6 +158,7 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
     /**
      * Sets the OTLP endpoint to connect to.
      * The endpoint must start with either http:// or https:// and follow the pattern http(s)://host:port.
+     * The default value is {@link #DEFAULT_ENDPOINT}.
      *
      * @param endpoint Endpoint to connect to.
      */
@@ -161,8 +176,48 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
         return endpoint;
     }
 
+    /**
+     * Sets the OTLP protocol to export metrics.
+     * The default value is {@link #DEFAULT_PROTOCOL}.
+     * 
+     * @param protocol Protocol to export metrics.
+     * @throws IllegalArgumentException when the given {@code protocol} is not supported.
+     * @see Protocol
+     */
+    public void setProtocol(String protocol) {
+        Protocol p = Protocol.of(protocol);
+
+        if (p == null) {
+            throw new IllegalArgumentException("Unsupported protocol [" +
+                "type=" + protocol + "]. Supported protocols are " + Arrays.toString(Protocol.values()));
+        }
+        
+        setProtocol(p);
+    }
+
+    /**
+     * Sets the OTLP protocol to export metrics.
+     *
+     * @param protocol Protocol to export metrics.
+     * @see Protocol
+     * @see #setProtocol(Protocol) 
+     */
+    public void setProtocol(Protocol protocol) {
+        this.protocol = protocol;
+    }
+
+    /**
+     * Returns the configured protocol.
+     *
+     * @return Configured protocol.
+     * @see Protocol
+     */
+    public Protocol getProtocol() {
+        return protocol;
+    }
+
     private MetricReporter createExporter() {
-        MetricReporter reporter = new MetricReporter(log, srvcNamespace, srvcName, "test.seviceid.12", endpoint);
+        MetricReporter reporter = new MetricReporter(log, srvcNamespace, srvcName, srvcId, endpoint, protocol);
 
         // TODO
         // if we want to cache already created metrics.

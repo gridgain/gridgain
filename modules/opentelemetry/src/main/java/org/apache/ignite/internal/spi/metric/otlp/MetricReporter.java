@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.spi.metric.otlp;
 
 import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter;
+import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
 import io.opentelemetry.sdk.common.InstrumentationScopeInfo;
 import io.opentelemetry.sdk.metrics.data.MetricData;
 import io.opentelemetry.sdk.metrics.export.MetricExporter;
@@ -42,6 +43,7 @@ import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.spi.metric.ObjectMetric;
 import org.apache.ignite.spi.metric.ReadOnlyMetricManager;
 import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
+import org.apache.ignite.spi.metric.otlp.Protocol;
 import org.jetbrains.annotations.Nullable;
 
 import static io.opentelemetry.sdk.common.export.MemoryMode.REUSABLE_DATA;
@@ -96,14 +98,15 @@ public class MetricReporter implements AutoCloseable {
         @Nullable String srvcNamespace,
         String srvcName,
         String srvcId,
-        String endpoint
+        String endpoint,
+        Protocol protocol
     ) {
         assert srvcName != null && !srvcName.isEmpty() : "Service name must be specified.";
         assert srvcId != null && !srvcId.isEmpty() : "Service id must be specified.";
 
         this.log = log;
         this.resource = createResource(srvcNamespace, srvcName, srvcId);
-        this.exporter = createExporter(endpoint);
+        this.exporter = createExporter(endpoint, protocol);
     }
 
     /** {@inheritDoc} */
@@ -171,36 +174,49 @@ public class MetricReporter implements AutoCloseable {
         return Resource.getDefault().merge(b.build());
     }
 
-    private MetricExporter createExporter(String endpoint) {
-        OtlpHttpMetricExporter exporter0 = OtlpHttpMetricExporter.builder()
-            .setEndpoint(createEndpoint(endpoint))
-            .setMemoryMode(REUSABLE_DATA)
-            .build();
+    private MetricExporter createExporter(String endpoint, Protocol protocol) {
+        switch (protocol) {
+            case HTTP: {
+                OtlpHttpMetricExporter exporter0 = OtlpHttpMetricExporter.builder()
+                    .setEndpoint(createEndpoint(endpoint, protocol))
+                    .setMemoryMode(REUSABLE_DATA)
+                    .build();
 
-        return exporter0;
+                return exporter0;
+            }
+
+            case GRPC: {
+                OtlpGrpcMetricExporter exporter0 = OtlpGrpcMetricExporter.builder()
+                    .setEndpoint(createEndpoint(endpoint, protocol))
+                    .setMemoryMode(REUSABLE_DATA)
+                    .build();
+
+                return exporter0;
+            }
+
+            default:
+                throw new IllegalArgumentException();
+        }
     }
 
-    private static String createEndpoint(String endpoint) {
+    private static String createEndpoint(String endpoint, Protocol protocol) {
         URI uri = URI.create(endpoint);
         StringBuilder sb = new StringBuilder();
 
-        // TODO support grpc protocol
-        if (true) {
+        if (Protocol.HTTP == protocol) {
             String basePath = uri.getPath();
 
             if (basePath != null && !basePath.isEmpty()) {
                 sb.append(basePath);
             }
 
-            if (!basePath.endsWith("v1/metrics")) {
+            if (!basePath.endsWith("v1/metrics") || !basePath.endsWith("v1/metrics/")) {
                 if (!basePath.endsWith("/")) {
                     sb.append('/');
                 }
 
                 sb.append("v1/metrics");
             }
-        } else {
-            sb.append('/');
         }
 
         try {
