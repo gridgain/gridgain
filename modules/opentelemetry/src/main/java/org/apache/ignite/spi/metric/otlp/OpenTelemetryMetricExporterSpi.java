@@ -28,6 +28,9 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
     /** Default protocol type that is used to export metrics. */
     public static final Protocol DEFAULT_PROTOCOL = Protocol.GRPC;
 
+    /** Default compression type. */
+    public static final Compression DEFAULT_COMPRESSION = Compression.NONE;
+
     /** Default endpoint URL. */
     public static final String DEFAULT_ENDPOINT = "http://localhost:4317";
 
@@ -58,13 +61,13 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
     /** Protocol that is used to export metrics. */
     private Protocol protocol = DEFAULT_PROTOCOL;
 
+    /** Compression type. */
+    private Compression compression = DEFAULT_COMPRESSION;
+
     // TODO connection headers
 
     // TODO security configuration
     // ssl
-
-    // TODO compression
-    // gzip, none
 
     /** Otlp metric exporter. */
     private volatile MetricReporter exporter;
@@ -210,14 +213,58 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
      * Returns the configured protocol.
      *
      * @return Configured protocol.
+     * @see #setProtocol(Protocol)
      * @see Protocol
      */
     public Protocol getProtocol() {
         return protocol;
     }
 
+    /**
+     * Sets compression type.
+     * The default value is {@link #DEFAULT_COMPRESSION}.
+     *
+     * @param compression Compression type.
+     * @throws IllegalArgumentException when the given {@code compression} is not supported.
+     * @see Compression
+     */
+    public void setCompression(String compression) {
+        Compression c = Compression.of(compression);
+
+        if (c == null) {
+            throw new IllegalArgumentException("Unsupported compression type [" +
+                "type=" + compression + "]. Supported compression types are " + Arrays.toString(Compression.values()));
+        }
+
+        setCompression(c);
+    }
+
+    /**
+     * Sets compression type.
+     * The default value is {@link #DEFAULT_COMPRESSION}.
+     *
+     * @param compression Compression type.
+     * @see Compression
+     */
+    public void setCompression(Compression compression) {
+        this.compression = compression;
+    }
+
+    /**
+     * Returns the configured compression type.
+     *
+     * @return Configured compression type.
+     * @see #setCompression(Compression)
+     * @see Compression
+     */
+    public Compression getCompression() {
+        return compression;
+    }
+
     private MetricReporter createExporter() {
-        MetricReporter reporter = new MetricReporter(log, srvcNamespace, srvcName, srvcId, endpoint, protocol);
+        MetricReporter reporter = new MetricReporter(
+            log, srvcNamespace, srvcName, srvcId, endpoint, protocol, compression
+        );
 
         // TODO
         // if we want to cache already created metrics.

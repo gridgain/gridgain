@@ -19,42 +19,42 @@ package org.apache.ignite.spi.metric.otlp;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Defines supported protocols to export metrics.
+ * Defines supported compression type.
  */
-public enum Protocol {
-    /** OTLP via HTTP, using OpenTelemetry's protobuf model. */
-    HTTP("http"),
+public enum Compression {
+    /** No compression. */
+    NONE("none"),
 
-    /** OTLP via gRPC, using OpenTelemetry's protobuf model. */
-    GRPC("grpc");
+    /** Gzip compression. */
+    GZIP("gzip");
 
     /**
      * Returns enumerated value for the given {@code type}.
-     * Returns {@code null} if the given {@code type} does not match any supported protocol.
+     * Returns {@code null} if the given {@code type} does not match any compression type.
      *
      * @param type Type of the protocol.
      * @return Enumerated value.
      */
-    @Nullable public static Protocol of(String type) {
-        for (Protocol p : values()) {
-            if (p.type().equalsIgnoreCase(type))
-                return p;
+    @Nullable public static Compression of(String type) {
+        for (Compression c : values()) {
+            if (c.type().equalsIgnoreCase(type))
+                return c;
         }
 
         return null;
     }
 
-    /** String representation of the protocol. */
+    /** String representation of the compression type. */
     private final String type;
 
-    Protocol(String name) {
+    Compression(String name) {
         this.type = name;
     }
 
     /**
-     * Returns string representation of the protocol.
+     * Returns string representation of the compression type.
      *
-     * @return String representation of the protocol
+     * @return String representation of the compression type.
      */
     public String type() {
         return type;

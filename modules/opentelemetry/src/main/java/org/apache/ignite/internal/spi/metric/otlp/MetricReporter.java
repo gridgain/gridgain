@@ -43,6 +43,7 @@ import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.spi.metric.ObjectMetric;
 import org.apache.ignite.spi.metric.ReadOnlyMetricManager;
 import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
+import org.apache.ignite.spi.metric.otlp.Compression;
 import org.apache.ignite.spi.metric.otlp.Protocol;
 import org.jetbrains.annotations.Nullable;
 
@@ -92,6 +93,8 @@ public class MetricReporter implements AutoCloseable {
      * @param srvcName Service name.
      * @param srvcId Service Identifier.
      * @param endpoint Endpoint to connect to.
+     * @param protocol Protocol type to export metrics.
+     * @param compression Compression type.
      */
     public MetricReporter(
         IgniteLogger log,
@@ -99,14 +102,15 @@ public class MetricReporter implements AutoCloseable {
         String srvcName,
         String srvcId,
         String endpoint,
-        Protocol protocol
+        Protocol protocol,
+        Compression compression
     ) {
         assert srvcName != null && !srvcName.isEmpty() : "Service name must be specified.";
         assert srvcId != null && !srvcId.isEmpty() : "Service id must be specified.";
 
         this.log = log;
         this.resource = createResource(srvcNamespace, srvcName, srvcId);
-        this.exporter = createExporter(endpoint, protocol);
+        this.exporter = createExporter(endpoint, protocol, compression);
     }
 
     /** {@inheritDoc} */
@@ -174,11 +178,12 @@ public class MetricReporter implements AutoCloseable {
         return Resource.getDefault().merge(b.build());
     }
 
-    private MetricExporter createExporter(String endpoint, Protocol protocol) {
+    private MetricExporter createExporter(String endpoint, Protocol protocol, Compression compression) {
         switch (protocol) {
             case HTTP: {
                 OtlpHttpMetricExporter exporter0 = OtlpHttpMetricExporter.builder()
                     .setEndpoint(createEndpoint(endpoint, protocol))
+                    .setCompression(compression.type())
                     .setMemoryMode(REUSABLE_DATA)
                     .build();
 
@@ -188,6 +193,7 @@ public class MetricReporter implements AutoCloseable {
             case GRPC: {
                 OtlpGrpcMetricExporter exporter0 = OtlpGrpcMetricExporter.builder()
                     .setEndpoint(createEndpoint(endpoint, protocol))
+                    .setCompression(compression.type())
                     .setMemoryMode(REUSABLE_DATA)
                     .build();
 
@@ -204,13 +210,13 @@ public class MetricReporter implements AutoCloseable {
         StringBuilder sb = new StringBuilder();
 
         if (Protocol.HTTP == protocol) {
-            String basePath = uri.getPath();
+            String basePath = uri.getPath() != null ? uri.getPath() : "";
 
-            if (basePath != null && !basePath.isEmpty()) {
+            if (!basePath.isEmpty()) {
                 sb.append(basePath);
             }
 
-            if (!basePath.endsWith("v1/metrics") || !basePath.endsWith("v1/metrics/")) {
+            if (!basePath.endsWith("v1/metrics") && !basePath.endsWith("v1/metrics/")) {
                 if (!basePath.endsWith("/")) {
                     sb.append('/');
                 }
@@ -220,7 +226,9 @@ public class MetricReporter implements AutoCloseable {
         }
 
         try {
-            return new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), sb.toString(), null, null).toString();
+            return new URI(
+                uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), sb.toString(), null, null
+            ).toString();
         } catch (URISyntaxException e) {
             throw new RuntimeException("Unexpected exception creating URL.", e);
         }
