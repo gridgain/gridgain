@@ -35,12 +35,12 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
 /**
- * Metric data that holds distribution metric.
+ * Metric data that holds histogram metric.
  */
-class IgniteDistributionMetricData extends IgniteMetricData<HistogramMetric> {
+class IgniteHistogramMetricData extends IgniteMetricData<HistogramMetric> {
     private final HistogramData data;
 
-    IgniteDistributionMetricData(Resource resource, InstrumentationScopeInfo scope, HistogramMetric metric) {
+    IgniteHistogramMetricData(Resource resource, InstrumentationScopeInfo scope, HistogramMetric metric) {
         super(resource, scope, metric);
 
         data = new IgniteHistogramData(new IgniteDistributionPointData(metric));

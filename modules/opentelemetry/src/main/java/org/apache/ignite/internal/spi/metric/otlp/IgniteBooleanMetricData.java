@@ -31,7 +31,7 @@ import static java.util.Collections.emptyList;
 /**
  * Metric data that holds boolean metric.
  */
-public class IgniteBooleanMetricData extends IgniteMetricData<BooleanMetric> {
+class IgniteBooleanMetricData extends IgniteMetricData<BooleanMetric> {
     private final Data<IgniteLongPointData> data;
 
     IgniteBooleanMetricData(Resource resource, InstrumentationScopeInfo scope, BooleanMetric metric) {

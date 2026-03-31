@@ -32,7 +32,7 @@ import static java.util.Collections.emptyList;
 /**
  * Metric data that holds Date metric.
  */
-public class IgniteDateMetricData extends IgniteMetricData<ObjectMetric<Date>> {
+class IgniteDateMetricData extends IgniteMetricData<ObjectMetric<Date>> {
     private final Data<IgniteLongPointData> data;
 
     IgniteDateMetricData(Resource resource, InstrumentationScopeInfo scope, ObjectMetric<Date> metric) {

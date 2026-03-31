@@ -29,6 +29,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -95,6 +96,7 @@ public class MetricReporter implements AutoCloseable {
      * @param endpoint Endpoint to connect to.
      * @param protocol Protocol type to export metrics.
      * @param compression Compression type.
+     * @param headers Connection headers.
      */
     public MetricReporter(
         IgniteLogger log,
@@ -103,14 +105,15 @@ public class MetricReporter implements AutoCloseable {
         String srvcId,
         String endpoint,
         Protocol protocol,
-        Compression compression
+        Compression compression,
+        Map<String, String> headers
     ) {
         assert srvcName != null && !srvcName.isEmpty() : "Service name must be specified.";
         assert srvcId != null && !srvcId.isEmpty() : "Service id must be specified.";
 
         this.log = log;
         this.resource = createResource(srvcNamespace, srvcName, srvcId);
-        this.exporter = createExporter(endpoint, protocol, compression);
+        this.exporter = createExporter(endpoint, protocol, compression, headers);
     }
 
     /** {@inheritDoc} */
@@ -178,11 +181,17 @@ public class MetricReporter implements AutoCloseable {
         return Resource.getDefault().merge(b.build());
     }
 
-    private MetricExporter createExporter(String endpoint, Protocol protocol, Compression compression) {
+    private MetricExporter createExporter(
+        String endpoint,
+        Protocol protocol,
+        Compression compression,
+        Map<String, String> headers
+    ) {
         switch (protocol) {
             case HTTP: {
                 OtlpHttpMetricExporter exporter0 = OtlpHttpMetricExporter.builder()
                     .setEndpoint(createEndpoint(endpoint, protocol))
+                    .setHeaders(() -> headers)
                     .setCompression(compression.type())
                     .setMemoryMode(REUSABLE_DATA)
                     .build();
@@ -193,6 +202,7 @@ public class MetricReporter implements AutoCloseable {
             case GRPC: {
                 OtlpGrpcMetricExporter exporter0 = OtlpGrpcMetricExporter.builder()
                     .setEndpoint(createEndpoint(endpoint, protocol))
+                    .setHeaders(() -> headers)
                     .setCompression(compression.type())
                     .setMemoryMode(REUSABLE_DATA)
                     .build();
@@ -258,7 +268,7 @@ public class MetricReporter implements AutoCloseable {
         }
 
         if (metric instanceof HistogramMetric)
-            return new IgniteDistributionMetricData(resource, scope, (HistogramMetric) metric);
+            return new IgniteHistogramMetricData(resource, scope, (HistogramMetric) metric);
 
         if (log.isDebugEnabled()) {
             log.debug("Unknown metric class for export [" +

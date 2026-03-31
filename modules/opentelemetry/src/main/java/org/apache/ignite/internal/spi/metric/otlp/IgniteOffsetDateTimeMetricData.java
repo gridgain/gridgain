@@ -32,7 +32,7 @@ import static java.util.Collections.emptyList;
 /**
  * Metric data that holds offset date time metric.
  */
-public class IgniteOffsetDateTimeMetricData extends IgniteMetricData<ObjectMetric<OffsetDateTime>> {
+class IgniteOffsetDateTimeMetricData extends IgniteMetricData<ObjectMetric<OffsetDateTime>> {
     private final Data<IgniteLongPointData> data;
 
     IgniteOffsetDateTimeMetricData(

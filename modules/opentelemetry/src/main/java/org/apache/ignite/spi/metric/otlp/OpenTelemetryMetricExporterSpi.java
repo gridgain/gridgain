@@ -17,6 +17,7 @@
 package org.apache.ignite.spi.metric.otlp;
 
 import java.util.Arrays;
+import java.util.Map;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.metric.PushMetricsExporterAdapter;
 import org.apache.ignite.internal.spi.metric.otlp.MetricReporter;
@@ -64,7 +65,8 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
     /** Compression type. */
     private Compression compression = DEFAULT_COMPRESSION;
 
-    // TODO connection headers
+    /** Connection headers. */
+    private Map<String, String> headers;
 
     // TODO security configuration
     // ssl
@@ -261,9 +263,28 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
         return compression;
     }
 
+    /**
+     * Sets connection headers.
+     *
+     * @param headers Connection headers.
+     */
+    public void setConnectionHeaders(Map<String, String> headers) {
+        this.headers = headers;
+    }
+
+    /**
+     * Returns the configured connection headers.
+     *
+     * @return Configured connection headers.
+     * @see #setConnectionHeaders(Map)
+     */
+    public Map<String, String> getConnectionHeaders() {
+        return headers;
+    }
+
     private MetricReporter createExporter() {
         MetricReporter reporter = new MetricReporter(
-            log, srvcNamespace, srvcName, srvcId, endpoint, protocol, compression
+            log, srvcNamespace, srvcName, srvcId, endpoint, protocol, compression, headers
         );
 
         // TODO
