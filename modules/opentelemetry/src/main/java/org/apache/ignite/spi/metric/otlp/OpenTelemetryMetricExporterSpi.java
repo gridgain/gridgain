@@ -17,12 +17,19 @@
 package org.apache.ignite.spi.metric.otlp;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
+import javax.cache.configuration.Factory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.metric.PushMetricsExporterAdapter;
 import org.apache.ignite.internal.spi.metric.otlp.MetricReporter;
 import org.apache.ignite.spi.IgniteSpiContext;
 import org.apache.ignite.spi.IgniteSpiException;
+import org.apache.ignite.ssl.SslContextFactory;
 import org.jetbrains.annotations.Nullable;
 
 public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
@@ -34,6 +41,12 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
 
     /** Default endpoint URL. */
     public static final String DEFAULT_ENDPOINT = "http://localhost:4317";
+
+    /**
+     * By default OTLP exporter uses SSL context factory from Ignite configuration.
+     * @see IgniteConfiguration#setSslContextFactory(Factory)
+     */
+    public static final boolean DFLT_USE_IGNITE_SSL_CTX_FACTORY = true;
 
     /** Logical name of a system or application under a common namespace. This a namespace for {@link #srvcName}. */
     private String srvcNamespace;
@@ -66,10 +79,19 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
     private Compression compression = DEFAULT_COMPRESSION;
 
     /** Connection headers. */
-    private Map<String, String> headers;
+    private Map<String, String> headers = Collections.emptyMap();
 
-    // TODO security configuration
-    // ssl
+    /** SSL enable flag, default is disabled. */
+    private boolean sslEnabled;
+
+    /** If set to {@code true}, when this SPI will use SSL context factory from Ignite configuration. */
+    private boolean useIgniteSslCtxFactory = DFLT_USE_IGNITE_SSL_CTX_FACTORY;
+
+    /** */
+    private Factory<SSLContext> sslFactory;
+
+    /** */
+    private Factory<TrustManager> trustFactory;
 
     /** Otlp metric exporter. */
     private volatile MetricReporter exporter;
@@ -282,9 +304,139 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
         return headers;
     }
 
+    /**
+     * Sets whether Secure Socket Layer should be enabled.
+     * <p>
+     * Note that if this flag is set to {@code true}, then a valid instance of {@code Factory&lt;SSLContext&gt;}
+     * should be provided. The default value is {@code false}.
+     *
+     * @param sslEnabled {@code true} if SSL should be enabled and {@code false} otherwise.
+     * @see #setSslContextFactory(Factory)
+     * @see #setUseIgniteSslContextFactory(boolean)
+     * @see IgniteConfiguration#setSslContextFactory(Factory)
+     */
+    public void setSslEnabled(boolean sslEnabled) {
+        this.sslEnabled = sslEnabled;
+    }
+
+    /**
+     * Returns {@code true} if Secure Socket Layer is enabled and {@code false} otherwise.
+     *
+     * @return Returns {@code true} if Secure Socket Layer is enabled and {@code false} otherwise.
+     * @see #setSslEnabled(boolean)
+     */
+    public boolean isSslEnabled() {
+        return sslEnabled;
+    }
+
+    /**
+     * Sets whether to use Ignite SSL context factory.
+     *
+     * @param useIgniteSslCtxFactory Whether to use Ignite SSL context factory.
+     * @see IgniteConfiguration#setSslContextFactory(Factory)
+     */
+    public void setUseIgniteSslContextFactory(boolean useIgniteSslCtxFactory) {
+        this.useIgniteSslCtxFactory = useIgniteSslCtxFactory;
+    }
+
+    /**
+     * Gets whether to use Ignite SSL context factory configured through
+     * {@link IgniteConfiguration#getSslContextFactory()} if {@link #getSslContextFactory()} is not set.
+     *
+     * @return {@code true} if Ignite SSL context factory should be used.
+     * @see #setUseIgniteSslContextFactory(boolean)
+     */
+    public boolean isUseIgniteSslContextFactory() {
+        return useIgniteSslCtxFactory;
+    }
+
+    /**
+     * Sets the given instance of {@link Factory} that will be used to create an instance of {@link SSLContext}
+     * for Secure Socket Layer. This factory will only be used if {@link #setSslEnabled(boolean)} is set to {@code true}.
+     * <p>
+     * An instance of {@link SslContextFactory} class can be used
+     * in order to provide {@link SSLContext} and {@link TrustManager} at the same time.
+     * <pre>
+     * {@code
+     *   // Create and setup the factory.
+     *   SslContextFactory factory = new SslContextFactory();
+     *
+     *   factory.setKeyStoreFilePath(keyStorePath);
+     *   factory.setKeyStorePassword(keyPass);
+     *   factory.setTrustStoreFilePath(trustStorePath);
+     *   factory.setTrustStorePassword(trustPass);
+     *   ...
+     *
+     *   OpenTelemetryMetricExporterSpi spi = new OpenTelemetryMetricExporterSpi();
+     *   // This call overrides {@link #setTrustManagerFactory(Factory)}
+     *   // TrustManager is obtained from the {@code factory}.
+     *   spi.setSslContextFactory(factory);
+     * }
+     * </pre>
+     *
+     * @param sslFactory Instance of {@link Factory}.
+     * @see SslContextFactory
+     */
+    public void setSslContextFactory(Factory<SSLContext> sslFactory) {
+        this.sslFactory = sslFactory;
+    }
+
+    /**
+     * Returns the configured instance of {@link Factory} that will be used to create an instance of {@link SSLContext}.
+     *
+     * @return Factory to create {@link SSLContext}.
+     * @see #setSslContextFactory(Factory)
+     */
+    public Factory<SSLContext> getSslContextFactory() {
+        return sslFactory;
+    }
+
+    /**
+     * Sets the given instance of {@link Factory} that will be used to create an instance of {@link TrustManager}.
+     * This factory will only be used if {@link #setSslEnabled(boolean)} is set to {@code true}.
+     *
+     * @param trustFactory Instance of {@link Factory}.
+     * @see SslContextFactory
+     */
+    public void setTrustManagerFactory(Factory<TrustManager> trustFactory) {
+        this.trustFactory = trustFactory;
+    }
+
+    /**
+     * Returns the configured instance of {@link TrustManager}.
+     *
+     * @return Factory to create {@link TrustManager}.
+     * @see #setTrustManagerFactory(Factory)
+     */
+    public Factory<TrustManager> getTrustManagerFactory() {
+        return trustFactory;
+    }
+
     private MetricReporter createExporter() {
+        SSLContext sslContext = null;
+        X509TrustManager trustManager = null;
+
+        if (sslEnabled) {
+            Factory<SSLContext> factory = useIgniteSslCtxFactory
+                ? ignite().configuration().getSslContextFactory()
+                : sslFactory;
+
+            if (factory instanceof SslContextFactory) {
+                SslContextFactory contextFactory = (SslContextFactory) factory;
+
+                sslContext = contextFactory.create();
+                trustManager = (X509TrustManager) contextFactory.getTrustManagers()[0];
+            }
+            else {
+                sslContext = factory.create();
+                trustManager = (X509TrustManager) trustFactory.create();
+            }
+        }
+
         MetricReporter reporter = new MetricReporter(
-            log, srvcNamespace, srvcName, srvcId, endpoint, protocol, compression, headers
+            log, srvcNamespace, srvcName, srvcId,
+            endpoint, protocol, compression, headers,
+            sslEnabled, sslContext, trustManager
         );
 
         // TODO

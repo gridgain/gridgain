@@ -37,6 +37,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Predicate;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.X509TrustManager;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;
@@ -100,6 +102,9 @@ public class MetricReporter implements AutoCloseable {
      * @param protocol Protocol type to export metrics.
      * @param compression Compression type.
      * @param headers Connection headers.
+     * @param sslEnabled {@code true} is SSL enabled.
+     * @param sslContext SSL context instance to propagate to the OTLP exporter.
+     * @param trustManager Trust manager to propagate to the OTLP exporter.
      */
     public MetricReporter(
         IgniteLogger log,
@@ -109,14 +114,20 @@ public class MetricReporter implements AutoCloseable {
         String endpoint,
         Protocol protocol,
         Compression compression,
-        Map<String, String> headers
+        Map<String, String> headers,
+        boolean sslEnabled,
+        SSLContext sslContext,
+        X509TrustManager trustManager
     ) {
         assert srvcName != null && !srvcName.isEmpty() : "Service name must be specified.";
         assert srvcId != null && !srvcId.isEmpty() : "Service id must be specified.";
 
         this.log = log;
         this.resource = createResource(srvcNamespace, srvcName, srvcId);
-        this.exporter = createExporter(endpoint, protocol, compression, headers);
+        this.exporter = createExporter(
+            endpoint, protocol, compression, headers,
+            sslEnabled, sslContext, trustManager
+        );
     }
 
     /** {@inheritDoc} */
@@ -195,7 +206,10 @@ public class MetricReporter implements AutoCloseable {
         String endpoint,
         Protocol protocol,
         Compression compression,
-        Map<String, String> headers
+        Map<String, String> headers,
+        boolean sslEnabled,
+        SSLContext sslContext,
+        X509TrustManager trustManager
     ) {
         switch (protocol) {
             case HTTP: {
@@ -208,17 +222,24 @@ public class MetricReporter implements AutoCloseable {
                 if (headers != null)
                     builder.setHeaders(() -> headers);
 
+                if (sslEnabled)
+                    builder.setSslContext(sslContext, trustManager);
+
                 return builder.build();
             }
 
             case GRPC: {
                 OtlpGrpcMetricExporterBuilder builder = OtlpGrpcMetricExporter.builder()
                     .setEndpoint(createEndpoint(endpoint, protocol))
+                    .setHeaders(() -> headers)
                     .setCompression(compression.type())
                     .setMemoryMode(REUSABLE_DATA);
 
                 if (headers != null)
                     builder.setHeaders(() -> headers);
+
+                if (sslEnabled)
+                    builder.setSslContext(sslContext, trustManager);
 
                 return builder.build();
             }
