@@ -92,11 +92,15 @@ class IgniteHistogramMetricData extends IgniteMetricData<HistogramMetric> {
 
         /** {@inheritDoc} */
         @Override public long getCount() {
+            long[] vals = metric.value();
+
+            if (isBoundariesChanged())
+                return 0;
+
             long totalCount = 0;
 
-            for (long c : metric.value()) {
+            for (long c : vals)
                 totalCount += c;
-            }
 
             return totalCount;
         }
@@ -129,10 +133,13 @@ class IgniteHistogramMetricData extends IgniteMetricData<HistogramMetric> {
         /** {@inheritDoc} */
         @Override public List<Long> getCounts() {
             long[] vals = metric.value();
-            List<Long> counts = new ArrayList<>(vals.length);
+            boolean changed = isBoundariesChanged();
 
-            for (long val : vals)
-                counts.add(val);
+            List<Long> counts = new ArrayList<>(boundaries.size() + 1);
+
+            for (long val : vals) {
+                counts.add(changed ? 0 : val);
+            }
 
             return counts;
         }
@@ -149,6 +156,14 @@ class IgniteHistogramMetricData extends IgniteMetricData<HistogramMetric> {
                 result.add((double) el);
 
             return result;
+        }
+
+        /**
+         * Returns {@code true} if the underlying histogram has changed in incompatible way,
+         * and {@code false} otherwise.
+         */
+        private boolean isBoundariesChanged() {
+            return boundaries.size() != metric.bounds().length;
         }
     }
 }
