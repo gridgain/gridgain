@@ -64,7 +64,9 @@ class IgniteOffsetDateTimeMetricData extends IgniteMetricData<ObjectMetric<Offse
 
         /** {@inheritDoc} */
         @Override public long getValue() {
-            return metric.value().toInstant().toEpochMilli();
+            OffsetDateTime val = metric.value();
+
+            return (val != null) ? val.toInstant().toEpochMilli() : 0;
         }
 
         /** {@inheritDoc} */

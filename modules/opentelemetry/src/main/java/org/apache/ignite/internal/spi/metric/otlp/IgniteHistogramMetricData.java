@@ -74,7 +74,7 @@ class IgniteHistogramMetricData extends IgniteMetricData<HistogramMetric> {
         }
     }
 
-    static class IgniteDistributionPointData extends IgnitePointData implements HistogramPointData {
+    private static class IgniteDistributionPointData extends IgnitePointData implements HistogramPointData {
         private final HistogramMetric metric;
 
         private final List<Double> boundaries;

@@ -17,7 +17,10 @@
 package org.apache.ignite.internal.spi.metric.otlp;
 
 import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter;
+import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporterBuilder;
 import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
+import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporterBuilder;
+import io.opentelemetry.sdk.common.CompletableResultCode;
 import io.opentelemetry.sdk.common.InstrumentationScopeInfo;
 import io.opentelemetry.sdk.metrics.data.MetricData;
 import io.opentelemetry.sdk.metrics.export.MetricExporter;
@@ -150,7 +153,14 @@ public class MetricReporter implements AutoCloseable {
                 }
             });
 
-            exporter.export(allMetrics);
+            CompletableResultCode res = exporter.export(allMetrics);
+            res.whenComplete(() -> {
+               if (!res.isSuccess()) {
+                   Throwable err = res.getFailureThrowable();
+
+                   log.warning("Failed to export metrics [err=" + ((err != null) ? err.getMessage() : "N/A") + ']');
+               }
+            });
         }
         finally {
             l.unlock();
@@ -189,25 +199,28 @@ public class MetricReporter implements AutoCloseable {
     ) {
         switch (protocol) {
             case HTTP: {
-                OtlpHttpMetricExporter exporter0 = OtlpHttpMetricExporter.builder()
+                OtlpHttpMetricExporterBuilder builder = OtlpHttpMetricExporter.builder()
                     .setEndpoint(createEndpoint(endpoint, protocol))
                     .setHeaders(() -> headers)
                     .setCompression(compression.type())
-                    .setMemoryMode(REUSABLE_DATA)
-                    .build();
+                    .setMemoryMode(REUSABLE_DATA);
 
-                return exporter0;
+                if (headers != null)
+                    builder.setHeaders(() -> headers);
+
+                return builder.build();
             }
 
             case GRPC: {
-                OtlpGrpcMetricExporter exporter0 = OtlpGrpcMetricExporter.builder()
+                OtlpGrpcMetricExporterBuilder builder = OtlpGrpcMetricExporter.builder()
                     .setEndpoint(createEndpoint(endpoint, protocol))
-                    .setHeaders(() -> headers)
                     .setCompression(compression.type())
-                    .setMemoryMode(REUSABLE_DATA)
-                    .build();
+                    .setMemoryMode(REUSABLE_DATA);
 
-                return exporter0;
+                if (headers != null)
+                    builder.setHeaders(() -> headers);
+
+                return builder.build();
             }
 
             default:
@@ -258,6 +271,9 @@ public class MetricReporter implements AutoCloseable {
         if (metric instanceof BooleanMetric)
             return new IgniteBooleanMetricData(resource, scope, (BooleanMetric) metric);
 
+        if (metric instanceof HistogramMetric)
+            return new IgniteHistogramMetricData(resource, scope, (HistogramMetric) metric);
+
         if (metric instanceof ObjectMetric) {
             ObjectMetric<?> objectMetric = (ObjectMetric<?>) metric;
 
@@ -266,9 +282,6 @@ public class MetricReporter implements AutoCloseable {
             else if (objectMetric.type() == java.time.OffsetDateTime.class)
                 return new IgniteOffsetDateTimeMetricData(resource, scope, (ObjectMetric<OffsetDateTime>) metric);
         }
-
-        if (metric instanceof HistogramMetric)
-            return new IgniteHistogramMetricData(resource, scope, (HistogramMetric) metric);
 
         if (log.isDebugEnabled()) {
             log.debug("Unknown metric class for export [" +

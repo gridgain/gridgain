@@ -104,14 +104,14 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
     @Override protected void onContextInitialized0(IgniteSpiContext spiCtx) throws IgniteSpiException {
         super.onContextInitialized0(spiCtx);
 
+        srvcId = ((IgniteEx) ignite()).context().discovery().localNode().consistentId().toString();
+
         if (srvcName == null || srvcName.isEmpty()) {
             // TODO
             // fix deadlock - srvcName = ((IgniteEx)ignite()).context().cluster().clusterName();
             // register event listener to get updated cluster name.
             srvcName = "cluster.name";
         }
-
-        srvcId = ((IgniteEx)ignite()).context().discovery().localNode().consistentId().toString();
 
         exporter = createExporter();
     }

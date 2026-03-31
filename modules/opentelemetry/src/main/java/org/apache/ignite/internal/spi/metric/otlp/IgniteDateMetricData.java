@@ -60,7 +60,9 @@ class IgniteDateMetricData extends IgniteMetricData<ObjectMetric<Date>> {
 
         /** {@inheritDoc} */
         @Override public long getValue() {
-            return metric.value().getTime();
+            Date val = metric.value();
+
+            return (val != null) ? val.getTime() : 0;
         }
 
         /** {@inheritDoc} */
