@@ -159,6 +159,15 @@ public class MetricReporter implements AutoCloseable {
                         metric.name(),
                         name -> toMetricData(resource, scope, metric));
 
+                    if (metricData instanceof IgniteHistogramMetricData) {
+                        // check that the metric was not re-set
+                        if (!((IgniteHistogramMetricData) metricData).isValid()) {
+                            // need to re-create the metric, because histogram bounds were changed.
+                            // log.warning(">>>>> recreate histogram [boundaries changed, name=" + metric.name() + "]");
+                            metricData = toMetricData(resource, scope, metric);
+                        }
+                    }
+
                     if (metricData != null)
                         metricsToExport.add(metricData);
                 }

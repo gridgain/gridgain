@@ -38,7 +38,7 @@ import static java.util.Collections.singletonList;
  * Metric data that holds histogram metric.
  */
 class IgniteHistogramMetricData extends IgniteMetricData<HistogramMetric> {
-    private final HistogramData data;
+    private final IgniteHistogramData data;
 
     IgniteHistogramMetricData(Resource resource, InstrumentationScopeInfo scope, HistogramMetric metric) {
         super(resource, scope, metric);
@@ -54,6 +54,10 @@ class IgniteHistogramMetricData extends IgniteMetricData<HistogramMetric> {
     /** {@inheritDoc} */
     @Override public Data<?> getData() {
         return data;
+    }
+
+    boolean isValid() {
+        return data.isValid();
     }
 
     static class IgniteHistogramData implements HistogramData {
@@ -72,17 +76,28 @@ class IgniteHistogramMetricData extends IgniteMetricData<HistogramMetric> {
         @Override public Collection<HistogramPointData> getPoints() {
             return points;
         }
+
+        private boolean isValid() {
+            for (HistogramPointData p : points) {
+                if (((IgniteDistributionPointData) p).isBoundariesChanged())
+                    return false;
+            }
+
+            return true;
+        }
     }
 
     private static class IgniteDistributionPointData extends IgnitePointData implements HistogramPointData {
         private final HistogramMetric metric;
 
+        private final long[] originalBoundaries;
         private final List<Double> boundaries;
 
         IgniteDistributionPointData(HistogramMetric metric) {
             this.metric = metric;
 
-            boundaries = asDoubleList(metric.bounds());
+            this.originalBoundaries = metric.bounds();
+            this.boundaries = asDoubleList(originalBoundaries);
         }
 
         /** {@inheritDoc} */
@@ -137,9 +152,8 @@ class IgniteHistogramMetricData extends IgniteMetricData<HistogramMetric> {
 
             List<Long> counts = new ArrayList<>(boundaries.size() + 1);
 
-            for (long val : vals) {
+            for (long val : vals)
                 counts.add(changed ? 0 : val);
-            }
 
             return counts;
         }
@@ -163,7 +177,7 @@ class IgniteHistogramMetricData extends IgniteMetricData<HistogramMetric> {
          * and {@code false} otherwise.
          */
         private boolean isBoundariesChanged() {
-            return boundaries.size() != metric.bounds().length;
+            return originalBoundaries != metric.bounds();
         }
     }
 }
