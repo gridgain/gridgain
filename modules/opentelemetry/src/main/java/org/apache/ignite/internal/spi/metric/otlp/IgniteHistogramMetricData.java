@@ -91,12 +91,14 @@ class IgniteHistogramMetricData extends IgniteMetricData<HistogramMetric> {
         private final HistogramMetric metric;
 
         private final long[] originalBoundaries;
+
         private final List<Double> boundaries;
 
         IgniteDistributionPointData(HistogramMetric metric) {
             this.metric = metric;
 
             this.originalBoundaries = metric.bounds();
+
             this.boundaries = asDoubleList(originalBoundaries);
         }
 

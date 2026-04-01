@@ -28,7 +28,9 @@ import org.apache.ignite.spi.metric.Metric;
  */
 abstract class IgniteMetricData<T extends Metric> implements MetricData {
     private final Resource resource;
+
     private final InstrumentationScopeInfo scope;
+
     private final T metric;
 
     IgniteMetricData(Resource resource, InstrumentationScopeInfo scope, T metric) {
