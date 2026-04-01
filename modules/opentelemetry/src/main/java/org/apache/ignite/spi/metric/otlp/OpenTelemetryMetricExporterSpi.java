@@ -409,8 +409,6 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
             sslEnabled, sslContext, trustManager
         );
 
-        // TODO
-        // if we want to cache already created metrics.
         mreg.addMetricRegistryRemoveListener(reporter::removeMetricSet);
 
         return reporter;

@@ -32,6 +32,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -80,7 +81,7 @@ public class MetricReporter implements AutoCloseable {
     private final IgniteLogger log;
 
     /** Represents a resource, which capture identifying information about the entities for which stats are reported.*/
-    private Resource resource;
+    private final Resource resource;
 
     private final MetricExporter exporter;
 
@@ -88,8 +89,7 @@ public class MetricReporter implements AutoCloseable {
     private final ReadWriteLock updateLock = new ReentrantReadWriteLock();
 
     /** Collection of actual metrics protected by {@link #updateLock}. */
-    // TODO if we need to cache already created metrics
-    // private Map<String, Collection<MetricData>> metricsBySet = new HashMap<>();
+     private Map<String, MetricData> metricsByName = new HashMap<>();
 
     /**
      * Creates a new instance of {@link MetricReporter}.
@@ -142,52 +142,52 @@ public class MetricReporter implements AutoCloseable {
      * @param filter Optional predicate to filter metric registries.
      */
     public void report(ReadOnlyMetricManager mreg, @Nullable Predicate<ReadOnlyMetricRegistry> filter) {
+        Collection<MetricData> metricsToExport = new ArrayList<>();
+
         Lock l = updateLock.readLock();
 
         l.lock();
         try {
-            Resource resource0 = resource;
-            Collection<MetricData> allMetrics = new ArrayList<>();
             mreg.forEach(metricSet -> {
                 if (filter != null && !filter.test(metricSet))
                     return;
 
-                InstrumentationScopeInfo scope = InstrumentationScopeInfo.builder(metricSet.name())
-                    .build();
+                InstrumentationScopeInfo scope = InstrumentationScopeInfo.builder(metricSet.name()).build();
 
                 for (Metric metric : metricSet) {
-                    MetricData metricData = toMetricData(resource0, scope, metric);
+                    MetricData metricData = metricsByName.computeIfAbsent(
+                        metric.name(),
+                        name -> toMetricData(resource, scope, metric));
 
-                    if (metricData != null) {
-                        allMetrics.add(metricData);
-                    }
+                    if (metricData != null)
+                        metricsToExport.add(metricData);
                 }
-            });
-
-            CompletableResultCode res = exporter.export(allMetrics);
-            res.whenComplete(() -> {
-               if (!res.isSuccess()) {
-                   Throwable err = res.getFailureThrowable();
-
-                   log.warning("Failed to export metrics [err=" + ((err != null) ? err.getMessage() : "N/A") + ']');
-               }
             });
         }
         finally {
             l.unlock();
         }
-    }
 
-    public void serviceName(String serviceName) {
-        // TODO need to reinitialize resource and collection of metrics.
-    }
+        CompletableResultCode res = exporter.export(metricsToExport);
+        res.whenComplete(() -> {
+            if (!res.isSuccess()) {
+                Throwable err = res.getFailureThrowable();
 
-    public void addMetricSet(ReadOnlyMetricRegistry metricSet) {
-        // TODO if we want to cache already created metrics
+                log.warning("Failed to export metrics [err=" + ((err != null) ? err.getMessage() : "N/A") + ']');
+            }
+        });
     }
 
     public void removeMetricSet(ReadOnlyMetricRegistry metricSet) {
-        // TODO if we want to cache already created metrics
+        Lock l = updateLock.writeLock();
+
+        l.lock();
+        try {
+            metricSet.forEach(metric -> metricsByName.remove(metric.name()));
+        }
+        finally {
+            l.unlock();
+        }
     }
 
     private Resource createResource(@Nullable String srvcNamespace, String srvcName, String srvcId) {
@@ -256,14 +256,12 @@ public class MetricReporter implements AutoCloseable {
         if (Protocol.HTTP == protocol) {
             String basePath = uri.getPath() != null ? uri.getPath() : "";
 
-            if (!basePath.isEmpty()) {
+            if (!basePath.isEmpty())
                 sb.append(basePath);
-            }
 
             if (!basePath.endsWith("v1/metrics") && !basePath.endsWith("v1/metrics/")) {
-                if (!basePath.endsWith("/")) {
+                if (!basePath.endsWith("/"))
                     sb.append('/');
-                }
 
                 sb.append("v1/metrics");
             }
