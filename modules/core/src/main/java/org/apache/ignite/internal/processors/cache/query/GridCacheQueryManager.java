@@ -632,6 +632,8 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                     break;
 
                 case VECTOR:
+                    long vqT0 = log.isTraceEnabled() ? System.nanoTime() : 0;
+
                     if (cctx.events().isRecordable(EVT_CACHE_QUERY_EXECUTED)) {
                         cctx.gridEvents().record(new CacheQueryExecutedEvent<>(
                             cctx.localNode(),
@@ -648,8 +650,14 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                             taskName));
                     }
 
+                    long vqT1 = log.isTraceEnabled() ? System.nanoTime() : 0;
+
                     iter = qryProc.queryVector(cacheName, qry.fieldName(), qry.queryVector(), qry.k(), qry.threshold(),
                         qry.queryClassName(), filter(qry));
+
+                    if (log.isTraceEnabled())
+                        log.trace("GCQM-VQ events=" + (vqT1 - vqT0) / 1000 + "us queryVector=" +
+                            (System.nanoTime() - vqT1) / 1000 + "us");
 
                     break;
 

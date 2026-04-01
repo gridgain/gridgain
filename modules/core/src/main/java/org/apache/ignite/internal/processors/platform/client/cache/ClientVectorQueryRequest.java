@@ -54,16 +54,29 @@ public class ClientVectorQueryRequest extends ClientCacheRequest {
 
     /** {@inheritDoc} */
     @Override public ClientResponse process(ClientConnectionContext ctx) {
+        long t0 = System.nanoTime();
+
         IgniteCache<Object, Object> cache = cache(ctx);
+
+        long t1 = System.nanoTime();
 
         try {
             QueryCursor cur = cache.query(qry);
+
+            long t2 = System.nanoTime();
 
             ClientCacheEntryQueryCursor cliCur = new ClientCacheEntryQueryCursor(cur, pageSize, ctx);
 
             long cursorId = ctx.resources().put(cliCur);
 
             cliCur.id(cursorId);
+
+            long t3 = System.nanoTime();
+
+            org.apache.ignite.IgniteLogger log = ctx.kernalContext().log(ClientVectorQueryRequest.class);
+            if (log.isTraceEnabled())
+                log.trace("CVQ getCache=" + (t1 - t0) / 1000 + "us query=" + (t2 - t1) / 1000 +
+                    "us cursor=" + (t3 - t2) / 1000 + "us total=" + (t3 - t0) / 1000 + "us");
 
             return new ClientCacheQueryResponse(requestId(), cliCur);
         }

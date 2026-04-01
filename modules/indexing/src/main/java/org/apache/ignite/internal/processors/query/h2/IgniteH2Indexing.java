@@ -605,9 +605,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         String typeName,
         IndexingQueryFilter filter
     ) throws IgniteCheckedException {
+        boolean trace = log.isTraceEnabled();
+        long t0 = trace ? System.nanoTime() : 0;
+
         H2TableDescriptor tbl = schemaMgr.tableForType(schemaName, cacheName, typeName);
 
         if (tbl != null && tbl.luceneIndex() != null) {
+            long t1 = trace ? System.nanoTime() : 0;
+
             Long qryId = runningQueryManager().register(
                 null,
                 VECTOR,
@@ -622,9 +627,20 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null
             );
 
+            long t2 = trace ? System.nanoTime() : 0;
+
             Throwable failReason = null;
             try {
-                return tbl.luceneIndex().vectorQuery(field.toUpperCase(), qryVector, k, threshold, filter);
+                GridCloseableIterator<IgniteBiTuple<K, V>> res =
+                    tbl.luceneIndex().vectorQuery(field.toUpperCase(), qryVector, k, threshold, filter);
+
+                long t3 = trace ? System.nanoTime() : 0;
+
+                if (trace)
+                    log.trace("H2VQ tblLookup=" + (t1 - t0) / 1000 + "us qryReg=" + (t2 - t1) / 1000 +
+                        "us luceneVQ=" + (t3 - t2) / 1000 + "us");
+
+                return res;
             }
             catch (Throwable t) {
                 failReason = t;
