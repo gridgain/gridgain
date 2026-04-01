@@ -32,6 +32,78 @@ import org.apache.ignite.spi.IgniteSpiContext;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.ssl.SslContextFactory;
 
+/**
+ * SPI implementation that periodically exports Ignite metrics to an
+ * <a href="https://opentelemetry.io/docs/specs/otlp/">OpenTelemetry Protocol (OTLP)</a> compatible backend
+ * (e.g. OpenTelemetry Collector, Grafana OTLP endpoint, Jaeger, etc.).
+ *
+ * <h2>Overview</h2>
+ * <p>
+ * This exporter runs a background task that fires every {@link #getPeriod()} milliseconds and pushes the current
+ * snapshot of all metric registries to the configured OTLP endpoint. Each Ignite node exports its own metrics and
+ * identifies itself via the
+ * <a href="https://opentelemetry.io/docs/specs/semconv/resource/service">OpenTelemetry service resource attributes</a>:
+ * <ul>
+ *   <li>{@code service.namespace} — set via {@link #setServiceNamespace(String)}</li>
+ *   <li>{@code service.name} — set via {@link #setServiceName(String)};
+ *       defaults to the cluster tag (see {@link IgniteCluster#tag()}) if not specified</li>
+ *   <li>{@code service.instance.id} — automatically set to the node's consistent ID</li>
+ * </ul>
+ *
+ * <h2>Transport</h2>
+ * <p>
+ * Two wire protocols are supported (see {@link Protocol}):
+ * <ul>
+ *   <li>{@link Protocol#GRPC} (default) — OTLP over gRPC</li>
+ *   <li>{@link Protocol#HTTP} — OTLP over HTTP/protobuf</li>
+ * </ul>
+ * The target endpoint is configured via {@link #setEndpoint(String)} and must follow the pattern
+ * {@code http(s)://host:port}.  The default endpoint is {@value #DEFAULT_ENDPOINT}.
+ *
+ * <h2>Compression</h2>
+ * <p>
+ * Payload compression is controlled by {@link #setCompression(Compression)}.  Supported types are
+ * {@link Compression#NONE} (default) and {@link Compression#GZIP}.
+ *
+ * <h2>SSL/TLS</h2>
+ * <p>
+ * Secure connections are enabled by setting {@link #setSslEnabled(boolean)} to {@code true}.
+ * By default, the SPI will reuse the {@link javax.cache.configuration.Factory Factory&lt;SSLContext&gt;} already
+ * configured in {@link org.apache.ignite.configuration.IgniteConfiguration#setSslContextFactory(Factory)}
+ * (controlled by {@link #setUseIgniteSslContextFactory(boolean)}).
+ * <p>
+ * A dedicated SSL context factory can be provided via {@link #setSslContextFactory(Factory)}.
+ * An instance of {@link org.apache.ignite.ssl.SslContextFactory} is the recommended implementation because it
+ * supplies both the {@link javax.net.ssl.SSLContext} and the {@link javax.net.ssl.TrustManager} from a single
+ * object.  When a different {@link javax.cache.configuration.Factory Factory&lt;SSLContext&gt;} is used, a
+ * separate {@link #setTrustManagerFactory(Factory) trust-manager factory} must be configured.
+ *
+ * <h2>Custom headers</h2>
+ * <p>
+ * Arbitrary HTTP/gRPC metadata headers (e.g. authentication tokens) can be injected into every export request
+ * via {@link #setConnectionHeaders(Map)}.
+ *
+ * <h2>Configuration example</h2>
+ * <pre>{@code
+ * OpenTelemetryMetricExporterSpi spi = new OpenTelemetryMetricExporterSpi();
+ *
+ * spi.setEndpoint("http://otel-collector:4317");
+ * spi.setProtocol(Protocol.GRPC);
+ * spi.setCompression(Compression.GZIP);
+ * spi.setPeriod(30_000L);                   // export every 30 seconds
+ * spi.setServiceNamespace("my-org");
+ * spi.setServiceName("ignite-cluster");
+ *
+ * IgniteConfiguration cfg = new IgniteConfiguration();
+ * cfg.setMetricExporterSpi(spi);
+ * }</pre>
+ *
+ * @see Protocol
+ * @see Compression
+ * @see PushMetricsExporterAdapter
+ * @see <a href="https://opentelemetry.io/docs/specs/otlp/">OTLP specification</a>
+ * @see <a href="https://opentelemetry.io/docs/specs/semconv/resource/service">Service semantic conventions</a>
+ */
 public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
     /** Default protocol type that is used to export metrics. */
     public static final Protocol DEFAULT_PROTOCOL = Protocol.GRPC;
@@ -72,13 +144,13 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
     /** SSL enable flag, default is disabled. */
     private boolean sslEnabled;
 
-    /** If set to {@code true}, when this SPI will use SSL context factory from Ignite configuration. */
+    /** If set to {@code true}, this SPI will use SSL context factory from Ignite configuration. */
     private boolean useIgniteSslCtxFactory = DFLT_USE_IGNITE_SSL_CTX_FACTORY;
 
-    /** */
+    /** Factory to create SSLContext. */
     private Factory<SSLContext> sslFactory;
 
-    /** */
+    /** Factory to create TrustManager. */
     private Factory<TrustManager> trustFactory;
 
     /** Otlp metric exporter. */
@@ -110,7 +182,7 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
     }
 
     /**
-     * Sets a logical name of a system or application under a common namespace. This a namespace for the service name.
+     * Sets a logical name of a system or application under a common namespace. This is a namespace for the service name.
      * 
      * @param srvcNamespace Service namespace.
      * @see <a href="https://opentelemetry.io/docs/specs/semconv/resource/service">Service semantic conventions</a>
@@ -123,7 +195,7 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
      * Returns service namespace.
      * 
      * @return Service namespace.
-     * @see #setServiceName(String) 
+     * @see #setServiceNamespace(String)
      */
     public String getServiceNamespace() {
         return srvcNamespace;
@@ -373,7 +445,7 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
     }
 
     /**
-     * Returns the configured instance of {@link TrustManager}.
+     * Returns the configured factory to create an instance of {@link TrustManager}.
      *
      * @return Factory to create {@link TrustManager}.
      * @see #setTrustManagerFactory(Factory)
