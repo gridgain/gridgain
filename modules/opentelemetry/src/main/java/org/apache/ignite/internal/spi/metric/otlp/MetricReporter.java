@@ -163,7 +163,6 @@ public class MetricReporter implements AutoCloseable {
                         // check that the metric was not re-set
                         if (!((IgniteHistogramMetricData) metricData).isValid()) {
                             // need to re-create the metric, because histogram bounds were changed.
-                            // log.warning(">>>>> recreate histogram [boundaries changed, name=" + metric.name() + "]");
                             metricData = toMetricData(resource, scope, metric);
                         }
                     }
