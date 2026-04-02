@@ -476,6 +476,9 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
                     : null;
             }
             else {
+                if (trustFactory == null)
+                    throw new IgniteSpiException("SSL is enabled, but TrustManager factory is not configured.");
+
                 sslContext = factory.create();
                 trustManager = trustFactory.create();
             }
@@ -486,8 +489,10 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
             if (trustManager == null)
                 throw new IgniteSpiException("TrustManager factory returned null TrustManager.");
 
-            if (!(trustManager instanceof X509TrustManager))
-                throw new IgniteSpiException("TrustManager isn not an instance of X509TrustManager.");
+            if (!(trustManager instanceof X509TrustManager)) {
+                throw new IgniteSpiException("TrustManager is not an instance of X509TrustManager [class=" +
+                    trustManager.getClass().getSimpleName() + ']');
+            }
         }
 
         MetricReporter reporter = new MetricReporter(
