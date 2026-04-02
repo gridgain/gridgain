@@ -34,9 +34,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.X509TrustManager;
@@ -86,10 +84,10 @@ public class MetricReporter implements AutoCloseable {
     private final MetricExporter exporter;
 
     /** Lock to update collection of actual metrics and cluster name changes. */
-    private final ReadWriteLock updateLock = new ReentrantReadWriteLock();
+    private final ReentrantLock updateLock = new ReentrantLock();
 
     /** Collection of actual metrics protected by {@link #updateLock}. */
-     private Map<String, MetricData> metricsByName = new HashMap<>();
+     private final Map<String, MetricData> metricsByName = new HashMap<>();
 
     /**
      * Creates a new instance of {@link MetricReporter}.
@@ -144,9 +142,7 @@ public class MetricReporter implements AutoCloseable {
     public void report(ReadOnlyMetricManager mreg, @Nullable Predicate<ReadOnlyMetricRegistry> filter) {
         Collection<MetricData> metricsToExport = new ArrayList<>();
 
-        Lock l = updateLock.readLock();
-
-        l.lock();
+        updateLock.lock();
         try {
             mreg.forEach(metricSet -> {
                 if (filter != null && !filter.test(metricSet))
@@ -173,7 +169,7 @@ public class MetricReporter implements AutoCloseable {
             });
         }
         finally {
-            l.unlock();
+            updateLock.unlock();
         }
 
         CompletableResultCode res = exporter.export(metricsToExport);
@@ -187,14 +183,12 @@ public class MetricReporter implements AutoCloseable {
     }
 
     public void removeMetricSet(ReadOnlyMetricRegistry metricSet) {
-        Lock l = updateLock.writeLock();
-
-        l.lock();
+        updateLock.lock();
         try {
             metricSet.forEach(metric -> metricsByName.remove(metric.name()));
         }
         finally {
-            l.unlock();
+            updateLock.unlock();
         }
     }
 
