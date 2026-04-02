@@ -20,7 +20,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 /**
- * Suite to test OpenCensus integration.
+ * Suite to test OpenTelemetry integration.
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({

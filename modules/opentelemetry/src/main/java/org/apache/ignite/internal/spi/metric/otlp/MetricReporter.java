@@ -87,7 +87,7 @@ public class MetricReporter implements AutoCloseable {
     private final ReentrantLock updateLock = new ReentrantLock();
 
     /** Collection of actual metrics protected by {@link #updateLock}. */
-     private final Map<String, MetricData> metricsByName = new HashMap<>();
+    private final Map<String, MetricData> metricsByName = new HashMap<>();
 
     /**
      * Creates a new instance of {@link MetricReporter}.
@@ -160,6 +160,8 @@ public class MetricReporter implements AutoCloseable {
                         if (!((IgniteHistogramMetricData) metricData).isValid()) {
                             // need to re-create the metric, because histogram bounds were changed.
                             metricData = toMetricData(resource, scope, metric);
+
+                            metricsByName.put(metric.name(), metricData);
                         }
                     }
 
@@ -217,7 +219,6 @@ public class MetricReporter implements AutoCloseable {
             case HTTP: {
                 OtlpHttpMetricExporterBuilder builder = OtlpHttpMetricExporter.builder()
                     .setEndpoint(createEndpoint(endpoint, protocol))
-                    .setHeaders(() -> headers)
                     .setCompression(compression.type())
                     .setMemoryMode(REUSABLE_DATA);
 
@@ -233,7 +234,6 @@ public class MetricReporter implements AutoCloseable {
             case GRPC: {
                 OtlpGrpcMetricExporterBuilder builder = OtlpGrpcMetricExporter.builder()
                     .setEndpoint(createEndpoint(endpoint, protocol))
-                    .setHeaders(() -> headers)
                     .setCompression(compression.type())
                     .setMemoryMode(REUSABLE_DATA);
 

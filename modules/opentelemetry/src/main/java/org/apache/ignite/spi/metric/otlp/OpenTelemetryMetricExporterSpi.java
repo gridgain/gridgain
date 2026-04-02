@@ -165,7 +165,8 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
     @Override public void spiStop() throws IgniteSpiException {
         super.spiStop();
 
-        exporter.close();
+        if (exporter != null)
+            exporter.close();
     }
 
     /** {@inheritDoc} */
@@ -456,29 +457,43 @@ public class OpenTelemetryMetricExporterSpi extends PushMetricsExporterAdapter {
 
     private MetricReporter createExporter() {
         SSLContext sslContext = null;
-        X509TrustManager trustManager = null;
+        TrustManager trustManager = null;
 
         if (sslEnabled) {
             Factory<SSLContext> factory = useIgniteSslCtxFactory
                 ? ignite().configuration().getSslContextFactory()
                 : sslFactory;
 
+            if (factory == null)
+                throw new IgniteSpiException("SSL is enabled, but SSL context factory is not configured.");
+
             if (factory instanceof SslContextFactory) {
                 SslContextFactory contextFactory = (SslContextFactory) factory;
 
                 sslContext = contextFactory.create();
-                trustManager = (X509TrustManager) contextFactory.getTrustManagers()[0];
+                trustManager = contextFactory.getTrustManagers().length > 0
+                    ? contextFactory.getTrustManagers()[0]
+                    : null;
             }
             else {
                 sslContext = factory.create();
-                trustManager = (X509TrustManager) trustFactory.create();
+                trustManager = trustFactory.create();
             }
+
+            if (sslContext == null)
+                throw new IgniteSpiException("SSL context factory returned null SSLContext.");
+
+            if (trustManager == null)
+                throw new IgniteSpiException("TrustManager factory returned null TrustManager.");
+
+            if (!(trustManager instanceof X509TrustManager))
+                throw new IgniteSpiException("TrustManager isn not an instance of X509TrustManager.");
         }
 
         MetricReporter reporter = new MetricReporter(
             log, srvcNamespace, srvcName, srvcId,
             endpoint, protocol, compression, headers,
-            sslEnabled, sslContext, trustManager
+            sslEnabled, sslContext, (X509TrustManager) trustManager
         );
 
         mreg.addMetricRegistryRemoveListener(reporter::removeMetricSet);

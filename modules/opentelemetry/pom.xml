@@ -30,7 +30,10 @@
     </parent>
 
     <artifactId>ignite-opentelemetry</artifactId>
-    <url>http://ignite.apache.org</url>
+
+    <properties>
+        <org.testcontainers.version>1.21.4</org.testcontainers.version>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -46,12 +49,12 @@
             <exclusions>
                 <!-- Exclude transitive dependency for exporting logs and traces.-->
                 <exclusion>
-                    <artifactId>io.opentelemetry</artifactId>
-                    <groupId>opentelemetry-sdk-logs</groupId>
+                    <groupId>io.opentelemetry</groupId>
+                    <artifactId>opentelemetry-sdk-logs</artifactId>
                 </exclusion>
                 <exclusion>
-                    <artifactId>io.opentelemetry</artifactId>
-                    <groupId>opentelemetry-sdk-trace</groupId>
+                    <groupId>io.opentelemetry</groupId>
+                    <artifactId>opentelemetry-sdk-trace</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -88,7 +91,7 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
-            <version>1.21.4</version>
+            <version>${org.testcontainers.version}</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
