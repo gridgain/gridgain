@@ -136,6 +136,8 @@ public class PartitionReconciliationTombstonesWithIndicesTest extends PartitionR
 
         ig.cluster().state(ACTIVE);
 
+        awaitPartitionMapExchange();
+
         Class<?> customKeyCls = ig.configuration().getClassLoader().loadClass(CUSTOM_KEY_CLS);
         Class<?> customValCls = ig.configuration().getClassLoader().loadClass(CUSTOM_VAL_CLS);
 
@@ -148,7 +150,9 @@ public class PartitionReconciliationTombstonesWithIndicesTest extends PartitionR
 
         int primaryNodeIdx = -1;
         for (int i = 0; i < NODES_CNT; ++i) {
-            if (grid(i).affinity(DEFAULT_CACHE_NAME).isPrimary(grid(i).localNode(), primaryKey)) {
+            IgniteEx node = grid(i);
+
+            if (node.affinity(DEFAULT_CACHE_NAME).isPrimary(node.localNode(), primaryKey)) {
                 primaryNodeIdx = i;
 
                 break;
@@ -157,19 +161,37 @@ public class PartitionReconciliationTombstonesWithIndicesTest extends PartitionR
 
         assertTrue("Failed to find primary node for key [key=" + primaryKey + ']', primaryNodeIdx >= 0);
 
+        AtomicInteger msgCnt = new AtomicInteger(NODES_CNT - 1);
+
+        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(grid(primaryNodeIdx));
+
+        spi.blockMessages((node, msg) -> {
+            boolean needToCheck = cacheAtomicityMode == ATOMIC ?
+                msg instanceof GridDhtAtomicSingleUpdateRequest :
+                msg instanceof GridDhtTxFinishRequest;
+
+            if (needToCheck)
+                msgCnt.decrementAndGet();
+
+            return false;
+        });
+
         clientCache.put(primaryKey, primaryVal);
+
+        assertTrue(
+            "Failed to wait all update messages that are sent to backup nodes on initial update.",
+            waitForCondition(() -> msgCnt.get() == 0, 10_000));
 
         // Block first NODES_CNT - 1 messages from primary node,
         // to emulate the case when primary contains a tombstone for the key
         // and backup nodes store the original value.
-        AtomicInteger blocked = new AtomicInteger(NODES_CNT - 1);
-        TestRecordingCommunicationSpi spi = TestRecordingCommunicationSpi.spi(grid(primaryNodeIdx));
+        msgCnt.set(NODES_CNT - 1);
         spi.blockMessages((node, msg) -> {
-            boolean blockedMsg = cacheAtomicityMode == ATOMIC ?
+            boolean needToCheck = cacheAtomicityMode == ATOMIC ?
                 msg instanceof GridDhtAtomicSingleUpdateRequest :
                 msg instanceof GridDhtTxFinishRequest;
 
-            return blockedMsg && blocked.decrementAndGet() >= 0;
+            return needToCheck && msgCnt.decrementAndGet() >= 0;
         });
 
         final int pNodeIdx = primaryNodeIdx;
@@ -178,8 +200,8 @@ public class PartitionReconciliationTombstonesWithIndicesTest extends PartitionR
         });
 
         assertTrue(
-            "Failed to wait all update messages that are sent to backup nodes.",
-            waitForCondition(() -> blocked.get() == 0, 10_000));
+            "Failed to wait all update messages that are sent to backup nodes on remove.",
+            waitForCondition(() -> msgCnt.get() == 0, 10_000));
 
         ReconciliationResult res = partitionReconciliation(ig, fixMode, RepairAlgorithm.PRIMARY, 4, DEFAULT_CACHE_NAME);
 
