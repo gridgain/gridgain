@@ -4619,8 +4619,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         reg.register("longJVMPauseLastEvents", this::getLongJVMPauseLastEvents, Map.class,
             LONG_JVM_PAUSE_LAST_EVENTS_DESC);
 
-        reg.register("active", () -> ClusterState.active(ctx.state().clusterState().state()), Boolean.class,
-            ACTIVE_DESC);
+        reg.register("active", () -> ClusterState.active(ctx.state().clusterState().state()), ACTIVE_DESC);
 
         reg.register("clusterState", this::getClusterState, String.class, CLUSTER_STATE_DESC);
         reg.register("lastClusterStateChangeTime", this::lastClusterStateChangeTime, LAST_CLUSTER_STATE_CHANGE_TIME_DESC);
@@ -4641,8 +4640,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         reg.register("localNodeId", this::getLocalNodeId, UUID.class, LOC_NODE_ID_DESC);
 
-        reg.register("isPeerClassLoadingEnabled", this::isPeerClassLoadingEnabled, Boolean.class,
-            IS_PEER_CLS_LOADING_ENABLED_DESC);
+        reg.register("isPeerClassLoadingEnabled", this::isPeerClassLoadingEnabled, IS_PEER_CLS_LOADING_ENABLED_DESC);
 
         reg.register("lifecycleBeansFormatted", this::getLifecycleBeansFormatted, List.class,
             LIFECYCLE_BEANS_FORMATTED_DESC);
