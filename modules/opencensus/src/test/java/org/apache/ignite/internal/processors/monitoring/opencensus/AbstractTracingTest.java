@@ -16,6 +16,14 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
+import io.opencensus.common.Functions;
+import io.opencensus.trace.AttributeValue;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.SpanId;
+import io.opencensus.trace.Tracing;
+import io.opencensus.trace.export.SpanData;
+import io.opencensus.trace.export.SpanExporter;
+import io.opencensus.trace.samplers.Samplers;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,15 +34,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import io.opencensus.common.Functions;
-import io.opencensus.trace.AttributeValue;
-import io.opencensus.trace.Span;
-import io.opencensus.trace.SpanId;
-import io.opencensus.trace.Tracing;
-import io.opencensus.trace.export.SpanData;
-import io.opencensus.trace.export.SpanExporter;
-import io.opencensus.trace.samplers.Samplers;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -42,6 +41,7 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
 import org.apache.ignite.spi.tracing.TracingConfigurationManager;
@@ -70,7 +70,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     private static final int SPAN_BUFFER_COUNT = 2500;
 
     /** Enforces that trace export exports data at least once every 5 seconds (hardcoded in open census). */
-    private static final long EXPORTER_SCHEDULE_DELAY = 5_000;
+    protected static final long EXPORTER_SCHEDULE_DELAY = 5_000;
 
     /** */
     protected static final String IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL = "10";
@@ -513,7 +513,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
             // There is no ability to change this behavior in Opencensus, so this hack is needed to "flush" real spans to exporter.
             // @see io.opencensus.implcore.trace.export.ExportComponentImpl.
 
-            String testSpanNamePrefix = "test-" + System.nanoTime() + '-';
+            String testSpanNamePrefix = IgniteUuid.randomUuid() + "-test-" + System.nanoTime() + '-';
             String lastTestSpanName = testSpanNamePrefix + SPAN_BUFFER_COUNT;
 
             for (int i = 1; i <= SPAN_BUFFER_COUNT; i++) {
