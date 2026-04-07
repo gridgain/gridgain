@@ -153,6 +153,12 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     /** Error stack trace prefix. */
     protected static final String ERROR_STACK_TRACE_PREFIX = "Error stack trace:";
 
+    private static final Pattern SKIP_CLEAR_PATTERN =
+        Pattern.compile("The following caches don't exist:\\s*(.+)");
+
+    private static final Pattern CLEARED_CACHES_PATTERN =
+        Pattern.compile("The following caches have been cleared:\\s*(.+)");
+
     /**
      * Very basic tests for running the command in different environment which other command are running in.
      */
@@ -1461,21 +1467,45 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         assertEquals(EXIT_CODE_OK, execute("--cache", CLEAR.text(), CacheClear.CACHES, String.join(",", clearCaches)));
 
-        List<String> nonExistentCaches = clearCaches.stream()
+        Set<String> nonExistentCaches = clearCaches.stream()
             .filter(c -> !caches.contains(c))
-            .collect(Collectors.toList());
+            .collect(Collectors.toSet());
 
-        List<String> clearedCaches = clearCaches.stream()
+        Set<String> clearedCaches = clearCaches.stream()
             .filter(caches::contains)
-            .collect(Collectors.toList());
+            .collect(Collectors.toSet());
 
-        if (!nonExistentCaches.isEmpty())
-            assertContains(log, testOut.toString(), String.format(CacheClear.SKIP_CLEAR_MSG, String.join(", ", nonExistentCaches)));
+        if (!nonExistentCaches.isEmpty()) {
+            Matcher matcher = SKIP_CLEAR_PATTERN.matcher(testOut.toString());
+
+            assertTrue(
+                "Control utility output does not contain cleared caches [output=" + U.nl() + testOut.toString() + ']',
+                matcher.find());
+
+            Set<String> actuallySkippedCaches = Arrays.stream(matcher.group(1).split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
+
+            assertEquals(nonExistentCaches, actuallySkippedCaches);
+        }
         else
             assertNotContains(log, testOut.toString(), String.format(CacheClear.SKIP_CLEAR_MSG, ""));
 
-        if (!clearedCaches.isEmpty())
-            assertContains(log, testOut.toString(), String.format(CacheClear.CLEAR_MSG, String.join(", ", clearedCaches)));
+        if (!clearedCaches.isEmpty()) {
+            Matcher matcher = CLEARED_CACHES_PATTERN.matcher(testOut.toString());
+
+            assertTrue(
+                "Control utility output does not contain cleared caches [output=" + U.nl() + testOut.toString() + ']',
+                matcher.find());
+
+            Set<String> actuallyClearedCaches = Arrays.stream(matcher.group(1).split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
+
+            assertEquals(clearedCaches, actuallyClearedCaches);
+        }
         else
             assertNotContains(log, testOut.toString(), String.format(CacheClear.CLEAR_MSG, ""));
 
