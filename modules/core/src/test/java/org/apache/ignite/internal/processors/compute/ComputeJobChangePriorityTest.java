@@ -260,6 +260,7 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
         }
     }
 
+    // These tests don't need standard 300 seconds timeout.
     @Override protected long getTestTimeout() {
         return 30_000;
     }
