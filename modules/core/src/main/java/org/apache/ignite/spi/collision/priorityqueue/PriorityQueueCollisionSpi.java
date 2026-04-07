@@ -520,7 +520,7 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
 
         int waitJobsNum = this.waitJobsNum;
 
-        boolean noExcessiveJobs = waitSize < waitJobsNum;
+        boolean noExcessiveJobs = waitSize <= waitJobsNum;
 
         if (activateCnt <= 0 && noExcessiveJobs)
             return;
