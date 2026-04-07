@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.metastorage;
 
+import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,7 +29,9 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -36,6 +39,8 @@ import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -46,6 +51,8 @@ import org.junit.Test;
  * Single place to add for basic MetaStorage tests.
  */
 public class IgniteMetaStorageBasicTest extends GridCommonAbstractTest {
+    private static final String TEST_CACHE_NAME = "test-cache";
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
@@ -592,5 +599,55 @@ public class IgniteMetaStorageBasicTest extends GridCommonAbstractTest {
         }, true);
 
         return read;
+    }
+
+    /**
+     * Verifies that cache partition data is not evicted when a node rejoins the cluster
+     * after its metastorage folder has been wiped.
+     *
+     * Partition ownership is determined by the node's consistent ID, not by metastorage state,
+     * so the page store files should remain valid after the node rejoins.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCacheDataSurvivesMetaStorageWipe() throws Exception {
+        IgniteEx node0 = startGrid(0);
+        IgniteEx node1 = startGrid(1);
+
+        node0.cluster().active(true);
+
+        // The test fails if backups=0, but passes if backups=1
+        IgniteCache<Integer, String> cache = node0.getOrCreateCache(
+            new CacheConfiguration<Integer, String>(TEST_CACHE_NAME).setBackups(0)
+        );
+
+        Map<Integer, String> dataset = new HashMap<>();
+
+        for (int i = 0; i < 1000; i++) {
+            dataset.put(i, "value-" + i);
+            cache.put(i, "value-" + i);
+        }
+
+        forceCheckpoint();
+
+        File metastorageDir = new File(
+            node1.context().pdsFolderResolver().resolveFolders().persistentStoreNodePath(),
+            FilePageStoreManager.META_STORAGE_NAME
+        );
+
+        stopGrid(1);
+
+        assertTrue("Metastorage directory does not exist: " + metastorageDir, metastorageDir.exists());
+        assertTrue("Failed to delete metastorage directory", U.delete(metastorageDir));
+
+        startGrid(1);
+
+        awaitPartitionMapExchange();
+
+        IgniteCache<Integer, String> cacheAfter = grid(0).cache(TEST_CACHE_NAME);
+
+        for (Map.Entry<Integer, String> entry : dataset.entrySet())
+            assertEquals("Unexpected value for key " + entry.getKey(), entry.getValue(), cacheAfter.get(entry.getKey()));
     }
 }
