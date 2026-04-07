@@ -219,7 +219,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
 
         PriorityQueueCollisionSpiEx.collisionSpiEx(node).handleCollision = true;
 
-        node.context().job().handleCollisions();
+        node.context().job().scheduleHandleCollisions();
 
         assertTrue(waitForCondition(jobWorker::isStarted, getTestTimeout(), 10));
 
@@ -229,7 +229,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
     }
 
     private static void forceHandleCollisions() {
-        node.context().job().handleCollisionsSync();
+        node.context().job().handleCollisions();
     }
 
     /**

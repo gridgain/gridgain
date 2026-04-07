@@ -908,9 +908,9 @@ public class GridJobProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Handles collisions.
+     * Schedules handling of collisions in management executor pool.
      */
-    public void handleCollisions() {
+    public void scheduleHandleCollisions() {
         assert !jobAlwaysActivate;
 
         synchronized (handleCollisionMutex) {
@@ -920,8 +920,8 @@ public class GridJobProcessor extends GridProcessorAdapter {
     }
 
     @TestOnly
-    /** Synchronised version of {@link #handleCollisions()}. Made public for testing purposes. */
-    public void handleCollisionsSync() {
+    /** Handles collisions in current thread. Made public for testing purposes. */
+    public void handleCollisions() {
         if (!rwLock.tryReadLock()) {
             if (log.isDebugEnabled())
                 log.debug("Skipping handling collisions because node is stopping");
@@ -931,18 +931,13 @@ public class GridJobProcessor extends GridProcessorAdapter {
             return;
         }
 
-        if (stopping) {
-            rwLock.readUnlock();
-
-            if (log.isDebugEnabled())
-                log.debug("Skipping handling collisions because node is stopping");
-
-            handlingCollisionFut.completeExceptionally(new NodeStoppingException("Node is stopping"));
-
-            return;
-        }
-
         try {
+            if (stopping) {
+                if (log.isDebugEnabled())
+                    log.debug("Skipping handling collisions because node is stopping");
+
+                throw new NodeStoppingException("Node is stopping");
+            }
             if (log.isDebugEnabled())
                 log.debug("Before handling collisions.");
 
@@ -1108,8 +1103,11 @@ public class GridJobProcessor extends GridProcessorAdapter {
                         return heldJobs.size();
                     }
                 });
-        } finally {
+
             handlingCollisionFut.complete(null);
+        } catch (Exception e) {
+            handlingCollisionFut.completeExceptionally(e);
+        } finally {
             rwLock.readUnlock();
         }
 
@@ -1121,7 +1119,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
             if (shouldHandleCollision && (handlingCollisionFut == null || handlingCollisionFut.isDone())) {
                 handlingCollisionFut = new CompletableFuture<>();
 
-                ctx.pools().getManagementExecutorService().submit(this::handleCollisionsSync);
+                ctx.pools().getManagementExecutorService().submit(this::handleCollisions);
 
                 handlingCollisionFut.whenComplete((res, err) -> {
                     if (err != null) {
@@ -1458,7 +1456,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
                             if (old == null) {
                                 waitingJobsMetric.increment();
 
-                                handleCollisions();
+                                scheduleHandleCollisions();
                             }
                             else
                                 U.error(log, "Received computation request with duplicate job ID (could be " +
@@ -2045,7 +2043,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
             }
 
             try {
-                handleCollisions();
+                scheduleHandleCollisions();
             }
             finally {
                 rwLock.readUnlock();
@@ -2157,7 +2155,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
                     heldJobs.remove(worker.getJobId());
 
                     try {
-                        handleCollisions();
+                        scheduleHandleCollisions();
                     }
                     finally {
                         rwLock.readUnlock();
@@ -2348,7 +2346,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
 
                 try {
                     if (!jobAlwaysActivate)
-                        handleCollisions();
+                        scheduleHandleCollisions();
                     else if (metricsUpdateFreq > -1L)
                         updateJobMetrics();
                 }
@@ -2444,7 +2442,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
                 handleCollisions = true;
 
             if (handleCollisions)
-                handleCollisions();
+                scheduleHandleCollisions();
         }
         finally {
             rwLock.readUnlock();

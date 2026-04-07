@@ -91,6 +91,7 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
+        // Enable collision handling to ensure that any passive WaitJobs will be handled and won't block subsequent tests.
         for (Ignite n : G.allGrids())
             PriorityQueueCollisionSpiEx.spiEx(n).handleCollision = true;
 
@@ -99,7 +100,7 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
 
         // Force collision handling to activate any passive WaitJobs.
         for (Ignite n : G.allGrids())
-            ((IgniteEx)n).context().job().handleCollisionsSync();
+            ((IgniteEx)n).context().job().handleCollisions();
 
         assertTrue(waitForCondition(() -> CRD.compute().activeTaskFutures().isEmpty(), getTestTimeout()));
     }
@@ -193,9 +194,8 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
                 assertThrows(log, () -> fut.get(100), IgniteFutureTimeoutCheckedException.class, null);
         }
 
-        if (!expHandleCollisionOnChangeTaskAttrs) {
+        if (!expHandleCollisionOnChangeTaskAttrs)
             CRD.compute().execute(new NoopTask(), null);
-        }
 
         taskFut.get(getTestTimeout());
     }
@@ -211,7 +211,7 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
 
         /** {@inheritDoc} */
         @Override public void onCollision(CollisionContext ctx) {
-            GridFutureAdapter<CollisionJobContext> wFut = waitJobFut;
+            GridFutureAdapter<CollisionJobContext> waitFut = waitJobFut;
             GridFutureAdapter<Void> handleCollisionFut = onHandleCollisionFut;
 
             if (handleCollision) {
@@ -220,11 +220,11 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
                 super.onCollision(ctx);
             }
 
-            if (!wFut.isDone()) {
+            if (!waitFut.isDone()) {
                 ctx.waitingJobs().stream()
                     .filter(collisionJobCtx -> collisionJobCtx.getJob() instanceof WaitJob)
                     .findAny()
-                    .ifPresent(wFut::onDone);
+                    .ifPresent(waitFut::onDone);
             }
         }
 
