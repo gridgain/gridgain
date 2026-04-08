@@ -17,6 +17,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.preloader.la
 
 import java.nio.ByteBuffer;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
@@ -162,5 +163,10 @@ public class LatchAckMessage implements Message {
     /** {@inheritDoc} */
     @Override public void onAckReceived() {
         // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(LatchAckMessage.class, this);
     }
 }
