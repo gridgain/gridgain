@@ -70,7 +70,7 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
     private static final int SPAN_BUFFER_COUNT = 2500;
 
     /** Enforces that trace export exports data at least once every 5 seconds (hardcoded in open census). */
-    protected static final long EXPORTER_SCHEDULE_DELAY = 5_000;
+    private static final long EXPORTER_SCHEDULE_DELAY = 5_000;
 
     /** */
     protected static final String IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT_VAL = "10";
