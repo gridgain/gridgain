@@ -518,6 +518,13 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
 
         int activateCnt = parallelJobsNum - activeSize;
 
+        int waitJobsNum = this.waitJobsNum;
+
+        boolean noExcessiveJobs = waitSize <= waitJobsNum;
+
+        if (activateCnt <= 0 && noExcessiveJobs)
+            return;
+
         // Temporary snapshot of waitJobs.
         ArrayList<GridCollisionJobContextWrapper> waitSnap = slice(waitJobs, waitSize);
 
@@ -537,7 +544,7 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
                 if (preventStarvation)
                     bumpPriority(waitSnap);
 
-                // Passive list could have less then waitSize elements.
+                // Passive list could have less than waitSize elements.
                 for (int i = 0; i < activateCnt && i < waitSnap.size(); i++) {
                     waitSnap.get(i).getContext().activate();
 
@@ -545,8 +552,6 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
                 }
             }
         }
-
-        int waitJobsNum = this.waitJobsNum;
 
         if (waitSize > waitJobsNum) {
             int skip = waitSnap.size() - waitSize;
