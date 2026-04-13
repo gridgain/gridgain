@@ -26,8 +26,11 @@ public class GridTcpCommunicationSpiSslSelfTest extends GridTcpCommunicationSpiA
     /** */
     public GridTcpCommunicationSpiSslSelfTest() {
         super(false);
+    }
 
-        this.useSsl = true;
+    /** {@inheritDoc} */
+    @Override protected boolean isSslEnabled() {
+        return true;
     }
 
     /** {@inheritDoc} */
