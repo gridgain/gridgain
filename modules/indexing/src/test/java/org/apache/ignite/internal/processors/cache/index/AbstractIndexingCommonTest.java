@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
@@ -196,5 +198,34 @@ public class AbstractIndexingCommonTest extends GridCommonAbstractTest {
         public void stopBlock(String cacheName) {
             latches.computeIfAbsent(cacheName, l -> new CountDownLatch(1)).countDown();
         }
+    }
+
+    /** Cache that should be used for query execution */
+    protected String queryCache() {
+        return DEFAULT_CACHE_NAME;
+    }
+
+    /**
+     * @param ignite Ignite.
+     * @param sql Sql.
+     * @param args Args.
+     */
+    protected List<List<?>> execSql0(Ignite ignite, String sql, Object... args) {
+        IgniteCache<?,?> cache = ignite.cache(queryCache());
+
+        SqlFieldsQuery qry = new SqlFieldsQuery(sql);
+
+        if (args != null && args.length > 0)
+            qry.setArgs(args);
+
+        return cache.query(qry).getAll();
+    }
+
+    /**
+     * @param sql Sql.
+     * @param args Args.
+     */
+    protected List<List<?>> execSql0(String sql, Object... args) {
+        return execSql0(grid(), sql, args);
     }
 }

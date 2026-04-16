@@ -139,11 +139,18 @@ public interface GridQueryTypeDescriptor {
     public boolean valueTextIndex();
 
     /**
-     * Returns affinity key field name or {@code null} for default.
+     * Returns affinity key column name or {@code null} for default.
      *
      * @return Affinity key.
      */
     public String affinityKey();
+
+    /**
+     * Returns binary type affinity field name or {@code null} for default.
+     *
+     * @return Affinity key.
+     */
+    public String binaryTypeAffinityField();
 
     /**
      * @return Whether custom affinity key mapper exists.
@@ -160,6 +167,11 @@ public interface GridQueryTypeDescriptor {
      * @return {@code true} If the type of the given value cache object matches this descriptor.
      */
     public boolean matchType(CacheObject val);
+
+    /**
+     * @return Aliases mapping <code>[binaryTypeFieldName -> sqlAlias]</code>.
+     */
+    Map<String, String> aliases();
 
     /**
      * Gets key field name.

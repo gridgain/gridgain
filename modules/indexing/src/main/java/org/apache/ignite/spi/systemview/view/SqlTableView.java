@@ -17,7 +17,10 @@
 package org.apache.ignite.spi.systemview.view;
 
 import org.apache.ignite.internal.managers.systemview.walker.Order;
+import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
+import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
 
 /**
@@ -35,15 +38,25 @@ public class SqlTableView {
      */
     public SqlTableView(GridH2Table tbl) {
         this.tbl = tbl;
+        this.affColName = resolveAffColumn(tbl);
+    }
 
+    private static String resolveAffColumn(GridH2Table tbl) {
         IndexColumn affCol = tbl.getAffinityKeyColumn();
 
         if (affCol != null) {
             // Only explicit affinity column should be shown. Do not do this for _KEY or it's alias.
             if (!tbl.rowDescriptor().isKeyColumn(affCol.column.getColumnId())) {
-                affColName = affCol.columnName;
+                return affCol.columnName;
             }
         }
+        else {
+            GridQueryTypeDescriptor type = tbl.rowDescriptor().type();
+
+            return type.aliases().get(type.binaryTypeAffinityField());
+        }
+
+        return null;
     }
 
     /**
@@ -112,6 +125,16 @@ public class SqlTableView {
      * @return Affinity key column name.
      */
     @Order(6)
+    public String binaryTypeAffinityField() {
+        return tbl.rowDescriptor().type().binaryTypeAffinityField();
+    }
+
+    /**
+     * Returns name of affinity key column.
+     *
+     * @return Affinity key column name.
+     */
+    @Order(7)
     public String affinityKeyColumn() {
         return affColName;
     }
@@ -121,7 +144,7 @@ public class SqlTableView {
      *
      * @return Key alias.
      */
-    @Order(7)
+    @Order(8)
     public String keyAlias() {
         return tbl.rowDescriptor().type().keyFieldAlias();
     }
@@ -131,7 +154,7 @@ public class SqlTableView {
      *
      * @return Value alias.
      */
-    @Order(8)
+    @Order(9)
     public String valueAlias() {
         return tbl.rowDescriptor().type().valueFieldAlias();
     }
@@ -141,7 +164,7 @@ public class SqlTableView {
      *
      * @return Key type name.
      */
-    @Order(9)
+    @Order(10)
     public String keyTypeName() {
         return tbl.rowDescriptor().type().keyTypeName();
     }
@@ -151,7 +174,7 @@ public class SqlTableView {
      *
      * @return Value type name.
      */
-    @Order(10)
+    @Order(11)
     public String valueTypeName() {
         return tbl.rowDescriptor().type().valueTypeName();
     }

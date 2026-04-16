@@ -121,6 +121,9 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     private String affKey;
 
     /** */
+    private String binaryTypeAffField;
+
+    /** */
     private boolean customAffKeyMapper;
 
     /** */
@@ -537,10 +540,22 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     }
 
     /**
-     * @param affKey Affinity key field.
+     * @param affKey Affinity key field column.
      */
     public void affinityKey(String affKey) {
         this.affKey = affKey;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String binaryTypeAffinityField() {
+        return binaryTypeAffField;
+    }
+
+    /**
+     * @param binaryTypeAffField Affinity key field of binary type.
+     */
+    public void setBinaryTypeAffinityField(String binaryTypeAffField) {
+        this.binaryTypeAffField = binaryTypeAffField;
     }
 
     /** {@inheritDoc} */
@@ -555,11 +570,9 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
         this.customAffKeyMapper = customAffKeyMapper;
     }
 
-    /**
-     * @return Aliases.
-     */
-    public Map<String, String> aliases() {
-        return aliases != null ? aliases : Collections.<String, String>emptyMap();
+    /** {@inheritDoc} */
+    @Override public Map<String, String> aliases() {
+        return aliases != null ? aliases : Collections.emptyMap();
     }
 
     /**
