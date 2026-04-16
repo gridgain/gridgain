@@ -32,6 +32,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.cache.configuration.Factory;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.binary.BinaryBasicIdMapper;
+import org.apache.ignite.binary.BinaryBasicNameMapper;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.internal.ThinProtocolFeature;
@@ -254,13 +256,15 @@ public class JdbcThinTcpIo {
      * @throws SQLException On connection reject.
      */
     private HandshakeResult handshake(ClientListenerProtocolVersion ver) throws IOException, SQLException {
-        BinaryContext ctx = new BinaryContext(BinaryCachingMetadataHandler.create(), new IgniteConfiguration(), null);
+        BinaryConfiguration binaryCfg = JdbcThinUtils.resolveBinaryConfiguration(connProps);
+
+        BinaryContext ctx = new BinaryContext(BinaryCachingMetadataHandler.create(), new IgniteConfiguration().setBinaryConfiguration(binaryCfg), null);
 
         BinaryMarshaller marsh = new BinaryMarshaller();
 
         marsh.setContext(new MarshallerContextImpl(null, null));
 
-        ctx.configure(marsh, new BinaryConfiguration());
+        ctx.configure(marsh, binaryCfg);
 
         BinaryWriterExImpl writer = new BinaryWriterExImpl(ctx, new BinaryHeapOutputStream(HANDSHAKE_MSG_SIZE),
             null, null);
