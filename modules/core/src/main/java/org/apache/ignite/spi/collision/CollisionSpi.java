@@ -87,4 +87,13 @@ public interface CollisionSpi extends IgniteSpi {
      * @param lsnr Listener for external collision events ({@code null} to unset the listener).
      */
     public void setExternalCollisionListener(CollisionExternalListener lsnr);
+
+    /**
+     * Should be implemented if {@link #onCollision} is expensive. Called when job is finished to occupy freed slots.
+     *
+     * @param ctx Collision context.
+     */
+    default void activateJobs(CollisionContext ctx) {
+        onCollision(ctx);
+    }
 }
