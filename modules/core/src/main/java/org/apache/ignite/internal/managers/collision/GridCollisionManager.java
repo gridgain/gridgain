@@ -121,17 +121,18 @@ public class GridCollisionManager extends GridManagerAdapter<CollisionSpi> {
         }
     }
 
-    public void activateJobs(
+    public boolean activateJobs(
         final Collection<CollisionJobContext> waitJobs,
         final Collection<CollisionJobContext> activeJobs,
         final Collection<CollisionJobContext> heldJobs
     ) {
-        if (enabled()) {
-            if (log.isDebugEnabled())
-                log.debug("Activating jobs [waitJobs=" + waitJobs.size() + ", activeJobs=" + activeJobs + ']');
+        if (!enabled())
+            return true;
 
-            getSpi().activateJobs(createContext(waitJobs, activeJobs, heldJobs));
-        }
+        if (log.isDebugEnabled())
+            log.debug("Activating jobs [waitJobs=" + waitJobs.size() + ", activeJobs=" + activeJobs + ']');
+
+        return getSpi().activateJobs(createContext(waitJobs, activeJobs, heldJobs));
     }
 
     private static CollisionContext createContext(

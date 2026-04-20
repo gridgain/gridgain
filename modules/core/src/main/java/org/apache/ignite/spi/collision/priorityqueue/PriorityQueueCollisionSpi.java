@@ -554,8 +554,10 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
     }
 
     @Override
-    public void activateJobs(CollisionContext ctx) {
+    public boolean activateJobs(CollisionContext ctx) {
         activateJobsInternal(ctx.activeJobs());
+
+        return true;
     }
 
     /** Activate up to {@code parallelJobsNum - activeJobs.size()} jobs from {@link #sortedJobs}. */

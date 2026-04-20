@@ -945,8 +945,11 @@ public class GridJobProcessor extends GridProcessorAdapter {
             ctx.collision().onCollision(getPassiveJobsView(), getActiveJobsView(), getHeldJobsView());
 
             handlingCollisionFut.complete(null);
-        } catch (Exception e) {
-            handlingCollisionFut.completeExceptionally(e);
+        } catch (Throwable t) {
+            handlingCollisionFut.completeExceptionally(t);
+
+            if (t instanceof Error)
+                throw (Error) t;
         } finally {
             rwLock.readUnlock();
         }
@@ -1995,7 +1998,9 @@ public class GridJobProcessor extends GridProcessorAdapter {
                     heldJobs.remove(worker.getJobId());
 
                     try {
-                        ctx.collision().activateJobs(getPassiveJobsView(), getActiveJobsView(), getHeldJobsView());
+                        if (!ctx.collision().activateJobs(getPassiveJobsView(), getActiveJobsView(), getHeldJobsView())) {
+                            scheduleHandleCollisions();
+                        }
                     }
                     finally {
                         rwLock.readUnlock();

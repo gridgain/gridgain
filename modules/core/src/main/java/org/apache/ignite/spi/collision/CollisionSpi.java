@@ -89,11 +89,12 @@ public interface CollisionSpi extends IgniteSpi {
     public void setExternalCollisionListener(CollisionExternalListener lsnr);
 
     /**
-     * Should be implemented if {@link #onCollision} is expensive. Called when job is finished to occupy freed slots.
+     * Implement if {@link #onCollision} handling is expensive. Must not cancel jobs.
      *
      * @param ctx Collision context.
+     * @return {@code true} if handled; {@code false} for asynchronous {@link #onCollision} instead.
      */
-    default void activateJobs(CollisionContext ctx) {
-        onCollision(ctx);
+    default boolean activateJobs(CollisionContext ctx) {
+        return false;
     }
 }
