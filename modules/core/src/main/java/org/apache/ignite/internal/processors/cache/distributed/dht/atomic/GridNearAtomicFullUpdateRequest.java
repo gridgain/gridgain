@@ -53,6 +53,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.DELETE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRANSFORM;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
+import static org.apache.ignite.internal.processors.cache.distributed.util.PartitionCalculator.Strategy.FIRST_KEY;
 
 /**
  * Lite DHT cache update request sent from near node to primary node.
@@ -109,7 +110,8 @@ public class GridNearAtomicFullUpdateRequest extends GridNearAtomicAbstractUpdat
     @GridDirectTransient
     private int initSize;
 
-    private int partId;
+    /** Partition id. */
+    private int partId = PartitionCalculator.UNDEFINED_PARTITION;
 
     /**
      * Empty constructor required by {@link Externalizable}.
@@ -416,6 +418,16 @@ public class GridNearAtomicFullUpdateRequest extends GridNearAtomicAbstractUpdat
     /** {@inheritDoc} */
     @Override public int partition() {
         assert !F.isEmpty(keys);
+
+        if (partId == PartitionCalculator.UNDEFINED_PARTITION) {
+            // Partition id is not defined yet.
+            // It is possible when rolling upgrade is in progress, for instance,
+            // and we received the request from an "old" node that does not support configurable strategy.
+            // Fall back to first-key strategy for backward compatibility.
+            partId = PartitionCalculator.calculate(keys, FIRST_KEY);
+        }
+
+        assert partId >= 0 : "Undefined partition id [req=" + this + ']';
 
         return partId;
     }

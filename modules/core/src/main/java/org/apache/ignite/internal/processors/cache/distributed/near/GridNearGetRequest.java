@@ -48,6 +48,8 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.cache.distributed.util.PartitionCalculator.Strategy.FIRST_KEY;
+
 /**
  * Get request. Responsible for obtaining entry from primary node. 'Near' means 'Initiating node' here, not 'Near Cache'.
  */
@@ -114,6 +116,7 @@ public class GridNearGetRequest extends GridCacheIdMessage implements GridCacheD
     /** */
     private MvccSnapshot mvccSnapshot;
 
+    /** Partition id. */
     private int partId;
 
     /**
@@ -204,7 +207,7 @@ public class GridNearGetRequest extends GridCacheIdMessage implements GridCacheD
 
         // Use a user-defined calculation in case of atomic caches.
         this.partId = cctx.isColocated() ?
-            PartitionCalculator.calculate(this.keys, PartitionCalculator.Strategy.FIRST) :
+            PartitionCalculator.calculate(this.keys, FIRST_KEY) :
             PartitionCalculator.calculate(this.keys);
     }
 
@@ -306,6 +309,16 @@ public class GridNearGetRequest extends GridCacheIdMessage implements GridCacheD
 
     /** {@inheritDoc} */
     @Override public int partition() {
+        if (partId == PartitionCalculator.UNDEFINED_PARTITION) {
+            // Partition id is not defined yet.
+            // It is possible when rolling upgrade is in progress, for instance,
+            // and we received the request from an "old" node that does not support configurable strategy.
+            // Fall back to first-key strategy for backward compatibility.
+            partId = PartitionCalculator.calculate(keys, FIRST_KEY);
+        }
+
+        assert partId >= 0 : "Undefined partition id [req=" + this + ']';
+
         return partId;
     }
 

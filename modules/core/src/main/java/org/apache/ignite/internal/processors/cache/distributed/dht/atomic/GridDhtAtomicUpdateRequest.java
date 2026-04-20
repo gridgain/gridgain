@@ -46,6 +46,8 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.cache.distributed.util.PartitionCalculator.Strategy.FIRST_KEY;
+
 /**
  * Lite dht cache backup update request.
  */
@@ -128,7 +130,7 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
     private GridLongList updateCntrs;
 
     /** Partition id. */
-    private int partId;
+    private int partId = PartitionCalculator.UNDEFINED_PARTITION;
 
     /**
      * Empty constructor required by {@link Externalizable}.
@@ -465,7 +467,17 @@ public class GridDhtAtomicUpdateRequest extends GridDhtAtomicAbstractUpdateReque
     @Override public int partition() {
         assert !F.isEmpty(keys) || !F.isEmpty(nearKeys);
 
-        assert partId >= 0;
+        if (partId == PartitionCalculator.UNDEFINED_PARTITION) {
+            // Partition id is not defined yet.
+            // It is possible when rolling upgrade is in progress, for instance,
+            // and we received the request from an "old" node that does not support configurable strategy.
+            // Fall back to first-key strategy for backward compatibility.
+            partId = !keys.isEmpty()
+                ? PartitionCalculator.calculate(keys, FIRST_KEY)
+                : PartitionCalculator.calculate(nearKeys, FIRST_KEY);
+        }
+
+        assert partId >= 0 : "Undefined partition id [req=" + this + ']';
 
         return partId;
     }
