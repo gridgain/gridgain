@@ -127,8 +127,8 @@ public class GridCollisionManager extends GridManagerAdapter<CollisionSpi> {
         final Collection<CollisionJobContext> heldJobs
     ) {
         if (enabled()) {
-            if (log.isInfoEnabled())
-                log.info("Activating jobs [waitJobs=" + waitJobs.size() + ", activeJobs=" + activeJobs + ']');
+            if (log.isDebugEnabled())
+                log.debug("Activating jobs [waitJobs=" + waitJobs.size() + ", activeJobs=" + activeJobs + ']');
 
             getSpi().activateJobs(createContext(waitJobs, activeJobs, heldJobs));
         }
