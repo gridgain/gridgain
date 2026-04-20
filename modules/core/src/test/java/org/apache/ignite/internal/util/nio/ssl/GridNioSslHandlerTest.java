@@ -83,6 +83,9 @@ public class GridNioSslHandlerTest extends GridCommonAbstractTest {
         when(engine.unwrap(any(ByteBuffer.class), any(ByteBuffer.class)))
                 .thenReturn(new SSLEngineResult(SSLEngineResult.Status.OK, handshakeStatus, 0, 0));
 
+        GridSslMeta sslMeta = new GridSslMeta();
+        sslMeta.sslEngine(engine);
+
         GridNioSslHandler hnd = new GridNioSslHandler(filter,
                 ses,
                 engine,
@@ -90,7 +93,8 @@ public class GridNioSslHandlerTest extends GridCommonAbstractTest {
                 ByteOrder.nativeOrder(),
                 log,
                 handshake,
-                null);
+                sslMeta
+        );
 
         ByteBuffer msg = ByteBuffer.allocateDirect(64);
 
