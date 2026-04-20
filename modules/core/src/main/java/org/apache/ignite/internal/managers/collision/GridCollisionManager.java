@@ -142,20 +142,17 @@ public class GridCollisionManager extends GridManagerAdapter<CollisionSpi> {
     ) {
         return new CollisionContext() {
             /** {@inheritDoc} */
-            @Override
-            public Collection<CollisionJobContext> activeJobs() {
+            @Override public Collection<CollisionJobContext> activeJobs() {
                 return activeJobs;
             }
 
             /** {@inheritDoc} */
-            @Override
-            public Collection<CollisionJobContext> waitingJobs() {
+            @Override public Collection<CollisionJobContext> waitingJobs() {
                 return waitJobs;
             }
 
             /** {@inheritDoc} */
-            @Override
-            public Collection<CollisionJobContext> heldJobs() {
+            @Override public Collection<CollisionJobContext> heldJobs() {
                 return heldJobs;
             }
         };

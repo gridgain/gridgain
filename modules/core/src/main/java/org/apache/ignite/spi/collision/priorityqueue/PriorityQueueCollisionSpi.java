@@ -553,8 +553,8 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
         }
     }
 
-    @Override
-    public boolean activateJobs(CollisionContext ctx) {
+    /** {@inheritDoc} */
+    @Override public boolean activateJobs(CollisionContext ctx) {
         activateJobsInternal(ctx.activeJobs());
 
         return true;
