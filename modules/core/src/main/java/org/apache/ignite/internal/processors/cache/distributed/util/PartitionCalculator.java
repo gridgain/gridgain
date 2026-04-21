@@ -59,7 +59,7 @@ public class PartitionCalculator {
          * @param val Name of the strategy.
          * @return Strategy instance represented by {@code val}.
          */
-        static Strategy of(String val) {
+        public static Strategy of(String val) {
             if (val != null && !val.isEmpty()) {
                 for (Strategy s : Strategy.values()) {
                     if (s.name().equalsIgnoreCase(val))
