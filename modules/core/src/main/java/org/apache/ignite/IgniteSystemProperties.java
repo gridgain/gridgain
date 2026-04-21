@@ -2299,7 +2299,7 @@ public final class IgniteSystemProperties {
      * The default value is "FIRST_KEY".
      */
     @SystemProperty(
-        value = "Defines a strategy to calculate a partition for atomic batch updates.",
+        value = "Defines a strategy to calculate a partition for atomic batch updates",
         type = String.class,
         defaults = "FIRST_KEY")
     public static final String IGNITE_PARTITION_CALCULATION_STRATEGY = "IGNITE_PARTITION_CALCULATION_STRATEGY";
