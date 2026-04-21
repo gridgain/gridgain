@@ -41,7 +41,7 @@ public class ExchangeLatchManagerTest extends GridCommonAbstractTest {
     /** */
     private static final String LATCH_NAME = "test";
 
-    /** Message are meaning that node getting a stale acknowledge message. */
+    /** Message means that node getting a stale acknowledgement message. */
     private static final String STALE_ACK_LOG_MSG = "Latch for this acknowledge is completed or never have existed";
 
     /** Message happens when assertion was broken. */
@@ -80,12 +80,15 @@ public class ExchangeLatchManagerTest extends GridCommonAbstractTest {
     @Test
     @Ignore("Flaky test")
     public void testExcessAcknowledgeForNewCoordinator() throws Exception {
-        gridLogger = new ListeningTestLogger(false, log);
+        gridLogger = new ListeningTestLogger(log);
 
         LogListener staleMessageLsnr = LogListener.matches(STALE_ACK_LOG_MSG).build();
         LogListener errorLsnr = LogListener.matches(ERROR_MSG).build();
 
         IgniteEx ignite0 = startGrids(3);
+
+        // Need to wait late affinity assignment before blocking latch messages.
+        awaitPartitionMapExchange(false, true, null);
 
         TestRecordingCommunicationSpi spi0 = TestRecordingCommunicationSpi.spi(ignite0);
 
@@ -111,7 +114,7 @@ public class ExchangeLatchManagerTest extends GridCommonAbstractTest {
             return false;
         });
 
-        IgniteInternalFuture exchangeDoingFut = GridTestUtils.runAsync(() ->
+        IgniteInternalFuture<?> exchangeDoingFut = GridTestUtils.runAsync(() ->
             ignite0.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME))
         );
 
@@ -130,8 +133,7 @@ public class ExchangeLatchManagerTest extends GridCommonAbstractTest {
 
         spi1.stopBlock();
 
-        assertTrue(GridTestUtils.waitForCondition(() ->
-            staleMessageLsnr.check(), 10_000));
+        assertTrue(GridTestUtils.waitForCondition(staleMessageLsnr::check, 10_000));
 
         assertFalse(errorLsnr.check());
     }

@@ -90,6 +90,7 @@
         <module>modules/geospatial</module>
         <module>modules/schedule</module>
         <module>modules/control-utility</module>
+        <module>modules/opentelemetry</module>
     </modules>
 
     <profiles>
@@ -840,3 +841,4 @@
         </plugins>
     </build>
 </project>
+

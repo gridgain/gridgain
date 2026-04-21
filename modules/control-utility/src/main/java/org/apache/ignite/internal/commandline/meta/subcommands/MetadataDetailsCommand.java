@@ -61,6 +61,8 @@ public class MetadataDetailsCommand
 
         log.info("typeId=" + printInt(m.typeId()));
         log.info("typeName=" + m.typeName());
+        if (m.affinityKeyFieldName() != null)
+            log.info("affinityKeyFieldName=" + m.affinityKeyFieldName());
         log.info("Fields:");
 
         final Map<Integer, String> fldMap = new HashMap<>();

@@ -80,7 +80,7 @@ public class TcpHandshakeExecutor {
         BlockingTransport transport = stateProvider.isSslEnabled() ?
             new SslTransport(sslMeta, ch, directBuffer, log) : new TcpTransport(ch);
 
-        ByteBuffer buf = transport.recieveNodeId();
+        ByteBuffer buf = transport.receiveNodeId();
 
         if (buf == null)
             return NEED_WAIT;
@@ -97,7 +97,7 @@ public class TcpHandshakeExecutor {
 
         transport.sendHandshake(msg);
 
-        buf = transport.recieveAcknowledge();
+        buf = transport.receiveAcknowledge();
 
         long rcvCnt = buf.getLong(DIRECT_TYPE_SIZE);
 
@@ -124,7 +124,7 @@ public class TcpHandshakeExecutor {
          * @return Buffer with {@link NodeIdMessage}.
          * @throws IgniteCheckedException If failed.
          */
-        ByteBuffer recieveNodeId() throws IgniteCheckedException {
+        ByteBuffer receiveNodeId() throws IgniteCheckedException {
             ByteBuffer buf = ByteBuffer.allocate(NodeIdMessage.MESSAGE_FULL_SIZE)
                     .order(ByteOrder.LITTLE_ENDIAN);
 
@@ -170,7 +170,7 @@ public class TcpHandshakeExecutor {
          * @return Buffer with message.
          * @throws IgniteCheckedException If failed.
          */
-        ByteBuffer recieveAcknowledge() throws IgniteCheckedException {
+        ByteBuffer receiveAcknowledge() throws IgniteCheckedException {
             ByteBuffer buf = ByteBuffer.allocate(RecoveryLastReceivedMessage.MESSAGE_FULL_SIZE)
                     .order(ByteOrder.LITTLE_ENDIAN);
 
@@ -332,8 +332,11 @@ public class TcpHandshakeExecutor {
 
             ByteBuffer inBuf = handler.inputBuffer();
 
-            if (inBuf.position() > 0)
+            if (inBuf.position() > 0) {
+                inBuf.flip();
+
                 sslMeta.encodedBuffer(inBuf);
+            }
         }
 
         /**
