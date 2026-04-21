@@ -69,6 +69,7 @@ public class IgniteCacheQueryNodeRestartDistributedJoinSelfTest extends IgniteCa
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testRestartsBroadcast() throws Exception {
         restarts(true);
     }

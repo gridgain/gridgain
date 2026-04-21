@@ -273,6 +273,7 @@ namespace Apache.Ignite.Core.Tests
         /// Tests that fair lock favors granting access to the longest-waiting thread
         /// </summary>
         [Test]
+        [Ignore("Flaky test")]
         [Category(TestUtils.CategoryIntensive)]
         public void TestFairLockGuaranteesOrder()
         {

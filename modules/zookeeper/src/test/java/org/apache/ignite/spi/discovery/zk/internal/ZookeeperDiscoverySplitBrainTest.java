@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.typedef.G;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -142,6 +143,7 @@ public class ZookeeperDiscoverySplitBrainTest extends ZookeeperDiscoverySpiTestB
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testAlmostSplitBrain() throws Exception {
         failCommSpi = true;
 

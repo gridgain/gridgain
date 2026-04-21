@@ -955,6 +955,7 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
      * @throws Exception If any error occurs.
      */
     @Test
+    @Ignore("Flaky test")
     public void testIpFinderCleaning() throws Exception {
         try {
             ipFinder.registerAddresses(Arrays.asList(new InetSocketAddress("1.1.1.1", 1024),

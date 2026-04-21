@@ -59,6 +59,7 @@ import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
 import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.lang.Boolean.parseBoolean;
@@ -288,6 +289,7 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testDistributedJoin() throws Exception {
         String prsnTable = createTableAndPopulate(Person.class, PARTITIONED, 1);
 

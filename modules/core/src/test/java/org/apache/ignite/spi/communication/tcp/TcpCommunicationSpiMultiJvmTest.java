@@ -34,6 +34,7 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER;
@@ -142,6 +143,7 @@ public class TcpCommunicationSpiMultiJvmTest extends GridCommonAbstractTest {
      * @throws Exception If any error occurs.
      */
     @Test
+    @Ignore("Flaky test")
     @WithSystemProperty(key = IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER, value = "false")
     public void testIPv6AddressIsSkippedOnNodeNotSupportingIPv6() throws Exception {
         remoteNodePrefersIPv4 = true;

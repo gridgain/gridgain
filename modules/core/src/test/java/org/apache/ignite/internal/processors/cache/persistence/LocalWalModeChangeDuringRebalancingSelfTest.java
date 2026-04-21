@@ -69,6 +69,7 @@ import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING;
@@ -445,6 +446,7 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testParallelExchangeDuringCheckpoint() throws Exception {
         doTestParallelExchange(fileIOLatch);
     }

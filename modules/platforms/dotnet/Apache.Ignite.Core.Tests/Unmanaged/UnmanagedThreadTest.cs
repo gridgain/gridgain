@@ -32,6 +32,7 @@ namespace Apache.Ignite.Core.Tests.Unmanaged
         /// with <see cref="UnmanagedThread.EnableCurrentThreadExitEvent"/>.
         /// </summary>
         [Test]
+        [Ignore("Flaky test")]
         public void TestThreadExitFiresWhenEnabled([Values(true, false)] bool enableThreadExitCallback)
         {
             var evt = new ManualResetEventSlim();

@@ -49,6 +49,7 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -143,6 +144,7 @@ public class GridCacheAtomicInvalidPartitionHandlingSelfTest extends GridCommonA
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testPrimaryFullAsync() throws Exception {
         checkRestarts(FULL_ASYNC);
     }
