@@ -528,7 +528,7 @@ public abstract class GridNearAtomicAbstractUpdateRequest extends GridCacheIdMes
     /**
      * Recalculates a partition index for the request to be mapped to.
      * This method makes sense in case of batch updates.
-     **/
+     */
     public void recalculatePartition() {
         // No-op.
     }

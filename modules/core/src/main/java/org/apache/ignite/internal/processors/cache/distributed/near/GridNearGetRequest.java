@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.GridCodegenConverter;
 import org.apache.ignite.internal.GridDirectCollection;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -117,7 +118,8 @@ public class GridNearGetRequest extends GridCacheIdMessage implements GridCacheD
     private MvccSnapshot mvccSnapshot;
 
     /** Partition id. */
-    private int partId;
+    @GridCodegenConverter(defaultValueOnRead = "PartitionCalculator.UNDEFINED_PARTITION")
+    private int partId = PartitionCalculator.UNDEFINED_PARTITION;
 
     /**
      * Empty constructor required for {@link Externalizable}.
@@ -552,7 +554,7 @@ public class GridNearGetRequest extends GridCacheIdMessage implements GridCacheD
                 reader.incrementState();
 
             case 11:
-                partId = reader.readInt("partId");
+                partId = reader.readInt("partId", PartitionCalculator.UNDEFINED_PARTITION);
 
                 if (!reader.isLastRead())
                     return false;

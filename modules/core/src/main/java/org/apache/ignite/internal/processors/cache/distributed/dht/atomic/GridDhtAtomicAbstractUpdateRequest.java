@@ -496,7 +496,7 @@ public abstract class GridDhtAtomicAbstractUpdateRequest extends GridCacheIdMess
     /**
      * Recalculates a partition index for the request to be mapped to.
      * This method makes sense in case of batch updates.
-     **/
+     */
     public void recalculatePartition() {
         // No-op.
     }

@@ -26,6 +26,7 @@ import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
+import org.apache.ignite.internal.GridCodegenConverter;
 import org.apache.ignite.internal.GridDirectCollection;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -111,6 +112,7 @@ public class GridNearAtomicFullUpdateRequest extends GridNearAtomicAbstractUpdat
     private int initSize;
 
     /** Partition id. */
+    @GridCodegenConverter(defaultValueOnRead = "PartitionCalculator.UNDEFINED_PARTITION")
     private int partId = PartitionCalculator.UNDEFINED_PARTITION;
 
     /**
@@ -593,7 +595,7 @@ public class GridNearAtomicFullUpdateRequest extends GridNearAtomicAbstractUpdat
                 reader.incrementState();
 
             case 19:
-                partId = reader.readInt("partId");
+                partId = reader.readInt("partId", PartitionCalculator.UNDEFINED_PARTITION);
 
                 if (!reader.isLastRead())
                     return false;
