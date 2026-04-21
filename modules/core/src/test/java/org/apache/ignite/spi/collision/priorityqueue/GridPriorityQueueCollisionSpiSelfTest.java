@@ -422,6 +422,68 @@ public class GridPriorityQueueCollisionSpiSelfTest extends GridSpiAbstractTest<P
     }
 
     /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testTryActivateJobs() throws Exception {
+        List<CollisionJobContext> activeJobs = new ArrayList<>();
+
+        for (int i = 0; i < 10; i++)
+            activeJobs.add(new GridTestCollisionJobContext(new GridTestCollisionTaskSession(i, DFLT_PRIORITY_ATTRIBUTE_KEY)));
+
+        List<CollisionJobContext> passiveJobs = makeContextList(null);
+
+        assert passiveJobs.size() == 10;
+
+        getSpi().setParallelJobsNumber(10);
+
+        GridCollisionTestContext testCtx = new GridCollisionTestContext(activeJobs, passiveJobs);
+
+        // No jobs were cached yet.
+        assert getSpi().tryActivateJobs(testCtx);
+
+        for (CollisionJobContext ctx : passiveJobs)
+            assert !((GridTestCollisionJobContext)ctx).isActivated();
+
+        // No free slots, caches waiting jobs.
+        getSpi().onCollision(testCtx);
+
+        for (CollisionJobContext ctx : passiveJobs)
+            assert !((GridTestCollisionJobContext)ctx).isActivated();
+
+        // 3 top priority jobs will be activated.
+        activeJobs.subList(0, 3).clear();
+
+        assert getSpi().tryActivateJobs(testCtx);
+
+        for (CollisionJobContext ctx : passiveJobs) {
+            int pri = ((GridTestCollisionTaskSession)ctx.getTaskSession()).getPriority();
+
+            assert ((GridTestCollisionJobContext)ctx).isActivated() == (pri >= 7) : "pri=" + pri;
+        }
+
+        // All remaining jobs will be activated.
+        activeJobs.clear();
+
+        assert getSpi().tryActivateJobs(testCtx);
+
+        for (CollisionJobContext ctx : passiveJobs)
+            assert ((GridTestCollisionJobContext)ctx).isActivated();
+
+        // Cursor is exhausted, so will not be activated.
+        GridTestCollisionJobContext newJob = new GridTestCollisionJobContext(
+            new GridTestCollisionTaskSession(100, DFLT_PRIORITY_ATTRIBUTE_KEY));
+
+        passiveJobs.add(newJob);
+
+        activeJobs.clear();
+
+        assert getSpi().tryActivateJobs(testCtx);
+
+        assert !newJob.isActivated();
+    }
+
+    /**
      * @param attrKey Attribute key,
      * @param shuffle Whether result list should be shuffle.
      * @return List of job collision contexts.
