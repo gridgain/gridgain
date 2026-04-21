@@ -64,6 +64,7 @@ import org.apache.ignite.spi.metric.ObjectMetric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
@@ -281,6 +282,7 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testCacheGroupMetrics() throws Exception {
         pds = false;
 

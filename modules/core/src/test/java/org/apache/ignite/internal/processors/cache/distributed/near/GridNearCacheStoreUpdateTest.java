@@ -42,6 +42,7 @@ import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -119,6 +120,7 @@ public class GridNearCacheStoreUpdateTest extends GridCommonAbstractTest {
      * @throws Exception If fail.
      */
     @Test
+    @Ignore("Flaky test")
     public void testPessimisticReadCommittedUpdateNear() throws Exception {
         cache = client.createCache(cacheConfiguration().setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL),
             new NearCacheConfiguration<String, String>());

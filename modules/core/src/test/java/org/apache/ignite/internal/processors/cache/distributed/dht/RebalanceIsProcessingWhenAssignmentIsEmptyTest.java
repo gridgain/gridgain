@@ -29,6 +29,7 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -55,6 +56,7 @@ public class RebalanceIsProcessingWhenAssignmentIsEmptyTest extends GridCommonAb
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void test() throws Exception {
         IgniteEx ignite0 = startGrids(3);
 

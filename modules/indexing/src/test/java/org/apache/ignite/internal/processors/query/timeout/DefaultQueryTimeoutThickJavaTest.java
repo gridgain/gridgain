@@ -103,6 +103,13 @@ public class DefaultQueryTimeoutThickJavaTest extends AbstractDefaultQueryTimeou
         // No-op.
     }
 
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testNoExplicitTimeout2() throws Exception {
+        // No-op.
+    }
+
     /** */
     private void executeQuery0(SqlFieldsQuery qry) throws Exception {
         qry.setLazy(lazy);

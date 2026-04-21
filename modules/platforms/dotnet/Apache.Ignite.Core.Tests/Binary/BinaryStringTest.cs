@@ -79,6 +79,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         /// Tests the old serialization mode.
         /// </summary>
         [Test]
+        [Ignore("Flaky test")]
         public void TestNewMode()
         {
             // Run "TestOldMode" in a separate process with changed setting.

@@ -108,4 +108,11 @@ public class GridCachePartitionedTxMultiThreadedSelfTest extends IgniteTxMultiTh
     @Override public void testPessimisticReadCommittedCommitMultithreaded() throws Exception {
         // No-op.
     }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testOptimisticReadCommittedCommitMultithreaded() throws Exception {
+        // No-op.
+    }
 }

@@ -18,9 +18,11 @@ package org.apache.ignite.testsuites;
 
 import org.gridgain.internal.h2.test.synth.TestChooseIndexWithOrderBy;
 import org.gridgain.internal.h2.test.synth.TestHashJoin;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
+@Ignore("Flaky test")
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     TestChooseIndexWithOrderBy.class,

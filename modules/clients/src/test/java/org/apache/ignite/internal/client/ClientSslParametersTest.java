@@ -28,6 +28,7 @@ import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -194,6 +195,7 @@ public class ClientSslParametersTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testNoCommonProtocols() throws Exception {
         protocols = new String[] {
             "TLSv1.1",

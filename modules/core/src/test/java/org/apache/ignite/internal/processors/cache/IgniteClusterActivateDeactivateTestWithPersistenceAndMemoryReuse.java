@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.cache;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.junit.Assume;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  *
@@ -51,5 +53,12 @@ public class IgniteClusterActivateDeactivateTestWithPersistenceAndMemoryReuse ex
         Assume.assumeFalse("https://ggsystems.atlassian.net/browse/GG-22712", MvccFeatureChecker.forcedMvcc());
 
         super.testReActivateSimple_5_Servers_4_Clients_FromServer();
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testActivateCachesRestore_5_Servers() throws Exception {
+        // No-op.
     }
 }

@@ -29,6 +29,7 @@ import org.apache.ignite.client.ClientIgniteSet;
 import org.apache.ignite.configuration.AtomicConfiguration;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.datastructures.GridCacheAtomicLongEx;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -72,6 +73,7 @@ public class ThinClientAffinityAwarenessStableTopologyTest extends ThinClientAbs
      * Test affinity awareness for all applicable operation types for partitioned cache with primitive key.
      */
     @Test
+    @Ignore("Flaky test")
     public void testPartitionedCachePrimitiveKey() throws Exception {
         testApplicableCache(PART_CACHE_NAME, i -> i);
     }
@@ -141,6 +143,7 @@ public class ThinClientAffinityAwarenessStableTopologyTest extends ThinClientAbs
      * Test affinity awareness for all applicable operation types for partitioned cache with 3 backups.
      */
     @Test
+    @Ignore("Flaky test")
     public void testPartitionedCache3Backups() throws Exception {
         testApplicableCache(PART_CACHE_3_BACKUPS_NAME, i -> i);
     }

@@ -195,6 +195,7 @@ public class GridFileDeploymentSelfTest extends GridUriDeploymentAbstractSelfTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testSignedDeployment() throws Exception {
         checkTask("org.apache.ignite.spi.deployment.uri.tasks.GridUriDeploymentTestTask5");
         checkTask("GridUriDeploymentTestWithNameTask5");

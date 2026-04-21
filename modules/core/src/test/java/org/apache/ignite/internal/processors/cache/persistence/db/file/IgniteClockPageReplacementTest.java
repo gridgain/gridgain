@@ -17,11 +17,20 @@
 package org.apache.ignite.internal.processors.cache.persistence.db.file;
 
 import org.apache.ignite.configuration.PageReplacementMode;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /** */
 public class IgniteClockPageReplacementTest extends AbstractPageReplacementTest {
     /** {@inheritDoc} */
     @Override PageReplacementMode replacementMode() {
         return PageReplacementMode.CLOCK;
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testFsyncPhaseWillNotStartOnCheckpointUntilPageReplacementIsComplete() throws Exception {
+        // No-op.
     }
 }

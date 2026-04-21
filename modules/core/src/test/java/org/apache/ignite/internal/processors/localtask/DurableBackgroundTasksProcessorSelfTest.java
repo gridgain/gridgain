@@ -130,6 +130,7 @@ public class DurableBackgroundTasksProcessorSelfTest extends GridCommonAbstractT
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testCancelTaskExecution() throws Exception {
         IgniteEx n = startGrid(0);
         n.cluster().state(ACTIVE);

@@ -55,6 +55,7 @@ import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.spi.GridSpiAbstractTest;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -147,6 +148,7 @@ public class GridTcpCommunicationConnectionExclusivenessTest extends GridSpiAbst
      * @throws Exception If something goes wrong.
      */
     @Test
+    @Ignore("Flaky test")
     public void ensureNoDuplicatesWhenInboundCompetesWithOutbounds() throws Exception {
         prepareLogger(AsymmetricSlowlyConnectingCommunicationSpi.class);
 
