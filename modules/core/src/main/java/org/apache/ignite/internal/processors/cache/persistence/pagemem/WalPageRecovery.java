@@ -36,9 +36,6 @@ import org.apache.ignite.internal.processors.compress.CompressionProcessor;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.lang.IgniteBiTuple;
 
-import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.RESTORE_PAGE;
-import static org.apache.ignite.internal.util.GridUnsafe.wrapPointer;
-
 /**
  * Reusable utility that reconstructs a single data page by replaying the WAL.
  * <p>
