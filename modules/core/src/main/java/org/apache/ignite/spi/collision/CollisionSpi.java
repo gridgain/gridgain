@@ -94,7 +94,7 @@ public interface CollisionSpi extends IgniteSpi {
      * @param ctx Collision context.
      * @return {@code true} if handled; {@code false} for asynchronous {@link #onCollision} instead.
      */
-    default boolean activateJobs(CollisionContext ctx) {
+    default boolean tryActivateJobs(CollisionContext ctx) {
         return false;
     }
 }

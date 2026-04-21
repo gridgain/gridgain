@@ -121,7 +121,12 @@ public class GridCollisionManager extends GridManagerAdapter<CollisionSpi> {
         }
     }
 
-    public boolean activateJobs(
+    /**
+     * Tries a fast-path to activate jobs without async calling {@link #onCollision}
+     *
+     * @return {@code true} if jobs were activated, {@code false} if fast-path is not supported.
+     */
+    public boolean tryActivateJobs(
         final Collection<CollisionJobContext> waitJobs,
         final Collection<CollisionJobContext> activeJobs,
         final Collection<CollisionJobContext> heldJobs
@@ -132,7 +137,7 @@ public class GridCollisionManager extends GridManagerAdapter<CollisionSpi> {
         if (log.isDebugEnabled())
             log.debug("Activating jobs [waitJobs=" + waitJobs.size() + ", activeJobs=" + activeJobs + ']');
 
-        return getSpi().activateJobs(createContext(waitJobs, activeJobs, heldJobs));
+        return getSpi().tryActivateJobs(createContext(waitJobs, activeJobs, heldJobs));
     }
 
     private static CollisionContext createContext(

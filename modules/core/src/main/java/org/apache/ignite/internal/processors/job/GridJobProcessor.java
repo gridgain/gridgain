@@ -1998,7 +1998,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
                     heldJobs.remove(worker.getJobId());
 
                     try {
-                        if (!ctx.collision().activateJobs(getPassiveJobsView(), getActiveJobsView(), getHeldJobsView())) {
+                        if (!ctx.collision().tryActivateJobs(getPassiveJobsView(), getActiveJobsView(), getHeldJobsView())) {
                             scheduleHandleCollisions();
                         }
                     }

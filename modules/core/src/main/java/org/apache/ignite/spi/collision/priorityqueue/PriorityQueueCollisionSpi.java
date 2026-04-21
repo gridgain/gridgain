@@ -23,7 +23,6 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.compute.ComputeJobContext;
 import org.apache.ignite.internal.GridTaskSessionInternal;
@@ -554,13 +553,17 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
     }
 
     /** {@inheritDoc} */
-    @Override public boolean activateJobs(CollisionContext ctx) {
+    @Override public boolean tryActivateJobs(CollisionContext ctx) {
         activateJobsInternal(ctx.activeJobs());
 
         return true;
     }
 
-    /** Activate up to {@code parallelJobsNum - activeJobs.size()} jobs from {@link #sortedJobs}. */
+    /**
+     * Activate up to {@code parallelJobsNum - activeJobs.size()} jobs from {@link #sortedJobs}.
+     *
+     * @return Number of activated jobs.
+     */
     private synchronized int activateJobsInternal(Collection<CollisionJobContext> activeJobs) {
         int activateCnt = parallelJobsNum - activeJobs.size();
 
@@ -572,7 +575,7 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
         int activated = 0;
 
         while (activated < activateCnt) {
-            int idx = snapshot.cursor.getAndIncrement();
+            int idx = snapshot.nextJobIndex++;
 
             if (idx >= snapSize)
                 break;
@@ -694,14 +697,15 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
     }
 
     /**
-     * Cached sorted jobs to avoid calculating each time job needs to be activated. Replaced atomically in {@link #onCollision}.
+     * Cached sorted jobs to avoid calculating each time the jobs to be activated. Replaced atomically in {@link #onCollision}.
      */
     private static class SortedJobsSnapshot {
-        private final ArrayList<GridCollisionJobContextWrapper> jobs;
+        private final List<GridCollisionJobContextWrapper> jobs;
 
-        private final AtomicInteger cursor = new AtomicInteger();
+        // Must be used only in synchronized context */
+        private int nextJobIndex = 0;
 
-        SortedJobsSnapshot(ArrayList<GridCollisionJobContextWrapper> jobs) {
+        SortedJobsSnapshot(List<GridCollisionJobContextWrapper> jobs) {
             this.jobs = jobs;
         }
     }
