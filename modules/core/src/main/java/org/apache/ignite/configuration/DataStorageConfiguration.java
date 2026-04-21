@@ -1235,7 +1235,7 @@ public class DataStorageConfiguration implements Serializable {
     }
 
     /**
-     * Gets the minimum WAL archive size at which self-cleaning starts.
+     * Gets the minimum WAL archive size that must be reached for the self-cleaning process to start, in bytes.
      *
      * @return min size(in bytes) of WAL archive directory(greater than 0, or {@link #HALF_MAX_WAL_ARCHIVE_SIZE}).
      */
@@ -1244,7 +1244,7 @@ public class DataStorageConfiguration implements Serializable {
     }
 
     /**
-     * Sets a minimum size(in bytes) of WAL archives at which the self-cleaning process starts.
+     * Sets the minimum WAL archive size (in bytes) that must be reached for the self-cleaning process to start.
      *
      * If value is not positive, {@link #HALF_MAX_WAL_ARCHIVE_SIZE} will be used.
      *
