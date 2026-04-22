@@ -42,7 +42,7 @@ public class PartitionCalculator {
         /** First key defines a partition. */
         FIRST_KEY,
 
-        /** Chose a random key to define a partition. */
+        /** Choose a random key to define a partition. */
         RANDOM_KEY,
 
         /**
