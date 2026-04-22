@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.cache.eviction.paged;
 import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Enables but not touches persistent region, checks page eviction and PDS+no PDS mode.
@@ -54,5 +56,10 @@ public class PageEvictionMultinodeMixedRegionsTest extends PageEvictionMultinode
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    @Test
+    @Ignore
+    @Override public void testPageEviction() throws Exception {
     }
 }

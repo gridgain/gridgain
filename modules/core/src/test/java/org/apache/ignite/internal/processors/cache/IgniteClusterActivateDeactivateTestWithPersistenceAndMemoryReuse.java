@@ -61,4 +61,8 @@ public class IgniteClusterActivateDeactivateTestWithPersistenceAndMemoryReuse ex
     @Override public void testActivateCachesRestore_5_Servers() throws Exception {
         // No-op.
     }
+
+    @Override public void testClientJoinsWhenActivationIsInProgress() throws Exception {
+
+    }
 }

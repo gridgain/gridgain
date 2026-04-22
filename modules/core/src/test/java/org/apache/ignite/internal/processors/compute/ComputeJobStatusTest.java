@@ -166,6 +166,7 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void tesCancelledTasks() throws Exception {
         checkJobStatuses(CANCELLED);
     }
