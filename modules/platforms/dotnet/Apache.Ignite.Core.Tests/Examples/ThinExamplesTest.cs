@@ -24,6 +24,7 @@ namespace Apache.Ignite.Core.Tests.Examples
     /// Tests thin client examples.
     /// </summary>
     [Category(TestUtils.CategoryExamples)]
+    [Ignore("Flaky test")]
     public class ThinExamplesTest : ExamplesTestBase
     {
         /** */

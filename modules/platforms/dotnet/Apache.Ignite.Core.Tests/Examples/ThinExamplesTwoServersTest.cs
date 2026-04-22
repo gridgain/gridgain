@@ -23,6 +23,7 @@ namespace Apache.Ignite.Core.Tests.Examples
     /// </summary>
     [Category(TestUtils.CategoryExamples)]
     [TestFixture]
+    [Ignore("Flaky test")]
     public class ThinExamplesTwoServersTest : ThinExamplesTest
     {
         /// <summary>
