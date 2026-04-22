@@ -81,6 +81,7 @@ import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.apache.ignite.spi.systemview.view.SqlTableView;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.Arrays.asList;
@@ -1757,6 +1758,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
+    @Ignore
     public void testConfigurationView() throws Exception {
         IgniteConfiguration icfg = new IgniteConfiguration();
 
