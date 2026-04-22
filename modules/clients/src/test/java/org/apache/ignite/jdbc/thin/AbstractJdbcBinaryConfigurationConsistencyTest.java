@@ -124,12 +124,10 @@ public abstract class AbstractJdbcBinaryConfigurationConsistencyTest extends Jdb
             assertionHelp.append("\n  ").append(typeId).append("\t -> ").append(typeName);
 
             Long previousTypeId = typeNames.get(typeName);
-            if (previousTypeId != null)
-                throw new AssertionError("Multiple entries with same type name " +
-                    "<" + typeName + "> " +
-                    "[" + typeId + ", " + previousTypeId + "]" +
-                    assertionHelp
-                );
+            assertNull("Multiple entries with same type name <" + typeName + "> " +
+                "[" + typeId + ", " + previousTypeId + "]" + assertionHelp,
+                previousTypeId
+            );
 
             typeNames.put(typeName, typeId);
         }

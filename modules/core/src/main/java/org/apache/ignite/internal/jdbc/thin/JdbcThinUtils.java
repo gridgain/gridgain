@@ -217,7 +217,7 @@ public class JdbcThinUtils {
         if (!F.isEmpty(binaryCfgFactoryClassName)) {
             try {
                 Class<Factory<BinaryConfiguration>> cls = (Class<Factory<BinaryConfiguration>>)
-                    JdbcThinSSLUtil.class.getClassLoader().loadClass(binaryCfgFactoryClassName);
+                    JdbcThinUtils.class.getClassLoader().loadClass(binaryCfgFactoryClassName);
 
                 return cls.newInstance().create();
 
