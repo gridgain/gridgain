@@ -17,10 +17,17 @@
 package org.apache.ignite.internal.jdbc.thin;
 
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Date;
+import javax.cache.configuration.Factory;
+import org.apache.ignite.binary.BinaryBasicIdMapper;
+import org.apache.ignite.binary.BinaryBasicNameMapper;
+import org.apache.ignite.configuration.BinaryConfiguration;
+import org.apache.ignite.internal.processors.odbc.SqlStateCode;
+import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.Nullable;
 
 import static java.sql.Types.BIGINT;
@@ -202,5 +209,31 @@ public class JdbcThinUtils {
             return BYTE_DEFAULT;
 
         return val ? BYTE_ENABLED : BYTE_DISABLED;
+    }
+
+    static BinaryConfiguration resolveBinaryConfiguration(ConnectionProperties connProps) throws SQLException {
+        String binaryCfgFactoryClassName = connProps.getBinaryConfigFactory();
+        if (!F.isEmpty(binaryCfgFactoryClassName)) {
+            try {
+                Class<Factory<BinaryConfiguration>> cls = (Class<Factory<BinaryConfiguration>>)
+                    JdbcThinUtils.class.getClassLoader().loadClass(binaryCfgFactoryClassName);
+
+                return cls.newInstance().create();
+
+            } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+                throw new SQLException("Could not instantiate binary configuration factory class: " + binaryCfgFactoryClassName,
+                    SqlStateCode.CLIENT_CONNECTION_FAILED, e);
+            }
+        }
+
+        BinaryConfiguration res = new BinaryConfiguration();
+
+        if (connProps.isUseLowerCaseForBinaryTypes() != null)
+            res.setIdMapper(new BinaryBasicIdMapper(connProps.isUseLowerCaseForBinaryTypes()));
+
+        if (connProps.isUseSimpleNameForBinaryTypes() != null)
+            res.setNameMapper(new BinaryBasicNameMapper(connProps.isUseSimpleNameForBinaryTypes()));
+
+        return res;
     }
 }

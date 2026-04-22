@@ -592,4 +592,56 @@ public interface ConnectionProperties {
      * @param sslFactory Custom class name that implements Factory&lt;Map&lt;String, String&gt;&gt;.
      */
     public void setUserAttributesFactory(String sslFactory);
+
+    /**
+     * Gets the class name of the custom implementation of the
+     * <code>javax.cache.configuration.Factory&lt;BinaryConfiguration&gt;</code>.
+     * <p>
+     * This factory should return initialized binary configuration that will be used on JDBC side.
+     *
+     * @return Custom class name that implements Factory&lt;BinaryConfiguration&gt;.
+     */
+    String getBinaryConfigFactory();
+
+    /**
+     * Sets the class name of the custom implementation of the
+     * <code>javax.cache.configuration.Factory&lt;BinaryConfiguration&gt;</code>.
+     * <p>
+     * This factory should return initialized binary configuration that will be used on JDBC side.
+     *
+     * @param cls Custom class name that implements Factory&lt;BinaryConfiguration&gt;.
+     */
+    void setBinaryConfigFactory(String cls);
+
+    /**
+     * Get use lowercase for binary IDs resolution configuration flag.
+     *
+     * @return Use lowercase for binary IDs resolution configuration flag.
+     */
+    Boolean isUseLowerCaseForBinaryTypes();
+
+    /**
+     * Set to {@code true} to use lowercase for binary IDs resolution.
+     *
+     * <p> Defaults is {@link org.apache.ignite.binary.BinaryBasicIdMapper#DFLT_LOWER_CASE}.
+     **
+     * @param useLowerCaseForBinaryTypes Whether to use lowercase for binary IDs resolution.
+     */
+    void setUseLowerCaseForBinaryTypes(boolean useLowerCaseForBinaryTypes);
+
+    /**
+     * Get use simple class name for binary type names resolution configuration flag.
+     *
+     * @return Keep binary configuration flag.
+     */
+    Boolean isUseSimpleNameForBinaryTypes();
+
+    /**
+     * Set to {@code true} to use simple class name for binary type names resolution.
+     *
+     * <p> Defaults is {@link org.apache.ignite.binary.BinaryBasicNameMapper#DFLT_SIMPLE_NAME}.
+     **
+     * @param useSimpleNameForBinaryTypes Whether to use simple class name for binary type names resolution.
+     */
+    void setUseSimpleNameForBinaryTypes(boolean useSimpleNameForBinaryTypes);
 }

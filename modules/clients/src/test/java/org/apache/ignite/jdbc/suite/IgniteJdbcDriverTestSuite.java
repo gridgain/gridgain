@@ -40,6 +40,8 @@ import org.apache.ignite.jdbc.JdbcPreparedStatementSelfTest;
 import org.apache.ignite.jdbc.JdbcResultSetSelfTest;
 import org.apache.ignite.jdbc.JdbcStatementSelfTest;
 import org.apache.ignite.jdbc.JdbcThinMetadataSqlMatchTest;
+import org.apache.ignite.jdbc.thin.JdbcFactoryParamBinaryConfigurationConsistencyTest;
+import org.apache.ignite.jdbc.thin.JdbcFlagParamsBinaryConfigurationConsistencyTest;
 import org.apache.ignite.jdbc.thin.JdbcThinAuthenticateConnectionSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinAutoCloseServerCursorTest;
 import org.apache.ignite.jdbc.thin.JdbcThinBatchSelfTest;
@@ -271,7 +273,11 @@ import org.junit.runners.Suite;
 
     // Data types coverage.
     JdbcThinCacheToJdbcDataTypesCoverageTest.class,
-    JdbcThinJdbcToCacheDataTypesCoverageTest.class
+    JdbcThinJdbcToCacheDataTypesCoverageTest.class,
+
+    // Binary type IDs resolution consistency
+    JdbcFlagParamsBinaryConfigurationConsistencyTest.class,
+    JdbcFactoryParamBinaryConfigurationConsistencyTest.class
 })
 public class IgniteJdbcDriverTestSuite {
     /**
