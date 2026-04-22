@@ -211,7 +211,6 @@ public class JdbcThinUtils {
         return val ? BYTE_ENABLED : BYTE_DISABLED;
     }
 
-    @SuppressWarnings("unchecked")
     static BinaryConfiguration resolveBinaryConfiguration(ConnectionProperties connProps) throws SQLException {
         String binaryCfgFactoryClassName = connProps.getBinaryConfigFactory();
         if (!F.isEmpty(binaryCfgFactoryClassName)) {
