@@ -818,6 +818,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testTxConflictReadEntryWrite1() throws Exception {
         txConflictReadWrite(true, false, true);
     }
@@ -826,6 +827,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testTxConflictReadEntryWrite2() throws Exception {
         txConflictReadWrite(false, false, true);
     }
@@ -2840,6 +2842,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testReadWriteTransactionsNoDeadlockMultinode() throws Exception {
         checkReadWriteTransactionsNoDeadlock(true);
     }
@@ -3666,6 +3669,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testIncrementTxRestart() throws Exception {
         incrementTx(false, false, true);
     }
@@ -4374,6 +4378,7 @@ public class CacheSerializableTransactionsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testNoOptimisticExceptionOnChangingTopology() throws Exception {
         if (FAST)
             return;

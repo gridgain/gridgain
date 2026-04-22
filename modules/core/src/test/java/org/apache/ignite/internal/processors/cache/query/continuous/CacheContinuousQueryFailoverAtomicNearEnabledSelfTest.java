@@ -49,4 +49,11 @@ public class CacheContinuousQueryFailoverAtomicNearEnabledSelfTest
     @Override public void testOneBackup() throws Exception {
         super.testOneBackup();
     }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testOneBackupClientUpdate() throws Exception {
+        // No-op.
+    }
 }

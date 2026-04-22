@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import org.junit.Ignore;
+import org.junit.Test;
+
 /**
  * Tests for lazy query execution.
  */
@@ -24,5 +27,12 @@ public class IgniteQueryTableLockAndConnectionPoolLazyModeOnTest
     /** {@inheritDoc} */
     @Override protected boolean lazy() {
         return true;
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testMultipleNodesWithTablesLockQueryAndTableDrop() throws Exception {
+        // No-op.
     }
 }

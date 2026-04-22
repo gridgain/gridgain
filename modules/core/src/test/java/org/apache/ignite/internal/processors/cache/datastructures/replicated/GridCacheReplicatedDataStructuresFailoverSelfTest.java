@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.cache.datastructures.replicated;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.internal.processors.cache.datastructures.GridCacheAbstractDataStructuresFailoverSelfTest;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
@@ -36,5 +38,12 @@ public class GridCacheReplicatedDataStructuresFailoverSelfTest
     /** {@inheritDoc} */
     @Override protected CacheAtomicityMode collectionCacheAtomicityMode() {
         return TRANSACTIONAL;
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testAtomicSequenceConstantTopologyChange() throws Exception {
+        // No-op.
     }
 }

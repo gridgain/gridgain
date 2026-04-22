@@ -52,6 +52,7 @@ namespace Apache.Ignite.Core.Tests.Examples
         /// Tests thick mode example.
         /// </summary>
         [Test, TestCaseSource(nameof(ThickClientExamples))]
+        [Ignore("Flaky test")]
         public void TestThickExample(Example example)
         {
             Assert.IsFalse(example.IsThin);

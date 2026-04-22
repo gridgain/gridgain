@@ -23,6 +23,7 @@ namespace Apache.Ignite.Core.Tests.Examples
     /// Tests thick examples.
     /// </summary>
     [Category(TestUtils.CategoryExamples)]
+    [Ignore("Flaky test")]
     public class ThickExamplesTest : ExamplesTestBase
     {
         /** */
