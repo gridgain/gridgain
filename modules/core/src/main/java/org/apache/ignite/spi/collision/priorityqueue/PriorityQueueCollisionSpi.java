@@ -246,6 +246,9 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
     @LoggerResource
     private IgniteLogger log;
 
+    /** Sorted waiting jobs + activation cursor. Replaced atomically by {@link #onCollision}. */
+    private volatile SortedJobsSnapshot sortedJobs = new SortedJobsSnapshot(new ArrayList<>());
+
     /**
      * Gets number of jobs that can be executed in parallel.
      *
@@ -516,48 +519,25 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
 
         heldCnt = ctx.heldJobs().size();
 
-        int activateCnt = parallelJobsNum - activeSize;
-
         int waitJobsNum = this.waitJobsNum;
 
-        boolean noExcessiveJobs = waitSize <= waitJobsNum;
-
-        if (activateCnt <= 0 && noExcessiveJobs)
+        if (waitSize == 0)
             return;
 
         // Temporary snapshot of waitJobs.
         ArrayList<GridCollisionJobContextWrapper> waitSnap = slice(waitJobs, waitSize);
 
-        boolean waitSnapSorted = false;
+        waitSnap.sort(priComp);
 
-        if (activateCnt > 0 && waitSize > 0) {
-            if (waitSize <= activateCnt) {
-                for (GridCollisionJobContextWrapper cntx: waitSnap) {
-                    cntx.getContext().activate();
-                    waitSize--;
-                }
-            }
-            else {
-                waitSnap.sort(priComp);
-                waitSnapSorted = true;
+        sortedJobs = new SortedJobsSnapshot(waitSnap);
 
-                if (preventStarvation)
-                    bumpPriority(waitSnap);
+        if (preventStarvation)
+            bumpPriority(waitSnap);
 
-                // Passive list could have less than waitSize elements.
-                for (int i = 0; i < activateCnt && i < waitSnap.size(); i++) {
-                    waitSnap.get(i).getContext().activate();
-
-                    waitSize--;
-                }
-            }
-        }
+        waitSize -= activateJobsInternal(ctx.activeJobs());
 
         if (waitSize > waitJobsNum) {
             int skip = waitSnap.size() - waitSize;
-
-            if (!waitSnapSorted)
-                waitSnap.sort(priComp);
 
             int i = 0;
 
@@ -570,6 +550,41 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
                 }
             }
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean tryActivateJobs(CollisionContext ctx) {
+        activateJobsInternal(ctx.activeJobs());
+
+        return true;
+    }
+
+    /**
+     * Activate up to {@code parallelJobsNum - activeJobs.size()} jobs from {@link #sortedJobs}.
+     *
+     * @return Number of activated jobs.
+     */
+    private synchronized int activateJobsInternal(Collection<CollisionJobContext> activeJobs) {
+        int activateCnt = parallelJobsNum - activeJobs.size();
+
+        if (activateCnt <= 0)
+            return 0;
+
+        SortedJobsSnapshot snapshot = sortedJobs;
+        int snapSize = snapshot.jobs.size();
+        int activated = 0;
+
+        while (activated < activateCnt) {
+            int idx = snapshot.nextJobIndex++;
+
+            if (idx >= snapSize)
+                break;
+
+            if (snapshot.jobs.get(idx).getContext().activate())
+                activated++;
+        }
+
+        return activated;
     }
 
     /**
@@ -679,6 +694,20 @@ public class PriorityQueueCollisionSpi extends IgniteSpiAdapter implements Colli
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(PriorityQueueCollisionSpi.class, this);
+    }
+
+    /**
+     * Cached sorted jobs to avoid calculating each time the jobs to be activated. Replaced atomically in {@link #onCollision}.
+     */
+    private static class SortedJobsSnapshot {
+        private final List<GridCollisionJobContextWrapper> jobs;
+
+        // Must be used only in synchronized context */
+        private int nextJobIndex = 0;
+
+        SortedJobsSnapshot(List<GridCollisionJobContextWrapper> jobs) {
+            this.jobs = jobs;
+        }
     }
 
     /**
