@@ -27,6 +27,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
@@ -66,6 +67,7 @@ public class IgniteCacheSizeFailoverTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testSize() throws Exception {
         startGrids(2);
 

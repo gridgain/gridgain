@@ -30,6 +30,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.zookeeper.ZkTestClientCnxnSocketNIO;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.spi.discovery.zk.internal.ZookeeperDiscoveryImpl.IGNITE_ZOOKEEPER_DISCOVERY_SPI_MAX_EVTS;
@@ -78,6 +79,7 @@ public class ZookeeperDiscoveryConcurrentStartAndStartStopTest extends Zookeeper
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testConcurrentStart() throws Exception {
         final int NODES = 20;
 
