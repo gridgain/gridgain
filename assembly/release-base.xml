@@ -75,5 +75,13 @@
                 <include>**/management.sh</include>
             </includes>
         </fileSet>
+
+        <fileSet>
+            <directory>target/swid</directory>
+            <outputDirectory>/swidtag</outputDirectory>
+            <includes>
+                <include>*.swidtag</include>
+            </includes>
+        </fileSet>
     </fileSets>
 </component>
