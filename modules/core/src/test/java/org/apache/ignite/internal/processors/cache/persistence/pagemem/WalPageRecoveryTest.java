@@ -204,10 +204,39 @@ public class WalPageRecoveryTest extends GridCommonAbstractTest {
         WalPageRecovery rec = new WalPageRecovery(walMgr, null, log, PAGE_SIZE, grpId -> null);
         WalPageRecovery.WalRecordSummary sum = rec.summarize(fullId);
 
-        assertEquals(1, sum.pageRecordCount);
-        assertEquals(1, sum.pageDeltaRecordCount);
-        assertEquals(1, sum.checkpointBoundariesSeen);
-        assertFalse(sum.memoryRecoverySeen);
+        assertEquals(1, sum.getPageRecordCount());
+        assertEquals(1, sum.getPageDeltaRecordCount());
+        assertEquals(1, sum.getCheckpointBoundariesSeen());
+        assertFalse(sum.isMemoryRecoverySeen());
+    }
+
+    /**
+     * When a {@link PageDeltaRecord} for the target page is present but the group resolver returns {@code null},
+     * the recovery must abort with a {@link StorageException}.
+     */
+    @Test(expected = StorageException.class)
+    public void testFailsWhenDeltaEncountersUnknownGroup() throws Exception {
+        FullPageId fullId = new FullPageId(0x0001000000000001L, 42);
+
+        byte[] base = new byte[PAGE_SIZE];
+        Arrays.fill(base, (byte)0x11);
+
+        PageSnapshot snap = mock(PageSnapshot.class);
+        when(snap.type()).thenReturn(WALRecord.RecordType.PAGE_RECORD);
+        when(snap.fullPageId()).thenReturn(fullId);
+        when(snap.pageData()).thenReturn(base);
+        when(snap.pageDataSize()).thenReturn(PAGE_SIZE);
+
+        PageDeltaRecord delta = mock(PageDeltaRecord.class);
+        when(delta.type()).thenReturn(WALRecord.RecordType.DATA_PAGE_INSERT_RECORD);
+        when(delta.pageId()).thenReturn(fullId.pageId());
+        when(delta.groupId()).thenReturn(fullId.groupId());
+
+        IgniteWriteAheadLogManager walMgr = stubWalMgrWithRecords(snap, delta);
+
+        WalPageRecovery rec = new WalPageRecovery(walMgr, null, log, PAGE_SIZE, grpId -> null);
+
+        rec.recoverPage(fullId, ByteBuffer.allocateDirect(PAGE_SIZE));
     }
 
     /** */

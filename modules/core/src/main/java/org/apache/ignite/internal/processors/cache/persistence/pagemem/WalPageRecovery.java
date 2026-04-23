@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.IterationReas
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Reusable utility that reconstructs a single data page by replaying the WAL.
@@ -50,7 +51,7 @@ public class WalPageRecovery {
     private final IgniteWriteAheadLogManager walMgr;
 
     /** Compression processor used to decompress compressed page snapshots; {@code null} disables decompression. */
-    private final CompressionProcessor compressor;
+    @Nullable private final CompressionProcessor compressor;
 
     /** Logger. */
     private final IgniteLogger log;
@@ -59,9 +60,14 @@ public class WalPageRecovery {
     private final int pageSize;
 
     /**
-     * Resolver that returns the {@link PageMemoryEx} owning a given cache group id.
-     * May return {@code null} if the group is not present; callers treat a {@code null}
-     * resolution as "unknown" and fall back to the default {@link #pageSize}.
+     * Resolver that returns the {@link PageMemoryEx} owning a given cache group ID.
+     * May return {@code null} if the group is not present.
+     * <p>
+     * A {@code null} resolution is treated differently per call site:
+     * <ul>
+     *     <li>{@link #realPageSize(int)} (compressed-snapshot decompression sizing) falls back to {@link #pageSize}.</li>
+     *     <li>Delta application aborts recovery with a {@link StorageException}.</li>
+     * </ul>
      */
     private final IntFunction<PageMemoryEx> pageMemoryByGroup;
 
@@ -70,14 +76,14 @@ public class WalPageRecovery {
      * @param compressor Compression processor (may be {@code null} when compressed snapshots are not expected).
      * @param log Logger.
      * @param pageSize System page size.
-     * @param pageMemoryByGroup Resolver that returns the {@link PageMemoryEx} for a given cache group id,
+     * @param pageMemoryByGroup Resolver that returns the {@link PageMemoryEx} for a given cache group ID,
      *     or {@code null} if the group is not currently known. Used to derive the real page size for
      *     compressed snapshots and to provide the target {@link org.apache.ignite.internal.pagemem.PageMemory}
      *     when applying {@link PageDeltaRecord}s.
      */
     public WalPageRecovery(
         IgniteWriteAheadLogManager walMgr,
-        CompressionProcessor compressor,
+        @Nullable CompressionProcessor compressor,
         IgniteLogger log,
         int pageSize,
         IntFunction<PageMemoryEx> pageMemoryByGroup
@@ -184,15 +190,12 @@ public class WalPageRecovery {
 
                                     PageMemoryEx pageMem = pageMemoryByGroup.apply(fullId.groupId());
 
-                                    if (pageMem == null) {
-                                        if (log != null)
-                                            log.warning("Skipped WAL page-delta during recovery (no PageMemory for group) ["
-                                                + "fullPageId=" + fullId
-                                                + ", grpId=" + fullId.groupId()
-                                                + ", deltaType=" + deltaRec.type() + "]");
-
-                                        continue;
-                                    }
+                                    if (pageMem == null)
+                                        throw new StorageException("Cannot apply WAL page-delta during recovery: "
+                                            + "no PageMemory for group "
+                                            + "[fullPageId=" + fullId
+                                            + ", grpId=" + fullId.groupId()
+                                            + ", deltaType=" + deltaRec.type() + "]");
 
                                     deltaRec.applyDelta(pageMem, tmpAddr);
                                 }
@@ -239,22 +242,22 @@ public class WalPageRecovery {
                 switch (rec.type()) {
                     case PAGE_RECORD:
                         if (((PageSnapshot)rec).fullPageId().equals(fullId)) {
-                            sum.pageRecordCount++;
+                            sum.setPageRecordCount(sum.getPageRecordCount() + 1);
                             sum.updatePointer(ptr);
                         }
                         break;
                     case CHECKPOINT_RECORD:
                         if (!((CheckpointRecord)rec).end())
-                            sum.checkpointBoundariesSeen++;
+                            sum.setCheckpointBoundariesSeen(sum.getCheckpointBoundariesSeen() + 1);
                         break;
                     case MEMORY_RECOVERY:
-                        sum.memoryRecoverySeen = true;
+                        sum.setMemoryRecoverySeen(true);
                         break;
                     default:
                         if (rec instanceof PageDeltaRecord) {
                             PageDeltaRecord d = (PageDeltaRecord)rec;
                             if (d.pageId() == fullId.pageId() && d.groupId() == fullId.groupId()) {
-                                sum.pageDeltaRecordCount++;
+                                sum.setPageDeltaRecordCount(sum.getPageDeltaRecordCount() + 1);
                                 sum.updatePointer(ptr);
                             }
                         }
@@ -270,23 +273,17 @@ public class WalPageRecovery {
      * {@link #summarize(FullPageId)}. Intended for forensic logging.
      */
     public static final class WalRecordSummary {
-        /** Number of {@link WALRecord.RecordType#PAGE_RECORD} snapshots matching the target page. */
-        public int pageRecordCount;
+        private int pageRecordCount;
 
-        /** Number of {@link PageDeltaRecord}s targeting the target page. */
-        public int pageDeltaRecordCount;
+        private int pageDeltaRecordCount;
 
-        /** Number of non-end {@link WALRecord.RecordType#CHECKPOINT_RECORD} boundaries observed during the scan. */
-        public int checkpointBoundariesSeen;
+        private int checkpointBoundariesSeen;
 
-        /** {@code true} if any {@link WALRecord.RecordType#MEMORY_RECOVERY} record was observed during the scan. */
-        public boolean memoryRecoverySeen;
+        private boolean memoryRecoverySeen;
 
-        /** Earliest WAL pointer among records that matched the target page. */
-        public WALPointer earliestPointer;
+        private WALPointer earliestPointer;
 
-        /** Latest WAL pointer among records that matched the target page. */
-        public WALPointer latestPointer;
+        private WALPointer latestPointer;
 
         /**
          * Updates {@link #earliestPointer} / {@link #latestPointer} to reflect a newly seen matching record.
@@ -294,19 +291,74 @@ public class WalPageRecovery {
          * @param p WAL pointer of the matching record.
          */
         void updatePointer(WALPointer p) {
-            if (earliestPointer == null)
-                earliestPointer = p;
-            latestPointer = p;
+            if (getEarliestPointer() == null)
+                setEarliestPointer(p);
+
+            setLatestPointer(p);
+        }
+
+        /** Number of {@link WALRecord.RecordType#PAGE_RECORD} snapshots matching the target page. */
+        public int getPageRecordCount() {
+            return pageRecordCount;
+        }
+
+        public void setPageRecordCount(int pageRecordCount) {
+            this.pageRecordCount = pageRecordCount;
+        }
+
+        /** Number of {@link PageDeltaRecord}s targeting the target page. */
+        public int getPageDeltaRecordCount() {
+            return pageDeltaRecordCount;
+        }
+
+        public void setPageDeltaRecordCount(int pageDeltaRecordCount) {
+            this.pageDeltaRecordCount = pageDeltaRecordCount;
+        }
+
+        /** Number of non-end {@link WALRecord.RecordType#CHECKPOINT_RECORD} boundaries observed during the scan. */
+        public int getCheckpointBoundariesSeen() {
+            return checkpointBoundariesSeen;
+        }
+
+        public void setCheckpointBoundariesSeen(int checkpointBoundariesSeen) {
+            this.checkpointBoundariesSeen = checkpointBoundariesSeen;
+        }
+
+        /** {@code true} if any {@link WALRecord.RecordType#MEMORY_RECOVERY} record was observed during the scan. */
+        public boolean isMemoryRecoverySeen() {
+            return memoryRecoverySeen;
+        }
+
+        public void setMemoryRecoverySeen(boolean memoryRecoverySeen) {
+            this.memoryRecoverySeen = memoryRecoverySeen;
+        }
+
+        /** Earliest WAL pointer among records that matched the target page. */
+        public WALPointer getEarliestPointer() {
+            return earliestPointer;
+        }
+
+        public void setEarliestPointer(WALPointer earliestPointer) {
+            this.earliestPointer = earliestPointer;
+        }
+
+        /** Latest WAL pointer among records that matched the target page. */
+        public WALPointer getLatestPointer() {
+            return latestPointer;
+        }
+
+        public void setLatestPointer(WALPointer latestPointer) {
+            this.latestPointer = latestPointer;
         }
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return "WalRecordSummary[pageRecords=" + pageRecordCount
-                + ", pageDeltas=" + pageDeltaRecordCount
-                + ", checkpoints=" + checkpointBoundariesSeen
-                + ", memoryRecoverySeen=" + memoryRecoverySeen
-                + ", earliest=" + earliestPointer
-                + ", latest=" + latestPointer + "]";
+            return "WalRecordSummary[pageRecords=" + getPageRecordCount()
+                + ", pageDeltas=" + getPageDeltaRecordCount()
+                + ", checkpoints=" + getCheckpointBoundariesSeen()
+                + ", memoryRecoverySeen=" + isMemoryRecoverySeen()
+                + ", earliest=" + getEarliestPointer()
+                + ", latest=" + getLatestPointer() + "]";
         }
     }
 

@@ -193,7 +193,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     /** */
     private final IgniteWriteAheadLogManager walMgr;
 
-    /** Lazy-initialized WAL page recovery helper. */
+    /** Lazily-initialized WAL page recovery helper. */
     private volatile WalPageRecovery walPageRecovery;
 
     /** */
@@ -999,7 +999,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     }
 
     /**
-     * @return Lazy-initialized WAL page recovery helper.
+     * @return Lazily-initialized WAL page recovery helper.
      */
     private WalPageRecovery walPageRecovery() {
         WalPageRecovery local = walPageRecovery;
