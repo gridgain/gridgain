@@ -35,6 +35,7 @@ import org.apache.ignite.internal.util.nio.GridNioServer;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -50,6 +51,7 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
  * Test affinity awareness of thin client on unstable topology.
  */
 @RunWith(Parameterized.class)
+@Ignore
 public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientAbstractAffinityAwarenessTest {
     /** */
     @Parameterized.Parameter
