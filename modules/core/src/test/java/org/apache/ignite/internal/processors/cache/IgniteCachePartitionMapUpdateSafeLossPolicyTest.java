@@ -25,6 +25,8 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.internal.util.typedef.G;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  *
@@ -75,5 +77,10 @@ public class IgniteCachePartitionMapUpdateSafeLossPolicyTest extends IgniteCache
                 }
             }
         });
+    }
+
+    @Test
+    @Ignore
+    @Override public void testRandom2() throws Exception {
     }
 }

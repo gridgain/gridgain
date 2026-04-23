@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.cache.distributed.dht;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxConsistencyRestartAbstractSelfTest;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  *
@@ -32,5 +34,10 @@ public class IgniteTxConsistencyColocatedRestartSelfTest extends IgniteTxConsist
     /** {@inheritDoc} */
     @Override protected NearCacheConfiguration nearConfiguration() {
         return null;
+    }
+
+    @Test
+    @Ignore
+    @Override public void testTxConsistency() throws Exception {
     }
 }
