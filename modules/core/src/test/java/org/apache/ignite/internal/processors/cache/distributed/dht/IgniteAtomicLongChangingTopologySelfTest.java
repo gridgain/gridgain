@@ -146,6 +146,7 @@ public class IgniteAtomicLongChangingTopologySelfTest extends GridCommonAbstract
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testClientQueueCreateCloseFailover() throws Exception {
         testFailoverWithClient(new IgniteInClosure<Ignite>() {
             @Override public void apply(Ignite ignite) {

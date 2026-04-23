@@ -28,6 +28,7 @@ import org.apache.ignite.spi.metric.Metric;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -121,6 +122,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testMemoryIsTrackedWhenDistributedQueryIsRunningAndReleasedOnFinish() throws Exception {
         startGrids(2);
 

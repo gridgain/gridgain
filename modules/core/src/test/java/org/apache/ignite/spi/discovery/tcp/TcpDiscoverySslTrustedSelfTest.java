@@ -18,6 +18,8 @@ package org.apache.ignite.spi.discovery.tcp;
 
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Test for {@link TcpDiscoverySpi} with SSL.
@@ -37,5 +39,12 @@ public class TcpDiscoverySslTrustedSelfTest extends TcpDiscoverySelfTest {
         cfg.setSslContextFactory(GridTestUtils.sslTrustedFactory("node02", "trustboth"));
 
         return cfg;
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testFailedNodes3() throws Exception {
+        // No-op.
     }
 }

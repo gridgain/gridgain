@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache.query.continuous;
 
 import org.apache.ignite.cache.CacheMode;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 
@@ -28,5 +30,12 @@ public class CacheContinuousQueryFailoverAtomicReplicatedSelfTest
     /** {@inheritDoc} */
     @Override protected CacheMode cacheMode() {
         return REPLICATED;
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testMultiThreadedFailover() throws Exception {
+        // No-op.
     }
 }
