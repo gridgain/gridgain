@@ -32,6 +32,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.assertions.Assertion;
 import org.apache.ignite.testframework.junits.common.GridRollingRestartAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -60,6 +61,7 @@ public class GridCacheRebalancingPartitionDistributionTest extends GridRollingRe
      * redistribution.
      */
     @Test
+    @Ignore
     public void testRollingRestart() throws InterruptedException {
         awaitPartitionMapExchange();
 

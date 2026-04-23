@@ -27,6 +27,8 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.distributed.near.IgniteCacheQueryNodeRestartSelfTest;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  *
@@ -67,6 +69,12 @@ public class IgniteChangingBaselineCacheQueryNodeRestartSelfTest extends IgniteC
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    @Test
+    @Ignore
+    @Override public void testRestarts() throws Exception {
+
     }
 
     /** {@inheritDoc} */

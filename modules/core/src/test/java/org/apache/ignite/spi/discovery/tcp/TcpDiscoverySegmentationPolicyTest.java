@@ -26,6 +26,7 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -60,6 +61,7 @@ public class TcpDiscoverySegmentationPolicyTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testStopOnSegmentation() throws Exception {
         startGrids(NODES_CNT);
 

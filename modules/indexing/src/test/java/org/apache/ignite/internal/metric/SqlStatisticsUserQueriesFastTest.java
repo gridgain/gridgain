@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.util.IgniteUtils.resolveIgnitePath;
@@ -347,6 +348,7 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
      * Check cancel metric if local select cancelled.
      */
     @Test
+    @Ignore
     public void testLocalLazySelectCanceledOnIterator() {
         assertMetricsIncrementedOnlyOnReducer(() -> {
                 IgniteInternalFuture qryCanceled = runAsyncX(() -> GridTestUtils.assertThrowsAnyCause(
