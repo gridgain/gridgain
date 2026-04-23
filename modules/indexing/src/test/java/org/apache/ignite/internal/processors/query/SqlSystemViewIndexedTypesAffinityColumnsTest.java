@@ -16,10 +16,7 @@ public class SqlSystemViewIndexedTypesAffinityColumnsTest extends SqlSystemViewA
             new Object[] {KeyType.AFF_AND_SQL, false, userId, userId.toUpperCase()},
             new Object[] {KeyType.AFF_AND_SQL_WITH_ALIAS, false, userId, annotation_alias.toUpperCase()}
 
-            // When affinity key is overridden via custom CacheKeyConfiguration SQL doesn't see affinity field,
-            // but at the same time _KEY should not be marked as affinity=true
-            // because only groupId is used for affinity calculations
-            // TODO:
+            // TODO: https://ggsystems.atlassian.net/browse/GG-48162
             //new Object[] {KeyType.UNANNOTATED, true, groupId, null},
             //new Object[] {KeyType.AFF_ONLY, false, userId, null},
             //new Object[] {KeyType.AFF_ONLY, true, groupId, null},

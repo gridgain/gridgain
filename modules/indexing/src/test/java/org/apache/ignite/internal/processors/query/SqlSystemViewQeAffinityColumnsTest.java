@@ -57,7 +57,7 @@ public abstract class SqlSystemViewQeAffinityColumnsTest extends SqlSystemViewAb
                 new Object[] {KeyType.AFF_AND_SQL_WITH_ALIAS, ColDef.DEFINE, null, userId, annotation_alias.toUpperCase()},
                 new Object[] {KeyType.AFF_AND_SQL_WITH_ALIAS, ColDef.DEFINE_WITH_ALIAS, null, userId, qe_alias.toUpperCase()}
 
-                // TODO:
+                // TODO: https://ggsystems.atlassian.net/browse/GG-48162
                 //new Object[] {KeyType.UNANNOTATED, ColDef.LEAVE_AS_IS, groupId, groupId, null},
                 //new Object[] {KeyType.SQL_ONLY, ColDef.LEAVE_AS_IS, groupId, groupId, null},
                 //new Object[] {KeyType.AFF_ONLY, ColDef.LEAVE_AS_IS, null, userId, null},
@@ -103,7 +103,7 @@ public abstract class SqlSystemViewQeAffinityColumnsTest extends SqlSystemViewAb
                 // column name instead.
                 new Object[] {KeyType.AFF_AND_SQL_WITH_ALIAS, ColDef.DEFINE, null, userId, userId.toUpperCase()}
 
-                // TODO:
+                // TODO: https://ggsystems.atlassian.net/browse/GG-48162
                 //new Object[] {KeyType.UNANNOTATED, ColDef.LEAVE_AS_IS, groupId, groupId, null},
                 //new Object[] {KeyType.AFF_ONLY, ColDef.LEAVE_AS_IS, null, userId, null},
                 //new Object[] {KeyType.AFF_ONLY, ColDef.LEAVE_AS_IS, groupId, groupId, null},
