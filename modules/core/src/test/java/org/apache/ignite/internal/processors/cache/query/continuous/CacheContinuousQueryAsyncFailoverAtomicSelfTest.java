@@ -43,8 +43,6 @@ public class CacheContinuousQueryAsyncFailoverAtomicSelfTest
 
     @Test
     @Ignore
-    @Override
-    public void testOneBackup() throws Exception {
-
+    @Override public void testOneBackup() throws Exception {
     }
 }
