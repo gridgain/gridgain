@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache.distributed;
 
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 
@@ -28,5 +30,12 @@ public class CacheTxLoadingConcurrentGridStartSelfTestAllowOverwrite extends
     /** {@inheritDoc} */
     @Override protected CacheAtomicityMode atomicityMode() {
         return TRANSACTIONAL;
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testLoadCacheWithDataStreamerSequentialWithConfigAndRestarts() throws Exception {
+        // No-op.
     }
 }

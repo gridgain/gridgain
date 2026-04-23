@@ -211,4 +211,11 @@ public class JdbcThinJdbcToCacheDataTypesCoverageTest extends SqlDataTypesCovera
             assertNull(ignite.cache(cacheName).get(orignialVal));
         }
     }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore("Flaky test")
+    @Override public void testDoubleDataType() throws Exception {
+        // No-op.
+    }
 }

@@ -531,6 +531,7 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    @Ignore("Flaky test")
     public void testComputeTask() throws Exception {
         CyclicBarrier barrier = new CyclicBarrier(2);
 

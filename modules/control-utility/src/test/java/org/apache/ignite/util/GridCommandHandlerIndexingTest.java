@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStor
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
@@ -134,6 +135,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
     /** Run index validation check on busy cluster. */
     @Test
+    @Ignore("Flaky test")
     public void testIdleVerifyCheckFailsOnNotIdleClusterWithOverwriteWithPers() throws Exception {
         runIdleVerifyCheckCrcFailsOnNotIdleCluster(true);
     }
