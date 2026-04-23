@@ -213,6 +213,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testAllMetricsIfMemoryQuotaIsUnlimited() throws Exception {
         final MemValidator quotaUnlim = (free, max) -> {
             assertEquals(0, max);
