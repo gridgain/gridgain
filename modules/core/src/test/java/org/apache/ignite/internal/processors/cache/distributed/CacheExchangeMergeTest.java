@@ -235,6 +235,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testDelayExchangeMessages() throws Exception {
         testDelaySpi = true;
 

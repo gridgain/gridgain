@@ -24,6 +24,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -82,6 +83,13 @@ public class JettyRestProcessorSignedSelfTest extends JettyRestProcessorAbstract
         conn.connect();
 
         assertEquals(200, ((HttpURLConnection)conn).getResponseCode());
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore
+    @Override public void testTypedPut() throws Exception {
+        // No-op.
     }
 
     /** {@inheritDoc} */

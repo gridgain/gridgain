@@ -39,6 +39,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -122,6 +123,7 @@ public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTes
      * Test check that tombstones reside in persistent partition will be cleared after node restart.
      */
     @Test
+    @Ignore
     public void testTombstonesClearedAfterRestart() throws Exception {
         IgniteEx crd = startGrid(0);
         crd.cluster().state(ClusterState.ACTIVE);

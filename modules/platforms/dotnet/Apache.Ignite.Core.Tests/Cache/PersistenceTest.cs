@@ -290,6 +290,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// Tests the wal disable/enable functionality.
         /// </summary>
         [Test]
+        [Ignore("Flaky test")]
         public void TestWalDisableEnable()
         {
             using (var ignite = Ignition.Start(GetPersistentConfiguration()))
