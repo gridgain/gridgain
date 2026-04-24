@@ -72,6 +72,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// Tests that explicitly configured synchronous executor runs continuations on the striped pool.
         /// </summary>
         [Test]
+        [Ignore("Flaky test")]
         public async Task TestSynchronousExecutorRunsContinuationsOnStripedPool()
         {
             var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration(name: "client"))

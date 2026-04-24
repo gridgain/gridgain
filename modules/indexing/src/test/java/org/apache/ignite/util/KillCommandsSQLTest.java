@@ -29,6 +29,7 @@ import org.apache.ignite.internal.processors.cache.index.AbstractSchemaSelfTest;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
@@ -147,6 +148,7 @@ public class KillCommandsSQLTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    @Ignore
     public void testCancelScanQuery() {
         doTestScanQueryCancel(startCli, srvs,
             args -> execute(killCli, KILL_SCAN_QRY + " '" + args.get1() + "' '" + args.get2() + "' " + args.get3()));

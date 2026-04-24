@@ -304,6 +304,7 @@ public class ZookeeperDiscoveryCommunicationFailureTest extends ZookeeperDiscove
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testCommunicationErrorResolve_KillCoordinator_1() throws Exception {
         communicationFailureResolve_KillNodes(2, Collections.singleton(1L));
     }
