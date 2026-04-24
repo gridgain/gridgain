@@ -2295,6 +2295,16 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PDS_FORCED_CHECKPOINT_ON_NODE_STOP = "IGNITE_PDS_FORCED_CHECKPOINT_ON_NODE_STOP";
 
     /**
+     * Defines a strategy to calculate a partition for atomic batch updates.
+     * The default value is "FIRST_KEY".
+     */
+    @SystemProperty(
+        value = "Defines a strategy to calculate a partition for atomic batch updates",
+        type = String.class,
+        defaults = "FIRST_KEY")
+    public static final String IGNITE_PARTITION_CALCULATION_STRATEGY = "IGNITE_PARTITION_CALCULATION_STRATEGY";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

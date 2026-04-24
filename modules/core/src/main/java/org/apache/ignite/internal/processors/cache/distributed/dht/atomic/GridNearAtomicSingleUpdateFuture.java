@@ -659,6 +659,8 @@ public class GridNearAtomicSingleUpdateFuture extends GridNearAtomicAbstractUpda
             CU.EXPIRE_TIME_CALCULATE,
             null);
 
+        req.recalculatePartition();
+
         return new PrimaryRequestState(req, nodes, true);
     }
 

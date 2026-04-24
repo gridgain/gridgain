@@ -1058,6 +1058,9 @@ public class GridNearAtomicUpdateFuture extends GridNearAtomicAbstractUpdateFutu
             mapped.req.addUpdateEntry(cacheKey, val, conflictTtl, conflictExpireTime, conflictVer);
         }
 
+        for (PrimaryRequestState state : pendingMappings.values())
+            state.req.recalculatePartition();
+
         return pendingMappings;
     }
 
@@ -1166,6 +1169,8 @@ public class GridNearAtomicUpdateFuture extends GridNearAtomicAbstractUpdateFutu
             conflictTtl,
             conflictExpireTime,
             conflictVer);
+
+        req.recalculatePartition();
 
         return new PrimaryRequestState(req, nodes, true);
     }

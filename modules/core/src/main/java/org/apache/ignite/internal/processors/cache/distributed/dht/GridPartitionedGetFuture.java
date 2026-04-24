@@ -391,7 +391,7 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
         // The node still can be local, see details implementation of #tryLocalGet().
         boolean remote = !node.isLocal();
 
-        // Check retry counter, bound for avoid inifinit remap.
+        // Check retry counter, need to bound to avoid infinite remapping.
         if (!checkRetryPermits(key, node, missedNodesToKeysMapping))
             return false;
 
@@ -695,7 +695,7 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
         /** {@inheritDoc} */
         @Override protected GridNearGetRequest createGetRequest0(IgniteUuid rootFutId, IgniteUuid futId) {
             return new GridNearGetRequest(
-                cctx.cacheId(),
+                cctx,
                 rootFutId,
                 futId,
                 null,
