@@ -1248,6 +1248,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
             "cache_sql",         // CACHE_NAME
             "PUBLIC",            // SCHEMA_NAME
             "CACHE_SQL",         // TABLE_NAME
+            null,                // BINARY_AFFINITY_FIELD
             null,                // AFFINITY_KEY_COLUMN
             "ID",                // KEY_ALIAS
             null,                // VALUE_ALIAS
@@ -1272,6 +1273,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
                 "SQL_PUBLIC_DFLT_CACHE", // CACHE_NAME
                 "PUBLIC",                // SCHEMA_NAME
                 "DFLT_CACHE",            // TABLE_NAME
+                "ID2",                   // BINARY_AFFINITY_FIELD
                 "ID2",                   // AFFINITY_KEY_COLUMN
                 null,                    // KEY_ALIAS
                 "MY_VAL",                // VALUE_ALIAS

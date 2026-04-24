@@ -34,8 +34,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
@@ -879,6 +881,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".TABLES.CACHE_NAME.null.2147483647",
                 sysSchemaName() + ".TABLES.SCHEMA_NAME.null.2147483647",
                 sysSchemaName() + ".TABLES.TABLE_NAME.null.2147483647",
+                sysSchemaName() + ".TABLES.BINARY_AFFINITY_FIELD.null.2147483647",
                 sysSchemaName() + ".TABLES.AFFINITY_KEY_COLUMN.null.2147483647",
                 sysSchemaName() + ".TABLES.KEY_ALIAS.null.2147483647",
                 sysSchemaName() + ".TABLES.VALUE_ALIAS.null.2147483647",

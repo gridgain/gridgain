@@ -34,7 +34,7 @@ public class SqlTableViewWalker implements SystemViewRowAttributeWalker<SqlTable
         v.accept(3, "cacheName", String.class);
         v.accept(4, "schemaName", String.class);
         v.accept(5, "tableName", String.class);
-        v.accept(6, "binaryTypeAffinityField", String.class);
+        v.accept(6, "binaryAffinityField", String.class);
         v.accept(7, "affinityKeyColumn", String.class);
         v.accept(8, "keyAlias", String.class);
         v.accept(9, "valueAlias", String.class);
@@ -51,7 +51,7 @@ public class SqlTableViewWalker implements SystemViewRowAttributeWalker<SqlTable
         v.accept(3, "cacheName", String.class, row.cacheName());
         v.accept(4, "schemaName", String.class, row.schemaName());
         v.accept(5, "tableName", String.class, row.tableName());
-        v.accept(6, "binaryTypeAffinityField", String.class, row.binaryTypeAffinityField());
+        v.accept(6, "binaryAffinityField", String.class, row.binaryAffinityField());
         v.accept(7, "affinityKeyColumn", String.class, row.affinityKeyColumn());
         v.accept(8, "keyAlias", String.class, row.keyAlias());
         v.accept(9, "valueAlias", String.class, row.valueAlias());

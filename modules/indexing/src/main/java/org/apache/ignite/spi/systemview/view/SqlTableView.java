@@ -18,9 +18,7 @@ package org.apache.ignite.spi.systemview.view;
 
 import org.apache.ignite.internal.managers.systemview.walker.Order;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
-import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
-import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
 
 /**
@@ -53,7 +51,7 @@ public class SqlTableView {
         else {
             GridQueryTypeDescriptor type = tbl.rowDescriptor().type();
 
-            return type.aliases().get(type.binaryTypeAffinityField());
+            return type.aliases().get(type.binaryAffinityField());
         }
 
         return null;
@@ -125,8 +123,8 @@ public class SqlTableView {
      * @return Affinity key column name.
      */
     @Order(6)
-    public String binaryTypeAffinityField() {
-        return tbl.rowDescriptor().type().binaryTypeAffinityField();
+    public String binaryAffinityField() {
+        return tbl.rowDescriptor().type().binaryAffinityField();
     }
 
     /**

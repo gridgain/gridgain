@@ -547,14 +547,14 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     }
 
     /** {@inheritDoc} */
-    @Override public String binaryTypeAffinityField() {
+    @Override public String binaryAffinityField() {
         return binaryTypeAffField;
     }
 
     /**
      * @param binaryTypeAffField Affinity key field of binary type.
      */
-    public void setBinaryTypeAffinityField(String binaryTypeAffField) {
+    public void setbinaryAffinityField(String binaryTypeAffField) {
         this.binaryTypeAffField = binaryTypeAffField;
     }
 

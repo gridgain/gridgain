@@ -568,7 +568,7 @@ public class QueryUtils {
                     BinaryField field = mapper.affinityKeyField(keyType);
 
                     if (field != null) {
-                        desc.setBinaryTypeAffinityField(field.name());
+                        desc.setbinaryAffinityField(field.name());
 
                         String affField0 = field.name();
 

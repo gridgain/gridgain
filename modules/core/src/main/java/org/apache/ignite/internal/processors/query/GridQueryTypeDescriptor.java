@@ -150,7 +150,7 @@ public interface GridQueryTypeDescriptor {
      *
      * @return Affinity key.
      */
-    public String binaryTypeAffinityField();
+    public String binaryAffinityField();
 
     /**
      * @return Whether custom affinity key mapper exists.

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2026 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.processors.query;
 
 import java.util.Collections;
@@ -122,7 +138,7 @@ public abstract class SqlSystemViewAbstractAffinityColumnSelfTest extends Abstra
     }
 
     private List<List<?>> selectAffinityPropertiesFromTableSysView() {
-        return execSql0("SELECT TABLE_NAME, BINARY_TYPE_AFFINITY_FIELD, AFFINITY_KEY_COLUMN " +
+        return execSql0("SELECT TABLE_NAME, BINARY_AFFINITY_FIELD, AFFINITY_KEY_COLUMN " +
             "FROM " + sysSchemaName() + ".TABLES " +
             "WHERE CACHE_NAME = '" + CACHE_NAME + "'"
         );
@@ -147,12 +163,14 @@ public abstract class SqlSystemViewAbstractAffinityColumnSelfTest extends Abstra
     protected static class AffKey {
         @AffinityKeyMapped
         Integer userId = 0;
+
         Integer groupId = 0;
     }
 
     protected static class SqlKey {
         @QuerySqlField
         Integer userId = 0;
+
         Integer groupId = 0;
     }
 
@@ -160,6 +178,7 @@ public abstract class SqlSystemViewAbstractAffinityColumnSelfTest extends Abstra
         @AffinityKeyMapped
         @QuerySqlField
         Integer userId = 0;
+
         Integer groupId = 0;
     }
 
@@ -167,6 +186,7 @@ public abstract class SqlSystemViewAbstractAffinityColumnSelfTest extends Abstra
         @AffinityKeyMapped
         @QuerySqlField(name = annotation_alias)
         Integer userId = 0;
+
         Integer groupId = 0;
     }
 

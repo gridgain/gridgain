@@ -124,14 +124,14 @@ public class SqlTableColumnView {
             return true;
         }
 
-        boolean isAliasOfBinaryTypeAffinityField = isAliasOfBinaryTypeAffinityField();
+        boolean isAliasOfbinaryAffinityField = isAliasOfbinaryAffinityField();
 
-        return isAliasOfBinaryTypeAffinityField;
+        return isAliasOfbinaryAffinityField;
     }
 
-    private boolean isAliasOfBinaryTypeAffinityField() {
+    private boolean isAliasOfbinaryAffinityField() {
         GridQueryTypeDescriptor type = tbl.rowDescriptor().type();
-        String affFieldSqlAlias = type.aliases().get(type.binaryTypeAffinityField());
+        String affFieldSqlAlias = type.aliases().get(type.binaryAffinityField());
 
         return affFieldSqlAlias != null
             && col.getColumnId() == tbl.getColumn(affFieldSqlAlias).getColumnId();
