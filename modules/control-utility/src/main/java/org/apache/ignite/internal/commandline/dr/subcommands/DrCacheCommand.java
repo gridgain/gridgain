@@ -200,14 +200,17 @@ public class DrCacheCommand extends
             arg.cacheNamesMap = cacheNameToNodeMap;
         }
         else if (arg.remoteDataCenterId != 0) {
-            nodeIds = nodes.stream()
+            List<UUID> senderNodes = nodes.stream()
                     .filter(DrAbstractRemoteSubCommand::drControlUtilitySupported)
                     .filter(node -> node.attribute("plugins.gg.replication.ist.snd.hub") != null ||
                             node.attribute("plugins.gg.replication.snd.hub") != null)
                     .map(GridClientNode::nodeId)
                     .collect(Collectors.toList());
 
-            arg.actionCoordinator = nodeIds.isEmpty() ? null : nodeIds.get(0); // Set smth to preserve compatibility.
+            if (!senderNodes.isEmpty()) {
+                nodeIds = senderNodes;
+                arg.actionCoordinator = nodeIds.get(0); // Set smth to preserve compatibility.
+            }
         }
 
         return compute.projection(DrAbstractRemoteSubCommand::drControlUtilitySupported).execute(
