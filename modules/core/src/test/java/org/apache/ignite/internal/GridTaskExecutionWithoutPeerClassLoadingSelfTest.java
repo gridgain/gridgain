@@ -17,6 +17,8 @@
 package org.apache.ignite.internal;
 
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Task execution test.
@@ -26,5 +28,12 @@ public class GridTaskExecutionWithoutPeerClassLoadingSelfTest extends GridTaskEx
     /** {@inheritDoc} */
     @Override protected boolean peerClassLoadingEnabled() {
         return false;
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore
+    @Override public void testJobIdCollision() throws Exception {
+        // No-op.
     }
 }

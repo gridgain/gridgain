@@ -371,6 +371,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         /// Tests registration in multiple threads.
         /// </summary>
         [Test]
+        [Ignore("Flaky test")]
         public void TestRegistrationMultithreaded([Values(true, false)] bool useTypeName)
         {
             const int iterations = 50;

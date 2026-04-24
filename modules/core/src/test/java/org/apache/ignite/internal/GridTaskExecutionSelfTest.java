@@ -32,6 +32,7 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.resources.JobContextResource;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -93,6 +94,7 @@ public class GridTaskExecutionSelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testJobIdCollision() throws Exception {
         fail("Test refactoring is needed: https://issues.apache.org/jira/browse/IGNITE-4706");
 

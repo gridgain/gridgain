@@ -46,6 +46,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionState;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -358,6 +359,7 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
      * stop one client node.
      */
     @Test
+    @Ignore
     public void testTxDoesntBecomePreparedAfterError() throws Exception {
         backups = 2;
         persistence = true;

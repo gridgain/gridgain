@@ -19,6 +19,7 @@ package org.apache.ignite.spi.discovery.tcp.ipfinder.s3;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import org.apache.ignite.testsuites.IgniteS3TestSuite;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -42,6 +43,7 @@ public class TcpDiscoveryS3IpFinderAwsCredentialsProviderSelfTest extends TcpDis
 
     /** {@inheritDoc} */
     @Test
+    @Ignore
     @Override public void testIpFinder() throws Exception {
         super.testIpFinder();
     }

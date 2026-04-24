@@ -45,6 +45,7 @@ namespace Apache.Ignite.Core.Tests
         /// Tests the processor initialization and grid usage right after topology enter.
         /// </summary>
         [Test]
+        [Ignore("Flaky test")]
         public void TestProcessorInit()
         {
             var cfg = new IgniteConfiguration

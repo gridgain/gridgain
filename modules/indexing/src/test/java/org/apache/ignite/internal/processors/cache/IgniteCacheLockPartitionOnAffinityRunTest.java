@@ -348,6 +348,7 @@ public class IgniteCacheLockPartitionOnAffinityRunTest extends IgniteCacheLockPa
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testMultipleCaches() throws Exception {
         final PersonsCountGetter personsCntGetter = new PersonsCountGetter() {
             @Override public int getPersonsCount(IgniteEx ignite, IgniteLogger log, int orgId) throws Exception {

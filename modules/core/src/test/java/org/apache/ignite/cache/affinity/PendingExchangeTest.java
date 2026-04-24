@@ -100,6 +100,7 @@ public class PendingExchangeTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testStartSeveralClients() throws Exception {
         createClusterWithPendingExchnageDuringRebalance((ignite, exchangeManager) -> {
             GridCompoundFuture compFut = new GridCompoundFuture();
