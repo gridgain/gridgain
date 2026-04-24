@@ -17,12 +17,15 @@
 package org.apache.ignite.testframework;
 
 import com.google.common.collect.Lists;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
@@ -33,11 +36,16 @@ import java.lang.reflect.Modifier;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.ServerSocket;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.security.GeneralSecurityException;
+import java.security.KeyManagementException;
 import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -78,9 +86,13 @@ import java.util.stream.Stream;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
 import javax.management.Attribute;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -168,6 +180,9 @@ public final class GridTestUtils {
 
     /** */
     static final String ALPHABETH = "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890_";
+
+    /** Secure socket protocol to use. */
+    private static final String HTTPS_PROTOCOL = "TLS";
 
     /**
      * Hook object intervenes to discovery message handling
@@ -2805,5 +2820,90 @@ public final class GridTestUtils {
             sb.a(c);
 
         return sb.toString();
+    }
+
+    /**
+     * Downloads resource by URL.
+     *
+     * @param url URL to download.
+     * @param file File where downloaded resource should be stored.
+     * @return File where downloaded resource should be stored.
+     * @throws IOException If error occurred.
+     */
+    public static File downloadUrl(URL url, File file) throws IOException {
+        assert url != null;
+        assert file != null;
+
+        InputStream in = null;
+        OutputStream out = null;
+
+        try {
+            URLConnection conn = url.openConnection();
+
+            if (conn instanceof HttpsURLConnection) {
+                HttpsURLConnection https = (HttpsURLConnection)conn;
+
+                https.setHostnameVerifier(new DeploymentHostnameVerifier());
+
+                SSLContext ctx = SSLContext.getInstance(HTTPS_PROTOCOL);
+
+                ctx.init(null, getTrustManagers(), null);
+
+                // Initialize socket factory.
+                https.setSSLSocketFactory(ctx.getSocketFactory());
+            }
+
+            in = conn.getInputStream();
+
+            if (in == null)
+                throw new IOException("Failed to open connection: " + url.toString());
+
+            out = new BufferedOutputStream(new FileOutputStream(file));
+
+            IgniteUtils.copy(in, out);
+        }
+        catch (NoSuchAlgorithmException | KeyManagementException e) {
+            throw new IOException("Failed to open HTTPs connection [url=" + url.toString() + ", msg=" + e + ']', e);
+        }
+        finally {
+            IgniteUtils.close(in, null);
+            IgniteUtils.close(out, null);
+        }
+
+        return file;
+    }
+
+    /**
+     * Construct array with one trust manager which don't reject input certificates.
+     *
+     * @return Array with one X509TrustManager implementation of trust manager.
+     */
+    private static TrustManager[] getTrustManagers() {
+        return new TrustManager[] {
+            new X509TrustManager() {
+                @Nullable @Override public X509Certificate[] getAcceptedIssuers() {
+                    return null;
+                }
+
+                @Override public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                    /* No-op. */
+                }
+
+                @Override public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                    /* No-op. */
+                }
+            }
+        };
+    }
+
+    /**
+     * Verifier always returns successful result for any host.
+     */
+    private static class DeploymentHostnameVerifier implements HostnameVerifier {
+        /** {@inheritDoc} */
+        @Override public boolean verify(String hostname, SSLSession ses) {
+            // Remote host trusted by default.
+            return true;
+        }
     }
 }
