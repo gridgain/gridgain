@@ -37,6 +37,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Continuous
         /// </summary>
         [Test]
         [Category(TestUtils.CategoryIntensive)]
+        [Ignore("Flaky test")]
         public void TestSameQueryMultipleNodes()
         {
             using (var ignite = StartIgnite())

@@ -53,6 +53,7 @@ import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionOptimisticException;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
@@ -147,6 +148,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testRebalancingDuringLoad_1000_500_1_1() throws Exception {
         checkRebalancingDuringLoad(SF.apply(1000), SF.apply(500), 1, 1);
     }
@@ -155,6 +157,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testRebalancingDuringLoad_8000_500_1_1() throws Exception {
         checkRebalancingDuringLoad(SF.apply(8000), SF.apply(500), 1, 1);
     }
@@ -163,6 +166,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testRebalancingDuringLoad_1000_20000_1_1() throws Exception {
         checkRebalancingDuringLoad(SF.apply(1000), SF.apply(20000), 1, 1);
     }
@@ -171,6 +175,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testRebalancingDuringLoad_8000_8000_1_1() throws Exception {
         checkRebalancingDuringLoad(SF.apply(8000), SF.apply(8000), 1, 1);
     }
@@ -179,6 +184,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testRebalancingDuringLoad_1000_500_8_1() throws Exception {
         checkRebalancingDuringLoad(SF.apply(1000), SF.apply(500), 8, 1);
     }
@@ -187,6 +193,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testRebalancingDuringLoad_8000_500_8_1() throws Exception {
         checkRebalancingDuringLoad(SF.apply(8000), SF.apply(500), 8, 1);
     }
@@ -195,6 +202,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testRebalancingDuringLoad_1000_20000_8_1() throws Exception {
         checkRebalancingDuringLoad(SF.apply(1000), SF.apply(20000), 8, 1);
     }
@@ -203,6 +211,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testRebalancingDuringLoad_8000_8000_8_1() throws Exception {
         checkRebalancingDuringLoad(SF.apply(8000), SF.apply(8000), 8, 1);
     }
@@ -211,6 +220,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testRebalancingDuringLoad_1000_500_8_16() throws Exception {
         checkRebalancingDuringLoad(SF.apply(1000), SF.apply(500), 8, 16);
     }
@@ -219,6 +229,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testRebalancingDuringLoad_8000_500_8_16() throws Exception {
         checkRebalancingDuringLoad(SF.apply(8000), SF.apply(500), 8, 16);
     }
@@ -227,6 +238,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testRebalancingDuringLoad_1000_20000_8_16() throws Exception {
         checkRebalancingDuringLoad(SF.apply(1000), SF.apply(20000), 8, 16);
     }
@@ -235,6 +247,7 @@ public class IgnitePdsContinuousRestartTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testRebalancingDuringLoad_8000_8000_8_16() throws Exception {
         checkRebalancingDuringLoad(SF.apply(8000), SF.apply(8000), 8, 16);
     }

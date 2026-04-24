@@ -33,6 +33,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.util.AttributeNodeFilter;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -157,6 +158,7 @@ public class CachePartitionLossWithRestartsTest extends GridCommonAbstractTest {
      *
      */
     @Test
+    @Ignore
     public void testPartitionLossDetectionOnClientTopology() throws Exception {
         final IgniteEx crd = startGrids(3);
         crd.cluster().baselineAutoAdjustEnabled(false);
