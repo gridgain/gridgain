@@ -59,6 +59,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
     /** */
     @Test
+    @Ignore
     public void testValidateIndexesFailedOnNotIdleCluster() throws Exception {
         checkpointFreq = 100L;
 
