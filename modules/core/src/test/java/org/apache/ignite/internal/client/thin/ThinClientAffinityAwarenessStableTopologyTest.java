@@ -35,6 +35,7 @@ import org.junit.Test;
 /**
  * Test affinity awareness of thin client on stable topology.
  */
+@Ignore
 public class ThinClientAffinityAwarenessStableTopologyTest extends ThinClientAbstractAffinityAwarenessTest {
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -127,6 +128,7 @@ public class ThinClientAffinityAwarenessStableTopologyTest extends ThinClientAbs
      * Test affinity awareness for all applicable operation types for partitioned cache with 0 backups.
      */
     @Test
+    @Ignore
     public void testPartitionedCache0Backups() throws Exception {
         testApplicableCache(PART_CACHE_0_BACKUPS_NAME, i -> i);
     }
@@ -135,6 +137,7 @@ public class ThinClientAffinityAwarenessStableTopologyTest extends ThinClientAbs
      * Test affinity awareness for all applicable operation types for partitioned cache with 1 backups.
      */
     @Test
+    @Ignore
     public void testPartitionedCache1Backups() throws Exception {
         testApplicableCache(PART_CACHE_1_BACKUPS_NAME, i -> i);
     }

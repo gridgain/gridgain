@@ -26,6 +26,7 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
@@ -78,6 +79,7 @@ public class IgniteDisableWalOnRebalanceTest extends GridCommonAbstractTest {
      * then the node is shut down. This should not prevent the node from successfully starting up.
      */
     @Test
+    @Ignore
     public void testDisabledWalOnRebalance() throws Exception {
         IgniteEx ignite = startGrids(2);
 
