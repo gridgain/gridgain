@@ -94,7 +94,7 @@ public class TcpCommunicationSpiSkipMessageSendTest extends GridCommonAbstractTe
 
         TcpDiscoverySpi discoSpi = new CustomDiscoverySpi();
 
-        discoSpi.setIpFinder(LOCAL_IP_FINDER);
+        discoSpi.setIpFinder(sharedStaticIpFinder);
         discoSpi.setJoinTimeout(JOIN_TIMEOUT);
 
         cfg.setDiscoverySpi(discoSpi);

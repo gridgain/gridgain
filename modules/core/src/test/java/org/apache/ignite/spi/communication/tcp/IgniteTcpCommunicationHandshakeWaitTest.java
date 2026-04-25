@@ -61,6 +61,9 @@ public class IgniteTcpCommunicationHandshakeWaitTest extends GridCommonAbstractT
 
         TcpDiscoverySpi discoSpi = new SlowTcpDiscoverySpi();
 
+        // Port range outside LOCAL_IP_FINDER (47500-47509) to prevent cross-fork discovery in parallel CI.
+        discoSpi.setLocalPort(47610);
+        discoSpi.setLocalPortRange(10);
         discoSpi.setIpFinder(sharedStaticIpFinder);
 
         cfg.setDiscoverySpi(discoSpi);
