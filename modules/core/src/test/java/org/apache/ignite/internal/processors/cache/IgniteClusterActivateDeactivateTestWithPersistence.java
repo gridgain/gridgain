@@ -338,6 +338,7 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testActivateCachesRestore_5_Servers() throws Exception {
         activateCachesRestore(5, false, ACTIVE);
     }

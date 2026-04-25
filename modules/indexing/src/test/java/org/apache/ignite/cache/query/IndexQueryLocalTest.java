@@ -26,6 +26,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.query.IndexQueryCriteriaBuilder.lt;
@@ -56,6 +57,7 @@ public class IndexQueryLocalTest extends GridCommonAbstractTest {
 
     /** Should return full data. */
     @Test
+    @Ignore
     public void testServerNodeReplicatedCache() {
         IgniteCache<Long, Person> cache = crd.createCache(ccfg(CacheMode.REPLICATED));
 

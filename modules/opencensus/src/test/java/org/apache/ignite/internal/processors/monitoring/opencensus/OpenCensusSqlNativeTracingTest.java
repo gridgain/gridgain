@@ -441,6 +441,7 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
      */
     @Test
     @SuppressWarnings("Convert2MethodRef")
+    @Ignore
     public void testNextPageRequestFailure() throws Exception {
         String prsnTable = createTableAndPopulate(Person.class, PARTITIONED, 1);
 

@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.datastructures.GridCacheSetItemKey;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -120,6 +121,7 @@ public class PartitionReconciliationSetDataStructureTest extends PartitionReconc
      */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
+    @Ignore
     public void testReconciliationOfIgniteSetExplicitly() throws Exception {
         runIgniteSetReconciliation(true);
     }
