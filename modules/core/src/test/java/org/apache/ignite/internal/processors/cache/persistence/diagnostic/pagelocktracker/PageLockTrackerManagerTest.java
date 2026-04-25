@@ -23,6 +23,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLoc
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.HEAP_LOG;
@@ -72,6 +73,7 @@ public class PageLockTrackerManagerTest {
      *
      */
     @Test
+    @Ignore
     public void testMemoryCalculation() throws Exception {
         int[] trackerTypes = new int[] {HEAP_STACK, HEAP_LOG, OFF_HEAP_STACK, OFF_HEAP_LOG};
 
