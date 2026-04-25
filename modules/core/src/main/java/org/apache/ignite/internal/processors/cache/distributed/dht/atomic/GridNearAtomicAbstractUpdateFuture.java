@@ -772,11 +772,11 @@ public abstract class GridNearAtomicAbstractUpdateFuture extends GridCacheFuture
             if (finished())
                 return false;
 
-            if (res.hasResult())
-                hasRes = true;
-
             if (mappedNodes == null) {
                 assert expCnt == -1 : expCnt;
+
+                if (res.hasResult())
+                    hasRes = true;
 
                 mappedNodes = new HashMap<>();
 
@@ -793,11 +793,17 @@ public abstract class GridNearAtomicAbstractUpdateFuture extends GridCacheFuture
                 if (nodeRes.rcvd)
                     return false;
 
+                if (res.hasResult())
+                    hasRes = true;
+
                 nodeRes.rcvd = true;
 
                 rcvdCnt++;
             }
             else {
+                if (res.hasResult())
+                    hasRes = true;
+
                 if (!hasRes) // Do not finish future until primary response received and mapping is known.
                     expCnt = -1;
 
