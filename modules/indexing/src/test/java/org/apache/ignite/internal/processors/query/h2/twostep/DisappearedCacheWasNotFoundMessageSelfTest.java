@@ -79,7 +79,7 @@ public class DisappearedCacheWasNotFoundMessageSelfTest extends AbstractIndexing
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        cfg.setDiscoverySpi(new TcpDiscoverySpi().setIpFinder(LOCAL_IP_FINDER));
+        cfg.setDiscoverySpi(new TcpDiscoverySpi().setIpFinder(sharedStaticIpFinder));
 
         cfg.setCommunicationSpi(new TcpCommunicationSpi() {
             /** {@inheritDoc} */

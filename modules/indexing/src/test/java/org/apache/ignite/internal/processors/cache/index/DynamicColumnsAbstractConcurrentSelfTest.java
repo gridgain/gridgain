@@ -150,7 +150,7 @@ public abstract class DynamicColumnsAbstractConcurrentSelfTest extends DynamicCo
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration commonConfiguration(int idx) throws Exception {
         TestTcpDiscoverySpi spi = new TestTcpDiscoverySpi();
-        spi.setIpFinder(LOCAL_IP_FINDER);
+        spi.setIpFinder(sharedStaticIpFinder);
 
         return super.commonConfiguration(idx)
             .setDiscoverySpi(spi);

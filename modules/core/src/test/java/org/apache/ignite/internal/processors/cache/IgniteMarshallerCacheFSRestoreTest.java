@@ -83,7 +83,7 @@ public class IgniteMarshallerCacheFSRestoreTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         TcpDiscoverySpi discoSpi = new TestTcpDiscoverySpi();
-        discoSpi.setIpFinder(LOCAL_IP_FINDER);
+        discoSpi.setIpFinder(sharedStaticIpFinder);
 
         cfg.setDiscoverySpi(discoSpi);
 

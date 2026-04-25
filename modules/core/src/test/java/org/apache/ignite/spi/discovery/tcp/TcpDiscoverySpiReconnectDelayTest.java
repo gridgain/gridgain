@@ -368,7 +368,7 @@ public class TcpDiscoverySpiReconnectDelayTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = new IgniteConfiguration()
             .setIgniteInstanceName(name)
             .setDiscoverySpi(new FailingTcpDiscoverySpi()
-                .setIpFinder(LOCAL_IP_FINDER)
+                .setIpFinder(sharedStaticIpFinder)
                 .setReconnectDelay(reconnectDelay)
                 // Allow reconnection to take long.
                 .setNetworkTimeout(EVT_TIMEOUT)

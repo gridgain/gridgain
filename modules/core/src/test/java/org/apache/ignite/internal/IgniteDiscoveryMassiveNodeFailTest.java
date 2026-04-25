@@ -75,7 +75,7 @@ public class IgniteDiscoveryMassiveNodeFailTest extends GridCommonAbstractTest {
 
         FailDiscoverySpi disco = new FailDiscoverySpi();
 
-        disco.setIpFinder(LOCAL_IP_FINDER);
+        disco.setIpFinder(sharedStaticIpFinder);
 
         cfg.setDiscoverySpi(disco);
 

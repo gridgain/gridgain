@@ -75,7 +75,7 @@ public class IgniteMarshallerCacheClassNameConflictTest extends GridCommonAbstra
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
         TcpDiscoverySpi disco = new TestTcpDiscoverySpi();
-        disco.setIpFinder(LOCAL_IP_FINDER);
+        disco.setIpFinder(sharedStaticIpFinder);
 
         cfg.setDiscoverySpi(disco);
 

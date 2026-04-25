@@ -93,7 +93,7 @@ public class IgniteCacheFailedUpdateResponseTest extends GridCommonAbstractTest 
 
         cfg.setClientMode(igniteInstanceName.contains("client"));
 
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setIpFinder(LOCAL_IP_FINDER);
+        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setIpFinder(sharedStaticIpFinder);
 
         return cfg;
     }
