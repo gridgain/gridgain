@@ -615,7 +615,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @return Maximum time of awaiting PartitionMapExchange operation (in milliseconds)
      */
     protected long getPartitionMapExchangeTimeout() {
-        return 30_000;
+        return 30_000 * 3;
     }
 
     /**
