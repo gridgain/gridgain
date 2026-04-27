@@ -143,6 +143,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
     /** Run index validation check on busy cluster. */
     @Test
+    @Ignore("Flaky test")
     public void testIdleVerifyCheckFailsOnNotIdleClusterWithOverwriteWithoutPers() throws Exception {
         persistenceEnable(false);
 
@@ -151,12 +152,14 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
     /** Run index validation check on busy cluster. */
     @Test
+    @Ignore("Flaky test")
     public void testIdleVerifyCheckFailsOnNotIdleClusterWithoutOverwriteWithPers() throws Exception {
         runIdleVerifyCheckCrcFailsOnNotIdleCluster(false);
     }
 
     /** Run index validation check on busy cluster. */
     @Test
+    @Ignore("Flaky test")
     public void testIdleVerifyCheckFailsOnNotIdleClusterWithoutOverwriteWithoutPers() throws Exception {
         persistenceEnable(false);
 

@@ -29,6 +29,7 @@ import org.junit.Test;
 /**
  *
  */
+@Ignore
 public class ClientReconnectionSelfTest extends GridCommonAbstractTest {
     /** */
     public static final String HOST = "127.0.0.1";

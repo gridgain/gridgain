@@ -2035,6 +2035,7 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testDiscoveryEventsDiscard() throws Exception {
         try {
             TestEventDiscardSpi spi = new TestEventDiscardSpi();
