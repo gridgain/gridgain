@@ -26,6 +26,7 @@ import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
+import org.apache.ignite.internal.GridCodegenConverter;
 import org.apache.ignite.internal.GridDirectCollection;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -36,6 +37,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteExternalizableExpiryPolicy;
+import org.apache.ignite.internal.processors.cache.distributed.util.PartitionCalculator;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -52,6 +54,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.DELETE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRANSFORM;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
+import static org.apache.ignite.internal.processors.cache.distributed.util.PartitionCalculator.Strategy.FIRST_KEY;
 
 /**
  * Lite DHT cache update request sent from near node to primary node.
@@ -107,6 +110,10 @@ public class GridNearAtomicFullUpdateRequest extends GridNearAtomicAbstractUpdat
     /** Maximum possible size of inner collections. */
     @GridDirectTransient
     private int initSize;
+
+    /** Partition id. */
+    @GridCodegenConverter(defaultValueOnRead = "PartitionCalculator.UNDEFINED_PARTITION")
+    private int partId = PartitionCalculator.UNDEFINED_PARTITION;
 
     /**
      * Empty constructor required by {@link Externalizable}.
@@ -414,7 +421,22 @@ public class GridNearAtomicFullUpdateRequest extends GridNearAtomicAbstractUpdat
     @Override public int partition() {
         assert !F.isEmpty(keys);
 
-        return keys.get(0).partition();
+        if (partId == PartitionCalculator.UNDEFINED_PARTITION) {
+            // Partition id is not defined yet.
+            // It is possible when rolling upgrade is in progress, for instance,
+            // and we received the request from an "old" node that does not support configurable strategy.
+            // Fall back to first-key strategy for backward compatibility.
+            partId = PartitionCalculator.calculate(keys, FIRST_KEY);
+        }
+
+        assert partId >= 0 : "Undefined partition id [req=" + this + ']';
+
+        return partId;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void recalculatePartition() {
+        partId = PartitionCalculator.calculate(keys);
     }
 
     /** {@inheritDoc} */
@@ -481,6 +503,12 @@ public class GridNearAtomicFullUpdateRequest extends GridNearAtomicAbstractUpdat
                 writer.incrementState();
 
             case 19:
+                if (!writer.writeInt("partId", partId))
+                    return false;
+
+                writer.incrementState();
+
+            case 20:
                 if (!writer.writeCollection("vals", vals, MessageCollectionItemType.MSG))
                     return false;
 
@@ -567,6 +595,14 @@ public class GridNearAtomicFullUpdateRequest extends GridNearAtomicAbstractUpdat
                 reader.incrementState();
 
             case 19:
+                partId = reader.readInt("partId", PartitionCalculator.UNDEFINED_PARTITION);
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 20:
                 vals = reader.readCollection("vals", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -598,7 +634,7 @@ public class GridNearAtomicFullUpdateRequest extends GridNearAtomicAbstractUpdat
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 20;
+        return 21;
     }
 
     /** {@inheritDoc} */

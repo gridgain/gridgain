@@ -16,17 +16,17 @@
 
 package org.apache.ignite.internal.processors.monitoring.opencensus;
 
-import java.util.Collections;
-import java.util.List;
-
 import com.google.common.collect.ImmutableMap;
 import io.opencensus.trace.SpanId;
 import io.opencensus.trace.export.SpanData;
+import java.util.Collections;
+import java.util.List;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.spi.tracing.Scope;
-import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.spi.tracing.TracingConfigurationCoordinates;
 import org.apache.ignite.spi.tracing.TracingConfigurationParameters;
+import org.apache.ignite.spi.tracing.TracingSpi;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
@@ -50,8 +50,8 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.TX_NEAR_PRE
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_PROCESS_DHT_FINISH_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_PROCESS_DHT_PREPARE_REQ;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_PROCESS_DHT_PREPARE_RESP;
-import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_ROLLBACK;
+import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_ALWAYS;
 import static org.apache.ignite.spi.tracing.TracingConfigurationParameters.SAMPLING_RATE_NEVER;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
@@ -128,7 +128,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
             tx.commit();
         }
 
-        handler().flush();
+        flushSpans(true);
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -281,7 +281,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
             tx.commit();
         }
 
-        handler().flush();
+        flushSpans(true);
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -429,7 +429,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
             tx.commit();
         }
 
-        handler().flush();
+        flushSpans(true);
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -582,7 +582,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
             tx.commit();
         }
 
-        handler().flush();
+        flushSpans(true);
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -730,7 +730,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
             tx.commit();
         }
 
-        handler().flush();
+        flushSpans(true);
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -883,7 +883,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
             tx.commit();
         }
 
-        handler().flush();
+        flushSpans(true);
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -1016,7 +1016,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
             tx.rollback();
         }
 
-        handler().flush();
+        flushSpans(false);
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -1079,7 +1079,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
             client.cache(DEFAULT_CACHE_NAME).put(1, 1);
         }
 
-        handler().flush();
+        flushSpans(false);
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -1133,7 +1133,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
             tx.commit();
         }
 
-        handler().flush();
+        flushSpans(false);
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -1173,7 +1173,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
             tx.commit();
         }
 
-        handler().flush();
+        flushSpans(false);
 
         SpanData txSpan = handler().allSpans()
             .filter(span -> TX.spanName().equals(span.getName())).findFirst().get();
@@ -1204,7 +1204,7 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
             tx.commit();
         }
 
-        handler().flush();
+        flushSpans(true);
 
         List<SpanId> txSpanIds = checkSpan(
             TX,
@@ -1306,5 +1306,36 @@ public class OpenCensusTxTracingTest extends AbstractTracingTest {
             txNearFinishReqSpanIds.get(0),
             1,
             null);
+    }
+
+    /**
+     * Forces to flush ended spans that not passed to exporter yet.
+     *
+     * @param waitForProcessingOnBackups If {@code true} the method waits for processing TX requests on backups.
+     * @throws IgniteCheckedException If failed.
+     */
+    private void flushSpans(boolean waitForProcessingOnBackups) throws IgniteCheckedException {
+        handler().flush();
+
+        if (waitForProcessingOnBackups) {
+            for (int iter = 0; iter < 3; ++iter) {
+                boolean res = handler()
+                    .allSpans()
+                    .filter(span -> span.getName().equals(TX_PROCESS_DHT_FINISH_REQ.spanName()))
+                    .count() == 2L;
+
+                if (res)
+                    return;
+
+                handler().flush();
+            }
+
+            assertTrue(
+                "Failed to wait for exporting all traces. Please check span buffer size and exporter schedule delay.",
+            handler()
+                    .allSpans()
+                    .filter(span -> span.getName().equals(TX_PROCESS_DHT_FINISH_REQ.spanName()))
+                    .count() == 2L);
+        }
     }
 }

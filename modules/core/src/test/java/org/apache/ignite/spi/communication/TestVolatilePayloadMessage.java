@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2026 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,69 +13,55 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.cache.distributed.dht.preloader.latch;
+
+package org.apache.ignite.spi.communication;
 
 import java.nio.ByteBuffer;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
-/**
- * Message is used to send acks for {@link Latch} instances management.
- */
-public class LatchAckMessage implements Message {
+/** */
+public class TestVolatilePayloadMessage implements Message {
     /** */
-    private static final long serialVersionUID = 0L;
+    public static final short DIRECT_TYPE = 210;
 
-    /** Latch id. */
-    private String latchId;
+    /** */
+    private int idx;
 
-    /** Latch topology version. */
-    private AffinityTopologyVersion topVer;
+    /** */
+    private byte[] payload;
 
-    /** Flag indicates that ack is final. */
-    private boolean isFinal;
+    /** */
+    private int payloadLen;
 
-    /**
-     * Constructor.
-     *
-     * @param latchId Latch id.
-     * @param topVer Latch topology version.
-     * @param isFinal Final acknowledgement flag.
-     */
-    public LatchAckMessage(String latchId, AffinityTopologyVersion topVer, boolean isFinal) {
-        this.latchId = latchId;
-        this.topVer = topVer;
-        this.isFinal = isFinal;
+    /** */
+    public TestVolatilePayloadMessage() {
+        // No-op.
+    }
+
+    /** */
+    public TestVolatilePayloadMessage(int idx, byte[] payload) {
+        this.idx = idx;
+        this.payload = payload;
+        this.payloadLen = payload.length;
+    }
+
+    /** */
+    public int index() {
+        return idx;
     }
 
     /**
-     * Empty constructor for marshalling purposes.
+     * @return Network payload.
      */
-    public LatchAckMessage() {
+    public byte[] payload() {
+        return payload;
     }
 
-    /**
-     * @return Latch id.
-     */
-    public String latchId() {
-        return latchId;
-    }
-
-    /**
-     * @return Latch topology version.
-     */
-    public AffinityTopologyVersion topVer() {
-        return topVer;
-    }
-
-    /**
-     * @return {@code} if ack is final.
-     */
-    public boolean isFinal() {
-        return isFinal;
+    /** {@inheritDoc} */
+    @Override public void onAckReceived() {
+        // No-op.
     }
 
     /** {@inheritDoc} */
@@ -91,23 +77,20 @@ public class LatchAckMessage implements Message {
 
         switch (writer.state()) {
             case 0:
-                if (!writer.writeBoolean("isFinal", isFinal))
+                if (!writer.writeInt(null, idx))
                     return false;
 
                 writer.incrementState();
-
             case 1:
-                if (!writer.writeString("latchId", latchId))
+                if (!writer.writeInt(null, payloadLen))
                     return false;
 
                 writer.incrementState();
-
             case 2:
-                if (!writer.writeAffinityTopologyVersion("topVer", topVer))
+                if (!writer.writeByteArray(null, payload))
                     return false;
 
                 writer.incrementState();
-
         }
 
         return true;
@@ -117,12 +100,9 @@ public class LatchAckMessage implements Message {
     @Override public boolean readFrom(ByteBuffer buf, MessageReader reader) {
         reader.setBuffer(buf);
 
-        if (!reader.beforeMessageRead())
-            return false;
-
         switch (reader.state()) {
             case 0:
-                isFinal = reader.readBoolean("isFinal");
+                idx = reader.readInt(null);
 
                 if (!reader.isLastRead())
                     return false;
@@ -130,7 +110,7 @@ public class LatchAckMessage implements Message {
                 reader.incrementState();
 
             case 1:
-                latchId = reader.readString("latchId");
+                payloadLen = reader.readInt(null);
 
                 if (!reader.isLastRead())
                     return false;
@@ -138,35 +118,27 @@ public class LatchAckMessage implements Message {
                 reader.incrementState();
 
             case 2:
-                topVer = reader.readAffinityTopologyVersion("topVer");
+                if (buf.remaining() < payloadLen)
+                    return false;
+
+                payload = reader.readByteArray(null);
 
                 if (!reader.isLastRead())
                     return false;
 
                 reader.incrementState();
-
         }
 
-        return reader.afterMessageRead(LatchAckMessage.class);
+        return true;
     }
 
     /** {@inheritDoc} */
     @Override public short directType() {
-        return 135;
+        return DIRECT_TYPE;
     }
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 3;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onAckReceived() {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public String toString() {
-        return S.toString(LatchAckMessage.class, this);
+        return 2;
     }
 }

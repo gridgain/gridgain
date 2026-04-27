@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -60,6 +61,7 @@ import org.apache.ignite.internal.GridJobSiblingsResponse;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTaskSessionImpl;
 import org.apache.ignite.internal.GridTaskSessionRequest;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.SkipDaemon;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.collision.GridCollisionJobContextAdapter;
@@ -100,6 +102,7 @@ import org.apache.ignite.spi.systemview.view.ComputeJobView;
 import org.apache.ignite.spi.systemview.view.ComputeJobView.ComputeJobState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 import org.jsr166.ConcurrentLinkedHashMap;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -326,6 +329,14 @@ public class GridJobProcessor extends GridProcessorAdapter {
     /** Timeout interrupt {@link GridJobWorker workers} after {@link GridJobWorker#cancel cancel} im mills. */
     private final DistributedLongProperty computeJobWorkerInterruptTimeout =
         detachedLongProperty(COMPUTE_JOB_WORKER_INTERRUPT_TIMEOUT);
+
+    /** Guarded by handleCollisionMutex. */
+    private CompletableFuture<?> handlingCollisionFut;
+
+    /** Guarded by handleCollisionMutex. */
+    private boolean shouldHandleCollision;
+
+    private final Object handleCollisionMutex = new Object();
 
     /**
      * @param ctx Kernal context.
@@ -897,194 +908,76 @@ public class GridJobProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Handles collisions.
-     * <p>
-     * In most cases this method should be called from main read lock
-     * to avoid jobs activation after node stop has started.
+     * Schedules handling of collisions in management executor pool.
      */
-    public void handleCollisions() {
+    public void scheduleHandleCollisions() {
         assert !jobAlwaysActivate;
 
-        if (handlingCollision.get()) {
+        synchronized (handleCollisionMutex) {
+            shouldHandleCollision = true;
+            scheduleHandleCollisionsIfNeeded();
+        }
+    }
+
+    @TestOnly
+    /** Handles collisions in current thread. Made public for testing purposes. */
+    public void handleCollisions() {
+        if (!rwLock.tryReadLock()) {
             if (log.isDebugEnabled())
-                log.debug("Skipping recursive collision handling.");
+                log.debug("Skipping handling collisions because node is stopping");
+
+            handlingCollisionFut.completeExceptionally(new NodeStoppingException("Node is stopping"));
 
             return;
         }
 
-        handlingCollision.set(Boolean.TRUE);
-
         try {
+            if (stopping) {
+                if (log.isDebugEnabled())
+                    log.debug("Skipping handling collisions because node is stopping");
+
+                throw new NodeStoppingException("Node is stopping");
+            }
             if (log.isDebugEnabled())
                 log.debug("Before handling collisions.");
 
             // Invoke collision SPI.
-            ctx.collision().onCollision(
-                // Passive jobs view.
-                new AbstractCollection<org.apache.ignite.spi.collision.CollisionJobContext>() {
-                    /** {@inheritDoc} */
-                    @NotNull @Override public Iterator<org.apache.ignite.spi.collision.CollisionJobContext> iterator() {
-                        final Iterator<GridJobWorker> iter = passiveJobs.values().iterator();
+            ctx.collision().onCollision(getPassiveJobsView(), getActiveJobsView(), getHeldJobsView());
 
-                        return new Iterator<org.apache.ignite.spi.collision.CollisionJobContext>() {
-                            /** {@inheritDoc} */
-                            @Override public boolean hasNext() {
-                                return iter.hasNext();
-                            }
+            handlingCollisionFut.complete(null);
+        } catch (Throwable t) {
+            handlingCollisionFut.completeExceptionally(t);
 
-                            /** {@inheritDoc} */
-                            @Override public org.apache.ignite.spi.collision.CollisionJobContext next() {
-                                return new CollisionJobContext(iter.next(), true);
-                            }
+            if (t instanceof Error)
+                throw (Error) t;
+        } finally {
+            rwLock.readUnlock();
+        }
 
-                            /** {@inheritDoc} */
-                            @Override public void remove() {
-                                throw new UnsupportedOperationException();
-                            }
-                        };
+        updateJobMetrics();
+    }
+
+    private void scheduleHandleCollisionsIfNeeded() {
+        synchronized (handleCollisionMutex) {
+            if (shouldHandleCollision && (handlingCollisionFut == null || handlingCollisionFut.isDone())) {
+                handlingCollisionFut = new CompletableFuture<>();
+
+                ctx.pools().getManagementExecutorService().submit(this::handleCollisions);
+
+                handlingCollisionFut.whenComplete((res, err) -> {
+                    if (err != null) {
+                        if (err instanceof NodeStoppingException)
+                            return;
+                        if (log.isDebugEnabled())
+                            log.debug("Collision handling has been completed with error: " + err);
                     }
 
-                    /** {@inheritDoc} */
-                    @Override public int size() {
-                        return passiveJobs.size();
-                    }
-                },
-
-                // Active jobs view.
-                new AbstractCollection<org.apache.ignite.spi.collision.CollisionJobContext>() {
-                    /** {@inheritDoc} */
-                    @NotNull @Override public Iterator<org.apache.ignite.spi.collision.CollisionJobContext> iterator() {
-                        final Iterator<GridJobWorker> iter = activeJobs.values().iterator();
-
-                        return new Iterator<org.apache.ignite.spi.collision.CollisionJobContext>() {
-                            private GridJobWorker w;
-
-                            {
-                                advance();
-                            }
-
-                            /**
-                             *
-                             */
-                            void advance() {
-                                assert w == null;
-
-                                while (iter.hasNext()) {
-                                    GridJobWorker w0 = iter.next();
-
-                                    assert !w0.isInternal();
-
-                                    if (!w0.held()) {
-                                        w = w0;
-
-                                        break;
-                                    }
-                                }
-                            }
-
-                            /** {@inheritDoc} */
-                            @Override public boolean hasNext() {
-                                return w != null;
-                            }
-
-                            /** {@inheritDoc} */
-                            @Override public org.apache.ignite.spi.collision.CollisionJobContext next() {
-                                if (w == null)
-                                    throw new NoSuchElementException();
-
-                                org.apache.ignite.spi.collision.CollisionJobContext ret = new CollisionJobContext(w, false);
-
-                                w = null;
-
-                                advance();
-
-                                return ret;
-                            }
-
-                            /** {@inheritDoc} */
-                            @Override public void remove() {
-                                throw new UnsupportedOperationException();
-                            }
-                        };
-                    }
-
-                    /** {@inheritDoc} */
-                    @Override public int size() {
-                        int ret = activeJobs.size() - heldJobs.size();
-
-                        return Math.max(ret, 0);
-                    }
-                },
-
-                // Held jobs view.
-                new AbstractCollection<org.apache.ignite.spi.collision.CollisionJobContext>() {
-                    /** {@inheritDoc} */
-                    @NotNull @Override public Iterator<org.apache.ignite.spi.collision.CollisionJobContext> iterator() {
-                        final Iterator<GridJobWorker> iter = activeJobs.values().iterator();
-
-                        return new Iterator<org.apache.ignite.spi.collision.CollisionJobContext>() {
-                            private GridJobWorker w;
-
-                            {
-                                advance();
-                            }
-
-                            /**
-                             *
-                             */
-                            void advance() {
-                                assert w == null;
-
-                                while (iter.hasNext()) {
-                                    GridJobWorker w0 = iter.next();
-
-                                    assert !w0.isInternal();
-
-                                    if (w0.held()) {
-                                        w = w0;
-
-                                        break;
-                                    }
-                                }
-                            }
-
-                            /** {@inheritDoc} */
-                            @Override public boolean hasNext() {
-                                return w != null;
-                            }
-
-                            /** {@inheritDoc} */
-                            @Override public org.apache.ignite.spi.collision.CollisionJobContext next() {
-                                if (w == null)
-                                    throw new NoSuchElementException();
-
-                                org.apache.ignite.spi.collision.CollisionJobContext ret =
-                                    new CollisionJobContext(w, false);
-
-                                w = null;
-
-                                advance();
-
-                                return ret;
-                            }
-
-                            /** {@inheritDoc} */
-                            @Override public void remove() {
-                                throw new UnsupportedOperationException();
-                            }
-                        };
-                    }
-
-                    /** {@inheritDoc} */
-                    @Override public int size() {
-                        return heldJobs.size();
-                    }
+                    // To process collision events that happened during handling collisions.
+                    scheduleHandleCollisionsIfNeeded();
                 });
 
-            updateJobMetrics();
-        }
-        finally {
-            handlingCollision.set(Boolean.FALSE);
+                shouldHandleCollision = false;
+            }
         }
     }
 
@@ -1406,7 +1299,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
                             if (old == null) {
                                 waitingJobsMetric.increment();
 
-                                handleCollisions();
+                                scheduleHandleCollisions();
                             }
                             else
                                 U.error(log, "Received computation request with duplicate job ID (could be " +
@@ -1993,7 +1886,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
             }
 
             try {
-                handleCollisions();
+                scheduleHandleCollisions();
             }
             finally {
                 rwLock.readUnlock();
@@ -2105,7 +1998,9 @@ public class GridJobProcessor extends GridProcessorAdapter {
                     heldJobs.remove(worker.getJobId());
 
                     try {
-                        handleCollisions();
+                        if (!ctx.collision().tryActivateJobs(getPassiveJobsView(), getActiveJobsView(), getHeldJobsView())) {
+                            scheduleHandleCollisions();
+                        }
                     }
                     finally {
                         rwLock.readUnlock();
@@ -2113,6 +2008,170 @@ public class GridJobProcessor extends GridProcessorAdapter {
                 }
             }
         }
+    }
+
+    private AbstractCollection<org.apache.ignite.spi.collision.CollisionJobContext> getPassiveJobsView() {
+        return new AbstractCollection<org.apache.ignite.spi.collision.CollisionJobContext>() {
+            /** {@inheritDoc} */
+            @NotNull @Override public Iterator<org.apache.ignite.spi.collision.CollisionJobContext> iterator() {
+                final Iterator<GridJobWorker> iter = passiveJobs.values().iterator();
+
+                return new Iterator<org.apache.ignite.spi.collision.CollisionJobContext>() {
+                    /** {@inheritDoc} */
+                    @Override public boolean hasNext() {
+                        return iter.hasNext();
+                    }
+
+                    /** {@inheritDoc} */
+                    @Override public org.apache.ignite.spi.collision.CollisionJobContext next() {
+                        return new CollisionJobContext(iter.next(), true);
+                    }
+
+                    /** {@inheritDoc} */
+                    @Override public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
+                };
+            }
+
+            /** {@inheritDoc} */
+            @Override public int size() {
+                return passiveJobs.size();
+            }
+        };
+    }
+
+    private AbstractCollection<org.apache.ignite.spi.collision.CollisionJobContext> getActiveJobsView() {
+        return new AbstractCollection<org.apache.ignite.spi.collision.CollisionJobContext>() {
+            /** {@inheritDoc} */
+            @NotNull @Override public Iterator<org.apache.ignite.spi.collision.CollisionJobContext> iterator() {
+                final Iterator<GridJobWorker> iter = activeJobs.values().iterator();
+
+                return new Iterator<org.apache.ignite.spi.collision.CollisionJobContext>() {
+                    private GridJobWorker w;
+
+                    {
+                        advance();
+                    }
+
+                    /**
+                     *
+                     */
+                    void advance() {
+                        assert w == null;
+
+                        while (iter.hasNext()) {
+                            GridJobWorker w0 = iter.next();
+
+                            assert !w0.isInternal();
+
+                            if (!w0.held()) {
+                                w = w0;
+
+                                break;
+                            }
+                        }
+                    }
+
+                    /** {@inheritDoc} */
+                    @Override public boolean hasNext() {
+                        return w != null;
+                    }
+
+                    /** {@inheritDoc} */
+                    @Override public org.apache.ignite.spi.collision.CollisionJobContext next() {
+                        if (w == null)
+                            throw new NoSuchElementException();
+
+                        org.apache.ignite.spi.collision.CollisionJobContext ret = new CollisionJobContext(w, false);
+
+                        w = null;
+
+                        advance();
+
+                        return ret;
+                    }
+
+                    /** {@inheritDoc} */
+                    @Override public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
+                };
+            }
+
+            /** {@inheritDoc} */
+            @Override public int size() {
+                int ret = activeJobs.size() - heldJobs.size();
+
+                return Math.max(ret, 0);
+            }
+        };
+    }
+
+    private AbstractCollection<org.apache.ignite.spi.collision.CollisionJobContext> getHeldJobsView() {
+        return new AbstractCollection<org.apache.ignite.spi.collision.CollisionJobContext>() {
+            /** {@inheritDoc} */
+            @NotNull @Override public Iterator<org.apache.ignite.spi.collision.CollisionJobContext> iterator() {
+                final Iterator<GridJobWorker> iter = activeJobs.values().iterator();
+
+                return new Iterator<org.apache.ignite.spi.collision.CollisionJobContext>() {
+                    private GridJobWorker w;
+
+                    {
+                        advance();
+                    }
+
+                    /**
+                     *
+                     */
+                    void advance() {
+                        assert w == null;
+
+                        while (iter.hasNext()) {
+                            GridJobWorker w0 = iter.next();
+
+                            assert !w0.isInternal();
+
+                            if (w0.held()) {
+                                w = w0;
+
+                                break;
+                            }
+                        }
+                    }
+
+                    /** {@inheritDoc} */
+                    @Override public boolean hasNext() {
+                        return w != null;
+                    }
+
+                    /** {@inheritDoc} */
+                    @Override public org.apache.ignite.spi.collision.CollisionJobContext next() {
+                        if (w == null)
+                            throw new NoSuchElementException();
+
+                        org.apache.ignite.spi.collision.CollisionJobContext ret =
+                            new CollisionJobContext(w, false);
+
+                        w = null;
+
+                        advance();
+
+                        return ret;
+                    }
+
+                    /** {@inheritDoc} */
+                    @Override public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
+                };
+            }
+
+            /** {@inheritDoc} */
+            @Override public int size() {
+                return heldJobs.size();
+            }
+        };
     }
 
     /**
@@ -2296,7 +2355,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
 
                 try {
                     if (!jobAlwaysActivate)
-                        handleCollisions();
+                        scheduleHandleCollisions();
                     else if (metricsUpdateFreq > -1L)
                         updateJobMetrics();
                 }
@@ -2392,7 +2451,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
                 handleCollisions = true;
 
             if (handleCollisions)
-                handleCollisions();
+                scheduleHandleCollisions();
         }
         finally {
             rwLock.readUnlock();

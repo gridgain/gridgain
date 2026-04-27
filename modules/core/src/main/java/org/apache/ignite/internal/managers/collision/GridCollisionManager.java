@@ -18,7 +18,6 @@ package org.apache.ignite.internal.managers.collision;
 
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.SkipDaemon;
@@ -118,22 +117,49 @@ public class GridCollisionManager extends GridManagerAdapter<CollisionSpi> {
             if (log.isDebugEnabled())
                 log.debug("Resolving job collisions [waitJobs=" + waitJobs + ", activeJobs=" + activeJobs + ']');
 
-            getSpi().onCollision(new CollisionContext() {
-                /** {@inheritDoc} */
-                @Override public Collection<CollisionJobContext> activeJobs() {
-                    return activeJobs;
-                }
-
-                /** {@inheritDoc} */
-                @Override public Collection<CollisionJobContext> waitingJobs() {
-                    return waitJobs;
-                }
-
-                /** {@inheritDoc} */
-                @Override public Collection<CollisionJobContext> heldJobs() {
-                    return heldJobs;
-                }
-            });
+            getSpi().onCollision(createContext(waitJobs, activeJobs, heldJobs));
         }
+    }
+
+    /**
+     * Tries a fast-path to activate jobs without async calling {@link #onCollision}
+     *
+     * @return {@code true} if jobs were activated, {@code false} if fast-path is not supported.
+     */
+    public boolean tryActivateJobs(
+        final Collection<CollisionJobContext> waitJobs,
+        final Collection<CollisionJobContext> activeJobs,
+        final Collection<CollisionJobContext> heldJobs
+    ) {
+        if (!enabled())
+            return true;
+
+        if (log.isDebugEnabled())
+            log.debug("Activating jobs [waitJobs=" + waitJobs.size() + ", activeJobs=" + activeJobs + ']');
+
+        return getSpi().tryActivateJobs(createContext(waitJobs, activeJobs, heldJobs));
+    }
+
+    private static CollisionContext createContext(
+        Collection<CollisionJobContext> waitJobs,
+        Collection<CollisionJobContext> activeJobs,
+        Collection<CollisionJobContext> heldJobs
+    ) {
+        return new CollisionContext() {
+            /** {@inheritDoc} */
+            @Override public Collection<CollisionJobContext> activeJobs() {
+                return activeJobs;
+            }
+
+            /** {@inheritDoc} */
+            @Override public Collection<CollisionJobContext> waitingJobs() {
+                return waitJobs;
+            }
+
+            /** {@inheritDoc} */
+            @Override public Collection<CollisionJobContext> heldJobs() {
+                return heldJobs;
+            }
+        };
     }
 }

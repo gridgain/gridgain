@@ -239,6 +239,21 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
             " Zero means there is no limits.",
         0L, false, 0, Integer.MAX_VALUE);
 
+    /**
+     * Custom class name that implements <code>javax.cache.configuration.Factory&lt;BinaryConfiguration&gt;</code>
+     * which returns binary configuration for JDBC client.
+     */
+    private StringProperty binaryConfigFactory = new StringProperty("binaryConfigurationFactory",
+        "Custom class name that implements javax.cache.configuration.Factory<BinaryConfiguration> (binary configuration)", null, null, false, null);
+
+    /** Boolean flag that if set will be used for {@link org.apache.ignite.binary.BinaryBasicIdMapper} initialization. */
+    private BooleanProperty useLowerCaseForBinaryTypes = new BooleanProperty("useLowerCaseForBinaryTypes",
+        "Use lowercase when resolving binary type name or field ID", null, false);
+
+    /** Boolean flag that if set will be used for {@link org.apache.ignite.binary.BinaryBasicNameMapper} initialization. */
+    private BooleanProperty useSimpleNameForBinaryTypes = new BooleanProperty("useSimpleNamesForBinaryTypes",
+        "Use simple class names during binary type name resolution", null, false);
+
     // TODO: GG-25595 remove when version 8.7.X support ends
     /** */
     private BooleanProperty limitedV2_8_0Enabled = new BooleanProperty("limitedV2_8_0Enabled",
@@ -290,7 +305,10 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         connTimeout,
         limitedV2_8_0Enabled,
         disabledFeatures,
-        keepBinary
+        keepBinary,
+        binaryConfigFactory,
+        useLowerCaseForBinaryTypes,
+        useSimpleNameForBinaryTypes
     };
 
     /** {@inheritDoc} */
@@ -719,6 +737,36 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         userAttrsFactory.setValue(cls);
     }
 
+    /** {@inheritDoc} */
+    @Override public String getBinaryConfigFactory() {
+        return binaryConfigFactory.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setBinaryConfigFactory(String cls) {
+        binaryConfigFactory.setValue(cls);
+    }
+
+    /** {@inheritDoc} */
+    @Override public Boolean isUseLowerCaseForBinaryTypes() {
+        return useLowerCaseForBinaryTypes.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setUseLowerCaseForBinaryTypes(boolean useLowerCaseForBinaryTypes) {
+        this.useLowerCaseForBinaryTypes.setValue(useLowerCaseForBinaryTypes);
+    }
+
+    /** {@inheritDoc} */
+    @Override public Boolean isUseSimpleNameForBinaryTypes() {
+        return useSimpleNameForBinaryTypes.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setUseSimpleNameForBinaryTypes(boolean useSimpleNameForBinaryTypes) {
+        this.useSimpleNameForBinaryTypes.setValue(useSimpleNameForBinaryTypes);
+    }
+
     /**
      * @param url URL connection.
      * @param props Environment properties.
@@ -736,6 +784,17 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         if (!F.isEmpty(props.getProperty("user"))) {
             setUsername(props.getProperty("user"));
             setPassword(props.getProperty("password"));
+        }
+
+        postInitValidation();
+    }
+
+    private void postInitValidation() throws SQLException {
+        if (getBinaryConfigFactory() != null &&
+            (isUseLowerCaseForBinaryTypes() != null || isUseSimpleNameForBinaryTypes() != null)) {
+            throw new SQLException("Parameter '" + binaryConfigFactory.name + "' is mutually exclusive with " +
+                "'" + useLowerCaseForBinaryTypes.name + "' or '" + useSimpleNameForBinaryTypes.name + "'",
+                SqlStateCode.INVALID_PARAMETER_VALUE);
         }
     }
 

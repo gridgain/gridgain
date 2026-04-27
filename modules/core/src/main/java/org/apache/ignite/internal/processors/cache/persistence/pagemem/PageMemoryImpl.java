@@ -54,15 +54,9 @@ import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
-import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
-import org.apache.ignite.internal.pagemem.wal.WALIterator;
-import org.apache.ignite.internal.pagemem.wal.WALPointer;
-import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
-import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.InitNewPageRecord;
-import org.apache.ignite.internal.pagemem.wal.record.delta.PageDeltaRecord;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockStateChecker;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointState;
@@ -75,7 +69,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageI
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
-import org.apache.ignite.internal.processors.compress.CompressionProcessor;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
@@ -88,7 +81,6 @@ import org.apache.ignite.internal.util.lang.GridInClosure3X;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.apache.ignite.thread.IgniteThreadFactory;
@@ -105,7 +97,6 @@ import static org.apache.ignite.internal.pagemem.FullPageId.NULL_PAGE;
 import static org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl.DATAREGION_METRICS_PREFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageHeader.headerIsValid;
-import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.RESTORE_PAGE;
 import static org.apache.ignite.internal.util.GridUnsafe.wrapPointer;
 import static org.apache.ignite.internal.util.OffheapReadWriteLock.TAG_LOCK_ALWAYS;
 
@@ -201,6 +192,9 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     /** */
     private final IgniteWriteAheadLogManager walMgr;
+
+    /** Lazily-initialized WAL page recovery helper. */
+    private volatile WalPageRecovery walPageRecovery;
 
     /** */
     private final GridEncryptionManager encMgr;
@@ -1001,87 +995,32 @@ public class PageMemoryImpl implements PageMemoryEx {
      * @throws StorageException If it was not possible to restore page, page not found in WAL.
      */
     private void tryToRestorePage(FullPageId fullId, ByteBuffer buf) throws IgniteCheckedException {
-        Long tmpAddr = null;
-        try {
-            ByteBuffer curPage = null;
-            ByteBuffer lastValidPage = null;
+        walPageRecovery().recoverPage(fullId, buf);
+    }
 
-            try (WALIterator it = walMgr.replay(null, RESTORE_PAGE)) {
-                for (IgniteBiTuple<WALPointer, WALRecord> tuple : it) {
-                    switch (tuple.getValue().type()) {
-                        case PAGE_RECORD:
-                            PageSnapshot snapshot = (PageSnapshot)tuple.getValue();
+    /**
+     * @return Lazily-initialized WAL page recovery helper.
+     */
+    private WalPageRecovery walPageRecovery() {
+        WalPageRecovery local = walPageRecovery;
 
-                            if (snapshot.fullPageId().equals(fullId)) {
-                                if (tmpAddr == null) {
-                                    assert snapshot.pageDataSize() <= pageSize() : snapshot.pageDataSize();
+        if (local == null) {
+            synchronized (this) {
+                local = walPageRecovery;
 
-                                    tmpAddr = GridUnsafe.allocateMemory(pageSize());
-                                }
-
-                                if (curPage == null)
-                                    curPage = wrapPointer(tmpAddr, pageSize());
-
-                                PageUtils.putBytes(tmpAddr, 0, snapshot.pageData());
-
-                                if (PageIO.getCompressionType(tmpAddr) != CompressionProcessor.UNCOMPRESSED_PAGE) {
-                                    int realPageSize = realPageSize(snapshot.groupId());
-
-                                    assert snapshot.pageDataSize() < realPageSize : snapshot.pageDataSize();
-
-                                    ctx.kernalContext().compress().decompressPage(curPage, realPageSize);
-                                }
-                            }
-
-                            break;
-
-                        case CHECKPOINT_RECORD:
-                            CheckpointRecord rec = (CheckpointRecord)tuple.getValue();
-
-                            assert !rec.end();
-
-                            if (curPage != null) {
-                                lastValidPage = curPage;
-                                curPage = null;
-                            }
-
-                            break;
-
-                        case MEMORY_RECOVERY: // It means that previous checkpoint was broken.
-                            curPage = null;
-
-                            break;
-
-                        default:
-                            if (tuple.getValue() instanceof PageDeltaRecord) {
-                                PageDeltaRecord deltaRecord = (PageDeltaRecord)tuple.getValue();
-
-                                if (curPage != null
-                                    && deltaRecord.pageId() == fullId.pageId()
-                                    && deltaRecord.groupId() == fullId.groupId()) {
-                                    assert tmpAddr != null;
-
-                                    deltaRecord.applyDelta(this, tmpAddr);
-                                }
-                            }
-                    }
+                if (local == null) {
+                    walPageRecovery = local = new WalPageRecovery(
+                        walMgr,
+                        ctx.kernalContext().compress(),
+                        log,
+                        pageSize(),
+                        grpId -> this
+                    );
                 }
             }
-
-            ByteBuffer restored = curPage == null ? lastValidPage : curPage;
-
-            if (restored == null)
-                throw new StorageException(String.format(
-                    "Page is broken. Can't restore it from WAL. (grpId = %d, pageId = %X).",
-                    fullId.groupId(), fullId.pageId()
-                ));
-
-            buf.put(restored);
         }
-        finally {
-            if (tmpAddr != null)
-                GridUnsafe.freeMemory(tmpAddr);
-        }
+
+        return local;
     }
 
     /** {@inheritDoc} */

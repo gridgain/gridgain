@@ -155,6 +155,8 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
 
         ComputeTaskFuture<Void> taskFut = node.compute().executeAsync(new ComputeTask(CountDownLatchJob.class), null);
 
+        forceHandleCollisions();
+
         GridJobWorker jobWorker = jobWorker(node, taskFut.getTaskSession());
 
         cancelWitchChecks(jobWorker);
@@ -178,12 +180,14 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
 
         ComputeTaskFuture<Void> taskFut = node.compute().executeAsync(new ComputeTask(CountDownLatchJob.class), null);
 
+        forceHandleCollisions();
+
         GridJobWorker jobWorker = jobWorker(node, taskFut.getTaskSession());
 
         cancelWitchChecks(jobWorker);
 
         // We are waiting for the GridJobWorkerInterrupter to interrupt the worker.
-        taskFut.get(1_000L);
+        taskFut.get(getTestTimeout());
 
         assertThat(jobWorker.isCancelled(), equalTo(true));
         assertThat(countDownLatchJobInterrupted(jobWorker), equalTo(true));
@@ -205,6 +209,8 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
 
         ComputeTaskFuture<Void> taskFut = node.compute().executeAsync(new ComputeTask(CountDownLatchJob.class), null);
 
+        forceHandleCollisions();
+
         GridJobWorker jobWorker = jobWorker(node, taskFut.getTaskSession());
 
         cancelBeforeStartWitchChecks(jobWorker);
@@ -213,13 +219,17 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
 
         PriorityQueueCollisionSpiEx.collisionSpiEx(node).handleCollision = true;
 
-        node.context().job().handleCollisions();
+        node.context().job().scheduleHandleCollisions();
 
         assertTrue(waitForCondition(jobWorker::isStarted, getTestTimeout(), 10));
 
         assertThat(jobWorker.isCancelled(), equalTo(true));
         assertThat(countDownLatchJobInterrupted(jobWorker), equalTo(false));
         assertThat(jobWorkerInterrupters(timeoutObjects(node), jobWorker), hasSize(2));
+    }
+
+    private static void forceHandleCollisions() {
+        node.context().job().handleCollisions();
     }
 
     /**

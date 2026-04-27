@@ -56,6 +56,14 @@
 
     <fileSets>
         <fileSet>
+            <directory>target/swid</directory>
+            <outputDirectory>/swidtag</outputDirectory>
+            <includes>
+                <include>*.swidtag</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
             <directory>examples-ml</directory>
             <outputDirectory>/examples-ml</outputDirectory>
             <includes>

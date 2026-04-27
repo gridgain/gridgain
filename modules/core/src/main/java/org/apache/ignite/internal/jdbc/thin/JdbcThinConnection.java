@@ -269,7 +269,7 @@ public class JdbcThinConnection implements Connection {
 
         metaHnd = new JdbcBinaryMetadataHandler();
         marshCtx = new JdbcMarshallerContext();
-        ctx = createBinaryCtx(metaHnd, marshCtx);
+        ctx = createBinaryCtx(metaHnd, marshCtx, connProps);
         holdability = HOLD_CURSORS_OVER_COMMIT;
         autoCommit = true;
         txIsolation = Connection.TRANSACTION_NONE;
@@ -296,13 +296,18 @@ public class JdbcThinConnection implements Connection {
     }
 
     /** Create new binary context. */
-    private BinaryContext createBinaryCtx(JdbcBinaryMetadataHandler metaHnd, JdbcMarshallerContext marshCtx) {
+    private BinaryContext createBinaryCtx(
+        JdbcBinaryMetadataHandler metaHnd,
+        JdbcMarshallerContext marshCtx,
+        ConnectionProperties connProps
+    ) throws SQLException {
         BinaryMarshaller marsh = new BinaryMarshaller();
         marsh.setContext(marshCtx);
 
-        BinaryConfiguration binCfg = new BinaryConfiguration().setCompactFooter(true);
-        
-        BinaryContext ctx = new BinaryContext(metaHnd, new IgniteConfiguration(), new NullLogger());
+        BinaryConfiguration binCfg = JdbcThinUtils.resolveBinaryConfiguration(connProps)
+            .setCompactFooter(true);
+
+        BinaryContext ctx = new BinaryContext(metaHnd, new IgniteConfiguration().setBinaryConfiguration(binCfg), new NullLogger());
 
         ctx.configure(marsh, binCfg);
 
@@ -1406,7 +1411,7 @@ public class JdbcThinConnection implements Connection {
 
         // Clear local metadata cache on disconnect.
         metaHnd = new JdbcBinaryMetadataHandler();
-        ctx = createBinaryCtx(metaHnd, marshCtx);
+        ctx = createBinaryCtx(metaHnd, marshCtx, connProps);
     }
 
     /**

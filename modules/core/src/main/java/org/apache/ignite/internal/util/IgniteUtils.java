@@ -72,7 +72,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -91,12 +90,10 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.security.AccessController;
 import java.security.InvalidKeyException;
 import java.security.Key;
-import java.security.KeyManagementException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedAction;
 import java.security.ProtectionDomain;
-import java.security.cert.X509Certificate;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -169,10 +166,7 @@ import javax.naming.Context;
 import javax.naming.NamingException;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
@@ -407,9 +401,6 @@ public abstract class IgniteUtils {
     /** Cache for {@link GridPeerDeployAware} fields to speed up reflection. */
     private static final ConcurrentMap<String, IgniteBiTuple<Class<?>, Collection<Field>>> p2pFields =
         new ConcurrentHashMap<>();
-
-    /** Secure socket protocol to use. */
-    private static final String HTTPS_PROTOCOL = "TLS";
 
     /** Default working directory name. */
     private static final String DEFAULT_WORK_DIR = "work";
@@ -2689,80 +2680,6 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Downloads resource by URL.
-     *
-     * @param url URL to download.
-     * @param file File where downloaded resource should be stored.
-     * @return File where downloaded resource should be stored.
-     * @throws IOException If error occurred.
-     */
-    public static File downloadUrl(URL url, File file) throws IOException {
-        assert url != null;
-        assert file != null;
-
-        InputStream in = null;
-        OutputStream out = null;
-
-        try {
-            URLConnection conn = url.openConnection();
-
-            if (conn instanceof HttpsURLConnection) {
-                HttpsURLConnection https = (HttpsURLConnection)conn;
-
-                https.setHostnameVerifier(new DeploymentHostnameVerifier());
-
-                SSLContext ctx = SSLContext.getInstance(HTTPS_PROTOCOL);
-
-                ctx.init(null, getTrustManagers(), null);
-
-                // Initialize socket factory.
-                https.setSSLSocketFactory(ctx.getSocketFactory());
-            }
-
-            in = conn.getInputStream();
-
-            if (in == null)
-                throw new IOException("Failed to open connection: " + url.toString());
-
-            out = new BufferedOutputStream(new FileOutputStream(file));
-
-            copy(in, out);
-        }
-        catch (NoSuchAlgorithmException | KeyManagementException e) {
-            throw new IOException("Failed to open HTTPs connection [url=" + url.toString() + ", msg=" + e + ']', e);
-        }
-        finally {
-            close(in, null);
-            close(out, null);
-        }
-
-        return file;
-    }
-
-    /**
-     * Construct array with one trust manager which don't reject input certificates.
-     *
-     * @return Array with one X509TrustManager implementation of trust manager.
-     */
-    private static TrustManager[] getTrustManagers() {
-        return new TrustManager[] {
-            new X509TrustManager() {
-                @Nullable @Override public X509Certificate[] getAcceptedIssuers() {
-                    return null;
-                }
-
-                @Override public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                    /* No-op. */
-                }
-
-                @Override public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                    /* No-op. */
-                }
-            }
-        };
-    }
-
-    /**
      * Replace password in URI string with a single '*' character.
      * <p>
      * Parses given URI by applying &quot;.*://(.*:.*)@.*&quot;
@@ -3524,17 +3441,6 @@ public abstract class IgniteUtils {
         String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp - 1) + (si ? "" : "i");
 
         return String.format("%.1f %sB", bytes / Math.pow(unit, exp), pre);
-    }
-
-    /**
-     * Verifier always returns successful result for any host.
-     */
-    private static class DeploymentHostnameVerifier implements HostnameVerifier {
-        /** {@inheritDoc} */
-        @Override public boolean verify(String hostname, SSLSession ses) {
-            // Remote host trusted by default.
-            return true;
-        }
     }
 
     /**

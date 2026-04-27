@@ -60,7 +60,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -262,7 +261,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
 
             File file = new File(System.getProperty("java.io.tmpdir") + File.separator + "url-http.file");
 
-            file = U.downloadUrl(new URL(srv.getBaseUrl() + urlPath), file);
+            file = GridTestUtils.downloadUrl(new URL(srv.getBaseUrl() + urlPath), file);
 
             assert file.exists();
             assert file.delete();
@@ -286,7 +285,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
 
             File file = new File(System.getProperty("java.io.tmpdir") + File.separator + "url-http.file");
 
-            file = U.downloadUrl(new URL(srv.getBaseUrl() + urlPath), file);
+            file = GridTestUtils.downloadUrl(new URL(srv.getBaseUrl() + urlPath), file);
 
             assert file.exists();
             assert file.delete();
@@ -304,7 +303,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     public void testDownloadUrlFromLocalFile() throws Exception {
         File file = new File(System.getProperty("java.io.tmpdir") + File.separator + "url-http.file");
 
-        file = U.downloadUrl(
+        file = GridTestUtils.downloadUrl(
             GridTestUtils.resolveIgnitePath("modules/core/src/test/config/tests.properties").toURI().toURL(), file);
 
         assert file.exists();
