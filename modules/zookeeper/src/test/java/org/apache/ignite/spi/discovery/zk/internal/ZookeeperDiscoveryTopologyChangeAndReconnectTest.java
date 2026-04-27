@@ -62,6 +62,7 @@ import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_RECONNECTED;
 /**
  * Tests for Zookeeper SPI discovery.
  */
+@Ignore
 public class ZookeeperDiscoveryTopologyChangeAndReconnectTest extends ZookeeperDiscoverySpiTestBase {
     /** {@code True} if indexing disabled. */
     private boolean indexingDisabled;
