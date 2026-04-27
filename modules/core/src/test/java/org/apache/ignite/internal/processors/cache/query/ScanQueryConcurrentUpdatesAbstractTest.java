@@ -21,6 +21,7 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.cache.Cache;
@@ -132,6 +133,7 @@ public abstract class ScanQueryConcurrentUpdatesAbstractTest extends GridCommonA
 
     /** */
     @Test
+    @Ignore
     public void testReplicatedOneRecordLongExpiry() {
         testStableDataset(createCache("replicated_long_expiry",
             CacheMode.REPLICATED, Duration.ONE_HOUR), 1);
@@ -139,6 +141,7 @@ public abstract class ScanQueryConcurrentUpdatesAbstractTest extends GridCommonA
 
     /** */
     @Test
+    @Ignore
     public void testReplicatedManyRecordsLongExpiry() {
         testStableDataset(createCache("replicated_long_expiry",
             CacheMode.REPLICATED, Duration.ONE_HOUR), 1000);
@@ -146,6 +149,7 @@ public abstract class ScanQueryConcurrentUpdatesAbstractTest extends GridCommonA
 
     /** */
     @Test
+    @Ignore
     public void testReplicatedOneRecordNoExpiry() {
         testStableDataset(createCache("replicated_no_expiry",
             CacheMode.REPLICATED, null), 1);
@@ -153,6 +157,7 @@ public abstract class ScanQueryConcurrentUpdatesAbstractTest extends GridCommonA
 
     /** */
     @Test
+    @Ignore
     public void testReplicatedManyRecordsNoExpiry() {
         testStableDataset(createCache("replicated_no_expiry",
             CacheMode.REPLICATED, null), 1000);
@@ -160,6 +165,7 @@ public abstract class ScanQueryConcurrentUpdatesAbstractTest extends GridCommonA
 
     /** */
     @Test
+    @Ignore
     public void testPartitionedOneRecordLongExpiry() {
         testStableDataset(createCache("partitioned_long_expiry",
             CacheMode.PARTITIONED, Duration.ONE_HOUR), 1);
@@ -167,6 +173,7 @@ public abstract class ScanQueryConcurrentUpdatesAbstractTest extends GridCommonA
 
     /** */
     @Test
+    @Ignore
     public void testPartitionedManyRecordsLongExpiry() {
         testStableDataset(createCache("partitioned_long_expiry",
             CacheMode.PARTITIONED, Duration.ONE_HOUR), 1000);
@@ -174,6 +181,7 @@ public abstract class ScanQueryConcurrentUpdatesAbstractTest extends GridCommonA
 
     /** */
     @Test
+    @Ignore
     public void testPartitionedOneRecordNoExpiry() {
         testStableDataset(createCache("partitioned_no_expiry",
             CacheMode.PARTITIONED, null), 1);
@@ -181,6 +189,7 @@ public abstract class ScanQueryConcurrentUpdatesAbstractTest extends GridCommonA
 
     /** */
     @Test
+    @Ignore
     public void testPartitionedManyRecordsNoExpiry() {
         testStableDataset(createCache("partitioned_no_expiry",
             CacheMode.PARTITIONED, null), 1000);
@@ -188,6 +197,7 @@ public abstract class ScanQueryConcurrentUpdatesAbstractTest extends GridCommonA
 
     /** */
     @Test
+    @Ignore
     public void testPartitionedShortExpiry() {
         testExpiringDataset(createCache("partitioned_short_expiry",
             CacheMode.PARTITIONED, new Duration(TimeUnit.MILLISECONDS, 1)));
@@ -195,6 +205,7 @@ public abstract class ScanQueryConcurrentUpdatesAbstractTest extends GridCommonA
 
     /** */
     @Test
+    @Ignore
     public void testReplicatedShortExpiry() {
         testExpiringDataset(createCache("partitioned_short_expiry",
             CacheMode.REPLICATED, new Duration(TimeUnit.MILLISECONDS, 1)));

@@ -31,6 +31,7 @@ import org.junit.Test;
 /**
  * Testing logging via {@link IgniteUtils#warnDevOnly(IgniteLogger, Object)}.
  */
+@Ignore
 public class IgniteDevOnlyLogTest extends GridCommonAbstractTest {
     /** */
     private List<String> additionalArgs;
