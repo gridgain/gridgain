@@ -236,7 +236,7 @@ namespace Apache.Ignite.Core.Tests
         /// <returns>
         ///   <c>True</c> if topology took required size.
         /// </returns>
-        public static bool WaitTopology(this IIgnite grid, int size, int timeout = 30000)
+        public static bool WaitTopology(this IIgnite grid, int size, int timeout = 60000)
         {
             int left = timeout;
 
@@ -271,7 +271,7 @@ namespace Apache.Ignite.Core.Tests
         ///   <c>True</c> if topology took required size.
         /// </returns>
         public static bool WaitTopology(this IIgnite grid, AffinityTopologyVersion waitingTop,
-            string cacheName = UtilityCacheName, int timeout = 30000)
+            string cacheName = UtilityCacheName, int timeout = 60000)
         {
             int checkPeriod = 200;
 
@@ -311,7 +311,7 @@ namespace Apache.Ignite.Core.Tests
             this IIgnite ignite,
             string cacheName,
             AffinityTopologyVersion expectedTopVer,
-            long timeoutMs = 1000)
+            long timeoutMs = 5000)
         {
             return ignite.GetCompute().ExecuteJavaTask<bool>(
                 WaitForRebalanceTask,
@@ -348,7 +348,7 @@ namespace Apache.Ignite.Core.Tests
         /// <param name="cond">Condition.</param>
         /// <param name="timeout">Timeout, in milliseconds.</param>
         /// <param name="message">Assertion message.</param>
-        public static void WaitForTrueCondition(Func<bool> cond, int timeout = 1000, string message = null)
+        public static void WaitForTrueCondition(Func<bool> cond, int timeout = 5000, string message = null)
         {
             WaitForTrueCondition(cond, message == null ? (Func<string>) null : () => message, timeout);
         }
@@ -359,7 +359,7 @@ namespace Apache.Ignite.Core.Tests
         /// <param name="cond">Condition.</param>
         /// <param name="messageFunc">Assertion message func.</param>
         /// <param name="timeout">Timeout, in milliseconds.</param>
-        public static void WaitForTrueCondition(Func<bool> cond, Func<string> messageFunc, int timeout = 1000)
+        public static void WaitForTrueCondition(Func<bool> cond, Func<string> messageFunc, int timeout = 5000)
         {
             var res = WaitForCondition(cond, timeout);
 

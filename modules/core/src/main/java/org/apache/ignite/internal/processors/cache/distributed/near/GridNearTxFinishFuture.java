@@ -510,8 +510,7 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
             onDone(e);
         }
         finally {
-            if (commit &&
-                tx.onePhaseCommit() &&
+            if (tx.onePhaseCommit() &&
                 !tx.writeMap().isEmpty()) // Readonly operations require no ack.
                 ackBackup();
         }

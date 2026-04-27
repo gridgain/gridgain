@@ -200,6 +200,57 @@ stopGrid(name, false, false);   // cancel=false, awaitTop=false
 |------|-----|
 | `MemLeakOnSqlWithClientReconnectTest.checkReservationLeak` — 10 concurrent cli-restart threads each called `stopGrid(name)` (awaitTop=true), causing mutual blocking → interrupt → `stopGridErr=true` | Changed to `stopGrid(name, false, false)` |
 
+## One-Phase Commit Wrapper Leaked After Near-Node Rollback (`IgniteCachePutRetryTransactionalSelfTest`)
+
+### Symptom
+
+```
+java.lang.AssertionError: completedVersHashMap contains
+  org.apache.ignite.internal.processors.cache.GridCacheReturnCompletableWrapper
+  instead of boolean. These values should be replaced by boolean after
+  onePhaseCommit finished. [node=dht.IgniteCachePutRetryTransactionalSelfTest3]
+```
+
+Fired by `checkOnePhaseCommitReturnValuesCleaned` in `afterTest` even after the 5-second wait.
+
+### Root cause
+
+`GridCacheReturnCompletableWrapper` is put into `IgniteTxManager.completedVersHashMap` on the **backup** node (node3) when a one-phase-commit implicit transaction with `needReturnValue=true` (e.g. `cache.invoke`) is processed. It should be replaced by `true` (a boolean) once the near node sends a deferred ack (`GridDhtTxOnePhaseCommitAckRequest`).
+
+The ack is sent by `ackBackup()`, called in the `finally` block of `GridNearTxFinishFuture.doFinish`:
+
+```java
+finally {
+    if (commit &&              // ← old: guarded by commit
+        tx.onePhaseCommit() &&
+        !tx.writeMap().isEmpty())
+        ackBackup();
+}
+```
+
+When a topology change causes the near node to **retry** the transaction (calling `doFinish(false, ...)`), `commit=false` so `ackBackup()` is skipped. The backup already committed one-phase and holds the wrapper. The ack is never sent, and the wrapper stays indefinitely because:
+
+- The `EVT_NODE_LEFT` cleanup path in `IgniteTxManager` only fires when the **originating** node leaves — in this test node3 (the backup) is restarted, not node0 (the originator).
+- The deferred-ack path in `ackBackup()` is bypassed by the `commit &&` guard.
+
+### Fix
+
+`GridNearTxFinishFuture.doFinish` — drop `commit &&` from the guard:
+
+```java
+finally {
+    if (tx.onePhaseCommit() &&
+        !tx.writeMap().isEmpty())
+        ackBackup();
+}
+```
+
+`ackBackup()` itself already guards on `tx.needReturnValue() && tx.implicit()` (the only cases where a wrapper is stored on the backup). When called on rollback it sends the deferred ack unconditionally; on the backup `removeTxReturn` replaces the wrapper with `true` if one exists, or is a no-op if the backup never committed.
+
+### Note
+
+`testOriginatingNodeFailureForcesOnePhaseCommitDataCleanup` in the same class covers the complementary case (originating node leaves) and already passes because `EVT_NODE_LEFT` triggers cleanup. The bug only manifests when the **backup** is restarted while the originator stays alive.
+
 ## `JdbcThinConnection.cliIo` Index Out of Bounds on Node Round-Robin
 
 ### Symptom

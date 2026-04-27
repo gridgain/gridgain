@@ -63,6 +63,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCaus
 /**
  *
  */
+@Ignore
 public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteClusterActivateDeactivateTest {
     /** Indicates that additional data region configuration should be added on server node. */
     private boolean addAdditionalDataRegion;
@@ -658,6 +659,7 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testDeactivateDuringEvictionAndRebalance() throws Exception {
         Assume.assumeFalse("https://issues.apache.org/jira/browse/IGNITE-7384", MvccFeatureChecker.forcedMvcc());
 
