@@ -60,6 +60,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.eclipse.jetty.security.HashLoginService;
 import org.eclipse.jetty.security.SecurityHandler;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.webapp.WebAppContext;
@@ -73,8 +74,8 @@ import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT;
  * Tests the correctness of web sessions caching functionality.
  */
 public class WebSessionSelfTest extends GridCommonAbstractTest {
-    /** Port for test Jetty server. */
-    private static final int TEST_JETTY_PORT = 49090;
+    /** Port for test Jetty server. Assigned dynamically per run to avoid cross-fork port conflicts. */
+    private int TEST_JETTY_PORT;
 
     /** Servers count in load test. */
     private static final int SRV_CNT = 3;
@@ -985,13 +986,15 @@ public class WebSessionSelfTest extends GridCommonAbstractTest {
      */
     private Server startServer(int port, @Nullable String cfg, @Nullable String igniteInstanceName, HttpServlet servlet)
         throws Exception {
-        Server srv = new Server(port);
+        Server srv = new Server(0);
 
         WebAppContext ctx = getWebContext(cfg, igniteInstanceName, keepBinary(), servlet);
 
         srv.setHandler(ctx);
 
         srv.start();
+
+        TEST_JETTY_PORT = ((ServerConnector)srv.getConnectors()[0]).getLocalPort();
 
         return srv;
     }
@@ -1009,7 +1012,7 @@ public class WebSessionSelfTest extends GridCommonAbstractTest {
     private Server startServerWithLoginService(
         int port, @Nullable String cfg, @Nullable String igniteInstanceName, HttpServlet servlet
     ) throws Exception {
-        Server srv = new Server(port);
+        Server srv = new Server(0);
 
         WebAppContext ctx = getWebContext(cfg, igniteInstanceName, keepBinary(), servlet);
 
@@ -1025,6 +1028,8 @@ public class WebSessionSelfTest extends GridCommonAbstractTest {
         srv.setHandler(ctx);
 
         srv.start();
+
+        TEST_JETTY_PORT = ((ServerConnector)srv.getConnectors()[0]).getLocalPort();
 
         return srv;
     }

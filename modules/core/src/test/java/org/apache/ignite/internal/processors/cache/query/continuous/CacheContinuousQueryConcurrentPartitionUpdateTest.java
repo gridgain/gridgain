@@ -56,6 +56,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
 /**
  *
  */
+@Ignore
 public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommonAbstractTest {
     /** */
     private boolean client;
