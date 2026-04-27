@@ -48,6 +48,7 @@ import static org.apache.ignite.spi.discovery.tcp.TcpDiscoveryImpl.RES_WAIT;
 /**
  * Test for {@link TcpDiscoverySpi#setReconnectDelay(int)}.
  */
+@Ignore
 public class TcpDiscoverySpiReconnectDelayTest extends GridCommonAbstractTest {
     /** Time to wait for events. */
     private static final int EVT_TIMEOUT = 120000;

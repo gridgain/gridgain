@@ -109,6 +109,46 @@ The internal package is **not public API**. Architecture is processor-based:
 - Main development branch: `master`
 - Release branches: `8.9-master`, `8.8-master`
 
+## SQL Function Registration Race: Create Cache Before Starting Extra Nodes
+
+### Symptom
+
+```
+Exception message is not as expected [expected=cancel,
+  actual=Failed to parse query. Function "LONGPROCESS" not found; SQL statement:
+  select longProcess(_val, 8) from default [90022-199]]
+```
+
+The test expected a query to be cancelled by timeout, but H2 couldn't even parse it because a custom SQL function (`@QuerySqlFunction`) was not registered on the node that executed the query.
+
+### Root cause
+
+`setSqlFunctionClasses(SomeClass.class)` on a `CacheConfiguration` registers custom H2 SQL functions when a node **initializes that cache locally**. When a cache is created dynamically (`ign.createCache(cfg)`) _after_ additional nodes have already joined the cluster, those nodes receive a cache-start event and initialize the cache asynchronously. If a SQL query is dispatched from such a node before its local cache initialization completes, H2 cannot resolve the function and the query fails at parse time with "Function … not found".
+
+The pattern that triggers this:
+
+```java
+startGrid(0);
+prepareQueryExecution();    // starts client grid — joins BEFORE cache exists
+helper.createCache(grid(0)); // cache created after client joined
+executeQuery(...);           // client parses query — function may not yet be registered
+```
+
+### Rule: create shared caches before starting additional nodes
+
+Any test that uses `setSqlFunctionClasses` (or any `@QuerySqlFunction`) must create the cache **before** starting client grids or other nodes that will execute queries against it. Nodes that join _after_ the cache already exists initialize it synchronously during the join handshake, so the function is guaranteed to be available before any query is dispatched.
+
+```java
+startGrid(0);
+helper.createCache(grid(0)); // cache created first
+prepareQueryExecution();     // client starts and sees cache already present — initializes synchronously
+executeQuery(...);           // safe: function registered
+```
+
+### Known fix
+
+`AbstractDefaultQueryTimeoutTest` — swapped `prepareQueryExecution()` (which starts a client grid) to run **after** `helper.createCache(grid(0))` in both `checkQuery0` and `testConcurrent`. Applied to the same file because the pattern was repeated in both methods.
+
 ## Test Isolation: LOCAL_IP_FINDER vs sharedStaticIpFinder
 
 `GridAbstractTest` provides two IP finders for discovery in tests:

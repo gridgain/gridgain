@@ -201,11 +201,11 @@ public abstract class AbstractDefaultQueryTimeoutTest extends AbstractIndexingCo
 
         setDefaultQueryTimeout(2000);
 
-        prepareQueryExecution();
-
         TimedQueryHelper helper = new TimedQueryHelper(1000, DEFAULT_CACHE_NAME);
 
         helper.createCache(ign);
+
+        prepareQueryExecution();
 
         String qryText = updateQuery() ? helper.buildTimedUpdateQuery() : helper.buildTimedQuery();
 
@@ -245,11 +245,15 @@ public abstract class AbstractDefaultQueryTimeoutTest extends AbstractIndexingCo
 
         setDefaultQueryTimeout(defaultTimeout);
 
-        prepareQueryExecution();
-
         TimedQueryHelper helper = new TimedQueryHelper(execTime, DEFAULT_CACHE_NAME);
 
         helper.createCache(grid(0));
+
+        // prepareQueryExecution() must be called after cache creation so that any additional nodes
+        // (e.g. client nodes) join the cluster with the cache already present. This guarantees that
+        // H2 SQL function aliases (longProcess) are registered on those nodes during join, before
+        // any query is dispatched to them.
+        prepareQueryExecution();
 
         Callable<Void> c = () -> {
             String qryText = updateQuery() ? helper.buildTimedUpdateQuery() : helper.buildTimedQuery();
