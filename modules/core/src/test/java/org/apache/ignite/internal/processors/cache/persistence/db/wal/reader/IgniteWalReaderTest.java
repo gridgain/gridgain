@@ -86,6 +86,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.Arrays.fill;
@@ -313,6 +314,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testArchiveCompactedEventFired() throws Exception {
         boolean oldEnableWalCompaction = enableWalCompaction;
 

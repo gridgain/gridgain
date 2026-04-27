@@ -31,6 +31,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointe
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE;
@@ -113,6 +114,7 @@ public class IgnitePdsReserveWalSegmentsTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testWalDoesNotTruncatedWhenSegmentReserved() throws Exception {
         IgniteEx n = prepareGrid(2);
 

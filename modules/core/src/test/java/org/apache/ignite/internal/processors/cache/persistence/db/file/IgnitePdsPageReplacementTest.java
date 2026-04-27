@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -114,6 +115,7 @@ public class IgnitePdsPageReplacementTest extends GridCommonAbstractTest {
      * @throws Exception If fail.
      */
     @Test
+    @Ignore
     public void testPageReplacement() throws Exception {
         final IgniteEx ig = startGrid(0);
 

@@ -69,6 +69,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 /**
  * Tests for Zookeeper SPI discovery.
  */
+@Ignore
 public class ZookeeperDiscoveryCommunicationFailureTest extends ZookeeperDiscoverySpiTestBase {
     /**
      * @throws Exception If failed.

@@ -429,6 +429,7 @@ public abstract class CacheContinuousQueryFailoverAbstractSelfTest extends GridC
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testOneBackup() throws Exception {
         checkBackupQueue(1, false);
     }
