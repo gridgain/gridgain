@@ -40,22 +40,22 @@ import org.junit.Test;
  */
 public class TcpDiscoveryNetworkIssuesTest extends GridCommonAbstractTest {
     /** */
-    private static final int NODE_0_PORT = 47500;
+    private static final int NODE_0_PORT = 47610;
 
     /** */
-    private static final int NODE_1_PORT = 47501;
+    private static final int NODE_1_PORT = 47611;
 
     /** */
-    private static final int NODE_2_PORT = 47502;
+    private static final int NODE_2_PORT = 47612;
 
     /** */
-    private static final int NODE_3_PORT = 47503;
+    private static final int NODE_3_PORT = 47613;
 
     /** */
-    private static final int NODE_4_PORT = 47504;
+    private static final int NODE_4_PORT = 47614;
 
     /** */
-    private static final int NODE_5_PORT = 47505;
+    private static final int NODE_5_PORT = 47615;
 
     /** */
     private static final String NODE_0_NAME = "node00-" + NODE_0_PORT;

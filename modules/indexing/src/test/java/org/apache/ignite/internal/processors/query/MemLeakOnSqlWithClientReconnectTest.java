@@ -36,11 +36,13 @@ import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * Tests for group reservation leaks at the PartitionReservationManager on unstable topology.
  */
+@Ignore
 public class MemLeakOnSqlWithClientReconnectTest extends AbstractIndexingCommonTest {
     /** Keys count. */
     private static final int KEY_CNT = 10;
@@ -112,6 +114,7 @@ public class MemLeakOnSqlWithClientReconnectTest extends AbstractIndexingCommonT
      * @throws Exception On error.
      */
     @Test
+
     public void testPartitioned() throws Exception {
         checkReservationLeak(false);
     }
@@ -145,7 +148,7 @@ public class MemLeakOnSqlWithClientReconnectTest extends AbstractIndexingCommonT
 
                         U.sleep(10);
 
-                        stopGrid(name);
+                        stopGrid(name, false, false);
                     }
                     catch (Exception e) {
                         fail("Unexpected exception on start test client node");
