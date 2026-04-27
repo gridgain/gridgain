@@ -1,0 +1,300 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+GridGain Community Edition 8.9 — a distributed in-memory computing platform built on Apache Ignite. The codebase is a Java Maven multi-module project (58+ modules) targeting Java 1.8 bytecode, built and tested with Java 11+.
+
+## Build Commands
+
+```bash
+# Full build, skip tests (most common)
+mvn clean install -Pall-java,all-scala,licenses -DskipTests
+
+# Build a single module and its dependencies
+mvn clean install -pl :ignite-core -am -DskipTests
+
+# Validate code style (Checkstyle)
+mvn validate -Pcheckstyle
+
+# Validate license headers (Apache RAT)
+mvn clean validate -Pcheck-licenses
+```
+
+## Running Tests
+
+```bash
+# Run a specific test class (from repo root)
+mvn clean test -U -Pexamples,-clean-libs,-release \
+  -Dmaven.test.failure.ignore=true \
+  -DfailIfNoTests=false \
+  -Dtest=GridCacheLocalAtomicFullApiSelfTest
+
+# Run a specific test method
+mvn clean test -U -Pexamples,-clean-libs,-release \
+  -Dmaven.test.failure.ignore=true \
+  -DfailIfNoTests=false \
+  -Dtest=GridCacheLocalAtomicFullApiSelfTest#testGet
+
+# Run a test suite
+mvn clean test -U -Pexamples,-clean-libs,-release \
+  -Dmaven.test.failure.ignore=true \
+  -DfailIfNoTests=false \
+  -Dtest=IgniteBasicTestSuite
+
+# Run tests in a specific module
+mvn test -pl :ignite-core -am
+```
+
+Test suites live in `modules/core/src/test/java/org/apache/ignite/testsuites/` (116+ suites). Flaky/skipped tests are tracked in `modules/ignored-tests/`.
+
+## Module Structure
+
+Key modules:
+
+| Module | Artifact ID | Purpose |
+|--------|-------------|---------|
+| `modules/core` | `ignite-core` | Main engine: cache, cluster, compute, transactions |
+| `modules/indexing` | `ignite-indexing` | SQL indexing via H2 |
+| `modules/spring` | `ignite-spring` | Spring integration |
+| `modules/compress` | `ignite-compress` | Data compression |
+| `modules/direct-io` | `ignite-direct-io` | Direct I/O for persistence |
+| `modules/ml` | `ignite-ml` | Machine learning |
+| `modules/zookeeper` | `ignite-zookeeper` | ZooKeeper discovery SPI |
+| `modules/kubernetes` | `ignite-kubernetes` | Kubernetes IP finder |
+| `modules/control-utility` | `ignite-control-utility` | CLI management tool |
+| `modules/compatibility` | `ignite-compatibility` | Cross-version compatibility tests |
+
+Dependency versions are centrally managed in `parent/pom.xml`.
+
+## Architecture
+
+### Public API (`modules/core/src/main/java/org/apache/ignite/`)
+
+The `Ignite` interface is the main entry point. Key sub-APIs obtained from it:
+- `IgniteCache` — distributed cache with SQL/predicate queries
+- `IgniteCluster` / `ClusterGroup` — topology and node management
+- `IgniteCompute` — distributed task/closure execution
+- `IgniteTransactions` — distributed ACID transactions
+- `IgniteServices` — deployed singleton services
+- `IgniteDataStreamer` — bulk data ingestion
+- `IgniteMessaging` / `IgniteEvents` — pub/sub and event system
+- Data structures: `IgniteAtomicLong`, `IgniteQueue`, `IgniteSet`, etc.
+
+### Internal Implementation (`modules/core/src/main/java/org/apache/ignite/internal/`)
+
+The internal package is **not public API**. Architecture is processor-based:
+- `GridProcessor` subclasses handle each major subsystem (cache, compute, events, transactions, etc.)
+- SPI (Service Provider Interfaces) under `org.apache.ignite.spi` allow pluggable implementations for discovery, load balancing, communication, checkpoint, failover, and collision
+- `RendezvousAffinityFunction` handles partition-to-node mapping
+
+### Key Design Patterns
+- SPI pattern: most behaviors are swappable via `IgniteConfiguration` (e.g., `TcpDiscoverySpi`, `TcpCommunicationSpi`)
+- Processors are wired together at grid startup via `GridKernalContext`
+- Test infrastructure uses `GridAbstractTest` base class with embedded cluster startup
+
+## Code Style
+
+- Checkstyle rules: `checkstyle/checkstyle.xml` (suppressions in `checkstyle-suppressions.xml`)
+- No tabs — spaces only
+- UTF-8 encoding, Unix line endings
+- `@Override` annotations required
+- Unused imports prohibited
+- Modifier order enforced
+
+## Branch & Commit Conventions
+
+- Feature branches follow `GG-XXXXX` pattern (JIRA ticket number)
+- Main development branch: `master`
+- Release branches: `8.9-master`, `8.8-master`
+
+## Test Isolation: LOCAL_IP_FINDER vs sharedStaticIpFinder
+
+`GridAbstractTest` provides two IP finders for discovery in tests:
+
+- **`sharedStaticIpFinder`** — in-memory, per-JVM, initialized empty each test class. Nodes register their actual ports dynamically. Safe for parallel CI forks because it never crosses JVM boundaries. This is the default used by the framework (`getConfiguration` sets it when `isMultiJvm()` is false).
+- **`LOCAL_IP_FINDER`** — static, fixed addresses `127.0.0.1:47500..47509`. Used for multi-JVM tests so remote child JVMs can find the cluster. Because it tries to TCP-connect to those fixed ports, it **crosses JVM boundaries** at the OS level and can discover nodes from unrelated parallel CI forks.
+
+### Rule: never use LOCAL_IP_FINDER in single-JVM tests
+
+Any single-JVM test that sets `discoSpi.setIpFinder(LOCAL_IP_FINDER)` instead of `sharedStaticIpFinder` is a flakiness source: when a parallel CI fork has nodes bound to ports 47500–47509 with different configuration attributes (e.g. `peerClassLoading=false`), the test discovers those foreign nodes and `GridDiscoveryManager.checkAttributes` throws, failing startup.
+
+Symptom: `"Remote node has peer class loading enabled flag different from local"` with a remote node `order` much higher than expected (indicating it belongs to another test's cluster).
+
+### Rule: tests with peerClassLoading=false must avoid ports 47500–47509
+
+Tests that explicitly set `peerClassLoading=false` should bind their discovery SPI to a port range **outside** 47500–47509 (e.g. 47610–47619) so that `LOCAL_IP_FINDER`-based tests in parallel forks cannot discover them.
+
+## HTTP Server Tests: Use OS-Assigned Ports, Not Hardcoded Ones
+
+### Symptom
+
+```
+java.io.IOException: Failed to bind to 0.0.0.0/0.0.0.0:49090
+Caused by: java.net.BindException: Address already in use
+```
+
+### Root cause
+
+Any test that starts an embedded HTTP server (Jetty, Netty, etc.) on a hardcoded port will fail with `BindException` when a parallel CI fork runs the same test concurrently and binds to the same port first.
+
+### Rule: always use port 0 (OS-assigned) for embedded HTTP servers in tests
+
+Pass `0` as the port to `new Server(0)` (Jetty) or equivalent. After `srv.start()`, read the actual port back:
+
+```java
+int port = ((ServerConnector)srv.getConnectors()[0]).getLocalPort();
+```
+
+Store the result in a non-static instance field so all subsequent URL constructions in the same test method use the correct port.
+
+### Known fixes applied
+
+| Test | Problem | Fix |
+|------|---------|-----|
+| `WebSessionSelfTest` (+ subclasses) | `TEST_JETTY_PORT = 49090` hardcoded; parallel forks bind to the same port | Changed `static final int TEST_JETTY_PORT` to `int TEST_JETTY_PORT` (instance field); both `startServer` / `startServerWithLoginService` now use `new Server(0)` and write `TEST_JETTY_PORT` from the actual `ServerConnector.getLocalPort()` after start |
+
+### Known fixes applied
+
+| Test | Problem | Fix |
+|------|---------|-----|
+| `TcpDiscoveryNetworkIssuesTest` | Used ports 47500–47505 (hardcoded `NODE_X_PORT` constants) with its own `TcpDiscoveryVmIpFinder`. A parallel fork using `LOCAL_IP_FINDER` connects to those ports and joins the ring; the joining node's UUID is recorded in `nodesIdsHist`. The test's own node 1 (next test run) tries to join with a UUID derived from instance name "node01-47501" (deterministic low/high nibbles) and is rejected by the `nodesIdsHist` check. | Changed `NODE_0_PORT`–`NODE_5_PORT` from 47500–47505 to 47610–47615. |
+
+### Known fixes applied (IgniteSpiCommunicationSelfTestSuite)
+
+| Test | Problem | Fix |
+|------|---------|-----|
+| `TcpCommunicationSpiSkipMessageSendTest` | Used `LOCAL_IP_FINDER` in a single-JVM test | Changed to `sharedStaticIpFinder` |
+| `IgniteTcpCommunicationHandshakeWaitTest` (+ SSL variant) | Sets `peerClassLoading=false`; nodes bind to default port 47500 | Added `setLocalPort(47610)` / `setLocalPortRange(10)` on the discovery SPI |
+
+## `stopGrid` in Background Threads: Never Await Topology
+
+### Symptom
+
+```
+java.lang.RuntimeException: Not all Ignite instances has been stopped. Please, see log for details.
+```
+
+Preceded by `[WARN] Interrupting threads started so far: N` and multiple `[ERROR] Failed to stop grid ... IgniteInterruptedCheckedException: sleep interrupted` from background threads calling `stopGrid`.
+
+### Root cause
+
+`stopGrid(name)` (and the two-arg form `stopGrid(name, cancel)`) defaults to `awaitTop=true`, which calls `awaitTopologyChange()`. `awaitTopologyChange` polls via `waitForCondition → IgniteUtils.sleep`. When multiple background threads concurrently stop nodes, each thread's `awaitTopologyChange` waits for the topology to stabilize, but the other threads keep triggering new topology events — so they all block each other indefinitely.
+
+The test framework eventually fires its global timeout and calls `GridTestUtils.stopThreads(log)`, which interrupts all background threads. The interrupted `IgniteUtils.sleep` throws `IgniteInterruptedCheckedException`, which is caught in `stopGrid0`, sets `stopGridErr = true`, and leaves the node running. After the test, `stopAllGrids` finds `stopGridErr=true` and throws the `RuntimeException`.
+
+### Rule: background restart threads must use `stopGrid(name, false, false)`
+
+Any test thread that repeatedly starts and stops nodes for topology churn (not for topology-stability verification) must pass `awaitTop=false`:
+
+```java
+stopGrid(name, false, false);   // cancel=false, awaitTop=false
+```
+
+`awaitTop=true` is only appropriate in the main test thread after a deliberate topology change where the test logic needs to observe a stable state.
+
+### Known fixes applied
+
+| Test | Fix |
+|------|-----|
+| `MemLeakOnSqlWithClientReconnectTest.checkReservationLeak` — 10 concurrent cli-restart threads each called `stopGrid(name)` (awaitTop=true), causing mutual blocking → interrupt → `stopGridErr=true` | Changed to `stopGrid(name, false, false)` |
+
+## `JdbcThinConnection.cliIo` Index Out of Bounds on Node Round-Robin
+
+### Symptom
+
+```
+java.sql.SQLException: Failed to communicate with Ignite cluster.
+Caused by: java.lang.IndexOutOfBoundsException: Index: 2, Size: 2
+    at JdbcThinConnection.cliIo(JdbcThinConnection.java:1698)
+```
+
+Seen in `JdbcThinPartitionAwarenessSelfTest` when partition-awareness routes a request to one of multiple nodes and the chosen I/O object is absent from `ios`.
+
+### Root cause
+
+`JdbcThinConnection.cliIo` (the partition-awareness node-selection branch) cycles through `nodeIds` to find a live `JdbcThinTcpIo`. The wrap-around guard was:
+
+```java
+initNodeId = initNodeId == nodeIds.size() ? 0 : initNodeId + 1;
+```
+
+The condition `initNodeId == nodeIds.size()` can never be true **before** `nodeIds.get(initNodeId)` on the previous line throws — by the time the check would wrap, the index is already one past the end. With `nodeIds.size() == 2` and `initNodeId` starting at 1:
+
+- Iteration 1: `nodeIds.get(1)` → OK, suppose `ios` miss → `io` stays `null`; `initNodeId` becomes 2 (guard doesn't fire because `1 != 2`)
+- Iteration 2: `nodeIds.get(2)` → `IndexOutOfBoundsException`
+
+### Fix
+
+`JdbcThinConnection.java` line 1700 — replaced the broken guard with modulo arithmetic:
+
+```java
+// before
+initNodeId = initNodeId == nodeIds.size() ? 0 : initNodeId + 1;
+// after
+initNodeId = (initNodeId + 1) % nodeIds.size();
+```
+
+## Partition Reservation Leak on Unstable Client Topology (`MemLeakOnSqlWithClientReconnectTest`)
+
+### Symptom
+
+```
+java.lang.AssertionError: Reservations leaks: [base=1, cur=2]
+```
+
+`PartitionReservationManager.reservations` map grows from 1 to 2 entries during `testPartitioned` while 10 client nodes repeatedly join and leave the cluster.
+
+### Root cause
+
+`PartitionReservationManager.reservePartitions` computes the group-reservation cache key as `(cacheName, lastAffinityChangedTopologyVersion(reqTopVer))`. When a client joins (overall topology T3, affinity unchanged at T1), a query can arrive with `reqTopVer=T3` before the server has finished T3's partition-map exchange. At that moment `lastAffinityChangedTopologyVersion(T3)` returns T3 itself (no entry yet in `lastAffTopVers`), so a **stale** group reservation keyed `(part, T3)` is created alongside the legitimate `(part, T1)` entry.
+
+After T3's exchange completes, `onDoneAfterTopologyUnlock` tries `invalidate()` on `(part, T3)`. `invalidate()` requires `reservations.count == 0`; if the query is still running, it fails and the stale entry stays. When the query later finishes and `release()` drops the count to 0, **no one retried the invalidation**, leaving `(part, T3)` permanently in the map.
+
+### Fix
+
+`GridDhtPartitionsReservation.release()` — after the last reservation is released, check whether `lastAffinityChangedTopologyVersion(this.topVer) != this.topVer`. If so, the reservation was keyed to a non-affinity topology version (i.e. it is stale) and `invalidate()` is called immediately.
+
+- A valid entry (`topVer = T1`, a true affinity-change version): `lastAffinityChangedTopologyVersion(T1) = T1` → check is false → not invalidated.
+- A stale entry (`topVer = T3`, client-only change): `lastAffinityChangedTopologyVersion(T3) = T1 ≠ T3` → check is true → `invalidate()` → removed from map.
+
+If T3's exchange hasn't finished by the time `release()` runs, the check is false (still returns T3) and the existing `onDoneAfterTopologyUnlock` path handles cleanup once the exchange completes.
+
+## Atomic Future Stuck in INIT: `hasRes` Race in `PrimaryRequestState.onDhtResponse`
+
+### Symptom
+
+```
+java.lang.AssertionError: Unexpected atomic futures: [GridNearAtomicSingleUpdateFuture
+  [reqState=Primary [..., primaryRes=false, done=true, ...],
+   super=GridNearAtomicAbstractUpdateFuture [..., state=INIT, ...]]]
+```
+
+The future is in the `atomicFutures` map, its `GridFutureAdapter.state` is `INIT` (never completed), yet `reqState.done=true` (`finished()` returns `true`). Seen in `IgniteCacheSslStartStopSelfTest` (extends `IgniteCachePutRetryAbstractSelfTest`), which runs FULL_SYNC ATOMIC puts while repeatedly stopping/starting a backup node.
+
+### Root cause
+
+In `PrimaryRequestState.onDhtResponse` (`GridNearAtomicAbstractUpdateFuture.java`), `hasRes = true` was set **before** the duplicate-node check. The following race triggered it:
+
+1. Near node maps a put (FULL_SYNC, `initMappingLocally=true`, 1 backup). Request sent to primary; primary forwards to backup.
+2. Backup **leaves** topology → `onNodeLeft` fires → `onDhtNodeLeft` increments `rcvdCnt` to `expCnt`, but `hasRes` is still `false` → returns `ALL_RCVD_CHECK_PRIMARY` → a `GridNearAtomicCheckUpdateRequest` is sent to the primary.
+3. The backup's **in-flight DHT response** (sent before it left) arrives at the near node. `onDhtResponse` is called:
+   - Old code: `hasRes = true` set immediately (because `res.hasResult()`), **then** `nodeRes.rcvd == true` detected → `return false`.
+   - Result: `hasRes=true`, `rcvdCnt=expCnt=1` → `finished()=true`, but the future was never completed.
+4. The check response from the primary arrives → `processPrimaryResponse` → `finished()=true` → returns `null` → future abandoned permanently in INIT state.
+
+SSL amplifies the window: handshake latency makes it likely the node-left event is processed **before** the in-flight response arrives, whereas in non-SSL tests the response wins the race.
+
+### Fix
+
+`GridNearAtomicAbstractUpdateFuture.java`, `PrimaryRequestState.onDhtResponse`: moved `hasRes = true` into each non-duplicate branch so a late response for an already-counted node cannot corrupt `finished()`:
+
+- `mappedNodes == null` branch (unknown mapping): set `hasRes` here before returning.
+- `nodeRes != null && !nodeRes.rcvd` branch (new response): set `hasRes` here.
+- `nodeRes == null` branch (unexpected node): set `hasRes` here.
+- `nodeRes != null && nodeRes.rcvd` branch (duplicate): **return early without touching `hasRes`** — this is the fix.
+
+### Note on `topVer` in the assertion output
+
+The large `topVer` (e.g. 330) in exchange log lines near the assertion is just accumulated topology version from many stop/start cycles across ~11 test methods; it is unrelated to the stuck future's own `topVer` field.

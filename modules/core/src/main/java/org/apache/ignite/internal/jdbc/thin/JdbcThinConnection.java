@@ -1697,7 +1697,7 @@ public class JdbcThinConnection implements Connection {
             while (io == null) {
                 io = ios.get(nodeIds.get(initNodeId));
 
-                initNodeId = initNodeId == nodeIds.size() ? 0 : initNodeId + 1;
+                initNodeId = (initNodeId + 1) % nodeIds.size();
 
                 iterCnt++;
 
