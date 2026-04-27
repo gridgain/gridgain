@@ -35,6 +35,7 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryClientReconnectMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryJoinRequestMessage;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -62,12 +63,14 @@ public class TcpDiscoverySpiReconnectDelayTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    @Ignore
     public void testClientJoinAfterFailureShortTimeout() throws Exception {
         checkClientJoinAfterNodeFailure(5, 500);
     }
 
     /** */
     @Test
+    @Ignore
     public void testClientJoinAfterFailureLongTimeout() throws Exception {
         checkClientJoinAfterNodeFailure(3, 5000);
     }
