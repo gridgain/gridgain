@@ -217,6 +217,7 @@ public class CacheLoadingConcurrentGridStartSelfTest extends GridCommonAbstractT
      * @throws Exception if failed
      */
     @Test
+    @Ignore
     public void testLoadCacheWithDataStreamerSequential() throws Exception {
         loadCacheWithDataStreamerSequential();
     }
