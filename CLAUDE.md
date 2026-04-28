@@ -432,3 +432,60 @@ master.affinity("partitioned").mapKeyToNode("Dummy");  // safe
 ### Known fix
 
 `GridCachePutAllFailoverSelfTest.checkPutAllFailover` — added `awaitPartitionMapExchange()` after the workers-start loop and before the `try` block that calls `master.affinity(CACHE_NAME).mapKeyToNode("Dummy")`.
+
+## Dynamic Cache Leak: `createCache` Outside `try-finally` Leaves Cache on Exception
+
+### Symptom
+
+```
+org.apache.ignite.cache.CacheExistsException: Failed to start cache
+    (a cache with the same name is already started): test-cache-PRIMARY_SYNC-2
+```
+
+Thrown at the very first `createCache` call of a test method, before any test logic runs.
+
+### Root cause
+
+A common pattern in tests is:
+
+```java
+grid(0).createCache(ccfg);         // ← OUTSIDE the try block
+
+IgniteCache clnCache = cln.createNearCache(...);  // ← can throw
+clnCache.put(KEY, VALUE);                         // ← can throw
+
+try {
+    // test logic
+}
+catch (Exception e) { e.printStackTrace(); }
+finally {
+    grid(0).destroyCache(ccfg.getName());  // ← only reached if no exception above
+}
+```
+
+If anything between `createCache` and the `try` block throws (e.g. `createNearCache` when a near-cache config is present, or even `cache.put`), the `finally` is never reached and the cache is left alive on the cluster. The next test method (or the next iteration) that tries to create a cache with the same name then fails with `CacheExistsException`.
+
+Multiple test methods in the same class can share the same cache name if they use identical `CacheWriteSynchronizationMode` and backup-count combinations — e.g. both `testOptimistic` and `testOptimisticWithNearCache` produce `"test-cache-PRIMARY_SYNC-2"`.
+
+### Rule: always place `createCache` inside the `try` block that has the `finally { destroyCache }` guard
+
+```java
+try {
+    grid(0).createCache(ccfg);
+
+    IgniteCache clnCache = cln.createNearCache(...);
+    clnCache.put(KEY, VALUE);
+
+    // test logic
+}
+catch (Exception e) { e.printStackTrace(); }
+finally {
+    grid(0).destroyCache(ccfg.getName());  // always runs
+}
+```
+
+`destroyCache` on a cache name that doesn't exist is a no-op, so it is safe to call it even when `createCache` was the call that failed.
+
+### Known fix
+
+`CacheEntryProcessorExternalizableFailedTest.doTestInvokeTest` — moved `grid(0).createCache(ccfg)`, `cln.createNearCache(...)`, and `clnCache.put(KEY, EXPECTED_VALUE)` inside the single `try` block so that `destroyCache` in `finally` always executes.

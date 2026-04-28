@@ -602,18 +602,18 @@ public class CacheEntryProcessorExternalizableFailedTest extends GridCommonAbstr
         TransactionIsolation txIsolation) throws Exception {
         IgniteEx cln = grid(getServerNodeCount());
 
-        grid(0).createCache(ccfg);
-
-        IgniteCache clnCache;
-
-        if (ccfg.getNearConfiguration() != null)
-            clnCache = cln.createNearCache(ccfg.getName(), ccfg.getNearConfiguration());
-        else
-            clnCache = cln.cache(ccfg.getName());
-
-        clnCache.put(KEY, EXPECTED_VALUE);
-
         try {
+            grid(0).createCache(ccfg);
+
+            IgniteCache clnCache;
+
+            if (ccfg.getNearConfiguration() != null)
+                clnCache = cln.createNearCache(ccfg.getName(), ccfg.getNearConfiguration());
+            else
+                clnCache = cln.cache(ccfg.getName());
+
+            clnCache.put(KEY, EXPECTED_VALUE);
+
             // Explicit tx.
             for (int i = 0; i < ITERATION_CNT; i++) {
                 if (ccfg.getAtomicityMode() == TRANSACTIONAL_SNAPSHOT)

@@ -62,6 +62,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.validateMockitoUsage;
 import static org.mockito.Mockito.verify;
 
 /** Base class for testing various page replacement policies. */
@@ -120,6 +121,11 @@ public abstract class AbstractPageReplacementTest extends GridCommonAbstractTest
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        // Detects and clears any incomplete doAnswer()/when() chains left in Mockito's thread-local
+        // state. Without this, a stub that started but never completed (e.g. because fileIO() returned
+        // null and .when(null) threw) would corrupt the next test on the same thread.
+        validateMockitoUsage();
+
         super.afterTest();
 
         stopAllGrids();
