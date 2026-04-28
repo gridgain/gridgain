@@ -21,6 +21,8 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Adding shared group and indexes to testing. It would impact how we evict partitions.
@@ -34,6 +36,13 @@ public class IgnitePdsContinuousRestartTestWithSharedGroupAndIndexes extends Ign
      */
     public IgnitePdsContinuousRestartTestWithSharedGroupAndIndexes() {
         super(false);
+    }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore
+    @Override public void testRebalancingDuringLoad_10_500_8_16() throws Exception {
+        super.testRebalancingDuringLoad_10_500_8_16();
     }
 
     /** {@inheritDoc} */

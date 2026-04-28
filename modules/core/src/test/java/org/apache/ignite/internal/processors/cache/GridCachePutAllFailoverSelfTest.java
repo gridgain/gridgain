@@ -252,6 +252,8 @@ public class GridCachePutAllFailoverSelfTest extends GridCommonAbstractTest {
             runningWorkers.add(workers.get(i - 1));
         }
 
+        awaitPartitionMapExchange();
+
         try {
             // Dummy call to fetch affinity function from remote node
             master.affinity(CACHE_NAME).mapKeyToNode("Dummy");

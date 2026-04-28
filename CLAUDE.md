@@ -389,3 +389,46 @@ SSL amplifies the window: handshake latency makes it likely the node-left event 
 ### Note on `topVer` in the assertion output
 
 The large `topVer` (e.g. 330) in exchange log lines near the assertion is just accumulated topology version from many stop/start cycles across ~11 test methods; it is unrelated to the stuck future's own `topVer` field.
+
+## `startGrid` Does Not Guarantee Topology Propagation to Existing Nodes
+
+### Symptom
+
+```
+org.apache.ignite.IgniteException: Failed to find cache (cache was not started yet or cache was already stopped): partitioned
+    at GridAffinityProcessor$CacheAffinityProxy.cache(GridAffinityProcessor.java:1132)
+    at GridAffinityProcessor$CacheAffinityProxy.mapKeyToNode(...)
+```
+
+Thrown immediately after all worker nodes are started, before any cache operations have begun.
+
+### Root cause
+
+`startGrid("workerX")` waits only for the new node's own partition-map exchange to complete. It does **not** wait for already-running nodes (e.g. a master client node) to finish processing the topology-change event that includes the new node's caches. When a test starts a master client first and then starts worker nodes that define the cache, the master may still be processing the join exchange asynchronously when the test proceeds to call `affinity(cacheName)` or `cache(cacheName)`.
+
+```java
+final Ignite master = startGrid("master");   // client, no cache configured
+
+for (int i = 1; i <= workerCnt; i++)
+    workers.add(startGrid("worker" + i));    // workers bring "partitioned" cache
+
+// RACE: master may not have processed worker join exchanges yet
+master.affinity("partitioned").mapKeyToNode("Dummy");  // ← fails
+```
+
+### Rule: call `awaitPartitionMapExchange()` before using a cache that was defined by later-joining nodes
+
+After starting all nodes that carry the cache definition, call `awaitPartitionMapExchange()` to guarantee that every node in the cluster — including the master client — has completed the exchange and has the cache initialized:
+
+```java
+for (int i = 1; i <= workerCnt; i++)
+    workers.add(startGrid("worker" + i));
+
+awaitPartitionMapExchange();  // all nodes, including master, have processed all joins
+
+master.affinity("partitioned").mapKeyToNode("Dummy");  // safe
+```
+
+### Known fix
+
+`GridCachePutAllFailoverSelfTest.checkPutAllFailover` — added `awaitPartitionMapExchange()` after the workers-start loop and before the `try` block that calls `master.affinity(CACHE_NAME).mapKeyToNode("Dummy")`.

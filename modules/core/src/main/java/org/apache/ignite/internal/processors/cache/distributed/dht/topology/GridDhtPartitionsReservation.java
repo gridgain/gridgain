@@ -194,10 +194,18 @@ public class GridDhtPartitionsReservation implements GridReservable {
                 throw new IllegalStateException("Method 'reserve' must be called before 'release'.");
 
             if (reservations.compareAndSet(r, r - 1)) {
-                // If it was the last reservation and topology version changed -> attempt to evict partitions.
-                if (r == 1 && !cctx.kernalContext().isStopping() &&
-                    !topVer.equals(cctx.topology().lastTopologyChangeVersion()))
-                    tryContinueClearing(parts.get());
+                if (r == 1) {
+                    // If it was the last reservation and topology version changed -> attempt to evict partitions.
+                    if (!cctx.kernalContext().isStopping() &&
+                        !topVer.equals(cctx.topology().lastTopologyChangeVersion()))
+                        tryContinueClearing(parts.get());
+
+                    // If the reservation was created at a non-affinity topology version (e.g. a client-only
+                    // join), it is permanently stale — invalidate immediately so reserve() returns false
+                    // without waiting for the async eviction callback.
+                    if (!cctx.shared().exchange().lastAffinityChangedTopologyVersion(topVer).equals(topVer))
+                        invalidate();
+                }
 
                 return;
             }
