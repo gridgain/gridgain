@@ -175,6 +175,11 @@ public class IgniteCachePutRetryTransactionalSelfTest extends IgniteCachePutRetr
             startGrid(stopIdx);
         }
 
+        // Wait for all partitions to reach OWNING state before verifying. Without this, the last
+        // restarted node may still be rebalancing when cache.get() is called, returning null for
+        // keys whose primary is the restarted node.
+        awaitPartitionMapExchange(true, true, null);
+
         for (int i = 0; i < threads; i++) {
             Exception error = err.get(i);
 

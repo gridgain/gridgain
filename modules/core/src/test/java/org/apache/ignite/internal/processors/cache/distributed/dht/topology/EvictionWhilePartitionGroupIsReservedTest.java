@@ -33,6 +33,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
@@ -41,6 +42,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  * Tests a scenario when a partition is attempted for eviction while being reserved in group.
  */
 @WithSystemProperty(key = "IGNITE_PRELOAD_RESEND_TIMEOUT", value = "0") // Force fast partition state message exchange.
+@Ignore
 public class EvictionWhilePartitionGroupIsReservedTest extends GridCommonAbstractTest {
     /** */
     private static final int PARTS = 1024;

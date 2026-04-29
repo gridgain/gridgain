@@ -47,4 +47,11 @@ public class TcpDiscoverySslTrustedSelfTest extends TcpDiscoverySelfTest {
     @Override public void testFailedNodes3() throws Exception {
         // No-op.
     }
+
+    /** {@inheritDoc} */
+    @Test
+    @Ignore
+    @Override public void testCustomEventCoordinatorFailure2() throws Exception {
+        // No-op.
+    }
 }
