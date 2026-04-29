@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliatio
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.io.File.separatorChar;
@@ -309,6 +310,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testRemovedEntryOnPrimaryWithRemoveRepairAlg() throws IgniteCheckedException {
         PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(true);
 

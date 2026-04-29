@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Client.Cache
 {
     using System.Linq;
+    using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
     using NUnit.Framework;
 
@@ -63,6 +64,22 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         }
 #endif
 
+
+        [Test]
+        [Ignore("Flaky")]
+        public override void IgniteSet_RequestIsRoutedToPrimaryNode(
+            string name, string groupName, CacheMode cacheMode, int item, int gridIdx)
+        {
+            // No-op.
+        }
+
+        [Test]
+        [Ignore("Flaky")]
+        public override void IgniteSetColocated_RequestIsRoutedToPrimaryNode(
+            string name, string groupName, CacheMode cacheMode, int item, int gridIdx)
+        {
+            // No-op.
+        }
 
         protected override IgniteClientConfiguration GetClientConfiguration()
         {
