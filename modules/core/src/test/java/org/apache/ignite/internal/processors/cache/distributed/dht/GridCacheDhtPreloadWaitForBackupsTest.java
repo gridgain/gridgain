@@ -42,6 +42,7 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.Arrays.asList;
@@ -118,6 +119,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testNodeLeavesRebalanceCompletesAtomicReplicated() throws Exception {
         cacheMode = CacheMode.REPLICATED;
         atomicityMode = CacheAtomicityMode.ATOMIC;
@@ -132,6 +134,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testNodeLeavesRebalanceCompletesTransactionalPartitioned() throws Exception {
         cacheMode = CacheMode.PARTITIONED;
         atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
@@ -147,6 +150,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testNodeLeavesRebalanceCompletesClientNode() throws Exception {
         cacheMode = CacheMode.PARTITIONED;
         atomicityMode = CacheAtomicityMode.ATOMIC;

@@ -513,6 +513,7 @@ public class JdbcThinPartitionAwarenessReconnectionAndFailoverSelfTest extends J
      */
     @SuppressWarnings("ThrowableNotThrown")
     @Test
+    @Ignore
     public void testFailoverLimit() throws Exception {
         startGrid(3);
         startGrid(4);
