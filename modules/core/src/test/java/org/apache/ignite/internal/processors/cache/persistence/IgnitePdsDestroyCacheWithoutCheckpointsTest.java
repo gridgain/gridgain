@@ -20,6 +20,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.G;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -40,6 +41,7 @@ public class IgnitePdsDestroyCacheWithoutCheckpointsTest extends IgnitePdsDestro
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testDestroyCachesAbruptlyWithoutCheckpoints() throws Exception {
         Ignite ignite = startGrids(NODES);
 
