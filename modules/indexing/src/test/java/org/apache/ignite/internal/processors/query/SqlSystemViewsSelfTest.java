@@ -1248,13 +1248,13 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
             "cache_sql",         // CACHE_NAME
             "PUBLIC",            // SCHEMA_NAME
             "CACHE_SQL",         // TABLE_NAME
-            null,                // BINARY_AFFINITY_FIELD
             null,                // AFFINITY_KEY_COLUMN
             "ID",                // KEY_ALIAS
             null,                // VALUE_ALIAS
             "java.lang.Integer", // KEY_TYPE_NAME
             "random_name",       // VALUE_TYPE_NAME
-            false                // IS_INDEX_REBUILD_IN_PROGRESS
+            false,               // IS_INDEX_REBUILD_IN_PROGRESS
+            null                 // BINARY_AFFINITY_FIELD
         );
 
         assertEquals("Returned incorrect info. ", expRow, cacheSqlInfos.get(0));
@@ -1273,13 +1273,13 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
                 "SQL_PUBLIC_DFLT_CACHE", // CACHE_NAME
                 "PUBLIC",                // SCHEMA_NAME
                 "DFLT_CACHE",            // TABLE_NAME
-                "ID2",                   // BINARY_AFFINITY_FIELD
                 "ID2",                   // AFFINITY_KEY_COLUMN
                 null,                    // KEY_ALIAS
                 "MY_VAL",                // VALUE_ALIAS
                 "random_name",           // KEY_TYPE_NAME
                 "java.lang.String",      // VALUE_TYPE_NAME
-                false                    // IS_INDEX_REBUILD_IN_PROGRESS
+                false,                   // IS_INDEX_REBUILD_IN_PROGRESS
+                "ID2"                    // BINARY_AFFINITY_FIELD
             )
         );
 
