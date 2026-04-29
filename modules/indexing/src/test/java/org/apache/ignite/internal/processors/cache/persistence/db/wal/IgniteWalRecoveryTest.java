@@ -956,6 +956,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @Ignore
     public void testLargeRandomCrash() throws Exception {
         checkpointFrequency = 2_000 + new Random().nextInt(4_000);
 

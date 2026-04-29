@@ -635,7 +635,18 @@ public abstract class DynamicColumnsAbstractConcurrentSelfTest extends DynamicCo
         // Unblock indexing and see what happens.
         unblockIndexing(srv1);
 
-        idxFut.get();
+        try {
+            idxFut.get();
+        }
+        catch (IgniteCheckedException e) {
+            // The cache may have been destroyed before the schema change was applied on some nodes.
+            // This is an expected concurrent race outcome when DROP TABLE races with the schema operation.
+            SchemaOperationException schemaEx = X.cause(e, SchemaOperationException.class);
+
+            if (schemaEx == null || schemaEx.code() != SchemaOperationException.CODE_CACHE_NOT_FOUND)
+                throw e;
+        }
+
         dropFut.get();
     }
 

@@ -489,3 +489,46 @@ finally {
 ### Known fix
 
 `CacheEntryProcessorExternalizableFailedTest.doTestInvokeTest` — moved `grid(0).createCache(ccfg)`, `cln.createNearCache(...)`, and `clnCache.put(KEY, EXPECTED_VALUE)` inside the single `try` block so that `destroyCache` in `finally` always executes.
+
+## Schema Operation Race With Concurrent Cache Destroy (`DynamicColumns*ConcurrentCacheDestroy`)
+
+### Symptom
+
+```
+SchemaOperationException [code=1, msg=Cache doesn't exist: SQL_PUBLIC_PERSON]
+  at GridQueryProcessor.startSchemaChange(GridQueryProcessor.java:880)
+  at GridQueryProcessor.onSchemaPropose(GridQueryProcessor.java:736)
+  at GridCacheProcessor.processCustomExchangeTask(GridCacheProcessor.java:423)
+  at GridCachePartitionExchangeManager$ExchangeWorker.processCustomTask(...)
+```
+
+Thrown from `idxFut.get()` in `DynamicColumnsAbstractConcurrentSelfTest.checkConcurrentCacheDestroy`, causing `testDropConcurrentCacheDestroy` (and potentially `testAddConcurrentCacheDestroy`) to fail.
+
+### Root cause
+
+`DROP TABLE` in GridGain is implemented via `GridQueryProcessor.dynamicTableDrop` → `ctx.grid().destroyCache0(cacheName, true)`. This goes through the **partition exchange** (a `CacheDestroyRequest`), not the schema propose protocol. It is therefore not serialized with a concurrent `DROP COLUMN` schema change.
+
+The schema propose protocol enqueues a `SchemaExchangeWorkerTask` in the exchange worker's `futQ`. If the cache-destroy partition exchange is processed before that task is dequeued (e.g., due to queue ordering or exchange delay), the exchange worker calls `onSchemaPropose` → `startSchemaChange` after the cache is already gone. At line 880, `cacheDesc == null` → `SchemaOperationException(CODE_CACHE_NOT_FOUND, cacheName)` is created and passed to the `SchemaOperationWorker`, which completes the schema operation future with that error.
+
+### Rule: wrap `idxFut.get()` in concurrent-destroy tests to accept `CODE_CACHE_NOT_FOUND`
+
+Tests that explicitly exercise concurrent schema-change + cache-destroy must not call `idxFut.get()` bare. The schema operation legitimately fails with `CODE_CACHE_NOT_FOUND` when the cache is destroyed before the operation is applied. Wrap the call and re-throw anything that is not the expected error code:
+
+```java
+try {
+    idxFut.get();
+}
+catch (IgniteCheckedException e) {
+    SchemaOperationException schemaEx = X.cause(e, SchemaOperationException.class);
+
+    if (schemaEx == null || schemaEx.code() != SchemaOperationException.CODE_CACHE_NOT_FOUND)
+        throw e;
+}
+dropFut.get();
+```
+
+Do **not** use `@Ignore("Flaky test")` for this class of failure — the test is structurally sound; only `idxFut.get()` needs to tolerate the expected concurrent error.
+
+### Known fix
+
+`DynamicColumnsAbstractConcurrentSelfTest.checkConcurrentCacheDestroy` — wrapped `idxFut.get()` with the try-catch above. Fixes both `testDropConcurrentCacheDestroy` and `testAddConcurrentCacheDestroy` across all subclasses (atomic replicated, transactional partitioned, etc.).
