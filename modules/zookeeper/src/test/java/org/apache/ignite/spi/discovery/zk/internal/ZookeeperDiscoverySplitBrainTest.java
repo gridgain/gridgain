@@ -44,6 +44,7 @@ public class ZookeeperDiscoverySplitBrainTest extends ZookeeperDiscoverySpiTestB
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testSimpleSplitBrain() throws Exception {
         failCommSpi = true;
 

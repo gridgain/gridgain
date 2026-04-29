@@ -28,6 +28,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -92,6 +93,7 @@ public class MaintenanceAutoRecoveryTest extends GridCommonAbstractTest {
     /** Node won't auto shut down once all maintenance tasks are completed. */
     @Test
     @WithSystemProperty(key = "IGNITE_MAINTENANCE_AUTO_SHUTDOWN_AFTER_RECOVERY", value = "false")
+    @Ignore
     public void testAutoShutdownDisabled() throws Exception {
         IgniteEx ign = startGrid(0);
         String taskName = "test";

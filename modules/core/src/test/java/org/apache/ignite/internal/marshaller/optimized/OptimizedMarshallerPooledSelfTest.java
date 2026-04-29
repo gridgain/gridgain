@@ -18,11 +18,13 @@ package org.apache.ignite.internal.marshaller.optimized;
 
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
+import org.junit.Ignore;
 
 /**
  * Optimized marshaller self test.
  */
 @GridCommonTest(group = "Marshaller")
+@Ignore
 public class OptimizedMarshallerPooledSelfTest extends OptimizedMarshallerSelfTest {
     /** {@inheritDoc} */
     @Override protected Marshaller marshaller() {

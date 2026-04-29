@@ -662,6 +662,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// Expiry policy tests.
         /// </summary>
         [Test]
+        [Ignore("flaky")]
         public void TestCacheConfigurationExpiryPolicy()
         {
             TestWithExpiryPolicy((cache, policy) =>

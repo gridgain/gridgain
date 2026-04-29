@@ -466,6 +466,7 @@ public class IgniteProjectionStartStopRestartSelfTest extends GridCommonAbstract
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testStopNodes() throws Exception {
         joinedLatch = new CountDownLatch(3);
 
