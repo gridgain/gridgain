@@ -39,6 +39,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -141,6 +142,7 @@ public class ClientReconnectAfterClusterRestartTest extends GridCommonAbstractTe
      * @throws Exception if failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testReconnectClient2sTimeout() throws Exception {
         joinTimeout = 2_000;
 

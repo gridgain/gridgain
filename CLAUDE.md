@@ -532,3 +532,82 @@ Do **not** use `@Ignore("Flaky test")` for this class of failure — the test is
 ### Known fix
 
 `DynamicColumnsAbstractConcurrentSelfTest.checkConcurrentCacheDestroy` — wrapped `idxFut.get()` with the try-catch above. Fixes both `testDropConcurrentCacheDestroy` and `testAddConcurrentCacheDestroy` across all subclasses (atomic replicated, transactional partitioned, etc.).
+
+## Affinity History Exhausted in Long Test Classes (`DynamicIndexServerCoordinatorBasicSelfTest`)
+
+### Symptom
+
+```
+java.lang.IllegalStateException: Getting affinity for too old topology version that is already
+  out of history (try to increase 'IGNITE_MIN_AFFINITY_HISTORY_SIZE' or
+  'IGNITE_AFFINITY_HISTORY_SIZE' system properties)
+  [locNode=..., grp=cache,
+   topVer=AffinityTopologyVersion [topVer=5, minorTopVer=124],
+   lastAffChangeTopVer=AffinityTopologyVersion [topVer=5, minorTopVer=124],
+   head=AffinityTopologyVersion [topVer=5, minorTopVer=125],
+   history=[AffinityTopologyVersion [topVer=5, minorTopVer=125]],
+   minNonShallowHistorySize=2, maxNonShallowHistorySize=25]
+  at GridAffinityAssignmentCache.cachedAffinity(GridAffinityAssignmentCache.java:848)
+  at GridCommonAbstractTest.awaitPartitionMapExchange(GridCommonAbstractTest.java:873)
+  at DynamicIndexAbstractBasicSelfTest.initialize(DynamicIndexAbstractBasicSelfTest.java:100)
+```
+
+### Root cause
+
+`GridAffinityAssignmentCache` tracks affinity assignments in a bounded history map. Each real topology-affinity change (e.g. cache create) is a **non-shallow** entry. When the count of non-shallow entries exceeds `MAX_NON_SHALLOW_HIST_SIZE` (default 25), the cleanup logic fires and **aggressively removes** old entries until only `MIN_NON_SHALLOW_HIST_SIZE` (default 2) remain.
+
+`DynamicIndexAbstractBasicSelfTest` runs ~30+ sequential test methods, each calling `initialize()` which creates a new SQL cache — generating one non-shallow affinity entry per method. After ~26 methods the cleanup triggers and reduces the history to 2 entries. Meanwhile `awaitPartitionMapExchange` reads `readyAffinityVersion()` returning `minorTopVer=124` for a node, then immediately calls `assignment(124)` — but the cleanup already evicted `124`, leaving only `125`. The `ceilingEntry(124)` call finds `125`, which is **greater** than the requested version, so `cachedAffinity` throws.
+
+The cleanup loop iterates ascending (oldest-first) and stops at the first non-shallow entry where `nonShallowSize <= MIN_NON_SHALLOW_HIST_SIZE`. All entries before that stop point — including the version `awaitPartitionMapExchange` just observed — are removed.
+
+### Fix: raise `IGNITE_AFFINITY_HISTORY_SIZE` globally in `GridAbstractTest`
+
+`MAX_NON_SHALLOW_HIST_SIZE` and `MIN_NON_SHALLOW_HIST_SIZE` are **instance fields** in `GridAffinityAssignmentCache`, re-read from system properties at each object construction. Setting the property before nodes start is sufficient.
+
+Added to `GridAbstractTest`'s static initializer (alongside other test-wide property overrides):
+
+```java
+System.setProperty(IGNITE_AFFINITY_HISTORY_SIZE, "500");
+```
+
+With a limit of 500, cleanup only fires after 500 non-shallow entries — far beyond what any realistic test run accumulates — so the history is never trimmed and `awaitPartitionMapExchange` always finds the version it needs.
+
+### Known fix
+
+`GridAbstractTest` static initializer — added `System.setProperty(IGNITE_AFFINITY_HISTORY_SIZE, "500")`. Applies to every test that extends `GridAbstractTest` (the entire test hierarchy).
+
+## Thin Client Cache Lookup Fails Inside Resumed Transaction (`BlockingTxOpsTest.testTransactionalConsistency`)
+
+### Symptom
+
+```
+org.apache.ignite.client.ClientException: Ignite failed to process request [5]:
+  Cannot start/stop cache within lock or transaction
+  [cacheNames=test, operation=dynamicStartCache] (server status code [1])
+  at TcpClientCache.txAwareService(TcpClientCache.java:1277)
+  at TcpClientCache.cacheSingleKeyOperation(TcpClientCache.java:1344)
+  at TcpClientCache.get(TcpClientCache.java:173)
+  at BlockingTxOpsTest.lambda$testTransactionalConsistency$54(BlockingTxOpsTest.java:318)
+```
+
+Thrown from `cache.get(key)` inside a thin client transaction.
+
+### Root cause
+
+The thin client server-side request handler (`ClientRequestHandler`) resumes the server-side transaction on the worker thread before calling `handle0(req)`, making the thread "inside a transaction" for the duration of the request.
+
+`ClientCacheRequest.rawCache()` then calls `ctx.kernalContext().grid().cache(cacheName)`, which internally calls `GridCacheProcessor.publicJCache(cacheName, false, checkThreadTx=true)` — the `true` is hardcoded in `IgniteKernal.cache(String)`.
+
+`publicJCache` calls `jcacheProxy(cacheName, true)` to fetch the running cache proxy. During the brief window while the cache's partition-map exchange is still completing on a server node (race between `getOrCreateCache` completing on the coordinator and propagating to all nodes), the proxy can be **absent from `jCacheProxies`**. When the proxy is null, `publicJCache` calls `dynamicStartCache(null, cacheName, null, false, false, checkThreadTx=true)`. Because `checkThreadTx=true` and the thread has a resumed transaction, `dynamicStartCache` throws "Cannot start/stop cache within lock or transaction" — even though the real intent of this `dynamicStartCache` call is just "wait for the locally pending exchange to complete", not "create a new cache."
+
+The OPTIMISTIC+SERIALIZABLE variant is more susceptible because the exchange timing window is wider compared to PESSIMISTIC+REPEATABLE_READ.
+
+### Fix
+
+`ClientCacheRequest.rawCache()` — replaced `ctx.kernalContext().grid().cache(cacheName)` (which uses `checkThreadTx=true`) with a direct call to `ctx.kernalContext().cache().publicJCache(cacheName, false, false)` (`checkThreadTx=false`). Added a null-check so a truly missing cache throws `IgniteClientException(CACHE_DOES_NOT_EXIST)` instead of NPE.
+
+`dynamicStartCache` with a null config only waits for the cache to start locally — it does not perform any new distributed cache creation — so bypassing the transaction guard here is correct.
+
+### Known fix
+
+`ClientCacheRequest.rawCache()` — changed lookup from `grid().cache(cacheName)` to `ctx.kernalContext().cache().publicJCache(cacheName, false, false)`. Also added `IgniteCheckedException` → `IgniteException` wrapping and an explicit null check.

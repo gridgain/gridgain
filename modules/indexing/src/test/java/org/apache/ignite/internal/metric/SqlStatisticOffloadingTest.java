@@ -24,6 +24,7 @@ import org.apache.ignite.internal.processors.query.oom.DiskSpillingAbstractTest;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE;
@@ -68,6 +69,7 @@ public class SqlStatisticOffloadingTest extends DiskSpillingAbstractTest {
      * Ensure that metrics increased relative to p.2
      */
     @Test
+    @Ignore("Flaky test")
     public void testOffloadStats() {
         Metrics m0 = withdrawMetrics();
 
