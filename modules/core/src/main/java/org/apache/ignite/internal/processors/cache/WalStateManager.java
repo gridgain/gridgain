@@ -595,25 +595,27 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
             }
         }
 
-        // Wait for the checkpoint outside the mux to avoid the deadlock.
+        // Wait for the checkpoint outside mux to avoid the deadlock; everything else stays under mux.
         if (cpFut != null) {
             try {
                 // Wait for checkpoint mark synchronously before releasing the control.
                 cpFut.futureFor(LOCK_RELEASED).get();
 
                 if (msg.enable()) {
-                    grpCtx.globalWalEnabled(true);
+                    synchronized (mux) {
+                        grpCtx.globalWalEnabled(true);
 
-                    // Enable: it is enough to release cache operations once mark is finished because
-                    // not-yet-flushed dirty pages have been logged.
-                    WalStateChangeWorker worker = new WalStateChangeWorker(msg, cpFut);
+                        // Enable: it is enough to release cache operations once mark is finished because
+                        // not-yet-flushed dirty pages have been logged.
+                        WalStateChangeWorker worker = new WalStateChangeWorker(msg, cpFut);
 
-                    IgniteThread thread = new IgniteThread(worker);
+                        IgniteThread thread = new IgniteThread(worker);
 
-                    thread.setUncaughtExceptionHandler(new OomExceptionHandler(
-                        cctx.kernalContext()));
+                        thread.setUncaughtExceptionHandler(new OomExceptionHandler(
+                            cctx.kernalContext()));
 
-                    thread.start();
+                        thread.start();
+                    }
                 }
                 else {
                     // Disable: not-yet-flushed operations are not logged, so wait for them
@@ -621,9 +623,11 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
                     // when it is safe to continue cache operations.
                     res = awaitCheckpoint(cpFut, msg);
 
-                    // WAL state is persisted after checkpoint if finished. Otherwise in case of crash
-                    // and restart we will think that WAL is enabled, but data might be corrupted.
-                    grpCtx.globalWalEnabled(false);
+                    synchronized (mux) {
+                        // WAL state is persisted after checkpoint if finished. Otherwise in case of crash
+                        // and restart we will think that WAL is enabled, but data might be corrupted.
+                        grpCtx.globalWalEnabled(false);
+                    }
                 }
             }
             catch (Exception e) {
