@@ -488,11 +488,12 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
         assertEquals(DFLT_SCHEMA, tbl.get(4)); // SCHEMA_NAME
         assertEquals("T1", tbl.get(5)); // TABLE_NAME
         assertNull(tbl.get(6)); // AFFINITY_KEY_COLUMN
-        assertNull(tbl.get(7)); // AFFINITY_KEY_COLUMN
-        assertEquals("ID", tbl.get(8)); // KEY_ALIAS
-        assertNull(tbl.get(9)); // VALUE_ALIAS
-        assertEquals("java.lang.Long", tbl.get(10)); // KEY_TYPE_NAME
-        assertNotNull(tbl.get(11)); // VALUE_TYPE_NAME
+        assertEquals("ID", tbl.get(7)); // KEY_ALIAS
+        assertNull(tbl.get(8)); // VALUE_ALIAS
+        assertEquals("java.lang.Long", tbl.get(9)); // KEY_TYPE_NAME
+        assertNotNull(tbl.get(10)); // VALUE_TYPE_NAME
+        assertFalse((Boolean) tbl.get(11)); // IS_INDEX_REBUILD_IN_PROGRESS
+        assertNull(tbl.get(12)); // BINARY_AFFINITY_FIELD
 
         execute(ignite0, "CREATE TABLE T2(ID LONG PRIMARY KEY, NAME VARCHAR)");
 

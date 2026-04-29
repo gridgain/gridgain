@@ -123,16 +123,6 @@ public class SqlTableView {
      * @return Affinity key column name.
      */
     @Order(6)
-    public String binaryAffinityField() {
-        return tbl.rowDescriptor().type().binaryAffinityField();
-    }
-
-    /**
-     * Returns name of affinity key column.
-     *
-     * @return Affinity key column name.
-     */
-    @Order(7)
     public String affinityKeyColumn() {
         return affColName;
     }
@@ -142,7 +132,7 @@ public class SqlTableView {
      *
      * @return Key alias.
      */
-    @Order(8)
+    @Order(7)
     public String keyAlias() {
         return tbl.rowDescriptor().type().keyFieldAlias();
     }
@@ -152,7 +142,7 @@ public class SqlTableView {
      *
      * @return Value alias.
      */
-    @Order(9)
+    @Order(8)
     public String valueAlias() {
         return tbl.rowDescriptor().type().valueFieldAlias();
     }
@@ -162,7 +152,7 @@ public class SqlTableView {
      *
      * @return Key type name.
      */
-    @Order(10)
+    @Order(9)
     public String keyTypeName() {
         return tbl.rowDescriptor().type().keyTypeName();
     }
@@ -172,7 +162,7 @@ public class SqlTableView {
      *
      * @return Value type name.
      */
-    @Order(11)
+    @Order(10)
     public String valueTypeName() {
         return tbl.rowDescriptor().type().valueTypeName();
     }
@@ -180,5 +170,15 @@ public class SqlTableView {
     /** @return {@code True} if index rebuild is in progress. */
     public boolean isIndexRebuildInProgress() {
         return tbl.rebuildFromHashInProgress();
+    }
+
+    /**
+     * Returns name of affinity key column.
+     *
+     * @return Affinity key column name.
+     */
+    @Order(12)
+    public String binaryAffinityField() {
+        return tbl.rowDescriptor().type().binaryAffinityField();
     }
 }

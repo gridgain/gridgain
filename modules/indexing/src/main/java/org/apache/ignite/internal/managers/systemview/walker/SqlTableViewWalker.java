@@ -34,13 +34,13 @@ public class SqlTableViewWalker implements SystemViewRowAttributeWalker<SqlTable
         v.accept(3, "cacheName", String.class);
         v.accept(4, "schemaName", String.class);
         v.accept(5, "tableName", String.class);
-        v.accept(6, "binaryAffinityField", String.class);
-        v.accept(7, "affinityKeyColumn", String.class);
-        v.accept(8, "keyAlias", String.class);
-        v.accept(9, "valueAlias", String.class);
-        v.accept(10, "keyTypeName", String.class);
-        v.accept(11, "valueTypeName", String.class);
-        v.accept(12, "isIndexRebuildInProgress", boolean.class);
+        v.accept(6, "affinityKeyColumn", String.class);
+        v.accept(7, "keyAlias", String.class);
+        v.accept(8, "valueAlias", String.class);
+        v.accept(9, "keyTypeName", String.class);
+        v.accept(10, "valueTypeName", String.class);
+        v.accept(11, "isIndexRebuildInProgress", boolean.class);
+        v.accept(12, "binaryAffinityField", String.class);
     }
 
     /** {@inheritDoc} */
@@ -51,13 +51,13 @@ public class SqlTableViewWalker implements SystemViewRowAttributeWalker<SqlTable
         v.accept(3, "cacheName", String.class, row.cacheName());
         v.accept(4, "schemaName", String.class, row.schemaName());
         v.accept(5, "tableName", String.class, row.tableName());
-        v.accept(6, "binaryAffinityField", String.class, row.binaryAffinityField());
-        v.accept(7, "affinityKeyColumn", String.class, row.affinityKeyColumn());
-        v.accept(8, "keyAlias", String.class, row.keyAlias());
-        v.accept(9, "valueAlias", String.class, row.valueAlias());
-        v.accept(10, "keyTypeName", String.class, row.keyTypeName());
-        v.accept(11, "valueTypeName", String.class, row.valueTypeName());
-        v.acceptBoolean(12, "isIndexRebuildInProgress", row.isIndexRebuildInProgress());
+        v.accept(6, "affinityKeyColumn", String.class, row.affinityKeyColumn());
+        v.accept(7, "keyAlias", String.class, row.keyAlias());
+        v.accept(8, "valueAlias", String.class, row.valueAlias());
+        v.accept(9, "keyTypeName", String.class, row.keyTypeName());
+        v.accept(10, "valueTypeName", String.class, row.valueTypeName());
+        v.acceptBoolean(11, "isIndexRebuildInProgress", row.isIndexRebuildInProgress());
+        v.accept(12, "binaryAffinityField", String.class, row.binaryAffinityField());
     }
 
     /** {@inheritDoc} */

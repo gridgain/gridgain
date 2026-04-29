@@ -112,24 +112,12 @@ public class SqlTableColumnView {
 
     /** @return {@code True} if affinity key field. */
     public boolean affinityColumn() {
-        return isAffinityColumn();
-    }
-
-    private boolean isAffinityColumn() {
-
         boolean isAffinityColumn = affCol != null && col.getColumnId() == affCol.column.getColumnId();
-        boolean isKeyColumn = tbl.rowDescriptor().isKeyColumn(col.getColumnId());
 
-        if (isAffinityColumn) {
-            return true;
-        }
-
-        boolean isAliasOfbinaryAffinityField = isAliasOfbinaryAffinityField();
-
-        return isAliasOfbinaryAffinityField;
+        return isAffinityColumn || isAliasOfBinaryAffinityField();
     }
 
-    private boolean isAliasOfbinaryAffinityField() {
+    private boolean isAliasOfBinaryAffinityField() {
         GridQueryTypeDescriptor type = tbl.rowDescriptor().type();
         String affFieldSqlAlias = type.aliases().get(type.binaryAffinityField());
 
