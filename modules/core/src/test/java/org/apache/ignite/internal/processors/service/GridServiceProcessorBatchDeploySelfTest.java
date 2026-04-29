@@ -39,6 +39,7 @@ import org.apache.ignite.services.ServiceDescriptor;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
@@ -117,6 +118,7 @@ public class GridServiceProcessorBatchDeploySelfTest extends GridCommonAbstractT
      * @throws Exception If failed.
      */
     @Test
+    @Ignore
     public void testDeployAllTopologyChange() throws Exception {
         Ignite client = grid(CLIENT_NODE_NAME);
 

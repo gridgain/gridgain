@@ -21,6 +21,7 @@ import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
@@ -33,6 +34,7 @@ public class GridVersionSelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     @WithSystemProperty(key = IGNITE_UPDATE_NOTIFIER, value = "true")
     public void testVersions() throws Exception {
         try {

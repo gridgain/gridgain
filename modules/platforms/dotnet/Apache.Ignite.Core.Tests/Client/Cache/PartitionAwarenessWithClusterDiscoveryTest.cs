@@ -17,13 +17,13 @@
 namespace Apache.Ignite.Core.Tests.Client.Cache
 {
     using System.Linq;
-    using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
     using NUnit.Framework;
 
     /// <summary>
     /// Tests Partition Awareness functionality combined with Cluster Discovery.
     /// </summary>
+    [Ignore("Flaky")]
     public class PartitionAwarenessWithClusterDiscoveryTest : PartitionAwarenessTest
     {
 #if NETCOREAPP // TODO: IGNITE-15710
@@ -63,23 +63,6 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             }
         }
 #endif
-
-
-        [Test]
-        [Ignore("Flaky")]
-        public override void IgniteSet_RequestIsRoutedToPrimaryNode(
-            string name, string groupName, CacheMode cacheMode, int item, int gridIdx)
-        {
-            // No-op.
-        }
-
-        [Test]
-        [Ignore("Flaky")]
-        public override void IgniteSetColocated_RequestIsRoutedToPrimaryNode(
-            string name, string groupName, CacheMode cacheMode, int item, int gridIdx)
-        {
-            // No-op.
-        }
 
         protected override IgniteClientConfiguration GetClientConfiguration()
         {

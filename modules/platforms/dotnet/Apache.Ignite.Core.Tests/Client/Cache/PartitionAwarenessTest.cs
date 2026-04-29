@@ -600,7 +600,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [TestCase("default-grp-partitioned-set", null, CacheMode.Partitioned, 4, 1)]
         [TestCase("custom-grp-partitioned-set", "testIgniteSet1", CacheMode.Partitioned, 1, 1)]
         [TestCase("custom-grp-partitioned-set", "testIgniteSet1", CacheMode.Partitioned, 3, 0)]
-        public virtual void IgniteSet_RequestIsRoutedToPrimaryNode(
+        public void IgniteSet_RequestIsRoutedToPrimaryNode(
             string name, string groupName, CacheMode cacheMode, int item, int gridIdx)
         {
             var cfg = new CollectionClientConfiguration
@@ -630,7 +630,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [TestCase("custom-grp-partitioned-set-2", "testIgniteSetColocated1", CacheMode.Partitioned, 1, 1)]
         [TestCase("custom-grp-partitioned-set-2", "testIgniteSetColocated1", CacheMode.Partitioned, 2, 1)]
         [TestCase("custom-grp-partitioned-set-2", "testIgniteSetColocated1", CacheMode.Partitioned, 3, 1)]
-        public virtual void IgniteSetColocated_RequestIsRoutedToPrimaryNode(
+        public void IgniteSetColocated_RequestIsRoutedToPrimaryNode(
             string name, string groupName, CacheMode cacheMode, int item, int gridIdx)
         {
             var cfg = new CollectionClientConfiguration
