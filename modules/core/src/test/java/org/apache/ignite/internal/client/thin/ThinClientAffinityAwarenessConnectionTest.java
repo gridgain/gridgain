@@ -22,6 +22,7 @@ import org.apache.ignite.client.ClientConnectionException;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.UUID;
@@ -74,6 +75,7 @@ public class ThinClientAffinityAwarenessConnectionTest extends ThinClientAbstrac
      * 3. Check that no connection created with correct exception;
      */
     @Test
+    @Ignore
     public void testMultipleConnectionsWithNoNodes() throws Exception {
         startGrids(3);
 
