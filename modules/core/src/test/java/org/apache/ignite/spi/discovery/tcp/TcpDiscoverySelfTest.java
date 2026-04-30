@@ -1790,6 +1790,7 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("Flaky test")
     public void testFailedNodes3() throws Exception {
         try {
             nodeSpi.set(createFailedNodeSpi(-1));

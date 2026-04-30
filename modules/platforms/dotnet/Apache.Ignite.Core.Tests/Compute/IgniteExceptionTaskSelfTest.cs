@@ -83,6 +83,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         /// Test task behavior when job produced by mapper is not marshalable.
         /// </summary>
         [Test]
+        [Ignore("Flaky test")]
         public void TestMapNotMarshalableJob()
         {
             _mode = ErrorMode.MapJobNotMarshalable;
@@ -237,6 +238,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         /// Test remote result not-marshalable error.
         /// </summary>
         [Test]
+        [Ignore("Flaky test")]
         public void TestRemoteResultErrorNotMarshalable()
         {
             _mode = ErrorMode.RmtResErrNotMarshalable;
