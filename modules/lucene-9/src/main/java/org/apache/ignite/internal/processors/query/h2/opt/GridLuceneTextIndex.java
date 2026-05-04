@@ -329,7 +329,6 @@ public class GridLuceneTextIndex implements LuceneIndex {
          * @return Object.
          * @throws IgniteCheckedException If failed.
          */
-        @SuppressWarnings("unchecked")
         private <Z> Z unmarshall(byte[] bytes, ClassLoader ldr) throws IgniteCheckedException {
             if (coctx == null) // For tests.
                 return (Z)JdbcUtils.deserialize(bytes, null);
@@ -342,7 +341,6 @@ public class GridLuceneTextIndex implements LuceneIndex {
          *
          * @throws IgniteCheckedException If failed.
          */
-        @SuppressWarnings("unchecked")
         private void findNext() throws IgniteCheckedException {
             curr = null;
 
@@ -350,7 +348,7 @@ public class GridLuceneTextIndex implements LuceneIndex {
                 Document doc;
 
                 try {
-                    doc = searcher.doc(docs[idx++].doc);
+                    doc = searcher.storedFields().document(docs[idx++].doc);
                 }
                 catch (IOException e) {
                     throw new IgniteCheckedException(e);

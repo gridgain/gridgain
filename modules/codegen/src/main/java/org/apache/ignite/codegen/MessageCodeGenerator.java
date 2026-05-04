@@ -932,7 +932,6 @@ public class MessageCodeGenerator {
      * @param col Classes.
      * @throws Exception In case of error.
      */
-    @SuppressWarnings("unchecked")
     private void processFile(File file, ClassLoader ldr, int prefixLen,
         Collection<Class<? extends Message>> col) throws Exception {
         assert file != null;
