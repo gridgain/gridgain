@@ -492,6 +492,8 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
         assertNull(tbl.get(8)); // VALUE_ALIAS
         assertEquals("java.lang.Long", tbl.get(9)); // KEY_TYPE_NAME
         assertNotNull(tbl.get(10)); // VALUE_TYPE_NAME
+        assertFalse((Boolean) tbl.get(11)); // IS_INDEX_REBUILD_IN_PROGRESS
+        assertNull(tbl.get(12)); // BINARY_AFFINITY_FIELD
 
         execute(ignite0, "CREATE TABLE T2(ID LONG PRIMARY KEY, NAME VARCHAR)");
 

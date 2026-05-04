@@ -568,6 +568,8 @@ public class QueryUtils {
                     BinaryField field = mapper.affinityKeyField(keyType);
 
                     if (field != null) {
+                        desc.setbinaryAffinityField(field.name());
+
                         String affField0 = field.name();
 
                         if (!F.isEmpty(qryEntity.getKeyFields()) && qryEntity.getKeyFields().contains(affField0)) {

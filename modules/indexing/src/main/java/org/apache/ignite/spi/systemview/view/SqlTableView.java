@@ -17,6 +17,7 @@
 package org.apache.ignite.spi.systemview.view;
 
 import org.apache.ignite.internal.managers.systemview.walker.Order;
+import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.gridgain.internal.h2.table.IndexColumn;
 
@@ -35,15 +36,25 @@ public class SqlTableView {
      */
     public SqlTableView(GridH2Table tbl) {
         this.tbl = tbl;
+        this.affColName = resolveAffColumn(tbl);
+    }
 
+    private static String resolveAffColumn(GridH2Table tbl) {
         IndexColumn affCol = tbl.getAffinityKeyColumn();
 
         if (affCol != null) {
             // Only explicit affinity column should be shown. Do not do this for _KEY or it's alias.
             if (!tbl.rowDescriptor().isKeyColumn(affCol.column.getColumnId())) {
-                affColName = affCol.columnName;
+                return affCol.columnName;
             }
         }
+        else {
+            GridQueryTypeDescriptor type = tbl.rowDescriptor().type();
+
+            return type.aliases().get(type.binaryAffinityField());
+        }
+
+        return null;
     }
 
     /**
@@ -159,5 +170,15 @@ public class SqlTableView {
     /** @return {@code True} if index rebuild is in progress. */
     public boolean isIndexRebuildInProgress() {
         return tbl.rebuildFromHashInProgress();
+    }
+
+    /**
+     * Returns name of affinity key column.
+     *
+     * @return Affinity key column name.
+     */
+    @Order(12)
+    public String binaryAffinityField() {
+        return tbl.rowDescriptor().type().binaryAffinityField();
     }
 }

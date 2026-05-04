@@ -40,6 +40,7 @@ public class SqlTableViewWalker implements SystemViewRowAttributeWalker<SqlTable
         v.accept(9, "keyTypeName", String.class);
         v.accept(10, "valueTypeName", String.class);
         v.accept(11, "isIndexRebuildInProgress", boolean.class);
+        v.accept(12, "binaryAffinityField", String.class);
     }
 
     /** {@inheritDoc} */
@@ -56,10 +57,11 @@ public class SqlTableViewWalker implements SystemViewRowAttributeWalker<SqlTable
         v.accept(9, "keyTypeName", String.class, row.keyTypeName());
         v.accept(10, "valueTypeName", String.class, row.valueTypeName());
         v.acceptBoolean(11, "isIndexRebuildInProgress", row.isIndexRebuildInProgress());
+        v.accept(12, "binaryAffinityField", String.class, row.binaryAffinityField());
     }
 
     /** {@inheritDoc} */
     @Override public int count() {
-        return 12;
+        return 13;
     }
 }

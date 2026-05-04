@@ -18,6 +18,7 @@ package org.apache.ignite.spi.systemview.view;
 
 import org.apache.ignite.internal.managers.systemview.walker.Order;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
+import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.gridgain.internal.h2.table.Column;
@@ -104,13 +105,23 @@ public class SqlTableColumnView {
         return tbl.rowDescriptor().isKeyColumn(col.getColumnId());
     }
 
-    /** @return {@code True} if autoincremented field. */
+    /** @return {@code True} if autoincrement field. */
     public boolean autoIncrement() {
         return col.isAutoIncrement();
     }
 
-    /** @return {@code True} if autoincremented field. */
+    /** @return {@code True} if affinity key field. */
     public boolean affinityColumn() {
-        return affCol != null && col.getColumnId() == affCol.column.getColumnId();
+        boolean isAffinityColumn = affCol != null && col.getColumnId() == affCol.column.getColumnId();
+
+        return isAffinityColumn || isAliasOfBinaryAffinityField();
+    }
+
+    private boolean isAliasOfBinaryAffinityField() {
+        GridQueryTypeDescriptor type = tbl.rowDescriptor().type();
+        String affFieldSqlAlias = type.aliases().get(type.binaryAffinityField());
+
+        return affFieldSqlAlias != null
+            && col.getColumnId() == tbl.getColumn(affFieldSqlAlias).getColumnId();
     }
 }
