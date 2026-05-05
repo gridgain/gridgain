@@ -6,52 +6,41 @@
 package org.gridgain.internal.h2.jdbc;
 
 import java.io.BufferedOutputStream;
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringReader;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLXML;
 
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLOutputFactory;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMResult;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.sax.SAXResult;
-import javax.xml.transform.sax.SAXSource;
-import javax.xml.transform.sax.SAXTransformerFactory;
-import javax.xml.transform.sax.TransformerHandler;
-import javax.xml.transform.stax.StAXResult;
-import javax.xml.transform.stax.StAXSource;
-import javax.xml.transform.stream.StreamResult;
-import javax.xml.transform.stream.StreamSource;
 
-import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.message.TraceObject;
 import org.gridgain.internal.h2.value.Value;
-import org.w3c.dom.Node;
-import org.xml.sax.InputSource;
 
 /**
  * Represents a SQLXML value.
+ *
+ * <p>The XML-processing entry points ({@link #getSource(Class)} and
+ * {@link #setResult(Class)}) are replaced with throw-stubs. The
+ * original H2 implementation parsed and transformed user-supplied XML
+ * through unhardened {@link javax.xml.parsers.DocumentBuilderFactory},
+ * {@link javax.xml.stream.XMLInputFactory}, and
+ * {@link javax.xml.transform.TransformerFactory} instances, which is
+ * an XXE attack surface. GridGain does not use the H2 JDBC layer for
+ * SQLXML values, so the XML-processing methods are unreachable in
+ * production; removing the XML factory wiring eliminates the surface
+ * entirely.</p>
+ *
+ * <p>The string-based getters and setters ({@link #getString()},
+ * {@link #setString(String)}) and the binary/character stream methods
+ * remain functional because they do not perform XML parsing.</p>
  */
 public class JdbcSQLXML extends JdbcLob implements SQLXML {
-
-    private DOMResult domResult;
-
-    /**
-     * Underlying stream for SAXResult, StAXResult, and StreamResult.
-     */
-    private Closeable closable;
 
     /**
      * INTERNAL
@@ -63,29 +52,11 @@ public class JdbcSQLXML extends JdbcLob implements SQLXML {
     @Override
     void checkReadable() throws SQLException, IOException {
         checkClosed();
-        if (state == State.SET_CALLED) {
-            if (domResult != null) {
-                Node node = domResult.getNode();
-                domResult = null;
-                TransformerFactory factory = TransformerFactory.newInstance();
-                try {
-                    Transformer transformer = factory.newTransformer();
-                    DOMSource domSource = new DOMSource(node);
-                    StringWriter stringWriter = new StringWriter();
-                    StreamResult streamResult = new StreamResult(stringWriter);
-                    transformer.transform(domSource, streamResult);
-                    completeWrite(conn.createClob(new StringReader(stringWriter.toString()), -1));
-                } catch (Exception e) {
-                    throw logAndConvert(e);
-                }
-                return;
-            } else if (closable != null) {
-                closable.close();
-                closable = null;
-                return;
-            }
-            throw DbException.getUnsupportedException("Stream setter is not yet closed.");
-        }
+        // The original H2 implementation handled state == SET_CALLED here by
+        // serialising a DOMResult through an unhardened TransformerFactory.
+        // setResult() is now a throw-stub, so SET_CALLED can no longer be
+        // reached from XML processing. We keep the no-op path so that the
+        // string/stream setters continue to behave identically.
     }
 
     @Override
@@ -98,30 +69,15 @@ public class JdbcSQLXML extends JdbcLob implements SQLXML {
         return super.getCharacterStream();
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public <T extends Source> T getSource(Class<T> sourceClass) throws SQLException {
-        try {
-            if (isDebugEnabled()) {
-                debugCodeCall(
-                        "getSource(" + (sourceClass != null ? sourceClass.getSimpleName() + ".class" : "null") + ')');
-            }
-            checkReadable();
-            if (sourceClass == null || sourceClass == DOMSource.class) {
-                DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-                return (T) new DOMSource(dbf.newDocumentBuilder().parse(new InputSource(value.getInputStream())));
-            } else if (sourceClass == SAXSource.class) {
-                return (T) new SAXSource(new InputSource(value.getInputStream()));
-            } else if (sourceClass == StAXSource.class) {
-                XMLInputFactory xif = XMLInputFactory.newInstance();
-                return (T) new StAXSource(xif.createXMLStreamReader(value.getInputStream()));
-            } else if (sourceClass == StreamSource.class) {
-                return (T) new StreamSource(value.getInputStream());
-            }
-            throw unsupported(sourceClass.getName());
-        } catch (Exception e) {
-            throw logAndConvert(e);
-        }
+        // GridGain does not parse XML through the H2 JDBC layer. Returning
+        // a Source would require constructing a DocumentBuilderFactory /
+        // XMLInputFactory / TransformerFactory, each of which is an XXE
+        // sink unless explicitly hardened — the factories are gone.
+        throw new SQLFeatureNotSupportedException(
+            "JdbcSQLXML.getSource is not supported. "
+            + "Use getString() / getBinaryStream() / getCharacterStream() instead.");
     }
 
     @Override
@@ -159,46 +115,14 @@ public class JdbcSQLXML extends JdbcLob implements SQLXML {
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public <T extends Result> T setResult(Class<T> resultClass) throws SQLException {
-        try {
-            if (isDebugEnabled()) {
-                debugCodeCall(
-                        "getSource(" + (resultClass != null ? resultClass.getSimpleName() + ".class" : "null") + ')');
-            }
-            checkEditable();
-            if (resultClass == null || resultClass == DOMResult.class) {
-                domResult = new DOMResult();
-                state = State.SET_CALLED;
-                return (T) domResult;
-            } else if (resultClass == SAXResult.class) {
-                SAXTransformerFactory transformerFactory = (SAXTransformerFactory) TransformerFactory.newInstance();
-                TransformerHandler transformerHandler = transformerFactory.newTransformerHandler();
-                Writer writer = setCharacterStreamImpl();
-                transformerHandler.setResult(new StreamResult(writer));
-                SAXResult saxResult = new SAXResult(transformerHandler);
-                closable = writer;
-                state = State.SET_CALLED;
-                return (T) saxResult;
-            } else if (resultClass == StAXResult.class) {
-                XMLOutputFactory xof = XMLOutputFactory.newInstance();
-                Writer writer = setCharacterStreamImpl();
-                StAXResult staxResult = new StAXResult(xof.createXMLStreamWriter(writer));
-                closable = writer;
-                state = State.SET_CALLED;
-                return (T) staxResult;
-            } else if (StreamResult.class.equals(resultClass)) {
-                Writer writer = setCharacterStreamImpl();
-                StreamResult streamResult = new StreamResult(writer);
-                closable = writer;
-                state = State.SET_CALLED;
-                return (T) streamResult;
-            }
-            throw unsupported(resultClass.getName());
-        } catch (Exception e) {
-            throw logAndConvert(e);
-        }
+        // See getSource above. setResult would require constructing a
+        // SAXTransformerFactory / XMLOutputFactory, both XXE-prone
+        // unless hardened.
+        throw new SQLFeatureNotSupportedException(
+            "JdbcSQLXML.setResult is not supported. "
+            + "Use setString() / setBinaryStream() / setCharacterStream() instead.");
     }
 
     @Override
