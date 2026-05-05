@@ -172,6 +172,9 @@ cd $PSScriptRoot
 
 
 # 2) Build .NET
+Exec "dotnet --version"
+Exec "dotnet --list-sdks"
+
 if (!$skipDotNet) {
     Build-Solution ".\Apache.Ignite.sln" "bin\net461"
 
