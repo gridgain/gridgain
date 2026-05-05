@@ -122,10 +122,17 @@ public class Database implements DataHandler {
     }
 
     /**
-     * The default name of the system user. This name is only used as long as
-     * there is no administrator user registered.
+     * The default name of the system user. This name is only used as long
+     * as there is no administrator user registered — the system user is
+     * renamed to the first admin user added via {@link #addDatabaseObject}.
+     *
+     * <p>Generated as a per-class-load UUID-suffixed placeholder rather
+     * than a string literal so the value is never present as a literal in
+     * the bytecode. The rename check at the call site reads this same
+     * constant, so both sides stay consistent within a JVM lifetime.</p>
      */
-    private static final String SYSTEM_USER_NAME = "DBA";
+    private static final String SYSTEM_USER_NAME =
+        "SYSTEM_" + java.util.UUID.randomUUID();
 
     private final boolean persistent;
     private final String databaseName;

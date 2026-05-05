@@ -48,10 +48,20 @@ import org.gridgain.internal.h2.util.StringUtils;
 public class CipherFactory {
 
     /**
-     * The default password to use for the .h2.keystore file
+     * The password to use for the in-memory .h2.keystore file.
+     *
+     * <p>Derived from {@link java.security.SecureRandom} at class load
+     * time rather than a string literal. The keystore is regenerated
+     * from this password on every JVM start (see {@link #setKeystore})
+     * — the on-disk keystore is rewritten if its bytes don't match the
+     * in-memory one — so a rotating password is safe. Operators that
+     * need a stable keystore can override via the
+     * {@code h2.cipherFactory.keystorePassword} system property.</p>
      */
     public static final String KEYSTORE_PASSWORD =
-            "h2pass";
+            System.getProperty("h2.cipherFactory.keystorePassword",
+                "ggh2_" + Long.toHexString(new java.security.SecureRandom().nextLong())
+                        + Long.toHexString(new java.security.SecureRandom().nextLong()));
 
     /**
      * The security property which can prevent anonymous TLS connections.

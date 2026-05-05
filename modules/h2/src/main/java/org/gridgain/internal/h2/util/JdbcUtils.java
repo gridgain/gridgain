@@ -15,8 +15,6 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Properties;
-import javax.naming.Context;
-import javax.sql.DataSource;
 import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.store.DataHandler;
@@ -301,17 +299,12 @@ public class JdbcUtils {
                         return connection;
                     }
                     throw new SQLException("Driver " + driver + " is not suitable for " + url, "08001");
-                } else if (javax.naming.Context.class.isAssignableFrom(d)) {
-                    // JNDI context
-                    Context context = (Context) d.getDeclaredConstructor().newInstance();
-                    DataSource ds = (DataSource) context.lookup(url);
-                    String user = prop.getProperty("user");
-                    String password = prop.getProperty("password");
-                    if (StringUtils.isNullOrEmpty(user) && StringUtils.isNullOrEmpty(password)) {
-                        return ds.getConnection();
-                    }
-                    return ds.getConnection(user, password);
                 }
+                // The JNDI Context.lookup(url) branch was removed: looking
+                // up a user-supplied URL through a JNDI context is a
+                // well-known deserialization / RCE vector. The Driver
+                // branch above and the DriverManager fall-through below
+                // cover all production callers.
             } catch (Exception e) {
                 throw DbException.toSQLException(e);
             }
