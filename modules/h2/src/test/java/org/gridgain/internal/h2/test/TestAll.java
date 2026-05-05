@@ -25,7 +25,6 @@ import org.gridgain.internal.h2.test.db.TestBigDb;
 import org.gridgain.internal.h2.test.db.TestBigResult;
 import org.gridgain.internal.h2.test.db.TestCases;
 import org.gridgain.internal.h2.test.db.TestCheckpoint;
-import org.gridgain.internal.h2.test.db.TestCluster;
 import org.gridgain.internal.h2.test.db.TestCompatibility;
 import org.gridgain.internal.h2.test.db.TestCompatibilityOracle;
 import org.gridgain.internal.h2.test.db.TestCompatibilitySQLServer;
@@ -77,7 +76,6 @@ import org.gridgain.internal.h2.test.db.TestTableEngines;
 import org.gridgain.internal.h2.test.db.TestTempTables;
 import org.gridgain.internal.h2.test.db.TestTransaction;
 import org.gridgain.internal.h2.test.db.TestTwoPhaseCommit;
-import org.gridgain.internal.h2.test.db.TestUpgrade;
 import org.gridgain.internal.h2.test.db.TestUsingIndex;
 import org.gridgain.internal.h2.test.db.TestView;
 import org.gridgain.internal.h2.test.db.TestViewAlterTable;
@@ -132,10 +130,8 @@ import org.gridgain.internal.h2.test.unit.TestPageStore;
 import org.gridgain.internal.h2.test.unit.TestPattern;
 import org.gridgain.internal.h2.test.unit.TestPerfectHash;
 import org.gridgain.internal.h2.test.unit.TestReader;
-import org.gridgain.internal.h2.test.unit.TestSampleApps;
 import org.gridgain.internal.h2.test.unit.TestScriptReader;
 import org.gridgain.internal.h2.test.unit.TestSecurity;
-import org.gridgain.internal.h2.test.unit.TestShell;
 import org.gridgain.internal.h2.test.unit.TestSort;
 import org.gridgain.internal.h2.test.unit.TestStringCache;
 import org.gridgain.internal.h2.test.unit.TestTimeStampWithTimeZone;
@@ -156,7 +152,6 @@ import org.gridgain.internal.h2.test.scripts.TestScript;
 import org.gridgain.internal.h2.test.server.TestAutoServer;
 import org.gridgain.internal.h2.test.server.TestInit;
 import org.gridgain.internal.h2.test.server.TestNestedLoop;
-import org.gridgain.internal.h2.test.server.TestWeb;
 import org.gridgain.internal.h2.test.store.TestCacheConcurrentLIRS;
 import org.gridgain.internal.h2.test.store.TestCacheLIRS;
 import org.gridgain.internal.h2.test.store.TestCacheLongKeyLIRS;
@@ -220,7 +215,6 @@ import org.gridgain.internal.h2.test.unit.TestMemoryUnmapper;
 import org.gridgain.internal.h2.test.unit.TestObjectDeserialization;
 import org.gridgain.internal.h2.test.unit.TestOverflow;
 import org.gridgain.internal.h2.test.unit.TestPageStoreCoverage;
-import org.gridgain.internal.h2.test.unit.TestPgServer;
 import org.gridgain.internal.h2.test.unit.TestRecovery;
 import org.gridgain.internal.h2.test.unit.TestReopen;
 import org.gridgain.internal.h2.test.unit.TestStreams;
@@ -873,7 +867,6 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
         addTest(new TestRandomSQL());
         addTest(new TestQueryCache());
         addTest(new TestUrlJavaObjectSerializer());
-        addTest(new TestWeb());
 
         // other unsafe
         addTest(new TestOptimizations());
@@ -907,24 +900,18 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
         addTest(new TestMultiThreadedKernel());
         addTest(new TestPageStore());
         addTest(new TestPageStoreCoverage());
-        addTest(new TestPgServer());
         addTest(new TestRecovery());
         addTest(new RecoverLobTest());
-        addTest(createTest("org.gridgain.internal.h2.test.unit.TestServlet"));
         addTest(new TestTimeStampWithTimeZone());
-        addTest(new TestUpgrade());
         addTest(new TestUsingIndex());
         addTest(new TestValue());
-        addTest(new TestWeb());
 
         runAddedTests();
 
-        addTest(new TestCluster());
         addTest(new TestFileLockSerialized());
 //        addTest(new TestFileLockProcess());
         addTest(new TestDefrag());
 //        addTest(new TestTools());
-        addTest(new TestSampleApps());
         addTest(new TestSubqueryPerformanceOnLazyExecutionMode());
 
         runAddedTests(1);
@@ -983,7 +970,6 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
         addTest(new TestReader());
         addTest(new TestScriptReader());
         addTest(new TestSecurity());
-        addTest(new TestShell());
         addTest(new TestSort());
         addTest(new TestStreams());
         addTest(new TestStringUtils());
