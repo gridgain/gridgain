@@ -124,6 +124,11 @@ while (!((Test-Path bin) -and (Test-Path examples) -and ((Test-Path modules) -or
 	}
 }
 
+echo "Checking prerequisites..."
+
+dotnet --version
+dotnet --list-sdks
+
 echo "Ignite home detected at '$pwd'."
 
 if (!$skipJava) {
@@ -172,9 +177,6 @@ cd $PSScriptRoot
 
 
 # 2) Build .NET
-Exec "dotnet --version"
-Exec "dotnet --list-sdks"
-
 if (!$skipDotNet) {
     Build-Solution ".\Apache.Ignite.sln" "bin\net461"
 
