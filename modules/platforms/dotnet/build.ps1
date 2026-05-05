@@ -126,8 +126,8 @@ while (!((Test-Path bin) -and (Test-Path examples) -and ((Test-Path modules) -or
 
 echo "Checking prerequisites..."
 
-dotnet --version
-dotnet --list-sdks
+Exec "dotnet --version"
+Exec "dotnet --list-sdks"
 
 echo "Ignite home detected at '$pwd'."
 
