@@ -8,12 +8,20 @@ package org.gridgain.internal.h2.util;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InvalidClassException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.ObjectStreamClass;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Properties;
 import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.message.DbException;
@@ -27,6 +35,128 @@ import org.gridgain.internal.h2.util.Utils.ClassFactory;
  * This is a utility class with JDBC helper functions.
  */
 public class JdbcUtils {
+
+    /**
+     * Class-name prefixes blocked when {@link #deserialize(byte[], DataHandler)}
+     * resolves classes during native Java deserialisation. The list covers the
+     * well-known gadget chains used in CWE-502 exploits (Apache Commons
+     * Collections, BeanUtils, Spring property factories, Groovy / OGNL / BSH
+     * runtime closures, RMI / JNDI lookup classes, JDK reflection proxies,
+     * and the {@link com.sun.rowset.JdbcRowSetImpl} JNDI sink). Any class
+     * whose name equals or starts with one of these prefixes is rejected
+     * with {@link InvalidClassException}.
+     */
+    private static final List<String> BLOCKED_DESERIALIZATION_PREFIXES =
+        Collections.unmodifiableList(Arrays.asList(
+            "java.lang.reflect.Proxy",
+            "java.beans.XMLDecoder",
+            "java.rmi.server.",
+            "javax.rmi.",
+            "sun.rmi.",
+            "javax.naming.",
+            "javax.script.",
+            "javax.swing.",
+            "com.sun.rowset.JdbcRowSetImpl",
+            "javax.sql.rowset.BaseRowSet",
+            "org.apache.commons.collections.functors.",
+            "org.apache.commons.collections4.functors.",
+            "org.apache.commons.beanutils.BeanComparator",
+            "org.apache.commons.fileupload.disk.DiskFileItem",
+            "org.codehaus.groovy.runtime.",
+            "org.springframework.beans.factory.config.PropertyPathFactoryBean",
+            "ognl.",
+            "bsh.",
+            "clojure.lang.",
+            "groovy.lang."
+        ));
+
+    /**
+     * Constructs an {@link ObjectInputStream} that rejects classes blocked
+     * by {@link #BLOCKED_DESERIALIZATION_PREFIXES} via {@code resolveClass},
+     * and additionally installs an {@link java.io.ObjectInputFilter} via
+     * reflection on Java 9+ runtimes (the API does not exist when compiled
+     * with {@code --release 8}, but we can call it reflectively if the
+     * deploy-time JVM provides it). The two layers compose: even on a
+     * Java 8 JVM where the filter is unavailable, the {@code resolveClass}
+     * denylist remains in force.
+     */
+    private static ObjectInputStream hardenedObjectInputStream(InputStream in) throws IOException {
+        final ClassLoader loader = SysProperties.USE_THREAD_CONTEXT_CLASS_LOADER
+            ? Thread.currentThread().getContextClassLoader() : null;
+        ObjectInputStream is = new ObjectInputStream(in) {
+            @Override
+            protected Class<?> resolveClass(ObjectStreamClass desc)
+                    throws IOException, ClassNotFoundException {
+                String name = desc.getName();
+                for (String prefix : BLOCKED_DESERIALIZATION_PREFIXES) {
+                    if (name.equals(prefix) || name.startsWith(prefix)) {
+                        throw new InvalidClassException(name,
+                            "Blocked by JdbcUtils deserialization filter (CWE-502 hardening)");
+                    }
+                }
+                if (loader != null) {
+                    try {
+                        return Class.forName(name, true, loader);
+                    } catch (ClassNotFoundException e) {
+                        // fall through to default resolution
+                    }
+                }
+                return super.resolveClass(desc);
+            }
+        };
+        installObjectInputFilterIfAvailable(is);
+        return is;
+    }
+
+    /**
+     * Installs a {@link java.io.ObjectInputFilter} on the given stream when
+     * running on Java 9+. On Java 8 the API is absent and the call is a
+     * no-op; the {@code resolveClass} denylist still applies.
+     */
+    private static void installObjectInputFilterIfAvailable(ObjectInputStream is) {
+        try {
+            Class<?> filterCls = Class.forName("java.io.ObjectInputFilter");
+            Class<?> filterInfoCls = Class.forName("java.io.ObjectInputFilter$FilterInfo");
+            Class<?> statusCls = Class.forName("java.io.ObjectInputFilter$Status");
+            // Resolve serialClass() on the (exported) FilterInfo interface so the
+            // call works against the JDK's package-private FilterInfo
+            // implementation under JPMS.
+            final Method serialClassMethod = filterInfoCls.getMethod("serialClass");
+            final Object rejected = statusCls.getField("REJECTED").get(null);
+            final Object allowed = statusCls.getField("ALLOWED").get(null);
+            // Build a filter that rejects the same prefix denylist.
+            Object filterInstance = Proxy.newProxyInstance(
+                filterCls.getClassLoader(),
+                new Class<?>[]{ filterCls },
+                new InvocationHandler() {
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                        // Only the checkInput(FilterInfo) method should be intercepted.
+                        if ("checkInput".equals(method.getName()) && args != null && args.length == 1) {
+                            Object info = args[0];
+                            Class<?> serialClass = (Class<?>) serialClassMethod.invoke(info);
+                            if (serialClass != null) {
+                                String name = serialClass.getName();
+                                for (String prefix : BLOCKED_DESERIALIZATION_PREFIXES) {
+                                    if (name.equals(prefix) || name.startsWith(prefix)) {
+                                        return rejected;
+                                    }
+                                }
+                            }
+                            return allowed;
+                        }
+                        return null;
+                    }
+                });
+            Method setFilter = ObjectInputStream.class
+                .getMethod("setObjectInputFilter", filterCls);
+            setFilter.invoke(is, filterInstance);
+        } catch (ClassNotFoundException notJava9) {
+            // Java 8: ObjectInputFilter is unavailable. resolveClass denylist still applies.
+        } catch (ReflectiveOperationException reflectFailure) {
+            // Filter API exists but reflection failed; resolveClass denylist still applies.
+        }
+    }
 
     /**
      * The serializer to use.
@@ -396,23 +526,7 @@ public class JdbcUtils {
                 return serializer.deserialize(data);
             }
             ByteArrayInputStream in = new ByteArrayInputStream(data);
-            ObjectInputStream is;
-            if (SysProperties.USE_THREAD_CONTEXT_CLASS_LOADER) {
-                final ClassLoader loader = Thread.currentThread().getContextClassLoader();
-                is = new ObjectInputStream(in) {
-                    @Override
-                    protected Class<?> resolveClass(ObjectStreamClass desc)
-                            throws IOException, ClassNotFoundException {
-                        try {
-                            return Class.forName(desc.getName(), true, loader);
-                        } catch (ClassNotFoundException e) {
-                            return super.resolveClass(desc);
-                        }
-                    }
-                };
-            } else {
-                is = new ObjectInputStream(in);
-            }
+            ObjectInputStream is = hardenedObjectInputStream(in);
             return is.readObject();
         } catch (Throwable e) {
             throw DbException.get(ErrorCode.DESERIALIZATION_FAILED_1, e, e.toString());
