@@ -100,6 +100,41 @@
             </activation>
             <dependencies/>
         </profile>
+
+        <!--
+            Opt-in static-analysis profile that runs SpotBugs + FindSecBugs
+            against the assembled ignite-h2 classes, scoped to the security
+            CWE classes listed in spotbugs-include.xml. Not part of the
+            normal build.
+
+            Run with:  mvn -pl modules/h2 -Pstatic-analysis spotbugs:spotbugs
+            Output:    modules/h2/target/spotbugsXml.xml
+        -->
+        <profile>
+            <id>static-analysis</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs-maven-plugin</artifactId>
+                        <version>4.8.6.6</version>
+                        <configuration>
+                            <effort>Max</effort>
+                            <threshold>Low</threshold>
+                            <includeFilterFile>${project.basedir}/spotbugs-include.xml</includeFilterFile>
+                            <jvmArgs>-Dfindsecbugs.taint.customconfigfile=${project.basedir}/findsecbugs-custom-taint.txt</jvmArgs>
+                            <plugins>
+                                <plugin>
+                                    <groupId>com.h3xstream.findsecbugs</groupId>
+                                    <artifactId>findsecbugs-plugin</artifactId>
+                                    <version>1.13.0</version>
+                                </plugin>
+                            </plugins>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 
     <build>

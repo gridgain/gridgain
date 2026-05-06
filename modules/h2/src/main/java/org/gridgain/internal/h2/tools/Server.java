@@ -12,8 +12,6 @@ import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.server.Service;
 import org.gridgain.internal.h2.server.ShutdownHandler;
 import org.gridgain.internal.h2.server.TcpServer;
-import org.gridgain.internal.h2.server.pg.PgServer;
-import org.gridgain.internal.h2.server.web.WebServer;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.util.Tool;
 
@@ -317,33 +315,12 @@ public class Server extends Tool implements Runnable, ShutdownHandler {
                 tcp.setShutdownHandler(this);
             }
             if (pgStart) {
-                pg = createPgServer(args);
-                pg.start();
-                out.println(pg.getStatus());
+                throw DbException.getUnsupportedException(
+                    "PG protocol server has been removed in GridGain");
             }
             if (webStart) {
-                web = createWebServer(args);
-                web.setShutdownHandler(this);
-                SQLException result = null;
-                try {
-                    web.start();
-                } catch (Exception e) {
-                    result = DbException.toSQLException(e);
-                }
-                out.println(web.getStatus());
-                // start browser in any case (even if the server is already
-                // running) because some people don't look at the output, but
-                // are wondering why nothing happens
-                if (browserStart) {
-                    try {
-                        openBrowser(web.getURL());
-                    } catch (Exception e) {
-                        out.println(e.getMessage());
-                    }
-                }
-                if (result != null) {
-                    throw result;
-                }
+                throw DbException.getUnsupportedException(
+                    "H2 web console has been removed in GridGain");
             } else if (browserStart) {
                 out.println("The browser can only start if a web server is started (-web)");
             }
@@ -422,27 +399,18 @@ public class Server extends Tool implements Runnable, ShutdownHandler {
      * @return the server
      */
     public static Server createWebServer(String... args) throws SQLException {
-        return createWebServer(args, null, false);
+        // The H2 web console has been removed in GridGain.
+        throw DbException.getUnsupportedException(
+            "H2 web console has been removed in GridGain");
     }
 
     /**
-     * Create a new web server, but does not start it yet.
-     *
-     * @param args
-     *            the argument list
-     * @param key
-     *            key, or null
-     * @param allowSecureCreation
-     *            whether creation of databases using the key should be allowed
-     * @return the server
+     * @deprecated The H2 web console has been removed in GridGain.
      */
+    @Deprecated
     static Server createWebServer(String[] args, String key, boolean allowSecureCreation) throws SQLException {
-        WebServer service = new WebServer();
-        service.setKey(key);
-        service.setAllowSecureCreation(allowSecureCreation);
-        Server server = new Server(service, args);
-        service.setShutdownHandler(server);
-        return server;
+        throw DbException.getUnsupportedException(
+            "H2 web console has been removed in GridGain");
     }
 
     /**
@@ -493,7 +461,9 @@ public class Server extends Tool implements Runnable, ShutdownHandler {
      * @return the server
      */
     public static Server createPgServer(String... args) throws SQLException {
-        return new Server(new PgServer(), args);
+        // The H2 PG protocol server has been removed in GridGain.
+        throw DbException.getUnsupportedException(
+            "PG protocol server has been removed in GridGain");
     }
 
     /**
@@ -671,27 +641,9 @@ public class Server extends Tool implements Runnable, ShutdownHandler {
      *         {@code .h2.server.properties} will be ignored
      */
     public static void startWebServer(Connection conn, boolean ignoreProperties) throws SQLException {
-        WebServer webServer = new WebServer();
-        String[] args;
-        if (ignoreProperties) {
-            args = new String[] { "-webPort", "0", "-properties", "null"};
-        } else {
-            args = new String[] { "-webPort", "0" };
-        }
-        Server web = new Server(webServer, args);
-        web.start();
-        Server server = new Server();
-        server.web = web;
-        webServer.setShutdownHandler(server);
-        String url = webServer.addSession(conn);
-        try {
-            Server.openBrowser(url);
-            while (!webServer.isStopped()) {
-                Thread.sleep(1000);
-            }
-        } catch (Exception e) {
-            // ignore
-        }
+        // The H2 web console has been removed in GridGain.
+        throw DbException.getUnsupportedException(
+            "H2 web console has been removed in GridGain");
     }
 
 }

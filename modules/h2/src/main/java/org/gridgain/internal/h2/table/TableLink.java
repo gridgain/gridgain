@@ -49,6 +49,12 @@ public class TableLink extends Table {
 
     private final String originalSchema;
     private String driver, url, user, password, originalTable, qualifiedTableName;
+    /**
+     * The qualified table name with each component double-quoted and embedded
+     * quotes escaped, so it can be safely concatenated into SQL. Computed in
+     * {@link #readMetaData()} once {@code qualifiedTableName} is known.
+     */
+    private String safeQualifiedTableName;
     private TableLinkConnection conn;
     private HashMap<String, PreparedStatement> preparedMap = new HashMap<>();
     private final ArrayList<Index> indexes = Utils.newSmallArrayList();
@@ -164,14 +170,17 @@ public class TableLink extends Table {
         rs.close();
         if (originalTable.indexOf('.') < 0 && !StringUtils.isNullOrEmpty(schema)) {
             qualifiedTableName = schema + "." + originalTable;
+            safeQualifiedTableName =
+                    StringUtils.quoteIdentifier(schema) + '.' + StringUtils.quoteIdentifier(originalTable);
         } else {
             qualifiedTableName = originalTable;
+            safeQualifiedTableName = quoteDottedIdentifier(originalTable);
         }
         // check if the table is accessible
 
         try (Statement stat = conn.getConnection().createStatement()) {
             rs = stat.executeQuery("SELECT * FROM " +
-                    qualifiedTableName + " T WHERE 1=0");
+                    getSafeQualifiedTable() + " T WHERE 1=0");
             if (columnList.isEmpty()) {
                 // alternative solution
                 ResultSetMetaData rsMeta = rs.getMetaData();
@@ -445,7 +454,7 @@ public class TableLink extends Table {
     @Override
     public synchronized long getRowCount(Session session) {
         //The foo alias is used to support the PostgreSQL syntax
-        String sql = "SELECT COUNT(*) FROM " + qualifiedTableName + " as foo";
+        String sql = "SELECT COUNT(*) FROM " + getSafeQualifiedTable() + " as foo";
         try {
             PreparedStatement prep = execute(sql, null, false);
             ResultSet rs = prep.getResultSet();
@@ -474,6 +483,95 @@ public class TableLink extends Table {
 
     public String getQualifiedTable() {
         return qualifiedTableName;
+    }
+
+    /**
+     * Returns the qualified table name with each component double-quoted
+     * (and any embedded quotes escaped per the SQL standard) so it can be
+     * safely concatenated into dynamic SQL.
+     *
+     * @return the safely-quoted form of {@link #getQualifiedTable()}
+     */
+    public String getSafeQualifiedTable() {
+        return safeQualifiedTableName;
+    }
+
+    /**
+     * Quote an identifier that may contain {@code .} component separators.
+     * Each unquoted segment between dots is quoted via
+     * {@link StringUtils#quoteIdentifier(String)} so the result is safe to
+     * concatenate into SQL.
+     *
+     * <p>If the input is already a quoted identifier (starts with a double
+     * quote), the leading/trailing quotes are validated and the body is
+     * re-quoted with embedded quotes escaped. Anything that doesn't parse as
+     * a valid quoted-or-unquoted identifier sequence is rejected with
+     * {@link ErrorCode#INVALID_NAME_1}.</p>
+     */
+    private static String quoteDottedIdentifier(String name) {
+        if (name == null || name.isEmpty()) {
+            throw DbException.get(ErrorCode.INVALID_VALUE_2, name, "linked-table identifier");
+        }
+        StringBuilder out = new StringBuilder(name.length() + 4);
+        int i = 0;
+        boolean first = true;
+        while (i < name.length()) {
+            if (!first) {
+                if (name.charAt(i) != '.') {
+                    throw DbException.get(ErrorCode.INVALID_VALUE_2, name, "linked-table identifier");
+                }
+                out.append('.');
+                i++;
+            }
+            first = false;
+            if (i >= name.length()) {
+                throw DbException.get(ErrorCode.INVALID_VALUE_2, name, "linked-table identifier");
+            }
+            int start = i;
+            if (name.charAt(i) == '"') {
+                // quoted segment: scan to the matching close quote, allowing "" as an escape
+                i++;
+                StringBuilder seg = new StringBuilder();
+                while (i < name.length()) {
+                    char c = name.charAt(i);
+                    if (c == '"') {
+                        if (i + 1 < name.length() && name.charAt(i + 1) == '"') {
+                            seg.append('"');
+                            i += 2;
+                        } else {
+                            i++; // closing quote
+                            break;
+                        }
+                    } else {
+                        seg.append(c);
+                        i++;
+                    }
+                }
+                if (i > name.length() || (i == name.length() && (i - start < 2 || name.charAt(i - 1) != '"'))) {
+                    throw DbException.get(ErrorCode.INVALID_VALUE_2, name, "linked-table identifier");
+                }
+                StringUtils.quoteIdentifier(out, seg.toString());
+            } else {
+                // unquoted segment: must match [A-Za-z_][A-Za-z0-9_]*
+                if (!isIdentStart(name.charAt(i))) {
+                    throw DbException.get(ErrorCode.INVALID_VALUE_2, name, "linked-table identifier");
+                }
+                int s = i++;
+                while (i < name.length() && isIdentPart(name.charAt(i))) {
+                    i++;
+                }
+                StringUtils.quoteIdentifier(out, name.substring(s, i));
+            }
+        }
+        return out.toString();
+    }
+
+    private static boolean isIdentStart(char c) {
+        return c == '_' || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+    }
+
+    private static boolean isIdentPart(char c) {
+        return isIdentStart(c) || (c >= '0' && c <= '9');
     }
 
     /**
