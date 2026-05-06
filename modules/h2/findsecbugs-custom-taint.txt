@@ -1,3 +1,6 @@
 org/gridgain/internal/h2/util/StringUtils.quoteIdentifier(Ljava/lang/String;)Ljava/lang/String;:SAFE
 org/gridgain/internal/h2/util/StringUtils.quoteIdentifier(Ljava/lang/StringBuilder;Ljava/lang/String;)Ljava/lang/StringBuilder;:SAFE
+org/gridgain/internal/h2/command/Parser.quoteIdentifier(Ljava/lang/String;Z)Ljava/lang/String;:SAFE
+org/gridgain/internal/h2/command/Parser.quoteIdentifier(Ljava/lang/StringBuilder;Ljava/lang/String;Z)Ljava/lang/StringBuilder;:SAFE
+org/gridgain/internal/h2/table/Column.getSQL(Ljava/lang/StringBuilder;Z)Ljava/lang/StringBuilder;:SAFE
 org/gridgain/internal/h2/table/TableLink.getSafeQualifiedTable()Ljava/lang/String;:SAFE
