@@ -160,6 +160,9 @@
         <maven.javadoc.plugin.version>2.10.4</maven.javadoc.plugin.version>
         <maven.flatten.plugin.version>1.2.7</maven.flatten.plugin.version>
         <maven.flatten.file.name>pom-installed.xml</maven.flatten.file.name>
+        <spotbugs.maven.plugin.version>4.8.6.6</spotbugs.maven.plugin.version>
+        <spotbugs.core.version>4.8.6</spotbugs.core.version>
+        <findsecbugs.plugin.version>1.14.0</findsecbugs.plugin.version>
 
         <!-- OSGI Manifest generation default property values -->
         <osgi.import.package>*</osgi.import.package>
@@ -646,6 +649,40 @@
                             </goals>
                         </execution>
                     </executions>
+                </plugin>
+
+                <!--
+                    SpotBugs + FindSecurityBugs SAST visibility — opt-in via the "sast" profile.
+                    Wired here in pluginManagement so any module can enable scanning by adding
+                    the plugin reference under its own &lt;profile id="sast"&gt; build/plugins block.
+                    See projects/barclays-veracode-h2 (assistant repo) for the driving context.
+                -->
+                <plugin>
+                    <groupId>com.github.spotbugs</groupId>
+                    <artifactId>spotbugs-maven-plugin</artifactId>
+                    <version>${spotbugs.maven.plugin.version}</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>com.github.spotbugs</groupId>
+                            <artifactId>spotbugs</artifactId>
+                            <version>${spotbugs.core.version}</version>
+                        </dependency>
+                    </dependencies>
+                    <configuration>
+                        <effort>Max</effort>
+                        <threshold>Low</threshold>
+                        <failOnError>false</failOnError>
+                        <sarifOutput>true</sarifOutput>
+                        <xmlOutput>true</xmlOutput>
+                        <includeFilterFile>${maven.multiModuleProjectDirectory}/checkrules/findsec-include.xml</includeFilterFile>
+                        <plugins>
+                            <plugin>
+                                <groupId>com.h3xstream.findsecbugs</groupId>
+                                <artifactId>findsecbugs-plugin</artifactId>
+                                <version>${findsecbugs.plugin.version}</version>
+                            </plugin>
+                        </plugins>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
