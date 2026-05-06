@@ -32,16 +32,21 @@ import org.gridgain.internal.h2.util.Utils;
 public class LinkedIndex extends BaseIndex {
 
     private final TableLink link;
-    private final String targetTableName;
     private long rowCount;
 
-    private final boolean quoteAllIdentifiers = false;
+    /**
+     * Always quote column identifiers when building dynamic SQL so that a
+     * column whose name contains SQL syntax cannot inject. Combined with
+     * {@link TableLink#getSafeQualifiedTable()} on the table-name side, the
+     * dynamic parts of every SQL statement built here are restricted to
+     * properly-quoted identifiers.
+     */
+    private final boolean quoteAllIdentifiers = true;
 
     public LinkedIndex(TableLink table, int id, IndexColumn[] columns,
             IndexType indexType) {
         super(table, id, null, columns, indexType);
         link = table;
-        targetTableName = link.getQualifiedTable();
     }
 
     @Override
@@ -62,7 +67,7 @@ public class LinkedIndex extends BaseIndex {
     public void add(Session session, Row row) {
         ArrayList<Value> params = Utils.newSmallArrayList();
         StringBuilder buff = new StringBuilder("INSERT INTO ");
-        buff.append(targetTableName).append(" VALUES(");
+        buff.append(link.getSafeQualifiedTable()).append(" VALUES(");
         for (int i = 0; i < row.getColumnCount(); i++) {
             Value v = row.getValue(i);
             if (i > 0) {
@@ -90,7 +95,7 @@ public class LinkedIndex extends BaseIndex {
     @Override
     public Cursor find(Session session, SearchRow first, SearchRow last) {
         ArrayList<Value> params = Utils.newSmallArrayList();
-        StringBuilder builder = new StringBuilder("SELECT * FROM ").append(targetTableName).append(" T");
+        StringBuilder builder = new StringBuilder("SELECT * FROM ").append(link.getSafeQualifiedTable()).append(" T");
         boolean f = false;
         for (int i = 0; first != null && i < first.getColumnCount(); i++) {
             Value v = first.getValue(i);
@@ -190,7 +195,7 @@ public class LinkedIndex extends BaseIndex {
     @Override
     public void remove(Session session, Row row) {
         ArrayList<Value> params = Utils.newSmallArrayList();
-        StringBuilder builder = new StringBuilder("DELETE FROM ").append(targetTableName).append(" WHERE ");
+        StringBuilder builder = new StringBuilder("DELETE FROM ").append(link.getSafeQualifiedTable()).append(" WHERE ");
         for (int i = 0; i < row.getColumnCount(); i++) {
             if (i > 0) {
                 builder.append("AND ");
@@ -227,7 +232,7 @@ public class LinkedIndex extends BaseIndex {
      */
     public void update(Row oldRow, Row newRow) {
         ArrayList<Value> params = Utils.newSmallArrayList();
-        StringBuilder builder = new StringBuilder("UPDATE ").append(targetTableName).append(" SET ");
+        StringBuilder builder = new StringBuilder("UPDATE ").append(link.getSafeQualifiedTable()).append(" SET ");
         for (int i = 0; i < newRow.getColumnCount(); i++) {
             if (i > 0) {
                 builder.append(", ");
