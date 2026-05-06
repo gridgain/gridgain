@@ -20,6 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Reader;
 import java.io.StringReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -43,8 +44,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.resources.CacheStoreSessionResource;
 import org.gridgain.internal.h2.jdbcx.JdbcConnectionPool;
-import org.gridgain.internal.h2.tools.RunScript;
 import org.gridgain.internal.h2.tools.Server;
+import org.gridgain.internal.h2.util.ScriptReader;
+import org.gridgain.internal.h2.util.StringUtils;
 
 /**
  * {@link TestCacheStoreStrategy} backed by H2 in-memory database.
@@ -86,9 +88,9 @@ public class H2CacheStoreStrategy implements TestCacheStoreStrategy {
             dataSrc = H2CacheStoreSessionListenerFactory.createDataSource(port);
 
             try (Connection conn = connection()) {
-                RunScript.execute(conn, new StringReader(CREATE_CACHE_TABLE));
-                RunScript.execute(conn, new StringReader(CREATE_STATS_TABLES));
-                RunScript.execute(conn, new StringReader(POPULATE_STATS_TABLE));
+                executeScript(conn, new StringReader(CREATE_CACHE_TABLE));
+                executeScript(conn, new StringReader(CREATE_STATS_TABLES));
+                executeScript(conn, new StringReader(POPULATE_STATS_TABLE));
             }
         }
         catch (SQLException e) {
@@ -128,8 +130,8 @@ public class H2CacheStoreStrategy implements TestCacheStoreStrategy {
     /** {@inheritDoc} */
     @Override public void resetStore() {
         try (Connection conn = connection()) {
-            RunScript.execute(conn, new StringReader("delete from CACHE;"));
-            RunScript.execute(conn, new StringReader(POPULATE_STATS_TABLE));
+            executeScript(conn, new StringReader("delete from CACHE;"));
+            executeScript(conn, new StringReader(POPULATE_STATS_TABLE));
         }
         catch (SQLException e) {
             throw new IgniteException(e);
@@ -483,5 +485,37 @@ public class H2CacheStoreStrategy implements TestCacheStoreStrategy {
                 throw new IgniteException("Failed to deserialize object from byte array", e);
             }
         }
+    }
+
+    /**
+     * Executes the SQL commands read from the reader against a database.
+     *
+     * @param conn the connection to a database
+     * @param reader the reader
+     * @return the last result set
+     */
+    public static ResultSet executeScript(Connection conn, Reader reader)
+            throws SQLException {
+        // can not close the statement because we return a result set from it
+        Statement stat = conn.createStatement();
+        ResultSet rs = null;
+        ScriptReader r = new ScriptReader(reader);
+        while (true) {
+            String sql = r.readStatement();
+            if (sql == null) {
+                break;
+            }
+            if (StringUtils.isWhitespaceOrEmpty(sql)) {
+                continue;
+            }
+            boolean resultSet = stat.execute(sql);
+            if (resultSet) {
+                if (rs != null) {
+                    rs.close();
+                }
+                rs = stat.getResultSet();
+            }
+        }
+        return rs;
     }
 }
