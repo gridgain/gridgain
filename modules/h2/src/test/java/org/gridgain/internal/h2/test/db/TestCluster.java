@@ -17,7 +17,6 @@ import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.store.fs.FileUtils;
 import org.gridgain.internal.h2.test.TestBase;
 import org.gridgain.internal.h2.test.TestDb;
-import org.gridgain.internal.h2.tools.CreateCluster;
 import org.gridgain.internal.h2.tools.DeleteDbFiles;
 import org.gridgain.internal.h2.tools.Server;
 import org.gridgain.internal.h2.util.JdbcUtils;
@@ -79,9 +78,6 @@ public class TestCluster extends TestDb {
 
         String serverList = "localhost:" + port1 + ",localhost:" + port2;
         String urlCluster = getURL("jdbc:gg-h2:tcp://" + serverList + "/test", true);
-        CreateCluster.main("-urlSource", url1, "-urlTarget", url2,
-                "-user", user, "-password", password, "-serverList",
-                serverList);
 
         conn = getConnection(urlCluster, user, password);
         conn.close();
@@ -113,9 +109,6 @@ public class TestCluster extends TestDb {
         String serverList = "localhost:" + port1 + ",localhost:" + port2;
         String urlCluster = getURL("jdbc:gg-h2:tcp://" + serverList + "/test", true);
 
-        CreateCluster.main("-urlSource", url1, "-urlTarget", url2,
-                "-user", user, "-password", password, "-serverList",
-                serverList);
 
         conn = getConnection(urlCluster, user, password);
         stat = conn.createStatement();
@@ -135,9 +128,6 @@ public class TestCluster extends TestDb {
 
         server2 = Server.createTcpServer("-ifNotExists", "-tcpPort",
                 "" + port2 , "-baseDir", getBaseDir() + "/node2").start();
-        CreateCluster.main("-urlSource", url1, "-urlTarget", url2,
-                "-user", user, "-password", password, "-serverList",
-                serverList);
 
         conn.close();
 
@@ -172,9 +162,6 @@ public class TestCluster extends TestDb {
         String serverList = "localhost:" + port1 + ",localhost:" + port2;
         String urlCluster = getURL("jdbc:gg-h2:tcp://" + serverList + "/test", true);
 
-        CreateCluster.main("-urlSource", url1, "-urlTarget", url2,
-                "-user", user, "-password", password, "-serverList",
-                serverList);
 
         conn = getConnection(urlCluster, user, password);
         stat = conn.createStatement();
@@ -215,10 +202,6 @@ public class TestCluster extends TestDb {
         String url1 = getURL("jdbc:gg-h2:tcp://localhost:" + port1 + "/test", true);
         String url2 = getURL("jdbc:gg-h2:tcp://localhost:" + port2 + "/test", true);
         String urlCluster = getURL("jdbc:gg-h2:tcp://" + serverList + "/test", true);
-
-        CreateCluster.main("-urlSource", url1, "-urlTarget", url2,
-                "-user", user, "-password", password, "-serverList",
-                serverList);
 
         conn = getConnection(urlCluster, user, password);
         stat = conn.createStatement();
@@ -268,9 +251,6 @@ public class TestCluster extends TestDb {
         String url2 = getURL("jdbc:gg-h2:tcp://localhost:" + port2 + "/test", true);
         String urlCluster = getURL("jdbc:gg-h2:tcp://" + serverList + "/test", true);
 
-        CreateCluster.main("-urlSource", url1, "-urlTarget", url2,
-                "-user", user, "-password", password, "-serverList",
-                serverList);
 
         conn = getConnection(urlCluster, user, password);
         Properties p = conn.getClientInfo();
@@ -326,9 +306,7 @@ public class TestCluster extends TestDb {
 
         // copy the database and initialize the cluster
         String serverList = "localhost:" + port1 + ",localhost:" + port2;
-        CreateCluster.main("-urlSource", url1, "-urlTarget", url2,
-                "-user", user, "-password", password, "-serverList",
-                serverList);
+
 
         // check the original connection is closed
         assertThrows(ErrorCode.CONNECTION_BROKEN_1, stat).
@@ -357,9 +335,7 @@ public class TestCluster extends TestDb {
         // re-create the cluster
         n2 = Server.createTcpServer("-ifNotExists", "-tcpPort", "" + port2,
                 "-baseDir", getBaseDir() + "/node2").start();
-        CreateCluster.main("-urlSource", url1, "-urlTarget", url2,
-                "-user", user, "-password", password, "-serverList",
-                serverList);
+
 
         // test the cluster connection
         check(connApp, len, "'" + serverList + "'");
@@ -416,10 +392,7 @@ public class TestCluster extends TestDb {
         check(conn, len, "''");
         conn.close();
 
-        // copy the database and initialize the cluster
-        CreateCluster.main("-urlSource", urlNode1, "-urlTarget",
-                urlNode2, "-user", user, "-password", password, "-serverList",
-                serverList);
+
 
         // start both servers
         Server n1 = Server.createTcpServer("-tcpPort", "" +
@@ -456,9 +429,7 @@ public class TestCluster extends TestDb {
 
         // re-create the cluster
         DeleteDbFiles.main("-dir", getBaseDir() + "/node2", "-quiet");
-        CreateCluster.main("-urlSource", urlNode1, "-urlTarget",
-                urlNode2, "-user", user, "-password", password, "-serverList",
-                serverList);
+
         n1 = Server.createTcpServer("-tcpPort", "" +
                 port1, "-baseDir", getBaseDir() + "/node1").start();
         n2 = Server.createTcpServer("-tcpPort", "" +
