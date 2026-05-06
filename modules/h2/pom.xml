@@ -122,6 +122,7 @@
                             <effort>Max</effort>
                             <threshold>Low</threshold>
                             <includeFilterFile>${project.basedir}/spotbugs-include.xml</includeFilterFile>
+                            <jvmArgs>-Dfindsecbugs.taint.customconfigfile=${project.basedir}/findsecbugs-custom-taint.txt</jvmArgs>
                             <plugins>
                                 <plugin>
                                     <groupId>com.h3xstream.findsecbugs</groupId>
