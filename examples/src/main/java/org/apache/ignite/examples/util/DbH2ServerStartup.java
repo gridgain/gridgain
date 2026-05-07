@@ -58,7 +58,7 @@ public class DbH2ServerStartup {
         JdbcConnectionPool dataSrc = JdbcConnectionPool.create("jdbc:gg-h2:tcp://localhost/mem:ExampleDb", "sa", "");
 
         // Create Person table in database.
-        RunScript.execute(dataSrc.getConnection(), new StringReader(CREATE_PERSON_TABLE));
+        executeScript(dataSrc.getConnection(), new StringReader(CREATE_PERSON_TABLE));
 
         // Populates Person table with sample data in database.
         executeScript(dataSrc.getConnection(), new StringReader(POPULATE_PERSON_TABLE));
