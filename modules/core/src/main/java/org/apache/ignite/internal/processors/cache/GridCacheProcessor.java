@@ -161,6 +161,7 @@ import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.IgniteCollectors;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.InitializationProtector;
+import org.apache.ignite.internal.util.TimeBag;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -2811,19 +2812,25 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * fully initialized (e.g. failed on cache init stage).
      *
      * @param topVer Topology version related to the given {@code exchActions}.
+     * @param timeBag Time bag to apply stages of cache group stop and destruction process.
      * @param exchActions Stop requests.
      */
-    void forceCloseCaches(AffinityTopologyVersion topVer, ExchangeActions exchActions) {
+    void forceCloseCaches(AffinityTopologyVersion topVer, TimeBag timeBag, ExchangeActions exchActions) {
         assert exchActions != null && !exchActions.cacheStopRequests().isEmpty();
 
-        processCacheStopRequestOnExchangeDone(topVer, exchActions);
+        processCacheStopRequestOnExchangeDone(topVer, timeBag, exchActions);
     }
 
     /**
      * @param topVer Topology version related to the given {@code exchActions}.
+     * @param timeBag Time bag to apply stages of cache group stop and destruction process.
      * @param exchActions Change requests.
      */
-    private void processCacheStopRequestOnExchangeDone(AffinityTopologyVersion topVer, ExchangeActions exchActions) {
+    private void processCacheStopRequestOnExchangeDone(
+        AffinityTopologyVersion topVer,
+        TimeBag timeBag,
+        ExchangeActions exchActions
+    ) {
         // Reserve at least 2 threads for system operations.
         int parallelismLvl = U.availableThreadCount(ctx, GridIoPolicy.SYSTEM_POOL, 2);
 
@@ -2939,11 +2946,25 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             cachesInfo.cleanupRemovedCaches(topVer);
         }
 
-        for (IgniteBiTuple<CacheGroupContext, Boolean> grp : grpsToStop)
-            stopCacheGroup(grp.get1().groupId(), grp.get2());
+        log.info("Stopping cache groups begins.");
+        timeBag.finishGlobalStage("Stopping cache groups begins.");
+
+        for (IgniteBiTuple<CacheGroupContext, Boolean> grp : grpsToStop) {
+            int grpId = grp.get1().groupId();
+
+            timeBag.finishGlobalStage("Stopping cache group id=" + grpId);
+
+            log.info("Stopping cache group id=" + grpId + " begins.");
+
+            stopCacheGroup(grpId, grp.get2());
+
+            log.info("Stopping cache group id=" + grpId + " ends.");
+        }
 
         if (!sharedCtx.kernalContext().clientNode())
             sharedCtx.database().onCacheGroupsStopped(grpsToStop);
+
+        timeBag.finishGlobalStage( "Stopping cache groups phase ends.");
 
         cachesInfo.cleanupRemovedCacheGroups(topVer);
 
@@ -2992,11 +3013,13 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * Callback invoked when first exchange future for dynamic cache is completed.
      *
      * @param cacheStartVer Started caches version to create proxy for.
+     * @param timeBag Time bag to apply stages of cache group stop and destruction process.
      * @param exchActions Change requests.
      * @param err Error.
      */
     public void onExchangeDone(
         AffinityTopologyVersion cacheStartVer,
+        TimeBag timeBag,
         @Nullable ExchangeActions exchActions,
         @Nullable Throwable err
     ) {
@@ -3013,7 +3036,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
 
         if (err == null)
-            processCacheStopRequestOnExchangeDone(cacheStartVer, exchActions);
+            processCacheStopRequestOnExchangeDone(cacheStartVer, timeBag, exchActions);
     }
 
     /**
