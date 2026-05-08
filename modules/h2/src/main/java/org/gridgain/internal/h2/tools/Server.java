@@ -5,15 +5,12 @@
  */
 package org.gridgain.internal.h2.tools;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.server.Service;
 import org.gridgain.internal.h2.server.ShutdownHandler;
 import org.gridgain.internal.h2.server.TcpServer;
-import org.gridgain.internal.h2.server.pg.PgServer;
-import org.gridgain.internal.h2.server.web.WebServer;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.util.Tool;
 
@@ -316,35 +313,7 @@ public class Server extends Tool implements Runnable, ShutdownHandler {
                 out.println(tcp.getStatus());
                 tcp.setShutdownHandler(this);
             }
-            if (pgStart) {
-                pg = createPgServer(args);
-                pg.start();
-                out.println(pg.getStatus());
-            }
-            if (webStart) {
-                web = createWebServer(args);
-                web.setShutdownHandler(this);
-                SQLException result = null;
-                try {
-                    web.start();
-                } catch (Exception e) {
-                    result = DbException.toSQLException(e);
-                }
-                out.println(web.getStatus());
-                // start browser in any case (even if the server is already
-                // running) because some people don't look at the output, but
-                // are wondering why nothing happens
-                if (browserStart) {
-                    try {
-                        openBrowser(web.getURL());
-                    } catch (Exception e) {
-                        out.println(e.getMessage());
-                    }
-                }
-                if (result != null) {
-                    throw result;
-                }
-            } else if (browserStart) {
+            if (browserStart) {
                 out.println("The browser can only start if a web server is started (-web)");
             }
         } catch (SQLException e) {
@@ -408,44 +377,6 @@ public class Server extends Tool implements Runnable, ShutdownHandler {
     }
 
     /**
-     * Create a new web server, but does not start it yet. Example:
-     *
-     * <pre>
-     * Server server = Server.createWebServer("-trace").start();
-     * </pre>
-     * Supported options are:
-     * -webPort, -webSSL, -webAllowOthers, -webDaemon,
-     * -trace, -ifExists, -ifNotExists, -baseDir, -properties.
-     * See the main method for details.
-     *
-     * @param args the argument list
-     * @return the server
-     */
-    public static Server createWebServer(String... args) throws SQLException {
-        return createWebServer(args, null, false);
-    }
-
-    /**
-     * Create a new web server, but does not start it yet.
-     *
-     * @param args
-     *            the argument list
-     * @param key
-     *            key, or null
-     * @param allowSecureCreation
-     *            whether creation of databases using the key should be allowed
-     * @return the server
-     */
-    static Server createWebServer(String[] args, String key, boolean allowSecureCreation) throws SQLException {
-        WebServer service = new WebServer();
-        service.setKey(key);
-        service.setAllowSecureCreation(allowSecureCreation);
-        Server server = new Server(service, args);
-        service.setShutdownHandler(server);
-        return server;
-    }
-
-    /**
      * Create a new TCP server, but does not start it yet. Example:
      *
      * <pre>
@@ -470,30 +401,6 @@ public class Server extends Tool implements Runnable, ShutdownHandler {
         Server server = new Server(service, args);
         service.setShutdownHandler(server);
         return server;
-    }
-
-    /**
-     * Create a new PG server, but does not start it yet.
-     * Example:
-     * <pre>
-     * Server server =
-     *     Server.createPgServer("-pgAllowOthers").start();
-     * </pre>
-     * Supported options are:
-     * -pgPort, -pgAllowOthers, -pgDaemon,
-     * -trace, -ifExists, -ifNotExists, -baseDir, -key.
-     * See the main method for details.
-     * <p>
-     * If no port is specified, the default port is used if possible,
-     * and if this port is already used, a random port is used.
-     * Use getPort() or getURL() after starting to retrieve the port.
-     * </p>
-     *
-     * @param args the argument list
-     * @return the server
-     */
-    public static Server createPgServer(String... args) throws SQLException {
-        return new Server(new PgServer(), args);
     }
 
     /**
@@ -646,52 +553,6 @@ public class Server extends Tool implements Runnable, ShutdownHandler {
         // The code of this method has been removed because it caused CWE-78.
         // This method is inherited from H2 and is not needed for Gridgain.
         // The method itself was left to avoid refactoring.
-    }
-
-    /**
-     * Start a web server and a browser that uses the given connection. The
-     * current transaction is preserved. This is specially useful to manually
-     * inspect the database when debugging. This method return as soon as the
-     * user has disconnected.
-     *
-     * @param conn the database connection (the database must be open)
-     */
-    public static void startWebServer(Connection conn) throws SQLException {
-        startWebServer(conn, false);
-    }
-
-    /**
-     * Start a web server and a browser that uses the given connection. The
-     * current transaction is preserved. This is specially useful to manually
-     * inspect the database when debugging. This method return as soon as the
-     * user has disconnected.
-     *
-     * @param conn the database connection (the database must be open)
-     * @param ignoreProperties if {@code true} properties from
-     *         {@code .h2.server.properties} will be ignored
-     */
-    public static void startWebServer(Connection conn, boolean ignoreProperties) throws SQLException {
-        WebServer webServer = new WebServer();
-        String[] args;
-        if (ignoreProperties) {
-            args = new String[] { "-webPort", "0", "-properties", "null"};
-        } else {
-            args = new String[] { "-webPort", "0" };
-        }
-        Server web = new Server(webServer, args);
-        web.start();
-        Server server = new Server();
-        server.web = web;
-        webServer.setShutdownHandler(server);
-        String url = webServer.addSession(conn);
-        try {
-            Server.openBrowser(url);
-            while (!webServer.isStopped()) {
-                Thread.sleep(1000);
-            }
-        } catch (Exception e) {
-            // ignore
-        }
     }
 
 }

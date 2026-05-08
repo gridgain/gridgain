@@ -94,7 +94,6 @@ import org.gridgain.internal.h2.command.ddl.CreateConstant;
 import org.gridgain.internal.h2.command.ddl.CreateDomain;
 import org.gridgain.internal.h2.command.ddl.CreateFunctionAlias;
 import org.gridgain.internal.h2.command.ddl.CreateIndex;
-import org.gridgain.internal.h2.command.ddl.CreateLinkedTable;
 import org.gridgain.internal.h2.command.ddl.CreateRole;
 import org.gridgain.internal.h2.command.ddl.CreateSchema;
 import org.gridgain.internal.h2.command.ddl.CreateSequence;
@@ -5736,8 +5735,6 @@ public class Parser {
             return parseCreateDomain();
         } else if (readIf("AGGREGATE")) {
             return parseCreateAggregate(force);
-        } else if (readIf("LINKED")) {
-            return parseCreateLinkedTable(false, false, force);
         }
         // tables or linked tables
         boolean memory = false, cached = false;
@@ -5748,22 +5745,13 @@ public class Parser {
         }
         if (readIf("LOCAL")) {
             read("TEMPORARY");
-            if (readIf("LINKED")) {
-                return parseCreateLinkedTable(true, false, force);
-            }
             read(TABLE);
             return parseCreateTable(true, false, cached);
         } else if (readIf("GLOBAL")) {
             read("TEMPORARY");
-            if (readIf("LINKED")) {
-                return parseCreateLinkedTable(true, true, force);
-            }
             read(TABLE);
             return parseCreateTable(true, true, cached);
         } else if (readIf("TEMP") || readIf("TEMPORARY")) {
-            if (readIf("LINKED")) {
-                return parseCreateLinkedTable(true, true, force);
-            }
             read(TABLE);
             return parseCreateTable(true, true, cached);
         } else if (readIf(TABLE)) {
@@ -7656,43 +7644,6 @@ public class Parser {
         } else {
             readIf("DEFERRABLE");
         }
-    }
-
-    private CreateLinkedTable parseCreateLinkedTable(boolean temp,
-            boolean globalTemp, boolean force) {
-        read(TABLE);
-        boolean ifNotExists = readIfNotExists();
-        String tableName = readIdentifierWithSchema();
-        CreateLinkedTable command = new CreateLinkedTable(session, getSchema());
-        command.setTemporary(temp);
-        command.setGlobalTemporary(globalTemp);
-        command.setForce(force);
-        command.setIfNotExists(ifNotExists);
-        command.setTableName(tableName);
-        command.setComment(readCommentIf());
-        read(OPEN_PAREN);
-        command.setDriver(readString());
-        read(COMMA);
-        command.setUrl(readString());
-        read(COMMA);
-        command.setUser(readString());
-        read(COMMA);
-        command.setPassword(readString());
-        read(COMMA);
-        String originalTable = readString();
-        if (readIf(COMMA)) {
-            command.setOriginalSchema(originalTable);
-            originalTable = readString();
-        }
-        command.setOriginalTable(originalTable);
-        read(CLOSE_PAREN);
-        if (readIf("EMIT")) {
-            read("UPDATES");
-            command.setEmitUpdates(true);
-        } else if (readIf("READONLY")) {
-            command.setReadOnly(true);
-        }
-        return command;
     }
 
     private CreateTable parseCreateTable(boolean temp, boolean globalTemp,
