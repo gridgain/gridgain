@@ -8,8 +8,6 @@ package org.gridgain.internal.h2.security;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -27,7 +25,6 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Properties;
 
 import javax.net.ServerSocketFactory;
 import javax.net.ssl.SSLServerSocket;
@@ -35,23 +32,15 @@ import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-import org.gridgain.internal.h2.store.fs.FileUtils;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.message.DbException;
-import org.gridgain.internal.h2.util.IOUtils;
 import org.gridgain.internal.h2.util.StringUtils;
 
 /**
  * A factory to create new block cipher objects.
  */
 public class CipherFactory {
-
-    /**
-     * The default password to use for the .h2.keystore file
-     */
-    public static final String KEYSTORE_PASSWORD =
-            "h2pass";
 
     /**
      * The security property which can prevent anonymous TLS connections.
@@ -66,13 +55,6 @@ public class CipherFactory {
      * Null if it is not set.
      */
     public static final String DEFAULT_LEGACY_ALGORITHMS = getLegacyAlgorithmsSilently();
-
-    private static final String KEYSTORE =
-            "~/.h2.keystore";
-    private static final String KEYSTORE_KEY =
-            "javax.net.ssl.keyStore";
-    private static final String KEYSTORE_PASSWORD_KEY =
-            "javax.net.ssl.keyStorePassword";
 
 
     private CipherFactory() {
@@ -107,19 +89,12 @@ public class CipherFactory {
     public static Socket createSocket(InetAddress address, int port)
             throws IOException {
         Socket socket = null;
-        setKeystore();
         SSLSocketFactory f = (SSLSocketFactory) SSLSocketFactory.getDefault();
         SSLSocket secureSocket = (SSLSocket) f.createSocket();
         secureSocket.connect(new InetSocketAddress(address, port),
                 SysProperties.SOCKET_CONNECT_TIMEOUT);
         secureSocket.setEnabledProtocols(
                 disableSSL(secureSocket.getEnabledProtocols()));
-        if (SysProperties.ENABLE_ANONYMOUS_TLS) {
-            String[] list = enableAnonymous(
-                    secureSocket.getEnabledCipherSuites(),
-                    secureSocket.getSupportedCipherSuites());
-            secureSocket.setEnabledCipherSuites(list);
-        }
         socket = secureSocket;
         return socket;
     }
@@ -141,10 +116,6 @@ public class CipherFactory {
     public static ServerSocket createServerSocket(int port,
             InetAddress bindAddress) throws IOException {
         ServerSocket socket = null;
-        if (SysProperties.ENABLE_ANONYMOUS_TLS) {
-            removeAnonFromLegacyAlgorithms();
-        }
-        setKeystore();
         ServerSocketFactory f = SSLServerSocketFactory.getDefault();
         SSLServerSocket secureSocket;
         if (bindAddress == null) {
@@ -154,12 +125,6 @@ public class CipherFactory {
         }
         secureSocket.setEnabledProtocols(
                 disableSSL(secureSocket.getEnabledProtocols()));
-        if (SysProperties.ENABLE_ANONYMOUS_TLS) {
-            String[] list = enableAnonymous(
-                    secureSocket.getEnabledCipherSuites(),
-                    secureSocket.getSupportedCipherSuites());
-            secureSocket.setEnabledCipherSuites(list);
-        }
 
         socket = secureSocket;
         return socket;
@@ -351,38 +316,6 @@ public class CipherFactory {
             return store;
         } catch (Exception e) {
             throw DbException.convertToIOException(e);
-        }
-    }
-
-    private static void setKeystore() throws IOException {
-        Properties p = System.getProperties();
-        if (p.getProperty(KEYSTORE_KEY) == null) {
-            String fileName = KEYSTORE;
-            byte[] data = getKeyStoreBytes(getKeyStore(
-                    KEYSTORE_PASSWORD), KEYSTORE_PASSWORD);
-            boolean needWrite = true;
-            if (FileUtils.exists(fileName) && FileUtils.size(fileName) == data.length) {
-                // don't need to overwrite the file if it did not change
-                InputStream fin = FileUtils.newInputStream(fileName);
-                byte[] now = IOUtils.readBytesAndClose(fin, 0);
-                if (now != null && Arrays.equals(data, now)) {
-                    needWrite = false;
-                }
-            }
-            if (needWrite) {
-                try {
-                    OutputStream out = FileUtils.newOutputStream(fileName, false);
-                    out.write(data);
-                    out.close();
-                } catch (Exception e) {
-                    throw DbException.convertToIOException(e);
-                }
-            }
-            String absolutePath = FileUtils.toRealPath(fileName);
-            System.setProperty(KEYSTORE_KEY, absolutePath);
-        }
-        if (p.getProperty(KEYSTORE_PASSWORD_KEY) == null) {
-            System.setProperty(KEYSTORE_PASSWORD_KEY, KEYSTORE_PASSWORD);
         }
     }
 
