@@ -51,12 +51,15 @@ import org.apache.ignite.internal.processors.cache.CacheConfigurationOverride;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.processors.rest.GridRestProtocolHandler;
 import org.apache.ignite.internal.processors.rest.GridRestResponse;
+import org.apache.ignite.internal.processors.rest.handlers.drain.DrainStatusResponse;
+import org.apache.ignite.internal.processors.rest.handlers.drain.SupplyStatusResponse;
 import org.apache.ignite.internal.processors.rest.request.DataStructuresRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestBaselineRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestCacheRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestChangeStateRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestClusterNameRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestClusterStateRequest;
+import org.apache.ignite.internal.processors.rest.request.GridRestDrainRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestLogRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestNodeStateBeforeStartRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
@@ -212,6 +215,31 @@ public class GridJettyRestHandler extends AbstractHandler {
         catch (NumberFormatException ignore) {
             throw new IgniteCheckedException(format(FAILED_TO_PARSE_FORMAT, "Long", key, val));
         }
+    }
+
+    /**
+     * Emit response headers that mirror well-known typed payloads carried in
+     * {@link GridRestResponse#getResponse()}. Used by the helm preStop hook,
+     * which parses these headers in pure shell ({@code grep}/{@code awk}) so
+     * the chart works without python or jq in the container image.
+     *
+     * <p>Header contract is frozen by the
+     * {@code GG-47498} ticket:</p>
+     * <ul>
+     *     <li>{@code DrainStatusResponse} → {@code X-Active-Thin-Clients}: integer.</li>
+     *     <li>{@code SupplyStatusResponse} → {@code X-Supplying}: lowercase {@code true}/{@code false}.</li>
+     * </ul>
+     *
+     * @param res HTTP response to mutate.
+     * @param cmdRes REST response carrying the typed payload.
+     */
+    private static void emitTypedResponseHeaders(HttpServletResponse res, GridRestResponse cmdRes) {
+        Object payload = cmdRes.getResponse();
+
+        if (payload instanceof DrainStatusResponse)
+            res.setHeader("X-Active-Thin-Clients", Integer.toString(((DrainStatusResponse)payload).getActiveThinClients()));
+        else if (payload instanceof SupplyStatusResponse)
+            res.setHeader("X-Supplying", ((SupplyStatusResponse)payload).isSupplying() ? "true" : "false");
     }
 
     /**
@@ -460,6 +488,11 @@ public class GridJettyRestHandler extends AbstractHandler {
                 cmdRes.setSessionToken(U.byteArray2HexString(sesTok));
 
             res.setStatus(cmdRes.getSuccessStatus() == GridRestResponse.SERVICE_UNAVAILABLE ? HttpServletResponse.SC_SERVICE_UNAVAILABLE : HttpServletResponse.SC_OK);
+
+            // Emit response headers for shell-parseable preStop hooks. The headers
+            // mirror well-known typed payloads on GridRestResponse.getResponse().
+            // Pure-shell preStop scripts parse these without python/jq.
+            emitTypedResponseHeaders(res, cmdRes);
         }
         catch (Throwable e) {
             res.setStatus(HttpServletResponse.SC_OK);
@@ -789,8 +822,20 @@ public class GridJettyRestHandler extends AbstractHandler {
             case DATA_STORAGE_METRICS:
             case NAME:
             case VERSION:
-            case PROBE: {
+            case PROBE:
+            case ALIVE:
+            case SUPPLY_STATUS: {
                 restReq = new GridRestRequest();
+
+                break;
+            }
+
+            case DRAIN: {
+                GridRestDrainRequest restReq0 = new GridRestDrainRequest();
+
+                restReq0.action(params.get("action"));
+
+                restReq = restReq0;
 
                 break;
             }

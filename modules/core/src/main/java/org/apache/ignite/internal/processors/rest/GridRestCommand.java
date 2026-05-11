@@ -224,8 +224,17 @@ public enum GridRestCommand {
     /** Warm-up. */
     WARM_UP("warmup"),
 
-    /** probe. */
-    PROBE("probe");
+    /** probe — readiness gate (kernel started AND no drain AND no PME AND no active supply). */
+    PROBE("probe"),
+
+    /** alive — liveness/startup gate (kernel started). */
+    ALIVE("alive"),
+
+    /** Connection drain control: action=start sets draining flag; action=stop clears it; action=status returns active thin-client count. */
+    DRAIN("drain"),
+
+    /** Outbound partition supply status (informational, never gates traffic). */
+    SUPPLY_STATUS("supply-status");
 
     /** Enum values. */
     private static final GridRestCommand[] VALS = values();

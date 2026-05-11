@@ -532,6 +532,15 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * @return Number of currently-open client listener sessions (thin clients,
+     * JDBC, ODBC). Returns {@code 0} if the client listener is disabled or has
+     * not started.
+     */
+    public int connectionsCount() {
+        return srv != null ? srv.sessions().size() : 0;
+    }
+
+    /**
      * Prepare connector configuration.
      *
      * @param cfg Ignite configuration.
