@@ -113,6 +113,11 @@ function Build-Solution([string]$targetSolution, [string]$targetDir) {
     Exec $buildCommand
 }
 
+# Ensure dotnet is in PATH on Linux agents where /usr/share/dotnet is not symlinked to /usr/local/bin
+if ($IsLinux -and (Test-Path '/usr/share/dotnet/dotnet')) {
+    $env:PATH = "/usr/share/dotnet:$env:PATH"
+}
+
 # 1) Build Java (Maven)
 # Detect Ignite root directory
 cd $PSScriptRoot\..
