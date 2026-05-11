@@ -186,16 +186,19 @@ GridGain.NET [Entity Framework Second Level Cache](https://www.gridgain.com/docs
 
 ## API Modernization
 
-* CQ in Thin Client (GG9 has it, GG8 Java client has it)
-* Multi-targeting (netstandard2.0 + net8.0) - enables modern language features and better performance on .NET 8 while maintaining compatibility with older .NET versions
-  * Required for IAsyncEnumerable and IAsyncDisposable
-* Missing async APIs for Thin Client: GetCache/CreateCache, Transactions, etc
-* IAsyncDisposable: ITransaction, IDataStreamer, IQueryCursor, etc (GG9 has it)
-* Query cursors: implement IAsyncEnumerable (GG9 has it)
-* CQ: return IAsyncEnumerable (GG9 has it)
-* Data Streamer: accept IAsyncEnumerable (GG9 has it)
-* Nullable Reference Types (NRT) - annotate all public APIs to improve developer experience and reduce potential for null reference exceptions (GG9 has it)
-* ADO.NET support (GG9 has it)
-* Source-generated serializers
-* Native AOT support (GG9 has it)
-* EF Core integration (implementation is mostly ready for GG9 but not yet released - high potential for code reuse)
+The table below summarizes proposed improvements to the GridGain.NET API. The "In GG9" column indicates whether the feature is already implemented in GridGain 9, which lowers delivery risk and enables code/design reuse.
+
+| # | Feature | Benefit                                                                                          | In GG9                                                                                      |
+|---|---------|--------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+| 1 | Multi-targeting (`netstandard2.0` + `net8.0`) | Prerequisite for `IAsyncEnumerable`, `IAsyncDisposable` and other APIs. Maintains compatibility. | Yes                                                                                         |
+| 2 | Nullable Reference Types on all public APIs | Better developer experience (for customers) and fewer null-reference bugs in user code.          | Yes                                                                                         |
+| 3 | Async APIs in Thin Client (`GetCache`, `CreateCache`, Transactions, etc.) | Performance, API consistency.                                                                    | Yes                                                                                         |
+| 4 | `IAsyncDisposable` for `ITransaction`, `IDataStreamer`, `IQueryCursor`, etc. | Idiomatic resource cleanup in async code (`await using`).                                        | Yes                                                                                         |
+| 5 | `IAsyncEnumerable` from query cursors | Idiomatic async iteration (`await foreach`) over result sets.                                    | Yes                                                                                         |
+| 6 | Continuous Queries in Thin Client | Feature parity with the GG8 Java thin client and GG9 .NET client.                                | Yes                                                                                         |
+| 7 | Continuous Queries return `IAsyncEnumerable` | Idiomatic consumption of change notifications.                                                   | Yes                                                                                         |
+| 8 | Data Streamer accepts `IAsyncEnumerable` | Natural integration with async data sources.                                                     | Yes                                                                                         |
+| 9 | Source-generated serializers | Faster startup and throughput; required for AOT.                                                 | No                                                                                          |
+| 10 | Native AOT support | Smaller, faster-starting binaries; enables cloud-native and container scenarios.                 | Yes                                                                                         |
+| 11 | ADO.NET provider | Integration with the standard .NET data-access ecosystem (Dapper, reporting tools, etc.).        | Yes                                                                                         |
+| 12 | EF Core integration | First-class ORM support for .NET applications.                                                   | In progress (GG9 implementation mostly ready, not yet released — high code-reuse potential) |
