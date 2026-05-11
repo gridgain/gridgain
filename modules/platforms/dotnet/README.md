@@ -194,3 +194,4 @@ GridGain.NET [Entity Framework Second Level Cache](https://www.gridgain.com/docs
 * Data Streamer: accept IAsyncEnumerable
 * Source-generated serializers
 * Native AOT support
+* EF Core integration (implementation is mostly ready for GG9 but not yet released - high potential for code reuse)
