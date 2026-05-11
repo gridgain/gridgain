@@ -2946,25 +2946,30 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             cachesInfo.cleanupRemovedCaches(topVer);
         }
 
-        log.info("Stopping cache groups begins.");
+        U.logInfo(log, "Stopping cache groups begins.");
+
         timeBag.finishGlobalStage("Stopping cache groups begins.");
 
         for (IgniteBiTuple<CacheGroupContext, Boolean> grp : grpsToStop) {
             int grpId = grp.get1().groupId();
 
-            timeBag.finishGlobalStage("Stopping cache group id=" + grpId);
+            long beginCacheStopTimeMs = U.currentTimeMillis();
 
-            log.info("Stopping cache group id=" + grpId + " begins.");
+            U.logInfo(log, "Stopping cache group begins [grpId=" + grpId + "].");
 
             stopCacheGroup(grpId, grp.get2());
 
-            log.info("Stopping cache group id=" + grpId + " ends.");
+            U.logInfo(log, "Stopping cache group ends [grpId=" + grpId +
+                ", elapsedTime=" + U.humanReadableDuration(U.currentTimeMillis() - beginCacheStopTimeMs) + "]."
+            );
         }
 
         if (!sharedCtx.kernalContext().clientNode())
             sharedCtx.database().onCacheGroupsStopped(grpsToStop);
 
         timeBag.finishGlobalStage( "Stopping cache groups phase ends.");
+
+        U.logInfo(log, "Stopping cache groups ends.");
 
         cachesInfo.cleanupRemovedCacheGroups(topVer);
 
