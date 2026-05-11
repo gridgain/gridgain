@@ -909,7 +909,8 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
         addTest(new TestDefrag());
 //        addTest(new TestTools());
         addTest(new TestSampleApps());
-        addTest(new TestSubqueryPerformanceOnLazyExecutionMode());
+        if (!travis)
+            addTest(new TestSubqueryPerformanceOnLazyExecutionMode());
 
         runAddedTests(1);
     }

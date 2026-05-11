@@ -196,6 +196,9 @@ public class JUnitTeamcityReporter extends RunListener {
                 curXmlStream.writeEndDocument();
                 curXmlStream.close();
                 curStream.close();
+
+                curXmlStream = null;
+                curStream = null;
             }
             catch (XMLStreamException | IOException ex) {
                 throw new RuntimeException(ex);
