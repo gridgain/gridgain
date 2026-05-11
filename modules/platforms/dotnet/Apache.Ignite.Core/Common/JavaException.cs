@@ -103,6 +103,7 @@ namespace Apache.Ignite.Core.Common
             _javaMessage = info.GetString(JavaMessageField);
         }
 
+#pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
         /// <summary>
         /// When overridden in a derived class, sets the <see cref="SerializationInfo" /> 
         /// with information about the exception.
@@ -111,6 +112,7 @@ namespace Apache.Ignite.Core.Common
         /// about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information
         /// about the source or destination.</param>
+        [Obsolete("Legacy serialization")]
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             base.GetObjectData(info, context);
@@ -118,6 +120,7 @@ namespace Apache.Ignite.Core.Common
             info.AddValue(JavaClassNameField, _javaClassName);
             info.AddValue(JavaMessageField, _javaMessage);
         }
+#pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
 
         /// <summary>
         /// Gets the Java exception class name.

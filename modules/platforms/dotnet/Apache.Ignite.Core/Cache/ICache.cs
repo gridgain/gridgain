@@ -22,6 +22,7 @@ namespace Apache.Ignite.Core.Cache
     using System.Diagnostics.CodeAnalysis;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Cache.Event;
     using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Cache.Query.Continuous;
@@ -801,6 +802,19 @@ namespace Apache.Ignite.Core.Cache
         /// <param name="qry">Continuous query.</param>
         /// <returns>Handle to stop query execution.</returns>
         IContinuousQueryHandle QueryContinuous(ContinuousQuery<TK, TV> qry);
+
+        #if NET6_0_OR_GREATER
+        /// <summary>
+        /// Starts a continuous query execution and returns an async enumerable of cache entry events.
+        /// </summary>
+        /// <returns>Async enumerable of cache events.</returns>
+        async IAsyncEnumerable<ICacheEntryEvent<TK, TV>> QueryContinuousAsync()
+        {
+            // TODO: Options
+            await Task.Yield();
+            yield break;
+        }
+        #endif
 
         /// <summary>
         /// Start continuous query execution.

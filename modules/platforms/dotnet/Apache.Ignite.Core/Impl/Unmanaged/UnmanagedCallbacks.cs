@@ -113,7 +113,10 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         }
 
         /** <inheritdoc /> */
+        [Obsolete("Internal, unused")]
+#pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
         public override object InitializeLifetimeService()
+#pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
         {
             // Ensure that cross-AppDomain reference lives forever.
             return null;

@@ -110,6 +110,7 @@ namespace Apache.Ignite.Core.Cache
             return _failedKeys == null ? null : _failedKeys.Cast<T>();
         }
 
+#pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
         /// <summary>
         /// When overridden in a derived class, sets the <see cref="SerializationInfo" />
         /// with information about the exception.
@@ -119,11 +120,13 @@ namespace Apache.Ignite.Core.Cache
         /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information
         /// about the source or destination.</param>
         [SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods")]
+        [Obsolete("Legacy serialization")]
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             info.AddValue(KeyFailedKeys, _failedKeys);
 
             base.GetObjectData(info, context);
         }
+#pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
     }
 }

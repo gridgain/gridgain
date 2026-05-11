@@ -99,7 +99,10 @@ namespace Apache.Ignite.Core.Services
         /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information
         /// about the source or destination.</param>
         [SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods")]
+        [Obsolete("Legacy serialization")]
+#pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
+#pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
         {
             info.AddValue(KeyBinaryCause, _binaryCause);
 

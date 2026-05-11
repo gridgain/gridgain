@@ -97,7 +97,10 @@ namespace Apache.Ignite.Core.Client
         /// about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information
         /// about the source or destination.</param>
+        [Obsolete("Legacy serialization")]
+#pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
+#pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
         {
             base.GetObjectData(info, context);
 
