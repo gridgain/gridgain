@@ -186,15 +186,16 @@ GridGain.NET [Entity Framework Second Level Cache](https://www.gridgain.com/docs
 
 ## API Modernization
 
-* Thin client CQ
+* Thin client CQ (GG9 has it)
 * Multi-targeting (netstandard2.0 + net8.0) - enables modern language features and better performance on .NET 8 while maintaining compatibility with older .NET versions
   * Required for IAsyncEnumerable and IAsyncDisposable
 * Missing async APIs for Thin Client: GetCache/CreateCache, Transactions, etc
-* ITransaction, ITransactionClient : IAsyncDisposable
-* Query cursors: implement IAsyncEnumerable
-* CQ: return IAsyncEnumerable
-* Data Streamer: accept IAsyncEnumerable
-* Nullable Reference Types (NRT) - annotate all public APIs to improve developer experience and reduce potential for null reference exceptions
+* ITransaction, ITransactionClient : IAsyncDisposable (GG9 has it)
+* Query cursors: implement IAsyncEnumerable (GG9 has it)
+* CQ: return IAsyncEnumerable (GG9 has it)
+* Data Streamer: accept IAsyncEnumerable (GG9 has it)
+* Nullable Reference Types (NRT) - annotate all public APIs to improve developer experience and reduce potential for null reference exceptions (GG9 has it)
+* ADO.NET support (GG9 has it)
 * Source-generated serializers
-* Native AOT support
+* Native AOT support (GG9 has it)
 * EF Core integration (implementation is mostly ready for GG9 but not yet released - high potential for code reuse)
