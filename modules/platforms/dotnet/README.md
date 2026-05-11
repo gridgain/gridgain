@@ -187,8 +187,10 @@ GridGain.NET [Entity Framework Second Level Cache](https://www.gridgain.com/docs
 ## API Modernization
 
 * Thin client CQ
-* Missing async APIs (everything in thin client such as GetCache/CreateCache)
-* Multi-targeting (netstandard2.0 + net8.0)
+* Multi-targeting (netstandard2.0 + net8.0) - enables modern language features and better performance on .NET 8 while maintaining compatibility with older .NET versions
+  * Required for IAsyncEnumerable and IAsyncDisposable
+* Missing async APIs for Thin Client: GetCache/CreateCache, Transactions, etc
+* ITransaction, ITransactionClient : IAsyncDisposable
 * Query cursors: implement IAsyncEnumerable
 * CQ: return IAsyncEnumerable
 * Data Streamer: accept IAsyncEnumerable
