@@ -1270,7 +1270,47 @@ public class GridSqlQuerySplitter {
 
         // -- GROUP BY
         if (mapQry.groupColumns() != null && !collocatedGrpBy) {
-            rdcQry.groupColumns(mapQry.groupColumns());
+            int[] grpCols = mapQry.groupColumns();
+
+            Set<Integer> grpColSet = new HashSet<>();
+
+            for (int gc : grpCols)
+                grpColSet.add(gc);
+
+            List<Integer> expandedGrpCols = null;
+
+            for (int i = 0; i < visibleCols; i++) {
+                if (!grpColSet.contains(i)) {
+                    GridSqlAst exp = rdcExps.get(i);
+
+                    if (exp instanceof GridSqlAlias)
+                        exp = exp.child();
+
+                    // Only non-aggregate columns must be in GROUP BY.
+                    if (!SplitterUtils.hasAggregates(exp)) {
+                        if (expandedGrpCols == null) {
+                            expandedGrpCols = new ArrayList<>(grpCols.length + 4);
+
+                            for (int gc : grpCols)
+                                expandedGrpCols.add(gc);
+                        }
+
+                        expandedGrpCols.add(i);
+                        grpColSet.add(i);
+                    }
+                }
+            }
+
+            if (expandedGrpCols != null) {
+                int[] expanded = new int[expandedGrpCols.size()];
+
+                for (int i = 0; i < expanded.length; i++)
+                    expanded[i] = expandedGrpCols.get(i);
+
+                rdcQry.groupColumns(expanded);
+            }
+            else
+                rdcQry.groupColumns(grpCols);
 
             // Grouping with distinct aggregates cannot be performed on map phase
             if (distinctAggregateFound)

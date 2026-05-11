@@ -338,6 +338,14 @@ public class Select extends Query {
             if (groupByExpression != null && groupByExpression[j]) {
                 continue;
             }
+
+            if (groupByCopies != null) {
+                int original = groupByCopies[j];
+                if (original >= 0) {
+                    row[j] = row[original];
+                    continue;
+                }
+            }
             Expression expr = expressions.get(j);
             row[j] = expr.getValue(session);
         }
