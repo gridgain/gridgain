@@ -192,3 +192,5 @@ GridGain.NET [Entity Framework Second Level Cache](https://www.gridgain.com/docs
 * Query cursors: implement IAsyncEnumerable
 * CQ: return IAsyncEnumerable
 * Data Streamer: accept IAsyncEnumerable
+* Source-generated serializers
+* Native AOT support
