@@ -194,6 +194,7 @@ GridGain.NET [Entity Framework Second Level Cache](https://www.gridgain.com/docs
 * Query cursors: implement IAsyncEnumerable
 * CQ: return IAsyncEnumerable
 * Data Streamer: accept IAsyncEnumerable
+* Nullable Reference Types (NRT) - annotate all public APIs to improve developer experience and reduce potential for null reference exceptions
 * Source-generated serializers
 * Native AOT support
 * EF Core integration (implementation is mostly ready for GG9 but not yet released - high potential for code reuse)
