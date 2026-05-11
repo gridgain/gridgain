@@ -184,3 +184,11 @@ GridGain.NET provides [Output Cache](https://www.gridgain.com/docs/latest/develo
 
 GridGain.NET [Entity Framework Second Level Cache](https://www.gridgain.com/docs/latest/developers-guide/net-specific/net-entity-framework-cache) improves Entity Framework performance by storing query results in GridGain caches.
 
+## API Modernization
+
+* Thin client CQ
+* Missing async APIs (everything in thin client such as GetCache/CreateCache)
+* Multi-targeting (netstandard2.0 + net8.0)
+* Query cursors: implement IAsyncEnumerable
+* CQ: return IAsyncEnumerable
+* Data Streamer: accept IAsyncEnumerable
