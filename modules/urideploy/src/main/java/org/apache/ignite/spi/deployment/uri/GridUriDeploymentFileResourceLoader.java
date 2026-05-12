@@ -70,7 +70,7 @@ class GridUriDeploymentFileResourceLoader {
             try {
                 return (Class<? extends ComputeTask<?, ?>>)clsLdr.loadClass(str);
             }
-            catch (ClassNotFoundException e) {
+            catch (ClassNotFoundException | NoClassDefFoundError e) {
                 if (ignoreUnknownRsrc) {
                     // No-op.
                 }
