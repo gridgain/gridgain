@@ -138,7 +138,7 @@ public class JUnitTeamcityReporter extends RunListener {
     /** */
     @Override public synchronized void testFailure(Failure failure) {
         if (curXmlStream == null)
-            testStarted(failure.getDescription());
+            return;
 
         try {
             curXmlStream.writeStartElement("failure");
