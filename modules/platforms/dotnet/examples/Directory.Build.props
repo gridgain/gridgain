@@ -17,6 +17,8 @@
 <Project>
     <PropertyGroup>
         <RunAnalyzers>false</RunAnalyzers>
+        <TargetFramework>net8.0</TargetFramework>
+        <OutputType>Exe</OutputType>
     </PropertyGroup>
 
     <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)..\bin\net8.0\Apache.Ignite.Core.dll')">
@@ -27,6 +29,10 @@
     <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)..\Apache.Ignite.Core\Ignition.cs') And Exists('$(MSBuildThisFileDirectory)..\Apache.Ignite.Core\bin')">
         <IgniteDevMode>true</IgniteDevMode>
     </PropertyGroup>
+
+    <ItemGroup Condition="'$(MSBuildProjectName)' != 'Shared'">
+        <ProjectReference Include="$(MSBuildThisFileDirectory)Shared\Shared.csproj" />
+    </ItemGroup>
 
     <ItemGroup Condition="$(IgniteDevMode) == 'true'">
         <ProjectReference Include="$(MSBuildThisFileDirectory)..\Apache.Ignite.Core\Apache.Ignite.Core.csproj" />
