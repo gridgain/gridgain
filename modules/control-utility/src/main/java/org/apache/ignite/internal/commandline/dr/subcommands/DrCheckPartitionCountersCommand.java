@@ -35,7 +35,8 @@ import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CHECK;
 
 /**
- * DR check partition counters command.
+ * DR check partition counters command. The task ensures cache entries has valid update counters.
+ * Can be executed at runtime.
  */
 public class DrCheckPartitionCountersCommand extends
     DrAbstractRemoteSubCommand<VisorDrCheckPartitionCountersTaskArg, VisorDrCheckPartitionCountersTaskResult, DrCheckPartitionCountersCommand.Arguments> {
