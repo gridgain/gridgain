@@ -18,6 +18,7 @@ package org.apache.ignite.logger.log4j;
 
 import java.io.File;
 import java.io.IOException;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.log4j.Layout;
@@ -87,8 +88,21 @@ public class Log4jRollingFileAppender extends RollingFileAppender implements Log
         if (baseFileName != null) {
             File f = new File(fileName);
 
-            if (f.getParentFile() != null)
-                f.getParentFile().mkdirs();
+            // Resolve relative paths against IGNITE_HOME so the log file location matches the
+            // convention used by U.resolveIgnitePath() and does not depend on the JVM's user.dir.
+            if (!f.isAbsolute()) {
+                String home = IgniteUtils.getIgniteHome();
+
+                if (home != null) {
+                    f = new File(home, fileName);
+                    fileName = f.getAbsolutePath();
+                }
+            }
+
+            File parent = f.getParentFile();
+
+            if (parent != null)
+                parent.mkdirs();
 
             super.setFile(fileName, fileAppend, bufIO, bufSize);
         }
