@@ -200,6 +200,10 @@ public class JUnitTeamcityReporter extends RunListener {
             catch (XMLStreamException | IOException ex) {
                 throw new RuntimeException(ex);
             }
+            finally {
+                curXmlStream = null;
+                curStream = null;
+            }
 
             File report = reportDir.resolve(fileName()).toFile();
 
