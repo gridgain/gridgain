@@ -29,6 +29,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
@@ -62,6 +63,8 @@ public class GridStartStopSelfTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = new IgniteConfiguration();
 
         cfg.setConnectorConfiguration(null);
+
+        cfg.setDiscoverySpi(new TcpDiscoverySpi().setIpFinder(sharedStaticIpFinder));
 
         info("Grid start-stop test count: " + COUNT);
 
@@ -152,6 +155,8 @@ public class GridStartStopSelfTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = new IgniteConfiguration();
 
         cfg.setConnectorConfiguration(null);
+
+        cfg.setDiscoverySpi(new TcpDiscoverySpi().setIpFinder(sharedStaticIpFinder));
 
         IgniteEx ignite = startGrid(cfg);
 
