@@ -492,11 +492,19 @@ namespace Apache.Ignite.Core.Tests.Binary.Serializable
             Assert.AreEqual("Object", binType.GetFieldTypeName("datetime"));
             Assert.AreEqual("Object", binType.GetFieldTypeName("datetimes"));
 
+#if NET8_0_OR_GREATER
+            Assert.AreEqual("long", binType.GetFieldTypeName("intptr"));
+            Assert.AreEqual("Object", binType.GetFieldTypeName("intptrs"));
+
+            Assert.AreEqual("long", binType.GetFieldTypeName("uintptr"));
+            Assert.AreEqual("Object", binType.GetFieldTypeName("uintptrs"));
+#else
             Assert.AreEqual("Object", binType.GetFieldTypeName("intptr"));
             Assert.AreEqual("Object", binType.GetFieldTypeName("intptrs"));
 
             Assert.AreEqual("Object", binType.GetFieldTypeName("uintptr"));
             Assert.AreEqual("Object", binType.GetFieldTypeName("uintptrs"));
+#endif
         }
 
         /// <summary>
