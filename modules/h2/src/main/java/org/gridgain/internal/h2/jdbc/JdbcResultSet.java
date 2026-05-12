@@ -3568,16 +3568,7 @@ public class JdbcResultSet extends TraceObject implements ResultSet, JdbcResultS
      */
     @Override
     public SQLXML getSQLXML(int columnIndex) throws SQLException {
-        try {
-            int id = getNextId(TraceObject.SQLXML);
-            if (isDebugEnabled()) {
-                debugCodeAssign("SQLXML", TraceObject.SQLXML, id, "getSQLXML(" + columnIndex + ")");
-            }
-            Value v = get(columnIndex);
-            return v == ValueNull.INSTANCE ? null : new JdbcSQLXML(conn, v, JdbcLob.State.WITH_VALUE, id);
-        } catch (Exception e) {
-            throw logAndConvert(e);
-        }
+        throw unsupported("xml");
     }
 
     /**
@@ -3590,16 +3581,7 @@ public class JdbcResultSet extends TraceObject implements ResultSet, JdbcResultS
      */
     @Override
     public SQLXML getSQLXML(String columnLabel) throws SQLException {
-        try {
-            int id = getNextId(TraceObject.SQLXML);
-            if (isDebugEnabled()) {
-                debugCodeAssign("SQLXML", TraceObject.SQLXML, id, "getSQLXML(" + columnLabel + ")");
-            }
-            Value v = get(columnLabel);
-            return v == ValueNull.INSTANCE ? null : new JdbcSQLXML(conn, v, JdbcLob.State.WITH_VALUE, id);
-        } catch (Exception e) {
-            throw logAndConvert(e);
-        }
+        throw unsupported("xml");
     }
 
     /**
@@ -3925,9 +3907,6 @@ public class JdbcResultSet extends TraceObject implements ResultSet, JdbcResultS
         } else if (type == Clob.class) {
             int id = getNextId(TraceObject.CLOB);
             return type.cast(new JdbcClob(conn, value, JdbcLob.State.WITH_VALUE, id));
-        } else if (type == SQLXML.class) {
-            int id = getNextId(TraceObject.SQLXML);
-            return type.cast(new JdbcSQLXML(conn, value, JdbcLob.State.WITH_VALUE, id));
         } else if (type == TimestampWithTimeZone.class) {
             ValueTimestampTimeZone v = (ValueTimestampTimeZone) value.convertTo(Value.TIMESTAMP_TZ);
             return type.cast(new TimestampWithTimeZone(v.getDateValue(), v.getTimeNanos(), v.getTimeZoneOffsetMins()));

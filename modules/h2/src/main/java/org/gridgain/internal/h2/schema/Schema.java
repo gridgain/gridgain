@@ -30,7 +30,6 @@ import org.gridgain.internal.h2.engine.User;
 import org.gridgain.internal.h2.index.Index;
 import org.gridgain.internal.h2.table.PageStoreTable;
 import org.gridgain.internal.h2.table.Table;
-import org.gridgain.internal.h2.table.TableLink;
 import org.gridgain.internal.h2.table.TableSynonym;
 import org.gridgain.internal.h2.util.StringUtils;
 import org.gridgain.internal.h2.util.Utils;
@@ -720,31 +719,6 @@ public class Schema extends DbObjectBase {
             database.lockMeta(data.session);
             data.schema = this;
             return new TableSynonym(data);
-        }
-    }
-
-    /**
-     * Add a linked table to the schema.
-     *
-     * @param id the object id
-     * @param tableName the table name of the alias
-     * @param driver the driver class name
-     * @param url the database URL
-     * @param user the user name
-     * @param password the password
-     * @param originalSchema the schema name of the target table
-     * @param originalTable the table name of the target table
-     * @param emitUpdates if updates should be emitted instead of delete/insert
-     * @param force create the object even if the database can not be accessed
-     * @return the {@link TableLink} object
-     */
-    public TableLink createTableLink(int id, String tableName, String driver,
-            String url, String user, String password, String originalSchema,
-            String originalTable, boolean emitUpdates, boolean force) {
-        synchronized (database) {
-            return new TableLink(this, id, tableName,
-                    driver, url, user, password,
-                    originalSchema, originalTable, emitUpdates, force);
         }
     }
 

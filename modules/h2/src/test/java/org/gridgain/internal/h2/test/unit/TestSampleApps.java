@@ -14,13 +14,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import org.gridgain.internal.h2.samples.CachedPreparedStatements;
-import org.gridgain.internal.h2.samples.Compact;
 import org.gridgain.internal.h2.samples.CsvSample;
 import org.gridgain.internal.h2.samples.Function;
 import org.gridgain.internal.h2.samples.ReadOnlyDatabaseInZip;
 import org.gridgain.internal.h2.store.fs.FileUtils;
 import org.gridgain.internal.h2.tools.ChangeFileEncryption;
-import org.gridgain.internal.h2.tools.RunScript;
 import org.gridgain.internal.h2.test.TestBase;
 import org.gridgain.internal.h2.test.TestDb;
 import org.gridgain.internal.h2.tools.DeleteDbFiles;
@@ -59,11 +57,7 @@ public class TestSampleApps extends TestDb {
                 "/optimizations.sql");
         IOUtils.copyAndClose(in, out);
         String url = "jdbc:gg-h2:" + getBaseDir() + "/" + getTestName();
-        testApp("", RunScript.class, "-url", url, "-user", "sa",
-                "-password", "sa", "-script", getBaseDir() +
-                        "/optimizations.sql", "-checkResults");
         deleteDb(getTestName());
-        testApp("Compacting...\nDone.", Compact.class);
         testApp("NAME: Bob Meier\n" +
                 "EMAIL: bob.meier@abcde.abc\n" +
                 "PHONE: +41123456789\n\n" +
