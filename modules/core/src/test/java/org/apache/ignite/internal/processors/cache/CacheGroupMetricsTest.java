@@ -95,7 +95,7 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
 
         /** {@inheritDoc} */
         @Override public int partition(Object key) {
-            return key.hashCode() % partitions();
+            return Math.abs(key.hashCode()) % partitions();
         }
 
         /** {@inheritDoc} */
