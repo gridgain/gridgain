@@ -19,11 +19,10 @@ package org.apache.ignite.internal.processors.cache.query.continuous;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.cache.configuration.Factory;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryEventFilter;
-import javax.cache.event.CacheEntryListenerException;
-import javax.cache.event.CacheEntryUpdatedListener;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -33,6 +32,8 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridStringLogger;
@@ -66,9 +67,6 @@ public class ContinuousQueryRemoteFilterMissingInClassPathSelfTest extends GridC
     private IgniteLogger log;
 
     /** */
-    private boolean clientMode;
-
-    /** */
     private boolean setExternalLoader;
 
     /** */
@@ -77,18 +75,21 @@ public class ContinuousQueryRemoteFilterMissingInClassPathSelfTest extends GridC
     /** */
     private boolean setFilterAttr;
 
+    /** */
+    private final AtomicReference<FailureContext> failureCtx = new AtomicReference<>();
+
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
         stopAllGrids();
+
+        assertNull("Unexpected failure [ctx=" + failureCtx.get() + ']', failureCtx.get());
     }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        cfg.setClientMode(clientMode);
 
         CacheConfiguration<Object, Object> cacheCfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
@@ -107,6 +108,8 @@ public class ContinuousQueryRemoteFilterMissingInClassPathSelfTest extends GridC
         if (setFilterAttr)
             cfg.setUserAttributes(U.map("filter", 1));
 
+        cfg.setFailureHandler(new TestFailureHandler(failureCtx));
+
         return cfg;
     }
 
@@ -115,17 +118,16 @@ public class ContinuousQueryRemoteFilterMissingInClassPathSelfTest extends GridC
      */
     @Test
     public void testClientJoinsMissingClassWarning() throws Exception {
-        clientMode = false;
         setExternalLoader = true;
         Ignite ignite0 = startGrid(1);
 
         executeContinuousQuery(ignite0.cache(DEFAULT_CACHE_NAME));
 
         log = new GridStringLogger();
-        clientMode = true;
+
         setExternalLoader = false;
 
-        startGrid(2);
+        startClientGrid(2);
 
         String logStr = log.toString();
 
@@ -140,15 +142,13 @@ public class ContinuousQueryRemoteFilterMissingInClassPathSelfTest extends GridC
     public void testClientJoinsExtClassLoaderNoWarning() throws Exception {
         setExternalLoader = true;
 
-        clientMode = false;
         Ignite ignite0 = startGrid(1);
 
         executeContinuousQuery(ignite0.cache(DEFAULT_CACHE_NAME));
 
         log = new GridStringLogger();
-        clientMode = true;
 
-        startGrid(2);
+        startClientGrid(2);
 
         assertTrue(!log.toString().contains("Failed to unmarshal continuous query remote filter on client node. " +
             "Can be ignored."));
@@ -159,9 +159,8 @@ public class ContinuousQueryRemoteFilterMissingInClassPathSelfTest extends GridC
      */
     @Test
     public void testServerJoinsMissingClassException() throws Exception {
-        clientMode = false;
-
         setExternalLoader = true;
+
         Ignite ignite0 = startGrid(1);
 
         executeContinuousQuery(ignite0.cache(DEFAULT_CACHE_NAME));
@@ -183,6 +182,9 @@ public class ContinuousQueryRemoteFilterMissingInClassPathSelfTest extends GridC
         GridTestUtils.assertThrows(log, () -> startGrid(2), IgniteCheckedException.class, "Failed to start");
 
         assertTrue(lsnr.check());
+
+        // It is expected that this test triggers a failure handler.
+        failureCtx.set(null);
     }
 
     /**
@@ -190,9 +192,8 @@ public class ContinuousQueryRemoteFilterMissingInClassPathSelfTest extends GridC
      */
     @Test
     public void testServerJoinsExtClassLoaderNoException() throws Exception {
-        clientMode = false;
-
         setExternalLoader = true;
+
         Ignite ignite0 = startGrid(1);
 
         executeContinuousQuery(ignite0.cache(DEFAULT_CACHE_NAME));
@@ -210,8 +211,6 @@ public class ContinuousQueryRemoteFilterMissingInClassPathSelfTest extends GridC
      */
     @Test
     public void testServerMissingClassFailsRegistration() throws Exception {
-        clientMode = false;
-
         setExternalLoader = true;
 
         Ignite ign1 = startGrid(1);
@@ -235,17 +234,13 @@ public class ContinuousQueryRemoteFilterMissingInClassPathSelfTest extends GridC
      */
     @Test
     public void testClientMissingClassDoesNotFailRegistration() throws Exception {
-        clientMode = false;
-
         setExternalLoader = true;
 
         Ignite ign1 = startGrid(1);
 
         setExternalLoader = false;
 
-        clientMode = true;
-
-        startGrid(2);
+        startClientGrid(2);
 
         executeContinuousQuery(ign1.cache(DEFAULT_CACHE_NAME));
     }
@@ -255,8 +250,6 @@ public class ContinuousQueryRemoteFilterMissingInClassPathSelfTest extends GridC
      */
     @Test
     public void testNodeFilterServerMissingClassDoesNotFailRegistration() throws Exception {
-        clientMode = false;
-
         setExternalLoader = true;
 
         Ignite ign1 = startGrid(1);
@@ -278,12 +271,9 @@ public class ContinuousQueryRemoteFilterMissingInClassPathSelfTest extends GridC
         ContinuousQuery<Integer, String> qry = new ContinuousQuery<>();
 
         qry.setLocalListener(
-            new CacheEntryUpdatedListener<Integer, String>() {
-                @Override public void onUpdated(Iterable<CacheEntryEvent<? extends Integer, ? extends String>> events)
-                    throws CacheEntryListenerException {
-                    for (CacheEntryEvent<? extends Integer, ? extends String> event : events)
-                        System.out.println("Key = " + event.getKey() + ", Value = " + event.getValue());
-                }
+            events -> {
+                for (CacheEntryEvent<? extends Integer, ? extends String> event : events)
+                    System.out.println("Key = " + event.getKey() + ", Value = " + event.getValue());
             }
         );
 
@@ -323,4 +313,25 @@ public class ContinuousQueryRemoteFilterMissingInClassPathSelfTest extends GridC
         }
     }
 
+    /** Test failure handler. */
+    private static class TestFailureHandler extends NoOpFailureHandler {
+        /** Failure context. */
+        private final AtomicReference<FailureContext> ctx;
+
+        /**
+         * Creates a new test failure handler.
+         *
+         * @param ctx Atomic reference to store a failure context.
+         */
+        public TestFailureHandler(AtomicReference<FailureContext> ctx) {
+            this.ctx = ctx;
+        }
+
+        /** {@inheritDoc} */
+        @Override protected boolean handle(Ignite ignite, FailureContext failureCtx) {
+            ctx.compareAndSet(null, failureCtx);
+
+            return super.handle(ignite, failureCtx);
+        }
+    }
 }
