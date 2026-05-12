@@ -233,7 +233,10 @@ final class GridUriDeploymentJarVerifier {
 
                 // Verify by reading the file if altered.
                 // Will return quietly if no problem.
-                verifyDigestsImplicitly(jarFile.getInputStream(jarEntry));
+                // Stream must be closed so JarFile triggers SecurityException on digest mismatch.
+                try (InputStream entryIn = jarFile.getInputStream(jarEntry)) {
+                    verifyDigestsImplicitly(entryIn);
+                }
 
                 if (!verifyEntry(jarEntry, manifest, pubKey, allSigned, false))
                     return false;
