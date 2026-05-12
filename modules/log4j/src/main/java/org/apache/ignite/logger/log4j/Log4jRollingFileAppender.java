@@ -16,6 +16,7 @@
 
 package org.apache.ignite.logger.log4j;
 
+import java.io.File;
 import java.io.IOException;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.lang.IgniteClosure;
@@ -83,7 +84,13 @@ public class Log4jRollingFileAppender extends RollingFileAppender implements Log
     /** {@inheritDoc} */
     @Override public synchronized void setFile(String fileName, boolean fileAppend, boolean bufIO, int bufSize)
         throws IOException {
-        if (baseFileName != null)
+        if (baseFileName != null) {
+            File f = new File(fileName);
+
+            if (f.getParentFile() != null)
+                f.getParentFile().mkdirs();
+
             super.setFile(fileName, fileAppend, bufIO, bufSize);
+        }
     }
 }
