@@ -66,7 +66,6 @@ import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.table.MetaTable;
 import org.gridgain.internal.h2.table.Table;
-import org.gridgain.internal.h2.table.TableLinkConnection;
 import org.gridgain.internal.h2.table.TableSynonym;
 import org.gridgain.internal.h2.table.TableType;
 import org.gridgain.internal.h2.table.TableView;
@@ -200,7 +199,6 @@ public class Database implements DataHandler {
     private final boolean autoServerMode;
     private final int autoServerPort;
     private Server server;
-    private HashMap<TableLinkConnection, TableLinkConnection> linkConnections;
     private final TempFileDeleter tempFileDeleter = TempFileDeleter.getInstance();
     private PageStore pageStore;
     private Properties reconnectLastLock;
@@ -2689,24 +2687,6 @@ public class Database implements DataHandler {
      */
     public boolean isSysTableLockedBy(Session session) {
         return meta == null || meta.isLockedExclusivelyBy(session);
-    }
-
-    /**
-     * Open a new connection or get an existing connection to another database.
-     *
-     * @param driver the database driver or null
-     * @param url the database URL
-     * @param user the user name
-     * @param password the password
-     * @return the connection
-     */
-    public TableLinkConnection getLinkConnection(String driver, String url,
-            String user, String password) {
-        if (linkConnections == null) {
-            linkConnections = new HashMap<>();
-        }
-        return TableLinkConnection.open(linkConnections, driver, url, user,
-                password, dbSettings.shareLinkedConnections);
     }
 
     @Override

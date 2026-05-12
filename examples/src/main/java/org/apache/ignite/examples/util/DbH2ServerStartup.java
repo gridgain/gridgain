@@ -17,12 +17,18 @@
 package org.apache.ignite.examples.util;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.io.StringReader;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+
 import org.apache.ignite.IgniteException;
 import org.gridgain.internal.h2.jdbcx.JdbcConnectionPool;
-import org.gridgain.internal.h2.tools.RunScript;
 import org.gridgain.internal.h2.tools.Server;
+import org.gridgain.internal.h2.util.ScriptReader;
+import org.gridgain.internal.h2.util.StringUtils;
 
 /**
  * Start H2 database TCP server in order to access sample in-memory database from other processes.
@@ -52,10 +58,10 @@ public class DbH2ServerStartup {
         JdbcConnectionPool dataSrc = JdbcConnectionPool.create("jdbc:gg-h2:tcp://localhost/mem:ExampleDb", "sa", "");
 
         // Create Person table in database.
-        RunScript.execute(dataSrc.getConnection(), new StringReader(CREATE_PERSON_TABLE));
+        executeScript(dataSrc.getConnection(), new StringReader(CREATE_PERSON_TABLE));
 
         // Populates Person table with sample data in database.
-        RunScript.execute(dataSrc.getConnection(), new StringReader(POPULATE_PERSON_TABLE));
+        executeScript(dataSrc.getConnection(), new StringReader(POPULATE_PERSON_TABLE));
     }
 
     /**
@@ -75,10 +81,10 @@ public class DbH2ServerStartup {
             JdbcConnectionPool dataSrc = JdbcConnectionPool.create("jdbc:gg-h2:tcp://localhost/mem:ExampleDb", "sa", "");
 
             // Create Person table in database.
-            RunScript.execute(dataSrc.getConnection(), new StringReader(CREATE_PERSON_TABLE));
+            executeScript(dataSrc.getConnection(), new StringReader(CREATE_PERSON_TABLE));
 
             // Populates Person table with sample data in database.
-            RunScript.execute(dataSrc.getConnection(), new StringReader(POPULATE_PERSON_TABLE));
+            executeScript(dataSrc.getConnection(), new StringReader(POPULATE_PERSON_TABLE));
         }
         catch (SQLException e) {
             throw new IgniteException("Failed to start database TCP server", e);
@@ -93,5 +99,38 @@ public class DbH2ServerStartup {
         catch (IOException ignored) {
             // No-op.
         }
+    }
+
+    /**
+     * Executes the SQL commands read from the reader against a database.
+     *
+     * @param conn   the connection to a database
+     * @param reader the reader
+     * @return the last result set
+     */
+    public static ResultSet executeScript(Connection conn, Reader reader)
+            throws SQLException {
+        // can not close the statement because we return a result set from it
+        Statement stat = conn.createStatement();
+        ResultSet rs = null;
+        ScriptReader r = new ScriptReader(reader);
+        while (true) {
+            String sql = r.readStatement();
+            if (sql == null) {
+                break;
+            }
+            if (StringUtils.isWhitespaceOrEmpty(sql)) {
+                continue;
+            }
+            boolean resultSet = stat.execute(sql);
+            if (resultSet) {
+                if (rs != null) {
+                    rs.close();
+                    rs = null;
+                }
+                rs = stat.getResultSet();
+            }
+        }
+        return rs;
     }
 }

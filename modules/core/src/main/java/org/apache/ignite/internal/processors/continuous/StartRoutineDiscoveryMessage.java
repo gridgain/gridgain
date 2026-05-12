@@ -40,7 +40,7 @@ public class StartRoutineDiscoveryMessage extends AbstractContinuousMessage {
     private final StartRequestData startReqData;
 
     /** */
-    // Initilized here as well to preserve compatibility with previous versions
+    // Initialized here as well to preserve compatibility with previous versions
     private Map<UUID, IgniteCheckedException> errs = new HashMap<>();
 
     /** */
