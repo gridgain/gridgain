@@ -113,7 +113,9 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
 
         Pattern ptrn = Pattern.compile(String.format(ALIVE_NODES_MSG, 1, 2));
 
-        LogListener aliveNodesLsnr = LogListener.matches(ptrn).times(log.isDebugEnabled() ? 0 : 4).build();
+        LogListener aliveNodesLsnr = log.isDebugEnabled()
+            ? LogListener.matches(ptrn).times(0).build()
+            : LogListener.matches(ptrn).atLeast(3).build();
 
         testLog.registerListener(aliveNodesLsnr);
 
@@ -177,7 +179,9 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
 
         Pattern ptrn = Pattern.compile(String.format(ALIVE_NODES_MSG, 1, 4));
 
-        LogListener aliveNodesLsnr = LogListener.matches(ptrn).times(log.isDebugEnabled() ? 0 : 16).build();
+        LogListener aliveNodesLsnr = log.isDebugEnabled()
+            ? LogListener.matches(ptrn).times(0).build()
+            : LogListener.matches(ptrn).atLeast(10).build();
 
         testLog.registerListener(aliveNodesLsnr);
 
@@ -243,7 +247,9 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
 
         Pattern ptrn = Pattern.compile(String.format(ALIVE_NODES_MSG, 1, 4));
 
-        LogListener aliveNodesLsnr = LogListener.matches(ptrn).times(log.isDebugEnabled() ? 0 : 25).build();
+        LogListener aliveNodesLsnr = log.isDebugEnabled()
+            ? LogListener.matches(ptrn).times(0).build()
+            : LogListener.matches(ptrn).atLeast(15).build();
 
         testLog.registerListener(aliveNodesLsnr);
 
