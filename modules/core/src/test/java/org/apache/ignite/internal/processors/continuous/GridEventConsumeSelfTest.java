@@ -133,6 +133,8 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                     if (!noAutoUnsubscribe) {
                         Map rmtInfos = U.field(proc, "rmtInfos");
 
+                        GridTestUtils.waitForCondition(rmtInfos::isEmpty, 10_000);
+
                         assertTrue("Unexpected remote infos: " + rmtInfos, rmtInfos.isEmpty());
                     }
                 }
@@ -141,6 +143,11 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
                 }
 
                 assertEquals(0, U.<Map>field(proc, "rmtInfos").size());
+
+                GridTestUtils.waitForCondition(() -> U.<Map>field(proc, "startFuts").isEmpty(), 10_000);
+                GridTestUtils.waitForCondition(() -> U.<Map>field(proc, "stopFuts").isEmpty(), 10_000);
+                GridTestUtils.waitForCondition(() -> U.<Map>field(proc, "bufCheckThreads").isEmpty(), 10_000);
+
                 assertEquals(0, U.<Map>field(proc, "startFuts").size());
                 assertEquals(0, U.<Map>field(proc, "stopFuts").size());
                 assertEquals(0, U.<Map>field(proc, "bufCheckThreads").size());
