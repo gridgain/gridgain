@@ -751,7 +751,7 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
         try {
             assertNotNull(consumeId);
 
-            grid(0).compute().broadcast(F.noop());
+            grid(0).compute().run(F.noop());
 
             assert latch.await(10, SECONDS) : latch;
 
