@@ -77,7 +77,7 @@ final class GridUriDeploymentDiscovery {
                         rsrcs.add(rsrc);
                 }
             }
-            catch (IOException e) {
+            catch (IOException | NoClassDefFoundError e) {
                 throw new IgniteSpiException("Failed to discover classes in file: " + file.getAbsolutePath(), e);
             }
         }

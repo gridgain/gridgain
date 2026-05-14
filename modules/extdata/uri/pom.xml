@@ -238,7 +238,7 @@
 
                                 <signjar jar="${basedir}/target/file/bad-signed-deployfile.jar" keystore="${basedir}/config/signeddeploy/keystore" storepass="abc123" keypass="abc123" alias="business" />
 
-                                <sleep seconds="2" />
+                                <sleep seconds="5" />
 
                                 <touch file="${basedir}/target/classes/org/apache/ignite/spi/deployment/uri/tasks/GridUriDeploymentTestWithNameTask11.class" />
 
@@ -398,7 +398,7 @@
 
                                 <signjar jar="${basedir}/target/file/bad-signed-deployfile.gar" keystore="${basedir}/config/signeddeploy/keystore" storepass="abc123" keypass="abc123" alias="business" />
 
-                                <sleep seconds="2" />
+                                <sleep seconds="5" />
 
                                 <touch file="${basedir}/target/classes/org/apache/ignite/spi/deployment/uri/tasks/GridUriDeploymentTestWithNameTask6.class" />
 
