@@ -73,6 +73,9 @@ public class JUnitTeamcityReporter extends RunListener {
         if (curXmlStream == null)
             testStarted(failure.getDescription());
 
+        if (curXmlStream == null)
+            return;
+
         try {
             curXmlStream.writeStartElement("skipped");
 
@@ -82,7 +85,11 @@ public class JUnitTeamcityReporter extends RunListener {
             curXmlStream.writeEndElement();
         }
         catch (XMLStreamException ex) {
-            throw new RuntimeException(ex);
+            System.err.println("JUnitTeamcityReporter: failed to record testAssumptionFailure for "
+                + failure.getDescription() + ": " + ex);
+
+            curStream = null;
+            curXmlStream = null;
         }
     }
 
@@ -134,18 +141,29 @@ public class JUnitTeamcityReporter extends RunListener {
         if (curXmlStream == null)
             testStarted(desc);
 
+        if (curXmlStream == null)
+            return;
+
         try {
             curXmlStream.writeEndElement();
         }
         catch (XMLStreamException ex) {
-            throw new RuntimeException(ex);
+            System.err.println("JUnitTeamcityReporter: failed to record testFinished for "
+                + desc + ": " + ex);
+
+            curStream = null;
+            curXmlStream = null;
         }
     }
 
     /** */
     @Override public synchronized void testFailure(Failure failure) {
-        if (curXmlStream == null)
+        if (curXmlStream == null) {
+            System.err.println("JUnitTeamcityReporter: test failure (no active XML stream): "
+                + failure.getDescription() + " - " + failure.getException());
+
             return;
+        }
 
         try {
             curXmlStream.writeStartElement("failure");
@@ -165,13 +183,20 @@ public class JUnitTeamcityReporter extends RunListener {
             }
         }
         catch (XMLStreamException ex) {
-            throw new RuntimeException(ex);
+            System.err.println("JUnitTeamcityReporter: failed to record testFailure for "
+                + failure.getDescription() + ": " + ex);
+
+            curStream = null;
+            curXmlStream = null;
         }
     }
 
     /** */
     @Override public synchronized void testIgnored(Description desc) {
         testStarted(desc);
+
+        if (curXmlStream == null)
+            return;
 
         Ignore annotation = desc.getAnnotation(Ignore.class);
 
@@ -184,7 +209,11 @@ public class JUnitTeamcityReporter extends RunListener {
             curXmlStream.writeEndElement();
         }
         catch (XMLStreamException ex) {
-            throw new RuntimeException(ex);
+            System.err.println("JUnitTeamcityReporter: failed to record testIgnored for "
+                + desc + ": " + ex);
+
+            curStream = null;
+            curXmlStream = null;
         }
 
         testFinished(desc);
@@ -198,6 +227,8 @@ public class JUnitTeamcityReporter extends RunListener {
         if ((prevSuite == null ? suite != null : !prevSuite.equals(suite)) ||
             (prevTestCls == null ? testCls != null : !prevTestCls.equals(testCls)) ||
             (System.currentTimeMillis() - prevFlush) > FLUSH_THRESHOLD) {
+            File report = reportDir.resolve(fileName()).toFile();
+
             try {
                 curXmlStream.writeEndElement();
                 curXmlStream.writeEndDocument();
@@ -205,19 +236,18 @@ public class JUnitTeamcityReporter extends RunListener {
                 curStream.close();
             }
             catch (XMLStreamException | IOException ex) {
-                throw new RuntimeException(ex);
+                System.err.println("JUnitTeamcityReporter: failed to flush XML stream for "
+                    + report + ": " + ex);
             }
             finally {
                 curXmlStream = null;
                 curStream = null;
             }
 
-            File report = reportDir.resolve(fileName()).toFile();
-
-            assert report.exists();
-
-            System.out.println(String.format("##teamcity[importData type='surefire' path='%s']",
-                escapeForTeamcity(report.getAbsolutePath())));
+            if (report.exists()) {
+                System.out.println(String.format("##teamcity[importData type='surefire' path='%s']",
+                    escapeForTeamcity(report.getAbsolutePath())));
+            }
 
             return true;
         }
