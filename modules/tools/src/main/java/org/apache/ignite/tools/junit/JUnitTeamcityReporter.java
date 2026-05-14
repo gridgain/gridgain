@@ -211,10 +211,10 @@ public class JUnitTeamcityReporter extends RunListener {
 
             File report = reportDir.resolve(fileName()).toFile();
 
-            assert report.exists();
-
-            System.out.println(String.format("##teamcity[importData type='surefire' path='%s']",
-                escapeForTeamcity(report.getAbsolutePath())));
+            if (report.exists()) {
+                System.out.println(String.format("##teamcity[importData type='surefire' path='%s']",
+                    escapeForTeamcity(report.getAbsolutePath())));
+            }
 
             return true;
         }
