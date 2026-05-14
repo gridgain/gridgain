@@ -897,7 +897,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         processCacheStopRequests(fut, crd, exchActions);
 
-        cctx.cache().forceCloseCaches(fut.initialVersion(), fut.timeBag(), exchActions);
+        cctx.cache().forceCloseCaches(fut.initialVersion(), exchActions);
     }
 
     /**

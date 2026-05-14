@@ -4823,22 +4823,6 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Writes logs with INFO level if enabled.
-     *
-     * @param log Logger to write.
-     * @param msg Message to write.
-     */
-    public static void logInfo(@Nullable IgniteLogger log, String msg) {
-        assert msg != null;
-
-        if (log == null)
-            return;
-
-        if (log.isInfoEnabled())
-            log.info(msg);
-    }
-
-    /**
      * Resolves work directory.
      * @param cfg Ignite configuration.
      */

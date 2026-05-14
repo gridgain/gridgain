@@ -161,7 +161,6 @@ import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.IgniteCollectors;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.InitializationProtector;
-import org.apache.ignite.internal.util.TimeBag;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -1065,6 +1064,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             GridCacheContextInfo cacheInfo = new GridCacheContextInfo(ctx, false);
 
+            long cleanupStartTimeMs = U.currentTimeMillis();
+
             if (clearDbObjects) {
                 boolean rmvIdx = !cache.context().group().persistenceEnabled() || callDestroy;
                 boolean clearIdx = !cache.context().group().persistenceEnabled() || clearCache;
@@ -1127,6 +1128,13 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 U.error(log, "Failed to flush WAL data while destroying cache" +
                     "[cache=" + ctx.name() + "]", e);
             }
+
+            if (log.isInfoEnabled())
+                log.info("Cache data removing ends [cacheName=" + ctx.cache().name()
+                    + (ctx.group().sharedGroup() ? ", grpName=" + ctx.group().cacheOrGroupName() : "")
+                    + ", grpId=" + ctx.group().groupId()
+                    + ", time=" + U.humanReadableDuration(U.currentTimeMillis() - cleanupStartTimeMs)
+                    + "]");
 
             try {
                 IgnitePageStoreManager pageStore;
@@ -2812,23 +2820,20 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * fully initialized (e.g. failed on cache init stage).
      *
      * @param topVer Topology version related to the given {@code exchActions}.
-     * @param timeBag Time bag to apply stages of cache group stop and destruction process.
      * @param exchActions Stop requests.
      */
-    void forceCloseCaches(AffinityTopologyVersion topVer, TimeBag timeBag, ExchangeActions exchActions) {
+    void forceCloseCaches(AffinityTopologyVersion topVer, ExchangeActions exchActions) {
         assert exchActions != null && !exchActions.cacheStopRequests().isEmpty();
 
-        processCacheStopRequestOnExchangeDone(topVer, timeBag, exchActions);
+        processCacheStopRequestOnExchangeDone(topVer, exchActions);
     }
 
     /**
      * @param topVer Topology version related to the given {@code exchActions}.
-     * @param timeBag Time bag to apply stages of cache group stop and destruction process.
      * @param exchActions Change requests.
      */
     private void processCacheStopRequestOnExchangeDone(
         AffinityTopologyVersion topVer,
-        TimeBag timeBag,
         ExchangeActions exchActions
     ) {
         // Reserve at least 2 threads for system operations.
@@ -2868,6 +2873,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     }
 
                     for (ExchangeActions.CacheActionData action : cachesToStopByGrp.getValue()) {
+                        long rollbackStartTime = U.currentTimeMillis();
+
                         context().tm().rollbackTransactionsForStoppingCache(action.descriptor().cacheId());
 
                         stopGateway(action.request());
@@ -2878,6 +2885,15 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                         if (cache != null)
                             cache.context().ttl().unregister();
+
+                        CacheGroupDescriptor grpDesc = action.descriptor().groupDescriptor();
+
+                        if (log.isDebugEnabled())
+                            log.debug("Rollback transactions for stopping cache [cacheName=" + cacheName
+                                + (grpDesc.sharedGroup() ? ", grpName=" + grpDesc.cacheOrGroupName() : "")
+                                + ", grpId=" + grpDesc.groupId()
+                                + ", time=" + U.humanReadableDuration(U.currentTimeMillis() - rollbackStartTime)
+                                + "]");
                     }
 
                     return null;
@@ -2946,30 +2962,24 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             cachesInfo.cleanupRemovedCaches(topVer);
         }
 
-        U.logInfo(log, "Stopping cache groups begins.");
-
-        timeBag.finishGlobalStage("Stopping cache groups begins.");
-
         for (IgniteBiTuple<CacheGroupContext, Boolean> grp : grpsToStop) {
-            int grpId = grp.get1().groupId();
+            CacheGroupContext gctx = grp.get1();
+
+            int grpId = gctx.groupId();
 
             long beginCacheStopTimeMs = U.currentTimeMillis();
 
-            U.logInfo(log, "Stopping cache group begins [grpId=" + grpId + "].");
-
             stopCacheGroup(grpId, grp.get2());
 
-            U.logInfo(log, "Stopping cache group ends [grpId=" + grpId +
-                ", elapsedTime=" + U.humanReadableDuration(U.currentTimeMillis() - beginCacheStopTimeMs) + "]."
-            );
+            if (log.isDebugEnabled())
+                log.debug("Stopping cache group ends [grpName=" + gctx.cacheOrGroupName()
+                    + ", grpId=" + grpId
+                    + ", time=" + U.humanReadableDuration(U.currentTimeMillis() - beginCacheStopTimeMs)
+                    + "]");
         }
 
         if (!sharedCtx.kernalContext().clientNode())
             sharedCtx.database().onCacheGroupsStopped(grpsToStop);
-
-        timeBag.finishGlobalStage( "Stopping cache groups phase ends.");
-
-        U.logInfo(log, "Stopping cache groups ends.");
 
         cachesInfo.cleanupRemovedCacheGroups(topVer);
 
@@ -2994,7 +3004,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * @param grpToStop Group for which listener shuold be removed.
+     * @param grpToStop Group for which listener should be removed.
      */
     private void removeOffheapCheckpointListener(List<IgniteBiTuple<CacheGroupContext, Boolean>> grpToStop) {
         sharedCtx.database().checkpointReadLock();
@@ -3018,13 +3028,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * Callback invoked when first exchange future for dynamic cache is completed.
      *
      * @param cacheStartVer Started caches version to create proxy for.
-     * @param timeBag Time bag to apply stages of cache group stop and destruction process.
      * @param exchActions Change requests.
      * @param err Error.
      */
     public void onExchangeDone(
         AffinityTopologyVersion cacheStartVer,
-        TimeBag timeBag,
         @Nullable ExchangeActions exchActions,
         @Nullable Throwable err
     ) {
@@ -3041,7 +3049,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
 
         if (err == null)
-            processCacheStopRequestOnExchangeDone(cacheStartVer, timeBag, exchActions);
+            processCacheStopRequestOnExchangeDone(cacheStartVer, exchActions);
     }
 
     /**

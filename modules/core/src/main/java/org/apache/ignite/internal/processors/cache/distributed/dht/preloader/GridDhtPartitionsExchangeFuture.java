@@ -2567,7 +2567,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 comp.onDoneBeforeTopologyUnlock(this);
 
             // Create and destroy caches and cache proxies.
-            cctx.cache().onExchangeDone(initialVersion(), timeBag, exchActions, err);
+            cctx.cache().onExchangeDone(initialVersion(), exchActions, err);
+
+            timeBag.finishGlobalStage("Create and destroy caches and cache proxies");
 
             cctx.kernalContext().authentication().onActivate();
 
