@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <Compile Include="..\SharedAssemblyInfo.cs" />
-    <PackageReference Include="Remotion.Linq" Version="2.1.2" />
+    <PackageReference Include="Remotion.Linq" Version="2.2.0" />
     <ProjectReference Include="..\Apache.Ignite.Core\Apache.Ignite.Core.csproj" />
 
     <!--

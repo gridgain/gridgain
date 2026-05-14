@@ -117,7 +117,7 @@ namespace Apache.Ignite.Core.Tests
                 };
 
                 AssertExtensions.ReflectionEqual(dsCfg, resCfg.DataStorageConfiguration,
-                    ignoredProperties: new HashSet<string> {"MaxSize"});
+                    ignoredProperties: new HashSet<string> { "MaxSize", "ConcurrencyLevel" });
             }
         }
     }

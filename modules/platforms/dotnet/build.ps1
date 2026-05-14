@@ -180,12 +180,12 @@ if (!$skipDotNet) {
 }
 
 if(!$skipDotNetCore) {
-    Build-Solution ".\Apache.Ignite.DotNetCore.sln" "bin\net6.0"
+    Build-Solution ".\Apache.Ignite.DotNetCore.sln" "bin\net8.0"
 
-    # Build executable for .NET 8 too. Copy all libraries, then build the binaries.
-    Make-Dir("bin\net8.0")
-    Copy-Item -Force -Recurse "bin\net6.0\*" "bin\net8.0"
-    dotnet publish .\Apache.Ignite\Apache.Ignite.DotNetCore.csproj -c $configuration -f net8.0 -o bin\net8.0
+    # Build executable for .NET 10 too. Copy all libraries, then build the binaries.
+    Make-Dir("bin\net10.0")
+    Copy-Item -Force -Recurse "bin\net8.0\*" "bin\net10.0"
+    dotnet publish .\Apache.Ignite\Apache.Ignite.DotNetCore.csproj -c $configuration -f net10.0 -o bin\net10.0
 }
 
 
