@@ -4367,6 +4367,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         timeBag.finishGlobalStage("Validate partitions states");
     }
 
+    private void recordExchangeEvent() {
+        GridKernalContext ctx = cctx.kernalContext();
+        if (ctx.event().isRecordable()) {
+
+            ctx.event().record();
+        }
+    }
+
     /**
      * @param cacheGrpsToResetOwners Set of cache groups which need to reset partitions state,
      *                                 null if reset partitions state for all cache groups needed
