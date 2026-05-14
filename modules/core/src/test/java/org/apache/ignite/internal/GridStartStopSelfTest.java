@@ -64,8 +64,6 @@ public class GridStartStopSelfTest extends GridCommonAbstractTest {
 
         cfg.setConnectorConfiguration(null);
 
-        cfg.setDiscoverySpi(new TcpDiscoverySpi().setIpFinder(sharedStaticIpFinder));
-
         info("Grid start-stop test count: " + COUNT);
 
         for (int i = 0; i < COUNT; i++) {
