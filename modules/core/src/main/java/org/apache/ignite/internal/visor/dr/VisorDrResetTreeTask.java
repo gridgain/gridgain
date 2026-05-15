@@ -172,30 +172,6 @@ public class VisorDrResetTreeTask extends VisorMultiNodeTask<
 
             return new VisorDrResetTreeJobResult(result, errors);
         }
-
-        /**
-         * Process task arguments and extract cache group id.
-         *
-         * @param arg      Task arguments.
-         * @param groupIds Group id collector.
-         * @param failures Failures collector.
-         */
-        private void extractGroupIds(VisorDrResetTreeTaskArgs arg, Consumer<Integer> groupIds,
-            Consumer<String> failures) {
-            GridCacheProcessor cacheProc = ignite.context().cache();
-
-            if (!F.isEmpty(arg.caches())) {
-                arg.caches().forEach(cacheName -> {
-                        DynamicCacheDescriptor desc = cacheProc.cacheDescriptor(cacheName);
-
-                        if (desc != null)
-                            groupIds.accept(desc.groupId());
-                        else
-                            failures.accept("Failed to find cache: " + cacheName);
-                    }
-                );
-            }
-        }
     }
 
     /**

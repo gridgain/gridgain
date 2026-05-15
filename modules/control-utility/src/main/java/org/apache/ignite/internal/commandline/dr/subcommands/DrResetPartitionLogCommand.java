@@ -166,8 +166,7 @@ public class DrResetPartitionLogCommand extends AbstractCommand<DrResetPartition
         }
     }
 
-    @Override
-    public String name() {
+    @Override public String name() {
         return DrSubCommandsList.RESET_TREES.text().toUpperCase();
     }
 
