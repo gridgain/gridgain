@@ -1130,11 +1130,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             }
 
             if (log.isInfoEnabled())
-                log.info("Cache data removing ends [cacheName=" + ctx.cache().name()
+                log.info("Cache data removing [cacheName=" + ctx.cache().name()
                     + (ctx.group().sharedGroup() ? ", grpName=" + ctx.group().cacheOrGroupName() : "")
                     + ", grpId=" + ctx.group().groupId()
                     + ", time=" + U.humanReadableDuration(U.currentTimeMillis() - cleanupStartTimeMs)
-                    + "]");
+                    + ']');
 
             try {
                 IgnitePageStoreManager pageStore;
@@ -2893,7 +2893,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                                 + (grpDesc.sharedGroup() ? ", grpName=" + grpDesc.cacheOrGroupName() : "")
                                 + ", grpId=" + grpDesc.groupId()
                                 + ", time=" + U.humanReadableDuration(U.currentTimeMillis() - rollbackStartTime)
-                                + "]");
+                                + ']');
                     }
 
                     return null;
@@ -2972,10 +2972,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             stopCacheGroup(grpId, grp.get2());
 
             if (log.isDebugEnabled())
-                log.debug("Stopping cache group ends [grpName=" + gctx.cacheOrGroupName()
+                log.debug("Stopping cache group [grpName=" + gctx.cacheOrGroupName()
                     + ", grpId=" + grpId
                     + ", time=" + U.humanReadableDuration(U.currentTimeMillis() - beginCacheStopTimeMs)
-                    + "]");
+                    + ']');
         }
 
         if (!sharedCtx.kernalContext().clientNode())
