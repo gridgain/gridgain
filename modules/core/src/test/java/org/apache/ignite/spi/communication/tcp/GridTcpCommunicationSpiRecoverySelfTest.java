@@ -494,9 +494,23 @@ public class GridTcpCommunicationSpiRecoverySelfTest<T extends CommunicationSpi<
                     assertEquals(expMsgs1, lsnr1.rcvCnt.get());
 
                     if (spi1.isUsePairedConnections()) {
-                        // Both paired directions must be re-established after the socketWriteTimeout-driven close.
-                        // Under load the second direction can take noticeably longer to reconnect than the
-                        // per-step waits in this test, so allow a longer dedicated timeout here.
+                        // After the test's main message bursts, late stale-connection detection inside the SPI
+                        // can close both paired directions; only the direction with current traffic will
+                        // re-establish itself by message send. Send a probe in each direction first so any
+                        // flapped session is restored before we assert the paired-conn invariant.
+                        spi0.sendMessage(node1, new GridTestMessage(node0.id(), msgId.incrementAndGet(), 0));
+                        expCnt1.incrementAndGet();
+                        spi1.sendMessage(node0, new GridTestMessage(node1.id(), msgId.incrementAndGet(), 0));
+                        expCnt0.incrementAndGet();
+
+                        final int expMsgs0Final = expCnt0.get();
+                        final int expMsgs1Final = expCnt1.get();
+
+                        GridTestUtils.waitForCondition(
+                            () -> lsnr0.rcvCnt.get() >= expMsgs0Final && lsnr1.rcvCnt.get() >= expMsgs1Final,
+                            awaitForSocketWriteTimeout()
+                        );
+
                         assertTrue(waitForSessionsCount(spi1, 2, 3 * awaitForSocketWriteTimeout()));
                     }
                 }
