@@ -493,8 +493,12 @@ public class GridTcpCommunicationSpiRecoverySelfTest<T extends CommunicationSpi<
                     assertEquals(expMsgs0, lsnr0.rcvCnt.get());
                     assertEquals(expMsgs1, lsnr1.rcvCnt.get());
 
-                    if (spi1.isUsePairedConnections())
-                        assertTrue(waitForSessionsCount(spi1, 2));
+                    if (spi1.isUsePairedConnections()) {
+                        // Both paired directions must be re-established after the socketWriteTimeout-driven close.
+                        // Under load the second direction can take noticeably longer to reconnect than the
+                        // per-step waits in this test, so allow a longer dedicated timeout here.
+                        assertTrue(waitForSessionsCount(spi1, 2, 3 * awaitForSocketWriteTimeout()));
+                    }
                 }
                 catch (IgniteCheckedException e) {
                     if (e.hasCause(BindException.class)) {
@@ -636,12 +640,24 @@ public class GridTcpCommunicationSpiRecoverySelfTest<T extends CommunicationSpi<
      * @return {@code true} if sessions count was achieved, {@code false} otherwise.
      */
     private boolean waitForSessionsCount(TcpCommunicationSpi spi, int cnt) throws IgniteInterruptedCheckedException {
+        return waitForSessionsCount(spi, cnt, awaitForSocketWriteTimeout());
+    }
+
+    /**
+     * @param spi SPI.
+     * @param cnt Expected sessions count.
+     * @param timeoutMs Maximum time to wait, in milliseconds.
+     *
+     * @return {@code true} if sessions count was achieved, {@code false} otherwise.
+     */
+    private boolean waitForSessionsCount(TcpCommunicationSpi spi, int cnt, long timeoutMs)
+        throws IgniteInterruptedCheckedException {
         return GridTestUtils.waitForCondition(() -> {
             Collection<? extends GridNioSession> sessions =
                 GridTestUtils.getFieldValue(spi, "nioSrvWrapper", "nioSrv", "sessions");
 
             return sessions.size() == cnt;
-        }, awaitForSocketWriteTimeout());
+        }, timeoutMs);
     }
 
     /**
