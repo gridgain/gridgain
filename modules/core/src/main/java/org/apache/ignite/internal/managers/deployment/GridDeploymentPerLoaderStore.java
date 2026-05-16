@@ -248,7 +248,7 @@ public class GridDeploymentPerLoaderStore extends GridDeploymentStoreAdapter {
                         // If we received execution request even after we waited for P2P
                         // timeout period, we simply ignore it.
                         else if (d.sequenceNumber() > meta.sequenceNumber()) {
-                            if (d.deployedClass(meta.className()).get1() != null) {
+                            if (d.existingDeployedClass(meta.className()) != null) {
                                 long time = U.currentTimeMillis() - d.timestamp();
 
                                 if (time < ctx.config().getNetworkTimeout()) {
