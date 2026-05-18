@@ -25,9 +25,11 @@
         http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans.xsd">
     <bean id="grid.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
+        <!-- See spring-start-nodes.xml for the reason behind override.org.apache.ignite.macs. -->
         <property name="userAttributes">
             <map>
                 <entry key="grid.node.ssh.started" value="true"/>
+                <entry key="override.org.apache.ignite.macs" value="IgniteProjectionStartStopRestartSelfTest"/>
             </map>
         </property>
 

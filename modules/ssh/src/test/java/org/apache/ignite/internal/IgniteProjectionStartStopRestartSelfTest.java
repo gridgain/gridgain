@@ -43,6 +43,7 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
@@ -182,16 +183,14 @@ public class IgniteProjectionStartStopRestartSelfTest extends GridCommonAbstract
 
         if (ignite != null) {
             if (!ignite.cluster().nodes().isEmpty()) {
-                leftLatch = new CountDownLatch(ignite.cluster().nodes().size());
-
                 ignite.cluster().stopNodes();
 
-                assert leftLatch.await(
-                    WAIT_TIMEOUT,
-                    MILLISECONDS);
+                // Poll cluster topology instead of relying on a leftLatch sized to the current
+                // node count: NODE_FAILED and NODE_LEFT can both fire for the same node, which
+                // races the latch to zero before the topology is actually empty.
+                wasEmpty = GridTestUtils.waitForCondition(
+                    () -> ignite.cluster().nodes().isEmpty(), WAIT_TIMEOUT);
             }
-
-            wasEmpty = ignite.cluster().nodes().isEmpty();
         }
 
         G.stop(true);

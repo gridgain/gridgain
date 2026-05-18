@@ -25,6 +25,16 @@
         http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans.xsd">
     <bean id="grid.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
+        <!-- Force a fixed value for ATTR_MACS so the daemon orchestrator and SSH-started nodes
+             match in IgniteClusterImpl.neighbors(). Without it, NetworkInterface.getHardwareAddress()
+             can intermittently return null on Linux (see U.allLocalMACs javadoc), producing
+             inconsistent MAC strings across JVMs and breaking neighbor counting. -->
+        <property name="userAttributes">
+            <map>
+                <entry key="override.org.apache.ignite.macs" value="IgniteProjectionStartStopRestartSelfTest"/>
+            </map>
+        </property>
+
         <property name="localHost" value="127.0.0.1"/>
 
         <property name="connectorConfiguration"><null/></property>
