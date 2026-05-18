@@ -117,6 +117,12 @@ public class IgniteDisableWalOnRebalanceTest extends GridCommonAbstractTest {
 
         assertFalse(restartedNode.cachex(DEFAULT_CACHE_NAME).context().group().walEnabled());
 
+        // Drain any in-flight or scheduled checkpoint before the forced shutdown. The startup
+        // 'checkpoint-frequency-changed' force-checkpoint can otherwise land between the WAL-disable
+        // and stopGrid(cancel=true), leaving a half-written start marker that forces the next
+        // restart into Maintenance Mode (GG-48683).
+        forceCheckpoint(restartedNode);
+
         // Stop the node and skip the checkpoint.
         stopGrid(1, true);
 
