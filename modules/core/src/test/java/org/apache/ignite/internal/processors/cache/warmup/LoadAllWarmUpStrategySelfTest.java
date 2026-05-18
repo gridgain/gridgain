@@ -22,7 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -33,11 +35,15 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.warmup.LoadAllWarmUpStrategy.LoadPartition;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
@@ -53,6 +59,9 @@ public class LoadAllWarmUpStrategySelfTest extends GridCommonAbstractTest {
     /** Flag for enabling warm-up. */
     private boolean warmUp;
 
+    /** Custom thread count for warm-up configurations; {@code 0} keeps the strategy default. */
+    private int warmUpThreads;
+
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
@@ -62,6 +71,7 @@ public class LoadAllWarmUpStrategySelfTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
 
         LoadAllWarmUpStrategyEx.loadDataInfoCb = null;
+        LoadAllWarmUpStrategyEx.loadPartitionCb = null;
     }
 
     /** {@inheritDoc} */
@@ -72,9 +82,9 @@ public class LoadAllWarmUpStrategySelfTest extends GridCommonAbstractTest {
                 new DataStorageConfiguration()
                     .setDataRegionConfigurations(
                         new DataRegionConfiguration().setName("dr_0").setPersistenceEnabled(true)
-                            .setWarmUpConfiguration(!warmUp ? null : new LoadAllWarmUpConfigurationEx()),
+                            .setWarmUpConfiguration(!warmUp ? null : newWarmUpCfg()),
                         new DataRegionConfiguration().setName("dr_1").setPersistenceEnabled(true)
-                            .setWarmUpConfiguration(!warmUp ? null : new LoadAllWarmUpConfigurationEx())
+                            .setWarmUpConfiguration(!warmUp ? null : newWarmUpCfg())
                     )
             ).setCacheConfiguration(
                 cacheCfg("c_0", "g_0", "dr_0", Organization.queryEntity()),
@@ -82,6 +92,18 @@ public class LoadAllWarmUpStrategySelfTest extends GridCommonAbstractTest {
                 cacheCfg("c_2", "g_1", "dr_1", Organization.queryEntity()),
                 cacheCfg("c_3", "g_1", "dr_1", Person.queryEntity())
             );
+    }
+
+    /**
+     * @return Warm-up configuration honoring the current {@link #warmUpThreads} override.
+     */
+    private LoadAllWarmUpConfigurationEx newWarmUpCfg() {
+        LoadAllWarmUpConfigurationEx cfg = new LoadAllWarmUpConfigurationEx();
+
+        if (warmUpThreads > 0)
+            cfg.setThreads(warmUpThreads);
+
+        return cfg;
     }
 
     /**
@@ -195,6 +217,91 @@ public class LoadAllWarmUpStrategySelfTest extends GridCommonAbstractTest {
 
         // Pages may be evicted.
         assertTrue(loadPages >= minLoadPages && loadPages <= maxLoadPages);
+    }
+
+    /**
+     * Same correctness invariant as {@link #testSimple()} but forces the single-threaded fallback
+     * code path inside the strategy ({@code threads == 1}).
+     */
+    @Test
+    public void testSingleThreadFallback() throws Exception {
+        warmUpThreads = 1;
+
+        testSimple();
+    }
+
+    /**
+     * Same correctness invariant as {@link #testSimple()} with a small explicit thread count.
+     */
+    @Test
+    public void testCustomThreadCount() throws Exception {
+        warmUpThreads = 4;
+
+        testSimple();
+    }
+
+    /**
+     * Verifies that {@link GridCacheProcessor#stopWarmUp} interrupts an in-flight parallel warm-up.
+     * <p/>
+     * Steps:
+     * 1) Start a node, populate the caches, checkpoint, stop;
+     * 2) Restart the node asynchronously with warm-up enabled and a non-trivial worker count;
+     * 3) Block the first partition's load via {@link LoadAllWarmUpStrategyEx#loadPartitionCb}
+     *    until the test thread signals release;
+     * 4) Once warm-up is running, call {@code stopWarmUp()} on the partially-started kernal;
+     * 5) Release the blocked partition and assert the node finishes starting.
+     */
+    @Test
+    public void testStopDuringParallelWarmUp() throws Exception {
+        IgniteEx n = startGrid(0);
+        n.cluster().state(ClusterState.ACTIVE);
+
+        for (int i = 0; i < 5_000; i++) {
+            n.cache("c_0").put("c_0" + i, new Organization(i, "c_0" + i));
+            n.cache("c_1").put("c_1" + i, new Person(i, "c_1" + i, i));
+            n.cache("c_2").put("c_2" + i, new Organization(i, "c_2" + i));
+            n.cache("c_3").put("c_3" + i, new Person(i, "c_3" + i, i));
+        }
+
+        forceCheckpoint();
+
+        stopAllGrids();
+
+        warmUp = true;
+        warmUpThreads = 4;
+
+        CountDownLatch firstPartHit = new CountDownLatch(1);
+        CountDownLatch releaseFirstPart = new CountDownLatch(1);
+
+        LoadAllWarmUpStrategyEx.loadPartitionCb = part -> {
+            if (firstPartHit.getCount() == 0)
+                return;
+
+            firstPartHit.countDown();
+
+            try {
+                releaseFirstPart.await(1, TimeUnit.MINUTES);
+            }
+            catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        };
+
+        String instName = getTestIgniteInstanceName(0);
+
+        IgniteInternalFuture<IgniteEx> startFut = GridTestUtils.runAsync(() -> startGrid(instName));
+
+        try {
+            assertTrue("Warm-up did not start in time", firstPartHit.await(1, TimeUnit.MINUTES));
+
+            assertTrue("stopWarmUp returned false — warm-up was not in progress",
+                IgnitionEx.gridx(instName).context().cache().stopWarmUp());
+        }
+        finally {
+            releaseFirstPart.countDown();
+        }
+
+        assertNotNull(startFut.get(TimeUnit.MINUTES.toMillis(1)));
     }
 
     /**

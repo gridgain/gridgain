@@ -16,6 +16,7 @@
 
 package org.apache.ignite.configuration;
 
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -25,6 +26,33 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 public class LoadAllWarmUpConfiguration implements WarmUpConfiguration {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
+
+    /** Default thread count. */
+    public static final int DFLT_THREADS = Math.max(8, Runtime.getRuntime().availableProcessors());
+
+    /** Number of threads used to perform warmup in parallel. */
+    private int threads = DFLT_THREADS;
+
+    /**
+     * @return Number of threads used to load pages in parallel. Falls back to {@link #DFLT_THREADS}.
+     */
+    public int getThreads() {
+        return threads > 0 ? threads : DFLT_THREADS;
+    }
+
+    /**
+     * Sets the number of threads used to load pages in parallel. Must be positive.
+     *
+     * @param threads Number of threads.
+     * @return {@code this} for chaining.
+     */
+    public LoadAllWarmUpConfiguration setThreads(int threads) {
+        A.ensure(threads > 0, "threads must be positive");
+
+        this.threads = threads;
+
+        return this;
+    }
 
     /** {@inheritDoc} */
     @Override public String toString() {
