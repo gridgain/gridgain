@@ -444,7 +444,7 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
                 stop.set(true);
             }
 
-            GridTestUtils.runMultiThreadedAsync(new Callable<Void>() {
+            GridTestUtils.runMultiThreaded(new Callable<Void>() {
                 @Override public Void call() throws Exception {
                     ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
