@@ -224,6 +224,15 @@ public enum GridRestCommand {
     /** Warm-up. */
     WARM_UP("warmup"),
 
+    /** List distributed properties. */
+    PROPERTY_LIST("listproperties"),
+
+    /** Get a distributed property by name. */
+    PROPERTY_GET("getproperty"),
+
+    /** Set a distributed property by name. */
+    PROPERTY_SET("setproperty"),
+
     /** probe. */
     PROBE("probe");
 
