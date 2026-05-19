@@ -2201,11 +2201,12 @@ public class GridCacheUtils {
         Map<Class<? extends WarmUpConfiguration>, WarmUpStrategy> strategies = new HashMap<>();
 
         // Adding default strategies.
-        WarmUpStrategy[] defStrats = {
+        WarmUpStrategy<?>[] defStrats = {
             new NoOpWarmUpStrategy(),
             new LoadAllWarmUpStrategy(
                 kernalCtx.log(LoadAllWarmUpStrategy.class),
-                () -> kernalCtx.cache().cacheGroups()
+                () -> kernalCtx.cache().cacheGroups(),
+                kernalCtx.igniteInstanceName()
             )
         };
 
