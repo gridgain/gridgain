@@ -54,6 +54,7 @@ import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
+import org.apache.ignite.events.PartitionsValidationEvent;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.GridKernalContext;
@@ -144,9 +145,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_THREAD_DUMP_ON_EXC
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.cluster.ClusterState.active;
-import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
-import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
-import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
+import static org.apache.ignite.events.EventType.*;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DYNAMIC_CACHE_START_ROLLBACK_SUPPORTED;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
@@ -4319,6 +4318,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * Validates that partition update counters and cache sizes for all caches are consistent.
      */
     private void validatePartitionsState() {
+        Map<String, Set<Integer>> failedValidation = new ConcurrentHashMap<>();
+
+        AtomicReference<AffinityTopologyVersion> topVer = new AtomicReference<>();
+
         try {
             U.doInParallel(
                 cctx.kernalContext().pools().getSystemExecutorService(),
@@ -4354,6 +4357,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     catch (PartitionStateValidationException ex) {
                         log.warning(String.format(PARTITION_STATE_FAILED_MSG, grpCtx.cacheOrGroupName(), ex.getMessage()));
                         // TODO: Handle such errors https://issues.apache.org/jira/browse/IGNITE-7833
+
+                        failedValidation.put(grpCtx.cacheOrGroupName(), ex.failedPartitions());
+
+                        topVer.compareAndSet(null, ex.topologyVersion());
                     }
 
                     return null;
@@ -4364,14 +4371,27 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             throw new IgniteException("Failed to validate partitions state", e);
         }
 
+        if (!failedValidation.isEmpty()) {
+            recordExchangeEvent("Partition states validation has failed.",
+                    EVT_PARTITION_VALIDATION_FAILED, failedValidation, topVer.get());
+        }
+
         timeBag.finishGlobalStage("Validate partitions states");
     }
 
-    private void recordExchangeEvent() {
+    private void recordExchangeEvent(String msg, int eventType, Map<String, Set<Integer>> parts,
+                                     AffinityTopologyVersion topVer) {
         GridKernalContext ctx = cctx.kernalContext();
-        if (ctx.event().isRecordable()) {
+        if (ctx.event().isRecordable(eventType)) {
+            PartitionsValidationEvent event = new PartitionsValidationEvent(
+                    ctx.discovery().localNode(),
+                    msg,
+                    eventType,
+                    parts,
+                    topVer
+            );
 
-            ctx.event().record();
+            ctx.event().record(event);
         }
     }
 
