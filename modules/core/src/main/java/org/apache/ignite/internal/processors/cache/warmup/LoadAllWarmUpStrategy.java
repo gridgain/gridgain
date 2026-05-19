@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.cache.warmup;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -109,12 +109,13 @@ public class LoadAllWarmUpStrategy implements WarmUpStrategy<LoadAllWarmUpConfig
         if (log.isInfoEnabled()) {
             Collection<List<LoadPartition>> parts = loadDataInfo.values();
 
-            int totalParts = loadDataInfo.values().stream().mapToInt(List::size).sum();
+            int totalParts = parts.stream().mapToInt(List::size).sum();
 
             long pageCnt = parts.stream().flatMap(Collection::stream).mapToLong(LoadPartition::pages).sum();
 
             List<String> grpNames = loadDataInfo.keySet().stream()
                     .map(CacheGroupContext::cacheOrGroupName)
+                    .sorted()
                     .collect(toList());
 
             log.info(String.format(
@@ -284,15 +285,9 @@ public class LoadAllWarmUpStrategy implements WarmUpStrategy<LoadAllWarmUpConfig
      * Acquires and immediately releases a page — the act of acquiring pulls it into the data region.
      */
     private void loadPage(PageMemoryEx pageMemEx, int grpId, long pageId) throws IgniteCheckedException {
-        long pagePtr = -1;
+        long pagePtr = pageMemEx.acquirePage(grpId, pageId);
 
-        try {
-            pagePtr = pageMemEx.acquirePage(grpId, pageId);
-        }
-        finally {
-            if (pagePtr != -1)
-                pageMemEx.releasePage(grpId, pageId, pagePtr);
-        }
+        pageMemEx.releasePage(grpId, pageId, pagePtr);
     }
 
     /** {@inheritDoc} */
@@ -337,7 +332,7 @@ public class LoadAllWarmUpStrategy implements WarmUpStrategy<LoadAllWarmUpConfig
         long availableLoadPageCnt = availableLoadPageCount(region);
 
         // Computing groups, partitions, and pages to load into data region.
-        Map<CacheGroupContext, List<LoadPartition>> loadableGrps = new LinkedHashMap<>();
+        Map<CacheGroupContext, List<LoadPartition>> loadableGrps = new HashMap<>();
 
         for (int i = 0; i < regionGrps.size() && availableLoadPageCnt > 0; i++) {
             CacheGroupContext grp = regionGrps.get(i);
