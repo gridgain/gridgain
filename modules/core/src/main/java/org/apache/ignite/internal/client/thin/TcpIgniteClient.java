@@ -351,14 +351,19 @@ public class TcpIgniteClient implements IgniteClient {
         ));
     }
 
-    @Override
-    public <K, V> ClientDataStreamer<K, V> dataStreamer(String cacheName) throws IllegalStateException {
-        throw new UnsupportedOperationException("dataStreamer is not supported for TcpIgniteClient");
+    /** {@inheritDoc} */
+    @Override public <K, V> ClientDataStreamer<K, V> dataStreamer(String cacheName) {
+        GridArgumentCheck.notNull(cacheName, "cacheName");
+
+        return new TcpClientDataStreamer<>(cacheName, ch, marsh, new DataStreamerClientOptions<>());
     }
 
-    @Override
-    public <K, V> ClientDataStreamer<K, V> dataStreamer(String cacheName, DataStreamerClientOptions<K, V> options) throws IllegalStateException {
-        throw new UnsupportedOperationException("dataStreamer is not supported for TcpIgniteClient");
+    /** {@inheritDoc} */
+    @Override public <K, V> ClientDataStreamer<K, V> dataStreamer(String cacheName, DataStreamerClientOptions<K, V> options) {
+        GridArgumentCheck.notNull(cacheName, "cacheName");
+        GridArgumentCheck.notNull(options, "options");
+
+        return new TcpClientDataStreamer<>(cacheName, ch, marsh, options);
     }
 
     /** {@inheritDoc} */
