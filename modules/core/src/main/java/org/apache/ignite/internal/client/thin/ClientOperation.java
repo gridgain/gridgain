@@ -300,7 +300,13 @@ public enum ClientOperation {
     ATOMIC_SEQUENCE_VALUE_GET(9033),
 
     /** AtomicSequence.addAndGet (also covers incrementAndGet, getAndIncrement, getAndAdd). */
-    ATOMIC_SEQUENCE_VALUE_ADD_AND_GET(9034);
+    ATOMIC_SEQUENCE_VALUE_ADD_AND_GET(9034),
+
+    /** Start a data streamer (also used for one-shot flush+close batches). */
+    DATA_STREAMER_START(8000),
+
+    /** Add data to an existing long-lived server-side streamer. */
+    DATA_STREAMER_ADD_DATA(8001);
 
     /** Code. */
     private final int code;
