@@ -53,6 +53,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxEnlistRequest;
@@ -815,6 +816,25 @@ public class TxRollbackAsyncTest extends GridCommonAbstractTest {
             ", rolledBack=" + rolledBack.sum());
 
         assertEquals("total != completed + failed", total.sum(), completed.sum() + failed.sum());
+
+        // Async rollbacks are fire-and-forget (rollbackFut.listen(fut -> tx.close())), so finish futures
+        // and active transactions may still be draining when we get here. Wait for them to settle before
+        // asserting, otherwise checkFutures() races with the rollback completion.
+        waitForCondition(() -> {
+            for (Ignite ignite : G.allGrids()) {
+                IgniteEx ig = (IgniteEx)ignite;
+
+                for (GridCacheFuture<?> fut : ig.context().cache().context().mvcc().activeFutures()) {
+                    if (!fut.isDone())
+                        return false;
+                }
+
+                if (!ig.context().cache().context().tm().activeTransactions().isEmpty())
+                    return false;
+            }
+
+            return true;
+        }, 10_000);
 
         checkFutures();
     }
