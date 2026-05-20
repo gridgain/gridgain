@@ -51,6 +51,8 @@ import org.apache.ignite.client.ClientServices;
 import org.apache.ignite.client.ClientTransactions;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.client.IgniteClientFuture;
+import org.apache.ignite.client.datastreamer.ClientDataStreamer;
+import org.apache.ignite.client.datastreamer.DataStreamerClientOptions;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
@@ -347,6 +349,16 @@ public class TcpIgniteClient implements IgniteClient {
             true,
             marsh
         ));
+    }
+
+    @Override
+    public <K, V> ClientDataStreamer<K, V> dataStreamer(String cacheName) throws IllegalStateException {
+        throw new UnsupportedOperationException("dataStreamer is not supported for TcpIgniteClient");
+    }
+
+    @Override
+    public <K, V> ClientDataStreamer<K, V> dataStreamer(String cacheName, DataStreamerClientOptions<K, V> options) throws IllegalStateException {
+        throw new UnsupportedOperationException("dataStreamer is not supported for TcpIgniteClient");
     }
 
     /** {@inheritDoc} */

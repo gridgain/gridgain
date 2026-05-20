@@ -16,14 +16,17 @@
 
 package org.apache.ignite.client;
 
-import java.util.Collection;
-import java.util.List;
 import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.client.datastreamer.ClientDataStreamer;
+import org.apache.ignite.client.datastreamer.DataStreamerClientOptions;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Ignite thin client.
@@ -142,6 +145,10 @@ public interface IgniteClient extends AutoCloseable {
      * @return Cursor.
      */
     public FieldsQueryCursor<List<?>> query(SqlFieldsQuery qry);
+
+    public <K, V> ClientDataStreamer<K, V> dataStreamer(String cacheName) throws IllegalStateException;
+
+    public <K, V> ClientDataStreamer<K, V> dataStreamer(String cacheName, DataStreamerClientOptions<K, V> options) throws IllegalStateException;
 
     /**
      * Gets client transactions facade.
