@@ -135,13 +135,15 @@ public class PageLockTrackerManagerTest {
 
             for (int i = 0; i < threads; i++) {
                 Thread th = new Thread(() -> {
-                    startThreadsLatch.countDown();
-
                     pls.onBeforeReadLock(cacheId, pageId, page);
 
                     pls.onReadLock(cacheId, pageId, page, pageAdder);
 
                     pls.onReadUnlock(cacheId, pageId, page, pageAdder);
+
+                    // Count down only after the per-thread tracker entry has been fully
+                    // populated, so the main thread observes a stable overhead snapshot.
+                    startThreadsLatch.countDown();
 
                     try {
                         finishThreadsLatch.await();
