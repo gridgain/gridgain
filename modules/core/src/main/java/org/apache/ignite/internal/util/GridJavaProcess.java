@@ -219,6 +219,11 @@ public final class GridJavaProcess {
                 log.info(String.format("Abnormal exit value of %s for pid %s", exitVal, pid));
         }
 
+        // Wait for the target JVM to be reaped so its file locks (e.g. PDS folder lock) are released
+        // before this method returns. Otherwise a follow-up node restart can race the lock release.
+        if (proc != null)
+            proc.waitFor();
+
         if (procKilledC != null)
             procKilledC.apply();
 
