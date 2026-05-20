@@ -43,7 +43,6 @@ import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionSerializationException;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
@@ -96,14 +95,6 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
      * @throws Exception If failed.
      */
     @Test
-    public void testConcurrentUpdatePartitionMvccTx() throws Exception {
-        concurrentUpdatePartition(TRANSACTIONAL_SNAPSHOT, false);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
     public void testConcurrentUpdatePartitionAtomicCacheGroup() throws Exception {
         concurrentUpdatePartition(ATOMIC, true);
     }
@@ -114,14 +105,6 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
     @Test
     public void testConcurrentUpdatePartitionTxCacheGroup() throws Exception {
         concurrentUpdatePartition(TRANSACTIONAL, true);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testConcurrentUpdatePartitionMvccTxCacheGroup() throws Exception {
-        concurrentUpdatePartition(TRANSACTIONAL_SNAPSHOT, true);
     }
 
     /**
@@ -284,18 +267,8 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-22462")
     public void testConcurrentUpdatesAndQueryStartTx() throws Exception {
         concurrentUpdatesAndQueryStart(TRANSACTIONAL, false);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-46116")
-    public void testConcurrentUpdatesAndQueryStartMvccTx() throws Exception {
-        concurrentUpdatesAndQueryStart(TRANSACTIONAL_SNAPSHOT, false);
     }
 
     /**
@@ -312,15 +285,6 @@ public class CacheContinuousQueryConcurrentPartitionUpdateTest extends GridCommo
     @Test
     public void testConcurrentUpdatesAndQueryStartTxCacheGroup() throws Exception {
         concurrentUpdatesAndQueryStart(TRANSACTIONAL, true);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-46116")
-    public void testConcurrentUpdatesAndQueryStartMvccTxCacheGroup() throws Exception {
-        concurrentUpdatesAndQueryStart(TRANSACTIONAL_SNAPSHOT, true);
     }
 
     /**
