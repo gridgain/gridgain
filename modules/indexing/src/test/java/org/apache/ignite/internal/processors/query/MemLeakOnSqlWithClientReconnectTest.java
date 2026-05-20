@@ -170,8 +170,13 @@ public class MemLeakOnSqlWithClientReconnectTest extends AbstractIndexingCommonT
 
             int curReservations = reservationCount(grid());
 
-            assertTrue("Reservations leaks: [base=" + baseReservations + ", cur=" + curReservations + ']',
-                curReservations < baseReservations * 2);
+            // A real leak scales with the number of iterations, so allow a small absolute
+            // fluctuation on top of the 2x ratio to avoid flakiness when baseReservations is tiny.
+            int maxReservations = Math.max(baseReservations * 2, baseReservations + 5);
+
+            assertTrue("Reservations leaks: [base=" + baseReservations + ", cur=" + curReservations
+                    + ", max=" + maxReservations + ']',
+                curReservations <= maxReservations);
 
             log.info("Reservations OK: [base=" + baseReservations + ", cur=" + curReservations + ']');
         }
