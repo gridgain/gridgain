@@ -88,8 +88,6 @@ public class PartitionsStateValidationEventsTest extends GridCommonAbstractTest 
 
         ignite.cluster().state(ACTIVE);
         ignite.cluster().baselineAutoAdjustEnabled(false);
-
-        awaitPartitionMapExchange();
     }
 
     /** {@inheritDoc} */
