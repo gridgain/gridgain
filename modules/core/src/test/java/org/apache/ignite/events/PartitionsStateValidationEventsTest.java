@@ -36,7 +36,7 @@ import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 /**
  * Tests for triggering PartitionsValidationEvent in case validation failed.
  */
-public class PartitionsValidationEventsTest extends GridCommonAbstractTest {
+public class PartitionsStateValidationEventsTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE_NAME = "cache";
 
@@ -57,7 +57,7 @@ public class PartitionsValidationEventsTest extends GridCommonAbstractTest {
         cfg.setCacheConfiguration(new CacheConfiguration(CACHE_NAME).setBackups(1));
 
         cfg.setIncludeEventTypes(
-                EventType.EVT_PARTITION_VALIDATION_FAILED
+                EventType.EVT_PARTITIONS_STATE_VALIDATION_FAILED
         );
 
         return cfg;
@@ -81,7 +81,7 @@ public class PartitionsValidationEventsTest extends GridCommonAbstractTest {
 
                                 return true;
                             }
-                        }, EventType.EVT_PARTITION_VALIDATION_FAILED
+                        }, EventType.EVT_PARTITIONS_STATE_VALIDATION_FAILED
                 );
 
         latch = new CountDownLatch(1);
@@ -130,10 +130,10 @@ public class PartitionsValidationEventsTest extends GridCommonAbstractTest {
 
         assertNotNull(evt);
 
-        assertEquals(EventType.EVT_PARTITION_VALIDATION_FAILED, evt.type());
-        assertEquals(250, ((PartitionsValidationEvent)evt).parts().get(CACHE_NAME).size());
-        System.out.println(((PartitionsValidationEvent)evt).topVer());
-        assertEquals(3, ((PartitionsValidationEvent)evt).topVer().topologyVersion());
+        assertEquals(EventType.EVT_PARTITIONS_STATE_VALIDATION_FAILED, evt.type());
+        assertEquals(250, ((PartitionsStateValidationEvent)evt).parts().get(CACHE_NAME).size());
+        System.out.println(((PartitionsStateValidationEvent)evt).topVer());
+        assertEquals(3, ((PartitionsStateValidationEvent)evt).topVer().topologyVersion());
     }
 
     /**

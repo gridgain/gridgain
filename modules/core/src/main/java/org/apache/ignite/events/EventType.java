@@ -23,7 +23,6 @@ import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.compute.ComputeTaskSession;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionsStateValidator;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.checkpoint.CheckpointSpi;
@@ -944,15 +943,14 @@ public interface EventType {
     public static final int EVT_QUERY_FINISHED = 166;
 
     /**
-     * Built-in event type: will occur when the partitions validation fails.
-     * @see GridDhtPartitionsStateValidator#validatePartitionsUpdateCounters
-     * <p>
-     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * Built-in event type: occurs when partition state validation fails.
+     *
+     * <p><b>NOTE:</b> all types in range <b>from 1 to 1000 are reserved</b> for
      * internal Ignite events and should not be used by user-defined events.
      *
-     * @see PartitionsValidationEvent
+     * @see PartitionsStateValidationEvent
      */
-    public static final int EVT_PARTITION_VALIDATION_FAILED = 170;
+    public static final int EVT_PARTITIONS_STATE_VALIDATION_FAILED = 170;
 
     /**
      * All checkpoint events. This array can be directly passed into

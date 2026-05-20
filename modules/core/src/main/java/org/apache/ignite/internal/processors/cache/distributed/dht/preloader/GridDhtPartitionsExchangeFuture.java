@@ -54,7 +54,7 @@ import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
-import org.apache.ignite.events.PartitionsValidationEvent;
+import org.apache.ignite.events.PartitionsStateValidationEvent;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.GridKernalContext;
@@ -4373,7 +4373,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         if (!failedValidation.isEmpty()) {
             recordExchangeEvent("Partition states validation has failed.",
-                    EVT_PARTITION_VALIDATION_FAILED, failedValidation, topVer.get());
+                EVT_PARTITIONS_STATE_VALIDATION_FAILED, failedValidation, topVer.get());
         }
 
         timeBag.finishGlobalStage("Validate partitions states");
@@ -4383,7 +4383,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                                      AffinityTopologyVersion topVer) {
         GridKernalContext ctx = cctx.kernalContext();
         if (ctx.event().isRecordable(eventType)) {
-            PartitionsValidationEvent event = new PartitionsValidationEvent(
+            PartitionsStateValidationEvent event = new PartitionsStateValidationEvent(
                     ctx.discovery().localNode(),
                     msg,
                     eventType,

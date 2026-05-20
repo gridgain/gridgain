@@ -55,9 +55,9 @@ import java.util.Set;
  * certain events are required for Ignite's internal operations and such events will still be generated but not stored
  * by event storage SPI if they are disabled in Ignite configuration.
  *
- * @see EventType#EVT_PARTITION_VALIDATION_FAILED
+ * @see EventType#EVT_PARTITIONS_STATE_VALIDATION_FAILED
  */
-public class PartitionsValidationEvent extends EventAdapter {
+public class PartitionsStateValidationEvent extends EventAdapter {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -76,8 +76,8 @@ public class PartitionsValidationEvent extends EventAdapter {
      * @param parts Map of cache or group names to the set of partition ids which failed validation.
      * @param topVer Topology version on which the validation failed.
      */
-    public PartitionsValidationEvent(ClusterNode node, String msg, int type, Map<String, Set<Integer>> parts,
-                                     AffinityTopologyVersion topVer) {
+    public PartitionsStateValidationEvent(ClusterNode node, String msg, int type, Map<String, Set<Integer>> parts,
+                                          AffinityTopologyVersion topVer) {
         super(node, msg, type);
         this.parts = Collections.unmodifiableMap(parts);
         this.topVer = topVer;
