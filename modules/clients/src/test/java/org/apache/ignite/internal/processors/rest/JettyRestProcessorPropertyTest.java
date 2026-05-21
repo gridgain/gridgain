@@ -17,16 +17,12 @@
 package org.apache.ignite.internal.processors.rest;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import java.io.IOException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
-import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Test;
-
-import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_SUCCESS;
 
 /**
  * End-to-end HTTP tests for the distributed-property REST commands.
@@ -43,11 +39,13 @@ public class JettyRestProcessorPropertyTest extends JettyRestProcessorCommonSelf
 
         // checkpoint.deviation is registered only when persistence is enabled
         // (GridCacheDatabaseSharedManager is constructed only in that case).
-        cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setMaxSize(100 * 1024 * 1024)
                 .setPersistenceEnabled(true))
-            .setWalMode(WALMode.NONE));
+            .setWalMode(WALMode.NONE);
+
+        cfg.setDataStorageConfiguration(dsCfg);
 
         return cfg;
     }
@@ -57,47 +55,6 @@ public class JettyRestProcessorPropertyTest extends JettyRestProcessorCommonSelf
         super.beforeTestsStarted();
 
         grid(0).cluster().state(ClusterState.ACTIVE);
-    }
-
-    /**
-     * Asserts that the REST response indicates success and returns the {@code response} JSON node.
-     *
-     * @param content Raw HTTP response body.
-     * @param bulk Whether a bulk (multi-key) command was invoked.
-     * @return The {@code response} field of the JSON envelope.
-     */
-    private JsonNode assertResponseSucceeded(String content, boolean bulk) throws IOException {
-        assertNotNull(content);
-        assertFalse(content.isEmpty());
-
-        JsonNode node = JSON_MAPPER.readTree(content);
-
-        JsonNode affNode = node.get("affinityNodeId");
-
-        if (affNode != null)
-            assertEquals(bulk, affNode.isNull());
-
-        assertEquals(STATUS_SUCCESS, node.get("successStatus").asInt());
-        assertTrue(node.get("error").isNull());
-
-        return node.get("response");
-    }
-
-    /**
-     * Asserts that the REST response indicates failure and that the error message contains {@code err}.
-     *
-     * @param content Raw HTTP response body.
-     * @param err Expected error substring.
-     */
-    private void assertResponseContainsError(String content, String err) throws IOException {
-        assertFalse(F.isEmpty(content));
-        assertNotNull(err);
-
-        JsonNode node = JSON_MAPPER.readTree(content);
-
-        assertTrue(node.get("successStatus").asInt() != STATUS_SUCCESS);
-        assertTrue(node.get("response").isNull());
-        assertTrue(node.get("error").asText().contains(err));
     }
 
     /**
