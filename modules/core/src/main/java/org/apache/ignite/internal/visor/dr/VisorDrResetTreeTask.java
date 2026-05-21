@@ -161,7 +161,7 @@ public class VisorDrResetTreeTask extends VisorMultiNodeTask<
                     }
 
                     if (debug)
-                        ignite.log().debug("Reset DR state: cache=" + cache + ", partitions=" + partitionsProcessed.toIntArray());
+                        ignite.log().debug("Reset DR state: cache=" + cache + ", partitions=" + Arrays.toString(partitionsProcessed.toIntArray()));
                 } catch (Exception ex) {
                     errors.add("Failed to reset DR state: cache=" + cache + ", error=" + ex.getMessage());
 
