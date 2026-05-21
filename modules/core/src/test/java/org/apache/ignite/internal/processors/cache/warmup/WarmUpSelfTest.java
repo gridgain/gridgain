@@ -177,7 +177,7 @@ public class WarmUpSelfTest extends GridCommonAbstractTest {
         GridCacheProcessor cacheProc = n.context().cache();
 
         Map<Class<? extends WarmUpConfiguration>, WarmUpStrategy> expStrats =
-            Stream.of(new NoOpWarmUpStrategy(), new LoadAllWarmUpStrategy(log, cacheProc::cacheGroups))
+            Stream.of(new NoOpWarmUpStrategy(), new LoadAllWarmUpStrategy(log, cacheProc::cacheGroups, n.name()))
                 .collect(toMap(WarmUpStrategy::configClass, identity()));
 
         Map<Class<? extends WarmUpConfiguration>, WarmUpStrategy> actStrats = CU.warmUpStrategies(n.context());
