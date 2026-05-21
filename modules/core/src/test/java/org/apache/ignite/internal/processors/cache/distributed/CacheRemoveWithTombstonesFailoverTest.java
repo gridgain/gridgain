@@ -178,10 +178,12 @@ public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTes
 
         awaitPartitionMapExchange();
 
-        // Ensure the evict queue is filled.
+        // Ensure the evict queue is filled. FillEvictQueueTask reschedules itself up to
+        // processEmptyEvictQueueFreq * 10 ms (5s by default) when there's nothing to do,
+        // which is the case while the cluster is inactive between the two restarts above.
         IgniteEx finalDemander = demander;
         assertTrue(GridTestUtils.waitForCondition(() ->
-            !finalDemander.context().cache().context().evict().evictQueue(true).isEmptyx(), 1_000));
+            !finalDemander.context().cache().context().evict().evictQueue(true).isEmptyx(), 10_000));
 
         final LongMetric tombstoneMetric1 = demander.context().metric().registry(
             MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric(TS_METRIC_NAME);

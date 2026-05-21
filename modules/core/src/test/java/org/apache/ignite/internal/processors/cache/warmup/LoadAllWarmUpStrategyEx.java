@@ -19,12 +19,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 
 import static java.util.Objects.nonNull;
 
@@ -35,14 +37,22 @@ class LoadAllWarmUpStrategyEx extends LoadAllWarmUpStrategy {
     /** {@link #loadDataInfo} callback. */
     static volatile BiConsumer<String, Map<CacheGroupContext, List<LoadPartition>>> loadDataInfoCb;
 
+    /** {@link #loadPartition} callback, invoked before delegating to the superclass. */
+    static volatile Consumer<LoadPartition> loadPartitionCb;
+
     /**
      * Constructor.
      *
-     * @param log       Logger.
+     * @param log Logger.
      * @param grpCtxSup Cache group contexts supplier. Since {@link GridCacheProcessor} starts later.
+     * @param igniteInstanceName Ignite instance name (used for naming warmup pool threads).
      */
-    public LoadAllWarmUpStrategyEx(IgniteLogger log, Supplier<Collection<CacheGroupContext>> grpCtxSup) {
-        super(log, grpCtxSup);
+    public LoadAllWarmUpStrategyEx(
+        IgniteLogger log,
+        Supplier<Collection<CacheGroupContext>> grpCtxSup,
+        String igniteInstanceName
+    ) {
+        super(log, grpCtxSup, igniteInstanceName);
     }
 
     /** {@inheritDoc} */
@@ -60,5 +70,15 @@ class LoadAllWarmUpStrategyEx extends LoadAllWarmUpStrategy {
             loadDataInfoCb.accept(region.config().getName(), loadDataInfo);
 
         return loadDataInfo;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void loadPartition(PageMemoryEx pageMemEx, CacheGroupContext grp, LoadPartition part) {
+        Consumer<LoadPartition> cb = loadPartitionCb;
+
+        if (cb != null)
+            cb.accept(part);
+
+        super.loadPartition(pageMemEx, grp, part);
     }
 }
