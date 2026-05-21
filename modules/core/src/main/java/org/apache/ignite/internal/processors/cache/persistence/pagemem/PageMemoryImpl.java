@@ -92,11 +92,14 @@ import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DELAYED_REPLACED_PAGE_WRITE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOADED_PAGES_BACKWARD_SHIFT_MAP;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_DIRTY_PAGES_RATIO;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.IgniteSystemProperties.getDouble;
 import static org.apache.ignite.internal.pagemem.FullPageId.NULL_PAGE;
 import static org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl.DATAREGION_METRICS_PREFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageHeader.headerIsValid;
+import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesWriteThrottlePolicy.DFLT_MAX_DIRTY_PAGES_RATIO;
 import static org.apache.ignite.internal.util.GridUnsafe.wrapPointer;
 import static org.apache.ignite.internal.util.OffheapReadWriteLock.TAG_LOCK_ALWAYS;
 
@@ -245,6 +248,12 @@ public class PageMemoryImpl implements PageMemoryEx {
     /** Write throttle type. */
     private final ThrottlingPolicy throttlingPlc;
 
+    /**
+     * Maximum fraction of dirty pages in a data region before a checkpoint is forced and throttling reaches its
+     * ceiling. Configured with {@link IgniteSystemProperties#IGNITE_MAX_DIRTY_PAGES_RATIO}.
+     */
+    private final double maxDirtyPagesRatio;
+
     /** Checkpoint progress provider. Null disables throttling. */
     @Nullable private final IgniteOutClosure<CheckpointProgress> cpProgressProvider;
 
@@ -316,6 +325,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         this.changeTracker = changeTracker;
         this.stateChecker = stateChecker;
         this.throttlingPlc = throttlingPlc != null ? throttlingPlc : ThrottlingPolicy.CHECKPOINT_BUFFER_ONLY;
+        this.maxDirtyPagesRatio = resolveMaxDirtyPagesRatio(log);
         this.cpProgressProvider = cpProgressProvider;
 
         this.pmPageMgr = pmPageMgr;
@@ -434,6 +444,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     private void initWriteThrottle() {
         if (throttlingPlc == ThrottlingPolicy.SPEED_BASED)
             writeThrottle = new PagesWriteSpeedBasedThrottle(
+                maxDirtyPagesRatio,
                 this,
                 cpProgressProvider,
                 stateChecker,
@@ -441,9 +452,25 @@ public class PageMemoryImpl implements PageMemoryEx {
                 ctx.kernalContext().metric().registry(MetricUtils.metricName(DATAREGION_METRICS_PREFIX, metrics().getName()))
             );
         else if (throttlingPlc == ThrottlingPolicy.TARGET_RATIO_BASED)
-            writeThrottle = new PagesWriteThrottle(this, cpProgressProvider, stateChecker, false, log);
+            writeThrottle = new PagesWriteThrottle(maxDirtyPagesRatio, this, cpProgressProvider, stateChecker, false, log);
         else if (throttlingPlc == ThrottlingPolicy.CHECKPOINT_BUFFER_ONLY)
-            writeThrottle = new PagesWriteThrottle(this, null, stateChecker, true, log);
+            writeThrottle = new PagesWriteThrottle(maxDirtyPagesRatio, this, null, stateChecker, true, log);
+    }
+
+    /**
+     * Reads {@link IgniteSystemProperties#IGNITE_MAX_DIRTY_PAGES_RATIO}, returns the default if absent or not
+     in allowed range.
+     */
+    static double resolveMaxDirtyPagesRatio(IgniteLogger log) {
+        double ratio = getDouble(IGNITE_MAX_DIRTY_PAGES_RATIO, DFLT_MAX_DIRTY_PAGES_RATIO);
+
+        if (ratio > 0.5 && ratio <= 0.99999)
+            return ratio;
+
+        U.warn(log, "Invalid " + IGNITE_MAX_DIRTY_PAGES_RATIO + "=" + ratio
+            + ", expected value in (0.5, 0.99999]; using default " + DFLT_MAX_DIRTY_PAGES_RATIO + ".");
+
+        return DFLT_MAX_DIRTY_PAGES_RATIO;
     }
 
     /** {@inheritDoc} */
@@ -2036,7 +2063,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                     region.address() + memPerTbl + ldPagesMapOffInRegion, pool.pages());
 
             maxDirtyPages = throttlingPlc != ThrottlingPolicy.DISABLED
-                ? pool.pages() * 3L / 4
+                ? Math.round(pool.pages() * maxDirtyPagesRatio)
                 : Math.min(pool.pages() * 2L / 3, cpPoolPages);
         }
 
