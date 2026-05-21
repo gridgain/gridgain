@@ -25,6 +25,10 @@ import org.apache.ignite.internal.util.typedef.F;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_JETTY_PORT;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_SUCCESS;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertThat;
 
 /**
  * Base class for testing Jetty REST protocol.
@@ -127,9 +131,9 @@ public abstract class JettyRestProcessorCommonSelfTest extends AbstractRestProce
 
         JsonNode node = JSON_MAPPER.readTree(content);
 
-        assertTrue(node.get("successStatus").asInt() != STATUS_SUCCESS);
+        assertThat(node.get("successStatus").asInt(), not(equalTo(STATUS_SUCCESS)));
         assertTrue(node.get("response").isNull());
-        assertTrue(node.get("error").asText().contains(err));
+        assertThat(node.get("error").asText(), containsString(err));
     }
 
     /**
@@ -147,7 +151,7 @@ public abstract class JettyRestProcessorCommonSelfTest extends AbstractRestProce
         if (affNode != null)
             assertEquals(bulk, affNode.isNull());
 
-        assertEquals(STATUS_SUCCESS, node.get("successStatus").asInt());
+        assertThat(node.get("successStatus").asInt(), equalTo(STATUS_SUCCESS));
         assertTrue(node.get("error").isNull());
 
         assertNotSame(securityEnabled(), node.get("sessionToken").isNull());
