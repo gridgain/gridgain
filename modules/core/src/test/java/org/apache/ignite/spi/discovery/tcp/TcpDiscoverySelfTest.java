@@ -966,7 +966,7 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
             // Each cleanup cycle sleeps ipFinderCleanFreq, then pings every registered address sequentially.
             // Pings to the two stale addresses each can take up to failureDetectTimeout, so allow for two
             // ping timeouts per cycle plus a second cycle as a safety margin.
-            long timeout = discoMap.get(g1.name()).getIpFinderCleanFrequency() * 2 + failureDetectTimeout * 3;
+            long timeout = discoMap.get(g1.name()).getIpFinderCleanFrequency() * 2 + failureDetectTimeout * 4;
 
             GridTestUtils.waitForCondition(new GridAbsPredicate() {
                 @Override public boolean apply() {
