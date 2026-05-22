@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 GridGain Systems, Inc. and Contributors.
+ * Copyright 2026 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +56,7 @@ import java.util.Set;
  * by event storage SPI if they are disabled in Ignite configuration.
  *
  * @see EventType#EVT_PARTITIONS_STATE_VALIDATION_FAILED
+ * @see EventType#EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED
  */
 public class PartitionsStateValidationEvent extends EventAdapter {
     /** */

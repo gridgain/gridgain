@@ -121,6 +121,7 @@ import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.TimeBag;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainCallable;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CI1;
@@ -4318,9 +4319,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * Validates that partition update counters and cache sizes for all caches are consistent.
      */
     private void validatePartitionsState() {
-        Map<String, Set<Integer>> failedValidation = new ConcurrentHashMap<>();
+        Map<String, Set<Integer>> partsFailedValidation = new ConcurrentHashMap<>();
 
-        AtomicReference<AffinityTopologyVersion> topVer = new AtomicReference<>();
+        AtomicBoolean validated = new AtomicBoolean(false);
 
         try {
             U.doInParallel(
@@ -4358,10 +4359,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         log.warning(String.format(PARTITION_STATE_FAILED_MSG, grpCtx.cacheOrGroupName(), ex.getMessage()));
                         // TODO: Handle such errors https://issues.apache.org/jira/browse/IGNITE-7833
 
-                        failedValidation.put(grpCtx.cacheOrGroupName(), ex.failedPartitions());
-
-                        topVer.compareAndSet(null, ex.topologyVersion());
+                        partsFailedValidation.put(grpCtx.cacheOrGroupName(), ex.failedPartitions());
                     }
+
+                    validated.compareAndSet(false, true);
 
                     return null;
                 }
@@ -4371,28 +4372,39 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             throw new IgniteException("Failed to validate partitions state", e);
         }
 
-        if (!failedValidation.isEmpty()) {
-            recordExchangeEvent("Partition states validation has failed.",
-                EVT_PARTITIONS_STATE_VALIDATION_FAILED, failedValidation, topVer.get());
+        if (validated.get()) {
+            if (partsFailedValidation.isEmpty())
+                recordPartitionsValidationEvent(EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED, partsFailedValidation);
+            else
+                recordPartitionsValidationEvent(EVT_PARTITIONS_STATE_VALIDATION_FAILED, partsFailedValidation);
         }
 
         timeBag.finishGlobalStage("Validate partitions states");
     }
 
-    private void recordExchangeEvent(String msg, int eventType, Map<String, Set<Integer>> parts,
-                                     AffinityTopologyVersion topVer) {
+    private void recordPartitionsValidationEvent(int evtType, Map<String, Set<Integer>> partsFailedValidation) {
         GridKernalContext ctx = cctx.kernalContext();
-        if (ctx.event().isRecordable(eventType)) {
-            PartitionsStateValidationEvent event = new PartitionsStateValidationEvent(
-                    ctx.discovery().localNode(),
-                    msg,
-                    eventType,
-                    parts,
-                    topVer
-            );
 
-            ctx.event().record(event);
-        }
+        if (!ctx.event().isRecordable(evtType))
+            return;
+
+        String msg = evtType == EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED
+            ? "Partitions state validation succeeded."
+            : "Partitions state validation failed.";
+
+        PartitionsStateValidationEvent event = new PartitionsStateValidationEvent(
+            ctx.discovery().localNode(),
+            msg,
+            evtType,
+            partsFailedValidation,
+            context().events().topologyVersion()
+        );
+
+        ctx.closure().runLocalSafe(new GridPlainRunnable() {
+            @Override public void run() {
+                ctx.event().record(event);
+            }
+        }, false);
     }
 
     /**

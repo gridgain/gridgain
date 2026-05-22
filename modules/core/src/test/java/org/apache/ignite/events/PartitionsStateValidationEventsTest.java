@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 GridGain Systems, Inc. and Contributors.
+ * Copyright 2026 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,23 +25,21 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 
 /**
- * Tests for triggering PartitionsValidationEvent in case validation failed.
+ * Tests for triggering PartitionsValidationEvent in case validation failed or validation succeeded.
  */
 public class PartitionsStateValidationEventsTest extends GridCommonAbstractTest {
     /** */
     private static final String CACHE_NAME = "cache";
 
     /** */
-    private static final Collection<Event> evts = new ArrayList<>();
+    private static final List<PartitionsStateValidationEvent> evts = new CopyOnWriteArrayList<>();
 
     /** */
     private static CountDownLatch latch;
@@ -57,7 +55,7 @@ public class PartitionsStateValidationEventsTest extends GridCommonAbstractTest 
         cfg.setCacheConfiguration(new CacheConfiguration(CACHE_NAME).setBackups(1));
 
         cfg.setIncludeEventTypes(
-                EventType.EVT_PARTITIONS_STATE_VALIDATION_FAILED
+                EventType.EVTS_PARTITIONS_STATE_VALIDATION
         );
 
         return cfg;
@@ -73,21 +71,27 @@ public class PartitionsStateValidationEventsTest extends GridCommonAbstractTest 
 
         ignite.events()
                 .localListen(
-                        new IgnitePredicate<Event>() {
-                            @Override public boolean apply(Event evt) {
+                        new IgnitePredicate<PartitionsStateValidationEvent>() {
+                            @Override public boolean apply(PartitionsStateValidationEvent evt) {
                                 evts.add(evt);
 
                                 latch.countDown();
 
                                 return true;
                             }
-                        }, EventType.EVT_PARTITIONS_STATE_VALIDATION_FAILED
+                        }, EventType.EVTS_PARTITIONS_STATE_VALIDATION
                 );
 
-        latch = new CountDownLatch(1);
-
-        ignite.cluster().state(ACTIVE);
-        ignite.cluster().baselineAutoAdjustEnabled(false);
+        // There are exactly five events of this type should be triggered, but only three are handled:
+        // - the first node startup (the first event (EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED) triggered)
+        // - the second node started (the second event (EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED) triggered)
+        // - setting up a local event listener
+        // - the cache "cache" rebalanced to the second node (the third event (EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED) triggered)
+        // - the third node started (the fourth event (EVT_PARTITIONS_STATE_VALIDATION_FAILED, if there is inconsistency,
+        // otherwise EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED) triggered)
+        // - the cache "cache" rebalanced to the third node (the fifth event (EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED)
+        // triggered as the inconsistencies have been fixed by rebalance)
+        latch = new CountDownLatch(3);
     }
 
     /** {@inheritDoc} */
@@ -96,12 +100,13 @@ public class PartitionsStateValidationEventsTest extends GridCommonAbstractTest 
     }
 
     /**
-     * Tests that event is triggered in case of found inconsistencies and all required information is delivered in event.
+     * Tests that EVT_PARTITIONS_STATE_VALIDATION_FAILED is triggered, in case, validation happened and event contains
+     * partitions which failed validation.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testRecordingPartitionsValidationEvent() throws Exception {
+    public void testRecordingPartitionsValidationEventWhenValidationFailed() throws Exception {
         for (int i = 0; i < 500; i++)
             ignite.cache(CACHE_NAME).put(i, i);
 
@@ -116,31 +121,46 @@ public class PartitionsStateValidationEventsTest extends GridCommonAbstractTest 
 
         awaitPartitionMapExchange();
 
-        assertTrue("Failed to wait for partition validation.", latch.await(5, SECONDS));
+        assertTrue("Failed to wait for partition validation." + latch.getCount(), latch.await(15, SECONDS));
 
-        assertEquals(1, evts.size());
+        assertEquals(3, evts.size());
 
-        Iterator<Event> it = evts.iterator();
+        PartitionsStateValidationEvent evt = evts.get(0);
 
-        assertTrue(it.hasNext());
+        assertNotNull(evt);
 
-        Event evt = it.next();
+        assertEquals(EventType.EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED, evt.type());
+        assertEquals("Partitions state validation succeeded.", evt.message());
+        assertTrue(evt.parts().isEmpty());
+        assertEquals(2, evt.topVer().topologyVersion());
+
+        evt = evts.get(1);
 
         assertNotNull(evt);
 
         assertEquals(EventType.EVT_PARTITIONS_STATE_VALIDATION_FAILED, evt.type());
-        assertEquals(250, ((PartitionsStateValidationEvent)evt).parts().get(CACHE_NAME).size());
-        System.out.println(((PartitionsStateValidationEvent)evt).topVer());
-        assertEquals(3, ((PartitionsStateValidationEvent)evt).topVer().topologyVersion());
+        assertEquals("Partitions state validation failed.", evt.message());
+        assertEquals(250, evt.parts().get(CACHE_NAME).size());
+        assertEquals(3, evt.topVer().topologyVersion());
+
+        evt = evts.get(2);
+
+        assertNotNull(evt);
+
+        assertEquals(EventType.EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED, evt.type());
+        assertEquals("Partitions state validation succeeded.", evt.message());
+        assertTrue(evt.parts().isEmpty());
+        assertEquals(3, evt.topVer().topologyVersion());
     }
 
     /**
-     * Tests that there is no event in case the validation passed.
+     * Tests that EVT_PARTITIONS_STATE_VALIDATION_FAILED is not triggered, in case, validation hasn't found
+     * any inconsistencies.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testPartitionsValidationEventNotRecorded() throws Exception {
+    public void testRecordingPartitionsValidationEventWhenValidationPassed() throws Exception {
         for (int i = 0; i < 500; i++)
             ignite.cache(CACHE_NAME).put(i, i);
 
@@ -149,8 +169,13 @@ public class PartitionsStateValidationEventsTest extends GridCommonAbstractTest 
 
         awaitPartitionMapExchange();
 
-        assertFalse("The 'Validation Failed' event was sent in error.", latch.await(5, SECONDS));
+        assertTrue("Failed to wait for partition validation." + latch.getCount(), latch.await(5, SECONDS));
 
-        assertEquals(0, evts.size());
+        assertEquals(3, evts.size());
+
+        for (PartitionsStateValidationEvent evt : evts) {
+            assertEquals("Partitions state validation succeeded.", evt.message());
+            assertEquals(EventType.EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED, evt.type());
+        }
     }
 }
