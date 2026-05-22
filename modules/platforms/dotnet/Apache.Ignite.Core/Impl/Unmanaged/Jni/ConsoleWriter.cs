@@ -65,6 +65,9 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
         }
 
         /** <inheritdoc /> */
+#if NET6_0_OR_GREATER
+        [Obsolete("Formatter-based serialization is obsolete and should not be used.")]
+#endif
         public override object InitializeLifetimeService()
         {
             // Ensure that cross-AppDomain reference lives forever.
