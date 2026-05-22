@@ -40,7 +40,10 @@ import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REBUIL
 import static org.apache.ignite.internal.commandline.util.TopologyUtils.anyConnectableServerNode;
 
 /**
- * Repair partition counters command.
+ * The command triggers maintenance task to re-create then rebuild partition log tree. Designed to be used when the tree
+ * was corrupted.
+ *
+ * @see DrCleanupPartitionLogCommand
  */
 public class DrRebuildPartitionLogCommand extends AbstractCommand<DrRebuildPartitionLogCommand.Arguments> {
     /**  */
