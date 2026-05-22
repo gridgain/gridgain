@@ -28,6 +28,7 @@ import org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrNodeCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrRebuildPartitionLogCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrRepairPartitionCountersCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrResetPartitionLogCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrStateCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrTopologyCommand;
 
@@ -45,6 +46,7 @@ import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.NODE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.PAUSE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REBUILD_TREES;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REPAIR;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.RESET_TREES;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.RESUME;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.STATE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.TOPOLOGY;
@@ -184,6 +186,15 @@ public class DrCommand extends AbstractCommand<Object> {
             optional(DrCleanupPartitionLogCommand.CACHES_ARG, "cacheName1,cacheName2,...,cacheNameN"),
             optional(DrCleanupPartitionLogCommand.GROUPS_ARG, "groupName1,groupName2,...,groupNameN"),
             optional(DrCleanupPartitionLogCommand.NODES_ARG, "consistentId0,consistentId1,...,consistentIdN"),
+            optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Start task for resetting DR state:",
+            DATA_CENTER_REPLICATION,
+            RESET_TREES.toString(),
+            optional(DrResetPartitionLogCommand.CACHES_ARG, "cacheName1,cacheName2,...,cacheNameN"),
+            optional(DrResetPartitionLogCommand.PARTITIONS_ARG, "0,1,...,N"),
+            optional(DrResetPartitionLogCommand.NODES_ARG, "consistentId0,consistentId1,...,consistentIdN"),
             optional(CMD_AUTO_CONFIRMATION)
         );
     }
