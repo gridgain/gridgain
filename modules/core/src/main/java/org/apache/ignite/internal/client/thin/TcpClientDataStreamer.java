@@ -19,12 +19,16 @@ package org.apache.ignite.internal.client.thin;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.client.datastreamer.ClientDataStreamer;
@@ -45,6 +49,11 @@ import static org.apache.ignite.internal.processors.platform.client.streamer.Cli
  *
  * <p>Each batch is sent as a self-contained {@code DATA_STREAMER_START} request with
  * {@code FLUSH | CLOSE} flags, matching the behaviour of the .NET thin client.</p>
+ *
+ * <p>When partition awareness is enabled, a separate batch chain is maintained per cache partition
+ * so that each batch is sent directly to the node that owns those partitions. When partition
+ * awareness is disabled or the affinity mapping is not yet available, all entries share a single
+ * chain keyed by {@link ClientCacheAffinityMapping#UNKNOWN_PARTITION}.</p>
  */
 class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
 
@@ -77,10 +86,15 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
     private final byte flags;
 
     /**
-     * Reference to the active batch.
-     * {@code null} once the streamer is closed.
+     * Per-partition batch chains. Key: cache partition index, or
+     * {@link ClientCacheAffinityMapping#UNKNOWN_PARTITION} when partition awareness is
+     * disabled or the affinity mapping is not yet available for the entry's key.
      */
-    private final AtomicReference<Batch<K, V>> batchRef;
+    private final ConcurrentHashMap<Integer, AtomicReference<Batch<K, V>>> partitionBatches =
+        new ConcurrentHashMap<>();
+
+    /** Set to {@code true} once {@link #close(boolean)} has been called. */
+    private final AtomicBoolean closed = new AtomicBoolean(false);
 
     /** Limits the number of in-flight batch sends. */
     private final Semaphore flightSem;
@@ -104,7 +118,6 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
         this.serDes = new ClientUtils(marsh);
         this.opts = opts;
         this.flags = buildFlags(opts);
-        this.batchRef = new AtomicReference<>(new Batch<>(null));
         this.flightSem = new Semaphore(opts.getPerNodeParallelOperations());
         this.flusher = new Flusher();
         this.flusher.start();
@@ -117,7 +130,7 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
 
     /** {@inheritDoc} */
     @Override public boolean isClosed() {
-        return batchRef.get() == null;
+        return closed.get();
     }
 
     /** {@inheritDoc} */
@@ -149,25 +162,27 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
      * @param val Value, or {@code null} to remove.
      */
     private void add0(K key, V val) {
-        // TODO: Probably rename.
         int bufSndSize = opts.getPerNodeBufferSize();
+        int partition = ch.resolveAffinityPartition(cacheId, key);
+        AtomicReference<Batch<K, V>> batchRef = partitionBatches.computeIfAbsent(
+            partition, k -> new AtomicReference<>(new Batch<>(partition, null)));
 
         while (true) {
-            Batch<K, V> cur = batchRef.get();
-
-            if (cur == null)
+            if (closed.get())
                 throw new ClientException("Data streamer is stopped.");
+
+            Batch<K, V> cur = batchRef.get();
 
             int size = cur.add(key, val);
 
             if (size == -1) {
                 // Batch is sealed (send in progress); swap in a fresh one and retry.
-                batchRef.compareAndSet(cur, new Batch<>(cur));
+                batchRef.compareAndSet(cur, new Batch<>(partition, cur));
                 continue;
             }
 
             if (size >= bufSndSize)
-                sendBatch(cur);
+                sendBatch(batchRef, cur);
 
             return;
         }
@@ -191,69 +206,79 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
 
     /** {@inheritDoc} */
     @Override public IgniteClientFuture<Void> flushAsync() {
-        Batch<K, V> cur = batchRef.get();
+        if (closed.get())
+            return new IgniteClientFutureImpl<>(closeFut);
 
-        if (cur != null) {
-            sendBatch(cur);
-            return new IgniteClientFutureImpl<>(cur.allDoneFuture());
+        List<CompletableFuture<Void>> futs = new ArrayList<>();
+
+        for (AtomicReference<Batch<K, V>> batchRef : partitionBatches.values()) {
+            Batch<K, V> cur = batchRef.get();
+
+            if (cur != null) {
+                sendBatch(batchRef, cur);
+                futs.add(cur.allDoneFuture());
+            }
         }
 
-        return new IgniteClientFutureImpl<>(closeFut);
+        if (futs.isEmpty())
+            return new IgniteClientFutureImpl<>(CompletableFuture.completedFuture(null));
+
+        return new IgniteClientFutureImpl<>(
+            CompletableFuture.allOf(futs.toArray(new CompletableFuture[0])));
     }
 
     /** {@inheritDoc} */
     @Override public void close(boolean cancel) {
         flusher.stopFlusher();
 
-        while (true) {
-            Batch<K, V> cur = batchRef.get();
-
-            if (cur == null) {
-                // A concurrent close is already in progress; wait for it.
-                try {
-                    closeFut.get();
-                }
-                catch (Exception e) {
-                    throw new ClientException("Close failed.", e);
-                }
-                return;
-            }
-
-            // Atomically mark the streamer as closed so no new entries can be added.
-            if (!batchRef.compareAndSet(cur, null))
-                continue;
-
+        if (!closed.compareAndSet(false, true)) {
+            // A concurrent close is already in progress; wait for it.
             try {
-                if (!cancel) {
-                    cur.send(this);
-
-                    try {
-                        cur.allDoneFuture().get();
-                    }
-                    catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new ClientException("Close interrupted.", e);
-                    }
-                    catch (ExecutionException e) {
-                        Throwable cause = e.getCause();
-                        throw cause instanceof ClientException ? (ClientException) cause
-                            : new ClientException("Close failed.", cause);
-                    }
-                }
-
-                closeFut.complete(null);
-            }
-            catch (ClientException e) {
-                closeFut.completeExceptionally(e);
-                throw e;
+                closeFut.get();
             }
             catch (Exception e) {
-                ClientException ce = new ClientException("Close failed.", e);
-                closeFut.completeExceptionally(ce);
-                throw ce;
+                throw new ClientException("Close failed.", e);
+            }
+            return;
+        }
+
+        try {
+            if (!cancel) {
+                List<CompletableFuture<Void>> futs = new ArrayList<>();
+
+                for (AtomicReference<Batch<K, V>> batchRef : partitionBatches.values()) {
+                    Batch<K, V> cur = batchRef.get();
+
+                    if (cur != null) {
+                        cur.send(this);
+                        futs.add(cur.allDoneFuture());
+                    }
+                }
+
+                try {
+                    CompletableFuture.allOf(futs.toArray(new CompletableFuture[0])).get();
+                }
+                catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new ClientException("Close interrupted.", e);
+                }
+                catch (ExecutionException e) {
+                    Throwable cause = e.getCause();
+                    throw cause instanceof ClientException ? (ClientException) cause
+                        : new ClientException("Close failed.", cause);
+                }
             }
 
-            return;
+            closeFut.complete(null);
+        }
+        catch (ClientException e) {
+            closeFut.completeExceptionally(e);
+            throw e;
+        }
+        catch (Exception e) {
+            ClientException ce = new ClientException("Close failed.", e);
+            closeFut.completeExceptionally(ce);
+            throw ce;
         }
     }
 
@@ -265,24 +290,30 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
     /**
      * Swaps the current batch for a fresh one and initiates an async send of the old batch.
      *
-     * @param batch Batch to send.
+     * @param batchRef Per-partition batch reference.
+     * @param batch    Batch to send.
      */
-    private void sendBatch(Batch<K, V> batch) {
-        batchRef.compareAndSet(batch, new Batch<>(batch));
+    private void sendBatch(AtomicReference<Batch<K, V>> batchRef, Batch<K, V> batch) {
+        batchRef.compareAndSet(batch, new Batch<>(batch.partition, batch));
         batch.send(this);
     }
 
-    /** Flushes the current batch if it is non-empty. Called by the auto-flusher thread. */
+    /** Flushes all non-empty partition batches. Called by the auto-flusher thread. */
     private void tryFlush() {
-        Batch<K, V> cur = batchRef.get();
+        for (AtomicReference<Batch<K, V>> batchRef : partitionBatches.values()) {
+            Batch<K, V> cur = batchRef.get();
 
-        if (cur != null && !cur.isEmpty())
-            sendBatch(cur);
+            if (cur != null && !cur.isEmpty())
+                sendBatch(batchRef, cur);
+        }
     }
 
     /**
      * Sends {@code entries} to the server via a single {@code DATA_STREAMER_START} request
      * with {@code FLUSH | CLOSE} flags, matching the one-shot approach of the .NET thin client.
+     *
+     * <p>When {@code partition} is not {@link ClientCacheAffinityMapping#UNKNOWN_PARTITION}, the
+     * request is routed to the node owning that partition; otherwise the default channel is used.</p>
      *
      * <p>Wire format (matches {@code ClientDataStreamerStartRequest} on the server side):</p>
      * <pre>
@@ -296,10 +327,11 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
      *   [key (Object), val (Object)]...  val == null means remove
      * </pre>
      *
-     * @param entries List of {@code [key, val]} pairs; {@code null} val means remove.
-     * @param result  Future to complete on success or failure.
+     * @param partition Cache partition owning these entries, or {@link ClientCacheAffinityMapping#UNKNOWN_PARTITION}.
+     * @param entries   List of {@code [key, val]} pairs; {@code null} val means remove.
+     * @param result    Future to complete on success or failure.
      */
-    void sendToChannel(List<Object[]> entries, CompletableFuture<Void> result) {
+    void sendToChannel(int partition, List<Object[]> entries, CompletableFuture<Void> result) {
         try {
             flightSem.acquire();
         }
@@ -312,7 +344,7 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
         try {
             StreamReceiver<K, V> rcv = opts.getReceiver();
 
-            ch.serviceAsync(ClientOperation.DATA_STREAMER_START, req -> {
+            Consumer<PayloadOutputChannel> payloadWriter = req -> {
                 BinaryOutputStream out = req.out();
 
                 out.writeInt(cacheId);
@@ -320,7 +352,6 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
                 out.writeInt(SERVER_BUFFER_SIZE_AUTO);  // perNodeBufferSize
                 out.writeInt(SERVER_BUFFER_SIZE_AUTO);  // perThreadBufferSize
 
-                // Receiver: write the object; if non-null, follow with the platform code.
                 serDes.writeObject(out, rcv);
                 if (rcv != null)
                     out.writeByte(ClientPlatform.JAVA);
@@ -331,7 +362,17 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
                     serDes.writeObject(out, e[0]);  // key
                     serDes.writeObject(out, e[1]);  // value (null = remove)
                 }
-            }, res -> res.in().readLong()).whenComplete((res, err) -> {
+            };
+
+            Function<PayloadInputChannel, Long> payloadReader = res -> res.in().readLong();
+
+            ch.affinityServiceAsync(
+                    cacheId,
+                    partition,
+                    ClientOperation.DATA_STREAMER_START,
+                    payloadWriter,
+                    payloadReader
+            ).whenComplete((res, err) -> {
                 flightSem.release();
 
                 if (err != null)
@@ -368,6 +409,9 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
      */
     static final class Batch<K, V> {
 
+        /** Cache partition this batch will be sent to (or {@link ClientCacheAffinityMapping#UNKNOWN_PARTITION}). */
+        final int partition;
+
         /** Entries: each element is {@code Object[]{key, val}}; {@code null} val means remove. */
         private final ConcurrentLinkedQueue<Object[]> queue = new ConcurrentLinkedQueue<>();
 
@@ -390,7 +434,8 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
         private final CompletableFuture<Void> fut = new CompletableFuture<>();
 
         /** Constructor. */
-        Batch(Batch<K, V> prev) {
+        Batch(int partition, Batch<K, V> prev) {
+            this.partition = partition;
             this.prev = prev;
             // Release the prev link once this batch completes to avoid accumulating large chains.
             fut.thenRun(this::tryReleasePrev);
@@ -458,7 +503,7 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
             if (entries.isEmpty())
                 fut.complete(null);
             else
-                streamer.sendToChannel(entries, fut);
+                streamer.sendToChannel(partition, entries, fut);
         }
 
         /**

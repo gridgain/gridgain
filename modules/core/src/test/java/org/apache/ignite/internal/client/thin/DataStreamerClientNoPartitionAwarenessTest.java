@@ -17,11 +17,11 @@
 package org.apache.ignite.internal.client.thin;
 
 /**
- * Runs all {@link AbstractDataStreamerClientTest} tests with partition awareness enabled.
+ * Runs all {@link AbstractDataStreamerClientTest} tests with partition awareness disabled.
  */
-public class DataStreamerClientTest extends AbstractDataStreamerClientTest {
+public class DataStreamerClientNoPartitionAwarenessTest extends AbstractDataStreamerClientTest {
     /** {@inheritDoc} */
     @Override protected boolean isClientPartitionAwarenessEnabled() {
-        return true;
+        return false;
     }
 }
