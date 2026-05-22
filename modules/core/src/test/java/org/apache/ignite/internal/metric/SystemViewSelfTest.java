@@ -94,6 +94,7 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.services.ServiceConfiguration;
+import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.systemview.view.BaselineNodeAttributeView;
 import org.apache.ignite.spi.systemview.view.BinaryMetadataView;
 import org.apache.ignite.spi.systemview.view.CacheGroupView;
@@ -2057,6 +2058,7 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
         String expDrName = "my-dr";
 
         icfg.setIgniteInstanceName(expName);
+        icfg.setDiscoverySpi(new TcpDiscoverySpi().setIpFinder(sharedStaticIpFinder));
         icfg.setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(
                         new DataRegionConfiguration()

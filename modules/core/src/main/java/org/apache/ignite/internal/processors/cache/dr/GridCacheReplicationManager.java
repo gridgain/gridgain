@@ -131,4 +131,15 @@ public interface GridCacheReplicationManager extends GridCacheManager {
     default void updateCounter(int part, long updCnt, long delta) {
         // No op.
     }
+
+    /**
+     * Low-watermark change callback.
+     *
+     * @param part Partition.
+     * @param start Start counter.
+     * @param delta Delta.
+     */
+    default void lwm(int part, long start, long delta) {
+        // No op.
+    }
 }
