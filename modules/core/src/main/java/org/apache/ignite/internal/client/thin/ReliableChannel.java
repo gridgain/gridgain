@@ -377,6 +377,51 @@ final class ReliableChannel implements AutoCloseable {
     }
 
     /**
+     * Send request to affinity node and handle response.
+     */
+    public <T> IgniteClientFuture<T> affinityServiceAsync(
+            int cacheId,
+            int partition,
+            ClientOperation op,
+            Consumer<PayloadOutputChannel> payloadWriter,
+            Function<PayloadInputChannel, T> payloadReader
+    ) throws ClientException, ClientError {
+        if (partition != ClientCacheAffinityMapping.UNKNOWN_PARTITION
+                && partitionAwarenessEnabled && affinityInfoIsUpToDate(cacheId)) {
+            UUID affNodeId = affinityCtx.affinityNode(cacheId, partition);
+
+            if (affNodeId != null) {
+                CompletableFuture<T> fut = new CompletableFuture<>();
+                List<ClientConnectionException> failures = new ArrayList<>();
+
+                Object result = applyOnNodeChannel(
+                        affNodeId,
+                        channel -> applyOnClientChannelAsync(fut, channel, op, payloadWriter, payloadReader, failures),
+                        failures
+                );
+
+                if (result != null)
+                    return new IgniteClientFutureImpl<>(fut);
+            }
+        }
+
+        return serviceAsync(op, payloadWriter, payloadReader);
+    }
+    
+    /**
+     * Resolves the partition for the given cache key when partition awareness is enabled.
+     *
+     * @return Partition index, or {@link ClientCacheAffinityMapping#UNKNOWN_PARTITION} if partition awareness is
+     *      disabled or the affinity info is not yet available for the cache.
+     */
+    public int resolveAffinityPartition(int cacheId, Object key) {
+        if (partitionAwarenessEnabled && affinityInfoIsUpToDate(cacheId))
+            return affinityCtx.partition(cacheId, key);
+
+        return ClientCacheAffinityMapping.UNKNOWN_PARTITION;
+    }
+
+    /**
      * Checks if affinity information for the cache is up to date and tries to update it if not.
      *
      * @return {@code True} if affinity information is up to date, {@code false} if there is not affinity information
