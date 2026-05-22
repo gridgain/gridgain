@@ -48,9 +48,11 @@ namespace Apache.Ignite.Core.Client
 
             var sslStream = new SslStream(stream, false, ValidateServerCertificate, null);
 
+#pragma warning disable SYSLIB0057
             var cert = string.IsNullOrEmpty(CertificatePath)
                 ? null
                 : new X509Certificate2(CertificatePath, CertificatePassword);
+#pragma warning restore SYSLIB0057
 
             var certs = cert == null
                 ? null
