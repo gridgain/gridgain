@@ -66,7 +66,7 @@ public class DrResetPartitionLogCommand extends AbstractCommand<DrResetPartition
 
                 Predicate<? super GridClientNode> nodeFilter = arg().nodeIds == null
                     ? node -> true
-                    : node -> args().nodeIds.contains(node.consistentId().toString());
+                    : node -> arg().nodeIds.contains(node.consistentId().toString());
 
                 List<UUID> nodes = client.compute().nodes().stream()
                     .filter(node -> !node.isClient())
