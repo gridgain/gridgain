@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.BiFunction;
+
 import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.internal.binary.BinaryObjectExImpl;
@@ -31,11 +33,15 @@ import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Affinity mapping (partition to nodes) for each cache.
  */
 public class ClientCacheAffinityMapping {
+    /** Returned by {@link #partition} when the partition cannot be determined. */
+    public static final int UNKNOWN_PARTITION = -1;
+
     /** CacheAffinityInfo for caches with not applicable affinity awareness. */
     private static final CacheAffinityInfo NOT_APPLICABLE_CACHE_AFFINITY_INFO =
         new CacheAffinityInfo(null, null);
@@ -78,7 +84,22 @@ public class ClientCacheAffinityMapping {
      * @param key Key.
      * @return Affinity node id or {@code null} if affinity node can't be determined for given cache and key.
      */
+    @Nullable
     public UUID affinityNode(IgniteBinary binary, int cacheId, Object key) {
+        return withAffinityInfo(
+                binary,
+                cacheId,
+                key,
+                CacheAffinityInfo::nodeForKey
+        );
+    }
+
+    private <T> T withAffinityInfo(
+            IgniteBinary binary,
+            int cacheId,
+            Object key,
+            BiFunction<CacheAffinityInfo, Object, T> fun
+    ) {
         CacheAffinityInfo affinityInfo = cacheAffinity.get(cacheId);
 
         if (affinityInfo == null || affinityInfo == NOT_APPLICABLE_CACHE_AFFINITY_INFO)
@@ -99,7 +120,43 @@ public class ClientCacheAffinityMapping {
             }
         }
 
-        return affinityInfo.nodeForKey(binaryKey);
+        return fun.apply(affinityInfo, binaryKey);
+    }
+
+    /**
+     * Returns the affinity node for a pre-computed partition index.
+     *
+     * @param cacheId Cache ID.
+     * @param partition Partition index (direct index into the partition-to-node mapping array).
+     * @return Affinity node id or {@code null} if affinity node can't be determined for given cache and partition.
+     */
+    @Nullable
+    public UUID affinityNode(int cacheId, int partition) {
+        CacheAffinityInfo affinityInfo = cacheAffinity.get(cacheId);
+
+        if (affinityInfo == null || affinityInfo == NOT_APPLICABLE_CACHE_AFFINITY_INFO)
+            return null;
+
+        return affinityInfo.partMapping[partition];
+    }
+
+    /**
+     * Calculates the partition for the given cache key.
+     *
+     * @param binary Binary data processor (needed to extract affinity field from the key).
+     * @param cacheId Cache ID.
+     * @param key Key.
+     * @return Partition index, or {@link #UNKNOWN_PARTITION} if the partition cannot be determined for the given cache and key.
+     */
+    public int partition(IgniteBinary binary, int cacheId, Object key) {
+        @Nullable Integer part = withAffinityInfo(
+                binary,
+                cacheId,
+                key,
+                CacheAffinityInfo::partitionForKey
+        );
+
+        return (part != null) ? part : UNKNOWN_PARTITION;
     }
 
     /**
@@ -260,9 +317,18 @@ public class ClientCacheAffinityMapping {
         private UUID nodeForKey(Object key) {
             assert partMapping != null;
 
-            int part = RendezvousAffinityFunction.calculatePartition(key, affinityMask, partMapping.length);
+            return partMapping[partitionForKey(key)];
+        }
 
-            return partMapping[part];
+        /**
+         * Calculates partition for given key.
+         *
+         * @param key Key.
+         */
+        private int partitionForKey(Object key) {
+            assert partMapping != null;
+
+            return RendezvousAffinityFunction.calculatePartition(key, affinityMask, partMapping.length);
         }
     }
 }
