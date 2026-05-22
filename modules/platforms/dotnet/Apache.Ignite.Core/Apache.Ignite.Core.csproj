@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AssemblyName>Apache.Ignite.Core</AssemblyName>
@@ -16,6 +16,18 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <CodeAnalysisRuleSet>..\Apache.Ignite.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
+    <!--
+    TODO Suppressions for net8.0+ targets:
+      SYSLIB0050/SYSLIB0051 - obsolete formatter-based serialization (ISerializable / GetObjectData).
+      SYSLIB0018           - Assembly.ReflectionOnlyLoad is no longer supported.
+      SYSLIB0054           - Thread.VolatileRead/VolatileWrite obsolete on net10+ (use Volatile.Read/Write).
+      SYSLIB0057           - X509Certificate2(string, string?) constructor obsolete on net10+.
+      CS0672               - override of obsolete members (Exception.GetObjectData, InitializeLifetimeService).
+      CA1416               - Windows-only Registry APIs in JNI/JVM discovery (gated at runtime by callers).
+    -->
+    <NoWarn>$(NoWarn);SYSLIB0050;SYSLIB0051;SYSLIB0018;SYSLIB0054;SYSLIB0057;CS0672;CA1416</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.5.0" />
