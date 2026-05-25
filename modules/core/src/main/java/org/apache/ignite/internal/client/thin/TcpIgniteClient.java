@@ -52,7 +52,6 @@ import org.apache.ignite.client.ClientTransactions;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.client.datastreamer.ClientDataStreamer;
-import org.apache.ignite.client.datastreamer.DataStreamerClientOptions;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
@@ -355,15 +354,7 @@ public class TcpIgniteClient implements IgniteClient {
     @Override public <K, V> ClientDataStreamer<K, V> dataStreamer(String cacheName) {
         GridArgumentCheck.notNull(cacheName, "cacheName");
 
-        return new TcpClientDataStreamer<>(cacheName, ch, marsh, new DataStreamerClientOptions<>());
-    }
-
-    /** {@inheritDoc} */
-    @Override public <K, V> ClientDataStreamer<K, V> dataStreamer(String cacheName, DataStreamerClientOptions<K, V> options) {
-        GridArgumentCheck.notNull(cacheName, "cacheName");
-        GridArgumentCheck.notNull(options, "options");
-
-        return new TcpClientDataStreamer<>(cacheName, ch, marsh, options);
+        return new TcpClientDataStreamer<>(cacheName, ch, marsh);
     }
 
     /** {@inheritDoc} */
