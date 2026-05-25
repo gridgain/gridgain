@@ -35,7 +35,8 @@ import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REPAIR;
 
 /**
- * Repair partition counters command.
+ * Repair partition counters command. The command scans partitions data and assigns some update counters to all records.
+ * Designed for upgrading to an incremental DR. Can be executed at runtime.
  */
 public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand<VisorDrRepairPartitionCountersTaskArg,
         VisorDrRepairPartitionCountersTaskResult, DrRepairPartitionCountersCommand.Arguments> {
