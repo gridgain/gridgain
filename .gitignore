@@ -118,3 +118,6 @@ CMakeSettings.json
 
 #NodeJs files
 /modules/platforms/nodejs/node_modules
+
+# LLMs
+.claude
