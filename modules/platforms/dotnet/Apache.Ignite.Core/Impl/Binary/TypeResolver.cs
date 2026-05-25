@@ -215,7 +215,13 @@ namespace Apache.Ignite.Core.Impl.Binary
             {
                 try
                 {
+                    #if NET6_0_OR_GREATER
+                    // Reflection-only loading is not supported.
+                    // https://learn.microsoft.com/en-us/dotnet/fundamentals/syslib-diagnostics/syslib0018
+                    result = null;
+                    #else
                     result = Assembly.ReflectionOnlyLoad(fullName);
+                    #endif
                 }
                 catch (Exception)
                 {
