@@ -87,7 +87,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     private final CheckpointBufferOverflowWatchdog cpBufferWatchdog;
 
     /**
-     * @param maxDirtyPagesRatio Configured max-dirty-pages ratio
+     * @param maxDirtyPagesRatio Configured max-dirty-pages ratio.
      * @param pageMemory Page memory.
      * @param cpProgress Database manager.
      * @param stateChecker Checkpoint lock state provider.
@@ -125,7 +125,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         mreg.register("CheckpointBufferPagesSize", pageMemory::checkpointBufferPagesSize, "Number of used pages in checkpoint buffer.");
     }
 
-    /** Test-only constructor that uses {@link PagesWriteThrottlePolicy#DFLT_MAX_DIRTY_PAGES_RATIO}. */
+    /** Test-only constructor that uses {@link PageMemoryImpl#DFLT_MAX_DIRTY_PAGES_RATIO}. */
     @TestOnly
     public PagesWriteSpeedBasedThrottle(
             PageMemoryImpl pageMemory,
@@ -134,7 +134,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
             IgniteLogger log,
             MetricRegistry mreg
     ) {
-        this(DFLT_MAX_DIRTY_PAGES_RATIO, pageMemory, cpProgress, stateChecker, log, mreg);
+        this(PageMemoryImpl.DFLT_MAX_DIRTY_PAGES_RATIO, pageMemory, cpProgress, stateChecker, log, mreg);
     }
 
     /** {@inheritDoc} */

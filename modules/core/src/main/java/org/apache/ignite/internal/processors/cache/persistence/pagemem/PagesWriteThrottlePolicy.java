@@ -72,9 +72,6 @@ public interface PagesWriteThrottlePolicy {
     /** Checkpoint buffer fullfill upper bound. */
     float CP_BUF_FILL_THRESHOLD = 2f / 3;
 
-    /** @see IgniteSystemProperties#IGNITE_MAX_DIRTY_PAGES_RATIO */
-    double DFLT_MAX_DIRTY_PAGES_RATIO = 0.75;
-
     /**
      * Callback to apply throttling delay.
      * @param isPageInCheckpoint flag indicating if current page is in scope of current checkpoint.

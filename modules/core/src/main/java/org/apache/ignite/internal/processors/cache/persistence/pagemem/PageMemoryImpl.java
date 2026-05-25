@@ -99,7 +99,6 @@ import static org.apache.ignite.internal.pagemem.FullPageId.NULL_PAGE;
 import static org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl.DATAREGION_METRICS_PREFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageHeader.headerIsValid;
-import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesWriteThrottlePolicy.DFLT_MAX_DIRTY_PAGES_RATIO;
 import static org.apache.ignite.internal.util.GridUnsafe.wrapPointer;
 import static org.apache.ignite.internal.util.OffheapReadWriteLock.TAG_LOCK_ALWAYS;
 
@@ -160,6 +159,9 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     /** @see IgniteSystemProperties#IGNITE_LOADED_PAGES_BACKWARD_SHIFT_MAP */
     public static final boolean DFLT_LOADED_PAGES_BACKWARD_SHIFT_MAP = true;
+
+    /** @see IgniteSystemProperties#IGNITE_MAX_DIRTY_PAGES_RATIO */
+    public static final double DFLT_MAX_DIRTY_PAGES_RATIO = 0.75;
 
     /** Tracking io. */
     private static final TrackingPageIO trackingIO = TrackingPageIO.VERSIONS.latest();
@@ -291,6 +293,7 @@ public class PageMemoryImpl implements PageMemoryEx {
      * @param dataRegionMetrics Memory metrics to track dirty pages count and page replace rate.
      * @param throttlingPlc Write throttle enabled and its type. Null equal to none.
      * @param cpProgressProvider checkpoint progress, base for throttling. Null disables throttling.
+     * @param maxDirtyPagesRatio Max-dirty-pages ratio.
      */
     public PageMemoryImpl(
         DataRegionConfiguration dataRegionCfg,
@@ -304,7 +307,8 @@ public class PageMemoryImpl implements PageMemoryEx {
         CheckpointLockStateChecker stateChecker,
         DataRegionMetricsImpl dataRegionMetrics,
         @Nullable ThrottlingPolicy throttlingPlc,
-        IgniteOutClosure<CheckpointProgress> cpProgressProvider
+        IgniteOutClosure<CheckpointProgress> cpProgressProvider,
+        double maxDirtyPagesRatio
     ) {
         assert ctx != null;
         assert pageSize > 0;
@@ -325,7 +329,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         this.changeTracker = changeTracker;
         this.stateChecker = stateChecker;
         this.throttlingPlc = throttlingPlc != null ? throttlingPlc : ThrottlingPolicy.CHECKPOINT_BUFFER_ONLY;
-        this.maxDirtyPagesRatio = resolveMaxDirtyPagesRatio(log);
+        this.maxDirtyPagesRatio = maxDirtyPagesRatio;
         this.cpProgressProvider = cpProgressProvider;
 
         this.pmPageMgr = pmPageMgr;
@@ -458,10 +462,10 @@ public class PageMemoryImpl implements PageMemoryEx {
     }
 
     /**
-     * Reads {@link IgniteSystemProperties#IGNITE_MAX_DIRTY_PAGES_RATIO}, returns the default if absent or not
-     in allowed range.
+     * Reads {@link IgniteSystemProperties#IGNITE_MAX_DIRTY_PAGES_RATIO}, returns it if the value is in the allowed
+     * range {@code (0.5, 0.99999]}; otherwise logs a warning and returns {@link #DFLT_MAX_DIRTY_PAGES_RATIO}.
      */
-    static double resolveMaxDirtyPagesRatio(IgniteLogger log) {
+    public static double resolveMaxDirtyPagesRatio(IgniteLogger log) {
         double ratio = getDouble(IGNITE_MAX_DIRTY_PAGES_RATIO, DFLT_MAX_DIRTY_PAGES_RATIO);
 
         if (ratio > 0.5 && ratio <= 0.99999)

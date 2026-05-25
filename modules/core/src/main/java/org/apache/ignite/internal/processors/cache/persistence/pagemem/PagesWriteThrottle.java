@@ -91,7 +91,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
                 : "cpProgress must be not null if ratio based throttling mode is used";
     }
 
-    /** Test-only constructor that uses {@link PagesWriteThrottlePolicy#DFLT_MAX_DIRTY_PAGES_RATIO}. */
+    /** Test-only constructor that uses {@link PageMemoryImpl#DFLT_MAX_DIRTY_PAGES_RATIO}. */
     @TestOnly
     public PagesWriteThrottle(PageMemoryImpl pageMemory,
         IgniteOutClosure<CheckpointProgress> cpProgress,
@@ -99,7 +99,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
         boolean throttleOnlyPagesInCheckpoint,
         IgniteLogger log
     ) {
-        this(DFLT_MAX_DIRTY_PAGES_RATIO, pageMemory, cpProgress, stateChecker, throttleOnlyPagesInCheckpoint, log);
+        this(PageMemoryImpl.DFLT_MAX_DIRTY_PAGES_RATIO, pageMemory, cpProgress, stateChecker, throttleOnlyPagesInCheckpoint, log);
     }
 
     /** {@inheritDoc} */

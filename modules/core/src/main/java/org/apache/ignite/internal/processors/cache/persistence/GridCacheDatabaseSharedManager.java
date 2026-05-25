@@ -283,6 +283,12 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private final String throttlingPolicyOverride = IgniteSystemProperties.getString(
         IgniteSystemProperties.IGNITE_OVERRIDE_WRITE_THROTTLING_ENABLED);
 
+    /**
+     * Max-dirty-pages ratio resolved once at startup from
+     * {@link IgniteSystemProperties#IGNITE_MAX_DIRTY_PAGES_RATIO}.
+     */
+    private double maxDirtyPagesRatio;
+
     /** Defragmentation regions size percentage of configured ones. */
     private final int defragmentationRegionSizePercentageOfConfiguredSize =
         getInteger(IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE, DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE);
@@ -559,6 +565,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** {@inheritDoc} */
     @Override protected void start0() throws IgniteCheckedException {
         super.start0();
+
+        maxDirtyPagesRatio = PageMemoryImpl.resolveMaxDirtyPagesRatio(log);
 
         snapshotMgr = cctx.snapshot();
 
@@ -1313,7 +1321,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             this,
             memMetrics,
             resolveThrottlingPolicy(),
-            () -> getCheckpointer().currentProgress()
+            () -> getCheckpointer().currentProgress(),
+            maxDirtyPagesRatio
         );
 
         memMetrics.pageMemory(pageMem);

@@ -36,7 +36,8 @@ import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
-import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesWriteThrottlePolicy;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.ThrottlingPolicy;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
@@ -99,7 +100,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.diagnostic
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.FullPageIdTable.DFLT_LONG_LONG_HASH_MAP_LOAD_FACTOR;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.DFLT_DELAYED_REPLACED_PAGE_WRITE;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.DFLT_LOADED_PAGES_BACKWARD_SHIFT_MAP;
-import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesWriteThrottlePolicy.DFLT_MAX_DIRTY_PAGES_RATIO;
+import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.DFLT_MAX_DIRTY_PAGES_RATIO;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesWriteThrottlePolicy.DFLT_THROTTLE_LOG_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.IGNITE_BPLUS_TREE_LOCK_RETRIES_DEFAULT;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager.DFLT_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE;
@@ -1637,13 +1638,14 @@ public final class IgniteSystemProperties {
     /**
      * Maximum fraction of a data region's page pool that can be dirty before checkpoint is
      * scheduled. Gives more headroom for write bursts  at the cost of a larger pending checkpoint and
-     * more permissive <b>{@code TARGET_RATIO_BASED}</b> / <b>{@code SPEED_BASED}</b> throttling policy curves.
+     * more permissive <b>{@link ThrottlingPolicy#TARGET_RATIO_BASED}</b> / <b>{@link ThrottlingPolicy#SPEED_BASED}</b>
+     * throttling policy curves.
      * <p>
-     * Allowed range: {@code (0.5, 0.99999]}. Invalid values fall back to {@link PagesWriteThrottlePolicy#DFLT_MAX_DIRTY_PAGES_RATIO}
+     * Allowed range: {@code (0.5, 0.99999]}. Invalid values fall back to {@link PageMemoryImpl#DFLT_MAX_DIRTY_PAGES_RATIO}
      * with a warning.
      * <p>
-     * <b>{@code CHECKPOINT_BUFFER_ONLY}</b> is unaffected, doesn't use dirty-page ratio. <b>{@code DISABLED}</b>
-     * ignores value, throttles at 2 / 3 of dirty pages to avoid CP buffer overflow.
+     * <b>{@link ThrottlingPolicy#CHECKPOINT_BUFFER_ONLY}</b> is unaffected, doesn't use dirty-page ratio.
+     * <b>{@link ThrottlingPolicy#DISABLED}</b> ignores value, throttles at 2 / 3 of dirty pages to avoid CP buffer overflow.
      */
     @SystemProperty(value = "Maximum fraction of a data region that can be dirty before writers stall and a checkpoint is forced",
         type = Double.class, defaults = "" + DFLT_MAX_DIRTY_PAGES_RATIO)

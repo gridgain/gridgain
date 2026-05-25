@@ -88,8 +88,8 @@ import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.MARKER_STORED_TO_DISK;
 import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.SYSTEM_DATA_REGION_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.CHECKPOINT_POOL_OVERFLOW_ERROR_MSG;
+import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.DFLT_MAX_DIRTY_PAGES_RATIO;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.ThrottlingPolicy.CHECKPOINT_BUFFER_ONLY;
-import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesWriteThrottlePolicy.DFLT_MAX_DIRTY_PAGES_RATIO;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -871,7 +871,8 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
                 () -> true,
                 dataRegionMetrics,
                 throttlingPlc,
-                noThrottle
+                noThrottle,
+                DFLT_MAX_DIRTY_PAGES_RATIO
             ) :
             new PageMemoryImpl(
                 dataRegionCfg,
@@ -888,7 +889,8 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
                 () -> true,
                 dataRegionMetrics,
                 throttlingPlc,
-                noThrottle
+                noThrottle,
+                DFLT_MAX_DIRTY_PAGES_RATIO
             ) {
                 @Override public FullPageId pullPageFromCpBuffer() {
                     FullPageId pageId = super.pullPageFromCpBuffer();
