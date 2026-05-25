@@ -20,11 +20,10 @@
   <PropertyGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
     <!--
     TODO Suppressions for net8.0+ targets:
-      SYSLIB0050/SYSLIB0051 - obsolete formatter-based serialization (ISerializable / GetObjectData).
       SYSLIB0018           - Assembly.ReflectionOnlyLoad is no longer supported.
       CA1416               - Windows-only Registry APIs in JNI/JVM discovery (gated at runtime by callers).
     -->
-    <NoWarn>$(NoWarn);SYSLIB0050;SYSLIB0051;SYSLIB0018;CA1416</NoWarn>
+    <NoWarn>$(NoWarn);SYSLIB0018;CA1416</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.5.0" />

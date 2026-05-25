@@ -49,7 +49,10 @@ namespace Apache.Ignite.Core.Impl.Binary
         /** <inheritdoc /> */
         public T ReadBinary<T>(BinaryReader reader, IBinaryTypeDescriptor desc, int pos, Type typeOverride)
         {
+            // SYSLIB0050: FormatterServices is obsolete in net8.0+; still required to materialize objects without invoking constructors.
+#pragma warning disable SYSLIB0050
             var obj = FormatterServices.GetUninitializedObject(typeOverride ?? desc.Type);
+#pragma warning restore SYSLIB0050
 
             reader.AddHandle(pos, obj);
 
