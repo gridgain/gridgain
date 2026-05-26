@@ -65,7 +65,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
 
         /** <inheritdoc /> */
 #if NET6_0_OR_GREATER
-        [Obsolete("Formatter-based serialization is obsolete and should not be used.")]
+        [Obsolete("InitializeLifetimeService is obsolete in .NET 5+ because Remoting/lifetime services were removed.")]
 #endif
         public override object InitializeLifetimeService()
         {
