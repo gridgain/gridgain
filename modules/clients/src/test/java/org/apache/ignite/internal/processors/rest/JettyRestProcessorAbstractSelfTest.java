@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.rest;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.URLEncoder;
@@ -34,7 +35,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -133,44 +133,6 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
-    }
-
-    /**
-     * @param content Content to check.
-     * @param err Error message.
-     */
-    protected void assertResponseContainsError(String content, String err) throws IOException {
-        assertFalse(F.isEmpty(content));
-        assertNotNull(err);
-
-        JsonNode node = JSON_MAPPER.readTree(content);
-
-        assertTrue(node.get("successStatus").asInt() != STATUS_SUCCESS);
-        assertTrue(node.get("response").isNull());
-        assertTrue(node.get("error").asText().contains(err));
-    }
-
-    /**
-     * @param content Content to check.
-     * @return JSON node with actual response.
-     */
-    protected JsonNode assertResponseSucceeded(String content, boolean bulk) throws IOException {
-        assertNotNull(content);
-        assertFalse(content.isEmpty());
-
-        JsonNode node = JSON_MAPPER.readTree(content);
-
-        JsonNode affNode = node.get("affinityNodeId");
-
-        if (affNode != null)
-            assertEquals(bulk, affNode.isNull());
-
-        assertEquals(STATUS_SUCCESS, node.get("successStatus").asInt());
-        assertTrue(node.get("error").isNull());
-
-        assertNotSame(securityEnabled(), node.get("sessionToken").isNull());
-
-        return node.get("response");
     }
 
     /**

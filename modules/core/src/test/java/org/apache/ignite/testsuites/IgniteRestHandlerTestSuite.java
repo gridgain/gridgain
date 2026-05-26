@@ -23,6 +23,7 @@ import org.apache.ignite.internal.processors.rest.handlers.cache.GridCacheAtomic
 import org.apache.ignite.internal.processors.rest.handlers.cache.GridCacheCommandHandlerSelfTest;
 import org.apache.ignite.internal.processors.rest.handlers.cache.GridCacheMetadataCommandTest;
 import org.apache.ignite.internal.processors.rest.handlers.log.GridLogCommandHandlerTest;
+import org.apache.ignite.internal.processors.rest.handlers.property.GridPropertyCommandHandlerTest;
 import org.apache.ignite.internal.processors.rest.handlers.query.GridQueryCommandHandlerTest;
 import org.apache.ignite.internal.processors.rest.handlers.top.CacheTopologyCommandHandlerTest;
 import org.junit.runner.RunWith;
@@ -37,6 +38,7 @@ import org.junit.runners.Suite;
     GridCacheAtomicCommandHandlerSelfTest.class,
     GridCacheMetadataCommandTest.class,
     GridLogCommandHandlerTest.class,
+    GridPropertyCommandHandlerTest.class,
     GridQueryCommandHandlerTest.class,
     CacheTopologyCommandHandlerTest.class,
     RestProtocolStartTest.class,
