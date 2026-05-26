@@ -87,12 +87,14 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     private final CheckpointBufferOverflowWatchdog cpBufferWatchdog;
 
     /**
+     * @param maxDirtyPagesRatio Configured max-dirty-pages ratio.
      * @param pageMemory Page memory.
      * @param cpProgress Database manager.
      * @param stateChecker Checkpoint lock state provider.
      * @param log Logger.
      */
     public PagesWriteSpeedBasedThrottle(
+            double maxDirtyPagesRatio,
             PageMemoryImpl pageMemory,
             IgniteOutClosure<CheckpointProgress> cpProgress,
             CheckpointLockStateChecker stateChecker,
@@ -104,7 +106,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         cpLockStateChecker = stateChecker;
         this.log = log;
 
-        cleanPagesProtector = new SpeedBasedMemoryConsumptionThrottlingStrategy(pageMemory, cpProgress,
+        cleanPagesProtector = new SpeedBasedMemoryConsumptionThrottlingStrategy(maxDirtyPagesRatio, pageMemory, cpProgress,
             markSpeedAndAvgParkTime);
         cpBufferWatchdog = new CheckpointBufferOverflowWatchdog(pageMemory);
 
@@ -121,6 +123,18 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         mreg.register("CpSyncedPages", cleanPagesProtector::cpSyncedPages, "Counter for fsynced checkpoint pages.");
         mreg.register("CheckpointBufferPagesCount", pageMemory::checkpointBufferPagesCount, "Number of pages used in checkpoint buffer.");
         mreg.register("CheckpointBufferPagesSize", pageMemory::checkpointBufferPagesSize, "Number of used pages in checkpoint buffer.");
+    }
+
+    /** Test-only constructor that uses {@link PageMemoryImpl#DFLT_MAX_DIRTY_PAGES_RATIO}. */
+    @TestOnly
+    public PagesWriteSpeedBasedThrottle(
+            PageMemoryImpl pageMemory,
+            IgniteOutClosure<CheckpointProgress> cpProgress,
+            CheckpointLockStateChecker stateChecker,
+            IgniteLogger log,
+            MetricRegistry mreg
+    ) {
+        this(PageMemoryImpl.DFLT_MAX_DIRTY_PAGES_RATIO, pageMemory, cpProgress, stateChecker, log, mreg);
     }
 
     /** {@inheritDoc} */

@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -67,23 +68,27 @@ import org.apache.ignite.internal.util.lang.GridInClosure3X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteOutClosure;
+import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.apache.ignite.spi.eventstorage.NoopEventStorageSpi;
 import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.GridTestKernalContext;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_DIRTY_PAGES_RATIO;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.MARKER_STORED_TO_DISK;
 import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.SYSTEM_DATA_REGION_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.CHECKPOINT_POOL_OVERFLOW_ERROR_MSG;
+import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.DFLT_MAX_DIRTY_PAGES_RATIO;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.ThrottlingPolicy.CHECKPOINT_BUFFER_ONLY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -101,6 +106,36 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
 
     /** Max memory size. */
     private static final int MAX_SIZE = 128;
+
+    /**
+     * Validates that an in-range {@link
+     * IgniteSystemProperties#IGNITE_MAX_DIRTY_PAGES_RATIO} is honored.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_MAX_DIRTY_PAGES_RATIO, value = "0.99999")
+    public void resolveMaxDirtyPagesRatioAcceptsInRangeValue() {
+        assertEquals(0.99999, PageMemoryImpl.resolveMaxDirtyPagesRatio(new NullLogger()), 0.0);
+    }
+
+    /**
+     * Values above the allowed 0.99999 must fall back to the default.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_MAX_DIRTY_PAGES_RATIO, value = "0.999991")
+    public void resolveMaxDirtyPagesRatioRejectsValueAboveRange() {
+        assertEquals(DFLT_MAX_DIRTY_PAGES_RATIO,
+            PageMemoryImpl.resolveMaxDirtyPagesRatio(new NullLogger()), 0.0);
+    }
+
+    /**
+     * Values at or below the lower bound {@code 0.5} must fall back to the default.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_MAX_DIRTY_PAGES_RATIO, value = "0.499999")
+    public void resolveMaxDirtyPagesRatioRejectsValueBelowRange() {
+        assertEquals(DFLT_MAX_DIRTY_PAGES_RATIO,
+            PageMemoryImpl.resolveMaxDirtyPagesRatio(new NullLogger()), 0.0);
+    }
 
     /**
      * Tests that allocation of huge number of pages leads to OOM exception using the default data region.
@@ -836,7 +871,8 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
                 () -> true,
                 dataRegionMetrics,
                 throttlingPlc,
-                noThrottle
+                noThrottle,
+                DFLT_MAX_DIRTY_PAGES_RATIO
             ) :
             new PageMemoryImpl(
                 dataRegionCfg,
@@ -853,7 +889,8 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
                 () -> true,
                 dataRegionMetrics,
                 throttlingPlc,
-                noThrottle
+                noThrottle,
+                DFLT_MAX_DIRTY_PAGES_RATIO
             ) {
                 @Override public FullPageId pullPageFromCpBuffer() {
                     FullPageId pageId = super.pullPageFromCpBuffer();
