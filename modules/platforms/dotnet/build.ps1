@@ -185,7 +185,7 @@ if(!$skipDotNetCore) {
     # Build executable for .NET 10 too. Copy all libraries, then build the binaries.
     Make-Dir("bin\net10.0")
     Copy-Item -Force -Recurse "bin\net8.0\*" "bin\net10.0"
-    dotnet publish .\Apache.Ignite\Apache.Ignite.DotNetCore.csproj -c $configuration -f net10.0 -o bin\net10.0
+    Build-Solution ".\Apache.Ignite\Apache.Ignite.DotNetCore.csproj" "bin\net10.0" "net10.0"
 }
 
 
