@@ -101,14 +101,14 @@ function Exec([string]$command) {
     }
 }
 
-function Build-Solution([string]$targetSolution, [string]$targetDir) {
+function Build-Solution([string]$targetSolution, [string]$targetDir, [string]$framework) {
     if ($clean) {
         $cleanCommand = "dotnet clean $targetSolution -c $configuration"
         echo "Starting dotnet clean: '$cleanCommand'"
         Exec $cleanCommand
     }
 
-    $buildCommand = "dotnet publish $targetSolution -c $configuration -o $targetDir"
+    $buildCommand = "dotnet publish $targetSolution -c $configuration -f $framework -o $targetDir"
     echo "Starting dotnet build: '$buildCommand'"
     Exec $buildCommand
 }
@@ -173,14 +173,14 @@ cd $PSScriptRoot
 
 # 2) Build .NET
 if (!$skipDotNet) {
-    Build-Solution ".\Apache.Ignite.sln" "bin\net461"
+    Build-Solution ".\Apache.Ignite.sln" "bin\net461" "net461"
 
     # Overwrite dlls to ensure that net461 versions are used instead of netstandard2.
     Copy-Item -Force -Recurse ".\Apache.Ignite\bin\$configuration\net461\*" "bin\net461"
 }
 
 if(!$skipDotNetCore) {
-    Build-Solution ".\Apache.Ignite.DotNetCore.sln" "bin\net8.0"
+    Build-Solution ".\Apache.Ignite.DotNetCore.sln" "bin\net8.0" "net8.0"
 
     # Build executable for .NET 10 too. Copy all libraries, then build the binaries.
     Make-Dir("bin\net10.0")
