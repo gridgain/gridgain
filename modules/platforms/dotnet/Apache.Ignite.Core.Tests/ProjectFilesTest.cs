@@ -45,7 +45,7 @@ namespace Apache.Ignite.Core.Tests
             Assert.GreaterOrEqual(projFiles.Length, 7);
             CheckFiles(
                 projFiles,
-                x => !x.Contains("<TargetFramework>net461</TargetFramework>") && !x.Contains("<TargetFramework>netstandard2.0</TargetFramework>"),
+                x => !x.Contains("<TargetFramework>net461</TargetFramework>") && !x.Contains("netstandard2.0"),
                 "Invalid csproj files: ");
         }
 
