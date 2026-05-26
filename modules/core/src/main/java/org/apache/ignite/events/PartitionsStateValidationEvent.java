@@ -23,6 +23,9 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.ignite.events.EventType.EVT_PARTITIONS_STATE_VALIDATION_FAILED;
+import static org.apache.ignite.events.EventType.EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED;
+
 /**
  * Grid partitions validation event.
  * <p>
@@ -69,13 +72,49 @@ public class PartitionsStateValidationEvent extends EventAdapter {
     private final AffinityTopologyVersion topVer;
 
     /**
+     * Creates failed partition validation state event.
+     *
+     * @param node Node that raised this event.
+     * @param parts Map of cache or group names to the set of partition ids which failed validation.
+     * @param topVer Topology version on which the validation failed.
+     * @return Partitions state validation event.
+     */
+    public static PartitionsStateValidationEvent failedEvent(ClusterNode node, Map<String, Set<Integer>> parts,
+                                                             AffinityTopologyVersion topVer) {
+        return new PartitionsStateValidationEvent(
+            node,
+            "Partitions state validation failed.",
+            EVT_PARTITIONS_STATE_VALIDATION_FAILED,
+            parts,
+            topVer
+        );
+    }
+
+    /**
+     * Creates succeeded partition validation state event.
+     *
+     * @param node Node that raised this event.
+     * @param topVer Topology version on which the validation succeeded.
+     * @return Partitions state validation event.
+     */
+    public static PartitionsStateValidationEvent succeededEvent(ClusterNode node, AffinityTopologyVersion topVer) {
+        return new PartitionsStateValidationEvent(
+            node,
+            "Partitions state validation succeeded.",
+            EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED,
+            Collections.emptyMap(),
+            topVer
+        );
+    }
+
+    /**
      * Creates partitions validation event with given parameters.
      *
      * @param node Node that raised this event.
      * @param msg Optional message.
      * @param type Event type.
      * @param parts Map of cache or group names to the set of partition ids which failed validation.
-     * @param topVer Topology version on which the validation failed.
+     * @param topVer Topology version on which the validation happened.
      */
     public PartitionsStateValidationEvent(ClusterNode node, String msg, int type, Map<String, Set<Integer>> parts,
                                           AffinityTopologyVersion topVer) {

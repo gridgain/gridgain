@@ -146,7 +146,11 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_THREAD_DUMP_ON_EXC
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.cluster.ClusterState.active;
-import static org.apache.ignite.events.EventType.*;
+import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
+import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
+import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
+import static org.apache.ignite.events.EventType.EVT_PARTITIONS_STATE_VALIDATION_FAILED;
+import static org.apache.ignite.events.EventType.EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DYNAMIC_CACHE_START_ROLLBACK_SUPPORTED;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
@@ -4388,17 +4392,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         if (!ctx.event().isRecordable(evtType))
             return;
 
-        String msg = evtType == EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED
-            ? "Partitions state validation succeeded."
-            : "Partitions state validation failed.";
+        ClusterNode node = ctx.discovery().localNode();
+        AffinityTopologyVersion topVer = context().events().topologyVersion();
 
-        PartitionsStateValidationEvent event = new PartitionsStateValidationEvent(
-            ctx.discovery().localNode(),
-            msg,
-            evtType,
-            partsFailedValidation,
-            context().events().topologyVersion()
-        );
+        PartitionsStateValidationEvent event = evtType == EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED
+            ? PartitionsStateValidationEvent.succeededEvent(node, topVer)
+            : PartitionsStateValidationEvent.failedEvent(node, partsFailedValidation, topVer);
 
         ctx.closure().runLocalSafe(new GridPlainRunnable() {
             @Override public void run() {
