@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#nullable disable
 namespace Apache.Ignite.Core.Impl.Binary
 {
     using System;
@@ -36,7 +37,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         private readonly Marshaller _marsh;
 
         /** Parent builder. */
-        private readonly BinaryObjectBuilder? _builder;
+        private readonly BinaryObjectBuilder _builder;
 
         /** Handles. */
         private BinaryReaderHandleDictionary _hnds;
