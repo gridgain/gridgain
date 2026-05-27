@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Impl.Common
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.Globalization;
 
     /// <summary>
@@ -31,7 +32,7 @@ namespace Apache.Ignite.Core.Impl.Common
         /// </summary>
         /// <param name="arg">The argument.</param>
         /// <param name="argName">Name of the argument.</param>
-        public static void NotNull(object arg, string argName)
+        public static void NotNull([NotNull] object? arg, string argName)
         {
             if (arg == null)
                 throw new ArgumentNullException(argName);
@@ -42,9 +43,9 @@ namespace Apache.Ignite.Core.Impl.Common
         /// </summary>
         /// <param name="arg">The argument.</param>
         /// <param name="argName">Name of the argument.</param>
-        public static string NotNullOrEmpty(string arg, string argName)
+        public static string NotNullOrEmpty([NotNull] string? arg, string argName)
         {
-            if (string.IsNullOrEmpty(arg))
+            if (arg == null || arg.Length == 0)
                 throw new ArgumentException(string.Format(CultureInfo.InvariantCulture,
                     "'{0}' argument should not be null or empty.", argName), argName);
 
@@ -56,7 +57,7 @@ namespace Apache.Ignite.Core.Impl.Common
         /// </summary>
         /// <param name="collection">The collection.</param>
         /// <param name="argName">Name of the argument.</param>
-        public static void NotNullOrEmpty<T>(ICollection<T> collection, string argName)
+        public static void NotNullOrEmpty<T>([NotNull] ICollection<T>? collection, string argName)
         {
             if (collection == null || collection.Count == 0)
                 throw new ArgumentException(string.Format(CultureInfo.InvariantCulture,
@@ -69,7 +70,7 @@ namespace Apache.Ignite.Core.Impl.Common
         /// <param name="condition">Condition.</param>
         /// <param name="argName">Name of the argument.</param>
         /// <param name="message">Message.</param>
-        public static void Ensure(bool condition, string argName, string message)
+        public static void Ensure([DoesNotReturnIf(false)] bool condition, string argName, string message)
         {
             if (!condition)
                 throw new ArgumentException(string.Format(CultureInfo.InvariantCulture,
