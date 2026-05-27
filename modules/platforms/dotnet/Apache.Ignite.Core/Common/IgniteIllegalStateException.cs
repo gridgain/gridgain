@@ -40,7 +40,7 @@ namespace Apache.Ignite.Core.Common
         /// Initializes a new instance of the <see cref="IgniteIllegalStateException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public IgniteIllegalStateException(string message) : base(message)
+        public IgniteIllegalStateException(string? message) : base(message)
         {
             // No-op.
         }
@@ -50,7 +50,7 @@ namespace Apache.Ignite.Core.Common
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public IgniteIllegalStateException(string message, Exception? cause) : base(message, cause)
+        public IgniteIllegalStateException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }

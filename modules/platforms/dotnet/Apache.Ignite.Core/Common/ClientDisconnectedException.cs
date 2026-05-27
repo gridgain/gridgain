@@ -56,7 +56,7 @@ namespace Apache.Ignite.Core.Common
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public ClientDisconnectedException(string message, Exception cause) : base(message, cause)
+        public ClientDisconnectedException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }
@@ -67,7 +67,8 @@ namespace Apache.Ignite.Core.Common
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
         /// <param name="clientReconnectTask">The client reconnect task.</param>
-        public ClientDisconnectedException(string message, Exception? cause, Task<bool> clientReconnectTask) : base(message, cause)
+        public ClientDisconnectedException(string? message, Exception? cause, Task<bool>? clientReconnectTask)
+            : base(message, cause)
         {
             _clientReconnectTask = clientReconnectTask;
         }
