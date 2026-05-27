@@ -294,7 +294,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <returns>
         /// Object.
         /// </returns>
-        public T Unmarshal<T>(IBinaryStream stream, BinaryMode mode, BinaryObjectBuilder builder)
+        public T Unmarshal<T>(IBinaryStream stream, BinaryMode mode, BinaryObjectBuilder? builder)
         {
             return new BinaryReader(this, stream, mode, builder).Deserialize<T>();
         }

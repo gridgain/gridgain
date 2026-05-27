@@ -110,7 +110,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="pos">Position.</param>
         /// <param name="builder">Builder.</param>
         /// <returns>Field value.</returns>
-        public T GetField<T>(int pos, BinaryObjectBuilder builder)
+        public T GetField<T>(int pos, BinaryObjectBuilder? builder)
         {
             using (IBinaryStream stream = new BinaryHeapStream(_data))
             {
@@ -229,7 +229,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Lazy fields initialization routine.
         /// </summary>
-        private void InitializeFields(IBinaryTypeDescriptor desc = null)
+        private void InitializeFields(IBinaryTypeDescriptor? desc = null)
         {
             if (_fields != null)
                 return;
@@ -252,12 +252,12 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /** <inheritdoc /> */
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (this == obj)
                 return true;
 
-            BinaryObject that = obj as BinaryObject;
+            BinaryObject? that = obj as BinaryObject;
 
             if (that == null)
                 return false;
@@ -295,7 +295,7 @@ namespace Apache.Ignite.Core.Impl.Binary
 
             IBinaryTypeDescriptor desc = _marsh.GetDescriptor(true, _header.TypeId);
 
-            IBinaryType meta;
+            IBinaryType? meta;
 
             try
             {

@@ -36,7 +36,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         private readonly Marshaller _marsh;
 
         /** Parent builder. */
-        private readonly BinaryObjectBuilder _builder;
+        private readonly BinaryObjectBuilder? _builder;
 
         /** Handles. */
         private BinaryReaderHandleDictionary _hnds;
@@ -61,7 +61,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             (Marshaller marsh,
             IBinaryStream stream,
             BinaryMode mode,
-            BinaryObjectBuilder builder)
+            BinaryObjectBuilder? builder)
         {
             _marsh = marsh;
             _mode = mode;

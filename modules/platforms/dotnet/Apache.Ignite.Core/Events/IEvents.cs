@@ -63,18 +63,7 @@ namespace Apache.Ignite.Core.Events
         /// <param name="timeout">Maximum time to wait for result, null or 0 to wait forever.</param>
         /// <param name="types">Event types to be queried.</param>
         /// <returns>Collection of Ignite events returned from specified nodes.</returns>
-        ICollection<T> RemoteQuery<T>(IEventFilter<T> filter, TimeSpan? timeout = null, IEnumerable<int> types = null) 
-            where T : IEvent;
-
-        /// <summary>
-        /// Queries nodes in this cluster group for events using passed in predicate filter for event selection.
-        /// </summary>
-        /// <typeparam name="T">Type of events.</typeparam>
-        /// <param name="filter">Predicate filter used to query events on remote nodes.</param>
-        /// <param name="timeout">Maximum time to wait for result, null or 0 to wait forever.</param>
-        /// <param name="types">Event types to be queried.</param>
-        /// <returns>Collection of Ignite events returned from specified nodes.</returns>
-        Task<ICollection<T>> RemoteQueryAsync<T>(IEventFilter<T> filter, TimeSpan? timeout = null, IEnumerable<int> types = null) 
+        ICollection<T> RemoteQuery<T>(IEventFilter<T> filter, TimeSpan? timeout = null, IEnumerable<int>? types = null)
             where T : IEvent;
 
         /// <summary>
@@ -138,6 +127,17 @@ namespace Apache.Ignite.Core.Events
         /// If not provided, all events will be passed to the filter.</param>
         /// <returns>Ignite event.</returns>
         T WaitForLocal<T>(IEventFilter<T> filter, IEnumerable<int> types) where T : IEvent;
+
+        /// <summary>
+        /// Queries nodes in this cluster group for events using passed in predicate filter for event selection.
+        /// </summary>
+        /// <typeparam name="T">Type of events.</typeparam>
+        /// <param name="filter">Predicate filter used to query events on remote nodes.</param>
+        /// <param name="timeout">Maximum time to wait for result, null or 0 to wait forever.</param>
+        /// <param name="types">Event types to be queried.</param>
+        /// <returns>Collection of Ignite events returned from specified nodes.</returns>
+        Task<ICollection<T>> RemoteQueryAsync<T>(IEventFilter<T> filter, TimeSpan? timeout = null, IEnumerable<int>? types = null)
+            where T : IEvent;
 
         /// <summary>
         /// Waits for the specified events.
