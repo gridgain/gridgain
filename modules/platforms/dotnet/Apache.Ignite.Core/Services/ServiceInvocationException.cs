@@ -46,7 +46,7 @@ namespace Apache.Ignite.Core.Services
         /// Initializes a new instance of the <see cref="ServiceInvocationException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public ServiceInvocationException(string message) : base(message)
+        public ServiceInvocationException(string? message) : base(message)
         {
             // No-op.
         }
@@ -56,7 +56,7 @@ namespace Apache.Ignite.Core.Services
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public ServiceInvocationException(string message, Exception cause) : base(message, cause)
+        public ServiceInvocationException(string? message, Exception? cause) : base(message, cause)
         {
         }
 
@@ -65,7 +65,7 @@ namespace Apache.Ignite.Core.Services
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="binaryCause">The binary cause.</param>
-        public ServiceInvocationException(string message, IBinaryObject binaryCause)
+        public ServiceInvocationException(string? message, IBinaryObject binaryCause)
             :base(message)
         {
             _binaryCause = binaryCause;

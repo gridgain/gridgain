@@ -49,7 +49,7 @@ namespace Apache.Ignite.Core.Common
         /// Initializes a new instance of the <see cref="JavaException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public JavaException(string message) : base(message)
+        public JavaException(string? message) : base(message)
         {
             // No-op.
         }
@@ -87,7 +87,7 @@ namespace Apache.Ignite.Core.Common
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public JavaException(string message, Exception? cause) : base(message, cause)
+        public JavaException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }

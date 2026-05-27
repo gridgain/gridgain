@@ -46,7 +46,7 @@ namespace Apache.Ignite.Core.Common
         /// Initializes a new instance of the <see cref="ClientDisconnectedException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public ClientDisconnectedException(string message) : base(message)
+        public ClientDisconnectedException(string? message) : base(message)
         {
             // No-op.
         }

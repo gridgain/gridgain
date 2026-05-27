@@ -70,7 +70,7 @@ namespace Apache.Ignite.Core.Cache
         /// </summary>
         /// <param name="msg">Exception message.</param>
         /// <param name="failedKeysException">Exception occurred during failed keys read/write.</param>
-        public CachePartialUpdateException(string? msg, Exception failedKeysException)
+        public CachePartialUpdateException(string? msg, Exception? failedKeysException)
             : this(msg, null, failedKeysException)
         {
             // No-op.

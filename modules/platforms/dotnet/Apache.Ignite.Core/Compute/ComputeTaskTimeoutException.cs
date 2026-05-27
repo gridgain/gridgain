@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Compute
         /// Initializes a new instance of the <see cref="ComputeTaskTimeoutException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public ComputeTaskTimeoutException(string message) : base(message)
+        public ComputeTaskTimeoutException(string? message) : base(message)
         {
             // No-op.
         }
@@ -58,7 +58,7 @@ namespace Apache.Ignite.Core.Compute
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public ComputeTaskTimeoutException(string message, Exception cause) : base(message, cause)
+        public ComputeTaskTimeoutException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }
