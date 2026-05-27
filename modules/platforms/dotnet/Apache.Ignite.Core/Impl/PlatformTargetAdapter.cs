@@ -310,7 +310,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="type">The type code.</param>
         /// <param name="writeAction">The write action.</param>
         /// <returns>Task for async operation</returns>
-        protected Task DoOutOpAsync(int type, Action<BinaryWriter> writeAction = null)
+        protected Task DoOutOpAsync(int type, Action<BinaryWriter>? writeAction = null)
         {
             return DoOutOpAsync<object>(type, writeAction);
         }
@@ -324,8 +324,8 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="keepBinary">Keep binary flag, only applicable to object futures. False by default.</param>
         /// <param name="convertFunc">The function to read future result from stream.</param>
         /// <returns>Task for async operation</returns>
-        protected Task<T> DoOutOpAsync<T>(int type, Action<BinaryWriter> writeAction = null, bool keepBinary = false,
-            Func<BinaryReader, T>? convertFunc = null)
+        protected Task<T> DoOutOpAsync<T>(int type, Action<BinaryWriter>? writeAction = null, bool keepBinary = false,
+            Func<BinaryReader?, T>? convertFunc = null)
         {
             return GetFuture((futId, futType) => DoOutOp(type, w =>
             {
@@ -421,7 +421,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="convertFunc">The function to read future result from stream.</param>
         /// <returns>Created future.</returns>
         private Future<T> GetFuture<T>(Func<long, int, IPlatformTargetInternal> listenAction, bool keepBinary = false,
-            Func<BinaryReader, T> convertFunc = null)
+            Func<BinaryReader?, T>? convertFunc = null)
         {
             var futType = FutureType.Object;
 
@@ -463,7 +463,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="convertFunc">The function to read future result from stream.</param>
         /// <returns>Created future.</returns>
         private Future<T> GetFuture<T>(Action<long, int> listenAction, bool keepBinary = false,
-            Func<BinaryReader, T>? convertFunc = null)
+            Func<BinaryReader?, T>? convertFunc = null)
         {
             var futType = FutureType.Object;
 
