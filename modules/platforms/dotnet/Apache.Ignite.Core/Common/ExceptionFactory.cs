@@ -26,5 +26,5 @@ namespace Apache.Ignite.Core.Common
     /// <param name="inner">Inner exception.</param>
     /// <param name="ignite">Ignite instance.</param>
     /// <returns>Exception.</returns>
-    public delegate Exception ExceptionFactory(string className, string message, Exception? inner, IIgnite? ignite);
+    public delegate Exception ExceptionFactory(string className, string? message, Exception? inner, IIgnite? ignite);
 }

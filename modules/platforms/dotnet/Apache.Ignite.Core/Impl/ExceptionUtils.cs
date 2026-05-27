@@ -147,7 +147,7 @@ namespace Apache.Ignite.Core.Impl
             var msg = innerException.JavaMessage;
             var clsName = innerException.JavaClassName;
 
-            ExceptionFactory ctor;
+            ExceptionFactory? ctor;
 
             if (clsName != null && Exs.TryGetValue(clsName, out ctor))
             {
@@ -177,7 +177,7 @@ namespace Apache.Ignite.Core.Impl
                 return ProcessCachePartialUpdateException(igniteInt, msg, innerException.Message, reader);
 
             // Predefined mapping not found - check plugins.
-            if (igniteInt != null && igniteInt.PluginProcessor != null)
+            if (igniteInt != null && igniteInt.PluginProcessor != null && clsName != null)
             {
                 ctor = igniteInt.PluginProcessor.GetExceptionMapping(clsName);
 
@@ -201,7 +201,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="reader">Reader.</param>
         /// <returns>CachePartialUpdateException.</returns>
         [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        private static Exception ProcessCachePartialUpdateException(IIgniteInternal? ignite, string msg,
+        private static Exception ProcessCachePartialUpdateException(IIgniteInternal? ignite, string? msg,
             string stackTrace, BinaryReader? reader)
         {
             if (reader == null)
@@ -261,7 +261,7 @@ namespace Apache.Ignite.Core.Impl
         /// </summary>
         /// <param name="reader">Reader.</param>
         /// <returns>List.</returns>
-        private static List<object> ReadNullableList(BinaryReader reader)
+        private static List<object>? ReadNullableList(BinaryReader reader)
         {
             if (!reader.ReadBoolean())
                 return null;

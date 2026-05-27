@@ -142,13 +142,9 @@ namespace Apache.Ignite.Core.Impl.Plugin
         /// <summary>
         /// Gets the exception factory.
         /// </summary>
-        public ExceptionFactory GetExceptionMapping(string className)
+        public ExceptionFactory? GetExceptionMapping(string className)
         {
-            Debug.Assert(className != null);
-
-            ExceptionFactory res;
-
-            if (_exactExceptionMappings.TryGetValue(className, out res))
+            if (_exactExceptionMappings.TryGetValue(className, out var res))
             {
                 return res;
             }
