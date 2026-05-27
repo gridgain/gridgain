@@ -73,7 +73,7 @@ namespace Apache.Ignite.Core.Client
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
         /// <param name="statusCode">The error code.</param>
-        public IgniteClientException(string message, Exception cause, ClientStatusCode statusCode) 
+        public IgniteClientException(string message, Exception? cause, ClientStatusCode statusCode)
             : base(message, cause)
         {
             _statusCode = statusCode;

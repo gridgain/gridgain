@@ -112,7 +112,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /** <inheritdoc /> */
-        public string GetTypeName(int id, byte platformId, Func<Exception, string> errorFunc = null)
+        public string GetTypeName(int id, byte platformId, Func<Exception, string>? errorFunc = null)
         {
             return _socket.DoOutInOp(ClientOp.BinaryTypeNameGet, ctx =>
                 {
@@ -121,7 +121,7 @@ namespace Apache.Ignite.Core.Impl.Binary
                 },
                 ctx => ctx.Reader.ReadString(),
                 errorFunc == null
-                    ? (Func<ClientStatusCode, string, string>) null
+                    ? (Func<ClientStatusCode, string, string>?) null
                     : (statusCode, msg) => errorFunc(new BinaryObjectException(msg)));
         }
 

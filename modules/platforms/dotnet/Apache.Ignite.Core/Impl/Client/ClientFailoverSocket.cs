@@ -145,10 +145,10 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         public T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
             Func<ClientResponseContext, T> readFunc,
-            Func<ClientStatusCode, string, T> errorFunc = null)
+            Func<ClientStatusCode, string, T>? errorFunc = null)
         {
             var attempt = 0;
-            List<Exception> errors = null;
+            List<Exception>? errors = null;
 
             while (true)
             {

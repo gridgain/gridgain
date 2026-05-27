@@ -852,7 +852,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write string value.
         /// </summary>
         /// <param name="val">String value.</param>
-        public void WriteString(string val)
+        public void WriteString(string? val)
         {
             if (val == null)
                 WriteNullRawField();

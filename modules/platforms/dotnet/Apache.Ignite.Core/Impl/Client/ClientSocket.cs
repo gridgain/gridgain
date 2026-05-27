@@ -97,8 +97,8 @@ namespace Apache.Ignite.Core.Impl.Client
         private bool _isReadTimeoutEnabled;
 
         /** Current async operations, map from request id. */
-        private readonly ConcurrentDictionary<long, Request> _requests
-            = new ConcurrentDictionary<long, Request>();
+        private readonly ConcurrentDictionary<long, Request?> _requests
+            = new ConcurrentDictionary<long, Request?>();
 
         /** Server -> Client notification listeners. */
         private readonly ConcurrentDictionary<long, ClientNotificationHandler> _notificationListeners
@@ -156,12 +156,6 @@ namespace Apache.Ignite.Core.Impl.Client
             ClientProtocolVersion? version, Action<AffinityTopologyVersion> topVerCallback,
             Marshaller marshaller)
         {
-            Debug.Assert(clientConfiguration != null);
-            Debug.Assert(endPoint != null);
-            Debug.Assert(!string.IsNullOrWhiteSpace(host));
-            Debug.Assert(topVerCallback != null);
-            Debug.Assert(marshaller != null);
-
             _topVerCallback = topVerCallback;
             _marsh = marshaller;
             _timeout = clientConfiguration.SocketTimeout;
@@ -280,8 +274,8 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "BinaryHeapStream does not need to be disposed.")]
-        public T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
-            Func<ClientResponseContext, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
+        public T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext>? writeAction,
+            Func<ClientResponseContext, T>? readFunc, Func<ClientStatusCode, string, T>? errorFunc = null)
         {
             // Encode.
             var reqMsg = WriteMessage(writeAction, opId);
@@ -297,7 +291,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// Performs a send-receive operation asynchronously.
         /// </summary>
         public Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
-            Func<ClientResponseContext, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null,
+            Func<ClientResponseContext, T> readFunc, Func<ClientStatusCode, string, T>? errorFunc = null,
             bool syncCallback = false)
         {
             // Encode.
@@ -541,8 +535,8 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Decodes the response that we got from <see cref="HandleResponse"/>.
         /// </summary>
-        private T DecodeResponse<T>(BinaryHeapStream stream, Func<ClientResponseContext, T> readFunc,
-            Func<ClientStatusCode, string, T> errorFunc)
+        private T DecodeResponse<T>(BinaryHeapStream stream, Func<ClientResponseContext, T>? readFunc,
+            Func<ClientStatusCode, string, T>? errorFunc)
         {
             ClientStatusCode statusCode;
 
@@ -572,7 +566,7 @@ namespace Apache.Ignite.Core.Impl.Client
             {
                 return readFunc != null
                     ? readFunc(new ClientResponseContext(stream, this))
-                    : default(T);
+                    : default!;
             }
 
             var msg = BinaryUtils.Marshaller.StartUnmarshal(stream).ReadString();
@@ -645,7 +639,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 if (success)
                 {
-                    BitArray featureBits = null;
+                    BitArray? featureBits = null;
 
                     if (hasFeatures)
                     {
@@ -750,7 +744,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Sends the request synchronously.
         /// </summary>
-        private BinaryHeapStream SendRequest(ref RequestMessage reqMsg)
+        private BinaryHeapStream? SendRequest(ref RequestMessage reqMsg)
         {
             // Do not enter lock when disposed.
             CheckException();
@@ -861,7 +855,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "BinaryHeapStream does not need to be disposed.")]
-        private RequestMessage WriteMessage(Action<ClientRequestContext> writeAction, ClientOp opId)
+        private RequestMessage WriteMessage(Action<ClientRequestContext>? writeAction, ClientOp opId)
         {
             _features.ValidateOp(opId);
 
@@ -1069,7 +1063,7 @@ namespace Apache.Ignite.Core.Impl.Client
             {
                 foreach (var reqId in _requests.Keys.ToArray())
                 {
-                    Request req;
+                    Request? req;
                     if (_requests.TryRemove(reqId, out req) && req != null)
                     {
                         req.CompletionSource.TrySetException(ex);

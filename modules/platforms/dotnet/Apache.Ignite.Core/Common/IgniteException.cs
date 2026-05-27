@@ -47,7 +47,7 @@ namespace Apache.Ignite.Core.Common
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public IgniteException(string message, Exception cause) : base(message, cause)
+        public IgniteException(string message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }
