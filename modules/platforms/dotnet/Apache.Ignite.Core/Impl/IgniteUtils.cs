@@ -36,16 +36,13 @@ namespace Apache.Ignite.Core.Impl
     {
         /** Thread-local random. */
         [ThreadStatic]
-        private static Random _rnd;
+        private static Random? _rnd;
 
         /// <summary>
         /// Gets thread local random.
         /// </summary>
         /// <value>Thread local random.</value>
-        public static Random ThreadLocalRandom
-        {
-            get { return _rnd ?? (_rnd = new Random()); }
-        }
+        public static Random ThreadLocalRandom => _rnd ??= new Random();
 
         /// <summary>
         /// Returns shuffled list copy.
@@ -82,7 +79,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="typeName">Class name</param>
         /// <param name="props">Properties to set.</param>
         /// <returns>New Instance.</returns>
-        public static T CreateInstance<T>(string typeName, IEnumerable<KeyValuePair<string, object>> props = null)
+        public static T CreateInstance<T>(string typeName, IEnumerable<KeyValuePair<string, object>>? props = null)
         {
             IgniteArgumentCheck.NotNullOrEmpty(typeName, "typeName");
 
@@ -104,7 +101,7 @@ namespace Apache.Ignite.Core.Impl
         /// </summary>
         /// <param name="target">Target object.</param>
         /// <param name="props">Properties.</param>
-        private static void SetProperties(object target, IEnumerable<KeyValuePair<string, object>> props)
+        private static void SetProperties(object target, IEnumerable<KeyValuePair<string, object>>? props)
         {
             if (props == null)
                 return;
@@ -115,7 +112,7 @@ namespace Apache.Ignite.Core.Impl
 
             foreach (KeyValuePair<string, object> prop in props)
             {
-                PropertyInfo prop0 = typ.GetProperty(prop.Key, 
+                PropertyInfo? prop0 = typ.GetProperty(prop.Key,
                     BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
                 if (prop0 == null)
@@ -131,7 +128,7 @@ namespace Apache.Ignite.Core.Impl
         /// </summary>
         /// <param name="str">String.</param>
         /// <returns>Unmanaged byte array.</returns>
-        public static unsafe sbyte* StringToUtf8Unmanaged(string str)
+        public static unsafe sbyte* StringToUtf8Unmanaged(string? str)
         {
             var ptr = IntPtr.Zero;
 
@@ -155,7 +152,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="reader">Reader.</param>
         /// <param name="pred">The predicate.</param>
         /// <returns> Nodes list or null. </returns>
-        public static List<IClusterNode> ReadNodes(BinaryReader reader, Func<ClusterNodeImpl, bool> pred = null)
+        public static List<IClusterNode>? ReadNodes(BinaryReader reader, Func<ClusterNodeImpl, bool>? pred = null)
         {
             var cnt = reader.ReadInt();
 
@@ -188,7 +185,7 @@ namespace Apache.Ignite.Core.Impl
         /// <summary>
         /// Encodes the peek modes into a single int value.
         /// </summary>
-        public static int EncodePeekModes(CachePeekMode[] modes, out bool hasPlatformCache)
+        public static int EncodePeekModes(CachePeekMode[]? modes, out bool hasPlatformCache)
         {
             var res = 0;
             hasPlatformCache = false;
