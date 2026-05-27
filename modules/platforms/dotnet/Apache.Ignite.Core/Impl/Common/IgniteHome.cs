@@ -37,7 +37,7 @@ namespace Apache.Ignite.Core.Impl.Common
         /// </summary>
         /// <param name="igniteHome">Optional known home.</param>
         /// <param name="log">The log.</param>
-        public static string Resolve(string igniteHome = null, ILogger log = null)
+        public static string? Resolve(string? igniteHome = null, ILogger? log = null)
         {
             var home = igniteHome;
 
@@ -58,7 +58,7 @@ namespace Apache.Ignite.Core.Impl.Common
 
             if (log != null)
             {
-                log.Debug("IGNITE_HOME resolved to: {0}", home);
+                log.Debug("IGNITE_HOME resolved to: {0}", home!);
             }
 
             return home;
@@ -71,12 +71,11 @@ namespace Apache.Ignite.Core.Impl.Common
         /// <returns>
         /// Ignite home directory.
         /// </returns>
-        private static string Resolve(ILogger log)
+        private static string? Resolve(ILogger? log)
         {
             foreach (var probeDir in GetProbeDirectories().Where(x => !string.IsNullOrEmpty(x)))
             {
-                if (log != null)
-                    log.Debug("Probing IgniteHome in '{0}'...", probeDir);
+                log?.Debug("Probing IgniteHome in '{0}'...", probeDir);
 
                 var dir = new DirectoryInfo(probeDir);
 

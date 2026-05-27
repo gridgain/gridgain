@@ -62,7 +62,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             (Marshaller marsh,
             IBinaryStream stream,
             BinaryMode mode,
-            BinaryObjectBuilder? builder)
+            BinaryObjectBuilder builder)
         {
             _marsh = marsh;
             _mode = mode;
