@@ -169,7 +169,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="platformId">Platform identifier.</param>
         /// <param name="errorAction">Error action.</param>
         /// <returns>Type or null.</returns>
-        public string GetTypeName(int id, byte platformId, Func<Exception, string> errorAction = null)
+        public string GetTypeName(int id, byte platformId, Func<Exception, string>? errorAction = null)
         {
             return DoOutInOp((int) Op.GetType, w =>
             {

@@ -68,8 +68,6 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="target">Target.</param>
         protected PlatformTargetAdapter(IPlatformTargetInternal target)
         {
-            Debug.Assert(target != null);
-
             _target = target;
             _marsh = target.Marshaller;
         }
@@ -213,7 +211,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="inAction">In action.</param>
         /// <param name="errorAction">Error action.</param>
         /// <returns>Result.</returns>
-        protected TR DoOutInOp<TR>(int type, Action<BinaryWriter> outAction, Func<IBinaryStream, TR> inAction, Func<Exception, TR> errorAction = null)
+        protected TR DoOutInOp<TR>(int type, Action<BinaryWriter> outAction, Func<IBinaryStream, TR> inAction, Func<Exception, TR>? errorAction = null)
         {
             return _target.InStreamOutStream(type, stream => WriteToStream(outAction, stream, _marsh), inAction, errorAction);
         }
@@ -327,7 +325,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="convertFunc">The function to read future result from stream.</param>
         /// <returns>Task for async operation</returns>
         protected Task<T> DoOutOpAsync<T>(int type, Action<BinaryWriter> writeAction = null, bool keepBinary = false,
-            Func<BinaryReader, T> convertFunc = null)
+            Func<BinaryReader, T>? convertFunc = null)
         {
             return GetFuture((futId, futType) => DoOutOp(type, w =>
             {
@@ -465,7 +463,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="convertFunc">The function to read future result from stream.</param>
         /// <returns>Created future.</returns>
         private Future<T> GetFuture<T>(Action<long, int> listenAction, bool keepBinary = false,
-            Func<BinaryReader, T> convertFunc = null)
+            Func<BinaryReader, T>? convertFunc = null)
         {
             var futType = FutureType.Object;
 
