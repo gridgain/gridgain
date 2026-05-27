@@ -78,7 +78,10 @@ namespace Apache.Ignite.Core.Impl.Binary
             Debug.Assert(reader != null);
             Debug.Assert(desc != null);
 
+            // SYSLIB0050: FormatterServices is obsolete in net8.0+; still required to materialize objects without invoking constructors.
+#pragma warning disable SYSLIB0050
             var obj = FormatterServices.GetUninitializedObject(typeOverride ?? desc.Type);
+#pragma warning restore SYSLIB0050
 
             var ctx = GetStreamingContext(reader);
 
@@ -127,7 +130,10 @@ namespace Apache.Ignite.Core.Impl.Binary
         internal static BinaryReflectiveSerializerInternal Create(Type type, int typeId, IBinaryNameMapper converter,
             IBinaryIdMapper idMapper, bool forceTimestamp, bool raw, bool unwrapNullable)
         {
+            // SYSLIB0050: FieldInfo.IsNotSerialized is obsolete in net8.0+ but still respected to honor [NonSerialized] field semantics.
+#pragma warning disable SYSLIB0050
             var fields = ReflectionUtils.GetAllFields(type).Where(x => !x.IsNotSerialized).ToList();
+#pragma warning restore SYSLIB0050
 
             IDictionary<int, string> idMap = new Dictionary<int, string>();
 
@@ -188,6 +194,8 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Gets the streaming context.
         /// </summary>
+        // SYSLIB0050: StreamingContext / StreamingContextStates are obsolete in net8.0+ but still passed to ISerializable callbacks.
+#pragma warning disable SYSLIB0050
         private static StreamingContext GetStreamingContext(IBinaryReader reader)
         {
             return new StreamingContext(StreamingContextStates.All, reader);
@@ -200,5 +208,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             return new StreamingContext(StreamingContextStates.All, writer);
         }
+#pragma warning restore SYSLIB0050
     }
 }

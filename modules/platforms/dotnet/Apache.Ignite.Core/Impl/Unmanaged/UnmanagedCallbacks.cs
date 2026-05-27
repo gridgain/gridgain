@@ -113,6 +113,9 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         }
 
         /** <inheritdoc /> */
+#if NET6_0_OR_GREATER
+        [Obsolete("InitializeLifetimeService is obsolete in .NET 5+ because Remoting/lifetime services were removed.")]
+#endif
         public override object InitializeLifetimeService()
         {
             // Ensure that cross-AppDomain reference lives forever.

@@ -48,9 +48,13 @@ namespace Apache.Ignite.Core.Client
 
             var sslStream = new SslStream(stream, false, ValidateServerCertificate, null);
 
+            // SYSLIB0057: X509Certificate2 file-path ctor is obsolete in net9+; X509CertificateLoader is the replacement
+            // but we still use the legacy ctor for back-compat with netstandard2.0.
+#pragma warning disable SYSLIB0057
             var cert = string.IsNullOrEmpty(CertificatePath)
                 ? null
                 : new X509Certificate2(CertificatePath, CertificatePassword);
+#pragma warning restore SYSLIB0057
 
             var certs = cert == null
                 ? null

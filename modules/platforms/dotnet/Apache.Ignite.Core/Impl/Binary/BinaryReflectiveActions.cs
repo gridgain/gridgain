@@ -261,11 +261,11 @@ namespace Apache.Ignite.Core.Impl.Binary
             else if (type == typeof(UIntPtr))
             {
                 writeAction = raw
-                    ? GetRawWriter<UIntPtr>(field, (w, o) => w.WriteLong((long) o))
-                    : GetWriter<UIntPtr>(field, (f, w, o) => w.WriteLong(f, (long) o));
+                    ? GetRawWriter<UIntPtr>(field, (w, o) => w.WriteLong((long) (ulong) o))
+                    : GetWriter<UIntPtr>(field, (f, w, o) => w.WriteLong(f, (long) (ulong) o));
                 readAction = raw
-                    ? GetRawReader(field, r => (UIntPtr) r.ReadLong())
-                    : GetReader(field, (f, r) => (UIntPtr) r.ReadLong(f));
+                    ? GetRawReader(field, r => (UIntPtr) (ulong) r.ReadLong())
+                    : GetReader(field, (f, r) => (UIntPtr) (ulong) r.ReadLong(f));
             }
             else
             {

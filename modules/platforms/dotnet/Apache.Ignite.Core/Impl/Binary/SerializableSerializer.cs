@@ -60,8 +60,12 @@ namespace Apache.Ignite.Core.Impl.Binary
             var objType = obj.GetType();
 
             // Get field values and write them.
+            // SYSLIB0050: FormatterConverter / SerializationInfo(Type, IFormatterConverter) / ISerializable.GetObjectData
+            // are obsolete in net8.0+; still required to interop with user types implementing ISerializable.
+#pragma warning disable SYSLIB0050
             var serInfo = new SerializationInfo(objType, new FormatterConverter());
             serializable.GetObjectData(serInfo, ctx);
+#pragma warning restore SYSLIB0050
 
             var dotNetFields = WriteSerializationInfo(writer, serInfo);
 
@@ -133,7 +137,10 @@ namespace Apache.Ignite.Core.Impl.Binary
                 }
                 else
                 {
+                    // SYSLIB0050: FormatterServices is obsolete in net8.0+; still required to materialize objects without invoking constructors.
+#pragma warning disable SYSLIB0050
                     res = FormatterServices.GetUninitializedObject(type);
+#pragma warning restore SYSLIB0050
 
                     _serializableTypeDesc.OnDeserializing(res, ctx);
 
@@ -565,7 +572,10 @@ namespace Apache.Ignite.Core.Impl.Binary
         private static SerializationInfo ReadSerializationInfo(BinaryReader reader, 
             IEnumerable<string> fieldNames, Type type, ICollection<int> dotNetFields)
         {
+            // SYSLIB0050: FormatterConverter and SerializationInfo(Type, IFormatterConverter) are obsolete in net8.0+; still required to interop with user types implementing ISerializable.
+#pragma warning disable SYSLIB0050
             var serInfo = new SerializationInfo(type, new FormatterConverter());
+#pragma warning restore SYSLIB0050
 
             if (dotNetFields == null)
             {
@@ -592,6 +602,9 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Reads the object as a custom type.
         /// </summary>
+        // SYSLIB0050: FormatterServices, IObjectReference and GetSerializableMembers are obsolete in net8.0+;
+        // still required to materialize objects without ctors and to interop with ISerializable proxies.
+#pragma warning disable SYSLIB0050
         private static object ReadAsCustomType(Type customType, SerializationInfo serInfo, StreamingContext ctx)
         {
             var ctorFunc = SerializableTypeDescriptor.Get(customType).SerializationCtor;
@@ -624,16 +637,20 @@ namespace Apache.Ignite.Core.Impl.Binary
 
             return resObj;
         }
+#pragma warning restore SYSLIB0050
 
         /// <summary>
         /// Gets the streaming context.
         /// </summary>
+        // SYSLIB0050: StreamingContext / StreamingContextStates are obsolete in net8.0+ but still passed to ISerializable callbacks.
+#pragma warning disable SYSLIB0050
         private static StreamingContext GetStreamingContext()
         {
             // Additional parameter must be null, because some ISerializable implementations expect weird things there.
             // For example, System.Data.DataTable calls Convert.ToBoolean on that value.
             return new StreamingContext(StreamingContextStates.All, null);
         }
+#pragma warning restore SYSLIB0050
 
         /// <summary>
         /// Reads the field.

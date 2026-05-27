@@ -56,9 +56,12 @@ namespace Apache.Ignite.Core.Plugin
         /// <summary>
         /// Initializes a new instance of the <see cref="PluginNotFoundException"/> class.
         /// </summary>
+        // SYSLIB0051: legacy formatter-based serialization ctor is obsolete in net8.0+ but preserved for binary compatibility.
+#pragma warning disable SYSLIB0051
         protected PluginNotFoundException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
             // No-op.
         }
+#pragma warning restore SYSLIB0051
     }
 }

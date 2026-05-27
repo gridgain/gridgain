@@ -23,6 +23,7 @@ namespace Apache.Ignite.Core.Impl.Collections
     /// </summary>
     public static class CollectionExtensions
     {
+#if NETSTANDARD2_0
         /// <summary>
         /// Returns a read-only System.Collections.Generic.IDictionary{K, V} wrapper for the current collection.
         /// </summary>
@@ -30,6 +31,7 @@ namespace Apache.Ignite.Core.Impl.Collections
         {
             return new ReadOnlyDictionary<TKey, TValue>(dict);
         }
+#endif
 
         /// <summary>
         /// Returns a read-only System.Collections.Generic.ICollection{K, V} wrapper for the current collection.
