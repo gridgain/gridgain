@@ -54,7 +54,7 @@ namespace Apache.Ignite.Core.Impl.Common
         /// Classpath string.
         /// </returns>
         internal static string CreateClasspath(string classPath, string igniteHome, bool forceTestClasspath = false,
-            ILogger log = null)
+            ILogger? log = null)
         {
             var cpStr = new StringBuilder();
 
@@ -69,10 +69,7 @@ namespace Apache.Ignite.Core.Impl.Common
             if (!string.IsNullOrWhiteSpace(igniteHome))
                 AppendHomeClasspath(igniteHome, forceTestClasspath, cpStr);
 
-            if (log != null)
-            {
-                log.Debug("Classpath resolved to: {0}", cpStr);
-            }
+            log?.Debug("Classpath resolved to: {0}", cpStr);
 
             var res = cpStr.ToString();
             res = res.StartsWith(ClasspathPrefix, StringComparison.Ordinal) ? res : ClasspathPrefix + res;
