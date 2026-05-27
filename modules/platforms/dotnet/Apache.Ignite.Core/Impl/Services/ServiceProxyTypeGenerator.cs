@@ -65,11 +65,10 @@ namespace Apache.Ignite.Core.Impl.Services
         /// </summary>
         public static Tuple<Type, MethodInfo[]> Generate(Type serviceType)
         {
-            Debug.Assert(serviceType != null);
             Debug.Assert(serviceType.FullName != null);
 
             var isClass = serviceType.IsClass;
-            var proxyType = ModuleBuilder.DefineType(serviceType.FullName,
+            var proxyType = ModuleBuilder.DefineType(serviceType.FullName!,
                 TypeAttributes.Class, isClass ? serviceType : null);
 
             var buildContext = new ProxyBuildContext(proxyType, serviceType);
@@ -93,10 +92,7 @@ namespace Apache.Ignite.Core.Impl.Services
                 GenerateMethod(buildContext, i);
             }
 
-            TypeInfo typeInfo = proxyType.CreateTypeInfo();
-
-            Debug.Assert(typeInfo != null);
-
+            TypeInfo typeInfo = proxyType.CreateTypeInfo()!;
             Type type = typeInfo.AsType();
 
             return Tuple.Create(type, buildContext.Methods);
@@ -171,11 +167,12 @@ namespace Apache.Ignite.Core.Impl.Services
             var baseType = buildContext.ServiceType;
             var isClass = baseType.IsClass;
 
-            ConstructorInfo baseCtr = null;
+            ConstructorInfo? baseCtr = null;
             if (isClass)
             {
                 baseCtr = baseType.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public,
-                    null, new Type[0], null);
+                    null, Type.EmptyTypes, null);
+
                 if (baseCtr == null)
                     throw new NotSupportedException(
                         "Service proxy does not support base types without parameterless constructor: " +
@@ -190,8 +187,9 @@ namespace Apache.Ignite.Core.Impl.Services
             {
                 // Load "this".
                 gen.Emit(OpCodes.Ldarg_0);
+
                 // Call base constructor.
-                gen.Emit(OpCodes.Call, baseCtr);
+                gen.Emit(OpCodes.Call, baseCtr!);
             }
 
             // Assign parameters to fields.
@@ -211,15 +209,14 @@ namespace Apache.Ignite.Core.Impl.Services
         /// </summary>
         private static void GenerateMethod(ProxyBuildContext buildContext, int methodIndex)
         {
-            var method = buildContext.Methods[methodIndex];
-            Debug.Assert(method.DeclaringType != null);
+            var method = buildContext.Methods[methodIndex]!;
             var parameters = method.GetParameters();
             var parameterTypes = new Type[parameters.Length];
             for (var i = 0; i < parameters.Length; i++)
                 parameterTypes[i] = parameters[i].ParameterType;
 
             var attributes = MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.HideBySig;
-            if (method.DeclaringType.IsInterface)
+            if (method.DeclaringType!.IsInterface)
                 attributes |= MethodAttributes.Final | MethodAttributes.NewSlot;
             if ((method.Attributes & MethodAttributes.SpecialName) == MethodAttributes.SpecialName)
                 attributes |= MethodAttributes.SpecialName;
