@@ -50,7 +50,7 @@ namespace Apache.Ignite.Core.Common
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public IgniteIllegalStateException(string message, Exception cause) : base(message, cause)
+        public IgniteIllegalStateException(string message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }

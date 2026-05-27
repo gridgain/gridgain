@@ -123,8 +123,8 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="reader">Error data reader.</param>
         /// <param name="innerException">Inner exception.</param>
         /// <returns>Exception.</returns>
-        public static Exception GetException(IIgniteInternal igniteInt, string clsName, string msg, string stackTrace,
-            BinaryReader reader = null, Exception innerException = null)
+        public static Exception GetException(IIgniteInternal? igniteInt, string clsName, string msg, string stackTrace,
+            BinaryReader? reader = null, Exception? innerException = null)
         {
             // Set JavaException as immediate inner.
             var jex = new JavaException(clsName, msg, stackTrace, innerException);
@@ -139,17 +139,17 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="innerException">Java exception.</param>
         /// <param name="reader">Error data reader.</param>
         /// <returns>Exception.</returns>
-        public static Exception GetException(IIgniteInternal igniteInt, JavaException innerException,
-            BinaryReader reader = null)
+        public static Exception GetException(IIgniteInternal? igniteInt, JavaException innerException,
+            BinaryReader? reader = null)
         {
-            var ignite = igniteInt == null ? null : igniteInt.GetIgnite();
+            var ignite = igniteInt?.GetIgnite();
 
             var msg = innerException.JavaMessage;
             var clsName = innerException.JavaClassName;
 
             ExceptionFactory ctor;
 
-            if (Exs.TryGetValue(clsName, out ctor))
+            if (clsName != null && Exs.TryGetValue(clsName, out ctor))
             {
                 var match = InnerClassRegex.Match(msg ?? string.Empty);
 
@@ -201,8 +201,8 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="reader">Reader.</param>
         /// <returns>CachePartialUpdateException.</returns>
         [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        private static Exception ProcessCachePartialUpdateException(IIgniteInternal ignite, string msg,
-            string stackTrace, BinaryReader reader)
+        private static Exception ProcessCachePartialUpdateException(IIgniteInternal? ignite, string msg,
+            string stackTrace, BinaryReader? reader)
         {
             if (reader == null)
                 return new CachePartialUpdateException(msg, new IgniteException("Failed keys are not available."));

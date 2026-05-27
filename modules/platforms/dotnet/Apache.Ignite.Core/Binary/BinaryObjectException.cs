@@ -47,7 +47,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public BinaryObjectException(string message, Exception cause)
+        public BinaryObjectException(string message, Exception? cause)
             : base(message, cause) {
         }
 

@@ -32,7 +32,7 @@ namespace Apache.Ignite.Core.Common
         /// <summary>
         /// The client reconnect task.
         /// </summary>
-        private readonly Task<bool> _clientReconnectTask;
+        private readonly Task<bool>? _clientReconnectTask;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClientDisconnectedException"/> class.
@@ -67,7 +67,7 @@ namespace Apache.Ignite.Core.Common
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
         /// <param name="clientReconnectTask">The client reconnect task.</param>
-        public ClientDisconnectedException(string message, Exception cause, Task<bool> clientReconnectTask) : base(message, cause)
+        public ClientDisconnectedException(string message, Exception? cause, Task<bool> clientReconnectTask) : base(message, cause)
         {
             _clientReconnectTask = clientReconnectTask;
         }
@@ -88,9 +88,6 @@ namespace Apache.Ignite.Core.Common
         /// <value>
         /// The client reconnect task, or null.
         /// </value>
-        public Task<bool> ClientReconnectTask
-        {
-            get { return _clientReconnectTask; }
-        }
+        public Task<bool>? ClientReconnectTask => _clientReconnectTask;
     }
 }
