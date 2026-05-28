@@ -69,7 +69,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="type">Operation type code.</param>
         /// <param name="writeAction">Write action.</param>
         /// <returns>Result.</returns>
-        IPlatformTargetInternal InStreamOutObject(int type, Action<IBinaryStream> writeAction);
+        IPlatformTargetInternal? InStreamOutObject(int type, Action<IBinaryStream> writeAction);
 
         /// <summary>
         /// Performs InObjectStreamOutObjectStream operation.

@@ -259,7 +259,7 @@ namespace Apache.Ignite.Core
         /// <param name="create">Flag indicating whether atomic long should be created if it does not exist.</param>
         /// <returns>Atomic long instance with the specified name,
         /// or null if it does not exist and <paramref name="create"/> is <c>false</c>.</returns>
-        IAtomicLong GetAtomicLong(string name, long initialValue, bool create);
+        IAtomicLong? GetAtomicLong(string name, long initialValue, bool create);
 
         /// <summary>
         /// Gets an atomic sequence with specified name from cache.
@@ -273,7 +273,7 @@ namespace Apache.Ignite.Core
         /// <returns>Atomic sequence instance with specified name,
         /// or null if it does not exist and <paramref name="create"/> flag is not set.</returns>
         /// <exception cref="IgniteException">If atomic sequence could not be fetched or created.</exception>
-        IAtomicSequence GetAtomicSequence(string name, long initialValue, bool create);
+        IAtomicSequence? GetAtomicSequence(string name, long initialValue, bool create);
 
         /// <summary>
         /// Gets an atomic reference with specified name from cache.
@@ -287,7 +287,7 @@ namespace Apache.Ignite.Core
         /// <returns>Atomic reference instance with specified name,
         /// or null if it does not exist and <paramref name="create"/> flag is not set.</returns>
         /// <exception cref="IgniteException">If atomic reference could not be fetched or created.</exception>
-        IAtomicReference<T> GetAtomicReference<T>(string name, T initialValue, bool create);
+        IAtomicReference<T>? GetAtomicReference<T>(string name, T initialValue, bool create);
 
         /// <summary>
         /// Gets the configuration of this Ignite instance.
@@ -499,6 +499,6 @@ namespace Apache.Ignite.Core
         /// <param name="configuration">Lock configuration.</param>
         /// <param name="create">Whether the lock should be created if it does not exist.</param>
         /// <returns><see cref="IIgniteLock"/></returns>
-        IIgniteLock GetOrCreateLock(LockConfiguration configuration, bool create);
+        IIgniteLock? GetOrCreateLock(LockConfiguration configuration, bool create);
     }
 }

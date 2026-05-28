@@ -52,7 +52,7 @@ namespace Apache.Ignite.Core.Impl
         /// </summary>
         /// <param name="id">Node id.</param>
         /// <returns>Cached node.</returns>
-        ClusterNodeImpl GetNode(Guid? id);
+        ClusterNodeImpl? GetNode(Guid? id);
 
         /// <summary>
         /// Gets the marshaller.
@@ -72,7 +72,8 @@ namespace Apache.Ignite.Core.Impl
         /// <summary>
         /// Gets the data streamer.
         /// </summary>
-        IDataStreamer<TK, TV> GetDataStreamer<TK, TV>(string cacheName, bool keepBinary);
+        IDataStreamer<TK, TV> GetDataStreamer<TK, TV>(string cacheName, bool keepBinary)
+            where TK : notnull;
 
         /// <summary>
         /// Gets the public Ignite API.

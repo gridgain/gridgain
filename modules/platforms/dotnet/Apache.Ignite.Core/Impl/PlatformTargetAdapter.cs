@@ -117,7 +117,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="type">Operation type.</param>
         /// <param name="action">Action to be performed on the stream.</param>
         /// <returns>Resulting object.</returns>
-        protected IPlatformTargetInternal DoOutOpObject(int type, Action<BinaryWriter> action)
+        protected IPlatformTargetInternal? DoOutOpObject(int type, Action<BinaryWriter> action)
         {
             return _target.InStreamOutObject(type, stream => WriteToStream(action, stream, _marsh));
         }
@@ -128,7 +128,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="type">Operation type.</param>
         /// <param name="action">Action to be performed on the stream.</param>
         /// <returns>Resulting object.</returns>
-        protected IPlatformTargetInternal DoOutOpObject(int type, Action<IBinaryStream> action)
+        protected IPlatformTargetInternal? DoOutOpObject(int type, Action<IBinaryStream> action)
         {
             return _target.InStreamOutObject(type, action);
         }
@@ -351,7 +351,7 @@ namespace Apache.Ignite.Core.Impl
                 writeAction(w);
                 w.WriteLong(futId);
                 w.WriteInt(futType);
-            }));
+            })!);
         }
 
         /// <summary>
