@@ -1392,7 +1392,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             StartTxIfNeeded();
 
             var holder = new CacheEntryProcessorHolder(processor, arg,
-                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
+                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a!), typeof(TK), typeof(TV));
 
             var ptr = AllocateIfNoTx(holder);
 
@@ -1407,7 +1407,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                     },
                     (input, res) => res == True
                         ? ReadInvokeAllResults<TRes>(Marshaller.StartUnmarshal(input, IsKeepBinary))
-                        : null, _readException);
+                        : null, _readException)!;
             }
             finally
             {
@@ -1426,7 +1426,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             StartTxIfNeeded();
 
             var holder = new CacheEntryProcessorHolder(processor, arg,
-                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
+                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a!), typeof(TK), typeof(TV));
 
             var ptr = AllocateIfNoTx(holder);
 
@@ -1444,7 +1444,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                         if (ptr != 0)
                             _ignite.HandleRegistry.Release(ptr);
 
-                        return ReadInvokeAllResults<TRes>(reader);
+                        return ReadInvokeAllResults<TRes>(reader!);
                     });
             }
             catch (Exception)
@@ -1468,7 +1468,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 },
                 (input, res) => res == True
                     ? readFunc(Marshaller.StartUnmarshal(input))
-                    : default(T), _readException);
+                    : default(T), _readException)!;
         }
 
         /** <inheritdoc /> */
@@ -1688,7 +1688,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// QueryContinuous implementation.
         /// </summary>
         private IContinuousQueryHandle<ICacheEntry<TK, TV>> QueryContinuousImpl(ContinuousQuery<TK, TV> qry,
-            QueryBase initialQry)
+            QueryBase? initialQry)
         {
             qry.Validate();
 
@@ -1770,7 +1770,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <typeparam name="T">The type of the result.</typeparam>
         /// <param name="reader">Stream.</param>
         /// <returns>Results of InvokeAll operation.</returns>
-        private ICollection<ICacheEntryProcessorResult<TK, T>> ReadInvokeAllResults<T>(BinaryReader reader)
+        private ICollection<ICacheEntryProcessorResult<TK, T>>? ReadInvokeAllResults<T>(BinaryReader reader)
         {
             var count = reader.ReadInt();
 

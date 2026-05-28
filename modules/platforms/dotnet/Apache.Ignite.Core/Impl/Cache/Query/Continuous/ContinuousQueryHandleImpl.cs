@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
 {
     using System;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Event;
@@ -59,7 +58,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
         private readonly ICacheEntryEventListener<TK, TV> _lsnr;
 
         /** Real filter. */
-        private readonly ICacheEntryEventFilter<TK, TV> _filter;
+        private readonly ICacheEntryEventFilter<TK, TV>? _filter;
 
         /** GC handle. */
         private readonly long _hnd;
@@ -71,7 +70,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
         private readonly bool _initialQueryIsFields;
 
         /** Initial query cursor. */
-        private volatile IPlatformTargetInternal _nativeInitialQueryCursor;
+        private volatile IPlatformTargetInternal? _nativeInitialQueryCursor;
 
         /** Disposed flag. */
         private bool _disposed;
@@ -85,7 +84,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
         /// <param name="createTargetCb">The initialization callback.</param>
         /// <param name="initialQry">The initial query.</param>
         public ContinuousQueryHandleImpl(ContinuousQuery<TK, TV> qry, Marshaller marsh, bool keepBinary,
-            Func<Action<BinaryWriter>, IPlatformTargetInternal> createTargetCb, IQueryBaseInternal initialQry)
+            Func<Action<BinaryWriter>, IPlatformTargetInternal> createTargetCb, IQueryBaseInternal? initialQry)
         {
             _marsh = marsh;
             _keepBinary = keepBinary;
@@ -169,11 +168,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
         /** <inheritdoc /> */
         public bool Evaluate(IBinaryStream stream)
         {
-            Debug.Assert(_filter != null, "Evaluate should not be called if filter is not set.");
-
             ICacheEntryEvent<TK, TV> evt = CQU.ReadEvent<TK, TV>(stream, _marsh, _keepBinary);
 
-            return _filter.Evaluate(evt);
+            return _filter!.Evaluate(evt);
         }
 
         /** <inheritdoc /> */

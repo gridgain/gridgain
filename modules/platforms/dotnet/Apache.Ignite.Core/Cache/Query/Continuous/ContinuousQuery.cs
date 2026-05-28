@@ -101,7 +101,7 @@ namespace Apache.Ignite.Core.Cache.Query.Continuous
         /// <param name="lsnr">Listener.</param>
         /// <param name="filter">Filter.</param>
         /// <param name="loc">Whether query should be executed locally.</param>
-        public ContinuousQuery(ICacheEntryEventListener<TK, TV> lsnr, ICacheEntryEventFilter<TK, TV> filter, bool loc)
+        public ContinuousQuery(ICacheEntryEventListener<TK, TV> lsnr, ICacheEntryEventFilter<TK, TV>? filter, bool loc)
         {
             Listener = lsnr;
             Filter = filter;
@@ -125,7 +125,7 @@ namespace Apache.Ignite.Core.Cache.Query.Continuous
         /// <para />
         /// Must be either binary or serializable in case query is not local.
         /// </summary>
-        public ICacheEntryEventFilter<TK, TV> Filter { get; set; }
+        public ICacheEntryEventFilter<TK, TV>? Filter { get; set; }
 
         /// <summary>
         /// Buffer size. When a cache update happens, entry is first put into a buffer.
