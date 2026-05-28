@@ -90,7 +90,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 if (Error == null)
                 {
-                    writer.WriteByte((byte) Entry.State);
+                    writer.WriteByte((byte) Entry!.State);
 
                     if (Entry.State == MutableCacheEntryState.ValueSet)
                         writer.Write(Entry.Value);
