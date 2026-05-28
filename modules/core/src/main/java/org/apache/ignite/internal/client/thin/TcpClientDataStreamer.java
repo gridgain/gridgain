@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,6 +47,7 @@ import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 import org.apache.ignite.internal.processors.platform.client.ClientPlatform;
 import org.apache.ignite.internal.util.GridArgumentCheck;
 import org.apache.ignite.stream.StreamReceiver;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteDataStreamer.DFLT_PER_NODE_BUFFER_SIZE;
 import static org.apache.ignite.IgniteDataStreamer.DFLT_UNLIMIT_TIMEOUT;
@@ -57,10 +59,10 @@ import static org.apache.ignite.internal.processors.platform.client.streamer.Cli
  * <p>Each batch is sent as a self-contained {@code DATA_STREAMER_START} request with
  * {@code FLUSH | CLOSE} flags.</p>
  *
- * <p>When partition awareness is enabled, a separate batch stream is maintained per cache partition
- * so that each batch is sent directly to the node that owns those partitions. When partition
- * awareness is disabled or the affinity mapping is not yet available, all entries share a single
- * stream keyed by {@link ClientCacheAffinityMapping#UNKNOWN_PARTITION}.</p>
+ * <p>When partition awareness is enabled, a separate batch stream is maintained per primary cluster
+ * node so that each batch is sent directly to the node that owns the keys. When partition awareness
+ * is disabled or the affinity mapping is not yet available, all entries share a single stream keyed
+ * by {@link #UNKNOWN_NODE}.</p>
  */
 class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
 
@@ -72,6 +74,13 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
 
     /** Sentinel for disabled timeout (matches {@code IgniteDataStreamer.DFLT_UNLIMIT_TIMEOUT}). */
     private static final long TIMEOUT_DISABLED = -1L;
+
+    /**
+     * Map-key sentinel used when the primary node for a key is not yet known (partition awareness
+     * disabled or affinity mapping not yet available). {@code ConcurrentHashMap} does not allow
+     * {@code null} keys, so we use a fixed all-zero UUID instead.
+     */
+    private static final UUID UNKNOWN_NODE = new UUID(0L, 0L);
 
     /** Cache name. */
     private final String cacheName;
@@ -116,11 +125,10 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
     private volatile byte flags;
 
     /**
-     * Per-partition batch streams. Key: cache partition index, or
-     * {@link ClientCacheAffinityMapping#UNKNOWN_PARTITION} when partition awareness is
-     * disabled or the affinity mapping is not yet available for the entry's key.
+     * Per-node batch streams. Key: primary node UUID, or {@link #UNKNOWN_NODE} when partition
+     * awareness is disabled or the affinity mapping is not yet available for the entry's key.
      */
-    private final ConcurrentHashMap<Integer, PartitionContext<K, V>> partitions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, PartitionContext<K, V>> partitions = new ConcurrentHashMap<>();
 
     /** Set to {@code true} once {@link #close(boolean)} has been called. */
     private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -452,9 +460,10 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
      */
     private CompletableFuture<Void> add0(K key, V val) {
         int bufSndSize = perNodeBufferSize;
-        int partition = ch.resolveAffinityPartition(cacheId, key);
+        @Nullable UUID nodeId = ch.resolveAffinityNode(cacheId, key);
+        UUID partition = nodeId != null ? nodeId : UNKNOWN_NODE;
         PartitionContext<K, V> partCtx = partitions.computeIfAbsent(
-                partition, k -> new PartitionContext<>(partition, perNodeParallelOperations, bufSndSize));
+                partition, k -> new PartitionContext<>(nodeId, perNodeParallelOperations, bufSndSize));
 
         AtomicReference<Batch<K, V>> batchRef = partCtx.headBatchRef;
 
@@ -500,8 +509,8 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
      * Sends {@code entries} to the server via a single {@code DATA_STREAMER_START} request
      * with {@code FLUSH | CLOSE} flags.
      *
-     * <p>When {@code partition} is not {@link ClientCacheAffinityMapping#UNKNOWN_PARTITION}, the
-     * request is routed to the node owning that partition; otherwise the default channel is used.</p>
+     * <p>When {@code ctx.nodeId} is not {@code null}, the request is routed directly to that
+     * cluster node; otherwise the default channel is used.</p>
      *
      * <p>Wire format (matches {@code ClientDataStreamerStartRequest} on the server side):</p>
      * <pre>
@@ -539,7 +548,7 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
         // Actual send batch.
         StreamReceiver<K, V> rcv = receiver;
         byte f = flags;
-        int partition = ctx.partition;
+        UUID nodeId = ctx.nodeId;
 
         Consumer<PayloadOutputChannel> payloadWriter = req -> {
             BinaryOutputStream out = req.out();
@@ -565,9 +574,8 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
 
         Function<PayloadInputChannel, Long> payloadReader = res -> res.in().readLong();
 
-        ch.affinityServiceAsync(
-                cacheId,
-                partition,
+        ch.nodeServiceAsync(
+                nodeId,
                 ClientOperation.DATA_STREAMER_START,
                 payloadWriter,
                 payloadReader
@@ -698,10 +706,14 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
         }
     }
 
-    /** Manages sending of batches per partition. */
+    /** Manages sending of batches for a single cluster node. */
     private static class PartitionContext<K, V> {
-        /** Cache partition this batch will be sent to (or {@link ClientCacheAffinityMapping#UNKNOWN_PARTITION}). */
-        final int partition;
+        /**
+         * Primary node UUID for all keys in this context, or {@code null} when partition
+         * awareness is disabled or the affinity mapping was not yet available.
+         * A {@code null} value causes sends to fall back to the default channel.
+         */
+        @Nullable final UUID nodeId;
 
         /** Batches that have been sealed and are waiting for a free inflight slot. */
         final BlockingQueue<Batch<K, V>> pendingBatches = new LinkedBlockingQueue<>();
@@ -716,12 +728,12 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
         final AtomicReferenceArray<Batch<K, V>> inflightBatches;
 
         /**
-         * @param partition         Cache partition index, or {@link ClientCacheAffinityMapping#UNKNOWN_PARTITION}.
+         * @param nodeId             Primary node UUID, or {@code null} when the node is unknown.
          * @param perNodeParallelOps Maximum number of concurrently in-flight batches.
-         * @param batchSize         Capacity of each new {@link Batch}.
+         * @param batchSize          Capacity of each new {@link Batch}.
          */
-        PartitionContext(int partition, int perNodeParallelOps, int batchSize) {
-            this.partition = partition;
+        PartitionContext(@Nullable UUID nodeId, int perNodeParallelOps, int batchSize) {
+            this.nodeId = nodeId;
             this.headBatchRef = new AtomicReference<>(new Batch<>(batchSize));
             this.inflightBatches = new AtomicReferenceArray<>(perNodeParallelOps);
         }

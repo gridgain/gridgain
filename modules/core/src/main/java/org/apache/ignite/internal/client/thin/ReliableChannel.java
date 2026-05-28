@@ -422,6 +422,45 @@ final class ReliableChannel implements AutoCloseable {
     }
 
     /**
+     * Resolves the primary node UUID for the given cache key when partition awareness is enabled.
+     *
+     * @return Node UUID, or {@code null} if partition awareness is disabled or affinity info is not yet available.
+     */
+    @Nullable public UUID resolveAffinityNode(int cacheId, Object key) {
+        if (partitionAwarenessEnabled && affinityInfoIsUpToDate(cacheId))
+            return affinityCtx.affinityNode(cacheId, key);
+
+        return null;
+    }
+
+    /**
+     * Sends a request to a specific node asynchronously, falling back to the default channel when {@code nodeId}
+     * is {@code null} or the node channel is unavailable.
+     */
+    public <T> IgniteClientFuture<T> nodeServiceAsync(
+        @Nullable UUID nodeId,
+        ClientOperation op,
+        Consumer<PayloadOutputChannel> payloadWriter,
+        Function<PayloadInputChannel, T> payloadReader
+    ) {
+        if (nodeId != null) {
+            CompletableFuture<T> fut = new CompletableFuture<>();
+            List<ClientConnectionException> failures = new ArrayList<>();
+
+            Object result = applyOnNodeChannel(
+                nodeId,
+                channel -> applyOnClientChannelAsync(fut, channel, op, payloadWriter, payloadReader, failures),
+                failures
+            );
+
+            if (result != null)
+                return new IgniteClientFutureImpl<>(fut);
+        }
+
+        return serviceAsync(op, payloadWriter, payloadReader);
+    }
+
+    /**
      * Checks if affinity information for the cache is up to date and tries to update it if not.
      *
      * @return {@code True} if affinity information is up to date, {@code false} if there is not affinity information
