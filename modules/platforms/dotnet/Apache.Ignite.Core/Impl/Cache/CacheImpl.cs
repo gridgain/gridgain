@@ -68,13 +68,13 @@ namespace Apache.Ignite.Core.Impl.Cache
         private readonly bool _flagPartitionRecover;
 
         /** Transaction manager. */
-        private readonly CacheTransactionManager _txManager;
+        private readonly CacheTransactionManager? _txManager;
 
         /** Pre-allocated delegate. */
         private readonly Func<IBinaryStream, Exception> _readException;
 
         /** Platform cache. */
-        private readonly IPlatformCache _platformCache;
+        private readonly IPlatformCache? _platformCache;
 
         /** Whether persistence is enabled for this cache. */
         private readonly bool _persistenceEnabled;
@@ -176,7 +176,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Performs async operation.
         /// </summary>
-        private Task DoOutOpAsync(CacheOp op, Action<BinaryWriter> writeAction = null)
+        private Task DoOutOpAsync(CacheOp op, Action<BinaryWriter>? writeAction = null)
         {
             return DoOutOpAsync<object>(op, writeAction);
         }
@@ -184,8 +184,8 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Performs async operation.
         /// </summary>
-        private Task<T> DoOutOpAsync<T>(CacheOp op, Action<BinaryWriter> writeAction = null,
-            Func<BinaryReader, T> convertFunc = null)
+        private Task<T> DoOutOpAsync<T>(CacheOp op, Action<BinaryWriter>? writeAction = null,
+            Func<BinaryReader?, T>? convertFunc = null)
         {
             return DoOutOpAsync((int)op, writeAction, IsKeepBinary, convertFunc);
         }
@@ -329,7 +329,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Writes the load cache data to the writer.
         /// </summary>
-        private void WriteLoadCacheData(BinaryWriter writer, ICacheEntryFilter<TK, TV> p, object[] args)
+        private void WriteLoadCacheData(BinaryWriter writer, ICacheEntryFilter<TK, TV>? p, object[]? args)
         {
             if (p != null)
             {
@@ -340,7 +340,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
             else
             {
-                writer.WriteObjectDetached<CacheEntryFilterHolder>(null);
+                writer.WriteObjectDetached<CacheEntryFilterHolder>(null!);
             }
 
             if (args != null && args.Length > 0)
@@ -431,7 +431,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                     }
 
                     // ReSharper disable AccessToDisposedClosure (operation is synchronous, not an issue).
-                    ICollection<ICacheEntry<TK, TV>> res = null;
+                    ICollection<ICacheEntry<TK, TV>>? res = null;
                     return DoOutOp(CacheOp.ContainsKeys,
                         writer => WriteKeysOrGetFromPlatformCache(writer, enumerator, ref res, discardResults: true));
                 }
@@ -2025,7 +2025,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// Keys that are not in platform cache are written to the writer.
         /// </summary>
         private void WriteKeysOrGetFromPlatformCache(BinaryWriter writer, IEnumerator<TK> enumerator,
-            ref ICollection<ICacheEntry<TK, TV>> res, bool discardResults = false)
+            ref ICollection<ICacheEntry<TK, TV>>? res, bool discardResults = false)
         {
             var count = 1;
             var pos = writer.Stream.Position;

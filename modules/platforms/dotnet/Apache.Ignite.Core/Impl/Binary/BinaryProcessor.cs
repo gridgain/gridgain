@@ -192,9 +192,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         public static void WriteBinaryTypes(BinaryWriter w, ICollection<BinaryType> types)
         {
-            Debug.Assert(w != null);
-            Debug.Assert(types != null);
-
             w.WriteInt(types.Count);
 
             foreach (var meta in types)
@@ -208,9 +205,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         public static void WriteBinaryType(BinaryWriter w, BinaryType meta)
         {
-            Debug.Assert(w != null);
-            Debug.Assert(meta != null);
-
             w.WriteInt(meta.TypeId);
             w.WriteString(meta.TypeName);
             w.WriteString(meta.AffinityKeyFieldName);
@@ -255,7 +249,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             var countPos = w.Stream.Position;
             w.WriteInt(0); // Reserve for count
 
-            foreach (var schema in desc.Schema.GetAll())
+            foreach (var schema in desc!.Schema.GetAll())
             {
                 w.WriteInt(schema.Key);
 

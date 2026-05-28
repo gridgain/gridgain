@@ -166,12 +166,12 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Gets or sets the cache name.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CacheConfiguration"/> class.
         /// </summary>
-        public CacheConfiguration() : this((string) null)
+        public CacheConfiguration() : this((string?) null)
         {
             // No-op.
         }
@@ -180,7 +180,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Initializes a new instance of the <see cref="CacheConfiguration"/> class.
         /// </summary>
         /// <param name="name">Cache name.</param>
-        public CacheConfiguration(string name)
+        public CacheConfiguration(string? name)
         {
             Name = name;
 
@@ -759,7 +759,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// If both <see cref="ReadThrough"/> and <see cref="WriteThrough"/> are <code>false</code>, cache store 
         /// will be invoked only on <see cref="ICache{TK,TV}.LoadCache"/> calls.
         /// </summary>
-        public IFactory<ICacheStore> CacheStoreFactory { get; set; }
+        public IFactory<ICacheStore>? CacheStoreFactory { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether read-through should be enabled for cache operations.
@@ -785,18 +785,18 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Gets or sets the query entity configuration.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<QueryEntity> QueryEntities { get; set; }
+        public ICollection<QueryEntity>? QueryEntities { get; set; }
 
         /// <summary>
         /// Gets or sets the near cache configuration.
         /// </summary>
-        public NearCacheConfiguration NearConfiguration { get; set; }
+        public NearCacheConfiguration? NearConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets the eviction policy.
         /// Null value means disabled evictions.
         /// </summary>
-        public IEvictionPolicy EvictionPolicy { get; set; }
+        public IEvictionPolicy? EvictionPolicy { get; set; }
 
         /// <summary>
         /// Gets or sets the affinity function to provide mapping from keys to nodes.
@@ -804,7 +804,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Predefined implementations:
         /// <see cref="RendezvousAffinityFunction"/>.
         /// </summary>
-        public IAffinityFunction AffinityFunction { get; set; }
+        public IAffinityFunction? AffinityFunction { get; set; }
 
         /// <summary>
         /// Gets or sets the factory for <see cref="IExpiryPolicy"/> to be used for all cache operations,
@@ -812,7 +812,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <para />
         /// Default is null, which means no expiration.
         /// </summary>
-        public IFactory<IExpiryPolicy> ExpiryPolicyFactory { get; set; }
+        public IFactory<IExpiryPolicy>? ExpiryPolicyFactory { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether statistics gathering is enabled on a cache.
@@ -824,7 +824,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Gets or sets the plugin configurations.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<ICachePluginConfiguration> PluginConfigurations { get; set; }
+        public ICollection<ICachePluginConfiguration>? PluginConfigurations { get; set; }
 
         /// <summary>
         /// Gets or sets the name of the <see cref="MemoryPolicyConfiguration"/> for this cache.
@@ -841,7 +841,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Gets or sets the name of the data region, see <see cref="DataRegionConfiguration"/>.
         /// </summary>
-        public string DataRegionName { get; set; }
+        public string? DataRegionName { get; set; }
 
         /// <summary>
         /// Gets or sets write coalescing flag for write-behind cache store operations.
@@ -868,7 +868,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <para />
         /// Grouping caches reduces overall overhead, since internal data structures are shared.
         /// </summary>
-        public string GroupName { get;set; }
+        public string? GroupName { get;set; }
 
         /// <summary>
         /// Gets or sets maximum inline size in bytes for sql indexes. See also <see cref="QueryIndex.InlineSize"/>.
@@ -881,7 +881,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Gets or sets the key configuration.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<CacheKeyConfiguration> KeyConfiguration { get; set; }
+        public ICollection<CacheKeyConfiguration>? KeyConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether on-heap cache is enabled for the off-heap based page memory.
@@ -947,7 +947,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <para />
         /// Quoted <see cref="Name"/> is used by default.
         /// </summary>
-        public string SqlSchema { get; set; }
+        public string? SqlSchema { get; set; }
 
         /// <summary>
         /// Gets or sets the desired query parallelism within a single node.
@@ -970,13 +970,13 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// More details: <see cref="PlatformCacheConfiguration"/>. 
         /// </summary>
         [IgniteExperimental]
-        public PlatformCacheConfiguration PlatformCacheConfiguration { get; set; }
+        public PlatformCacheConfiguration? PlatformCacheConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets the cluster node filter. Cache will be started only on nodes that match the filter.
         /// <para />
         /// Only predefined implementations are supported: <see cref="AttributeNodeFilter"/>.
         /// </summary>
-        public IClusterNodeFilter NodeFilter { get; set; }
+        public IClusterNodeFilter? NodeFilter { get; set; }
     }
 }
