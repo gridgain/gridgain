@@ -58,8 +58,6 @@ namespace Apache.Ignite.Core.Failure
         /// </summary>
         internal static StopNodeOrHaltFailureHandler Read(IBinaryRawReader reader)
         {
-            Debug.Assert(reader != null);
-
             var tryStop = reader.ReadBoolean();
             var timeout = reader.ReadLong();
 
