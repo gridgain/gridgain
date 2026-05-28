@@ -35,6 +35,7 @@ namespace Apache.Ignite.Core.Client.Datastream
     /// To avoid blocking threads when exiting <c>using()</c> block, use <see cref="CloseAsync"/>.
     /// </summary>
     public interface IDataStreamerClient<TK, TV> : IDisposable
+        where TK : notnull
     {
         /// <summary>
         /// Gets the cache name.
