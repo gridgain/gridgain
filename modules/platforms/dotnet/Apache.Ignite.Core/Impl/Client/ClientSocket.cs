@@ -353,8 +353,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 return;
             }
 
-            ClientNotificationHandler unused;
-            var removed = _notificationListeners.TryRemove(notificationId, out unused);
+            var removed = _notificationListeners.TryRemove(notificationId, out _);
             Debug.Assert(removed);
 
             var count = Interlocked.Decrement(ref _expectedNotifications);
@@ -375,12 +374,12 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Gets the current remote EndPoint.
         /// </summary>
-        public EndPoint RemoteEndPoint { get { return _socket.RemoteEndPoint; } }
+        public EndPoint RemoteEndPoint { get { return _socket.RemoteEndPoint!; } }
 
         /// <summary>
         /// Gets the current local EndPoint.
         /// </summary>
-        public EndPoint LocalEndPoint { get { return _socket.LocalEndPoint; } }
+        public EndPoint LocalEndPoint { get { return _socket.LocalEndPoint!; } }
 
         /// <summary>
         /// Gets the ID of the connected server node.
@@ -1074,8 +1073,7 @@ namespace Apache.Ignite.Core.Impl.Client
             {
                 foreach (var id in _notificationListeners.Keys)
                 {
-                    ClientNotificationHandler handler;
-                    if (_notificationListeners.TryRemove(id, out handler))
+                    if (_notificationListeners.TryRemove(id, out var handler))
                     {
                         handler.Handle(null, ex);
                     }

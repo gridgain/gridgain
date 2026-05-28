@@ -618,7 +618,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
             }
 
             // Prevent multiple parallel timer calls.
-            if (!Monitor.TryEnter(_autoFlushTimer))
+            if (!Monitor.TryEnter(_autoFlushTimer!))
             {
                 return;
             }
@@ -634,7 +634,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
             }
             finally
             {
-                Monitor.Exit(_autoFlushTimer);
+                Monitor.Exit(_autoFlushTimer!);
             }
         }
 

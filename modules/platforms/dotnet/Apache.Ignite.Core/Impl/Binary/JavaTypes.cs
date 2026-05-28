@@ -85,9 +85,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             // Unwrap nullable.
             type = Nullable.GetUnderlyingType(type) ?? type;
 
-            string res;
-
-            return NetToJava.TryGetValue(type, out res) ? res : null;
+            return NetToJava.TryGetValue(type, out var res) ? res : null;
         }
 
         /// <summary>
@@ -117,9 +115,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             // Unwrap nullable.
             var unwrapType = Nullable.GetUnderlyingType(type) ?? type;
 
-            Type directType;
-
-            return IndirectMappingTypes.TryGetValue(unwrapType, out directType) ? directType : type;
+            return IndirectMappingTypes.TryGetValue(unwrapType, out var directType) ? directType : type;
         }
 
         /// <summary>
@@ -132,13 +128,9 @@ namespace Apache.Ignite.Core.Impl.Binary
             if (string.IsNullOrEmpty(javaTypeName))
                 return null;
 
-            string fullJavaTypeName;
+            JavaPrimitiveToType.TryGetValue(javaTypeName!, out var fullJavaTypeName);
 
-            JavaPrimitiveToType.TryGetValue(javaTypeName!, out fullJavaTypeName);
-
-            Type res;
-
-            return JavaToNet.TryGetValue(fullJavaTypeName ?? javaTypeName!, out res) ? res : null;
+            return JavaToNet.TryGetValue(fullJavaTypeName ?? javaTypeName!, out var res) ? res : null;
         }
     }
 }
