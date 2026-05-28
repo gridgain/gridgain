@@ -364,7 +364,7 @@ namespace Apache.Ignite.Core.Impl
         /// <returns>
         /// Task for async operation
         /// </returns>
-        protected Task<TR> DoOutOpAsync<T1, TR>(int type, T1 val1)
+        protected Task<TR> DoOutOpAsync<T1, TR>(int type, T1? val1)
         {
             return GetFuture<TR>((futId, futType) => DoOutOp(type, w =>
             {
@@ -386,7 +386,7 @@ namespace Apache.Ignite.Core.Impl
         /// <returns>
         /// Task for async operation
         /// </returns>
-        protected Task<TR> DoOutOpAsync<T1, T2, TR>(int type, T1 val1, T2 val2)
+        protected Task<TR> DoOutOpAsync<T1, T2, TR>(int type, T1? val1, T2? val2)
         {
             return GetFuture<TR>((futId, futType) => DoOutOp(type, w =>
             {
