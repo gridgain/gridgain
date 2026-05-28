@@ -79,7 +79,7 @@ namespace Apache.Ignite.Core.Services
         protected ServiceInvocationException(SerializationInfo info, StreamingContext ctx)
             : base(info, ctx)
         {
-            _binaryCause = (IBinaryObject) info.GetValue(KeyBinaryCause, typeof (IBinaryObject));
+            _binaryCause = (IBinaryObject?) info.GetValue(KeyBinaryCause, typeof (IBinaryObject));
         }
 
         /// <summary>

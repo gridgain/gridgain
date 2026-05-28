@@ -222,8 +222,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
                 }
             }
 
-            string res;
-            return _aliasMap.TryGetValue(fieldName, out res) ? res : null;
+            return _aliasMap.TryGetValue(fieldName, out var res) ? res : null;
         }
 
         /// <summary>
@@ -343,9 +342,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
 
                 foreach (var field in Fields)
                 {
-                    QueryField src;
-
-                    if (fields.TryGetValue("_" + field.Name, out src))
+                    if (fields.TryGetValue("_" + field.Name, out var src))
                     {
                         field.CopyLocalProperties(src);
                     }

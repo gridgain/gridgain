@@ -530,9 +530,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
 
                 foreach (var entity in QueryEntities.Where(x => x != null))
                 {
-                    QueryEntity src;
-
-                    if (entities.TryGetValue(GetQueryEntityKey(entity), out src))
+                    if (entities.TryGetValue(GetQueryEntityKey(entity), out var src))
                     {
                         entity.CopyLocalProperties(src);
                     }

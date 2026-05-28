@@ -101,8 +101,8 @@ namespace Apache.Ignite.Core.Services
         protected ServiceDeploymentException(SerializationInfo info, StreamingContext ctx)
             : base(info, ctx)
         {
-            _binaryCause = (IBinaryObject)info.GetValue(KeyBinaryCause, typeof(IBinaryObject));
-            _failedCfgs = (ICollection<ServiceConfiguration>)info.GetValue(KeyFailedConfigurations, 
+            _binaryCause = (IBinaryObject?)info.GetValue(KeyBinaryCause, typeof(IBinaryObject));
+            _failedCfgs = (ICollection<ServiceConfiguration>?)info.GetValue(KeyFailedConfigurations,
                 typeof(ICollection<ServiceConfiguration>));
         }
 

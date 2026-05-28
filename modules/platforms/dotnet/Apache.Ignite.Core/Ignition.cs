@@ -908,7 +908,7 @@ namespace Apache.Ignite.Core
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-        private static void CurrentDomain_DomainUnload(object sender, EventArgs e)
+        private static void CurrentDomain_DomainUnload(object? sender, EventArgs e)
         {
             // If we don't stop Ignite.NET on domain unload,
             // we end up with broken instances in Java (invalid callbacks, etc).

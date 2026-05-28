@@ -176,7 +176,7 @@ namespace Apache.Ignite.Core.Client.Cache
 
                 foreach (var entity in QueryEntities.Where(x => x != null))
                 {
-                    QueryEntity src;
+                    QueryEntity? src;
 
                     if (entities.TryGetValue(GetQueryEntityKey(entity), out src))
                     {

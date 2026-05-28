@@ -51,7 +51,7 @@ namespace Apache.Ignite.Core.Impl.Common
             Type destinationType)
         {
             if (destinationType == typeof (string))
-                return value?.ToString().ToLowerInvariant();
+                return value?.ToString()?.ToLowerInvariant();
 
             return base.ConvertTo(context, culture, value, destinationType);
         }
