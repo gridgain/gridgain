@@ -56,7 +56,7 @@ namespace Apache.Ignite.Core.Cache.Query
                 writer.WriteInt(Partition.Value);
 
             if (Filter == null)
-                writer.WriteObject<CacheEntryFilterHolder>(null!);
+                writer.WriteObject<CacheEntryFilterHolder?>(null);
             else
             {
                 var holder = new CacheEntryFilterHolder(Filter, (key, val) => Filter.Invoke(

@@ -340,7 +340,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
             else
             {
-                writer.WriteObjectDetached<CacheEntryFilterHolder>(null!);
+                writer.WriteObjectDetached<CacheEntryFilterHolder?>(null);
             }
 
             if (args != null && args.Length > 0)

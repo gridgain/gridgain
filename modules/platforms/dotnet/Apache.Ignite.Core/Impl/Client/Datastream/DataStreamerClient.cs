@@ -19,7 +19,6 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Net.Sockets;
@@ -374,7 +373,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         {
             semaphore.Wait();
 
-            var tcs = new TaskCompletionSource<object>();
+            var tcs = new TaskCompletionSource<object?>();
 
             FlushBufferInternalAsync(buffer, socket, tcs);
 
@@ -396,14 +395,14 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         private void FlushBufferInternalAsync(
             DataStreamerClientBuffer<TK, TV> buffer,
             ClientSocket socket,
-            TaskCompletionSource<object> tcs)
+            TaskCompletionSource<object?> tcs)
         {
             try
             {
                 socket.DoOutInOpAsync(
                         ClientOp.DataStreamerStart,
                         ctx => WriteBuffer(buffer, ctx.Writer),
-                        ctx => (object)null,
+                        ctx => (object?)null,
                         syncCallback: true)
                     .ContWith(
                         t => FlushBufferCompleteOrRetry(buffer, socket, tcs, t.Exception),
@@ -421,7 +420,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         private void FlushBufferCompleteOrRetry(
             DataStreamerClientBuffer<TK, TV> buffer,
             ClientSocket socket,
-            TaskCompletionSource<object> tcs,
+            TaskCompletionSource<object?> tcs,
             Exception exception)
         {
             if (exception == null)
@@ -455,7 +454,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         private void FlushBufferRetry(
             DataStreamerClientBuffer<TK, TV> buffer,
             ClientSocket failedSocket,
-            TaskCompletionSource<object> tcs)
+            TaskCompletionSource<object?> tcs)
         {
             try
             {
@@ -534,7 +533,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
             }
             else
             {
-                w.WriteObject<object>(null);
+                w.WriteObject<object?>(null);
             }
 
             var count = buffer.Count;
@@ -555,7 +554,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
 
                 if (entry.Remove)
                 {
-                    w.WriteObject<object>(null);
+                    w.WriteObject<object?>(null);
                 }
                 else
                 {

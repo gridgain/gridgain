@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Threading.Tasks;
@@ -36,7 +35,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
     using Apache.Ignite.Core.Impl.Cache;
     using Apache.Ignite.Core.Impl.Cache.Expiry;
     using Apache.Ignite.Core.Impl.Cache.Query.Continuous;
-    using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Impl.Client.Cache.Query;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Log;
@@ -1097,7 +1095,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 
             if (continuousQuery.Filter == null)
             {
-                w.WriteObject<object>(null!);
+                w.WriteObject<object?>(null);
             }
             else
             {
