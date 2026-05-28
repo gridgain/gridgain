@@ -346,7 +346,7 @@ namespace Apache.Ignite.Core.Impl
         /// <returns>Future for async operation</returns>
         protected Future<T> DoOutOpObjectAsync<T>(int type, Action<BinaryWriter> writeAction)
         {
-            return GetFuture<T>((futId, futType) => DoOutOpObject(type, w =>
+            return GetFuture<T>((futId, futType) => DoOutOpObject(type, (BinaryWriter w) =>
             {
                 writeAction(w);
                 w.WriteLong(futId);
