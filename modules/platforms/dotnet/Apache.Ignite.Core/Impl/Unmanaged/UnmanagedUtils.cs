@@ -28,7 +28,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
 
         #region NATIVE METHODS: PROCESSOR
 
-        internal static void IgnitionStart(Env env, string cfgPath, string gridName,
+        internal static void IgnitionStart(Env env, string? cfgPath, string? gridName,
             bool clientMode, bool userLogger, long igniteId, bool redirectConsole)
         {
             using (var mem = IgniteManager.Memory.Allocate().GetStream())
@@ -52,7 +52,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             }
         }
 
-        internal static bool IgnitionStop(string gridName, bool cancel)
+        internal static bool IgnitionStop(string? gridName, bool cancel)
         {
             var env = Jvm.Get().AttachCurrentThread();
             var methodId = env.Jvm.MethodId;

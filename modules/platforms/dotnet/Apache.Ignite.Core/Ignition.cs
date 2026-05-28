@@ -86,7 +86,7 @@ namespace Apache.Ignite.Core
 
         /** Startup info. */
         [ThreadStatic]
-        private static Startup _startup;
+        private static Startup? _startup;
 
         /** Client mode flag. */
         [ThreadStatic]
@@ -269,7 +269,7 @@ namespace Apache.Ignite.Core
                 // 3. Create startup object which will guide us through the rest of the process.
                 _startup = new Startup(cfg, cbs);
 
-                PlatformJniTarget interopProc = null;
+                PlatformJniTarget? interopProc = null;
 
                 try
                 {
@@ -278,7 +278,7 @@ namespace Apache.Ignite.Core
                         cfg.RedirectJavaConsoleOutput);
 
                     // 5. At this point start routine is finished. We expect STARTUP object to have all necessary data.
-                    var node = _startup.Ignite;
+                    var node = _startup.Ignite!;
                     interopProc = (PlatformJniTarget)node.InteropProcessor;
 
                     var javaLogger = log as JavaLogger;
@@ -297,7 +297,7 @@ namespace Apache.Ignite.Core
                 catch (Exception ex)
                 {
                     // 1. Perform keys cleanup.
-                    string name = _startup.Name;
+                    string? name = _startup!.Name;
 
                     if (name != null)
                     {
@@ -377,7 +377,7 @@ namespace Apache.Ignite.Core
         /// </summary>
         /// <param name="cfg">Configuration.</param>
         /// <param name="log">Log.</param>
-        internal static void LogBinaryConfigurationDiagnostics(BinaryConfiguration cfg, ILogger log)
+        internal static void LogBinaryConfigurationDiagnostics(BinaryConfiguration? cfg, ILogger? log)
         {
             if (log == null)
                 return;
@@ -415,7 +415,7 @@ namespace Apache.Ignite.Core
             }
             catch (Exception e)
             {
-                _startup.Error = e;
+                _startup!.Error = e;
 
                 throw;
             }
@@ -430,7 +430,7 @@ namespace Apache.Ignite.Core
         private static void PrepareConfiguration(BinaryReader reader, PlatformMemoryStream outStream, ILogger log)
         {
             // 1. Load assemblies.
-            IgniteConfiguration cfg = _startup.Configuration;
+            IgniteConfiguration cfg = _startup!.Configuration;
 
             LoadAllAssemblies(cfg.Assemblies);
 
@@ -474,7 +474,7 @@ namespace Apache.Ignite.Core
                 beans.Add(new LifecycleHandlerHolder(CreateObject<ILifecycleHandler>(reader)));
 
             // 2. Append beans defined in local configuration.
-            ICollection<ILifecycleHandler> nativeBeans = _startup.Configuration.LifecycleHandlers;
+            ICollection<ILifecycleHandler>? nativeBeans = _startup!.Configuration.LifecycleHandlers;
 
             if (nativeBeans != null)
             {
@@ -537,20 +537,20 @@ namespace Apache.Ignite.Core
                 var name = reader.ReadString();
                 
                 // 2. Set ID and name so that Start() method can use them later.
-                _startup.Name = name;
+                _startup!.Name = name;
 
                 if (Nodes.ContainsKey(new NodeKey(name)))
                     throw new IgniteException("Ignite with the same name already started: " + name);
 
                 _startup.Ignite = new Ignite(_startup.Configuration, _startup.Name,
-                    new PlatformJniTarget(interopProc, _startup.Marshaller), _startup.Marshaller,
-                    _startup.LifecycleHandlers, _startup.Callbacks);
+                    new PlatformJniTarget(interopProc, _startup.Marshaller), _startup.Marshaller!,
+                    _startup.LifecycleHandlers!, _startup.Callbacks);
             }
             catch (Exception e)
             {
                 // 5. Preserve exception to throw it later in the "Start" method and throw it further
                 //    to abort startup in Java.
-                _startup.Error = e;
+                _startup!.Error = e;
 
                 throw;
             }
@@ -572,7 +572,7 @@ namespace Apache.Ignite.Core
         /// Load assemblies.
         /// </summary>
         /// <param name="assemblies">Assemblies.</param>
-        private static void LoadAllAssemblies(IEnumerable<string> assemblies)
+        private static void LoadAllAssemblies(IEnumerable<string>? assemblies)
         {
             if (assemblies != null)
             {
@@ -740,13 +740,11 @@ namespace Apache.Ignite.Core
         /// then Ignite instance belonging to a default no-name Ignite will be returned.
         /// </param>
         /// <returns>An instance of named grid, or null.</returns>
-        public static IIgnite TryGetIgnite(string name)
+        public static IIgnite? TryGetIgnite(string? name)
         {
             lock (SyncRoot)
             {
-                Ignite result;
-
-                return !Nodes.TryGetValue(new NodeKey(name), out result) ? null : result;
+                return !Nodes.TryGetValue(new NodeKey(name), out var result) ? null : result;
             }
         }
 
@@ -756,7 +754,7 @@ namespace Apache.Ignite.Core
         /// and none of them has null name.
         /// </summary>
         /// <returns>An instance of default no-name grid, or null.</returns>
-        public static IIgnite TryGetIgnite()
+        public static IIgnite? TryGetIgnite()
         {
             lock (SyncRoot)
             {
@@ -924,19 +922,19 @@ namespace Apache.Ignite.Core
         private class NodeKey
         {
             /** */
-            private readonly string _name;
+            private readonly string? _name;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="NodeKey"/> class.
             /// </summary>
             /// <param name="name">The name.</param>
-            internal NodeKey(string name)
+            internal NodeKey(string? name)
             {
                 _name = name;
             }
 
             /** <inheritdoc /> */
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 var other = obj as NodeKey;
 
@@ -979,27 +977,27 @@ namespace Apache.Ignite.Core
             /// <summary>
             /// Lifecycle handlers.
             /// </summary>
-            internal IList<LifecycleHandlerHolder> LifecycleHandlers { get; set; }
+            internal IList<LifecycleHandlerHolder>? LifecycleHandlers { get; set; }
 
             /// <summary>
             /// Node name.
             /// </summary>
-            internal string Name { get; set; }
+            internal string? Name { get; set; }
 
             /// <summary>
             /// Marshaller.
             /// </summary>
-            internal Marshaller Marshaller { get; set; }
+            internal Marshaller? Marshaller { get; set; }
 
             /// <summary>
             /// Start error.
             /// </summary>
-            internal Exception Error { get; set; }
+            internal Exception? Error { get; set; }
 
             /// <summary>
             /// Gets or sets the ignite.
             /// </summary>
-            internal Ignite Ignite { get; set; }
+            internal Ignite? Ignite { get; set; }
         }
 
         /// <summary>
@@ -1009,7 +1007,7 @@ namespace Apache.Ignite.Core
         {
             /** */
             #pragma warning disable 649   // unused field
-            [InstanceResource] private readonly IIgnite _ignite;
+            [InstanceResource] private readonly IIgnite? _ignite;
 
             /** <inheritdoc /> */
             public void OnLifecycleEvent(LifecycleEventType evt)
