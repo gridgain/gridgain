@@ -68,7 +68,7 @@ namespace Apache.Ignite.Core.Client
         /// <summary>
         /// Validates the server certificate.
         /// </summary>
-        private bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain,
+        private bool ValidateServerCertificate(object sender, X509Certificate? certificate, X509Chain? chain,
             SslPolicyErrors sslPolicyErrors)
         {
             if (SkipServerCertificateValidation)

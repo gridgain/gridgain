@@ -62,7 +62,7 @@ namespace Apache.Ignite.Core.Cache
         protected CachePartialUpdateException(SerializationInfo info, StreamingContext ctx)
             : base(info, ctx)
         {
-            _failedKeys = (IList<object>) info.GetValue(KeyFailedKeys, typeof (IList<object>));
+            _failedKeys = (IList<object>?) info.GetValue(KeyFailedKeys, typeof (IList<object>));
         }
 
         /// <summary>

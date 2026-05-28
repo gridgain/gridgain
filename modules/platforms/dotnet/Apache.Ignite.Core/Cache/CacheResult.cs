@@ -95,7 +95,7 @@ namespace Apache.Ignite.Core.Cache
         {
             unchecked
             {
-                return (EqualityComparer<T>.Default.GetHashCode(_value) * 397) ^ _success.GetHashCode();
+                return (EqualityComparer<T>.Default.GetHashCode(_value!) * 397) ^ _success.GetHashCode();
             }
         }
 
