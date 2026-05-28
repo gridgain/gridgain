@@ -55,10 +55,10 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         private readonly ClientClusterGroupProjection _projection;
 
         /** Predicate. */
-        private readonly Func<IClientClusterNode, bool> _predicate;
+        private readonly Func<IClientClusterNode, bool>? _predicate;
 
         /** Node ids collection. */
-        private Guid[] _nodeIds;
+        private Guid[]? _nodeIds;
 
         /// <summary>
         /// Constructor.
@@ -77,10 +77,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <param name="projection">Projection.</param>
         /// <param name="predicate">Predicate.</param>
         private ClientClusterGroup(IgniteClient ignite,
-            ClientClusterGroupProjection projection, Func<IClientClusterNode, bool> predicate = null)
+            ClientClusterGroupProjection projection, Func<IClientClusterNode, bool>? predicate = null)
         {
-            Debug.Assert(ignite != null);
-
             _ignite = ignite;
             _projection = projection;
             _predicate = predicate;
@@ -122,7 +120,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         }
 
         /** <inheritDoc /> */
-        public IClientClusterNode GetNode(Guid id)
+        public IClientClusterNode? GetNode(Guid id)
         {
             if (id == Guid.Empty)
             {
@@ -133,7 +131,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         }
 
         /** <inheritDoc /> */
-        public IClientClusterNode GetNode()
+        public IClientClusterNode? GetNode()
         {
             return GetNodes().FirstOrDefault();
         }
@@ -170,7 +168,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
 
             // Local lookup with a native predicate is a trade off between complexity and consistency.
             var nodesList = new List<IClientClusterNode>();
-            foreach (Guid nodeId in _nodeIds)
+            foreach (Guid nodeId in _nodeIds!)
             {
                 IClientClusterNode node = _ignite.GetClientNode(nodeId);
                 if (_predicate == null || _predicate(node))
@@ -186,7 +184,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// Request topology information.
         /// </summary>
         /// <returns>Topology version with nodes identifiers.</returns>rns>
-        private Tuple<long, Guid[]> RequestTopologyInformation(long oldTopVer)
+        private Tuple<long, Guid[]>? RequestTopologyInformation(long oldTopVer)
         {
             Action<ClientRequestContext> writeAction = ctx =>
             {
@@ -194,7 +192,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
                 _projection.Write(ctx.Writer);
             };
 
-            Func<ClientResponseContext, Tuple<long, Guid[]>> readFunc = ctx =>
+            Func<ClientResponseContext, Tuple<long, Guid[]>?> readFunc = ctx =>
             {
                 if (!ctx.Stream.ReadBool())
                 {

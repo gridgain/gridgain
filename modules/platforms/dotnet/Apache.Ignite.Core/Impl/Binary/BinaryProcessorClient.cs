@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Impl.Binary
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Binary.Metadata;
@@ -69,8 +68,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         /** <inheritdoc /> */
         public void PutBinaryTypes(ICollection<BinaryType> types)
         {
-            Debug.Assert(types != null);
-
             foreach (var binaryType in types)
             {
                 var type = binaryType;  // Access to modified closure.
@@ -104,7 +101,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /** <inheritdoc /> */
-        public BinaryType RegisterEnum(string typeName, IEnumerable<KeyValuePair<string, int>> values)
+        public BinaryType RegisterEnum(string typeName, IEnumerable<KeyValuePair<string, int>>? values)
         {
             throw IgniteClient.GetClientNotSupportedException();
         }
