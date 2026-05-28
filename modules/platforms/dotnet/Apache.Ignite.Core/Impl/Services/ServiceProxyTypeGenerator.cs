@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 namespace Apache.Ignite.Core.Impl.Services
 {
     using System;
@@ -167,7 +169,7 @@ namespace Apache.Ignite.Core.Impl.Services
             var baseType = buildContext.ServiceType;
             var isClass = baseType.IsClass;
 
-            ConstructorInfo? baseCtr = null;
+            ConstructorInfo baseCtr = null;
             if (isClass)
             {
                 baseCtr = baseType.GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public,

@@ -86,8 +86,6 @@ namespace Apache.Ignite.Core.Impl.Resource
         /// <param name="ses">Store session.</param>
         public static void InjectStoreSession(ICacheStore store, ICacheStoreSession ses)
         {
-            Debug.Assert(store != null);
-
             Descriptor(store.GetType()).InjectStoreSession(store, ses);
         }
     }
