@@ -32,7 +32,7 @@ namespace Apache.Ignite.Core.Services
         private const string KeyBinaryCause = "BinaryCause";
 
         /** Cause. */
-        private readonly IBinaryObject _binaryCause;
+        private readonly IBinaryObject? _binaryCause;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ServiceInvocationException"/> class.
@@ -85,10 +85,7 @@ namespace Apache.Ignite.Core.Services
         /// <summary>
         /// Gets the binary cause.
         /// </summary>
-        public IBinaryObject BinaryCause
-        {
-            get { return _binaryCause; }
-        }
+        public IBinaryObject? BinaryCause => _binaryCause;
 
         /// <summary>
         /// When overridden in a derived class, sets the <see cref="SerializationInfo" />
