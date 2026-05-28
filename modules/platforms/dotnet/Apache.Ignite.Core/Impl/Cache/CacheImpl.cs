@@ -285,7 +285,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             var cache0 = DoOutOpObject((int)CacheOp.WithExpiryPolicy, w => ExpiryPolicySerializer.WritePolicy(w, plc));
 
             return new CacheImpl<TK, TV>(
-                cache0,
+                cache0!,
                 flagSkipStore: _flagSkipStore,
                 flagKeepBinary: _flagKeepBinary,
                 flagNoRetries: _flagNoRetries,
@@ -1655,7 +1655,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             var cursor = DoOutOpObject((int) qry.OpId, writer => qry.Write(writer, IsKeepBinary));
 
-            return new QueryCursor<TK, TV>(cursor, _flagKeepBinary);
+            return new QueryCursor<TK, TV>(cursor!, _flagKeepBinary);
         }
 
         /** <inheritdoc /> */
@@ -1681,7 +1681,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             qry.Validate();
 
             return new ContinuousQueryHandleImpl<TK, TV>(qry, Marshaller, _flagKeepBinary,
-                writeAction => DoOutOpObject((int) CacheOp.QryContinuous, writeAction), initialQry);
+                writeAction => DoOutOpObject((int) CacheOp.QryContinuous, writeAction)!, initialQry);
         }
 
         /// <summary>
@@ -1693,7 +1693,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             qry.Validate();
 
             return new ContinuousQueryHandleImpl<TK, TV>(qry, Marshaller, _flagKeepBinary,
-                writeAction => DoOutOpObject((int) CacheOp.QryContinuous, writeAction), initialQry);
+                writeAction => DoOutOpObject((int) CacheOp.QryContinuous, writeAction)!, initialQry);
         }
 
         #endregion
@@ -1750,7 +1750,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 var target = DoOutOpObject((int) CacheOp.LocIterator, (IBinaryStream s) => s.WriteInt(peekModes));
 
-                return new CacheEnumerator<TK, TV>(target, _flagKeepBinary);
+                return new CacheEnumerator<TK, TV>(target!, _flagKeepBinary);
             }
 
             return new CacheEnumerator<TK, TV>(DoOutOpObject((int) CacheOp.Iterator), _flagKeepBinary);
@@ -2123,7 +2123,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             if (string.IsNullOrEmpty(qry.Sql))
                 throw new ArgumentException("Sql cannot be null or empty");
 
-            return DoOutOpObject((int) CacheOp.QrySqlFields, writer => qry.Write(writer));
+            return DoOutOpObject((int) CacheOp.QrySqlFields, writer => qry.Write(writer))!;
         }
     }
 }

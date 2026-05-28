@@ -47,7 +47,7 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
         /// </summary>
         /// <param name="ignite">Ignite.</param>
         /// <param name="cfg"></param>
-        public TransactionsClient(IgniteClient ignite, TransactionClientConfiguration cfg)
+        public TransactionsClient(IgniteClient ignite, TransactionClientConfiguration? cfg)
         {
             _ignite = ignite;
             _cfg = cfg ?? new TransactionClientConfiguration();

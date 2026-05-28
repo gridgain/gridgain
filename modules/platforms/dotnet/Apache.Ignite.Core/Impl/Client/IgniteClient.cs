@@ -156,7 +156,7 @@ namespace Apache.Ignite.Core.Impl.Client
             DoOutOp(ClientOp.CacheGetOrCreateWithConfiguration,
                 ctx => ClientCacheConfigurationSerializer.Write(ctx.Stream, configuration, ctx.Features));
 
-            return GetCache<TK, TV>(configuration.Name);
+            return GetCache<TK, TV>(configuration.Name!);
         }
 
         /** <inheritDoc /> */
@@ -177,7 +177,7 @@ namespace Apache.Ignite.Core.Impl.Client
             DoOutOp(ClientOp.CacheCreateWithConfiguration,
                 ctx => ClientCacheConfigurationSerializer.Write(ctx.Stream, configuration, ctx.Features));
 
-            return GetCache<TK, TV>(configuration.Name);
+            return GetCache<TK, TV>(configuration.Name!);
         }
 
         /** <inheritDoc /> */
