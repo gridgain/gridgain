@@ -177,7 +177,7 @@ namespace Apache.Ignite.Core.Configuration
         /// <summary>
         /// Gets or sets the host.
         /// </summary>
-        public string Host { get; set; }
+        public string? Host { get; set; }
 
         /// <summary>
         /// Gets or sets the port.
@@ -261,6 +261,6 @@ namespace Apache.Ignite.Core.Configuration
         /// <summary>
         /// Gets or sets thin client specific configuration.
         /// </summary>
-        public ThinClientConfiguration ThinClientConfiguration { get; set; }
+        public ThinClientConfiguration? ThinClientConfiguration { get; set; }
     }
 }
