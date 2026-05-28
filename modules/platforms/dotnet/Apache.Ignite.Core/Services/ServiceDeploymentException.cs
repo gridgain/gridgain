@@ -36,10 +36,10 @@ namespace Apache.Ignite.Core.Services
         private const string KeyFailedConfigurations = "FailedConfigurations";
 
         /** Cause. */
-        private readonly IBinaryObject _binaryCause;
+        private readonly IBinaryObject? _binaryCause;
 
         /** Configurations of services that failed to deploy */
-        private readonly ICollection<ServiceConfiguration> _failedCfgs;
+        private readonly ICollection<ServiceConfiguration>? _failedCfgs;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ServiceDeploymentException"/> class.
@@ -109,7 +109,7 @@ namespace Apache.Ignite.Core.Services
         /// <summary>
         /// Gets the binary cause.
         /// </summary>
-        public IBinaryObject BinaryCause
+        public IBinaryObject? BinaryCause
         {
             get { return _binaryCause; }
         }
@@ -137,7 +137,7 @@ namespace Apache.Ignite.Core.Services
         /// <summary>
         /// Configurations of services that failed to deploy, could be null
         /// </summary>
-        public ICollection<ServiceConfiguration> FailedConfigurations
+        public ICollection<ServiceConfiguration>? FailedConfigurations
         {
             get { return _failedCfgs; }
         }
