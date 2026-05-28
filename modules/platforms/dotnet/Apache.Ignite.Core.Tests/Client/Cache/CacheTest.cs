@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable enable
+
 namespace Apache.Ignite.Core.Tests.Client.Cache
 {
     using System;
@@ -153,7 +155,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 Assert.AreEqual(200, serverCache[3].Id);
 
                 // Null key or value.
-                Assert.Throws<ArgumentNullException>(() => clientCache.Put(10, null));
+                Assert.Throws<ArgumentNullException>(() => clientCache.Put(10, null!));
                 Assert.Throws<ArgumentNullException>(() => clientCache.Put(null, person));
             }
         }
@@ -292,7 +294,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             CollectionAssert.AreEquivalent(new[] {1, 2, 3},
                 cache.GetAll(new int?[] {1, 2, 3}).Select(x => x.Value));
 
-            Assert.Throws<ArgumentNullException>(() => cache.GetAll(null));
+            Assert.Throws<ArgumentNullException>(() => cache.GetAll(null!));
 
             Assert.Throws<IgniteClientException>(() => cache.GetAll(new int?[] {1, null}));
             Assert.Throws<IgniteClientException>(() => cache.GetAll(new int?[] {null}));
@@ -416,7 +418,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             Assert.IsFalse(cache.ContainsKeys(new[] {1, 0}));
             Assert.IsFalse(cache.ContainsKeys(new[] {1, 2, 3, 0}));
 
-            Assert.Throws<ArgumentNullException>(() => cache.ContainsKeys(null));
+            Assert.Throws<ArgumentNullException>(() => cache.ContainsKeys(null!));
         }
 
         /// <summary>
@@ -527,9 +529,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             using (var client = GetClient())
             {
                 // Primitives.
-                var cache = GetClientCache<int?, int?>();
+                var cache = GetClientCache<int, int?>();
 
-                cache.PutAll(Enumerable.Range(1, 3).ToDictionary(x => (int?) x, x => (int?) x + 1));
+                cache.PutAll(Enumerable.Range(1, 3).ToDictionary(x => x, x => (int?) x + 1));
 
                 Assert.AreEqual(2, cache[1]);
                 Assert.AreEqual(3, cache[2]);
@@ -557,9 +559,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 var res2 = cache2[2];
                 var res3 = cache2[3];
 
-                Assert.AreEqual(res1, res1.Inner.Inner);
-                Assert.AreEqual(res2, res2.Inner.Inner);
-                Assert.IsNotNull(res3.Inner.Inner.Inner);
+                Assert.AreEqual(res1, res1.Inner!.Inner);
+                Assert.AreEqual(res2, res2.Inner!.Inner);
+                Assert.IsNotNull(res3.Inner!.Inner!.Inner);
 
                 // Huge data set.
                 var cache3 = client.GetCache<int, Person>(CacheName);
@@ -569,14 +571,16 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 Assert.AreEqual(count, cache3.GetSize());
 
                 // Nulls.
-                Assert.Throws<ArgumentNullException>(() => cache.PutAll(null));
+                Assert.Throws<ArgumentNullException>(() => cache.PutAll(null!));
 
-                Assert.Throws<IgniteClientException>(() => cache.PutAll(new[]
+                var cache1 = GetClientCache<int?, int?>();
+
+                Assert.Throws<IgniteClientException>(() => cache1.PutAll(new[]
                 {
                     new KeyValuePair<int?, int?>(null, 1)
                 }));
 
-                Assert.Throws<IgniteClientException>(() => cache.PutAll(new[]
+                Assert.Throws<IgniteClientException>(() => cache1.PutAll(new[]
                 {
                     new KeyValuePair<int?, int?>(1, null)
                 }));
@@ -639,7 +643,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             Assert.IsTrue(cache.ContainsKey(2));
             Assert.IsFalse(cache.ContainsKey(3));
 
-            Assert.Throws<ArgumentNullException>(() => cache.ClearAll(null));
+            Assert.Throws<ArgumentNullException>(() => cache.ClearAll(null!));
             Assert.Throws<IgniteClientException>(() => cache.ClearAll(new int?[] {null, 1}));
         }
 
@@ -710,15 +714,15 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [Test]
         public void TestRemoveKeys()
         {
-            var cache = GetClientCache<int?, int?>();
-            var keys = Enumerable.Range(1, 10).Cast<int?>().ToArray();
+            var cache = GetClientCache<int, int>();
+            var keys = Enumerable.Range(1, 10).ToArray();
 
             cache.PutAll(keys.ToDictionary(x => x, x => x));
 
             cache.RemoveAll(keys.Skip(2));
             CollectionAssert.AreEquivalent(keys.Take(2), cache.GetAll(keys).Select(x => x.Key));
 
-            cache.RemoveAll(new int?[] {1});
+            cache.RemoveAll([1]);
             Assert.AreEqual(2, cache.GetAll(keys).Single().Value);
 
             cache.RemoveAll(keys);
@@ -726,8 +730,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
             Assert.AreEqual(0, cache.GetSize());
 
-            Assert.Throws<ArgumentNullException>(() => cache.RemoveAll(null));
-            Assert.Throws<IgniteClientException>(() => cache.RemoveAll(new int?[] {1, null}));
+            Assert.Throws<ArgumentNullException>(() => cache.RemoveAll(null!));
+            Assert.Throws<IgniteClientException>(() => GetClientCache<int?, int?>().RemoveAll([1, null]));
         }
 
         /// <summary>
@@ -1120,7 +1124,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
         private class Container
         {
-            public Container Inner;
+            public Container? Inner;
         }
 
         public enum ByteEnum : byte
