@@ -38,13 +38,11 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="socket">The socket.</param>
         public BinaryProcessorClient(ClientFailoverSocket socket)
         {
-            Debug.Assert(socket != null);
-
             _socket = socket;
         }
 
         /** <inheritdoc /> */
-        public BinaryType GetBinaryType(int typeId)
+        public BinaryType? GetBinaryType(int typeId)
         {
             return _socket.DoOutInOp(ClientOp.BinaryTypeGet, ctx => ctx.Stream.WriteInt(typeId),
                 ctx => ctx.Stream.ReadBool() ? new BinaryType(ctx.Reader, true) : null);

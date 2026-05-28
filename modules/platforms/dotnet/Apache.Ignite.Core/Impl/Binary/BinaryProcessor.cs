@@ -63,7 +63,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Gets metadata for specified type.
         /// </summary>
-        public BinaryType GetBinaryType(int typeId)
+        public BinaryType? GetBinaryType(int typeId)
         {
             return DoOutInOp((int) Op.GetMetaWithSchemas,
                 writer => writer.WriteInt(typeId),
@@ -90,7 +90,12 @@ namespace Apache.Ignite.Core.Impl.Binary
                 var res = new List<IBinaryType>(size);
 
                 for (var i = 0; i < size; i++)
-                    res.Add(reader.ReadBoolean() ? new BinaryType(reader) : null);
+                {
+                    if (reader.ReadBoolean())
+                    {
+                        res.Add(new BinaryType(reader));
+                    }
+                }
 
                 return res;
             });
@@ -131,10 +136,8 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="typeName">Name of the type.</param>
         /// <param name="values">The values.</param>
         /// <returns>Resulting binary type.</returns>
-        public BinaryType RegisterEnum(string typeName, IEnumerable<KeyValuePair<string, int>> values)
+        public BinaryType? RegisterEnum(string typeName, IEnumerable<KeyValuePair<string, int>>? values)
         {
-            Debug.Assert(typeName != null);
-
             return DoOutInOp((int) Op.RegisterEnum, w =>
             {
                 w.WriteString(typeName);

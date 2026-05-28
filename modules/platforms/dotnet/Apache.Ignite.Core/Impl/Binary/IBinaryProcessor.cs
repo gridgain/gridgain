@@ -29,7 +29,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Gets metadata for specified type.
         /// </summary>
-        BinaryType GetBinaryType(int typeId);
+        BinaryType? GetBinaryType(int typeId);
 
         /// <summary>
         /// Gets metadata for all known types.
@@ -57,7 +57,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="typeName">Name of the type.</param>
         /// <param name="values">The values.</param>
         /// <returns>Resulting binary type.</returns>
-        BinaryType RegisterEnum(string typeName, IEnumerable<KeyValuePair<string, int>> values);
+        BinaryType? RegisterEnum(string typeName, IEnumerable<KeyValuePair<string, int>>? values);
 
         /// <summary>
         /// Gets the type name by id.
@@ -66,7 +66,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="platformId">Platform identifier.</param>
         /// <param name="errorAction">Error action.</param>
         /// <returns>Type or null.</returns>
-        string GetTypeName(int id, byte platformId, Func<Exception, string> errorAction = null);
+        string GetTypeName(int id, byte platformId, Func<Exception, string>? errorAction = null);
 
         /// <summary>
         /// Removes the type by id.
