@@ -37,7 +37,7 @@ namespace Apache.Ignite.Core.Impl.Client.DataStructures
         private readonly int _cacheId;
 
         /** */
-        private readonly string _groupName;
+        private readonly string? _groupName;
 
         /// <summary>
         /// Initializes a new instance of <see cref="AtomicLongClient"/> class.
@@ -45,7 +45,7 @@ namespace Apache.Ignite.Core.Impl.Client.DataStructures
         /// <param name="socket">Socket.</param>
         /// <param name="name">Name.</param>
         /// <param name="groupName">Group name.</param>
-        public AtomicLongClient(ClientFailoverSocket socket, string name, string groupName)
+        public AtomicLongClient(ClientFailoverSocket socket, string name, string? groupName)
         {
             _socket = socket;
             Name = name;

@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-#nullable disable
-
 namespace Apache.Ignite.Core.Impl.Client
 {
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Globalization;
     using System.Net;
-    using System.Threading;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
@@ -93,8 +89,6 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <param name="clientConfiguration">The client configuration.</param>
         public IgniteClient(IgniteClientConfiguration clientConfiguration)
         {
-            Debug.Assert(clientConfiguration != null);
-
             _configuration = new IgniteClientConfiguration(clientConfiguration);
 
             _marsh = new Marshaller(_configuration.BinaryConfiguration, _configuration.Logger)
@@ -294,19 +288,22 @@ namespace Apache.Ignite.Core.Impl.Client
 
         /** <inheritDoc /> */
         public IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName)
+            where TK : notnull
         {
             return GetDataStreamer<TK, TV>(cacheName, null);
         }
 
         /** <inheritDoc /> */
         public IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName, DataStreamerClientOptions options)
+            where TK : notnull
         {
             return GetDataStreamer(cacheName, new DataStreamerClientOptions<TK, TV>(options));
         }
 
         /** <inheritDoc /> */
         public IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName,
-            DataStreamerClientOptions<TK, TV> options)
+            DataStreamerClientOptions<TK, TV>? options)
+            where TK : notnull
         {
             IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
 
@@ -314,15 +311,15 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritDoc /> */
-        public IAtomicLongClient GetAtomicLong(string name, long initialValue, bool create)
+        public IAtomicLongClient? GetAtomicLong(string name, long initialValue, bool create)
         {
             return GetAtomicLong(name, null, initialValue, create);
         }
 
         /** <inheritDoc /> */
-        public IAtomicLongClient GetAtomicLong(
+        public IAtomicLongClient? GetAtomicLong(
             string name,
-            AtomicClientConfiguration configuration,
+            AtomicClientConfiguration? configuration,
             long initialValue,
             bool create)
         {
@@ -364,7 +361,7 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritDoc /> */
-        public IIgniteSetClient<T> GetIgniteSet<T>(string name, CollectionClientConfiguration configuration)
+        public IIgniteSetClient<T>? GetIgniteSet<T>(string name, CollectionClientConfiguration? configuration)
         {
             IgniteArgumentCheck.NotNullOrEmpty(name, "name");
 
@@ -477,6 +474,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /** <inheritDoc /> */
         [ExcludeFromCodeCoverage]
         public IDataStreamer<TK, TV> GetDataStreamer<TK, TV>(string cacheName, bool keepBinary)
+            where TK : notnull
         {
             throw GetClientNotSupportedException();
         }
@@ -494,7 +492,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Gets the client not supported exception.
         /// </summary>
-        public static NotSupportedException GetClientNotSupportedException(string info = null)
+        public static NotSupportedException GetClientNotSupportedException(string? info = null)
         {
             var msg = "Operation is not supported in thin client mode.";
 
@@ -509,8 +507,8 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Does the out in op.
         /// </summary>
-        private T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
-            Func<ClientResponseContext, T> readFunc)
+        private T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext>? writeAction,
+            Func<ClientResponseContext, T>? readFunc)
         {
             return _socket.DoOutInOp(opId, writeAction, readFunc);
         }
@@ -518,7 +516,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Does the out op.
         /// </summary>
-        private void DoOutOp(ClientOp opId, Action<ClientRequestContext> writeAction = null)
+        private void DoOutOp(ClientOp opId, Action<ClientRequestContext>? writeAction = null)
         {
             DoOutInOp<object>(opId, writeAction, null);
         }

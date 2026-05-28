@@ -166,7 +166,8 @@ namespace Apache.Ignite.Core.Client
         /// </summary>
         /// <param name="cacheName">Cache name.</param>
         /// <returns>Data streamer.</returns>
-        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName);
+        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName)
+            where TK : notnull;
 
         /// <summary>
         /// Gets a new instance of the data streamer associated with the given cache name.
@@ -177,7 +178,8 @@ namespace Apache.Ignite.Core.Client
         /// <param name="cacheName">Cache name.</param>
         /// <param name="options">Data streamer options.</param>
         /// <returns>Data streamer.</returns>
-        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName, DataStreamerClientOptions options);
+        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName, DataStreamerClientOptions options)
+            where TK : notnull;
 
         /// <summary>
         /// Gets a new instance of the data streamer associated with the given cache name.
@@ -188,7 +190,8 @@ namespace Apache.Ignite.Core.Client
         /// <param name="cacheName">Cache name.</param>
         /// <param name="options">Data streamer options.</param>
         /// <returns>Data streamer.</returns>
-        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName, DataStreamerClientOptions<TK, TV> options);
+        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName, DataStreamerClientOptions<TK, TV> options)
+            where TK : notnull;
 
         /// <summary>
         /// Gets an atomic long with the specified name.
@@ -201,7 +204,7 @@ namespace Apache.Ignite.Core.Client
         /// <param name="create">Flag indicating whether atomic long should be created if it does not exist.</param>
         /// <returns>Atomic long instance with the specified name,
         /// or null if it does not exist and <paramref name="create"/> is <c>false</c>.</returns>
-        IAtomicLongClient GetAtomicLong(string name, long initialValue, bool create);
+        IAtomicLongClient? GetAtomicLong(string name, long initialValue, bool create);
 
         /// <summary>
         /// Gets an atomic long with the specified name.
@@ -215,7 +218,7 @@ namespace Apache.Ignite.Core.Client
         /// <param name="create">Flag indicating whether atomic long should be created if it does not exist.</param>
         /// <returns>Atomic long instance with the specified name,
         /// or null if it does not exist and <paramref name="create"/> is <c>false</c>.</returns>
-        IAtomicLongClient GetAtomicLong(
+        IAtomicLongClient? GetAtomicLong(
             string name,
             AtomicClientConfiguration configuration,
             long initialValue,
@@ -229,6 +232,6 @@ namespace Apache.Ignite.Core.Client
         /// otherwise, creates a new set with the specified configuration.</param>
         /// <typeparam name="T">Element type.</typeparam>
         /// <returns>Ignite set.</returns>
-        IIgniteSetClient<T> GetIgniteSet<T>(string name, CollectionClientConfiguration configuration);
+        IIgniteSetClient<T>? GetIgniteSet<T>(string name, CollectionClientConfiguration? configuration);
     }
 }

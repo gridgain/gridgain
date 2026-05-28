@@ -186,7 +186,7 @@ namespace Apache.Ignite.Core.Client.Datastream
         /// Initializes a new instance of <see cref="DataStreamerClientOptions{TK,TV}"/>.
         /// </summary>
         /// <param name="options">Options to copy from.</param>
-        public DataStreamerClientOptions(DataStreamerClientOptions options) : base(options)
+        public DataStreamerClientOptions(DataStreamerClientOptions? options) : base(options)
         {
             // No-op.
         }
@@ -195,7 +195,7 @@ namespace Apache.Ignite.Core.Client.Datastream
         /// Initializes a new instance of <see cref="DataStreamerClientOptions{TK,TV}"/>.
         /// </summary>
         /// <param name="options">Options to copy from.</param>
-        public DataStreamerClientOptions(DataStreamerClientOptions<TK, TV> options) : base(options)
+        public DataStreamerClientOptions(DataStreamerClientOptions<TK, TV>? options) : base(options)
         {
             // No-op.
         }

@@ -106,7 +106,7 @@ namespace Apache.Ignite.Core.Client
         /// Initializes a new instance of the <see cref="IgniteClientConfiguration"/> class.
         /// </summary>
         /// <param name="cfg">The configuration to copy.</param>
-        public IgniteClientConfiguration(IgniteClientConfiguration cfg) : this()
+        public IgniteClientConfiguration(IgniteClientConfiguration? cfg) : this()
         {
             if (cfg == null)
             {

@@ -36,6 +36,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
     /// Thin client data streamer.
     /// </summary>
     internal sealed class DataStreamerClient<TK, TV> : IDataStreamerClient<TK, TV>
+        where TK : notnull
     {
         /** Streamer flags. */
         [Flags]
@@ -105,7 +106,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         public DataStreamerClient(
             ClientFailoverSocket socket,
             string cacheName,
-            DataStreamerClientOptions<TK, TV> options)
+            DataStreamerClientOptions<TK, TV>? options)
         {
             // Copy to prevent modification.
             _options = new DataStreamerClientOptions<TK, TV>(options);
