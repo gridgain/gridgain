@@ -59,7 +59,7 @@ namespace Apache.Ignite.Core.Datastream
         {
             // Don't use InvokeAll because semantics is different, e.g. duplicate keys are ignored.
             foreach (var entry in entries)
-                cache.Invoke(entry.Key, _proc, default(TArg));
+                cache.Invoke(entry.Key, _proc!, default(TArg));
         }
 
         /** <inheritdoc /> */

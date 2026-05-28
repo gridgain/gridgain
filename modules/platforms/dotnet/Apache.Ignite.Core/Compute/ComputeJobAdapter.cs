@@ -39,7 +39,7 @@ namespace Apache.Ignite.Core.Compute
         private volatile bool _cancelled;
 
         /** Arguments. */
-        private object[] _args;
+        private object[]? _args;
 
         /// <summary>
         /// No-arg constructor.
