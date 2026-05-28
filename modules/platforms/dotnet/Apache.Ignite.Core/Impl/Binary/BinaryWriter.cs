@@ -373,7 +373,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write char array.
         /// </summary>
         /// <param name="val">Char array.</param>
-        public void WriteCharArray(char[] val)
+        public void WriteCharArray(char[]? val)
         {
             if (val == null)
                 WriteNullRawField();

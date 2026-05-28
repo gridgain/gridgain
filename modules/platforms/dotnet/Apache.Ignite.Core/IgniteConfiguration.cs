@@ -19,7 +19,6 @@ namespace Apache.Ignite.Core
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Linq;
@@ -706,8 +705,6 @@ namespace Apache.Ignite.Core
         /// </summary>
         internal void Validate(ILogger log)
         {
-            Debug.Assert(log != null);
-
             var ccfg = CacheConfiguration;
             if (ccfg != null)
             {
@@ -1018,7 +1015,7 @@ namespace Apache.Ignite.Core
         /// </summary>
         [Obsolete("Use IgniteInstanceName instead.")]
         [XmlIgnore]
-        public string GridName
+        public string? GridName
         {
             get { return IgniteInstanceName; }
             set { IgniteInstanceName = value; }
@@ -1170,7 +1167,7 @@ namespace Apache.Ignite.Core
                 {
                     var listener = _localEventListenersInternal[i];
                     ValidateLocalEventListener(listener);
-                    _localEventListenerIds[listener.ListenerObject] = i;
+                    _localEventListenerIds[listener.ListenerObject!] = i;
                 }
             }
         }
@@ -1184,7 +1181,7 @@ namespace Apache.Ignite.Core
             {
                 InitLocalEventListeners();
 
-                return _localEventListenersInternal;
+                return _localEventListenersInternal!;
             }
         }
 
@@ -1197,7 +1194,7 @@ namespace Apache.Ignite.Core
             {
                 InitLocalEventListeners();
 
-                return _localEventListenerIds;
+                return _localEventListenerIds!;
             }
         }
 
