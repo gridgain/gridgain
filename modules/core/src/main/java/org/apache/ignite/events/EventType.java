@@ -943,6 +943,28 @@ public interface EventType {
     public static final int EVT_QUERY_FINISHED = 166;
 
     /**
+     * Built-in event type: occurs when partition state validation fails.
+     * <p><b>NOTE:</b> the event is only triggered on the coordinator node.
+     *
+     * <p><b>NOTE:</b> all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see PartitionsStateValidationEvent
+     */
+    public static final int EVT_PARTITIONS_STATE_VALIDATION_FAILED = 170;
+
+    /**
+     * Built-in event type: occurs when partition state validation succeeded.
+     * <p><b>NOTE:</b> the event is only triggered on the coordinator node.
+     *
+     * <p><b>NOTE:</b> all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see PartitionsStateValidationEvent
+     */
+    public static final int EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED = 171;
+
+    /**
      * All checkpoint events. This array can be directly passed into
      * {@link IgniteEvents#localListen(IgnitePredicate, int...)} method to
      * subscribe to all checkpoint events.
@@ -1160,6 +1182,18 @@ public interface EventType {
     public static final int[] EVTS_CLUSTER_ACTIVATION = {
         EVT_CLUSTER_ACTIVATED,
         EVT_CLUSTER_DEACTIVATED
+    };
+
+    /**
+     * All partitions state validation events. This array can be directly passed into
+     * {@link IgniteEvents#localListen(IgnitePredicate, int...)} method to
+     * subscribe to all cloud events.
+     *
+     * @see PartitionsStateValidationEvent
+     */
+    public static final int[] EVTS_PARTITIONS_STATE_VALIDATION = {
+        EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED,
+        EVT_PARTITIONS_STATE_VALIDATION_FAILED
     };
 
     /**
