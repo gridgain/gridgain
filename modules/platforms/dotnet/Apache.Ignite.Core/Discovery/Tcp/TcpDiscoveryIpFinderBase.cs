@@ -57,7 +57,7 @@ namespace Apache.Ignite.Core.Discovery.Tcp
         /// <summary>
         /// Reads the instance.
         /// </summary>
-        internal static TcpDiscoveryIpFinderBase ReadInstance(IBinaryRawReader reader)
+        internal static TcpDiscoveryIpFinderBase? ReadInstance(IBinaryRawReader reader)
         {
             var code = reader.ReadByte();
 

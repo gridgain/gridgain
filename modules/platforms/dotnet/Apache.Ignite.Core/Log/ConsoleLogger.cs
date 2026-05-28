@@ -45,7 +45,7 @@ namespace Apache.Ignite.Core.Log
         /// <summary>
         /// Gets or sets DateTime provider.
         /// </summary>
-        public IDateTimeProvider DateTimeProvider { get; set; }
+        public IDateTimeProvider? DateTimeProvider { get; set; }
 
         /// <summary>
         /// Logs the specified message.

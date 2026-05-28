@@ -140,7 +140,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <para />
         /// Null for no swap.
         /// </summary>
-        public string SwapFilePath { get; set; }
+        public string? SwapFilePath { get; set; }
 
         /// <summary>
         /// Gets or sets the page eviction mode. If <see cref="DataPageEvictionMode.Disabled"/> is used (default)
