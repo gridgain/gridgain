@@ -1781,7 +1781,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Gets the unsupported type exception.
         /// </summary>
-        public static BinaryObjectException GetUnsupportedTypeException(Type type, object obj)
+        public static BinaryObjectException GetUnsupportedTypeException(Type type, object? obj)
         {
             return new BinaryObjectException(string.Format(
                 "Unsupported object type [type={0}, object={1}].\nSpecified type " +

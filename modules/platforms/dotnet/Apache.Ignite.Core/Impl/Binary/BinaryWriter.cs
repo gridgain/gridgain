@@ -19,7 +19,6 @@ namespace Apache.Ignite.Core.Impl.Binary
     using System;
     using System.Collections;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.IO;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -39,19 +38,19 @@ namespace Apache.Ignite.Core.Impl.Binary
         private readonly IBinaryStream _stream;
 
         /** Builder (used only during build). */
-        private BinaryObjectBuilder _builder;
+        private BinaryObjectBuilder? _builder;
 
         /** Handles. */
-        private BinaryHandleDictionary<object, long> _hnds;
+        private BinaryHandleDictionary<object, long>? _hnds;
 
         /** Metadatas collected during this write session. */
-        private IDictionary<int, BinaryType> _metas;
+        private IDictionary<int, BinaryType>? _metas;
 
         /** Current stack frame. */
         private Frame _frame;
 
         /** Whether we are currently detaching an object: detachment root when true, null otherwise. */
-        private object _detaching;
+        private object? _detaching;
 
         /** Whether we are directly within peer loading object holder. */
         private bool _isInWrapper;
@@ -70,7 +69,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Invoked when binary object writing finishes.
         /// </summary>
-        internal event Action<BinaryObjectHeader, BinaryObjectSchemaHolder, int> OnObjectWritten;
+        internal event Action<BinaryObjectHeader, BinaryObjectSchemaHolder, int>? OnObjectWritten;
 
         /// <summary>
         /// Write named boolean value.
@@ -456,7 +455,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write int array.
         /// </summary>
         /// <param name="val">Int array.</param>
-        public void WriteIntArray(int[] val)
+        public void WriteIntArray(int[]? val)
         {
             if (val == null)
                 WriteNullRawField();
@@ -1249,9 +1248,9 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         /// <param name="builder">Builder.</param>
         /// <returns>Previous builder.</returns>
-        internal BinaryObjectBuilder SetBuilder(BinaryObjectBuilder builder)
+        internal BinaryObjectBuilder? SetBuilder(BinaryObjectBuilder builder)
         {
-            BinaryObjectBuilder ret = _builder;
+            BinaryObjectBuilder? ret = _builder;
 
             _builder = builder;
 
@@ -1510,7 +1509,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             if (_builder != null)
             {
                 // Special case for binary object during build.
-                BinaryObject portObj = obj as BinaryObject;
+                BinaryObject? portObj = obj as BinaryObject;
 
                 if (portObj != null)
                 {
@@ -1521,7 +1520,7 @@ namespace Apache.Ignite.Core.Impl.Binary
                 }
 
                 // Special case for binary enum during build.
-                BinaryEnum binEnum = obj as BinaryEnum;
+                BinaryEnum? binEnum = obj as BinaryEnum;
 
                 if (binEnum != null)
                 {
@@ -1531,7 +1530,7 @@ namespace Apache.Ignite.Core.Impl.Binary
                 }
 
                 // Special case for builder during build.
-                BinaryObjectBuilder portBuilder = obj as BinaryObjectBuilder;
+                BinaryObjectBuilder? portBuilder = obj as BinaryObjectBuilder;
 
                 if (portBuilder != null)
                 {
@@ -1589,7 +1588,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <see cref="BinaryTypeId.Dictionary"/>), we want to detach every element of that collection, because
         /// Java side handles every element as a separate BinaryObject - they can't share handles.
         /// </param>
-        internal void WriteObjectDetached<T>(T o, object parentCollection = null)
+        internal void WriteObjectDetached<T>(T o, object? parentCollection = null)
         {
             if (_detaching != parentCollection)
             {
@@ -1627,7 +1626,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Gets or sets a function to wrap all serializer objects.
         /// </summary>
-        internal Func<object, object> WrapperFunc { get; set; }
+        internal Func<object, object>? WrapperFunc { get; set; }
 
         /// <summary>
         /// Stream.
@@ -1641,7 +1640,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Gets collected metadatas.
         /// </summary>
         /// <returns>Collected metadatas (if any).</returns>
-        internal ICollection<BinaryType> GetBinaryTypes()
+        internal ICollection<BinaryType>? GetBinaryTypes()
         {
             return _metas == null ? null : _metas.Values;
         }
@@ -1668,8 +1667,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="fields">Fields metadata.</param>
         internal void SaveMetadata(IBinaryTypeDescriptor desc, IDictionary<string, BinaryField> fields)
         {
-            Debug.Assert(desc != null);
-
             if (!desc.UserType && (fields == null || fields.Count == 0))
             {
                 // System types with no fields (most of them) do not need to be sent.
