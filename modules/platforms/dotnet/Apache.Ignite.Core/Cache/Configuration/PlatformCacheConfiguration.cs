@@ -67,13 +67,13 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Gets or sets fully-qualified platform type name of the cache key used for the local map.
         /// When not set, object-based map is used, which can reduce performance and increase allocations due to boxing.
         /// </summary>
-        public string KeyTypeName { get; set; }
+        public string? KeyTypeName { get; set; }
         
         /// <summary>
         /// Gets or sets fully-qualified platform type name of the cache value used for the local map.
         /// When not set, object-based map is used, which can reduce performance and increase allocations due to boxing.
         /// </summary>
-        public string ValueTypeName { get; set; }
+        public string? ValueTypeName { get; set; }
         
         /// <summary>
         /// Gets or sets a value indicating whether platform cache should store keys and values in binary form.
