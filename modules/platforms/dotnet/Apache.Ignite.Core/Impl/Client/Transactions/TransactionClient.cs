@@ -50,7 +50,7 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
             TransactionConcurrency concurrency,
             TransactionIsolation isolation,
             TimeSpan timeout,
-            string label)
+            string? label)
         {
             _id = id;
             _socket = socket;
@@ -84,7 +84,7 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
         public TimeSpan Timeout { get; private set; }
 
         /** <inheritdoc /> */
-        public string Label { get; private set; }
+        public string? Label { get; private set; }
 
         /** <inheritdoc /> */
         public void Dispose()

@@ -72,10 +72,7 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
         }
 
         /** <inheritDoc /> */
-        ITransactionClient ITransactionsClient.Tx
-        {
-            get { return Tx; }
-        }
+        ITransactionClient? ITransactionsClient.Tx => Tx;
 
         /// <summary>
         /// Gets transaction started by this thread or null if this thread does not have a transaction.
@@ -151,7 +148,7 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
         private ITransactionClient TxStart(TransactionConcurrency concurrency,
             TransactionIsolation isolation,
             TimeSpan timeout,
-            string label)
+            string? label)
         {
             if (Tx != null)
             {

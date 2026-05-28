@@ -73,7 +73,7 @@ namespace Apache.Ignite.Core.Client.Transactions
         /// <value>
         /// Transaction started by this thread or null if this thread does not have a transaction.
         /// </value>
-        ITransactionClient Tx { get; }
+        ITransactionClient? Tx { get; }
 
         /// <summary>
         /// Gets the default transaction concurrency.
