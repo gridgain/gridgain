@@ -289,7 +289,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Continuous
                 return Int == other.Int && string.Equals(String, other.String);
             }
 
-            public override bool Equals(object? obj)
+            public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;

@@ -42,7 +42,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         }
 
         /** <inheritdoc /> */
-        public override bool Equals(object? obj)
+        public override bool Equals(object obj)
         {
             CacheTestKey other = obj as CacheTestKey;
 

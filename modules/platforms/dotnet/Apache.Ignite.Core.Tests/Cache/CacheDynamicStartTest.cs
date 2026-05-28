@@ -187,7 +187,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             public int Id { get; set; }
 
             /** <inheritdoc /> */
-            public override bool Equals(object? obj)
+            public override bool Equals(object obj)
             {
                 DynamicTestKey other = obj as DynamicTestKey;
 
@@ -222,7 +222,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             public int Id { get; set; }
 
             /** <inheritdoc /> */
-            public override bool Equals(object? obj)
+            public override bool Equals(object obj)
             {
                 DynamicTestValue other = obj as DynamicTestValue;
 

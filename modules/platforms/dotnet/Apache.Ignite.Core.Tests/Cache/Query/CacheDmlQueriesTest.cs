@@ -498,7 +498,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
                     Key.Equals(other.Key);
             }
 
-            public override bool Equals(object? obj)
+            public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;

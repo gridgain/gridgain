@@ -1128,7 +1128,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Continuous
             }
 
             /** <inheritDoc /> */
-            public override bool Equals(object? obj)
+            public override bool Equals(object obj)
             {
                 return obj != null && obj is BinarizableEntry && ((BinarizableEntry)obj).val == val;
             }

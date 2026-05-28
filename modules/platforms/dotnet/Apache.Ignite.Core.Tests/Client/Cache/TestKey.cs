@@ -32,7 +32,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             return _i == other._i && string.Equals(_s, other._s);
         }
 
-        public override bool Equals(object? obj)
+        public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;

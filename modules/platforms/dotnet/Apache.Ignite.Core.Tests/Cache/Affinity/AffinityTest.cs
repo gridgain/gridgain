@@ -231,7 +231,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Affinity
             }
 
             /** <inheritdoc /> */
-            public override bool Equals(object? obj)
+            public override bool Equals(object obj)
             {
                 var other = obj as AffinityTestKey;
 

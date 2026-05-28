@@ -348,7 +348,7 @@ namespace Apache.Ignite.Core.Tests.Services
             }
 
             /** <inheritdoc /> */
-            public override bool Equals(object? obj)
+            public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj))
                     return false;
