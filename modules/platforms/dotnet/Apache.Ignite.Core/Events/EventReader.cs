@@ -36,7 +36,7 @@ namespace Apache.Ignite.Core.Events
             var clsId = reader.ReadInt();
 
             if (clsId == -1)
-                return default(T);
+                return default(T)!;
 
             return (T) CreateInstance(clsId, reader);
         }

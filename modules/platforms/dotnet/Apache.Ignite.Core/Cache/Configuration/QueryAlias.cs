@@ -28,7 +28,8 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         public QueryAlias()
         {
-            // No-op.
+            FullName = string.Empty;
+            Alias = string.Empty;
         }
 
         /// <summary>
@@ -48,11 +49,11 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Gets or sets the full name of the query field.
         /// </summary>
-        public string? FullName { get; set; }
+        public string FullName { get; set; }
         
         /// <summary>
         /// Gets or sets the alias for the full name.
         /// </summary>
-        public string? Alias { get; set; }
+        public string Alias { get; set; }
     }
 }

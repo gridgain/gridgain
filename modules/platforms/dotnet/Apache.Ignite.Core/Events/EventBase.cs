@@ -37,7 +37,7 @@ namespace Apache.Ignite.Core.Events
         private readonly long _localOrder;
 
         /** */
-        private readonly IClusterNode _node;
+        private readonly IClusterNode? _node;
 
         /** */
         private readonly string _message;
@@ -58,8 +58,6 @@ namespace Apache.Ignite.Core.Events
         [SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods")]
         protected EventBase(IBinaryRawReader r)
         {
-            Debug.Assert(r != null);
-
             _id = r.ReadObject<IgniteGuid>();
 
             _localOrder = r.ReadLong();
@@ -72,7 +70,7 @@ namespace Apache.Ignite.Core.Events
             
             var timestamp = r.ReadTimestamp();
             Debug.Assert(timestamp.HasValue);
-            _timestamp = timestamp.Value;
+            _timestamp = timestamp!.Value;
         }
 
         /// <summary>
@@ -97,7 +95,7 @@ namespace Apache.Ignite.Core.Events
         /// <summary>
         /// Node where event occurred and was recorded.
         /// </summary>
-        public IClusterNode Node
+        public IClusterNode? Node
         {
             get { return _node; }
         }
@@ -204,7 +202,7 @@ namespace Apache.Ignite.Core.Events
         /// <param name="reader">Reader.</param>
         /// <returns>Node or null.</returns>
         [SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods")]
-        protected static IClusterNode ReadNode(IBinaryRawReader reader)
+        protected static IClusterNode? ReadNode(IBinaryRawReader reader)
         {
             return ((BinaryReader)reader).Marshaller.Ignite.GetNode(reader.ReadGuid());
         }
