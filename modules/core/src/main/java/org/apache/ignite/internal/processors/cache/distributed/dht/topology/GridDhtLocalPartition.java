@@ -461,7 +461,15 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @param stateToRestore State to restore.
      */
     public void restoreState(GridDhtPartitionState stateToRestore) {
-        state.set(setPartState(state.get(), stateToRestore));
+        long currState = state.get();
+        GridDhtPartitionState state0 = getPartState(currState);
+
+        state.set(setPartState(currState, stateToRestore));
+
+        if (log.isDebugEnabled()) {
+            log.debug("Partition changed state (restored) [grp=" + grp.cacheOrGroupName()
+                + ", p=" + id + ", prev=" + state0 + ", to=" + stateToRestore + ']');
+        }
     }
 
     /**
@@ -473,7 +481,14 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             synchronized (this) {
                 long state0 = state.get();
 
-                this.state.compareAndSet(state0, setPartState(state0, toState));
+                boolean updated = this.state.compareAndSet(state0, setPartState(state0, toState));
+
+                if (updated) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Partition changed state [grp=" + grp.cacheOrGroupName()
+                            + ", p=" + id + ", prev=" + state0 + ", to=" + toState + ']');
+                    }
+                }
 
                 try {
                     ctx.wal().log(new PartitionMetaStateRecord(grp.groupId(), id, toState, 0));

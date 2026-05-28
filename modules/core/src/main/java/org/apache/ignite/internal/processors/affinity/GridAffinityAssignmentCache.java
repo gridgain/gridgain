@@ -340,9 +340,13 @@ public class GridAffinityAssignmentCache {
         @Nullable ExchangeDiscoveryEvents events,
         @Nullable DiscoCache discoCache
     ) {
-        if (log.isDebugEnabled())
-            log.debug("Calculating ideal affinity [topVer=" + topVer + ", locNodeId=" + ctx.localNodeId() +
-                ", discoEvts=" + events + ']');
+        if (log.isDebugEnabled()) {
+            log.debug("Calculating ideal affinity [grp=" + cacheOrGroupName() +
+                ", topVer=" + topVer +
+                ", locNodeId=" + ctx.localNodeId() +
+                ", discoEvts=" + events +
+                ']');
+        }
 
         IdealAffinityAssignment prevAssignment = idealAssignment;
 
@@ -457,7 +461,9 @@ public class GridAffinityAssignmentCache {
         if (locCache)
             initialize(topVer, assignment.assignment());
 
-        printAssignment("Calculate assignment ", topVer, assignment.assignment());
+        printAssignment("Calculated ideal assignment ", topVer, assignment.assignment());
+        if (baselineAssignment != null)
+            printAssignment("Calculated baseline assignment ", topVer, baselineAssignment.assignment());
 
         return assignment;
     }
@@ -473,9 +479,13 @@ public class GridAffinityAssignmentCache {
                 }
             }
 
+            ClusterNode localNode = ctx.discovery().localNode();
+
             log.info("DBG: " + msg + "[name=" + cacheOrGrpName +
-                    ", top=" + topVer +
-                    ", assignment=" + assignmentToPrint + ']');
+                ", top=" + topVer +
+                ", az=(" + (localNode != null ? localNode.attribute("AVAILABILITY_ZONE") : "N/A") +
+                ", " + ctx.config().getUserAttributes().get("AVAILABILITY_ZONE") + ')' +
+                ", assignment=" + assignmentToPrint + ']');
         }
     }
 

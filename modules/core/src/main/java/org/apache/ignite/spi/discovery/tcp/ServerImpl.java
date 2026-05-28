@@ -193,6 +193,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER_COMPACT_FOOTER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER_USE_BINARY_STRING_SER_VER_2;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER_USE_DFLT_SUID;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PREFIX;
 import static org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi.ALL_NODES;
 import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeSecurityContext;
 import static org.apache.ignite.spi.IgnitePortProtocol.TCP;
@@ -4879,6 +4880,20 @@ class ServerImpl extends TcpDiscoveryImpl {
                         .end();
 
                     return;
+                }
+
+                if (log.isInfoEnabled()) {
+                    for (Map.Entry<?, ?> attr : node.getAttributes().entrySet()) {
+                        // filter out internal attributes
+                        if (attr.getKey().toString().startsWith(ATTR_PREFIX))
+                            continue;
+
+                        log.info("Node attribute [" +
+                            "node=" + node.consistentId() + " " +
+                            attr.getKey() + '=' + attr.getValue() +
+                            ", phase=join" +
+                            ']');
+                    }
                 }
 
                 // Handle join.

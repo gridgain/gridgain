@@ -279,8 +279,13 @@ public class GridDhtPartitionDemander {
         final GridDhtPartitionsExchangeFuture exchFut = lastExchangeFut;
 
         if (exchFut != null) {
-            if (log.isDebugEnabled())
-                log.debug("Forcing rebalance event for future: " + exchFut);
+            if (log.isDebugEnabled()) {
+                log.debug("Forcing rebalance event for future [" +
+                    "grp=" + grp.cacheOrGroupName() +
+                    ", grpId=" + grp.groupId() +
+                    ", fut=" + exchFut +
+                    ']');
+            }
 
             final GridFutureAdapter<Boolean> fut = new GridFutureAdapter<>();
 
@@ -306,8 +311,12 @@ public class GridDhtPartitionDemander {
 
             return fut;
         }
-        else if (log.isDebugEnabled())
-            log.debug("Ignoring force rebalance request (no topology event happened yet).");
+        else if (log.isDebugEnabled()) {
+            log.debug("Ignoring force rebalance request (no topology event happened yet) [" +
+                "grp=" + grp.cacheOrGroupName() +
+                ", grpId=" + grp.groupId() +
+                ']');
+        }
 
         return new GridFinishedFuture<>(true);
     }
@@ -350,8 +359,13 @@ public class GridDhtPartitionDemander {
         @Nullable final GridCompoundFuture<Boolean, Boolean> forcedRebFut,
         GridCompoundFuture<Boolean, Boolean> compatibleRebFut
     ) {
-        if (log.isDebugEnabled())
-            log.debug("Adding partition assignments: " + assignments);
+        if (log.isDebugEnabled()) {
+            log.debug("Adding partition assignments [" +
+                "grpName=" + grp.cacheOrGroupName() +
+                ", grpId=" + grp.groupId() +
+                ", assignment=" + assignments +
+                ']');
+        }
 
         assert force == (forcedRebFut != null);
 
@@ -363,15 +377,23 @@ public class GridDhtPartitionDemander {
             final RebalanceFuture oldFut = rebalanceFut;
 
             if (assignments.cancelled()) { // Pending exchange.
-                if (log.isDebugEnabled())
-                    log.debug("Rebalancing skipped due to cancelled assignments.");
+                if (log.isDebugEnabled()) {
+                    log.debug("Rebalancing skipped due to cancelled assignments [" +
+                        "grpName=" + grp.cacheOrGroupName() +
+                        ", grpId=" + grp.groupId() +
+                        ']');
+                }
 
                 return null;
             }
 
             if (assignments.isEmpty()) { // Nothing to rebalance.
-                if (log.isDebugEnabled())
-                    log.debug("Rebalancing skipped due to empty assignments.");
+                if (log.isDebugEnabled()) {
+                    log.debug("Rebalancing skipped due to empty assignments [" +
+                        "grpName=" + grp.cacheOrGroupName() +
+                        ", grpId=" + grp.groupId() +
+                        ']');
+                }
 
                 if (oldFut.isInitial())
                     oldFut.onDone(true);
@@ -388,6 +410,13 @@ public class GridDhtPartitionDemander {
                 if (!oldFut.isDone())
                     compatibleRebFut.add(oldFut);
 
+                if (log.isDebugEnabled()) {
+                    log.debug("Ongoing rebalancing is compatible with a new assignment [" +
+                        "grpName=" + grp.cacheOrGroupName() +
+                        ", grpId=" + grp.groupId() +
+                        ']');
+                }
+
                 return null;
             }
 
@@ -401,8 +430,15 @@ public class GridDhtPartitionDemander {
             assignments.retainMoving(grp.topology());
 
             // Skip rebalanced group.
-            if (assignments.isEmpty())
+            if (assignments.isEmpty()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Rebalancing skipped due to empty assignments after retaining moving partitions [" +
+                        "grpName=" + grp.cacheOrGroupName() +
+                        ", grpId=" + grp.groupId() +
+                        ']');
+                }
                 return null;
+            }
 
             final RebalanceFuture fut = new RebalanceFuture(
                     grp, lastExchangeFut, assignments, log, rebalanceId, next, oldFut, lastCancelledTime
@@ -1028,8 +1064,13 @@ public class GridDhtPartitionDemander {
                             cached.key() + ", part=" + p + ']');
                 }
                 catch (GridDhtInvalidPartitionException ignored) {
-                    if (log.isDebugEnabled())
-                        log.debug("Partition became invalid during rebalancing (will ignore): " + p);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Partition became invalid during rebalancing (will ignore) [" +
+                            "grp=" + grp.cacheOrGroupName() +
+                            ", grpId=" + grp.groupId() +
+                            ", part=" + p +
+                            ']');
+                    }
 
                     return false;
                 }
@@ -1105,8 +1146,13 @@ public class GridDhtPartitionDemander {
                             cached.key() + ", part=" + p + ']');
                 }
                 catch (GridDhtInvalidPartitionException ignored) {
-                    if (log.isDebugEnabled())
-                        log.debug("Partition became invalid during rebalancing (will ignore): " + p);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Partition became invalid during rebalancing (will ignore) [" +
+                            "grp=" + grp.cacheOrGroupName() +
+                            ", grpId=" + grp.groupId() +
+                            ", part=" + p +
+                            ']');
+                    }
 
                     return false;
                 }
@@ -1747,8 +1793,13 @@ public class GridDhtPartitionDemander {
                     d.convertIfNeeded(node.version()), grp.ioPolicy(), grp.preloader().timeout());
             }
             catch (IgniteCheckedException ignored) {
-                if (log.isDebugEnabled())
-                    log.debug("Failed to send failover context cleanup request to node " + nodeId);
+                if (log.isDebugEnabled()) {
+                    log.debug("Failed to send failover context cleanup request to node [" +
+                        "grp=" + grp.cacheOrGroupName() +
+                        ", grpId=" + grp.groupId() +
+                        ", node=" + nodeId +
+                        ']');
+                }
             }
         }
 

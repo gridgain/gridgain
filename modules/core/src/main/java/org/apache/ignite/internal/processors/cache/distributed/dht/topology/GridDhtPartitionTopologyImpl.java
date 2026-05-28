@@ -91,7 +91,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     private static final GridDhtPartitionState[] MOVING_STATES = new GridDhtPartitionState[] {MOVING};
 
     /** Flag to control amount of output for full map. */
-    private static final boolean FULL_MAP_DEBUG = false;
+    private static final boolean FULL_MAP_DEBUG = true;
 
     /** */
     private static final boolean FAST_DIFF_REBUILD = false;
@@ -774,6 +774,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         return grp.affinity().nodes(p, topVer).contains(ctx.localNode());
     }
 
+    private List<ClusterNode> partitionNodes(int p, AffinityTopologyVersion topVer) {
+        return grp.affinity().nodes(p, topVer);
+    }
+
     /** {@inheritDoc} */
     @Override public void afterStateRestored(AffinityTopologyVersion topVer) {
         // No-op. If some partitions are restored in RENTING state clearing will be started after PME.
@@ -825,7 +829,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     for (int p = 0; p < partitions; p++) {
                         GridDhtLocalPartition locPart = localPartition0(p, topVer, false, true);
 
-                        if (partitionLocalNode(p, topVer)) {
+                        List<ClusterNode> nn = partitionNodes(p, topVer);
+                        if (/*partitionLocalNode(p, topVer)*/nn.contains(ctx.localNode())) {
                             assert locPart != null && locPart.state() != RENTING && locPart.state() != EVICTED :
                                 p + " " + topVer + " " + locPart + " " + grp.cacheOrGroupName();
                         }
@@ -841,8 +846,20 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                     changed = true;
 
                                     if (log.isDebugEnabled()) {
+                                        SB s = new SB();
+                                        s.a('[');
+                                        for (ClusterNode node : nn) {
+                                            s.a(node.consistentId().toString());
+                                            s.a('(').a(node.attributes().get("AVAILABILITY_ZONE")).a("), ");
+                                        }
+                                        s.a(']');
+
                                         log.debug("Evicting MOVING partition (it does not belong to affinity) [" +
-                                            "grp=" + grp.cacheOrGroupName() + ", p=" + locPart.id() + ']');
+                                            "grp=" + grp.cacheOrGroupName() +
+                                            ", p=" + locPart.id() +
+                                            ", topVer=" + topVer +
+                                            ", assignment=" + s.toString() +
+                                            ']');
                                     }
                                 }
                             }
@@ -1843,8 +1860,12 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         boolean force
     ) {
         if (log.isDebugEnabled()) {
-            log.debug("Updating single partition map [grp=" + grp.cacheOrGroupName() + ", exchId=" + exchId +
-                ", parts=" + mapString(parts) + ']');
+            log.debug("Updating single partition map [" +
+                "nodeId=" + (parts != null ? parts.nodeId() : "N/A") +
+                ", grp=" + grp.cacheOrGroupName() +
+                ", exchId=" + exchId +
+                ", parts=" + mapString(parts) +
+                ']');
         }
 
         if (!ctx.discovery().alive(parts.nodeId())) {

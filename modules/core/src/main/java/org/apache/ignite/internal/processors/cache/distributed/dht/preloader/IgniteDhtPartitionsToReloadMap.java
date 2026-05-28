@@ -37,10 +37,10 @@ public class IgniteDhtPartitionsToReloadMap implements Serializable {
 
     /**
      * @param nodeId Node ID.
-     * @param cacheId Cache ID.
+     * @param groupId Cache group ID.
      * @return Collection of partitions to reload.
      */
-    public synchronized Set<Integer> get(UUID nodeId, int cacheId) {
+    public synchronized Set<Integer> get(UUID nodeId, int groupId) {
         if (map == null)
             return Collections.emptySet();
 
@@ -49,7 +49,7 @@ public class IgniteDhtPartitionsToReloadMap implements Serializable {
         if (nodeMap == null)
             return Collections.emptySet();
 
-        Set<Integer> parts = nodeMap.get(cacheId);
+        Set<Integer> parts = nodeMap.get(groupId);
 
         if (parts == null)
             return Collections.emptySet();
@@ -59,16 +59,16 @@ public class IgniteDhtPartitionsToReloadMap implements Serializable {
 
     /**
      * @param nodeId Node ID.
-     * @param cacheId Cache ID.
+     * @param groupId Cache group ID.
      * @param partId Partition ID.
      */
-    public synchronized void put(UUID nodeId, int cacheId, int partId) {
+    public synchronized void put(UUID nodeId, int groupId, int partId) {
         if (map == null)
             map = new HashMap<>();
 
         Map<Integer, Set<Integer>> nodeMap = map.computeIfAbsent(nodeId, k -> new HashMap<>());
 
-        Set<Integer> parts = nodeMap.computeIfAbsent(cacheId, k -> new HashSet<>());
+        Set<Integer> parts = nodeMap.computeIfAbsent(groupId, k -> new HashSet<>());
 
         parts.add(partId);
     }

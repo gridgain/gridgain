@@ -1014,7 +1014,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                     "starting with '" + ATTR_PREFIX + "' are reserved for internal use.");
 
         // Ack local node user attributes.
-        logNodeUserAttributes();
+        logNodeUserAttributes("initial");
 
         // Ack configuration.
         ackSpis();
@@ -1072,6 +1072,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             // Starts lifecycle aware components.
             U.startLifecycleAware(lifecycleAwares(cfg));
+
+            // Ack local node user attributes.
+            logNodeUserAttributes("beforeNodeStart");
 
             startProcessor(new IgnitePluginProcessor(ctx, cfg, plugins));
 
@@ -2755,12 +2758,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /**
      * Prints all user attributes in info mode.
      */
-    private void logNodeUserAttributes() {
+    private void logNodeUserAttributes(String phase) {
         assert log != null;
 
         if (log.isInfoEnabled())
             for (Map.Entry<?, ?> attr : cfg.getUserAttributes().entrySet())
-                log.info("Local node user attribute [" + attr.getKey() + '=' + attr.getValue() + ']');
+                log.info("Local node user attribute [" + attr.getKey() + '=' + attr.getValue() + ", phase=" + phase + ']');
     }
 
     /**
