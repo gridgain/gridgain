@@ -42,9 +42,7 @@ namespace Apache.Ignite.Core.Impl.Resource
         {
             IDictionary<Type, ResourceTypeDescriptor> descs0 = _descs;
 
-            ResourceTypeDescriptor desc;
-
-            if (!descs0.TryGetValue(type, out desc))
+            if (!descs0.TryGetValue(type, out var desc))
             {
                 lock (Mux)
                 {
