@@ -112,7 +112,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// <returns>The value for the entry that is to be stored in the cache 
         /// or <c>null</c> if the object can't be loaded</returns>
         /// <exception cref="CacheStoreException" />
-        TV Load(TK key);
+        TV? Load(TK key);
 
         /// <summary>
         /// Loads multiple objects. Application developers should implement this method to customize 
@@ -122,7 +122,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// <param name="keys">Keys identifying the values to be loaded.</param>
         /// <returns>A map of key, values to be stored in the cache.</returns>
         /// <exception cref="CacheStoreException" />
-        IEnumerable<KeyValuePair<TK, TV>> LoadAll(IEnumerable<TK> keys);
+        IEnumerable<KeyValuePair<TK, TV>>? LoadAll(IEnumerable<TK> keys);
 
         /// <summary>
         /// Write the specified value under the specified key to the external resource.

@@ -101,8 +101,6 @@ namespace Apache.Ignite.Core.Cluster
                 string attrKey = reader.ReadString();
                 object attrVal = reader.ReadObject<object>();
 
-                Debug.Assert(attrKey != null);
-
                 Attributes[attrKey] = attrVal;
 
                 count--;
@@ -115,6 +113,11 @@ namespace Apache.Ignite.Core.Cluster
         /// <param name="writer">Writer.</param>
         internal void Write(IBinaryRawWriter writer)
         {
+            if (Attributes == null)
+            {
+                throw new InvalidOperationException("AttributeNodeFilter.Attributes must not be null.");
+            }
+
             writer.WriteInt(Attributes.Count);
 
             // Does not preserve ordering, it's fine.

@@ -106,7 +106,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// or <c>null</c> if the object can't be loaded
         /// </returns>
         [ExcludeFromCodeCoverage]
-        public virtual TV Load(TK key)
+        public virtual TV? Load(TK key)
         {
             return default(TV);
         }
@@ -121,7 +121,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// A map of key, values to be stored in the cache.
         /// </returns>
         [ExcludeFromCodeCoverage]
-        public virtual IEnumerable<KeyValuePair<TK, TV>> LoadAll(IEnumerable<TK> keys)
+        public virtual IEnumerable<KeyValuePair<TK, TV>>? LoadAll(IEnumerable<TK> keys)
         {
             return null;
         }
