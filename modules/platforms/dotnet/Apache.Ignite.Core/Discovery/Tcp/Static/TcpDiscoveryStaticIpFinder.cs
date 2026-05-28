@@ -29,7 +29,7 @@ namespace Apache.Ignite.Core.Discovery.Tcp.Static
         /// Gets or sets the end points.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<string> Endpoints { get; set; }
+        public ICollection<string>? Endpoints { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TcpDiscoveryStaticIpFinder"/> class.
