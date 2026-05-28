@@ -304,10 +304,10 @@ public abstract class AbstractDataStreamerClientTest extends AbstractThinClientT
             streamer.close(true);
 
             GridTestUtils.assertThrowsAnyCause(log, () -> { streamer.addData(1, 1); return null; },
-                ClientException.class, "Data streamer is stopped.");
+                ClientException.class, "Data streamer is closed.");
 
             GridTestUtils.assertThrowsAnyCause(log, () -> { streamer.removeData(1); return null; },
-                ClientException.class, "Data streamer is stopped.");
+                ClientException.class, "Data streamer is closed.");
         }
     }
 

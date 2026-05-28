@@ -98,7 +98,7 @@ public interface ClientDataStreamer<K, V> extends AutoCloseable {
     public boolean keepBinary();
 
     /**
-     * Sets flag indicating that objects should be kept in binary format when passes to the steam receiver.
+     * Sets flag indicating that objects should be kept in binary format when passed to the stream receiver.
      * Default is {@code false}.
      *
      * @param keepBinary Keep binary flag.
