@@ -216,8 +216,6 @@ namespace Apache.Ignite.Core.Configuration
         /// <param name="reader">The reader.</param>
         internal DataStorageConfiguration(IBinaryRawReader reader)
         {
-            Debug.Assert(reader != null);
-
             StoragePath = reader.ReadString();
             CheckpointFrequency = reader.ConfigReadLongAsTimespan();
             CheckpointThreads = reader.ReadInt();
@@ -271,8 +269,6 @@ namespace Apache.Ignite.Core.Configuration
         /// <param name="writer">The writer.</param>
         internal void Write(IBinaryRawWriter writer)
         {
-            Debug.Assert(writer != null);
-
             writer.WriteString(StoragePath);
             writer.ConfigWriteTimeSpanAsLong(CheckpointFrequency);
             writer.WriteInt(CheckpointThreads);
