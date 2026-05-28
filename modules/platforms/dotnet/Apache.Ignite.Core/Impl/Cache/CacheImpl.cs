@@ -1208,7 +1208,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             var op = loc ? CacheOp.SizeLongLoc : CacheOp.SizeLong;
 
-            return DoOutOp((int) op, writer =>
+            return DoOutOp((int) op, (BinaryWriter writer) =>
             {
                 writer.WriteInt(modes0);
 
@@ -1313,7 +1313,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             StartTxIfNeeded();
 
             var holder = new CacheEntryProcessorHolder(processor, arg,
-                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
+                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a!), typeof(TK), typeof(TV));
 
             var ptr = AllocateIfNoTx(holder);
 
@@ -1444,7 +1444,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                         if (ptr != 0)
                             _ignite.HandleRegistry.Release(ptr);
 
-                        return ReadInvokeAllResults<TRes>(reader!);
+                        return ReadInvokeAllResults<TRes>(reader!)!;
                     });
             }
             catch (Exception)
@@ -1712,10 +1712,10 @@ namespace Apache.Ignite.Core.Impl.Cache
                 if (onlyPlatformCacheMode)
                 {
                     // Only platform cache.
-                    return _platformCache.GetEntries<TK, TV>();
+                    return _platformCache!.GetEntries<TK, TV>();
                 }
 
-                return _platformCache.GetEntries<TK, TV>().Concat(new CacheEnumerable<TK, TV>(this, encodedPeekModes));
+                return _platformCache!.GetEntries<TK, TV>().Concat(new CacheEnumerable<TK, TV>(this, encodedPeekModes));
             }
 
             if (!HasPlatformCache && onlyPlatformCacheMode)
@@ -2038,7 +2038,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             while (enumerator.MoveNext())
             {
                 TV val;
-                if (_platformCache.TryGetValue(enumerator.Current, out val))
+                if (_platformCache!.TryGetValue(enumerator.Current, out val))
                 {
                     if (!discardResults)
                     {
@@ -2101,7 +2101,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
 
             var part = qry.Partition;
-            Action dispose = null;
+            Action? dispose = null;
 
             if (part != null)
             {
@@ -2110,7 +2110,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 dispose = () => ReleasePartition((int) part);
             }
 
-            return new PlatformCacheQueryCursor<TK, TV>(_platformCache, filter, part, dispose);
+            return new PlatformCacheQueryCursor<TK, TV>(_platformCache!, filter, part, dispose);
         }
 
         /// <summary>
