@@ -49,7 +49,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// <param name="local">Whether query should be executed locally.</param>
         /// <param name="args">Arguments.</param>
         public SqlQuery(Type queryType, string sql, bool local, params object[] args) 
-            : this(queryType == null ? null : queryType.Name, sql, local, args)
+            : this(queryType == null! ? null! : queryType.Name, sql, local, args)
         {
             // No-op.
         }
