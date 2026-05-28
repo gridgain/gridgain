@@ -48,6 +48,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     /// </summary>
     [SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")]
     internal class CacheImpl<TK, TV> : PlatformTargetAdapter, ICache<TK, TV>, ICacheInternal, ICacheLockInternal
+        where TK : notnull
     {
         /** Ignite instance. */
         private readonly IIgniteInternal _ignite;
@@ -234,6 +235,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
         /** <inheritDoc /> */
         public ICache<TK1, TV1> WithKeepBinary<TK1, TV1>()
+            where TK1 : notnull
         {
             if (_flagKeepBinary)
             {
@@ -691,7 +693,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 // Get what we can from platform cache, and the rest from Java.
                 // Duplicates the logic from GetAll above, but extracting common parts increases complexity too much.
-                ICollection<ICacheEntry<TK, TV>> res = null;
+                ICollection<ICacheEntry<TK, TV>>? res = null;
                 var allKeysAreInPlatformCache = true;
 
                 using (var enumerator = keys.GetEnumerator())
@@ -701,7 +703,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                         var key = enumerator.Current;
 
                         TV val;
-                        if (_platformCache.TryGetValue(key, out val))
+                        if (_platformCache!.TryGetValue(key, out val))
                         {
                             res = res ?? new List<ICacheEntry<TK, TV>>();
                             res.Add(new CacheEntry<TK, TV>(key, val));
@@ -715,7 +717,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
                     if (allKeysAreInPlatformCache)
                     {
-                        return TaskRunner.FromResult(res);
+                        return TaskRunner.FromResult(res!);
                     }
 
                     // ReSharper disable AccessToDisposedClosure (write operation is synchronous, not an issue).
