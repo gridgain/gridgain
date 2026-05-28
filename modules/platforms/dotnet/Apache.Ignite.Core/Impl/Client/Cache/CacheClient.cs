@@ -96,10 +96,10 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         private readonly bool _keepBinary;
 
         /** Expiry policy. */
-        private readonly IExpiryPolicy _expiryPolicy;
+        private readonly IExpiryPolicy? _expiryPolicy;
 
         /** Logger. Lazily initialized. */
-        private ILogger _logger;
+        private ILogger? _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CacheClient{TK, TV}" /> class.
@@ -108,11 +108,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <param name="name">Cache name.</param>
         /// <param name="keepBinary">Binary mode flag.</param>
         /// /// <param name="expiryPolicy">Expire policy.</param>
-        public CacheClient(IgniteClient ignite, string name, bool keepBinary = false, IExpiryPolicy expiryPolicy = null)
+        public CacheClient(IgniteClient ignite, string name, bool keepBinary = false, IExpiryPolicy? expiryPolicy = null)
         {
-            Debug.Assert(ignite != null);
-            Debug.Assert(name != null);
-
             _name = name;
             _ignite = ignite;
             _marsh = _ignite.Marshaller;
@@ -659,7 +656,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Does the out op.
         /// </summary>
-        private void DoOutOp(ClientOp opId, Action<ClientRequestContext> writeAction = null)
+        private void DoOutOp(ClientOp opId, Action<ClientRequestContext>? writeAction = null)
         {
             DoOutInOp<object>(opId, writeAction, null);
         }
@@ -675,7 +672,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Does the out op with Partition Awareness.
         /// </summary>
-        private Task DoOutOpAsync(ClientOp opId, Action<ClientRequestContext> writeAction = null)
+        private Task DoOutOpAsync(ClientOp opId, Action<ClientRequestContext>? writeAction = null)
         {
             return DoOutInOpAsync<object>(opId, writeAction, null);
         }
@@ -691,8 +688,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Does the out in op.
         /// </summary>
-        private T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
-            Func<ClientResponseContext, T> readFunc)
+        private T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext>? writeAction,
+            Func<ClientResponseContext, T>? readFunc)
         {
             return _ignite.Socket.DoOutInOp(opId, ctx => WriteRequest(writeAction, ctx),
                 readFunc, HandleError<T>);
@@ -730,7 +727,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Does the out in op with Partition Awareness.
         /// </summary>
-        private T DoOutInOpAffinity<T>(ClientOp opId, TK key, TV val, Func<ClientResponseContext, T> readFunc)
+        private T DoOutInOpAffinity<T>(ClientOp opId, TK key, TV val, Func<ClientResponseContext, T>? readFunc)
         {
             return _ignite.Socket.DoOutInOpAffinity(
                 opId,
@@ -748,8 +745,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Does the out in op.
         /// </summary>
-        private Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
-            Func<ClientResponseContext, T> readFunc)
+        private Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<ClientRequestContext>? writeAction,
+            Func<ClientResponseContext, T>? readFunc)
         {
             return _ignite.Socket.DoOutInOpAsync(opId, ctx => WriteRequest(writeAction, ctx),
                 readFunc, HandleError<T>);
@@ -796,7 +793,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Writes the request.
         /// </summary>
-        private void WriteRequest(Action<ClientRequestContext> writeAction, ClientRequestContext ctx)
+        private void WriteRequest(Action<ClientRequestContext>? writeAction, ClientRequestContext ctx)
         {
             ctx.Stream.WriteInt(_id);
 
@@ -817,13 +814,13 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 
             if ((flags & ClientCacheRequestFlag.WithExpiryPolicy) == ClientCacheRequestFlag.WithExpiryPolicy)
             {
-                ExpiryPolicySerializer.WritePolicy(ctx.Writer, _expiryPolicy);
+                ExpiryPolicySerializer.WritePolicy(ctx.Writer, _expiryPolicy!);
             }
 
             if ((flags & ClientCacheRequestFlag.WithTransactional) == ClientCacheRequestFlag.WithTransactional)
             {
                 // ReSharper disable once PossibleNullReferenceException flag is set only if tx != null
-                ctx.Writer.WriteInt(tx.Id);
+                ctx.Writer.WriteInt(tx!.Id);
             }
 
             if (writeAction != null)
@@ -873,8 +870,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// </summary>
         private void WriteScanQuery(BinaryWriter writer, ScanQuery<TK, TV> qry)
         {
-            Debug.Assert(qry != null);
-
             if (qry.Filter == null)
             {
                 writer.WriteByte(BinaryUtils.HdrNull);
@@ -902,8 +897,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         [Obsolete]
         private static void WriteSqlQuery(IBinaryRawWriter writer, SqlQuery qry)
         {
-            Debug.Assert(qry != null);
-
             writer.WriteString(qry.QueryType);
             writer.WriteString(qry.Sql);
             QueryBase.WriteQueryArgs(writer, qry.Arguments);
@@ -922,8 +915,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         private static void WriteSqlFieldsQuery(ClientRequestContext ctx, SqlFieldsQuery qry,
             bool includeColumns = true)
         {
-            Debug.Assert(qry != null);
-
             var writer = ctx.Writer;
 
             writer.WriteString(qry.Schema);
@@ -1074,9 +1065,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         private ClientContinuousQueryHandle QueryContinuousInternal(
             ContinuousQueryClient<TK, TV> continuousQuery)
         {
-            Debug.Assert(continuousQuery != null);
-            Debug.Assert(continuousQuery.Listener != null);
-
             var listener = continuousQuery.Listener;
 
             return DoOutInOp(
@@ -1109,7 +1097,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 
             if (continuousQuery.Filter == null)
             {
-                w.WriteObject<object>(null);
+                w.WriteObject<object>(null!);
             }
             else
             {

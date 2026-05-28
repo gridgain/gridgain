@@ -65,7 +65,7 @@ namespace Apache.Ignite.Core.Client.Cache.Query.Continuous
         /// <summary>
         /// Cache entry event listener. Invoked locally.
         /// </summary>
-        public ICacheEntryEventListener<TK, TV> Listener { get; set; }
+        public ICacheEntryEventListener<TK, TV>? Listener { get; set; }
 
         /// <summary>
         /// Optional cache entry filter. Invoked on a node where cache event occurred. If the filter
@@ -76,7 +76,7 @@ namespace Apache.Ignite.Core.Client.Cache.Query.Continuous
         /// server nodes to be .NET-based. Java filters can be used with <see cref="JavaObject"/>
         /// and <see cref="ContinuousQueryExtensions.ToCacheEntryEventFilter{K, V}"/>.
         /// </summary>
-        public ICacheEntryEventFilter<TK, TV> Filter { get; set; }
+        public ICacheEntryEventFilter<TK, TV>? Filter { get; set; }
 
         /// <summary>
         /// Buffer size. When a cache update happens, entry is first put into a buffer.
