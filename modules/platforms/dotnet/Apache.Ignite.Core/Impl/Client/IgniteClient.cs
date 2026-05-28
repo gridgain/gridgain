@@ -433,8 +433,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <returns>Client node.</returns>
         public IClientClusterNode GetClientNode(Guid id)
         {
-            IClientClusterNode result;
-            if (!_nodes.TryGetValue(id, out result))
+            if (!_nodes.TryGetValue(id, out var result))
             {
                 throw new ArgumentException(string.Format(
                     CultureInfo.InvariantCulture, "Unable to find node with id='{0}'", id));

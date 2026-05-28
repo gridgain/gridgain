@@ -77,7 +77,7 @@ namespace Apache.Ignite.Core.Impl.Common
             {
                 log?.Debug("Probing IgniteHome in '{0}'...", probeDir);
 
-                var dir = new DirectoryInfo(probeDir);
+                var dir = new DirectoryInfo(probeDir!);
 
                 while (dir != null)
                 {
@@ -94,7 +94,7 @@ namespace Apache.Ignite.Core.Impl.Common
         /// <summary>
         /// Gets directories to probe for Ignite Home.
         /// </summary>
-        private static IEnumerable<string> GetProbeDirectories()
+        private static IEnumerable<string?> GetProbeDirectories()
         {
             var entryAsm = Assembly.GetEntryAssembly();
             if (entryAsm != null)

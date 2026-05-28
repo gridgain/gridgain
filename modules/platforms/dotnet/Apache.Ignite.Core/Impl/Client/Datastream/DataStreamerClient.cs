@@ -262,9 +262,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         /// </summary>
         internal DataStreamerClientEntry<TK, TV>[] GetPooledArray()
         {
-            DataStreamerClientEntry<TK,TV>[] res;
-
-            if (_arrayPool.TryPop(out res))
+            if (_arrayPool.TryPop(out var res))
             {
                 // Reset buffer and return.
                 Array.Clear(res, 0, res.Length);
@@ -422,7 +420,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
             DataStreamerClientBuffer<TK, TV> buffer,
             ClientSocket socket,
             TaskCompletionSource<object?> tcs,
-            Exception exception)
+            Exception? exception)
         {
             if (exception == null)
             {
@@ -460,8 +458,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
             try
             {
                 // Connection failed. Remove disconnected socket from the map.
-                DataStreamerClientPerNodeBuffer<TK, TV> removed;
-                _buffers.TryRemove(failedSocket, out removed);
+                _buffers.TryRemove(failedSocket, out var removed);
 
                 // Re-add entries to other buffers.
                 ReAddEntriesAndReturnBuffer(buffer);
@@ -569,8 +566,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         /// </summary>
         private DataStreamerClientPerNodeBuffer<TK, TV> GetOrAddPerNodeBuffer(ClientSocket socket)
         {
-            DataStreamerClientPerNodeBuffer<TK,TV> res;
-            if (_buffers.TryGetValue(socket, out res))
+            if (_buffers.TryGetValue(socket, out var res))
             {
                 return res;
             }

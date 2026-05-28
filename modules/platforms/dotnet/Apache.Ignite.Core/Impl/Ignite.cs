@@ -577,7 +577,7 @@ namespace Apache.Ignite.Core.Impl
         {
             return _locNode ?? (_locNode =
                        GetNodes().FirstOrDefault(x => x.IsLocal) ??
-                       ForDaemons().GetNodes().FirstOrDefault(x => x.IsLocal));
+                       ForDaemons().GetNodes().FirstOrDefault(x => x.IsLocal))!;
         }
 
         /** <inheritdoc /> */
