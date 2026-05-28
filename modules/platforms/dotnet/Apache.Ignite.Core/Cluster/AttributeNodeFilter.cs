@@ -33,13 +33,13 @@ namespace Apache.Ignite.Core.Cluster
     public sealed class AttributeNodeFilter : IClusterNodeFilter
     {
         /** */
-        private IDictionary<string, object> _attributes;
+        private IDictionary<string, object>? _attributes;
 
         /// <summary>
         /// Attributes dictionary match.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public IDictionary<string, object> Attributes
+        public IDictionary<string, object>? Attributes
         {
             get { return _attributes; }
             set
