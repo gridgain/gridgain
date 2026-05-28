@@ -85,10 +85,10 @@ namespace Apache.Ignite.Core.Impl.Client
         private readonly TimeSpan _timeout;
 
         /** Request timeout checker. */
-        private readonly Timer _timeoutCheckTimer;
+        private readonly Timer? _timeoutCheckTimer;
 
         /** Heartbeat timer. */
-        private readonly Timer _heartbeatTimer;
+        private readonly Timer? _heartbeatTimer;
 
         /** Callback checker guard. */
         private volatile bool _checkingTimeouts;
@@ -111,7 +111,7 @@ namespace Apache.Ignite.Core.Impl.Client
         private long _requestId;
 
         /** Socket failure exception. */
-        private volatile Exception _exception;
+        private volatile Exception? _exception;
 
         /** Locker. */
         private readonly object _sendRequestSyncRoot = new object();
@@ -490,7 +490,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 return;
             }
 
-            Request req;
+            Request? req;
             if (!_requests.TryRemove(requestId, out req))
             {
                 if (_exception != null)
@@ -988,7 +988,7 @@ namespace Apache.Ignite.Core.Impl.Client
             {
                 if (_exception != null)
                 {
-                    _timeoutCheckTimer.Dispose();
+                    _timeoutCheckTimer?.Dispose();
                 }
 
                 foreach (var pair in _requests)
@@ -1057,7 +1057,6 @@ namespace Apache.Ignite.Core.Impl.Client
         private void EndRequestsWithError()
         {
             var ex = _exception;
-            Debug.Assert(ex != null);
 
             while (!_requests.IsEmpty)
             {
@@ -1066,7 +1065,7 @@ namespace Apache.Ignite.Core.Impl.Client
                     Request? req;
                     if (_requests.TryRemove(reqId, out req) && req != null)
                     {
-                        req.CompletionSource.TrySetException(ex);
+                        req.CompletionSource.TrySetException(ex!);
                     }
                 }
             }

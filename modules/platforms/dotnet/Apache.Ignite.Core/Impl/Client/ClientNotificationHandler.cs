@@ -66,7 +66,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         /// <param name="stream">Notification data.</param>
         /// <param name="exception">Exception. Can be null.</param>
-        public void Handle(IBinaryStream? stream, Exception exception)
+        public void Handle(IBinaryStream? stream, Exception? exception)
         {
             // We are in the socket receiver thread here.
             // However, handler is set from another thread, so lock is required.

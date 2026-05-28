@@ -268,7 +268,7 @@ namespace Apache.Ignite.Core.Client
         /// Gets or sets the logger.
         /// Default is <see cref="ConsoleLogger"/>. Set to <c>null</c> to disable logging.
         /// </summary>
-        public ILogger Logger { get; set; }
+        public ILogger? Logger { get; set; }
 
         /// <summary>
         /// Gets or sets the transaction configuration.
