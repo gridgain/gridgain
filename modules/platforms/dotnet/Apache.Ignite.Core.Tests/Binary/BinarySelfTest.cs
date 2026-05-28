@@ -1754,7 +1754,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             public InnerObjectType InObj { get; set; }
 
             /** <inheritdoc /> */
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (this == obj)
                     return true;
@@ -1779,7 +1779,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             public int PInt2 { get; set; }
 
             /** <inheritdoc /> */
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (this == obj)
                     return true;
@@ -1823,7 +1823,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             public LinkedList<int> LinkedList { get; set; }
 
             /** <inheritdoc /> */
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (this == obj)
                     return true;
@@ -1939,7 +1939,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             public Guid?[] PGuid { get; set; }
 
             /** <inheritdoc /> */
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (this == obj)
                     return true;
@@ -2084,7 +2084,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             public IgniteGuid IgniteGuid { get; set; }
 
             /** <inheritdoc /> */
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (this == obj)
                     return true;
@@ -2686,7 +2686,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 return Foo == other.Foo;
             }
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
@@ -2727,7 +2727,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 return _x == other._x && _y.Equals(other._y);
             }
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (ReferenceEquals(null, obj))
                     return false;

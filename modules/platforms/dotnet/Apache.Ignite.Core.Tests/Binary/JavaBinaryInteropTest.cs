@@ -327,7 +327,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         {
             public int X { get; set; }
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
@@ -348,7 +348,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         {
             public int X { get; set; }
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 return obj is Bar && X == ((Bar) obj).X;

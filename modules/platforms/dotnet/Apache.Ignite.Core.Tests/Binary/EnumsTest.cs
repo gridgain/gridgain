@@ -448,7 +448,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                     && Long == other.Long && ULong == other.ULong;
             }
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
@@ -491,7 +491,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                        Equals(Long, other.Long) && Equals(ULong, other.ULong);
             }
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
@@ -534,7 +534,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                     && Long == other.Long && ULong == other.ULong;
             }
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
@@ -646,7 +646,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 UShortEnum.Foo, IntEnum.Bar, UIntEnum.Foo, LongEnum.Bar, ULongEnum.Foo
             };
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
@@ -680,7 +680,7 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             private IntEnum EnmVal2 = IntEnum.Foo;
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;

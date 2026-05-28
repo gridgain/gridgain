@@ -456,7 +456,7 @@ namespace Apache.Ignite.Core.Tests
             }
 
             /** <inheritDoc /> */
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 var entry = obj as BinarizableEntry;
                 return entry != null && entry._val == _val;
@@ -488,7 +488,7 @@ namespace Apache.Ignite.Core.Tests
             }
 
             /** <inheritDoc /> */
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 var entry = obj as SerializableEntry;
                 return entry != null && entry._val == _val;

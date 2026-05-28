@@ -164,7 +164,7 @@ namespace Apache.Ignite.Core.Events
         /// <returns>
         ///   <c>true</c> if the specified object is equal to this instance; otherwise, <c>false</c>.
         /// </returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;

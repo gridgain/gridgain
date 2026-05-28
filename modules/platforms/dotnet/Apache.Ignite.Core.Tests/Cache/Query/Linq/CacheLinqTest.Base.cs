@@ -492,7 +492,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query.Linq
                 return _foo == other._foo && _bar == other._bar;
             }
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 return obj is RoleKey && Equals((RoleKey) obj);
