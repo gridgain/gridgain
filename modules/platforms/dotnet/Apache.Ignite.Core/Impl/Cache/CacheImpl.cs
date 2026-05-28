@@ -1326,7 +1326,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                         writer.WriteLong(ptr);
                         writer.WriteObjectDetached(holder);
                     },
-                    (input, res) => res == True ? Unmarshal<TRes>(input) : default(TRes),
+                    (input, res) => res == True ? Unmarshal<TRes>(input) : default(TRes)!,
                     _readException);
             }
             finally
@@ -1345,7 +1345,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             StartTxIfNeeded();
 
             var holder = new CacheEntryProcessorHolder(processor, arg,
-                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
+                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a!), typeof(TK), typeof(TV));
 
             var ptr = AllocateIfNoTx(holder);
 
@@ -1363,7 +1363,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                             _ignite.HandleRegistry.Release(ptr);
 
                         if (reader == null)
-                            return default(TRes);
+                            return default(TRes)!;
 
                         var hasError = reader.ReadBoolean();
 

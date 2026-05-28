@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         private readonly object? _arg;
 
         // func to invoke Process method on ICacheEntryProcessor in form of object.
-        private readonly Func<IMutableCacheEntryInternal, object?, object> _processFunc;
+        private readonly Func<IMutableCacheEntryInternal, object?, object?> _processFunc;
 
         // entry creator delegate
         private readonly Func<object, object, bool, IMutableCacheEntryInternal> _entryCtor;
@@ -52,7 +52,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <param name="keyType">Type of the key.</param>
         /// <param name="valType">Type of the value.</param>
         public CacheEntryProcessorHolder(object proc, object? arg,
-            Func<IMutableCacheEntryInternal, object?, object> processFunc, Type keyType, Type valType)
+            Func<IMutableCacheEntryInternal, object?, object?> processFunc, Type keyType, Type valType)
         {
             _proc = proc;
             _arg = arg;
