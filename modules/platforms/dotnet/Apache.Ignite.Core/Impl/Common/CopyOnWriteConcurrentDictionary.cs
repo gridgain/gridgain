@@ -29,6 +29,7 @@ namespace Apache.Ignite.Core.Impl.Common
     [SuppressMessage("Microsoft.Naming", "CA1711:IdentifiersShouldNotHaveIncorrectSuffix")]
     [SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
     public class CopyOnWriteConcurrentDictionary<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
+        where TKey : notnull
     {
         /** */
         private volatile Dictionary<TKey, TValue> _dict = new Dictionary<TKey, TValue>();
