@@ -37,7 +37,7 @@ namespace Apache.Ignite.Core.Events
         private readonly bool _isNear;
 
         /** */
-        private readonly IClusterNode _eventNode;
+        private readonly IClusterNode? _eventNode;
 
         /** */
         private readonly object _key;
@@ -105,7 +105,7 @@ namespace Apache.Ignite.Core.Events
         /// <summary>
         /// Gets node which initiated cache operation or null if that node is not available. 
         /// </summary>
-        public IClusterNode EventNode { get { return _eventNode; } }
+        public IClusterNode? EventNode { get { return _eventNode; } }
 
         /// <summary>
         /// Gets cache entry associated with event. 
@@ -164,7 +164,7 @@ namespace Apache.Ignite.Core.Events
 	    {
             return string.Format(CultureInfo.InvariantCulture, 
                 "{0}: IsNear={1}, Key={2}, HasNewValue={3}, HasOldValue={4}, NodeId={5}", Name, 
-                _isNear, _key, HasNewValue, HasOldValue, Node.Id);
+                _isNear, _key, HasNewValue, HasOldValue, Node?.Id);
 	    }
     }
 }

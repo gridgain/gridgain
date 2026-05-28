@@ -40,7 +40,7 @@ namespace Apache.Ignite.Core.Events
         private readonly IgniteGuid? _jobId;
 
         /** */
-        private readonly IClusterNode _taskNode;
+        private readonly IClusterNode? _taskNode;
 
         /** */
         private readonly Guid? _taskSubjectId;
@@ -82,7 +82,7 @@ namespace Apache.Ignite.Core.Events
         /// <summary>
         /// Get node where parent task of the job has originated. 
         /// </summary>
-        public IClusterNode TaskNode { get { return _taskNode; } }
+        public IClusterNode? TaskNode { get { return _taskNode; } }
 
         /// <summary>
         /// Gets task subject ID. 

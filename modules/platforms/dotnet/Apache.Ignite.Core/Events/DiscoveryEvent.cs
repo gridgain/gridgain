@@ -29,7 +29,7 @@ namespace Apache.Ignite.Core.Events
     public sealed class DiscoveryEvent : EventBase
 	{
         /** */
-        private readonly IClusterNode _eventNode;
+        private readonly IClusterNode? _eventNode;
 
         /** */
         private readonly long _topologyVersion;
@@ -56,7 +56,7 @@ namespace Apache.Ignite.Core.Events
         /// event was recorded. For example, node A locally recorded the event that a remote node B joined the topology. 
         /// In this case this property will return node B. 
         /// </summary>
-        public IClusterNode EventNode { get { return _eventNode; } }
+        public IClusterNode? EventNode { get { return _eventNode; } }
 
         /// <summary>
         /// Gets topology version if this event is raised on topology change and configured discovery

@@ -32,7 +32,7 @@ namespace Apache.Ignite.Core.Events
         private readonly int _partition;
 
         /** */
-        private readonly IClusterNode _discoveryNode;
+        private readonly IClusterNode? _discoveryNode;
 
         /** */
         private readonly int _discoveryEventType;
@@ -70,7 +70,7 @@ namespace Apache.Ignite.Core.Events
         /// <summary>
         /// Gets shadow of the node that triggered this rebalancing event. 
         /// </summary>
-        public IClusterNode DiscoveryNode { get { return _discoveryNode; } }
+        public IClusterNode? DiscoveryNode { get { return _discoveryNode; } }
 
         /// <summary>
         /// Gets type of discovery event that triggered this rebalancing event. 
