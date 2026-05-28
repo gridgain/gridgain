@@ -40,7 +40,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Initializes a new instance of the <see cref="QueryIndex"/> class.
         /// </summary>
-        public QueryIndex() : this((string[]) null)
+        public QueryIndex() : this((string[]?) null)
         {
             // No-op.
         }
@@ -49,7 +49,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Initializes a new instance of the <see cref="QueryIndex" /> class.
         /// </summary>
         /// <param name="fieldNames">Names of the fields to index.</param>
-        public QueryIndex(params string[] fieldNames) : this(false, fieldNames)
+        public QueryIndex(params string[]? fieldNames) : this(false, fieldNames)
         {
             // No-op.
         }
@@ -59,7 +59,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         /// <param name="isDescending">Sort direction.</param>
         /// <param name="fieldNames">Names of the fields to index.</param>
-        public QueryIndex(bool isDescending, params string[] fieldNames) 
+        public QueryIndex(bool isDescending, params string[]? fieldNames)
             : this(isDescending, QueryIndexType.Sorted, fieldNames)
         {
             // No-op.
@@ -71,7 +71,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <param name="isDescending">Sort direction.</param>
         /// <param name="indexType">Type of the index.</param>
         /// <param name="fieldNames">Names of the fields to index.</param>
-        public QueryIndex(bool isDescending, QueryIndexType indexType, params string[] fieldNames) 
+        public QueryIndex(bool isDescending, QueryIndexType indexType, params string[]? fieldNames)
         {
             if (fieldNames != null)
             {
@@ -100,7 +100,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Gets or sets the index name.
         /// Will be set automatically if not specified.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Gets or sets the type of the index.
@@ -111,7 +111,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Gets or sets a collection of fields to be indexed.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<QueryIndexField> Fields { get; set; }
+        public ICollection<QueryIndexField>? Fields { get; set; }
 
         /// <summary>
         /// Gets index inline size in bytes. When enabled part of indexed value will be placed directly to index pages,
