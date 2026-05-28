@@ -19,7 +19,6 @@
 namespace Apache.Ignite.Core.Cache.Configuration
 {
     using System;
-    using System.Diagnostics;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Common;
@@ -31,10 +30,10 @@ namespace Apache.Ignite.Core.Cache.Configuration
     public class QueryField
     {
         /** */
-        private Type _type;
+        private Type? _type;
 
         /** */
-        private string _fieldTypeName;
+        private string? _fieldTypeName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="QueryField"/> class.
@@ -78,8 +77,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         internal QueryField(IBinaryRawReader reader)
         {
-            Debug.Assert(reader != null);
-
             Name = reader.ReadString();
             FieldTypeName = reader.ReadString();
             IsKeyField = reader.ReadBoolean();
@@ -94,8 +91,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         internal void Write(IBinaryRawWriter writer)
         {
-            Debug.Assert(writer != null);
-
             writer.WriteString(Name);
             writer.WriteString(FieldTypeName);
             writer.WriteBoolean(IsKeyField);
@@ -108,14 +103,14 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Gets or sets the field name.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Gets or sets the type of the value.
         /// <para />
         /// This is a shortcut for <see cref="FieldTypeName"/>. Getter will return null for non-primitive types.
         /// </summary>
-        public Type FieldType
+        public Type? FieldType
         {
             get { return _type ?? JavaTypes.GetDotNetType(FieldTypeName); }
             set
@@ -131,7 +126,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Gets the Java type name.
         /// </summary>
-        public string FieldTypeName
+        public string? FieldTypeName
         {
             get { return _fieldTypeName; }
             set
@@ -155,7 +150,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Gets or sets the default value for the field.
         /// </summary>
-        public object DefaultValue { get; set; }
+        public object? DefaultValue { get; set; }
 
         /// <summary>
         /// Gets or sets the precision for the field.
@@ -172,9 +167,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         internal void Validate(ILogger log, string logInfo)
         {
-            Debug.Assert(log != null);
-            Debug.Assert(logInfo != null);
-
             logInfo += string.Format(", QueryField '{0}'", Name);
 
             JavaTypes.LogIndirectMappingWarning(_type, log, logInfo);
@@ -185,8 +177,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         internal void CopyLocalProperties(QueryField field)
         {
-            Debug.Assert(field != null);
-
             if (field._type != null)
             {
                 _type = field._type;
