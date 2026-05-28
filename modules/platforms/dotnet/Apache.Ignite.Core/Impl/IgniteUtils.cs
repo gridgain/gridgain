@@ -88,7 +88,7 @@ namespace Apache.Ignite.Core.Impl
             if (type == null)
                 throw new IgniteException("Failed to create class instance [className=" + typeName + ']');
 
-            var res =  (T) Activator.CreateInstance(type);
+            var res =  (T) Activator.CreateInstance(type)!;
 
             if (props != null)
                 SetProperties(res, props);

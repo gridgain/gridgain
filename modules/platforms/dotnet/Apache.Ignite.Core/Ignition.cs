@@ -703,9 +703,7 @@ namespace Apache.Ignite.Core
                     return Nodes.Single().Value;
                 }
 
-                Ignite result;
-
-                if (Nodes.TryGetValue(new NodeKey(null), out result))
+                if (Nodes.TryGetValue(new NodeKey(null), out var result))
                 {
                     return result;
                 }
@@ -783,9 +781,7 @@ namespace Apache.Ignite.Core
             {
                 NodeKey key = new NodeKey(name);
 
-                Ignite node;
-
-                if (!Nodes.TryGetValue(key, out node))
+                if (!Nodes.TryGetValue(key, out var node))
                     return false;
 
                 node.Stop(cancel);

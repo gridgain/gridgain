@@ -382,7 +382,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         private static IEnumerable<QueryIndex> GetGroupIndexes(List<QueryIndexEx> indexes)
         {
             return indexes.Where(idx => idx.IndexGroups != null)
-                .SelectMany(idx => idx.IndexGroups.Select(g => new {Index = idx, GroupName = g}))
+                .SelectMany(idx => idx.IndexGroups!.Select(g => new {Index = idx, GroupName = g}))
                 .GroupBy(x => x.GroupName)
                 .Select(g =>
                 {
@@ -390,7 +390,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
 
                     var first = idxs.First();
 
-                    return new QueryIndex(idxs.SelectMany(i => i.Fields).ToArray())
+                    return new QueryIndex(idxs.SelectMany(i => i.Fields!).ToArray())
                     {
                         IndexType = first.IndexType,
                         Name = first.Name

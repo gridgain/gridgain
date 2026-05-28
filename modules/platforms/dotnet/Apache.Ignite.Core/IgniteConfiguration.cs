@@ -668,7 +668,7 @@ namespace Apache.Ignite.Core
                 {
                     ValidateLocalEventListener(listener);
 
-                    writer.WriteIntArray(listener.EventTypes.ToArray());
+                    writer.WriteIntArray(listener.EventTypes!.ToArray());
                 }
             }
             else
@@ -975,9 +975,7 @@ namespace Apache.Ignite.Core
 
                 foreach (var cache in CacheConfiguration)
                 {
-                    CacheConfiguration src;
-
-                    if (cache != null && caches.TryGetValue("_" + cache.Name, out src))
+                    if (cache != null && caches.TryGetValue("_" + cache.Name, out var src))
                     {
                         cache.CopyLocalProperties(src);
                     }

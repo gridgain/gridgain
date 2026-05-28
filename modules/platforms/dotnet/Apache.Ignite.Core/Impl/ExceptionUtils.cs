@@ -153,9 +153,7 @@ namespace Apache.Ignite.Core.Impl
             {
                 var match = InnerClassRegex.Match(msg ?? string.Empty);
 
-                ExceptionFactory innerCtor;
-
-                if (match.Success && Exs.TryGetValue(match.Groups[1].Value, out innerCtor))
+                if (match.Success && Exs.TryGetValue(match.Groups[1].Value, out var innerCtor))
                 {
                     return ctor(clsName, msg,
                         innerCtor(match.Groups[1].Value, match.Groups[2].Value, innerException, ignite),
