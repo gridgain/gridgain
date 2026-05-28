@@ -30,6 +30,7 @@ namespace Apache.Ignite.Core.Datastream
     /// <typeparam name="TV">The type of the cache value.</typeparam>
     [Serializable]
     public sealed class StreamVisitor<TK, TV> : IStreamReceiver<TK, TV>
+        where TK : notnull
     {
         /** Visitor action */
         private readonly Action<ICache<TK, TV>, ICacheEntry<TK, TV>> _action;
