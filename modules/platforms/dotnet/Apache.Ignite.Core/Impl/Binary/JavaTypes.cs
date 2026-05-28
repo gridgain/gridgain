@@ -77,7 +77,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Gets the corresponding Java type name.
         /// </summary>
-        public static string GetJavaTypeName(Type type)
+        public static string? GetJavaTypeName(Type? type)
         {
             if (type == null)
                 return null;
@@ -93,7 +93,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Logs a warning for indirectly mapped types.
         /// </summary>
-        public static void LogIndirectMappingWarning(Type type, ILogger log, string logInfo)
+        public static void LogIndirectMappingWarning(Type? type, ILogger log, string logInfo)
         {
             if (type == null)
                 return;
@@ -127,18 +127,18 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         /// <param name="javaTypeName">Name of the java type.</param>
         /// <returns></returns>
-        public static Type GetDotNetType(string javaTypeName)
+        public static Type? GetDotNetType(string? javaTypeName)
         {
             if (string.IsNullOrEmpty(javaTypeName))
                 return null;
 
             string fullJavaTypeName;
 
-            JavaPrimitiveToType.TryGetValue(javaTypeName, out fullJavaTypeName);
+            JavaPrimitiveToType.TryGetValue(javaTypeName!, out fullJavaTypeName);
 
             Type res;
 
-            return JavaToNet.TryGetValue(fullJavaTypeName ?? javaTypeName, out res) ? res : null;
+            return JavaToNet.TryGetValue(fullJavaTypeName ?? javaTypeName!, out res) ? res : null;
         }
     }
 }

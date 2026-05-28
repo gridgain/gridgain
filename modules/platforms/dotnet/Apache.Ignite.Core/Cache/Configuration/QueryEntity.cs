@@ -35,22 +35,22 @@ namespace Apache.Ignite.Core.Cache.Configuration
     public sealed class QueryEntity : IQueryEntityInternal, IBinaryRawWriteAware
     {
         /** */
-        private Type _keyType;
+        private Type? _keyType;
 
         /** */
-        private Type _valueType;
+        private Type? _valueType;
 
         /** */
-        private string _valueTypeName;
+        private string? _valueTypeName;
 
         /** */
-        private string _keyTypeName;
+        private string? _keyTypeName;
 
         /** */
-        private Dictionary<string, string> _aliasMap;
+        private Dictionary<string, string>? _aliasMap;
 
         /** */
-        private ICollection<QueryAlias> _aliases;
+        private ICollection<QueryAlias>? _aliases;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="QueryEntity"/> class.
@@ -83,7 +83,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Gets or sets key Java type name.
         /// </summary>
-        public string KeyTypeName
+        public string? KeyTypeName
         {
             get { return _keyTypeName; }
             set
@@ -101,7 +101,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Setting this property will overwrite <see cref="Fields"/> and <see cref="Indexes"/> according to
         /// <see cref="QuerySqlFieldAttribute"/>, if any.
         /// </summary>
-        public Type KeyType
+        public Type? KeyType
         {
             get { return _keyType ?? JavaTypes.GetDotNetType(KeyTypeName); }
             set
@@ -177,7 +177,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// The order of fields defines the order of columns returned by the 'select *' queries.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<QueryField> Fields { get; set; }
+        public ICollection<QueryField>? Fields { get; set; }
 
         /// <summary>
         /// Gets or sets field name aliases: mapping from full name in dot notation to an alias 
@@ -185,7 +185,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Example: {"parent.name" -> "parentName"}.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<QueryAlias> Aliases
+        public ICollection<QueryAlias>? Aliases
         {
             get { return _aliases; }
             set
@@ -362,7 +362,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Rescans the attributes in <see cref="KeyType"/> and <see cref="ValueType"/>.
         /// </summary>
-        private void RescanAttributes(Type keyType, Type valType)
+        private void RescanAttributes(Type? keyType, Type? valType)
         {
             if (keyType == null && valType == null)
                 return;
@@ -419,16 +419,12 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <param name="isKey">Whether this is a key type.</param>
         /// <exception cref="System.InvalidOperationException">Recursive Query Field definition detected:  + type</exception>
         private static void ScanAttributes(Type type, List<QueryField> fields, List<QueryIndexEx> indexes, 
-            string parentPropName, ISet<Type> visitedTypes, bool isKey)
+            string? parentPropName, ISet<Type> visitedTypes, bool isKey)
         {
-            Debug.Assert(type != null);
-            Debug.Assert(fields != null);
-            Debug.Assert(indexes != null);
-
-            if (visitedTypes.Contains(type))
+            if (!visitedTypes.Add(type))
+            {
                 throw new InvalidOperationException("Recursive Query Field definition detected: " + type);
-
-            visitedTypes.Add(type);
+            }
 
             foreach (var memberInfo in ReflectionUtils.GetFieldsAndProperties(type))
             {
@@ -498,7 +494,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
             /// <param name="indexType">Type of the index.</param>
             /// <param name="groups">The groups.</param>
             public QueryIndexEx(string fieldName, bool isDescending, QueryIndexType indexType, 
-                ICollection<string> groups) 
+                ICollection<string>? groups)
                 : base(isDescending, indexType, fieldName)
             {
                 IndexGroups = groups;
@@ -507,7 +503,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
             /// <summary>
             /// Gets or sets the index groups.
             /// </summary>
-            public ICollection<string> IndexGroups { get; set; }
+            public ICollection<string>? IndexGroups { get; set; }
         }
     }
 }
