@@ -78,8 +78,6 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         internal void CopyLocalProperties(BinaryConfiguration cfg)
         {
-            Debug.Assert(cfg != null);
-
             IdMapper = cfg.IdMapper;
             NameMapper = cfg.NameMapper;
             KeepDeserialized = cfg.KeepDeserialized;
@@ -117,7 +115,7 @@ namespace Apache.Ignite.Core.Binary
         /// Type configurations.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<BinaryTypeConfiguration> TypeConfigurations { get; set; }
+        public ICollection<BinaryTypeConfiguration>? TypeConfigurations { get; set; }
 
         /// <summary>
         /// Gets or sets a collection of assembly-qualified type names
@@ -126,22 +124,22 @@ namespace Apache.Ignite.Core.Binary
         /// Shorthand for creating <see cref="BinaryTypeConfiguration"/>.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<string> Types { get; set; }
+        public ICollection<string>? Types { get; set; }
 
         /// <summary>
         /// Default name mapper.
         /// </summary>
-        public IBinaryNameMapper NameMapper { get; set; }
+        public IBinaryNameMapper? NameMapper { get; set; }
 
         /// <summary>
         /// Default ID mapper.
         /// </summary>
-        public IBinaryIdMapper IdMapper { get; set; }
+        public IBinaryIdMapper? IdMapper { get; set; }
 
         /// <summary>
         /// Default serializer.
         /// </summary>
-        public IBinarySerializer Serializer { get; set; }
+        public IBinarySerializer? Serializer { get; set; }
 
         /// <summary>
         /// Gets or sets a converter between <see cref="DateTime"/> and Java Timestamp.
@@ -150,7 +148,7 @@ namespace Apache.Ignite.Core.Binary
         /// <para />
         /// See also <see cref="ForceTimestamp"/>.
         /// </summary>
-        public ITimestampConverter TimestampConverter { get; set; }
+        public ITimestampConverter? TimestampConverter { get; set; }
 
         /// <summary>
         /// Default keep deserialized flag.
