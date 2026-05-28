@@ -83,7 +83,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         private readonly ConcurrentStack<DataStreamerClientEntry<TK, TV>[]> _arrayPool
             = new ConcurrentStack<DataStreamerClientEntry<TK, TV>[]>();
 
-        private readonly Timer _autoFlushTimer;
+        private readonly Timer? _autoFlushTimer;
 
         /** */
         private int _arraysAllocated;
@@ -92,7 +92,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         private long _entriesSent;
 
         /** Exception. When set, the streamer is closed. */
-        private volatile Exception _exception;
+        private volatile Exception? _exception;
 
         /** Cancelled flag. */
         private volatile bool _cancelled;
@@ -108,9 +108,6 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
             string cacheName,
             DataStreamerClientOptions<TK, TV> options)
         {
-            Debug.Assert(socket != null);
-            Debug.Assert(!string.IsNullOrEmpty(cacheName));
-
             // Copy to prevent modification.
             _options = new DataStreamerClientOptions<TK, TV>(options);
             _socket = socket;
