@@ -20,7 +20,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using Apache.Ignite.Core.Binary;
@@ -119,7 +118,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Gets or sets value Java type name.
         /// </summary>
-        public string ValueTypeName
+        public string? ValueTypeName
         {
             get { return _valueTypeName; }
             set
@@ -137,7 +136,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Setting this property will overwrite <see cref="Fields"/> and <see cref="Indexes"/> according to
         /// <see cref="QuerySqlFieldAttribute"/>, if any.
         /// </summary>
-        public Type ValueType
+        public Type? ValueType
         {
             get { return _valueType ?? JavaTypes.GetDotNetType(ValueTypeName); }
             set
@@ -157,20 +156,20 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <para />
         /// By default, entity key can be accessed with a special "_key" field name.
         /// </summary>
-        public string KeyFieldName { get; set; }
+        public string? KeyFieldName { get; set; }
 
         /// <summary>
         /// Gets or sets the name of the field that is used to denote the entire value.
         /// <para />
         /// By default, entity value can be accessed with a special "_val" field name.
         /// </summary>
-        public string ValueFieldName { get; set; }
+        public string? ValueFieldName { get; set; }
 
         /// <summary>
         /// Gets or sets the name of the SQL table.
         /// When not set, value type name is used.
         /// </summary>
-        public string TableName { get; set; }
+        public string? TableName { get; set; }
 
         /// <summary>
         /// Gets or sets query fields, a map from field name to Java type name. 
@@ -199,13 +198,13 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Gets or sets the query indexes.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<QueryIndex> Indexes { get; set; }
+        public ICollection<QueryIndex>? Indexes { get; set; }
 
         /// <summary>
         /// Gets the alias by field name, or null when no match found.
         /// This method constructs a dictionary lazily to perform lookups.
         /// </summary>
-        string IQueryEntityInternal.GetAlias(string fieldName)
+        string? IQueryEntityInternal.GetAlias(string fieldName)
         {
             if (Aliases == null || Aliases.Count == 0)
             {
@@ -310,9 +309,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         internal void Validate(ILogger log, string logInfo)
         {
-            Debug.Assert(log != null);
-            Debug.Assert(logInfo != null);
-
             logInfo += string.Format(", QueryEntity '{0}:{1}'", _keyTypeName ?? "", _valueTypeName ?? "");
 
             JavaTypes.LogIndirectMappingWarning(_keyType, log, logInfo);
@@ -331,8 +327,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         internal void CopyLocalProperties(QueryEntity entity)
         {
-            Debug.Assert(entity != null);
-
             if (entity._keyType != null)
             {
                 _keyType = entity._keyType;

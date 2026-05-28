@@ -25,6 +25,6 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// Gets the alias by field name, or null when no match found.
         /// This method constructs a dictionary lazily to perform lookups.
         /// </summary>
-        string GetAlias(string fieldName);
+        string? GetAlias(string fieldName);
     }
 }
