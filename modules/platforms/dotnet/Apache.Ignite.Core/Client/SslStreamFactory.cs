@@ -91,12 +91,12 @@ namespace Apache.Ignite.Core.Client
         /// <c>keytool -importkeystore -srckeystore thekeystore.jks -srcstoretype JKS
         /// -destkeystore thekeystore.pfx -deststoretype PKCS12</c>
         /// </summary>
-        public string CertificatePath { get; set; }
+        public string? CertificatePath { get; set; }
 
         /// <summary>
         /// Gets or sets the certificate file password.
         /// </summary>
-        public string CertificatePassword { get; set; }
+        public string? CertificatePassword { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to ignore invalid remote (server) certificates.
