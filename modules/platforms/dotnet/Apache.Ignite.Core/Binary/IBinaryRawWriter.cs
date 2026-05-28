@@ -148,7 +148,7 @@ namespace Apache.Ignite.Core.Binary
         /// Write string value.
         /// </summary>
         /// <param name="val">String value.</param>
-        void WriteString(string val);
+        void WriteString(string? val);
 
         /// <summary>
         /// Write string array.
