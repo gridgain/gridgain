@@ -66,7 +66,7 @@ namespace Apache.Ignite.Core.Discovery.Tcp.Multicast
         /// If local address is not set or is any local address then IP finder
         /// creates multicast sockets for all found non-loopback addresses.
         /// </summary>
-        public string LocalAddress { get; set; }
+        public string? LocalAddress { get; set; }
 
         /// <summary>
         /// Gets or sets the IP address of the multicast group.

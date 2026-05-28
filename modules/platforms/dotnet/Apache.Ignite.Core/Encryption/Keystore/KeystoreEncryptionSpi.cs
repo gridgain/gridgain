@@ -50,12 +50,12 @@ namespace Apache.Ignite.Core.Encryption.Keystore
         /// <summary>
         /// Path to key store.
         /// </summary>
-        public string KeyStorePath { get; set; }
+        public string? KeyStorePath { get; set; }
 
         /// <summary>
         /// Key store password.
         /// </summary>
-        public string KeyStorePassword { get; set; }
+        public string? KeyStorePassword { get; set; }
 
         /// <summary>
         /// Empty constructor.

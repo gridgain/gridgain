@@ -53,7 +53,7 @@ namespace Apache.Ignite.Core.Common
         {
             Debug.Assert(reader != null);
 
-            var stream = ((BinaryReader) reader).Stream;
+            var stream = ((BinaryReader) reader!).Stream;
 
             _localId = stream.ReadLong();
             _globalId = BinaryUtils.ReadGuid(stream);
@@ -162,7 +162,7 @@ namespace Apache.Ignite.Core.Common
         {
             Debug.Assert(writer != null);
 
-            var stream = ((BinaryWriter) writer.GetRawWriter()).Stream;
+            var stream = ((BinaryWriter) writer!.GetRawWriter()).Stream;
 
             stream.WriteLong(_localId);
             BinaryUtils.WriteGuid(_globalId, stream);
