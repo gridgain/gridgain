@@ -35,7 +35,7 @@ namespace Apache.Ignite.Core.Cache.Affinity
         private int _partitions = DefaultPartitions;
 
         /** */
-        private IAffinityFunction _baseFunction;
+        private IAffinityFunction? _baseFunction;
 
 
         /// <summary>
@@ -63,24 +63,14 @@ namespace Apache.Ignite.Core.Cache.Affinity
         /// <returns>
         /// Partition number for a given key.
         /// </returns>
-        public virtual int GetPartition(object key)
-        {
-            ThrowIfUninitialized();
-
-            return _baseFunction.GetPartition(key);
-        }
+        public virtual int GetPartition(object key) => ThrowIfUninitialized().GetPartition(key);
 
         /// <summary>
         /// Removes node from affinity. This method is called when it is safe to remove
         /// disconnected node from affinity mapping.
         /// </summary>
         /// <param name="nodeId">The node identifier.</param>
-        public virtual void RemoveNode(Guid nodeId)
-        {
-            ThrowIfUninitialized();
-
-            _baseFunction.RemoveNode(nodeId);
-        }
+        public virtual void RemoveNode(Guid nodeId) => ThrowIfUninitialized().RemoveNode(nodeId);
 
         /// <summary>
         /// Gets affinity nodes for a partition. In case of replicated cache, all returned
@@ -97,12 +87,8 @@ namespace Apache.Ignite.Core.Cache.Affinity
         /// A collection of partitions, where each partition is a collection of nodes,
         /// where first node is a primary node, and other nodes are backup nodes.
         /// </returns>
-        public virtual IEnumerable<IEnumerable<IClusterNode>> AssignPartitions(AffinityFunctionContext context)
-        {
-            ThrowIfUninitialized();
-
-            return _baseFunction.AssignPartitions(context);
-        }
+        public virtual IEnumerable<IEnumerable<IClusterNode>?> AssignPartitions(AffinityFunctionContext context) =>
+            ThrowIfUninitialized().AssignPartitions(context);
 
         /// <summary>
         /// Gets or sets a value indicating whether to exclude same-host-neighbors from being backups of each other.
@@ -129,10 +115,7 @@ namespace Apache.Ignite.Core.Cache.Affinity
         /// <summary>
         /// Gets the direct usage error.
         /// </summary>
-        private void ThrowIfUninitialized()
-        {
-            if (_baseFunction == null)
-                throw new IgniteException(GetType() + " has not yet been initialized.");
-        }
+        private IAffinityFunction ThrowIfUninitialized() =>
+            _baseFunction ?? throw new IgniteException(GetType() + " has not yet been initialized.");
     }
 }

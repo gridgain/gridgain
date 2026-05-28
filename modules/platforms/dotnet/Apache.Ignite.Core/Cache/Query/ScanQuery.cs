@@ -28,7 +28,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// Initializes a new instance of the <see cref="ScanQuery{K, V}"/> class.
         /// </summary>
         /// <param name="filter">The filter.</param>
-        public ScanQuery(ICacheEntryFilter<TK, TV> filter = null)
+        public ScanQuery(ICacheEntryFilter<TK, TV>? filter = null)
         {
             Filter = filter;
         }
@@ -36,7 +36,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// <summary>
         /// Gets or sets the predicate.
         /// </summary>
-        public ICacheEntryFilter<TK, TV> Filter { get; set; }
+        public ICacheEntryFilter<TK, TV>? Filter { get; set; }
 
         /// <summary>
         /// Gets or sets partition number over which this query should iterate. If null, query will iterate 
@@ -56,7 +56,7 @@ namespace Apache.Ignite.Core.Cache.Query
                 writer.WriteInt(Partition.Value);
 
             if (Filter == null)
-                writer.WriteObject<CacheEntryFilterHolder>(null);
+                writer.WriteObject<CacheEntryFilterHolder>(null!);
             else
             {
                 var holder = new CacheEntryFilterHolder(Filter, (key, val) => Filter.Invoke(
