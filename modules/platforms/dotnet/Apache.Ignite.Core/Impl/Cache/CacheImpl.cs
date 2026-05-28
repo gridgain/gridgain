@@ -1818,8 +1818,8 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <param name="reader">Reader.</param>
         /// <param name="res">Resulting collection.</param>
         /// <returns>Dictionary.</returns>
-        private static ICollection<ICacheEntry<TK, TV>> ReadGetAllDictionary(BinaryReader reader,
-            ICollection<ICacheEntry<TK, TV>> res = null)
+        private static ICollection<ICacheEntry<TK, TV>>? ReadGetAllDictionary(BinaryReader? reader,
+            ICollection<ICacheEntry<TK, TV>>? res = null)
         {
             if (reader == null)
                 return null;
