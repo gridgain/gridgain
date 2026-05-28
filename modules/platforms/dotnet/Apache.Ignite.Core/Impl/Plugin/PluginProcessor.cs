@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 namespace Apache.Ignite.Core.Impl.Plugin
 {
     using System;
@@ -142,7 +144,7 @@ namespace Apache.Ignite.Core.Impl.Plugin
         /// <summary>
         /// Gets the exception factory.
         /// </summary>
-        public ExceptionFactory? GetExceptionMapping(string className)
+        public ExceptionFactory GetExceptionMapping(string className)
         {
             if (_exactExceptionMappings.TryGetValue(className, out var res))
             {
