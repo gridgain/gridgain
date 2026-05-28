@@ -149,7 +149,7 @@ namespace Apache.Ignite.Core.Events
         /// <returns>
         ///   <c>true</c> if the specified object is equal to this instance; otherwise, <c>false</c>.
         /// </returns>
-        public bool Equals(EventBase other)
+        public bool Equals(EventBase? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;

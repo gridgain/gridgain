@@ -33,6 +33,7 @@ namespace Apache.Ignite.Core.Cache.Store
     /// <typeparam name="TV">Value type.</typeparam>
     /// <typeparam name="TData">Custom data entry type.</typeparam>
     public abstract class CacheParallelLoadStoreAdapter<TK, TV, TData> : ICacheStore<TK, TV>
+        where TK : notnull
     {
         /// <summary>
         /// Constructor.

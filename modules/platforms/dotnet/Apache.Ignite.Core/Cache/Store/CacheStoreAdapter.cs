@@ -36,6 +36,7 @@ namespace Apache.Ignite.Core.Cache.Store
     /// <typeparam name="TK">Key type.</typeparam>
     /// <typeparam name="TV">Value type.</typeparam>
     public abstract class CacheStoreAdapter<TK, TV> : ICacheStore<TK, TV>
+        where TK : notnull
     {
         /// <summary>
         /// Loads all values from underlying persistent storage. Note that keys are

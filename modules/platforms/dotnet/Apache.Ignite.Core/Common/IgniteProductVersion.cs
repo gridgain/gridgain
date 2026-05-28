@@ -177,7 +177,7 @@ namespace Apache.Ignite.Core.Common
         }
 
         /** <inheritDoc /> */
-        public int CompareTo(IgniteProductVersion other)
+        public int CompareTo(IgniteProductVersion? other)
         {
             IgniteArgumentCheck.NotNull(other, "other");
 
