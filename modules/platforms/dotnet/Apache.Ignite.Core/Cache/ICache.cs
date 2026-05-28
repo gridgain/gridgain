@@ -55,6 +55,7 @@ namespace Apache.Ignite.Core.Cache
     /// <typeparam name="TV">Value type.</typeparam>
     [SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
     public interface ICache<TK, TV> : IEnumerable<ICacheEntry<TK, TV>>
+        where TK : notnull
     {
         /// <summary>
         /// Name of this cache (<c>null</c> for default cache).
@@ -113,7 +114,8 @@ namespace Apache.Ignite.Core.Cache
         /// <typeparam name="TK1">Key type in binary mode.</typeparam>
         /// <typeparam name="TV1">Value type in binary mode.</typeparam>
         /// <returns>Cache instance with binary mode enabled.</returns>
-        ICache<TK1, TV1> WithKeepBinary<TK1, TV1>();
+        ICache<TK1, TV1> WithKeepBinary<TK1, TV1>()
+            where TK1 : notnull;
 
         /// <summary>
         /// Get another cache instance with operations allowed in transactions.
