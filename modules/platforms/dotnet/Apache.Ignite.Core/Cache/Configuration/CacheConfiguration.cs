@@ -250,7 +250,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// performing a deep copy of specified cache configuration.
         /// </summary>
         /// <param name="other">The other configuration to perform deep copy from.</param>
-        public CacheConfiguration(CacheConfiguration other)
+        public CacheConfiguration(CacheConfiguration? other)
         {
             if (other != null)
             {
@@ -522,8 +522,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         internal void CopyLocalProperties(CacheConfiguration cfg)
         {
-            Debug.Assert(cfg != null);
-
             PluginConfigurations = cfg.PluginConfigurations;
 
             if (QueryEntities != null && cfg.QueryEntities != null)
@@ -555,8 +553,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         internal void Validate(ILogger log)
         {
-            Debug.Assert(log != null);
-
             var entities = QueryEntities;
             if (entities != null)
             {
@@ -832,7 +828,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         [Obsolete("Use DataRegionName.")]
         [XmlIgnore]
-        public string MemoryPolicyName
+        public string? MemoryPolicyName
         {
             get { return DataRegionName; }
             set { DataRegionName = value; }

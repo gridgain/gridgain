@@ -31,7 +31,7 @@ namespace Apache.Ignite.Core.Cache.Affinity
         private readonly object _key;
 
         /** Affinity key. */
-        private readonly object _affinity;
+        private readonly object? _affinity;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AffinityKey"/> struct.
