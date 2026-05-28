@@ -212,7 +212,7 @@ namespace Apache.Ignite.Core.Communication.Tcp
         /// Gets or sets the local host address for socket binding. Note that one node could have
         /// additional addresses beside the loopback one. This configuration parameter is optional.
         /// </summary>
-        public string LocalAddress { get; set; }
+        public string? LocalAddress { get; set; }
 
         /// <summary>
         /// Gets or sets the local port for socket binding.
