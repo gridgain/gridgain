@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 #pragma warning disable 3019
 namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
 {

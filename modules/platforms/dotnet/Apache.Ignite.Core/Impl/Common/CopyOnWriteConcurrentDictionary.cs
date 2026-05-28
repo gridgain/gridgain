@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 // ReSharper disable InconsistentlySynchronizedField
 namespace Apache.Ignite.Core.Impl.Common
 {

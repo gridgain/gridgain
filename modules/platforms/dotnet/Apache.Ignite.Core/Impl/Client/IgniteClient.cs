@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 namespace Apache.Ignite.Core.Impl.Client
 {
     using System;

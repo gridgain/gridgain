@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 // ReSharper disable PartialTypeWithSinglePart
 namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
 {
