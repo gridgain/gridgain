@@ -38,8 +38,8 @@ namespace Apache.Ignite.Core.Impl.Log
         }
 
         /** <inheritdoc /> */
-        public void Log(LogLevel level, string message, object[] args, IFormatProvider formatProvider, string category,
-            string nativeErrorInfo, Exception ex)
+        public void Log(LogLevel level, string message, object[]? args, IFormatProvider? formatProvider, string? category,
+            string? nativeErrorInfo, Exception? ex)
         {
             // No-op.
         }
