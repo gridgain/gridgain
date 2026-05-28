@@ -680,7 +680,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Does the out op with Partition Awareness.
         /// </summary>
-        private Task DoOutOpAffinityAsync(ClientOp opId, TK key, Action<ClientRequestContext> writeAction = null)
+        private Task DoOutOpAffinityAsync(ClientOp opId, TK key, Action<ClientRequestContext>? writeAction = null)
         {
             return DoOutInOpAffinityAsync<object>(opId, key, writeAction, null);
         }
@@ -698,7 +698,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Does the out in op with Partition Awareness.
         /// </summary>
-        private T DoOutInOpAffinity<T>(ClientOp opId, TK key, Func<ClientResponseContext, T> readFunc)
+        private T DoOutInOpAffinity<T>(ClientOp opId, TK key, Func<ClientResponseContext, T>? readFunc)
         {
             return _ignite.Socket.DoOutInOpAffinity(
                 opId,
@@ -755,8 +755,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Does the out in op with Partition Awareness.
         /// </summary>
-        private Task<T> DoOutInOpAffinityAsync<T>(ClientOp opId, TK key, Action<ClientRequestContext> writeAction,
-            Func<ClientResponseContext, T> readFunc)
+        private Task<T> DoOutInOpAffinityAsync<T>(ClientOp opId, TK key, Action<ClientRequestContext>? writeAction,
+            Func<ClientResponseContext, T>? readFunc)
         {
             return _ignite.Socket.DoOutInOpAffinityAsync(opId, ctx => WriteRequest(writeAction, ctx),
                 readFunc, _id, key, HandleError<T>);
@@ -1123,8 +1123,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Handles continuous query events.
         /// </summary>
-        private void HandleContinuousQueryEvents(IBinaryStream stream, Exception err,
-            ICacheEntryEventListener<TK, TV> listener, ClientContinuousQueryHandle qryHandle)
+        private void HandleContinuousQueryEvents(IBinaryStream? stream, Exception? err,
+            ICacheEntryEventListener<TK, TV>? listener, ClientContinuousQueryHandle qryHandle)
         {
             if (err != null)
             {
@@ -1132,7 +1132,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
                 return;
             }
 
-            var flags = (ClientFlags) stream.ReadShort();
+            var flags = (ClientFlags) stream!.ReadShort();
             var opCode = (ClientOp) stream.ReadShort();
 
             if ((flags & ClientFlags.Error) == ClientFlags.Error)
@@ -1151,7 +1151,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             {
                 var evts = ContinuousQueryUtils.ReadEvents<TK, TV>(stream, _marsh, _keepBinary);
 
-                listener.OnEvent(evts);
+                listener?.OnEvent(evts);
 
                 return;
             }

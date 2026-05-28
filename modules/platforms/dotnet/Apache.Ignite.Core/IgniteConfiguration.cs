@@ -1411,7 +1411,7 @@ namespace Apache.Ignite.Core
         /// If no logger is set, logging is delegated to Java, which uses the logger defined in Spring XML (if present)
         /// or logs to console otherwise.
         /// </summary>
-        public ILogger Logger { get; set; }
+        public ILogger? Logger { get; set; }
 
         /// <summary>
         /// Gets or sets the failure detection timeout used by <see cref="TcpDiscoverySpi"/>
