@@ -87,7 +87,7 @@ namespace Apache.Ignite.Core.Log
         /// <param name="logger">The logger.</param>
         /// <param name="message">The message.</param>
         /// <param name="args">The arguments.</param>
-        public static void Debug(this ILogger logger, string message, params object[]? args)
+        public static void Debug(this ILogger logger, string message, params object?[]? args)
         {
             Log(logger, LogLevel.Debug, message, args);
         }
@@ -267,7 +267,7 @@ namespace Apache.Ignite.Core.Log
         /// <param name="level">The level.</param>
         /// <param name="message">The message.</param>
         /// <param name="args">The arguments.</param>
-        public static void Log(this ILogger logger, LogLevel level, string message, params object[]? args)
+        public static void Log(this ILogger logger, LogLevel level, string message, params object?[]? args)
         {
             IgniteArgumentCheck.NotNull(logger, "logger");
 

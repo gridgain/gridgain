@@ -37,7 +37,7 @@ namespace Apache.Ignite.Core.Log
         /// <param name="category">The logging category name.</param>
         /// <param name="nativeErrorInfo">The native error information.</param>
         /// <param name="ex">The exception. Can be null.</param>
-        void Log(LogLevel level, string message, object[]? args, IFormatProvider? formatProvider, string? category,
+        void Log(LogLevel level, string message, object?[]? args, IFormatProvider? formatProvider, string? category,
             string? nativeErrorInfo, Exception? ex);
 
         /// <summary>

@@ -975,7 +975,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Checks if any of the current requests timed out.
         /// </summary>
-        private void CheckTimeouts(object _)
+        private void CheckTimeouts(object? _)
         {
             if (_checkingTimeouts)
             {
@@ -1014,7 +1014,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes",
             Justification = "Thread root must catch all exceptions to avoid crashing the process.")]
-        private void SendHeartbeat(object unused)
+        private void SendHeartbeat(object? unused)
         {
             try
             {
