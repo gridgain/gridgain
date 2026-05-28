@@ -59,6 +59,6 @@ namespace Apache.Ignite.Core.Client.DataStructures
         /// <summary>
         /// Gets or sets the cache group name.
         /// </summary>
-        public string GroupName { get; set; }
+        public string? GroupName { get; set; }
     }
 }

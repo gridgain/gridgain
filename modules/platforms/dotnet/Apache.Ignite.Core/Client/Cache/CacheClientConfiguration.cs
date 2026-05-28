@@ -48,7 +48,7 @@ namespace Apache.Ignite.Core.Client.Cache
         /// <summary>
         /// Initializes a new instance of the <see cref="CacheConfiguration"/> class.
         /// </summary>
-        public CacheClientConfiguration() : this((string) null)
+        public CacheClientConfiguration() : this((string?) null)
         {
             // No-op.
         }
@@ -57,7 +57,7 @@ namespace Apache.Ignite.Core.Client.Cache
         /// Initializes a new instance of the <see cref="CacheConfiguration"/> class.
         /// </summary>
         /// <param name="name">Cache name.</param>
-        public CacheClientConfiguration(string name)
+        public CacheClientConfiguration(string? name)
         {
             Name = name;
 
@@ -111,7 +111,7 @@ namespace Apache.Ignite.Core.Client.Cache
         /// performing a deep copy of specified cache configuration.
         /// </summary>
         /// <param name="other">The other configuration to perfrom deep copy from.</param>
-        public CacheClientConfiguration(CacheClientConfiguration other)
+        public CacheClientConfiguration(CacheClientConfiguration? other)
         {
             if (other != null)
             {
@@ -170,8 +170,6 @@ namespace Apache.Ignite.Core.Client.Cache
         /// </summary>
         private void CopyLocalProperties(CacheClientConfiguration cfg)
         {
-            Debug.Assert(cfg != null);
-
             if (QueryEntities != null && cfg.QueryEntities != null)
             {
                 var entities = cfg.QueryEntities.Where(x => x != null).ToDictionary(x => GetQueryEntityKey(x), x => x);
@@ -201,7 +199,7 @@ namespace Apache.Ignite.Core.Client.Cache
         /// <summary>
         /// Gets or sets the cache name.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Gets or sets write synchronization mode. This mode controls whether the main        
@@ -312,7 +310,7 @@ namespace Apache.Ignite.Core.Client.Cache
         /// Gets or sets the query entity configuration.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<QueryEntity> QueryEntities { get; set; }
+        public ICollection<QueryEntity>? QueryEntities { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether statistics gathering is enabled on a cache.
@@ -323,7 +321,7 @@ namespace Apache.Ignite.Core.Client.Cache
         /// <summary>
         /// Gets or sets the name of the data region, see <see cref="DataRegionConfiguration"/>.
         /// </summary>
-        public string DataRegionName { get; set; }
+        public string? DataRegionName { get; set; }
 
         /// <summary>
         /// Gets or sets the partition loss policy. This policy defines how Ignite will react to
@@ -341,7 +339,7 @@ namespace Apache.Ignite.Core.Client.Cache
         /// <para />
         /// Grouping caches reduces overall overhead, since internal data structures are shared.
         /// </summary>
-        public string GroupName { get; set; }
+        public string? GroupName { get; set; }
 
         /// <summary>
         /// Gets or sets maximum inline size in bytes for sql indexes. See also <see cref="QueryIndex.InlineSize"/>.
@@ -354,7 +352,7 @@ namespace Apache.Ignite.Core.Client.Cache
         /// Gets or sets the key configuration.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<CacheKeyConfiguration> KeyConfiguration { get; set; }
+        public ICollection<CacheKeyConfiguration>? KeyConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether on-heap cache is enabled for the off-heap based page memory.
@@ -403,7 +401,7 @@ namespace Apache.Ignite.Core.Client.Cache
         /// <para />
         /// Quoted <see cref="Name"/> is used by default.
         /// </summary>
-        public string SqlSchema { get; set; }
+        public string? SqlSchema { get; set; }
 
         /// <summary>
         /// Gets or sets the desired query parallelism within a single node.
@@ -420,12 +418,12 @@ namespace Apache.Ignite.Core.Client.Cache
         /// <para />
         /// Default is null, which means no expiration.
         /// </summary>
-        public IFactory<IExpiryPolicy> ExpiryPolicyFactory { get; set; }
+        public IFactory<IExpiryPolicy>? ExpiryPolicyFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the plugin configurations.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<ICacheClientPluginConfiguration> PluginConfigurations { get; set; }
+        public ICollection<ICacheClientPluginConfiguration>? PluginConfigurations { get; set; }
     }
 }
