@@ -723,14 +723,14 @@ namespace Apache.Ignite.Core.Impl.Cache
                     // ReSharper disable AccessToDisposedClosure (write operation is synchronous, not an issue).
                     return DoOutOpAsync(CacheOp.GetAllAsync,
                         w => WriteKeysOrGetFromPlatformCache(w, enumerator, ref res),
-                        r => ReadGetAllDictionary(r, res));
+                        r => ReadGetAllDictionary(r, res)!);
                     // ReSharper restore AccessToDisposedClosure
                 }
             }
 
             return DoOutOpAsync(CacheOp.GetAllAsync,
                 w => w.WriteEnumerable(keys),
-                r => ReadGetAllDictionary(r));
+                r => ReadGetAllDictionary(r)!);
         }
 
         /** <inheritdoc /> */
@@ -750,7 +750,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                     // Platform cache optimization on primary nodes:
                     // Update from Java comes in this same thread, so we don't need to pass key/val from Java.
                     // However, we still rely on a callback to maintain the order of updates.
-                    _platformCache.SetThreadLocalPair(key, val);
+                    _platformCache!.SetThreadLocalPair(key, val);
                 }
 
                 DoOutOp(CacheOp.PutWithPlatformCache, key, val);
@@ -759,7 +759,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 if (platformCache)
                 {
-                    _platformCache.ResetThreadLocalPair();
+                    _platformCache!.ResetThreadLocalPair();
                 }
             }
         }
