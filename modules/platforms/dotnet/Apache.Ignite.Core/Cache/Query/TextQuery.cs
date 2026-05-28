@@ -43,7 +43,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// <param name="text">Text.</param>
         /// <param name="local">Whether query should be executed locally.</param>
         public TextQuery(Type queryType, string text, bool local)
-            : this(queryType == null ? null : queryType.Name, text, local)
+            : this(queryType == null! ? null! : queryType.Name, text, local)
         {
             // No-op.
         }
