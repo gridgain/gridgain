@@ -226,7 +226,7 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
             }
 
             /** <inheritDoc /> */
-            public ITransactionClient Tx
+            public ITransactionClient? Tx
             {
                 get { return _transactions.Tx; }
             }
