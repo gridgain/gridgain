@@ -29,6 +29,7 @@ namespace Apache.Ignite.Core.Client.Cache
     /// Client cache API. See <see cref="IIgniteClient.GetCache{K, V}"/>.
     /// </summary>
     public interface ICacheClient<TK, TV>
+        where TK : notnull
     {
         /// <summary>
         /// Name of this cache (<c>null</c> for default cache).
@@ -423,7 +424,8 @@ namespace Apache.Ignite.Core.Client.Cache
         /// <typeparam name="TK1">Key type in binary mode.</typeparam>
         /// <typeparam name="TV1">Value type in binary mode.</typeparam>
         /// <returns>Cache instance with binary mode enabled.</returns>
-        ICacheClient<TK1, TV1> WithKeepBinary<TK1, TV1>();
+        ICacheClient<TK1, TV1> WithKeepBinary<TK1, TV1>()
+            where TK1 : notnull;
 
         /// <summary>
         /// Returns cache with the specified expired policy set. This policy will be used for each operation
