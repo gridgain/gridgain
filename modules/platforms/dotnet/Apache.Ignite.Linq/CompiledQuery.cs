@@ -227,11 +227,11 @@ namespace Apache.Ignite.Linq
                 .Select(x => x.IsValueType ? Activator.CreateInstance(x) : null)
                 .ToArray();
 
-            var transformingxpressionVisitor = new JoinInnerSequenceParameterNotNullExpressionVisitor();
-            var queryCaller = (LambdaExpression)transformingxpressionVisitor.Visit(expression)!;
+            var transformingExpressionVisitor = new JoinInnerSequenceParameterNotNullExpressionVisitor();
+            var queryCaller = (LambdaExpression)transformingExpressionVisitor.Visit(expression)!;
 
             // Compile and invoke the delegate to obtain the cacheQueryable.
-            var queryable = queryCaller.Compile().DynamicInvoke(paramValues);
+            var queryable = queryCaller.Compile().DynamicInvoke(paramValues)!;
 
             var cacheQueryable = queryable as ICacheQueryableInternal;
 
