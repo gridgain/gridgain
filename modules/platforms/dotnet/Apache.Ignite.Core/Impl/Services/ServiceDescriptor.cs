@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#nullable disable
-
 namespace Apache.Ignite.Core.Impl.Services
 {
     using System;
@@ -35,7 +33,7 @@ namespace Apache.Ignite.Core.Impl.Services
         private readonly IServices _services;
 
         /** Service type. */
-        private Type _type;
+        private Type? _type;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ServiceDescriptor" /> class.
@@ -45,8 +43,6 @@ namespace Apache.Ignite.Core.Impl.Services
         /// <param name="services">Services.</param>
         public ServiceDescriptor(string name, BinaryReader reader, IServices services)
         {
-            Debug.Assert(reader != null);
-            Debug.Assert(services != null);
             Debug.Assert(!string.IsNullOrEmpty(name));
 
             _services = services;
@@ -78,7 +74,7 @@ namespace Apache.Ignite.Core.Impl.Services
             {
                 try
                 {
-                    return _type ?? (_type = _services.GetServiceProxy<IService>(Name).GetType());
+                    return _type ??= _services.GetServiceProxy<IService>(Name).GetType();
                 }
                 catch (Exception ex)
                 {
