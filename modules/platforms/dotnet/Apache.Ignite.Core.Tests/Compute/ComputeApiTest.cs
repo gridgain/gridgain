@@ -631,9 +631,7 @@ namespace Apache.Ignite.Core.Tests.Compute
                 .ForPredicate(new NotAttributePredicate<IClusterNode>("value2").Apply);
             Assert.AreEqual(1, prj2.GetNodes().Count);
 
-            string val;
-
-            prj2.GetNodes().First().TryGetAttribute("my_attr", out val);
+            prj2.GetNodes().First().TryGetAttribute("my_attr", out string? val);
 
             Assert.IsTrue(val == null || (!val.Equals("value1") && !val.Equals("value2")));
         }
