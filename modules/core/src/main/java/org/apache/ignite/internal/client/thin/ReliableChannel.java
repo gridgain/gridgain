@@ -52,7 +52,6 @@ import org.apache.ignite.internal.client.thin.io.ClientConnectionMultiplexer;
 import org.apache.ignite.internal.client.thin.io.gridnioserver.GridNioClientConnectionMultiplexer;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.logger.NullLogger;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -122,7 +121,8 @@ final class ReliableChannel implements AutoCloseable {
     ReliableChannel(
             BiFunction<ClientChannelConfiguration, ClientConnectionMultiplexer, ClientChannel> chFactory,
             ClientConfiguration clientCfg,
-            IgniteBinary binary
+            IgniteBinary binary,
+            IgniteLogger log
     ) {
         if (chFactory == null)
             throw new NullPointerException("chFactory");
@@ -132,7 +132,7 @@ final class ReliableChannel implements AutoCloseable {
 
         this.clientCfg = clientCfg;
         this.chFactory = chFactory;
-        log = NullLogger.whenNull(clientCfg.getLogger());
+        this.log = log;
 
         partitionAwarenessEnabled = clientCfg.isAffinityAwarenessEnabled();
 

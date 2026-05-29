@@ -87,6 +87,9 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_BINARY
  * Implementation of {@link IgniteClient} over TCP protocol.
  */
 public class TcpIgniteClient implements IgniteClient {
+    /** Logger. */
+    private final IgniteLogger log;
+
     /** Channel. */
     private final ReliableChannel ch;
 
@@ -133,6 +136,8 @@ public class TcpIgniteClient implements IgniteClient {
             BiFunction<ClientChannelConfiguration, ClientConnectionMultiplexer, ClientChannel> chFactory,
             ClientConfiguration cfg
     ) throws ClientException {
+        log = NullLogger.whenNull(cfg.getLogger());
+
         final ClientBinaryMetadataHandler metadataHnd = new ClientBinaryMetadataHandler();
 
         ClientMarshallerContextImpl marshCtx = new ClientMarshallerContextImpl();
@@ -144,7 +149,7 @@ public class TcpIgniteClient implements IgniteClient {
 
         binary = new ClientBinary(marsh);
 
-        ch = new ReliableChannel(chFactory, cfg, binary);
+        ch = new ReliableChannel(chFactory, cfg, binary, log);
 
         try {
             ch.channelsInit();
@@ -354,7 +359,7 @@ public class TcpIgniteClient implements IgniteClient {
     @Override public <K, V> ClientDataStreamer<K, V> dataStreamer(String cacheName) {
         GridArgumentCheck.notNull(cacheName, "cacheName");
 
-        return new TcpClientDataStreamer<>(cacheName, ch, marsh);
+        return new TcpClientDataStreamer<>(cacheName, ch, marsh, log);
     }
 
     /** {@inheritDoc} */
