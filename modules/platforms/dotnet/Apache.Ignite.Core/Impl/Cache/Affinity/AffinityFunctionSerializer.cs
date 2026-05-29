@@ -247,7 +247,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Affinity
 
             for (var i = 0; i < attrCount; i++)
             {
-                attrs[i] = reader.ReadString();
+                attrs[i] = reader.ReadString()!;
             }
 
             return new ClusterNodeAttributeAffinityBackupFilter{AttributeNames = attrs};

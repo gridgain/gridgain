@@ -223,8 +223,8 @@ namespace Apache.Ignite.Core.Configuration
             WalHistorySize = reader.ReadInt();
             WalSegments = reader.ReadInt();
             WalSegmentSize = reader.ReadInt();
-            WalPath = reader.ReadString();
-            WalArchivePath = reader.ReadString();
+            WalPath = reader.ReadString()!;
+            WalArchivePath = reader.ReadString()!;
             WalMode = (WalMode)reader.ReadInt();
             WalThreadLocalBufferSize = reader.ReadInt();
             WalFlushFrequency = reader.ConfigReadLongAsTimespan();

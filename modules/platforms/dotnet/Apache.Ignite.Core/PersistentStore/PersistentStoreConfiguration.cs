@@ -150,8 +150,8 @@ namespace Apache.Ignite.Core.PersistentStore
             WalHistorySize = reader.ReadInt();
             WalSegments = reader.ReadInt();
             WalSegmentSize = reader.ReadInt();
-            WalStorePath = reader.ReadString();
-            WalArchivePath = reader.ReadString();
+            WalStorePath = reader.ReadString()!;
+            WalArchivePath = reader.ReadString()!;
             WalMode = (WalMode)reader.ReadInt();
             TlbSize = reader.ReadInt();
             WalFlushFrequency = reader.ConfigReadLongAsTimespan();

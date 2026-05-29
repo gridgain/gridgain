@@ -244,7 +244,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
 
             count = reader.ReadInt();
             Aliases = count == 0 ? null : Enumerable.Range(0, count)
-                .Select(x=> new QueryAlias(reader.ReadString(), reader.ReadString())).ToList();
+                .Select(x=> new QueryAlias(reader.ReadString()!, reader.ReadString()!)).ToList();
 
             count = reader.ReadInt();
             Indexes = count == 0 ? null : Enumerable.Range(0, count).Select(x => new QueryIndex(reader)).ToList();

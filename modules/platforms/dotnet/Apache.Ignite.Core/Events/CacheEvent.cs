@@ -72,7 +72,7 @@ namespace Apache.Ignite.Core.Events
         /// <param name="r">The reader to read data from.</param>
         internal CacheEvent(IBinaryRawReader r) : base(r)
         {
-            _cacheName = r.ReadString();
+            _cacheName = r.ReadString()!;
             _partition = r.ReadInt();
             _isNear = r.ReadBoolean();
             _eventNode = ReadNode(r);

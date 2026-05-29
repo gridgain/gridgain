@@ -52,7 +52,7 @@ namespace Apache.Ignite.Core.Discovery.Tcp.Static
                 Endpoints = new List<string>(count);
 
                 for (int i = 0; i < count; i++)
-                    Endpoints.Add(reader.ReadString());
+                    Endpoints.Add(reader.ReadString()!);
             }
         }
 

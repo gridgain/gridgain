@@ -92,7 +92,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
             SystemCacheMaxSize = reader.ReadLong();
             PageSize = reader.ReadInt();
             ConcurrencyLevel = reader.ReadInt();
-            DefaultMemoryPolicyName = reader.ReadString();
+            DefaultMemoryPolicyName = reader.ReadString()!;
 
             var count = reader.ReadInt();
 

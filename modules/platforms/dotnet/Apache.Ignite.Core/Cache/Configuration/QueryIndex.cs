@@ -147,7 +147,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
 
             var count = reader.ReadInt();
             Fields = count == 0 ? null : Enumerable.Range(0, count).Select(x =>
-                new QueryIndexField(reader.ReadString(), reader.ReadBoolean())).ToList();
+                new QueryIndexField(reader.ReadString()!, reader.ReadBoolean())).ToList();
         }
 
         /// <summary>

@@ -106,7 +106,7 @@ namespace Apache.Ignite.Core.Discovery.Tcp.Multicast
         internal TcpDiscoveryMulticastIpFinder(IBinaryRawReader reader) : base(reader)
         {
             LocalAddress = reader.ReadString();
-            MulticastGroup = reader.ReadString();
+            MulticastGroup = reader.ReadString()!;
             MulticastPort = reader.ReadInt();
             AddressRequestAttempts = reader.ReadInt();
             ResponseTimeout = TimeSpan.FromMilliseconds(reader.ReadInt());

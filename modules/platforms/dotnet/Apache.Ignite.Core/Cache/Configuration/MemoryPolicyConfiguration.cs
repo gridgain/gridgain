@@ -84,7 +84,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <param name="reader">The reader.</param>
         internal MemoryPolicyConfiguration(IBinaryRawReader reader)
         {
-            Name = reader.ReadString();
+            Name = reader.ReadString()!;
             InitialSize = reader.ReadLong();
             MaxSize = reader.ReadLong();
             SwapFilePath = reader.ReadString();

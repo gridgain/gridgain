@@ -98,7 +98,7 @@ namespace Apache.Ignite.Core.Cluster
 
             while (count > 0)
             {
-                string attrKey = reader.ReadString();
+                string attrKey = reader.ReadString()!;
                 object attrVal = reader.ReadObject<object>();
 
                 Attributes[attrKey] = attrVal;

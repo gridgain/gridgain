@@ -252,7 +252,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
 
             for (var i = 0; i < count; i++)
             {
-                res[reader.ReadString()] = reader.ReadObject<object>();
+                res[reader.ReadString()!] = reader.ReadObject<object>();
             }
 
             return res.AsReadOnly();

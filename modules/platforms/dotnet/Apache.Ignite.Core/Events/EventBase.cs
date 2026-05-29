@@ -66,7 +66,7 @@ namespace Apache.Ignite.Core.Events
 
             _message = r.ReadString();
             _type = r.ReadInt();
-            _name = r.ReadString();
+            _name = r.ReadString()!;
             
             var timestamp = r.ReadTimestamp();
             Debug.Assert(timestamp.HasValue);

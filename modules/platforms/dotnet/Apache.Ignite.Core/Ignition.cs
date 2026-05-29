@@ -515,7 +515,7 @@ namespace Apache.Ignite.Core
         /// <returns>Resulting object.</returns>
         private static T CreateObject<T>(IBinaryRawReader reader)
         {
-            return IgniteUtils.CreateInstance<T>(reader.ReadString(),
+            return IgniteUtils.CreateInstance<T>(reader.ReadString()!,
                 reader.ReadDictionaryAsGeneric<string, object>());
         }
 

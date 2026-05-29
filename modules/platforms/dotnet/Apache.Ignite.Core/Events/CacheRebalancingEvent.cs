@@ -49,11 +49,11 @@ namespace Apache.Ignite.Core.Events
         /// <param name="r">The reader to read data from.</param>
         internal CacheRebalancingEvent(IBinaryRawReader r) : base(r)
         {
-            _cacheName = r.ReadString();
+            _cacheName = r.ReadString()!;
             _partition = r.ReadInt();
             _discoveryNode = ReadNode(r);
             _discoveryEventType = r.ReadInt();
-            _discoveryEventName = r.ReadString();
+            _discoveryEventName = r.ReadString()!;
             _discoveryTimestamp = r.ReadLong();
         }
 		

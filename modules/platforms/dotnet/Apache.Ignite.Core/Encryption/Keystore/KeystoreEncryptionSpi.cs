@@ -74,7 +74,7 @@ namespace Apache.Ignite.Core.Encryption.Keystore
         {
             IgniteArgumentCheck.NotNull(reader, "other");
 
-            MasterKeyName = reader.ReadString();
+            MasterKeyName = reader.ReadString()!;
             KeySize = reader.ReadInt();
             KeyStorePath = reader.ReadString();
 
