@@ -239,7 +239,7 @@ namespace Apache.Ignite.Core.Services
         /// <typeparam name="T">Service type.</typeparam>
         /// <param name="name">Service name.</param>
         /// <returns>Deployed service with specified name.</returns>
-        T GetService<T>(string name);
+        T? GetService<T>(string name);
 
         /// <summary>
         /// Gets all deployed services with specified name.
