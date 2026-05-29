@@ -215,7 +215,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         [Test]
         public void TestNodeMetrics()
         {
-            var node = _grid1.GetCluster().GetNode();
+            var node = _grid1.GetCluster().GetNode()!;
 
             IClusterMetrics metrics = node.GetMetrics();
 
@@ -291,14 +291,14 @@ namespace Apache.Ignite.Core.Tests.Compute
         {
             var cluster = _grid1.GetCluster();
 
-            Assert.AreEqual(1, cluster.GetTopology(1).Count);
+            Assert.AreEqual(1, cluster.GetTopology(1)!.Count);
 
             Assert.AreEqual(null, cluster.GetTopology(int.MaxValue));
 
             // Check that Nodes and Topology return the same for current version
             var topVer = cluster.TopologyVersion;
 
-            var top = cluster.GetTopology(topVer);
+            var top = cluster.GetTopology(topVer)!;
 
             var nodes = cluster.GetNodes();
 
@@ -311,7 +311,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             try
             {
-                top = cluster.GetTopology(topVer);
+                top = cluster.GetTopology(topVer)!;
 
                 Assert.AreEqual(top.Count, nodes.Count);
 
@@ -483,9 +483,9 @@ namespace Apache.Ignite.Core.Tests.Compute
                 var prj = _grid1.GetCluster().ForDaemons();
 
                 Assert.AreEqual(1, prj.GetNodes().Count);
-                Assert.AreEqual(ignite.GetCluster().GetLocalNode().Id, prj.GetNode().Id);
+                Assert.AreEqual(ignite.GetCluster().GetLocalNode().Id, prj.GetNode()!.Id);
 
-                Assert.IsTrue(prj.GetNode().IsDaemon);
+                Assert.IsTrue(prj.GetNode()!.IsDaemon);
                 Assert.IsTrue(ignite.GetCluster().GetLocalNode().IsDaemon);
             }
         }
@@ -516,15 +516,15 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             IClusterGroup prj = _grid1.GetCluster().ForYoungest();
             Assert.AreEqual(1, prj.GetNodes().Count);
-            Assert.IsTrue(nodes.Contains(prj.GetNode()));
+            Assert.IsTrue(nodes.Contains(prj.GetNode()!));
 
             prj = _grid1.GetCluster().ForOldest();
             Assert.AreEqual(1, prj.GetNodes().Count);
-            Assert.IsTrue(nodes.Contains(prj.GetNode()));
+            Assert.IsTrue(nodes.Contains(prj.GetNode()!));
 
             prj = _grid1.GetCluster().ForRandom();
             Assert.AreEqual(1, prj.GetNodes().Count);
-            Assert.IsTrue(nodes.Contains(prj.GetNode()));
+            Assert.IsTrue(nodes.Contains(prj.GetNode()!));
         }
 
         /// <summary>
@@ -570,7 +570,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             IClusterGroup prj = _grid1.GetCluster().ForAttribute("my_attr", "value1");
             Assert.AreEqual(1, prj.GetNodes().Count);
-            Assert.IsTrue(nodes.Contains(prj.GetNode()));
+            Assert.IsTrue(nodes.Contains(prj.GetNode()!));
             Assert.AreEqual("value1", prj.GetNodes().First().GetAttribute<string>("my_attr"));
         }
 

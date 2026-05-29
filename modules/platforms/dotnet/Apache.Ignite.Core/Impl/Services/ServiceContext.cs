@@ -35,7 +35,7 @@ namespace Apache.Ignite.Core.Impl.Services
         /// <param name="reader">The reader.</param>
         public ServiceContext(IBinaryRawReader reader)
         {
-            Name = reader.ReadString();
+            Name = reader.ReadString()!;
             ExecutionId = reader.ReadGuid() ?? Guid.Empty;
             IsCancelled = reader.ReadBoolean();
             CacheName = reader.ReadString();

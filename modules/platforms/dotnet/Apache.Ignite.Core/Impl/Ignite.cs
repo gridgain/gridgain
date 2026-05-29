@@ -807,7 +807,7 @@ namespace Apache.Ignite.Core.Impl
                 var res = new string[r.ReadInt()];
 
                 for (var i = 0; i < res.Length; i++)
-                    res[i] = r.ReadString();
+                    res[i] = r.ReadString()!;
 
                 return (ICollection<string>) res;
             });

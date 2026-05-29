@@ -45,7 +45,7 @@ namespace Apache.Ignite.Core.Impl.Compute
 
         /** <inheritdoc /> */
 
-        public Exception Exception
+        public Exception? Exception
         {
             get { return _wrappedRes.Exception; }
         }
