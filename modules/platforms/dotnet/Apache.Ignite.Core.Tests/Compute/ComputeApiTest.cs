@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable enable
+
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 namespace Apache.Ignite.Core.Tests.Compute
 {
@@ -49,16 +51,16 @@ namespace Apache.Ignite.Core.Tests.Compute
         private const string CacheName2 = "cache1";
 
         /** First node. */
-        private IIgnite _grid1;
+        private IIgnite _grid1 = null!;
 
         /** Second node. */
-        private IIgnite _grid2;
+        private IIgnite _grid2 = null!;
 
         /** Third node. */
-        private IIgnite _grid3;
+        private IIgnite _grid3 = null!;
 
         /** Thin client. */
-        private IIgniteClient _igniteClient;
+        private IIgniteClient _igniteClient = null!;
 
         /// <summary>
         /// Initialization routine.
@@ -582,7 +584,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             Assert.AreEqual(1,clientPrj.GetNodes().Count);
 
             var nodeId = _grid1.GetCluster().ForAttribute("my_attr", "value1").GetNodes().Single().Id;
-            Assert.AreEqual(nodeId, clientPrj.GetNode().Id);
+            Assert.AreEqual(nodeId, clientPrj.GetNode()?.Id);
         }
 
         /// <summary>
@@ -675,9 +677,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             /** <inhreitDoc /> */
             public bool Apply(T node)
             {
-                object val;
-
-                node.Attributes.TryGetValue("my_attr", out val);
+                node.Attributes.TryGetValue("my_attr", out var val);
 
                 return val == null || !val.Equals(_attrVal);
             }
@@ -989,9 +989,9 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             Assert.IsNotNull(ex.InnerException);
             Assert.AreEqual("Compute job has failed on local node, examine InnerException for details.",
-                ex.InnerException.Message);
+                ex.InnerException!.Message);
             Assert.IsNotNull(ex.InnerException.InnerException);
-            Assert.AreEqual(ExceptionalComputeAction.ErrorText, ex.InnerException.InnerException.Message);
+            Assert.AreEqual(ExceptionalComputeAction.ErrorText, ex.InnerException!.InnerException!.Message);
 
             // Remote.
             ex = Assert.Throws<AggregateException>(() =>
@@ -999,9 +999,9 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             Assert.IsNotNull(ex.InnerException);
             Assert.AreEqual("Compute job has failed on remote node, examine InnerException for details.",
-                ex.InnerException.Message);
+                ex.InnerException!.Message);
             Assert.IsNotNull(ex.InnerException.InnerException);
-            Assert.AreEqual(ExceptionalComputeAction.ErrorText, ex.InnerException.InnerException.Message);
+            Assert.AreEqual(ExceptionalComputeAction.ErrorText, ex.InnerException!.InnerException!.Message);
         }
 
         /// <summary>
@@ -1013,7 +1013,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             Assert.AreEqual(CompactFooter, ((Ignite) _grid1).Marshaller.CompactFooter);
 
             foreach (var g in new[] {_grid1, _grid2, _grid3})
-                Assert.AreEqual(CompactFooter, g.GetConfiguration().BinaryConfiguration.CompactFooter);
+                Assert.AreEqual(CompactFooter, g.GetConfiguration().BinaryConfiguration!.CompactFooter);
         }
 
         /// <summary>
@@ -1092,7 +1092,7 @@ namespace Apache.Ignite.Core.Tests.Compute
     [Serializable]
     class NetSimpleJob : IComputeJob<NetSimpleJobResult>
     {
-        public NetSimpleJobArgument Arg;
+        public NetSimpleJobArgument Arg = null!;
 
         /** <inheritDoc /> */
         public NetSimpleJobResult Execute()
@@ -1159,7 +1159,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         [InstanceResource]
 #pragma warning disable 649
         // ReSharper disable once UnassignedField.Local
-        private IIgnite _grid;
+        private IIgnite _grid = null!;
 
         public static ConcurrentBag<Guid> Invokes = new ConcurrentBag<Guid>();
 
@@ -1169,7 +1169,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
         public int? ReservedPartition { get; set; }
 
-        public ICollection<string> CacheNames { get; set; }
+        public ICollection<string> CacheNames { get; set; } = null!;
 
         public bool ShouldThrow { get; set; }
 
@@ -1249,7 +1249,7 @@ namespace Apache.Ignite.Core.Tests.Compute
     {
         [InstanceResource]
         // ReSharper disable once UnassignedField.Local
-        private IIgnite _grid;
+        private IIgnite _grid = null!;
 
         public static int InvokeCount;
 
