@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2026 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -122,7 +122,7 @@ public class MariaDBCacheStoreFactory<K, V> implements Factory<MariaDBCacheStore
      * @param types JDBC type mappings.
      * @return {@code This} for chaining.
      */
-    public MariaDBCacheStoreFactory<K, V> setTypes(JdbcType[] types) {
+    public MariaDBCacheStoreFactory<K, V> setTypes(JdbcType... types) {
         this.types = types;
         return this;
     }
