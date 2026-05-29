@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.StampedLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -144,6 +145,13 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
 
     /** Guards {@link #autoFlushInterval} and {@link #flushFut} updates. */
     private final Lock autoFlushLock = new ReentrantLock();
+
+    /**
+     * Coordinates concurrent add/flush operations. {@link #add0} acquires the read lock so multiple
+     * producers can run concurrently; {@link #flushAsync0} acquires the write lock to prevent new
+     * entries from being added while a flush is in progress.
+     */
+    private final StampedLock addFlushLock = new StampedLock();
 
     /** Single-thread executor for batch sends and auto-flush tasks. */
     private final ScheduledExecutorService scheduler;
@@ -444,6 +452,8 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
     private CompletableFuture<Void> flushAsync0() {
         List<CompletableFuture<Void>> futs = new ArrayList<>(partitions.size());
 
+        long stamp = addFlushLock.writeLock();
+
         int bufSndSize = perNodeBufferSize;
         for (PartitionContext<K, V> ctx : partitions.values()) {
             AtomicReference<Batch<K, V>> batchRef = ctx.headBatchRef;
@@ -453,6 +463,7 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
                 try {
                     sendBatch(ctx, batchRef, cur, bufSndSize);
                 } catch (RuntimeException e) {
+                    addFlushLock.unlockWrite(stamp);
                     CompletableFuture<Void> f = new CompletableFuture<>();
                     f.completeExceptionally(e);
                     return f;
@@ -462,7 +473,9 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
             futs.add(ctx.pendingBatchesFuture());
         }
 
-        return CompletableFuture.allOf(futs.toArray(new CompletableFuture[0]));
+        CompletableFuture<Void> result = CompletableFuture.allOf(futs.toArray(new CompletableFuture[0]));
+        result.whenComplete((v, e) -> addFlushLock.unlockWrite(stamp));
+        return result;
     }
 
     /**
@@ -473,34 +486,40 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
      * @return Future that completes when the batch containing this entry is sent.
      */
     private CompletableFuture<Void> add0(K key, V val) {
-        int bufSndSize = perNodeBufferSize;
-        @Nullable UUID nodeId = ch.resolveAffinityNode(cacheId, key);
-        UUID partition = nodeId != null ? nodeId : UNKNOWN_NODE;
-        PartitionContext<K, V> partCtx = partitions.computeIfAbsent(
-                partition, k -> new PartitionContext<>(nodeId, perNodeParallelOperations, bufSndSize));
+        long stamp = addFlushLock.readLock();
+        try {
+            int bufSndSize = perNodeBufferSize;
+            @Nullable UUID nodeId = ch.resolveAffinityNode(cacheId, key);
+            UUID partition = nodeId != null ? nodeId : UNKNOWN_NODE;
+            PartitionContext<K, V> partCtx = partitions.computeIfAbsent(
+                    partition, k -> new PartitionContext<>(nodeId, perNodeParallelOperations, bufSndSize));
 
-        AtomicReference<Batch<K, V>> batchRef = partCtx.headBatchRef;
+            AtomicReference<Batch<K, V>> batchRef = partCtx.headBatchRef;
 
-        Batch<K, V> cur = null;
-        int size = -1;
-        while (size < 0) {
-            ensureNotClosed();
+            Batch<K, V> cur = null;
+            int size = -1;
+            while (size < 0) {
+                ensureNotClosed();
 
-            cur = batchRef.get();
+                cur = batchRef.get();
 
-            size = cur.add(key, val);
+                size = cur.add(key, val);
 
-            if (size <= 0) {
-                // Batch is either full or already in the sendQueue. Swap in a new batch and retry.
-                batchRef.compareAndSet(cur, new Batch<>(bufSndSize));
+                if (size <= 0) {
+                    // Batch is either full or already in the sendQueue. Swap in a new batch and retry.
+                    batchRef.compareAndSet(cur, new Batch<>(bufSndSize));
+                }
             }
-        }
 
-        if (size == cur.maxSize) {
-            sendBatch(partCtx, batchRef, cur, bufSndSize);
-        }
+            if (size == cur.maxSize) {
+                sendBatch(partCtx, batchRef, cur, bufSndSize);
+            }
 
-        return cur.fut;
+            return cur.fut;
+        }
+        finally {
+            addFlushLock.unlockRead(stamp);
+        }
     }
 
     /**
