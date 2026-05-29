@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Client.Cache
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Expiry;
@@ -82,7 +83,7 @@ namespace Apache.Ignite.Core.Client.Cache
         /// <returns>
         /// true if the cache contains an element with the specified key; otherwise, false.
         /// </returns>
-        bool TryGet(TK key, out TV value);
+        bool TryGet(TK key, [MaybeNullWhen(false)] out TV value);
 
         /// <summary>
         /// Retrieves value mapped to the specified key from cache.

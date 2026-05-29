@@ -133,7 +133,7 @@ namespace Apache.Ignite.Core.Cache
         /// <param name="args">
         /// Optional user arguments to be passed into <see cref="ICacheStore{K, V}.LoadCache" />.
         /// </param>
-        void LoadCache(ICacheEntryFilter<TK, TV> p, params object[] args);
+        void LoadCache(ICacheEntryFilter<TK, TV>? p, params object[] args);
 
         /// <summary>
         /// Executes <see cref="LocalLoadCache"/> on all cache nodes.
@@ -144,7 +144,7 @@ namespace Apache.Ignite.Core.Cache
         /// <param name="args">
         /// Optional user arguments to be passed into <see cref="ICacheStore{K, V}.LoadCache" />.
         /// </param>
-        Task LoadCacheAsync(ICacheEntryFilter<TK, TV> p, params object[] args);
+        Task LoadCacheAsync(ICacheEntryFilter<TK, TV>? p, params object[] args);
 
         /// <summary>
         /// Delegates to <see cref="ICacheStore{K, V}.LoadCache" /> method to load state
@@ -158,7 +158,7 @@ namespace Apache.Ignite.Core.Cache
         /// <param name="args">
         /// Optional user arguments to be passed into <see cref="ICacheStore{K, V}.LoadCache" />.
         /// </param>
-        void LocalLoadCache(ICacheEntryFilter<TK, TV> p, params object[] args);
+        void LocalLoadCache(ICacheEntryFilter<TK, TV>? p, params object[] args);
 
         /// <summary>
         /// Delegates to <see cref="ICacheStore{K, V}.LoadCache" /> method to load state
@@ -172,7 +172,7 @@ namespace Apache.Ignite.Core.Cache
         /// <param name="args">
         /// Optional user arguments to be passed into <see cref="ICacheStore{K, V}.LoadCache" />.
         /// </param>
-        Task LocalLoadCacheAsync(ICacheEntryFilter<TK, TV> p, params object[] args);
+        Task LocalLoadCacheAsync(ICacheEntryFilter<TK, TV>? p, params object[] args);
 
         /// <summary>
         /// Loads the specified entries into the cache using the configured
@@ -256,7 +256,7 @@ namespace Apache.Ignite.Core.Cache
         /// <returns>
         /// true if the cache contains an element with the specified key; otherwise, false.
         /// </returns>
-        bool TryLocalPeek(TK key, out TV value, params CachePeekMode[] modes);
+        bool TryLocalPeek(TK key, [MaybeNullWhen(false)] out TV value, params CachePeekMode[] modes);
 
         /// <summary>
         /// Gets or sets a cache value with the specified key.
@@ -307,7 +307,7 @@ namespace Apache.Ignite.Core.Cache
         /// <returns>
         /// true if the cache contains an element with the specified key; otherwise, false.
         /// </returns>
-        bool TryGet(TK key, out TV value);
+        bool TryGet(TK key, [MaybeNullWhen(false)] out TV value);
 
         /// <summary>
         /// Retrieves value mapped to the specified key from cache.

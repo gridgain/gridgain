@@ -46,10 +46,10 @@ namespace Apache.Ignite.Core.Events
         private readonly IgniteGuid? _xid;
 
         /** */
-        private readonly object _newValue;
+        private readonly object? _newValue;
 
         /** */
-        private readonly object _oldValue;
+        private readonly object? _oldValue;
 
         /** */
         private readonly bool _hasOldValue;
@@ -61,10 +61,10 @@ namespace Apache.Ignite.Core.Events
         private readonly Guid? _subjectId;
 
         /** */
-        private readonly string _closureClassName;
+        private readonly string? _closureClassName;
 
         /** */
-        private readonly string _taskName;
+        private readonly string? _taskName;
 
         /// <summary>
         /// Constructor.
@@ -120,12 +120,12 @@ namespace Apache.Ignite.Core.Events
         /// <summary>
         /// Gets new value for this event. 
         /// </summary>
-        public object NewValue { get { return _newValue; } }
+        public object? NewValue { get { return _newValue; } }
 
         /// <summary>
         /// Gets old value associated with this event. 
         /// </summary>
-        public object OldValue { get { return _oldValue; } }
+        public object? OldValue { get { return _oldValue; } }
 
         /// <summary>
         /// Gets flag indicating whether cache entry has old value in case if we only have old value in serialized form 
@@ -150,12 +150,12 @@ namespace Apache.Ignite.Core.Events
         /// <summary>
         /// Gets closure class name (applicable only for TRANSFORM operations). 
         /// </summary>
-        public string ClosureClassName { get { return _closureClassName; } }
+        public string? ClosureClassName { get { return _closureClassName; } }
 
         /// <summary>
         /// Gets task name if cache event was caused by an operation initiated within task execution. 
         /// </summary>
-        public string TaskName { get { return _taskName; } }
+        public string? TaskName { get { return _taskName; } }
 
         /// <summary>
         /// Gets shortened version of ToString result.

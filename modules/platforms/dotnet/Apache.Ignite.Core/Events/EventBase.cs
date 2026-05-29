@@ -40,7 +40,7 @@ namespace Apache.Ignite.Core.Events
         private readonly IClusterNode? _node;
 
         /** */
-        private readonly string _message;
+        private readonly string? _message;
 
         /** */
         private readonly int _type;
@@ -103,7 +103,7 @@ namespace Apache.Ignite.Core.Events
         /// <summary>
         /// Gets optional message for this event.
         /// </summary>
-        public string Message
+        public string? Message
         {
             get { return _message; }
         }

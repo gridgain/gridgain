@@ -28,10 +28,10 @@ namespace Apache.Ignite.Core.Events
     public sealed class JobEvent : EventBase
 	{
         /** */
-        private readonly string _taskName;
+        private readonly string? _taskName;
 
         /** */
-        private readonly string _taskClassName;
+        private readonly string? _taskClassName;
 
         /** */
         private readonly IgniteGuid? _taskSessionId;
@@ -62,12 +62,12 @@ namespace Apache.Ignite.Core.Events
         /// <summary>
         /// Gets name of the task that triggered the event. 
         /// </summary>
-        public string TaskName { get { return _taskName; } }
+        public string? TaskName { get { return _taskName; } }
 
         /// <summary>
         /// Gets name of task class that triggered this event. 
         /// </summary>
-        public string TaskClassName { get { return _taskClassName; } }
+        public string? TaskClassName { get { return _taskClassName; } }
 
         /// <summary>
         /// Gets task session ID of the task that triggered this event. 

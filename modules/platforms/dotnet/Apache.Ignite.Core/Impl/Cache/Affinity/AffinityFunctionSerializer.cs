@@ -179,16 +179,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Affinity
         /// <param name="stream">The stream.</param>
         /// <param name="marsh">The marshaller.</param>
         /// <returns>Partitions assignment.</returns>
-        internal static IEnumerable<IEnumerable<IClusterNode>?> ReadPartitions(IBinaryStream stream, Marshaller marsh)
+        internal static IEnumerable<IEnumerable<IClusterNode>> ReadPartitions(IBinaryStream stream, Marshaller marsh)
         {
             var reader = marsh.StartUnmarshal(stream);
 
             var partCnt = reader.ReadInt();
 
-            var res = new List<IEnumerable<IClusterNode>?>(partCnt);
+            var res = new List<IEnumerable<IClusterNode>>(partCnt);
 
             for (var i = 0; i < partCnt; i++)
-                res.Add(IgniteUtils.ReadNodes(reader));
+                // Partition node count is always written as a non-negative value, so ReadNodes never returns null here.
+                res.Add(IgniteUtils.ReadNodes(reader)!);
 
             return res;
         }

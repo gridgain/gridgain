@@ -305,25 +305,25 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /** <inheritDoc /> */
-        public void LoadCache(ICacheEntryFilter<TK, TV> p, params object[] args)
+        public void LoadCache(ICacheEntryFilter<TK, TV>? p, params object[] args)
         {
             DoOutInOpX((int) CacheOp.LoadCache, writer => WriteLoadCacheData(writer, p, args), _readException);
         }
 
         /** <inheritDoc /> */
-        public Task LoadCacheAsync(ICacheEntryFilter<TK, TV> p, params object[] args)
+        public Task LoadCacheAsync(ICacheEntryFilter<TK, TV>? p, params object[] args)
         {
             return DoOutOpAsync(CacheOp.LoadCacheAsync, writer => WriteLoadCacheData(writer, p, args));
         }
 
         /** <inheritDoc /> */
-        public void LocalLoadCache(ICacheEntryFilter<TK, TV> p, params object[] args)
+        public void LocalLoadCache(ICacheEntryFilter<TK, TV>? p, params object[] args)
         {
             DoOutInOpX((int) CacheOp.LocLoadCache, writer => WriteLoadCacheData(writer, p, args), _readException);
         }
 
         /** <inheritDoc /> */
-        public Task LocalLoadCacheAsync(ICacheEntryFilter<TK, TV> p, params object[] args)
+        public Task LocalLoadCacheAsync(ICacheEntryFilter<TK, TV>? p, params object[] args)
         {
             return DoOutOpAsync(CacheOp.LocLoadCacheAsync, writer => WriteLoadCacheData(writer, p, args));
         }
@@ -485,7 +485,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            TV res;
+            TV? res;
 
             if (TryLocalPeek(key, out res, modes))
                 return res;
@@ -494,7 +494,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /** <inheritDoc /> */
-        public bool TryLocalPeek(TK key, out TV value, params CachePeekMode[] modes)
+        public bool TryLocalPeek(TK key, [MaybeNullWhen(false)] out TV value, params CachePeekMode[] modes)
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
@@ -590,7 +590,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /** <inheritDoc /> */
-        public bool TryGet(TK key, out TV value)
+        public bool TryGet(TK key, [MaybeNullWhen(false)] out TV value)
         {
             IgniteArgumentCheck.NotNull(key, "key");
 

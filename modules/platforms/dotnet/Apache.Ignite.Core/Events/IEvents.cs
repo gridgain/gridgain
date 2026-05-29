@@ -106,7 +106,7 @@ namespace Apache.Ignite.Core.Events
         /// <param name="types">Types of the events to wait for. 
         /// If not provided, all events will be passed to the filter.</param>
         /// <returns>Ignite event.</returns>
-        T WaitForLocal<T>(IEventFilter<T> filter, params int[] types) where T : IEvent;
+        T WaitForLocal<T>(IEventFilter<T>? filter, params int[] types) where T : IEvent;
 
         /// <summary>
         /// Waits for the specified events.
@@ -116,7 +116,7 @@ namespace Apache.Ignite.Core.Events
         /// <param name="types">Types of the events to wait for. 
         /// If not provided, all events will be passed to the filter.</param>
         /// <returns>Ignite event.</returns>
-        Task<T> WaitForLocalAsync<T>(IEventFilter<T> filter, params int[] types) where T : IEvent;
+        Task<T> WaitForLocalAsync<T>(IEventFilter<T>? filter, params int[] types) where T : IEvent;
 
         /// <summary>
         /// Waits for the specified events.
@@ -126,7 +126,7 @@ namespace Apache.Ignite.Core.Events
         /// <param name="types">Types of the events to wait for. 
         /// If not provided, all events will be passed to the filter.</param>
         /// <returns>Ignite event.</returns>
-        T WaitForLocal<T>(IEventFilter<T> filter, IEnumerable<int> types) where T : IEvent;
+        T WaitForLocal<T>(IEventFilter<T>? filter, IEnumerable<int> types) where T : IEvent;
 
         /// <summary>
         /// Queries nodes in this cluster group for events using passed in predicate filter for event selection.
@@ -147,7 +147,7 @@ namespace Apache.Ignite.Core.Events
         /// <param name="types">Types of the events to wait for. 
         /// If not provided, all events will be passed to the filter.</param>
         /// <returns>Ignite event.</returns>
-        Task<T> WaitForLocalAsync<T>(IEventFilter<T> filter, IEnumerable<int> types) where T : IEvent;
+        Task<T> WaitForLocalAsync<T>(IEventFilter<T>? filter, IEnumerable<int> types) where T : IEvent;
 
         /// <summary>
         /// Queries local node for events using of specified types.

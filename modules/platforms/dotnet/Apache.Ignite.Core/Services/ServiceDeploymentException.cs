@@ -74,7 +74,7 @@ namespace Apache.Ignite.Core.Services
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
         /// <param name="failedCfgs">List of failed configurations</param>
-        public ServiceDeploymentException(string? message, Exception? cause, ICollection<ServiceConfiguration> failedCfgs)
+        public ServiceDeploymentException(string? message, Exception? cause, ICollection<ServiceConfiguration>? failedCfgs)
             : base(message, cause)
         {
             _failedCfgs = failedCfgs;
@@ -87,7 +87,7 @@ namespace Apache.Ignite.Core.Services
         /// <param name="binaryCause">The binary cause.</param>
         /// <param name="failedCfgs">List of failed configurations</param>
         public ServiceDeploymentException(string? message, IBinaryObject binaryCause,
-            ICollection<ServiceConfiguration> failedCfgs) : base(message)
+            ICollection<ServiceConfiguration>? failedCfgs) : base(message)
         {
             _binaryCause = binaryCause;
             _failedCfgs = failedCfgs;

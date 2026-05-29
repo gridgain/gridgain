@@ -150,7 +150,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         }
 
         /** <inheritDoc /> */
-        public bool TryGet(TK key, out TV value)
+        public bool TryGet(TK key, [MaybeNullWhen(false)] out TV value)
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
