@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -39,7 +40,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.client.datastreamer.ClientDataStreamer;
@@ -130,6 +133,9 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
      */
     private final ConcurrentHashMap<UUID, PartitionContext<K, V>> partitions = new ConcurrentHashMap<>();
 
+    /** Logger. */
+    private final IgniteLogger log;
+
     /** Set to {@code true} once {@link #close(boolean)} has been called. */
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -149,12 +155,14 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
     TcpClientDataStreamer(
         String cacheName,
         ReliableChannel ch,
-        ClientBinaryMarshaller marsh
+        ClientBinaryMarshaller marsh,
+        IgniteLogger log
     ) {
         this.cacheName = cacheName;
         this.cacheId = ClientUtils.cacheId(cacheName);
         this.ch = ch;
         this.serDes = new ClientUtils(marsh);
+        this.log = log;
 
         this.allowOverwrite = false;
         this.skipStore = false;
@@ -442,7 +450,13 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
             Batch<K, V> cur = ctx.headBatchRef.get();
 
             if (!cur.isEmpty()) {
-                sendBatch(ctx, batchRef, cur, bufSndSize);
+                try {
+                    sendBatch(ctx, batchRef, cur, bufSndSize);
+                } catch (RuntimeException e) {
+                    CompletableFuture<Void> f = new CompletableFuture<>();
+                    f.completeExceptionally(e);
+                    return f;
+                }
             }
 
             futs.add(ctx.pendingBatchesFuture());
@@ -501,7 +515,11 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
         batchRef.compareAndSet(batch, new Batch<>(bufSndSize));
         if (batch.lockForSend()) {
             ctx.pendingBatches.add(batch);
-            scheduler.submit(() -> sendToChannel(ctx));
+            try {
+                scheduler.submit(() -> sendToChannel(ctx));
+            } catch (RejectedExecutionException e) {
+                throw new ClientException("Failed to trigger send batch.", e);
+            }
         }
     }
 
@@ -538,9 +556,12 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
         if (timeout0 != TIMEOUT_DISABLED) {
             long elapsed = System.nanoTime() - cur.sndTimestamp;
             if (elapsed > TimeUnit.MILLISECONDS.toNanos(timeout0)) {
-                ctx.inflightBatches.set(slot, null);
-                scheduler.submit(() -> sendToChannel(ctx));
-                cur.fut.completeExceptionally(new ClientException("Timed out waiting for a send permit."));
+                finishBatchSend(
+                        ctx,
+                        slot,
+                        cur,
+                        () -> new ClientException("Timed out waiting for a send permit.")
+                );
                 return;
             }
         }
@@ -580,15 +601,34 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
                 payloadWriter,
                 payloadReader
         ).whenComplete((res, err) -> {
-            ctx.inflightBatches.set(slot, null);
-            scheduler.submit(() -> sendToChannel(ctx));
-
-            if (err != null) {
-                cur.fut.completeExceptionally(new ClientException("Data streamer batch send failed.", err));
-            } else {
-                cur.fut.complete(null);
-            }
+            finishBatchSend(
+                    ctx,
+                    slot,
+                    cur,
+                    () -> err == null ? null : new ClientException("Data streamer batch send failed.", err)
+            );
         });
+    }
+
+    private void finishBatchSend(
+            PartitionContext<K, V> ctx,
+            int slot,
+            Batch<K, V> batch,
+            Supplier<@Nullable Throwable> errSupplier
+    ) {
+        ctx.inflightBatches.set(slot, null);
+        try {
+            scheduler.submit(() -> sendToChannel(ctx));
+        } catch (RejectedExecutionException e) {
+            log.error("Data streamer scheduler rejected batch send, streamer may be closing [cache=" + cacheName + ']', e);
+        }
+
+        @Nullable Throwable err = errSupplier.get();
+        if (err != null) {
+            batch.fut.completeExceptionally(err);
+        } else {
+            batch.fut.complete(null);
+        }
     }
 
     private void ensureNotClosed() throws ClientException {

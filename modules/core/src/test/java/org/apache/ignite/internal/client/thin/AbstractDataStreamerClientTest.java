@@ -63,8 +63,10 @@ public abstract class AbstractDataStreamerClientTest extends AbstractThinClientT
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
-
-        grid(0).cache(CACHE_NAME).removeAll();
+        IgniteCache<Object, Object> cache = grid(0).cache(CACHE_NAME);
+        if (cache != null) {
+            cache.removeAll();
+        }
     }
 
     /**
