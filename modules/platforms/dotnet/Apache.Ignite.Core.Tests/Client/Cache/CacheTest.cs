@@ -131,7 +131,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 var person2 = new Person2 {Id = 200, Name = "bar"};
 
                 var serverCache = GetCache<Person>();
-                var clientCache = client.GetCache<int?, Person>(CacheName);
+                var clientCache = client.GetCache<int, Person>(CacheName);
 
                 Assert.AreEqual(CacheName, clientCache.Name);
 
@@ -156,7 +156,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
                 // Null key or value.
                 Assert.Throws<ArgumentNullException>(() => clientCache.Put(10, null!));
-                Assert.Throws<ArgumentNullException>(() => clientCache.Put(null, person));
+                Assert.Throws<ArgumentNullException>(() => client.GetCache<object, Person>(CacheName).Put(null!, person));
             }
         }
 

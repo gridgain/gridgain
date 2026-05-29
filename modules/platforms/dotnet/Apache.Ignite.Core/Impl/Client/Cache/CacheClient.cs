@@ -45,6 +45,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
     /// Client cache implementation.
     /// </summary>
     internal sealed class CacheClient<TK, TV> : ICacheClient<TK, TV>, ICacheInternal
+        where TK : notnull
     {
         /// <summary>
         /// Additional flags values for cache operations.
@@ -603,6 +604,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 
         /** <inheritDoc /> */
         public ICacheClient<TK1, TV1> WithKeepBinary<TK1, TV1>()
+            where TK1 : notnull
         {
             if (_keepBinary)
             {
@@ -1013,7 +1015,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Writes the peek modes.
         /// </summary>
-        private static void WritePeekModes(ICollection<CachePeekMode> modes, IBinaryStream w)
+        private static void WritePeekModes(ICollection<CachePeekMode>? modes, IBinaryStream w)
         {
             if (modes == null)
             {

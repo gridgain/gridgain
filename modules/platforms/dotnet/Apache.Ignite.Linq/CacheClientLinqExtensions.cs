@@ -48,6 +48,7 @@ namespace Apache.Ignite.Linq
         /// <returns><see cref="IQueryable{T}"/> instance over this cache.</returns>
         public static IQueryable<ICacheEntry<TKey, TValue>> AsCacheQueryable<TKey, TValue>(
             this ICacheClient<TKey, TValue> cache)
+            where TKey : notnull
         {
             IgniteArgumentCheck.NotNull(cache, "cache");
 
@@ -70,6 +71,7 @@ namespace Apache.Ignite.Linq
         /// <returns><see cref="IQueryable{T}"/> instance over this cache.</returns>
         public static IQueryable<ICacheEntry<TKey, TValue>> AsCacheQueryable<TKey, TValue>(
             this ICacheClient<TKey, TValue> cache, bool local)
+            where TKey : notnull
         {
             IgniteArgumentCheck.NotNull(cache, "cache");
 
@@ -99,6 +101,7 @@ namespace Apache.Ignite.Linq
         /// <returns><see cref="IQueryable{T}" /> instance over this cache.</returns>
         public static IQueryable<ICacheEntry<TKey, TValue>> AsCacheQueryable<TKey, TValue>(
             this ICacheClient<TKey, TValue> cache, bool local, string? tableName)
+            where TKey : notnull
         {
             IgniteArgumentCheck.NotNull(cache, "cache");
 
@@ -123,6 +126,7 @@ namespace Apache.Ignite.Linq
         [SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", Justification = "False positive")]
         public static IQueryable<ICacheEntry<TKey, TValue>> AsCacheQueryable<TKey, TValue>(
             this ICacheClient<TKey, TValue> cache, QueryOptions queryOptions)
+            where TKey : notnull
         {
             IgniteArgumentCheck.NotNull(cache, "cache");
             IgniteArgumentCheck.NotNull(queryOptions, "queryOptions");

@@ -50,7 +50,8 @@ namespace Apache.Ignite.Core.Client
         /// <returns>Cache instance for given name.</returns>
         /// <typeparam name="TK">Cache key type.</typeparam>
         /// <typeparam name="TV">Cache value type.</typeparam>
-        ICacheClient<TK, TV> GetCache<TK, TV>(string name);
+        ICacheClient<TK, TV> GetCache<TK, TV>(string name)
+            where TK : notnull;
 
         /// <summary>
         /// Gets existing cache with the given name or creates new one using template configuration.
@@ -59,7 +60,8 @@ namespace Apache.Ignite.Core.Client
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="name">Cache name.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(string name);
+        ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(string name)
+            where TK : notnull;
 
         /// <summary>
         /// Gets existing cache with the given name or creates new one using provided configuration.
@@ -68,7 +70,8 @@ namespace Apache.Ignite.Core.Client
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="configuration">Cache configuration.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(CacheClientConfiguration configuration);
+        ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(CacheClientConfiguration configuration)
+            where TK : notnull;
 
         /// <summary>
         /// Dynamically starts new cache using template configuration.
@@ -77,7 +80,8 @@ namespace Apache.Ignite.Core.Client
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="name">Cache name.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICacheClient<TK, TV> CreateCache<TK, TV>(string name);
+        ICacheClient<TK, TV> CreateCache<TK, TV>(string name)
+            where TK : notnull;
 
         /// <summary>
         /// Dynamically starts new cache using provided configuration.
@@ -86,7 +90,8 @@ namespace Apache.Ignite.Core.Client
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="configuration">Cache configuration.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICacheClient<TK, TV> CreateCache<TK, TV>(CacheClientConfiguration configuration);
+        ICacheClient<TK, TV> CreateCache<TK, TV>(CacheClientConfiguration configuration)
+            where TK : notnull;
 
         /// <summary>
         /// Gets the collection of names of currently available caches, or empty collection if there are no caches.

@@ -132,6 +132,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
         /** <inheritDoc /> */
         public ICacheClient<TK, TV> GetCache<TK, TV>(string name)
+            where TK : notnull
         {
             IgniteArgumentCheck.NotNull(name, "name");
 
@@ -140,6 +141,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
         /** <inheritDoc /> */
         public ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(string name)
+            where TK : notnull
         {
             IgniteArgumentCheck.NotNull(name, "name");
 
@@ -150,6 +152,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
         /** <inheritDoc /> */
         public ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(CacheClientConfiguration configuration)
+            where TK : notnull
         {
             IgniteArgumentCheck.NotNull(configuration, "configuration");
 
@@ -161,6 +164,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
         /** <inheritDoc /> */
         public ICacheClient<TK, TV> CreateCache<TK, TV>(string name)
+            where TK : notnull
         {
             IgniteArgumentCheck.NotNull(name, "name");
 
@@ -171,6 +175,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
         /** <inheritDoc /> */
         public ICacheClient<TK, TV> CreateCache<TK, TV>(CacheClientConfiguration configuration)
+            where TK : notnull
         {
             IgniteArgumentCheck.NotNull(configuration, "configuration");
 
