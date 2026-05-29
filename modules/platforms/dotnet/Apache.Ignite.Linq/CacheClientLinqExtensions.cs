@@ -98,7 +98,7 @@ namespace Apache.Ignite.Linq
         /// </param>
         /// <returns><see cref="IQueryable{T}" /> instance over this cache.</returns>
         public static IQueryable<ICacheEntry<TKey, TValue>> AsCacheQueryable<TKey, TValue>(
-            this ICacheClient<TKey, TValue> cache, bool local, string tableName)
+            this ICacheClient<TKey, TValue> cache, bool local, string? tableName)
         {
             IgniteArgumentCheck.NotNull(cache, "cache");
 
