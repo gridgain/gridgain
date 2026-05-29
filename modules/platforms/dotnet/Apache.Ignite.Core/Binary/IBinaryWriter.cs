@@ -36,7 +36,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Byte array.</param>
-        void WriteByteArray(string fieldName, byte[] val);
+        void WriteByteArray(string fieldName, byte[]? val);
 
         /// <summary>
         /// Write named char value.
@@ -50,7 +50,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Char array.</param>
-        void WriteCharArray(string fieldName, char[] val);
+        void WriteCharArray(string fieldName, char[]? val);
 
         /// <summary>
         /// Write named short value.
@@ -64,7 +64,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Short array.</param>
-        void WriteShortArray(string fieldName, short[] val);
+        void WriteShortArray(string fieldName, short[]? val);
 
         /// <summary>
         /// Write named int value.
@@ -78,7 +78,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Int array.</param>
-        void WriteIntArray(string fieldName, int[] val);
+        void WriteIntArray(string fieldName, int[]? val);
 
         /// <summary>
         /// Write named long value.
@@ -92,7 +92,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Long array.</param>
-        void WriteLongArray(string fieldName, long[] val);
+        void WriteLongArray(string fieldName, long[]? val);
 
         /// <summary>
         /// Write named boolean value.
@@ -106,7 +106,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Boolean array.</param>
-        void WriteBooleanArray(string fieldName, bool[] val);
+        void WriteBooleanArray(string fieldName, bool[]? val);
 
         /// <summary>
         /// Write named float value.
@@ -120,7 +120,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Float array.</param>
-        void WriteFloatArray(string fieldName, float[] val);
+        void WriteFloatArray(string fieldName, float[]? val);
 
         /// <summary>
         /// Write named double value.
@@ -134,7 +134,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Double array.</param>
-        void WriteDoubleArray(string fieldName, double[] val);
+        void WriteDoubleArray(string fieldName, double[]? val);
 
         /// <summary>
         /// Write named decimal value.
@@ -148,7 +148,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Decimal array.</param>
-        void WriteDecimalArray(string fieldName, decimal?[] val);
+        void WriteDecimalArray(string fieldName, decimal?[]? val);
 
         /// <summary>
         /// Write named date value.
@@ -162,21 +162,21 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Date array.</param>
-        void WriteTimestampArray(string fieldName, DateTime?[] val);
+        void WriteTimestampArray(string fieldName, DateTime?[]? val);
 
         /// <summary>
         /// Write named string value.
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">String value.</param>
-        void WriteString(string fieldName, string val);
+        void WriteString(string fieldName, string? val);
 
         /// <summary>
         /// Write named string array.
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">String array.</param>
-        void WriteStringArray(string fieldName, string[] val);
+        void WriteStringArray(string fieldName, string?[]? val);
 
         /// <summary>
         /// Write named GUID value.
@@ -190,7 +190,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">GUID array.</param>
-        void WriteGuidArray(string fieldName, Guid?[] val);
+        void WriteGuidArray(string fieldName, Guid?[]? val);
 
         /// <summary>
         /// Write named enum value.
@@ -204,21 +204,21 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Enum array.</param>
-        void WriteEnumArray<T>(string fieldName, T[] val);
+        void WriteEnumArray<T>(string fieldName, T[]? val);
 
         /// <summary>
         /// Write named object value.
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Object value.</param>
-        void WriteObject<T>(string fieldName, T val);
+        void WriteObject<T>(string fieldName, T? val);
 
         /// <summary>
         /// Write named object array.
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Object array.</param>
-        void WriteArray<T>(string fieldName, T[] val);
+        void WriteArray<T>(string fieldName, T[]? val);
 
         /// <summary>
         /// Writes a named collection in interoperable form.
@@ -231,7 +231,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Collection.</param>
-        void WriteCollection(string fieldName, ICollection val);
+        void WriteCollection(string fieldName, ICollection? val);
 
         /// <summary>
         /// Writes a named dictionary in interoperable form.
@@ -244,7 +244,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <param name="val">Dictionary.</param>
-        void WriteDictionary(string fieldName, IDictionary val);
+        void WriteDictionary(string fieldName, IDictionary? val);
 
         /// <summary>
         /// Get raw writer. 
