@@ -69,7 +69,7 @@ namespace Apache.Ignite.Core.Binary
         /// <value>
         /// The name of the enum value.
         /// </value>
-        string EnumName { get; }
+        string? EnumName { get; }
 
         /// <summary>
         /// Creates a new <see cref="IBinaryObjectBuilder"/> based on this object.
