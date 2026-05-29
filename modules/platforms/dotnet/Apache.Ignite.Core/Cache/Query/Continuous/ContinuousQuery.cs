@@ -64,6 +64,7 @@ namespace Apache.Ignite.Core.Cache.Query.Continuous
     /// <see cref="ICache{K,V}.QueryContinuous(ContinuousQuery{K,V})"/>.
     /// </summary>
     public class ContinuousQuery<TK, TV> : ContinuousQuery
+        where TK : notnull
     {
         /// <summary>
         /// Constructor.

@@ -68,7 +68,8 @@ namespace Apache.Ignite.Core.Cache.Store
         /// </returns>
         public virtual IEnumerable<KeyValuePair<TK, TV>> LoadAll(IEnumerable<TK> keys)
         {
-            return keys.ToDictionary(key => key, Load);
+            // Load can return null for keys that can't be loaded; the resulting map mirrors that, as before.
+            return keys.ToDictionary(key => key, key => Load(key)!);
         }
 
         /// <summary>
@@ -127,7 +128,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// The value for the entry that is to be stored in the cache
         /// or <c>null</c> if the object can't be loaded
         /// </returns>
-        public abstract TV Load(TK key);
+        public abstract TV? Load(TK key);
 
         /// <summary>
         /// Write the specified value under the specified key to the external resource.

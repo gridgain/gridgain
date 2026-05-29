@@ -43,6 +43,7 @@ namespace Apache.Ignite.Core.Client.Cache.Query.Continuous
     /// <see cref="ICacheClient{K,V}.QueryContinuous"/>.
     /// </summary>
     public class ContinuousQueryClient<TK, TV> : ContinuousQueryClient
+        where TK : notnull
     {
         /// <summary>
         /// Initializes a new instance of <see cref="ContinuousQueryClient{TK,TV}"/> class.

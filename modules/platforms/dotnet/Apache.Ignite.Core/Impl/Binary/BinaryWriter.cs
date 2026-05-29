@@ -142,7 +142,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write boolean array.
         /// </summary>
         /// <param name="val">Boolean array.</param>
-        public void WriteBooleanArray(bool[] val)
+        public void WriteBooleanArray(bool[]? val)
         {
             if (val == null)
                 WriteNullRawField();
@@ -219,7 +219,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write byte array.
         /// </summary>
         /// <param name="val">Byte array.</param>
-        public void WriteByteArray(byte[] val)
+        public void WriteByteArray(byte[]? val)
         {
             if (val == null)
                 WriteNullRawField();
@@ -296,7 +296,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write short array.
         /// </summary>
         /// <param name="val">Short array.</param>
-        public void WriteShortArray(short[] val)
+        public void WriteShortArray(short[]? val)
         {
             if (val == null)
                 WriteNullRawField();
@@ -532,7 +532,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write long array.
         /// </summary>
         /// <param name="val">Long array.</param>
-        public void WriteLongArray(long[] val)
+        public void WriteLongArray(long[]? val)
         {
             if (val == null)
                 WriteNullRawField();
@@ -609,7 +609,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write float array.
         /// </summary>
         /// <param name="val">Float array.</param>
-        public void WriteFloatArray(float[] val)
+        public void WriteFloatArray(float[]? val)
         {
             if (val == null)
                 WriteNullRawField();
@@ -686,7 +686,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write double array.
         /// </summary>
         /// <param name="val">Double array.</param>
-        public void WriteDoubleArray(double[] val)
+        public void WriteDoubleArray(double[]? val)
         {
             if (val == null)
                 WriteNullRawField();
@@ -752,7 +752,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write decimal array.
         /// </summary>
         /// <param name="val">Decimal array.</param>
-        public void WriteDecimalArray(decimal?[] val)
+        public void WriteDecimalArray(decimal?[]? val)
         {
             if (val == null)
                 WriteNullRawField();
@@ -818,7 +818,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write date array.
         /// </summary>
         /// <param name="val">Date array.</param>
-        public void WriteTimestampArray(DateTime?[] val)
+        public void WriteTimestampArray(DateTime?[]? val)
         {
             if (val == null)
                 WriteNullRawField();
@@ -884,7 +884,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write string array.
         /// </summary>
         /// <param name="val">String array.</param>
-        public void WriteStringArray(string[] val)
+        public void WriteStringArray(string?[]? val)
         {
             if (val == null)
                 WriteNullRawField();
@@ -950,7 +950,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write GUID array.
         /// </summary>
         /// <param name="val">GUID array.</param>
-        public void WriteGuidArray(Guid?[] val)
+        public void WriteGuidArray(Guid?[]? val)
         {
             if (val == null)
                 WriteNullRawField();
@@ -1063,7 +1063,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="val">Enum array.</param>
-        public void WriteEnumArray<T>(T[] val)
+        public void WriteEnumArray<T>(T[]? val)
         {
             WriteEnumArrayInternal(val, null);
         }
@@ -1073,7 +1073,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         /// <param name="val">The value.</param>
         /// <param name="elementTypeId">The element type id.</param>
-        public void WriteEnumArrayInternal(Array val, int? elementTypeId)
+        public void WriteEnumArrayInternal(Array? val, int? elementTypeId)
         {
             if (val == null)
                 WriteNullField();
@@ -1107,7 +1107,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="val">Object value.</param>
-        public void WriteObject<T>(T val)
+        public void WriteObject<T>(T? val)
         {
             Write(val);
         }
@@ -1130,7 +1130,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         /// <typeparam name="T">Element type.</typeparam>
         /// <param name="val">Object array.</param>
-        public void WriteArray<T>(T[] val)
+        public void WriteArray<T>(T[]? val)
         {
             WriteArrayInternal(val);
         }
@@ -1139,7 +1139,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write object array.
         /// </summary>
         /// <param name="val">Object array.</param>
-        public void WriteArrayInternal(Array val)
+        public void WriteArrayInternal(Array? val)
         {
             if (val == null)
                 WriteNullRawField();
@@ -1169,7 +1169,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write collection.
         /// </summary>
         /// <param name="val">Collection.</param>
-        public void WriteCollection(ICollection val)
+        public void WriteCollection(ICollection? val)
         {
             if (val == null)
                 WriteNullField();
@@ -1199,7 +1199,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// Write dictionary.
         /// </summary>
         /// <param name="val">Dictionary.</param>
-        public void WriteDictionary(IDictionary val)
+        public void WriteDictionary(IDictionary? val)
         {
             if (val == null)
                 WriteNullField();

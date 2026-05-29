@@ -47,6 +47,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
     /// </summary>
     internal class ContinuousQueryHandleImpl<TK, TV> : IContinuousQueryHandleImpl, IContinuousQueryFilter,
         IContinuousQueryHandle<ICacheEntry<TK, TV>>, IContinuousQueryHandleFields
+        where TK : notnull
     {
         /** Marshaller. */
         private readonly Marshaller _marsh;

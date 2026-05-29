@@ -671,7 +671,7 @@ namespace Apache.Ignite.Core
         /// An instance of named grid.
         /// </returns>
         /// <exception cref="IgniteException">When there is no Ignite instance with specified name.</exception>
-        public static IIgnite GetIgnite(string name)
+        public static IIgnite GetIgnite(string? name)
         {
             var ignite = TryGetIgnite(name);
 

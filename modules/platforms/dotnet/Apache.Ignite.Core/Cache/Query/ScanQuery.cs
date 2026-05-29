@@ -23,6 +23,7 @@ namespace Apache.Ignite.Core.Cache.Query
     /// Scan query over cache entries. Will accept all the entries if no predicate was set.
     /// </summary>
     public class ScanQuery<TK, TV> : QueryBase
+        where TK : notnull
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ScanQuery{K, V}"/> class.
