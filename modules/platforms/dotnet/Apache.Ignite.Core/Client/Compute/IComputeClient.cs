@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Client.Compute
         /// <param name="taskArg">Optional argument of task execution, can be null.</param>
         /// <returns>Task result.</returns>
         /// <typeparam name="TRes">Type of task result.</typeparam>
-        TRes ExecuteJavaTask<TRes>(string taskName, object taskArg);
+        TRes ExecuteJavaTask<TRes>(string taskName, object? taskArg);
 
         /// <summary>
         /// Executes Java task by class name.
@@ -47,7 +47,7 @@ namespace Apache.Ignite.Core.Client.Compute
         /// <param name="taskArg">Optional argument of task execution, can be null.</param>
         /// <returns>Task result.</returns>
         /// <typeparam name="TRes">Type of task result.</typeparam>
-        Task<TRes> ExecuteJavaTaskAsync<TRes>(string taskName, object taskArg);
+        Task<TRes> ExecuteJavaTaskAsync<TRes>(string taskName, object? taskArg);
 
         /// <summary>
         /// Executes Java task by class name.
@@ -57,7 +57,7 @@ namespace Apache.Ignite.Core.Client.Compute
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>Task result.</returns>
         /// <typeparam name="TRes">Type of task result.</typeparam>
-        Task<TRes> ExecuteJavaTaskAsync<TRes>(string taskName, object taskArg, CancellationToken cancellationToken);
+        Task<TRes> ExecuteJavaTaskAsync<TRes>(string taskName, object? taskArg, CancellationToken cancellationToken);
 
         /// <summary>
         /// Returns a new instance of <see cref="IComputeClient"/> with a timeout for all task executions.
