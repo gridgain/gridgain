@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-#nullable disable
-
 namespace Apache.Ignite.Core.Impl.Services
 {
     using System;
-    using System.Diagnostics;
     using System.Threading;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Services;
@@ -38,8 +35,6 @@ namespace Apache.Ignite.Core.Impl.Services
         /// <param name="reader">The reader.</param>
         public ServiceContext(IBinaryRawReader reader)
         {
-            Debug.Assert(reader != null);
-
             Name = reader.ReadString();
             ExecutionId = reader.ReadGuid() ?? Guid.Empty;
             IsCancelled = reader.ReadBoolean();
@@ -57,15 +52,15 @@ namespace Apache.Ignite.Core.Impl.Services
         public bool IsCancelled { get; private set; }
 
         /** <inheritdoc /> */
-        public string CacheName { get; private set; }
+        public string? CacheName { get; private set; }
 
         /** <inheritdoc /> */
-        public object AffinityKey { get; private set; }
+        public object? AffinityKey { get; private set; }
 
         /** <inheritdoc /> */
         public IServiceCallContext CurrentCallContext
         {
-            get { return LocCallCtx.Value; }
+            get { return LocCallCtx.Value!; }
         }
 
         /// <summary>
