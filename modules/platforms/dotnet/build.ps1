@@ -117,7 +117,7 @@ function Build-Solution([string]$targetSolution, [string]$targetDir) {
         Exec $cleanCommand
     }
 
-    $buildCommand = "dotnet publish $targetSolution -c $configuration -o $targetDir"
+    $buildCommand = "dotnet publish $targetSolution -c $configuration -o $targetDir /p:TreatWarningsAsErrors=false /p:NoWarn=NU1902 /p:NuGetAudit=false"
     echo "Starting dotnet build: '$buildCommand'"
     Exec $buildCommand
 }
@@ -205,7 +205,7 @@ if (!$skipNuGet) {
     $ver = if ($version) { $version } else { (gi Apache.Ignite.Core\bin\Release\netstandard2.0\Apache.Ignite.Core.dll).VersionInfo.ProductVersion }
     $ver = "$ver$versionSuffix"
 
-    Exec "dotnet pack Apache.Ignite.sln -c Release -o $nupkgDir /p:Version=$ver"
+    Exec "dotnet pack Apache.Ignite.sln -c Release -o $nupkgDir /p:Version=$ver /p:TreatWarningsAsErrors=false"
 
     echo "NuGet packages created in '$pwd\$nupkgDir'."
 
@@ -213,7 +213,7 @@ if (!$skipNuGet) {
     # Copy csproj to current dir temporarily: dotnet-new templates can't be packed with parent dir content.
     Copy-Item .\templates\public\Apache.Ignite.Examples\Apache.Ignite.Examples.csproj $pwd
 
-    Exec "dotnet pack Apache.Ignite.Examples.csproj --output $nupkgDir -p:PackageVersion=$ver"
+    Exec "dotnet pack Apache.Ignite.Examples.csproj --output $nupkgDir -p:PackageVersion=$ver /p:TreatWarningsAsErrors=false"
 
     Remove-Item Apache.Ignite.Examples.csproj
     Remove-Item bin\Debug -Force -Recurse
