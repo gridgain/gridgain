@@ -427,7 +427,7 @@ namespace Apache.Ignite.Core
         /// </summary>
         /// <param name="memoryPolicyName">Name of the memory policy.</param>
         [Obsolete("Use GetDataRegionMetrics.")]
-        IMemoryMetrics GetMemoryMetrics(string memoryPolicyName);
+        IMemoryMetrics? GetMemoryMetrics(string memoryPolicyName);
 
         /// <summary>
         /// Changes Ignite grid state to active or inactive.
@@ -468,7 +468,7 @@ namespace Apache.Ignite.Core
         /// use <see cref="DataStorageConfiguration.DefaultDataRegionName"/>.
         /// </summary>
         /// <param name="dataRegionName">Name of the data region.</param>
-        IDataRegionMetrics GetDataRegionMetrics(string dataRegionName);
+        IDataRegionMetrics? GetDataRegionMetrics(string dataRegionName);
 
         /// <summary>
         /// Gets the persistent store metrics.

@@ -114,7 +114,7 @@ namespace Apache.Ignite.Core.Binary
         /// Gets metadata for specified type.
         /// </summary>
         /// <returns>Metadata.</returns>
-        IBinaryType GetBinaryType(Type type);
+        IBinaryType? GetBinaryType(Type type);
 
         /// <summary>
         /// Converts enum to a binary form.

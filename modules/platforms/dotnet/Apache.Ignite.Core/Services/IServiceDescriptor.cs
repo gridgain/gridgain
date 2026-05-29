@@ -63,7 +63,7 @@ namespace Apache.Ignite.Core.Services
         /// <returns>
         /// Cache name, possibly null.
         /// </returns>
-        string CacheName { get; }
+        string? CacheName { get; }
 
         /// <summary>
         /// Gets affinity key used for key-to-node affinity calculation. 
@@ -72,7 +72,7 @@ namespace Apache.Ignite.Core.Services
         /// <value>
         /// Affinity key, possibly null.
         /// </value>
-        object AffinityKey { get; }
+        object? AffinityKey { get; }
 
         /// <summary>
         /// Gets affinity key used for key-to-node affinity calculation. 

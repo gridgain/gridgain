@@ -69,7 +69,7 @@ namespace Apache.Ignite.Core.Cluster
         /// <exception cref="IgniteException">If underlying SPI implementation does not support 
         /// topology history. Currently only <c>org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi</c>
         /// supports topology history.</exception>
-        ICollection<IClusterNode> GetTopology(long ver);
+        ICollection<IClusterNode>? GetTopology(long ver);
 
         /// <summary>
         /// Resets local I/O, job, and task execution metrics.
@@ -119,7 +119,7 @@ namespace Apache.Ignite.Core.Cluster
         /// Gets the baseline topology.
         /// Returns null if <see cref="SetBaselineTopology(long)"/> has not been called.
         /// </summary>
-        ICollection<IBaselineNode> GetBaselineTopology();
+        ICollection<IBaselineNode>? GetBaselineTopology();
 
         /// <summary>
         /// Disables write-ahead logging for specified cache. When WAL is disabled, changes are not logged to disk.

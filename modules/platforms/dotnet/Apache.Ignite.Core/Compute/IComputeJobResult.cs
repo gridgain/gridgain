@@ -50,7 +50,7 @@ namespace Apache.Ignite.Core.Compute
         /// exception was produced.
         /// </summary>
         /// <value>Exception or <c>null</c> in case of success.</value>
-        Exception Exception { get; }
+        Exception? Exception { get; }
 
         /// <summary>
         /// ID of the node where actual job execution occurred.

@@ -211,14 +211,14 @@ namespace Apache.Ignite.Core.Cluster
         /// <param name="id">Node ID.</param>
         /// <returns>Node with given ID from this projection or null if such node does not 
         /// exist in this projection.</returns>
-        IClusterNode GetNode(Guid id);
+        IClusterNode? GetNode(Guid id);
 
         /// <summary>
         /// Gets first node from the list of nodes in this projection.
         /// </summary>
         /// <returns>Node.</returns>
         [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate", Justification = "Semantics.")]
-        IClusterNode GetNode();
+        IClusterNode? GetNode();
 
         /// <summary>
         /// Gets a metrics snapshot for this projection
