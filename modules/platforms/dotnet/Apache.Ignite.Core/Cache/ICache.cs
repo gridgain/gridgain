@@ -133,7 +133,7 @@ namespace Apache.Ignite.Core.Cache
         /// <param name="args">
         /// Optional user arguments to be passed into <see cref="ICacheStore{K, V}.LoadCache" />.
         /// </param>
-        void LoadCache(ICacheEntryFilter<TK, TV>? p, params object[] args);
+        void LoadCache(ICacheEntryFilter<TK, TV>? p, params object?[]? args);
 
         /// <summary>
         /// Executes <see cref="LocalLoadCache"/> on all cache nodes.
@@ -144,7 +144,7 @@ namespace Apache.Ignite.Core.Cache
         /// <param name="args">
         /// Optional user arguments to be passed into <see cref="ICacheStore{K, V}.LoadCache" />.
         /// </param>
-        Task LoadCacheAsync(ICacheEntryFilter<TK, TV>? p, params object[] args);
+        Task LoadCacheAsync(ICacheEntryFilter<TK, TV>? p, params object?[]? args);
 
         /// <summary>
         /// Delegates to <see cref="ICacheStore{K, V}.LoadCache" /> method to load state
@@ -158,7 +158,7 @@ namespace Apache.Ignite.Core.Cache
         /// <param name="args">
         /// Optional user arguments to be passed into <see cref="ICacheStore{K, V}.LoadCache" />.
         /// </param>
-        void LocalLoadCache(ICacheEntryFilter<TK, TV>? p, params object[] args);
+        void LocalLoadCache(ICacheEntryFilter<TK, TV>? p, params object?[]? args);
 
         /// <summary>
         /// Delegates to <see cref="ICacheStore{K, V}.LoadCache" /> method to load state
@@ -172,7 +172,7 @@ namespace Apache.Ignite.Core.Cache
         /// <param name="args">
         /// Optional user arguments to be passed into <see cref="ICacheStore{K, V}.LoadCache" />.
         /// </param>
-        Task LocalLoadCacheAsync(ICacheEntryFilter<TK, TV>? p, params object[] args);
+        Task LocalLoadCacheAsync(ICacheEntryFilter<TK, TV>? p, params object?[]? args);
 
         /// <summary>
         /// Loads the specified entries into the cache using the configured

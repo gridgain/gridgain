@@ -30,7 +30,7 @@ namespace Apache.Ignite.Linq
     /// <typeparam name="T">Result type.</typeparam>
     /// <param name="args">The arguments.</param>
     /// <returns>Query cursor.</returns>
-    public delegate IQueryCursor<T> CompiledQueryFunc<T>(params object[] args);
+    public delegate IQueryCursor<T> CompiledQueryFunc<T>(params object?[]? args);
 
     /// <summary>
     /// Represents a compiled cache query.

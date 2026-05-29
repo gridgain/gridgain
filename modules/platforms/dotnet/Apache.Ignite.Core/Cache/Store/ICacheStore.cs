@@ -101,7 +101,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// <param name="act">Action for loaded values.</param>
         /// <param name="args">Optional arguemnts passed to <see cref="ICache{K,V}.LocalLoadCache"/> method.</param>
         /// <exception cref="CacheStoreException" />
-        void LoadCache(Action<TK, TV> act, params object[] args);
+        void LoadCache(Action<TK, TV> act, params object?[]? args);
 
         /// <summary>
         /// Loads an object. Application developers should implement this method to customize the loading 

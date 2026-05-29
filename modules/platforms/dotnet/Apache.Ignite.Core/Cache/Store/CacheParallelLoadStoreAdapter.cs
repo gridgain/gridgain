@@ -58,7 +58,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// <param name="act">Action for loaded values.</param>
         /// <param name="args">Optional arguemnts passed to <see cref="ICache{K,V}.LocalLoadCache" /> method.</param>
         /// <exception cref="CacheStoreException" />
-        public virtual void LoadCache(Action<TK, TV> act, params object[] args)
+        public virtual void LoadCache(Action<TK, TV> act, params object?[]? args)
         {
             if (MaxDegreeOfParallelism == 0 || MaxDegreeOfParallelism < -1)
                 throw new ArgumentOutOfRangeException("MaxDegreeOfParallelism must be either positive or -1: " +
@@ -85,7 +85,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// This method should transform raw data records from GetInputData
         /// into valid key-value pairs to be stored into cache.        
         /// </summary>
-        protected abstract KeyValuePair<TK, TV>? Parse(TData inputRecord, params object[] args);
+        protected abstract KeyValuePair<TK, TV>? Parse(TData inputRecord, params object?[]? args);
 
         /// <summary>
         /// Gets or sets the maximum degree of parallelism to use in LoadCache. 

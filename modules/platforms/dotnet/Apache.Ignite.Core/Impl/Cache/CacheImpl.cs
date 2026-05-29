@@ -305,25 +305,25 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /** <inheritDoc /> */
-        public void LoadCache(ICacheEntryFilter<TK, TV>? p, params object[] args)
+        public void LoadCache(ICacheEntryFilter<TK, TV>? p, params object?[]? args)
         {
             DoOutInOpX((int) CacheOp.LoadCache, writer => WriteLoadCacheData(writer, p, args), _readException);
         }
 
         /** <inheritDoc /> */
-        public Task LoadCacheAsync(ICacheEntryFilter<TK, TV>? p, params object[] args)
+        public Task LoadCacheAsync(ICacheEntryFilter<TK, TV>? p, params object?[]? args)
         {
             return DoOutOpAsync(CacheOp.LoadCacheAsync, writer => WriteLoadCacheData(writer, p, args));
         }
 
         /** <inheritDoc /> */
-        public void LocalLoadCache(ICacheEntryFilter<TK, TV>? p, params object[] args)
+        public void LocalLoadCache(ICacheEntryFilter<TK, TV>? p, params object?[]? args)
         {
             DoOutInOpX((int) CacheOp.LocLoadCache, writer => WriteLoadCacheData(writer, p, args), _readException);
         }
 
         /** <inheritDoc /> */
-        public Task LocalLoadCacheAsync(ICacheEntryFilter<TK, TV>? p, params object[] args)
+        public Task LocalLoadCacheAsync(ICacheEntryFilter<TK, TV>? p, params object?[]? args)
         {
             return DoOutOpAsync(CacheOp.LocLoadCacheAsync, writer => WriteLoadCacheData(writer, p, args));
         }
@@ -331,7 +331,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Writes the load cache data to the writer.
         /// </summary>
-        private void WriteLoadCacheData(BinaryWriter writer, ICacheEntryFilter<TK, TV>? p, object[]? args)
+        private void WriteLoadCacheData(BinaryWriter writer, ICacheEntryFilter<TK, TV>? p, object?[]? args)
         {
             if (p != null)
             {

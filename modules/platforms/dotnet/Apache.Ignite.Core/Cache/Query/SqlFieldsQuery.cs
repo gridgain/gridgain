@@ -39,7 +39,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// </summary>
         /// <param name="sql">SQL.</param>
         /// <param name="args">Arguments.</param>
-        public SqlFieldsQuery(string sql, params object[] args) : this(sql, false, args)
+        public SqlFieldsQuery(string sql, params object?[]? args) : this(sql, false, args)
         {
             // No-op.
         }
@@ -50,7 +50,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// <param name="sql">SQL.</param>
         /// <param name="loc">Whether query should be executed locally.</param>
         /// <param name="args">Arguments.</param>
-        public SqlFieldsQuery(string sql, bool loc, params object[] args)
+        public SqlFieldsQuery(string sql, bool loc, params object?[]? args)
         {
             Sql = sql;
             Local = loc;
@@ -69,7 +69,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// Arguments.
         /// </summary>
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
-        public object[] Arguments { get; set; }
+        public object?[]? Arguments { get; set; }
 
         /// <summary>
         /// Local flag. When set query will be executed only on local node, so only local

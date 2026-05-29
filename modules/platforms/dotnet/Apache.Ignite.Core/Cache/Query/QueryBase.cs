@@ -80,7 +80,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// </summary>
         /// <param name="writer">Writer.</param>
         /// <param name="args">Arguments.</param>
-        internal static void WriteQueryArgs(IBinaryRawWriter writer, object[] args)
+        internal static void WriteQueryArgs(IBinaryRawWriter writer, object?[]? args)
         {
             if (args == null)
                 writer.WriteInt(0);

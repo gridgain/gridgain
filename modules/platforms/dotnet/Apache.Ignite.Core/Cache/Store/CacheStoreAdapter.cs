@@ -52,7 +52,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// </summary>
         /// <param name="act">Action for loaded values.</param>
         /// <param name="args">Optional arguments passed to <see cref="ICache{K,V}.LocalLoadCache" /> method.</param>
-        public virtual void LoadCache(Action<TK, TV> act, params object[] args)
+        public virtual void LoadCache(Action<TK, TV> act, params object?[]? args)
         {
             // No-op.
         }
