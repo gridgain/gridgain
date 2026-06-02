@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Client cache affinity awareness context.
@@ -180,73 +179,21 @@ public class ClientCacheAffinityContext {
      * @param key Key.
      * @return Affinity node id or {@code null} if affinity node can't be determined for given cache and key.
      */
-    @Nullable
     public UUID affinityNode(int cacheId, Object key) {
-        @Nullable ClientCacheAffinityMapping mapping = mapping(cacheId, key);
-        if (mapping == null) {
+        TopologyNodes top = lastTop.get();
+
+        if (top == null)
             return null;
-        }
+
+        ClientCacheAffinityMapping mapping = affinityMapping;
+
+        if (mapping == null)
+            return null;
+
+        if (top.topVer.compareTo(mapping.topologyVersion()) > 0)
+            return null;
 
         return mapping.affinityNode(binary, cacheId, key);
-    }
-
-    /**
-     * Calculates the partition for the given cache key.
-     *
-     * @param cacheId Cache ID.
-     * @param key Key.
-     * @return Partition index, or {@link ClientCacheAffinityMapping#UNKNOWN_PARTITION} if the partition cannot be
-     *      determined for the given cache and key.
-     */
-    public int partition(int cacheId, Object key) {
-        @Nullable ClientCacheAffinityMapping mapping = mapping(cacheId, key);
-        if (mapping == null) {
-            return ClientCacheAffinityMapping.UNKNOWN_PARTITION;
-        }
-
-        return mapping.partition(binary, cacheId, key);
-    }
-
-    @Nullable
-    private ClientCacheAffinityMapping mapping(int cacheId, Object key) {
-        TopologyNodes top = lastTop.get();
-
-        if (top == null)
-            return null;
-
-        ClientCacheAffinityMapping mapping = affinityMapping;
-
-        if (mapping == null)
-            return null;
-
-        if (top.topVer.compareTo(mapping.topologyVersion()) > 0)
-            return null;
-
-        return mapping;
-    }
-
-    /**
-     * Returns the affinity node for a pre-computed partition index.
-     *
-     * @param cacheId Cache ID.
-     * @param partition Partition index.
-     * @return Affinity node id or {@code null} if affinity node can't be determined for given cache and partition.
-     */
-    public UUID affinityNode(int cacheId, int partition) {
-        TopologyNodes top = lastTop.get();
-
-        if (top == null)
-            return null;
-
-        ClientCacheAffinityMapping mapping = affinityMapping;
-
-        if (mapping == null)
-            return null;
-
-        if (top.topVer.compareTo(mapping.topologyVersion()) > 0)
-            return null;
-
-        return mapping.affinityNode(cacheId, partition);
     }
 
     /**
