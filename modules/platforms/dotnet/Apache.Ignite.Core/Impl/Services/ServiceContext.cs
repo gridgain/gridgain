@@ -58,9 +58,9 @@ namespace Apache.Ignite.Core.Impl.Services
         public object? AffinityKey { get; private set; }
 
         /** <inheritdoc /> */
-        public IServiceCallContext CurrentCallContext
+        public IServiceCallContext? CurrentCallContext
         {
-            get { return LocCallCtx.Value!; }
+            get { return LocCallCtx.Value; }
         }
 
         /// <summary>

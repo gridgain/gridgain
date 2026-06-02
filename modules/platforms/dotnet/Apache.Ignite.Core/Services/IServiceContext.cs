@@ -72,6 +72,6 @@ namespace Apache.Ignite.Core.Services
         /// <returns>Context of the current service call.</returns>
         /// <seealso cref="IServiceCallContext"/>
         [IgniteExperimental]
-        IServiceCallContext CurrentCallContext { get; }
+        IServiceCallContext? CurrentCallContext { get; }
     }
 }
