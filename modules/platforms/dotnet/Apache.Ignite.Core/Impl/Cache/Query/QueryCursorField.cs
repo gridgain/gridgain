@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#nullable disable
-
 namespace Apache.Ignite.Core.Impl.Cache.Query
 {
     using System;
@@ -34,8 +32,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// <param name="reader">The reader.</param>
         public QueryCursorField(IBinaryRawReader reader)
         {
-            Name = reader.ReadString();
-            JavaTypeName = reader.ReadString();
+            Name = reader.ReadString()!;
+            JavaTypeName = reader.ReadString()!;
             Type = JavaTypes.GetDotNetType(JavaTypeName);
         }
 
@@ -46,6 +44,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         public string JavaTypeName { get; private set; }
 
         /** <inheritdoc /> */
-        public Type Type { get; private set; }
+        public Type? Type { get; private set; }
     }
 }
