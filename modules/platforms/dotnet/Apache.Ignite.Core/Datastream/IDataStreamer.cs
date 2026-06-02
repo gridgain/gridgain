@@ -181,7 +181,7 @@ namespace Apache.Ignite.Core.Datastream
         /// <summary>
         /// Gets or sets custom stream receiver.
         /// </summary>
-        IStreamReceiver<TK, TV> Receiver { get; set; }
+        IStreamReceiver<TK, TV>? Receiver { get; set; }
 
         /// <summary>
         /// Adds single key-value pair for loading. Passing <c>null</c> as value will be

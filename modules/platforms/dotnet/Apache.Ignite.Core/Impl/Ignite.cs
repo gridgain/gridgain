@@ -631,7 +631,7 @@ namespace Apache.Ignite.Core.Impl
                 w.WriteBoolean(keepBinary);
             });
 
-            return new DataStreamerImpl<TK, TV>(streamerTarget, _marsh, cacheName, keepBinary);
+            return new DataStreamerImpl<TK, TV>(streamerTarget!, _marsh, cacheName, keepBinary);
         }
 
         /// <summary>

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#nullable disable
-
 namespace Apache.Ignite.Core.Impl.Datastream
 {
     using System;
@@ -45,6 +43,7 @@ namespace Apache.Ignite.Core.Impl.Datastream
     /// Data streamer implementation.
     /// </summary>
     internal class DataStreamerImpl<TK, TV> : PlatformDisposableTargetAdapter, IDataStreamer, IDataStreamer<TK, TV>
+        where TK : notnull
     {
 
 #pragma warning disable 0420
@@ -115,7 +114,7 @@ namespace Apache.Ignite.Core.Impl.Datastream
         private readonly ReaderWriterLockSlim _rwLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
         /** Close future. */
-        private readonly TaskCompletionSource<object> _closeFut = new TaskCompletionSource<object>();
+        private readonly TaskCompletionSource<object?> _closeFut = new TaskCompletionSource<object?>();
 
         /** GC handle to this streamer. */
         private readonly long _hnd;
@@ -130,13 +129,13 @@ namespace Apache.Ignite.Core.Impl.Datastream
         private volatile int _bufSndSize;
 
         /** Current data streamer batch. */
-        private volatile DataStreamerBatch<TK, TV> _batch;
+        private volatile DataStreamerBatch<TK, TV>? _batch;
 
         /** Flusher. */
         private readonly Flusher<TK, TV> _flusher;
 
         /** Receiver. */
-        private volatile IStreamReceiver<TK, TV> _rcv;
+        private volatile IStreamReceiver<TK, TV>? _rcv;
 
         /** Receiver handle. */
         private long _rcvHnd;
@@ -431,7 +430,7 @@ namespace Apache.Ignite.Core.Impl.Datastream
         }
 
         /** <inheritDoc /> */
-        public IStreamReceiver<TK, TV> Receiver
+        public IStreamReceiver<TK, TV>? Receiver
         {
             get
             {
@@ -588,7 +587,7 @@ namespace Apache.Ignite.Core.Impl.Datastream
 
             while (true)
             {
-                DataStreamerBatch<TK, TV> batch0 = _batch;
+                DataStreamerBatch<TK, TV>? batch0 = _batch;
 
                 if (batch0 == null)
                 {
@@ -630,6 +629,7 @@ namespace Apache.Ignite.Core.Impl.Datastream
 
         /** <inheritDoc /> */
         public IDataStreamer<TK1, TV1> WithKeepBinary<TK1, TV1>()
+            where TK1 : notnull
         {
             if (_keepBinary)
             {
@@ -801,7 +801,7 @@ namespace Apache.Ignite.Core.Impl.Datastream
 
             // 2. Perform actual send.
             Debug.Assert(curBatch != null, "curBatch != null");
-            curBatch.Send(this, plc);
+            curBatch!.Send(this, plc);
 
             if (wait)
                 // 3. Wait for all futures to finish.
@@ -834,6 +834,7 @@ namespace Apache.Ignite.Core.Impl.Datastream
         /// Flusher.
         /// </summary>
         private class Flusher<TK1, TV1>
+            where TK1 : notnull
         {
             /** State: running. */
             private const int StateRunning = 0;
