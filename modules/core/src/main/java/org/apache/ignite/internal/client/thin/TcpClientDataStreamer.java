@@ -450,32 +450,35 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
 
     /** Initiates an async send of all non-empty buffered batches and returns a future tracking their completion. */
     private CompletableFuture<Void> flushAsync0() {
-        List<CompletableFuture<Void>> futs = new ArrayList<>(partitions.size());
+        return CompletableFuture.supplyAsync(() -> {
+            List<CompletableFuture<Void>> futs = new ArrayList<>(partitions.size());
 
-        long stamp = addFlushLock.writeLock();
+            long stamp = addFlushLock.writeLock();
 
-        int bufSndSize = perNodeBufferSize;
-        for (PartitionContext<K, V> ctx : partitions.values()) {
-            AtomicReference<Batch<K, V>> batchRef = ctx.headBatchRef;
-            Batch<K, V> cur = ctx.headBatchRef.get();
+            int bufSndSize = perNodeBufferSize;
+            for (PartitionContext<K, V> ctx : partitions.values()) {
+                AtomicReference<Batch<K, V>> batchRef = ctx.headBatchRef;
+                Batch<K, V> cur = ctx.headBatchRef.get();
 
-            if (!cur.isEmpty()) {
-                try {
-                    sendBatch(ctx, batchRef, cur, bufSndSize);
-                } catch (RuntimeException e) {
-                    addFlushLock.unlockWrite(stamp);
-                    CompletableFuture<Void> f = new CompletableFuture<>();
-                    f.completeExceptionally(e);
-                    return f;
+                if (!cur.isEmpty()) {
+                    try {
+                        sendBatch(ctx, batchRef, cur, bufSndSize);
+                    } catch (RuntimeException e) {
+                        addFlushLock.unlockWrite(stamp);
+                        CompletableFuture<Void> f = new CompletableFuture<>();
+                        f.completeExceptionally(e);
+                        return f;
+                    }
                 }
+
+                futs.add(ctx.pendingBatchesFuture());
             }
 
-            futs.add(ctx.pendingBatchesFuture());
-        }
-
-        CompletableFuture<Void> result = CompletableFuture.allOf(futs.toArray(new CompletableFuture[0]));
-        result.whenComplete((v, e) -> addFlushLock.unlockWrite(stamp));
-        return result;
+            CompletableFuture<Void> result = CompletableFuture.allOf(futs.toArray(new CompletableFuture[0]));
+            result.whenComplete((v, e) -> addFlushLock.unlockWrite(stamp));
+            return result;
+        }, scheduler)
+                .thenCompose(f -> f);
     }
 
     /**
