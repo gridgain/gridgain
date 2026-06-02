@@ -775,7 +775,7 @@ namespace Apache.Ignite.Core
         /// by calling <c>ComputeJob.cancel</c>method.</param>
         /// <returns><c>true</c> if named Ignite instance was indeed found and stopped, <c>false</c>
         /// othwerwise (the instance with given <c>name</c> was not found).</returns>
-        public static bool Stop(string name, bool cancel)
+        public static bool Stop(string? name, bool cancel)
         {
             lock (SyncRoot)
             {

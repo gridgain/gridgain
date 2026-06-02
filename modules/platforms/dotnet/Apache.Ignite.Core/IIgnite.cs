@@ -58,7 +58,7 @@ namespace Apache.Ignite.Core
         /// for information on how to start named grids.
         /// </summary>
         /// <returns>Name of the grid, or <c>null</c> for default grid.</returns>
-        string Name { get; }
+        string? Name { get; }
 
         /// <summary>
         /// Gets an instance of <see cref="ICluster" /> interface.

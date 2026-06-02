@@ -109,7 +109,7 @@ namespace Apache.Ignite.Core.Impl
         private readonly IgniteConfiguration _cfg;
 
         /** Grid name. */
-        private readonly string _name;
+        private readonly string? _name;
 
         /** Unmanaged node. */
         private readonly IPlatformTargetInternal _proc;
@@ -216,7 +216,7 @@ namespace Apache.Ignite.Core.Impl
         }
 
         /** <inheritdoc /> */
-        public string Name
+        public string? Name
         {
             get { return _name; }
         }
