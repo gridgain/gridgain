@@ -284,7 +284,7 @@ namespace Apache.Ignite.Core.Impl
         }
 
         /** <inheritdoc /> */
-        public IClusterGroup ForAttribute(string name, string val)
+        public IClusterGroup ForAttribute(string name, string? val)
         {
             return _prj.ForAttribute(name, val);
         }
@@ -364,13 +364,13 @@ namespace Apache.Ignite.Core.Impl
         }
 
         /** <inheritdoc /> */
-        public IClusterNode GetNode(Guid id)
+        public IClusterNode? GetNode(Guid id)
         {
             return _prj.GetNode(id);
         }
 
         /** <inheritdoc /> */
-        public IClusterNode GetNode()
+        public IClusterNode? GetNode()
         {
             return _prj.GetNode();
         }

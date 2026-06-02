@@ -109,7 +109,7 @@ namespace Apache.Ignite.Core.Cluster
         /// <param name="name">Name of the attribute.</param>
         /// <param name="val">Optional attribute value to match.</param>
         /// <returns>Grid projection for nodes containing specified attribute.</returns>
-        IClusterGroup ForAttribute(string name, string val);
+        IClusterGroup ForAttribute(string name, string? val);
 
         /// <summary>
         /// Creates projection for all nodes that have cache with specified name running.
