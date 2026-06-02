@@ -143,6 +143,8 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
     /** Completed when {@link #close(boolean)} finishes. */
     private final CompletableFuture<Void> closeFut = new CompletableFuture<>();
 
+    private final IgniteClientFuture<Void> ignCloseFut = new IgniteClientFutureImpl<>(closeFut);
+
     /** Guards {@link #autoFlushInterval} and {@link #flushFut} updates. */
     private final Lock autoFlushLock = new ReentrantLock();
 
@@ -307,7 +309,7 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
 
     /** {@inheritDoc} */
     @Override public IgniteClientFuture<Void> future() {
-        return new IgniteClientFutureImpl<>(closeFut);
+        return ignCloseFut;
     }
 
     /** {@inheritDoc} */
