@@ -417,6 +417,9 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
                 scheduler.shutdown();
             } else {
                 scheduler.shutdownNow();
+                for (PartitionContext<K, V> partCtx : partitions.values()) {
+                    partCtx.cancelAllBatches();
+                }
             }
 
             scheduler.awaitTermination(1, TimeUnit.MINUTES);
@@ -842,6 +845,19 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
             }
 
             return CompletableFuture.allOf(futs.toArray(new CompletableFuture[0]));
+        }
+
+        void cancelAllBatches() {
+            for (Batch<K, V> batch : pendingBatches) {
+                batch.fut.cancel(true);
+            }
+
+            for (int i = 0; i < inflightBatches.length(); i++) {
+                Batch<K, V> batch = inflightBatches.get(i);
+                if (batch != null) {
+                    batch.fut.cancel(true);
+                }
+            }
         }
     }
 }
