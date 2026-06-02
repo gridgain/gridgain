@@ -26,6 +26,7 @@ namespace Apache.Ignite.Core.Datastream
     /// to achieve better performance.
     /// </summary>
     public interface IStreamReceiver<TK, TV>
+        where TK : notnull
     {
         /// <summary>
         /// Updates cache with batch of entries.

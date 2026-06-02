@@ -32,7 +32,7 @@ namespace Apache.Ignite.Core.Common
         /// <summary>
         /// The client reconnect task.
         /// </summary>
-        private readonly Task<bool> _clientReconnectTask;
+        private readonly Task<bool>? _clientReconnectTask;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClientDisconnectedException"/> class.
@@ -46,7 +46,7 @@ namespace Apache.Ignite.Core.Common
         /// Initializes a new instance of the <see cref="ClientDisconnectedException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public ClientDisconnectedException(string message) : base(message)
+        public ClientDisconnectedException(string? message) : base(message)
         {
             // No-op.
         }
@@ -56,7 +56,7 @@ namespace Apache.Ignite.Core.Common
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public ClientDisconnectedException(string message, Exception cause) : base(message, cause)
+        public ClientDisconnectedException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }
@@ -67,7 +67,8 @@ namespace Apache.Ignite.Core.Common
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
         /// <param name="clientReconnectTask">The client reconnect task.</param>
-        public ClientDisconnectedException(string message, Exception cause, Task<bool> clientReconnectTask) : base(message, cause)
+        public ClientDisconnectedException(string? message, Exception? cause, Task<bool>? clientReconnectTask)
+            : base(message, cause)
         {
             _clientReconnectTask = clientReconnectTask;
         }
@@ -88,9 +89,6 @@ namespace Apache.Ignite.Core.Common
         /// <value>
         /// The client reconnect task, or null.
         /// </value>
-        public Task<bool> ClientReconnectTask
-        {
-            get { return _clientReconnectTask; }
-        }
+        public Task<bool>? ClientReconnectTask => _clientReconnectTask;
     }
 }

@@ -36,10 +36,10 @@ namespace Apache.Ignite.Core.Services
         private const string KeyFailedConfigurations = "FailedConfigurations";
 
         /** Cause. */
-        private readonly IBinaryObject _binaryCause;
+        private readonly IBinaryObject? _binaryCause;
 
         /** Configurations of services that failed to deploy */
-        private readonly ICollection<ServiceConfiguration> _failedCfgs;
+        private readonly ICollection<ServiceConfiguration>? _failedCfgs;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ServiceDeploymentException"/> class.
@@ -53,7 +53,7 @@ namespace Apache.Ignite.Core.Services
         /// Initializes a new instance of the <see cref="ServiceDeploymentException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public ServiceDeploymentException(string message) : base(message)
+        public ServiceDeploymentException(string? message) : base(message)
         {
             // No-op.
         }
@@ -63,7 +63,7 @@ namespace Apache.Ignite.Core.Services
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public ServiceDeploymentException(string message, Exception cause) : base(message, cause)
+        public ServiceDeploymentException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }
@@ -74,7 +74,7 @@ namespace Apache.Ignite.Core.Services
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
         /// <param name="failedCfgs">List of failed configurations</param>
-        public ServiceDeploymentException(string message, Exception cause, ICollection<ServiceConfiguration> failedCfgs) 
+        public ServiceDeploymentException(string? message, Exception? cause, ICollection<ServiceConfiguration>? failedCfgs)
             : base(message, cause)
         {
             _failedCfgs = failedCfgs;
@@ -86,8 +86,8 @@ namespace Apache.Ignite.Core.Services
         /// <param name="message">The message.</param>
         /// <param name="binaryCause">The binary cause.</param>
         /// <param name="failedCfgs">List of failed configurations</param>
-        public ServiceDeploymentException(string message, IBinaryObject binaryCause,
-            ICollection<ServiceConfiguration> failedCfgs) : base(message)
+        public ServiceDeploymentException(string? message, IBinaryObject binaryCause,
+            ICollection<ServiceConfiguration>? failedCfgs) : base(message)
         {
             _binaryCause = binaryCause;
             _failedCfgs = failedCfgs;
@@ -101,15 +101,15 @@ namespace Apache.Ignite.Core.Services
         protected ServiceDeploymentException(SerializationInfo info, StreamingContext ctx)
             : base(info, ctx)
         {
-            _binaryCause = (IBinaryObject)info.GetValue(KeyBinaryCause, typeof(IBinaryObject));
-            _failedCfgs = (ICollection<ServiceConfiguration>)info.GetValue(KeyFailedConfigurations, 
+            _binaryCause = (IBinaryObject?)info.GetValue(KeyBinaryCause, typeof(IBinaryObject));
+            _failedCfgs = (ICollection<ServiceConfiguration>?)info.GetValue(KeyFailedConfigurations,
                 typeof(ICollection<ServiceConfiguration>));
         }
 
         /// <summary>
         /// Gets the binary cause.
         /// </summary>
-        public IBinaryObject BinaryCause
+        public IBinaryObject? BinaryCause
         {
             get { return _binaryCause; }
         }
@@ -137,7 +137,7 @@ namespace Apache.Ignite.Core.Services
         /// <summary>
         /// Configurations of services that failed to deploy, could be null
         /// </summary>
-        public ICollection<ServiceConfiguration> FailedConfigurations
+        public ICollection<ServiceConfiguration>? FailedConfigurations
         {
             get { return _failedCfgs; }
         }

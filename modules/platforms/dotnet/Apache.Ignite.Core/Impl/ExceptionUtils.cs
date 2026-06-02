@@ -71,8 +71,8 @@ namespace Apache.Ignite.Core.Impl
             Exs["org.apache.ignite.IgniteException"] = (c, m, e, i) => new IgniteException(m, e);
             Exs["org.apache.ignite.IgniteCheckedException"] = (c, m, e, i) => new IgniteException(m, e);
             Exs["org.apache.ignite.IgniteIllegalStateException"] = (c, m, e, i) => new IgniteIllegalStateException(m, e);
-            Exs["org.apache.ignite.IgniteClientDisconnectedException"] = (c, m, e, i) => new ClientDisconnectedException(m, e, i.GetCluster().ClientReconnectTask);
-            Exs["org.apache.ignite.internal.IgniteClientDisconnectedCheckedException"] = (c, m, e, i) => new ClientDisconnectedException(m, e, i.GetCluster().ClientReconnectTask);
+            Exs["org.apache.ignite.IgniteClientDisconnectedException"] = (c, m, e, i) => new ClientDisconnectedException(m, e, i?.GetCluster().ClientReconnectTask);
+            Exs["org.apache.ignite.internal.IgniteClientDisconnectedCheckedException"] = (c, m, e, i) => new ClientDisconnectedException(m, e, i?.GetCluster().ClientReconnectTask);
             Exs["org.apache.ignite.binary.BinaryObjectException"] = (c, m, e, i) => new BinaryObjectException(m, e);
 
             // Cluster exceptions.
@@ -123,8 +123,8 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="reader">Error data reader.</param>
         /// <param name="innerException">Inner exception.</param>
         /// <returns>Exception.</returns>
-        public static Exception GetException(IIgniteInternal igniteInt, string clsName, string msg, string stackTrace,
-            BinaryReader reader = null, Exception innerException = null)
+        public static Exception GetException(IIgniteInternal? igniteInt, string clsName, string msg, string stackTrace,
+            BinaryReader? reader = null, Exception? innerException = null)
         {
             // Set JavaException as immediate inner.
             var jex = new JavaException(clsName, msg, stackTrace, innerException);
@@ -139,23 +139,21 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="innerException">Java exception.</param>
         /// <param name="reader">Error data reader.</param>
         /// <returns>Exception.</returns>
-        public static Exception GetException(IIgniteInternal igniteInt, JavaException innerException,
-            BinaryReader reader = null)
+        public static Exception GetException(IIgniteInternal? igniteInt, JavaException innerException,
+            BinaryReader? reader = null)
         {
-            var ignite = igniteInt == null ? null : igniteInt.GetIgnite();
+            var ignite = igniteInt?.GetIgnite();
 
             var msg = innerException.JavaMessage;
             var clsName = innerException.JavaClassName;
 
-            ExceptionFactory ctor;
+            ExceptionFactory? ctor;
 
-            if (Exs.TryGetValue(clsName, out ctor))
+            if (clsName != null && Exs.TryGetValue(clsName, out ctor))
             {
                 var match = InnerClassRegex.Match(msg ?? string.Empty);
 
-                ExceptionFactory innerCtor;
-
-                if (match.Success && Exs.TryGetValue(match.Groups[1].Value, out innerCtor))
+                if (match.Success && Exs.TryGetValue(match.Groups[1].Value, out var innerCtor))
                 {
                     return ctor(clsName, msg,
                         innerCtor(match.Groups[1].Value, match.Groups[2].Value, innerException, ignite),
@@ -177,7 +175,7 @@ namespace Apache.Ignite.Core.Impl
                 return ProcessCachePartialUpdateException(igniteInt, msg, innerException.Message, reader);
 
             // Predefined mapping not found - check plugins.
-            if (igniteInt != null && igniteInt.PluginProcessor != null)
+            if (igniteInt != null && igniteInt.PluginProcessor != null && clsName != null)
             {
                 ctor = igniteInt.PluginProcessor.GetExceptionMapping(clsName);
 
@@ -201,8 +199,8 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="reader">Reader.</param>
         /// <returns>CachePartialUpdateException.</returns>
         [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        private static Exception ProcessCachePartialUpdateException(IIgniteInternal ignite, string msg,
-            string stackTrace, BinaryReader reader)
+        private static Exception ProcessCachePartialUpdateException(IIgniteInternal? ignite, string? msg,
+            string stackTrace, BinaryReader? reader)
         {
             if (reader == null)
                 return new CachePartialUpdateException(msg, new IgniteException("Failed keys are not available."));
@@ -261,7 +259,7 @@ namespace Apache.Ignite.Core.Impl
         /// </summary>
         /// <param name="reader">Reader.</param>
         /// <returns>List.</returns>
-        private static List<object> ReadNullableList(BinaryReader reader)
+        private static List<object>? ReadNullableList(BinaryReader reader)
         {
             if (!reader.ReadBoolean())
                 return null;

@@ -43,7 +43,7 @@ namespace Apache.Ignite.Core.Impl.Compute.Closure
         [SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods")]
         protected override ComputeJobResultPolicy Result0(IComputeJobResult<T> res)
         {
-            _res.Add(res.Data);
+            _res.Add(res.Data!);
 
             return ComputeJobResultPolicy.Wait;
         }

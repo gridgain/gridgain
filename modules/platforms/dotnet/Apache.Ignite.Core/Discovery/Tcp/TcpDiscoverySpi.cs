@@ -128,7 +128,7 @@ namespace Apache.Ignite.Core.Discovery.Tcp
         /// <summary>
         /// Gets or sets the IP finder which defines how nodes will find each other on the network.
         /// </summary>
-        public ITcpDiscoveryIpFinder IpFinder { get; set; }
+        public ITcpDiscoveryIpFinder? IpFinder { get; set; }
 
         /// <summary>
         /// Gets or sets the socket timeout.
@@ -174,7 +174,7 @@ namespace Apache.Ignite.Core.Discovery.Tcp
         /// <summary>
         /// Gets or sets the local host IP address that discovery SPI uses.
         /// </summary>
-        public string LocalAddress { get; set; }
+        public string? LocalAddress { get; set; }
 
         /// <summary>
         /// Gets or sets the number of times node tries to (re)establish connection to another node.

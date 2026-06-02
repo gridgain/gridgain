@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 using System;
 
 namespace Apache.Ignite.Core.Impl.Unmanaged.Jni

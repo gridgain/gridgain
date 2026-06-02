@@ -33,7 +33,7 @@ namespace Apache.Ignite.Core.Events
         /// <param name="r">The reader to read data from.</param>
         internal CheckpointEvent(IBinaryRawReader r) : base(r)
         {
-            _key = r.ReadString();
+            _key = r.ReadString()!;
         }
 		
         /// <summary>

@@ -171,7 +171,7 @@ namespace Apache.Ignite.Core.Transactions
         /// <summary>
         /// Label of current transaction.
         /// </summary>
-        string Label
+        string? Label
         {
             get;
         }

@@ -85,14 +85,14 @@ namespace Apache.Ignite.Core.Client
         /// <param name="id">Node ID.</param>
         /// <returns>Node with given ID from this projection or null if such node does not
         /// exist in this projection.</returns>
-        IClientClusterNode GetNode(Guid id);
+        IClientClusterNode? GetNode(Guid id);
 
         /// <summary>
         /// Gets first node from the list of nodes in this projection.
         /// </summary>
         /// <returns>Node.</returns>
         [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate", Justification = "Semantics.")]
-        IClientClusterNode GetNode();
+        IClientClusterNode? GetNode();
 
         /// <summary>
         /// Gets compute functionality over this grid projection. All operations

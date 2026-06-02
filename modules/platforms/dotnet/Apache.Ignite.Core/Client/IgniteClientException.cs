@@ -52,7 +52,7 @@ namespace Apache.Ignite.Core.Client
         /// Initializes a new instance of the <see cref="IgniteClientException" /> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public IgniteClientException(string message) : base(message)
+        public IgniteClientException(string? message) : base(message)
         {
             // No-op.
         }
@@ -62,7 +62,7 @@ namespace Apache.Ignite.Core.Client
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public IgniteClientException(string message, Exception cause) : base(message, cause)
+        public IgniteClientException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }
@@ -73,7 +73,7 @@ namespace Apache.Ignite.Core.Client
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
         /// <param name="statusCode">The error code.</param>
-        public IgniteClientException(string message, Exception cause, ClientStatusCode statusCode) 
+        public IgniteClientException(string? message, Exception? cause, ClientStatusCode statusCode)
             : base(message, cause)
         {
             _statusCode = statusCode;

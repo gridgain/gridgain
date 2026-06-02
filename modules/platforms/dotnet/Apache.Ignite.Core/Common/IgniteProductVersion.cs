@@ -44,7 +44,7 @@ namespace Apache.Ignite.Core.Common
         private readonly DateTime _releaseDate;
 
         /** Revision hash. */
-        private readonly byte[] _revHash;
+        private readonly byte[]? _revHash;
 
         /// <summary>
         /// Constructor.
@@ -55,7 +55,7 @@ namespace Apache.Ignite.Core.Common
         /// <param name="stage">Stage of development.</param>
         /// <param name="releaseDate">Revision date.</param>
         /// <param name="revHash">Revision hash.</param>
-        public IgniteProductVersion(byte major, byte minor, byte maintenance, string stage, DateTime releaseDate, byte[] revHash)
+        public IgniteProductVersion(byte major, byte minor, byte maintenance, string stage, DateTime releaseDate, byte[]? revHash)
         {
             if (revHash != null && revHash.Length != 20)
             {
@@ -81,7 +81,7 @@ namespace Apache.Ignite.Core.Common
             _major = reader.ReadByte();
             _minor = reader.ReadByte();
             _maintenance = reader.ReadByte();
-            _stage = reader.ReadString();
+            _stage = reader.ReadString()!;
             _releaseDate = BinaryUtils.JavaTicksToDateTime(reader.ReadLong());
             _revHash = reader.ReadByteArray();
         }
@@ -130,7 +130,7 @@ namespace Apache.Ignite.Core.Common
         /// Gets the revision hash
         /// </summary>
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
-        public byte[] RevisionHash
+        public byte[]? RevisionHash
         {
             get { return _revHash; }
         }
@@ -152,7 +152,7 @@ namespace Apache.Ignite.Core.Common
         [SuppressMessage("Microsoft.Globalization", "CA1307:SpecifyStringComparison", Justification = "Not available on .NET FW")]
         public override string ToString()
         {
-            string hash = null;
+            string? hash = null;
             if (RevisionHash != null)
             {
                 hash = BitConverter.ToString(RevisionHash)
@@ -165,7 +165,7 @@ namespace Apache.Ignite.Core.Common
         }
 
         /** <inheritDoc /> */
-        public bool Equals(IgniteProductVersion other)
+        public bool Equals(IgniteProductVersion? other)
         {
             if (other == null)
                 return false;
@@ -177,7 +177,7 @@ namespace Apache.Ignite.Core.Common
         }
 
         /** <inheritDoc /> */
-        public int CompareTo(IgniteProductVersion other)
+        public int CompareTo(IgniteProductVersion? other)
         {
             IgniteArgumentCheck.NotNull(other, "other");
 
@@ -201,7 +201,7 @@ namespace Apache.Ignite.Core.Common
         }
 
         /** <inheritDoc /> */
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return Equals(obj as IgniteProductVersion);
         }

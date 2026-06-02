@@ -216,8 +216,6 @@ namespace Apache.Ignite.Core.Configuration
         /// <param name="reader">The reader.</param>
         internal DataStorageConfiguration(IBinaryRawReader reader)
         {
-            Debug.Assert(reader != null);
-
             StoragePath = reader.ReadString();
             CheckpointFrequency = reader.ConfigReadLongAsTimespan();
             CheckpointThreads = reader.ReadInt();
@@ -225,8 +223,8 @@ namespace Apache.Ignite.Core.Configuration
             WalHistorySize = reader.ReadInt();
             WalSegments = reader.ReadInt();
             WalSegmentSize = reader.ReadInt();
-            WalPath = reader.ReadString();
-            WalArchivePath = reader.ReadString();
+            WalPath = reader.ReadString()!;
+            WalArchivePath = reader.ReadString()!;
             WalMode = (WalMode)reader.ReadInt();
             WalThreadLocalBufferSize = reader.ReadInt();
             WalFlushFrequency = reader.ConfigReadLongAsTimespan();
@@ -271,8 +269,6 @@ namespace Apache.Ignite.Core.Configuration
         /// <param name="writer">The writer.</param>
         internal void Write(IBinaryRawWriter writer)
         {
-            Debug.Assert(writer != null);
-
             writer.WriteString(StoragePath);
             writer.ConfigWriteTimeSpanAsLong(CheckpointFrequency);
             writer.WriteInt(CheckpointThreads);
@@ -339,7 +335,7 @@ namespace Apache.Ignite.Core.Configuration
         /// <summary>
         /// Gets or sets the path where data and indexes will be persisted.
         /// </summary>
-        public string StoragePath { get; set; }
+        public string? StoragePath { get; set; }
 
         /// <summary>
         /// Gets or sets the checkpointing frequency which is a minimal interval when the dirty pages will be written
@@ -525,11 +521,11 @@ namespace Apache.Ignite.Core.Configuration
         /// Gets or sets the data region configurations.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<DataRegionConfiguration> DataRegionConfigurations { get; set; }
+        public ICollection<DataRegionConfiguration>? DataRegionConfigurations { get; set; }
 
         /// <summary>
         /// Gets or sets the default region configuration.
         /// </summary>
-        public DataRegionConfiguration DefaultDataRegionConfiguration { get; set; }
+        public DataRegionConfiguration? DefaultDataRegionConfiguration { get; set; }
     }
 }

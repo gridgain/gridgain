@@ -34,7 +34,7 @@ namespace Apache.Ignite.Core.Impl
         /// </summary>
         [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes",
             Justification = "ExecuteSafe should ignore all exceptions.")]
-        public static string ExecuteSafe(string file, string args, int timeoutMs = 1000, ILogger log = null)
+        public static string ExecuteSafe(string file, string args, int timeoutMs = 1000, ILogger? log = null)
         {
             try
             {

@@ -37,7 +37,7 @@ namespace Apache.Ignite.Core.Compute
         /// <see cref="IComputeTask{A,T,R}.Reduce(IList{IComputeJobResult{T}})"/> method. 
         /// </summary>
         /// <returns>Data returned by job.</returns>
-        TRes Data { get; }
+        TRes? Data { get; }
 
         /// <summary>
         /// Gets local instance of remote job produced this result.
@@ -50,7 +50,7 @@ namespace Apache.Ignite.Core.Compute
         /// exception was produced.
         /// </summary>
         /// <value>Exception or <c>null</c> in case of success.</value>
-        Exception Exception { get; }
+        Exception? Exception { get; }
 
         /// <summary>
         /// ID of the node where actual job execution occurred.

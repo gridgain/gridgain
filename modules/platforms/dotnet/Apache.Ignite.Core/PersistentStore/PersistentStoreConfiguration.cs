@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.PersistentStore
 {
     using System;
     using System.ComponentModel;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Configuration;
@@ -143,8 +142,6 @@ namespace Apache.Ignite.Core.PersistentStore
         /// <param name="reader">The reader.</param>
         internal PersistentStoreConfiguration(IBinaryRawReader reader)
         {
-            Debug.Assert(reader != null);
-
             PersistentStorePath = reader.ReadString();
             CheckpointingFrequency = reader.ConfigReadLongAsTimespan();
             CheckpointingPageBufferSize = reader.ReadLong();
@@ -153,8 +150,8 @@ namespace Apache.Ignite.Core.PersistentStore
             WalHistorySize = reader.ReadInt();
             WalSegments = reader.ReadInt();
             WalSegmentSize = reader.ReadInt();
-            WalStorePath = reader.ReadString();
-            WalArchivePath = reader.ReadString();
+            WalStorePath = reader.ReadString()!;
+            WalArchivePath = reader.ReadString()!;
             WalMode = (WalMode)reader.ReadInt();
             TlbSize = reader.ReadInt();
             WalFlushFrequency = reader.ConfigReadLongAsTimespan();
@@ -174,8 +171,6 @@ namespace Apache.Ignite.Core.PersistentStore
         /// <param name="writer">The writer.</param>
         internal void Write(IBinaryRawWriter writer)
         {
-            Debug.Assert(writer != null);
-
             writer.WriteString(PersistentStorePath);
             writer.ConfigWriteTimeSpanAsLong(CheckpointingFrequency);
             writer.WriteLong(CheckpointingPageBufferSize);
@@ -202,7 +197,7 @@ namespace Apache.Ignite.Core.PersistentStore
         /// <summary>
         /// Gets or sets the path where data and indexes will be persisted.
         /// </summary>
-        public string PersistentStorePath { get; set; }
+        public string? PersistentStorePath { get; set; }
 
         /// <summary>
         /// Gets or sets the checkpointing frequency which is a minimal interval when the dirty pages will be written

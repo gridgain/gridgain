@@ -57,7 +57,7 @@ namespace Apache.Ignite.Core.Cluster
         /// <param name="name">Attribute name.</param>
         /// <param name="attr">Attribute value.</param>
         /// <returns><c>true</c> in case such attribute exists.</returns>
-        bool TryGetAttribute<T>(string name, out T attr);
+        bool TryGetAttribute<T>(string name, out T? attr);
 
         /// <summary>
         /// Gets all node attributes. Attributes are assigned to nodes at startup.

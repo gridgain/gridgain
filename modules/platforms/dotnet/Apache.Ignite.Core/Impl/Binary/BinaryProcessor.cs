@@ -63,7 +63,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Gets metadata for specified type.
         /// </summary>
-        public BinaryType GetBinaryType(int typeId)
+        public BinaryType? GetBinaryType(int typeId)
         {
             return DoOutInOp((int) Op.GetMetaWithSchemas,
                 writer => writer.WriteInt(typeId),
@@ -90,7 +90,12 @@ namespace Apache.Ignite.Core.Impl.Binary
                 var res = new List<IBinaryType>(size);
 
                 for (var i = 0; i < size; i++)
-                    res.Add(reader.ReadBoolean() ? new BinaryType(reader) : null);
+                {
+                    if (reader.ReadBoolean())
+                    {
+                        res.Add(new BinaryType(reader));
+                    }
+                }
 
                 return res;
             });
@@ -131,10 +136,8 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="typeName">Name of the type.</param>
         /// <param name="values">The values.</param>
         /// <returns>Resulting binary type.</returns>
-        public BinaryType RegisterEnum(string typeName, IEnumerable<KeyValuePair<string, int>> values)
+        public BinaryType? RegisterEnum(string typeName, IEnumerable<KeyValuePair<string, int>>? values)
         {
-            Debug.Assert(typeName != null);
-
             return DoOutInOp((int) Op.RegisterEnum, w =>
             {
                 w.WriteString(typeName);
@@ -169,7 +172,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="platformId">Platform identifier.</param>
         /// <param name="errorAction">Error action.</param>
         /// <returns>Type or null.</returns>
-        public string GetTypeName(int id, byte platformId, Func<Exception, string> errorAction = null)
+        public string GetTypeName(int id, byte platformId, Func<Exception, string>? errorAction = null)
         {
             return DoOutInOp((int) Op.GetType, w =>
             {
@@ -189,9 +192,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         public static void WriteBinaryTypes(BinaryWriter w, ICollection<BinaryType> types)
         {
-            Debug.Assert(w != null);
-            Debug.Assert(types != null);
-
             w.WriteInt(types.Count);
 
             foreach (var meta in types)
@@ -205,9 +205,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         public static void WriteBinaryType(BinaryWriter w, BinaryType meta)
         {
-            Debug.Assert(w != null);
-            Debug.Assert(meta != null);
-
             w.WriteInt(meta.TypeId);
             w.WriteString(meta.TypeName);
             w.WriteString(meta.AffinityKeyFieldName);
@@ -252,7 +249,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             var countPos = w.Stream.Position;
             w.WriteInt(0); // Reserve for count
 
-            foreach (var schema in desc.Schema.GetAll())
+            foreach (var schema in desc!.Schema.GetAll())
             {
                 w.WriteInt(schema.Key);
 

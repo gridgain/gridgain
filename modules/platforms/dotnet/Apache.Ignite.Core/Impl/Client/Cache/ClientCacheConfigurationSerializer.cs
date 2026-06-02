@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 namespace Apache.Ignite.Core.Impl.Client.Cache
 {
     using System;
@@ -91,9 +93,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// </summary>
         public static void Copy(CacheConfiguration from, CacheClientConfiguration to, bool ignoreUnsupportedProperties)
         {
-            Debug.Assert(from != null);
-            Debug.Assert(to != null);
-
             to.AtomicityMode = from.AtomicityMode;
             to.Backups = from.Backups;
             to.CacheMode = from.CacheMode;
@@ -161,9 +160,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// </summary>
         public static void Copy(CacheClientConfiguration from, CacheConfiguration to)
         {
-            Debug.Assert(from != null);
-            Debug.Assert(to != null);
-
             to.AtomicityMode = from.AtomicityMode;
             to.Backups = from.Backups;
             to.CacheMode = from.CacheMode;
@@ -204,9 +200,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         public static void Write(IBinaryStream stream, CacheClientConfiguration cfg, ClientFeatures features,
             bool skipCodes = false)
         {
-            Debug.Assert(stream != null);
-            Debug.Assert(cfg != null);
-
             // Configuration should be written with a system marshaller.
             var writer = BinaryUtils.Marshaller.StartMarshal(stream);
             var pos = writer.Stream.Position;
@@ -408,8 +401,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// </summary>
         private static void WriteQueryField(BinaryWriter writer, QueryField field, ClientFeatures features)
         {
-            Debug.Assert(writer != null);
-
             writer.WriteString(field.Name);
             writer.WriteString(field.FieldTypeName);
             writer.WriteBoolean(field.IsKeyField);
@@ -428,8 +419,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// </summary>
         public static void Read(IBinaryStream stream, CacheClientConfiguration cfg, ClientFeatures features)
         {
-            Debug.Assert(stream != null);
-
             // Configuration should be read with system marshaller.
             var reader = BinaryUtils.Marshaller.StartUnmarshal(stream);
 
@@ -480,8 +469,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// </summary>
         private static QueryEntity ReadQueryEntity(BinaryReader reader, ClientFeatures features)
         {
-            Debug.Assert(reader != null);
-
             var value = new QueryEntity
             {
                 KeyTypeName = reader.ReadString(),
@@ -536,7 +523,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// </summary>
         // ReSharper disable ParameterOnlyUsedForPreconditionCheck.Local
         // ReSharper disable UnusedParameter.Local
-        private static void ThrowUnsupportedIfNotDefault<T>(T obj, string propertyName, T defaultValue = default(T))
+        private static void ThrowUnsupportedIfNotDefault<T>(T obj, string propertyName, T defaultValue = default!)
         {
             if (!Equals(obj, defaultValue))
             {

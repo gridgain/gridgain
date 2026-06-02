@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable enable
+
 namespace Apache.Ignite.Core.Tests.Binary
 {
     using System;

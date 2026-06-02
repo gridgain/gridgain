@@ -35,7 +35,7 @@ namespace Apache.Ignite.Core.Binary
         /// Read named byte array. 
         /// </summary>
         /// <returns>Byte array.</returns>
-        byte[] ReadByteArray(string fieldName);
+        byte[]? ReadByteArray(string fieldName);
         
         /// <summary>
         /// Read named char value.
@@ -48,7 +48,7 @@ namespace Apache.Ignite.Core.Binary
         /// Read named char array. 
         /// </summary>
         /// <returns>Char array.</returns>
-        char[] ReadCharArray(string fieldName);
+        char[]? ReadCharArray(string fieldName);
 
         /// <summary>
         /// Read named short value.
@@ -61,7 +61,7 @@ namespace Apache.Ignite.Core.Binary
         /// Read named short array. 
         /// </summary>
         /// <returns>Short array.</returns>
-        short[] ReadShortArray(string fieldName);        
+        short[]? ReadShortArray(string fieldName);
 
         /// <summary>
         /// Read named int value.
@@ -75,7 +75,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <returns>Int array.</returns>
-        int[] ReadIntArray(string fieldName);
+        int[]? ReadIntArray(string fieldName);
 
         /// <summary>
         /// Read named long value.
@@ -89,7 +89,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <returns>Long array.</returns>
-        long[] ReadLongArray(string fieldName);
+        long[]? ReadLongArray(string fieldName);
 
         /// <summary>
         /// Read named boolean value.
@@ -103,7 +103,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <returns>Boolean array.</returns>
-        bool[] ReadBooleanArray(string fieldName);
+        bool[]? ReadBooleanArray(string fieldName);
 
         /// <summary>
         /// Read named float value.
@@ -117,7 +117,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <returns>Float array.</returns>
-        float[] ReadFloatArray(string fieldName);
+        float[]? ReadFloatArray(string fieldName);
 
         /// <summary>
         /// Read named double value.
@@ -131,7 +131,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <returns>Double array.</returns>
-        double[] ReadDoubleArray(string fieldName);
+        double[]? ReadDoubleArray(string fieldName);
 
         /// <summary>
         /// Read named decimal value.
@@ -145,7 +145,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <returns>Decimal array.</returns>
-        decimal?[] ReadDecimalArray(string fieldName);
+        decimal?[]? ReadDecimalArray(string fieldName);
 
         /// <summary>
         /// Read named date value in UTC form.
@@ -159,21 +159,21 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <returns>Date array.</returns>
-        DateTime?[] ReadTimestampArray(string fieldName);
+        DateTime?[]? ReadTimestampArray(string fieldName);
 
         /// <summary>
         /// Read named string value.
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <returns>String value.</returns>
-        string ReadString(string fieldName);
+        string? ReadString(string fieldName);
 
         /// <summary>
         /// Read named string array.
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <returns>String array.</returns>
-        string[] ReadStringArray(string fieldName);
+        string?[]? ReadStringArray(string fieldName);
 
         /// <summary>
         /// Read named GUID value.
@@ -187,7 +187,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <returns>GUID array.</returns>
-        Guid?[] ReadGuidArray(string fieldName);
+        Guid?[]? ReadGuidArray(string fieldName);
         
         /// <summary>
         /// Read named enum value.
@@ -201,7 +201,7 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <returns>Enum array.</returns>
-        T[] ReadEnumArray<T>(string fieldName);
+        T[]? ReadEnumArray<T>(string fieldName);
 
         /// <summary>
         /// Read named object.
@@ -215,14 +215,14 @@ namespace Apache.Ignite.Core.Binary
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <returns>Object array.</returns>
-        T[] ReadArray<T>(string fieldName);
+        T[]? ReadArray<T>(string fieldName);
 
         /// <summary>
         /// Read named collection.
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <returns>Collection.</returns>
-        ICollection ReadCollection(string fieldName);
+        ICollection? ReadCollection(string fieldName);
 
         /// <summary>
         /// Read named collection.
@@ -231,14 +231,14 @@ namespace Apache.Ignite.Core.Binary
         /// <param name="factory">Factory.</param>
         /// <param name="adder">Adder.</param>
         /// <returns>Collection.</returns>
-        ICollection ReadCollection(string fieldName, Func<int, ICollection> factory, Action<ICollection, object> adder);
+        ICollection? ReadCollection(string fieldName, Func<int, ICollection> factory, Action<ICollection, object> adder);
 
         /// <summary>
         /// Read named dictionary.
         /// </summary>
         /// <param name="fieldName">Field name.</param>
         /// <returns>Dictionary.</returns>
-        IDictionary ReadDictionary(string fieldName);
+        IDictionary? ReadDictionary(string fieldName);
 
         /// <summary>
         /// Read named dictionary.
@@ -246,7 +246,7 @@ namespace Apache.Ignite.Core.Binary
         /// <param name="fieldName">Field name.</param>
         /// <param name="factory">Factory.</param>
         /// <returns>Dictionary.</returns>
-        IDictionary ReadDictionary(string fieldName, Func<int, IDictionary> factory);
+        IDictionary? ReadDictionary(string fieldName, Func<int, IDictionary> factory);
 
         /// <summary>
         /// Get raw reader. 

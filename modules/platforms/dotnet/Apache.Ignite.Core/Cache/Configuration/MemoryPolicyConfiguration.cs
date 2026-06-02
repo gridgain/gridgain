@@ -84,7 +84,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <param name="reader">The reader.</param>
         internal MemoryPolicyConfiguration(IBinaryRawReader reader)
         {
-            Name = reader.ReadString();
+            Name = reader.ReadString()!;
             InitialSize = reader.ReadLong();
             MaxSize = reader.ReadLong();
             SwapFilePath = reader.ReadString();
@@ -140,7 +140,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <para />
         /// Null for no swap.
         /// </summary>
-        public string SwapFilePath { get; set; }
+        public string? SwapFilePath { get; set; }
 
         /// <summary>
         /// Gets or sets the page eviction mode. If <see cref="DataPageEvictionMode.Disabled"/> is used (default)

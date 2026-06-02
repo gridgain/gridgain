@@ -48,10 +48,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Affinity
         /// <summary>
         /// Writes the instance.
         /// </summary>
-        internal static void Write(IBinaryRawWriter writer, IAffinityFunction fun, object userFuncOverride = null)
+        internal static void Write(IBinaryRawWriter writer, IAffinityFunction? fun, object? userFuncOverride = null)
         {
-            Debug.Assert(writer != null);
-
             if (fun == null)
             {
                 writer.WriteByte(TypeCodeNull);
@@ -93,10 +91,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Affinity
         /// <summary>
         /// Reads the instance.
         /// </summary>
-        internal static IAffinityFunction Read(IBinaryRawReader reader)
+        internal static IAffinityFunction? Read(IBinaryRawReader reader)
         {
-            Debug.Assert(reader != null);
-
             var typeCode = reader.ReadByte();
 
             if (typeCode == TypeCodeNull)
@@ -144,10 +140,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Affinity
         internal static void WritePartitions(IEnumerable<IEnumerable<IClusterNode>> parts,
             PlatformMemoryStream stream, Marshaller marsh)
         {
-            Debug.Assert(parts != null);
-            Debug.Assert(stream != null);
-            Debug.Assert(marsh != null);
-
             IBinaryRawWriter writer = marsh.StartMarshal(stream);
 
             var partCnt = 0;
@@ -189,9 +181,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Affinity
         /// <returns>Partitions assignment.</returns>
         internal static IEnumerable<IEnumerable<IClusterNode>> ReadPartitions(IBinaryStream stream, Marshaller marsh)
         {
-            Debug.Assert(stream != null);
-            Debug.Assert(marsh != null);
-
             var reader = marsh.StartUnmarshal(stream);
 
             var partCnt = reader.ReadInt();
@@ -199,7 +188,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Affinity
             var res = new List<IEnumerable<IClusterNode>>(partCnt);
 
             for (var i = 0; i < partCnt; i++)
-                res.Add(IgniteUtils.ReadNodes(reader));
+                // Partition node count is always written as a non-negative value, so ReadNodes never returns null here.
+                res.Add(IgniteUtils.ReadNodes(reader)!);
 
             return res;
         }
@@ -230,7 +220,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Affinity
         /// <summary>
         /// Writes the user function.
         /// </summary>
-        private static void WriteUserFunc(IBinaryRawWriter writer, IAffinityFunction func, object funcOverride)
+        private static void WriteUserFunc(IBinaryRawWriter writer, IAffinityFunction? func, object? funcOverride)
         {
             if (funcOverride != null)
             {
@@ -244,7 +234,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Affinity
         /// <summary>
         /// Reads the backup filter.
         /// </summary>
-        private static ClusterNodeAttributeAffinityBackupFilter ReadBackupFilter(IBinaryRawReader reader)
+        private static ClusterNodeAttributeAffinityBackupFilter? ReadBackupFilter(IBinaryRawReader reader)
         {
             var attrCount = reader.ReadInt();
 
@@ -257,7 +247,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Affinity
 
             for (var i = 0; i < attrCount; i++)
             {
-                attrs[i] = reader.ReadString();
+                attrs[i] = reader.ReadString()!;
             }
 
             return new ClusterNodeAttributeAffinityBackupFilter{AttributeNames = attrs};

@@ -77,7 +77,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Gets the corresponding Java type name.
         /// </summary>
-        public static string GetJavaTypeName(Type type)
+        public static string? GetJavaTypeName(Type? type)
         {
             if (type == null)
                 return null;
@@ -85,15 +85,13 @@ namespace Apache.Ignite.Core.Impl.Binary
             // Unwrap nullable.
             type = Nullable.GetUnderlyingType(type) ?? type;
 
-            string res;
-
-            return NetToJava.TryGetValue(type, out res) ? res : null;
+            return NetToJava.TryGetValue(type, out var res) ? res : null;
         }
 
         /// <summary>
         /// Logs a warning for indirectly mapped types.
         /// </summary>
-        public static void LogIndirectMappingWarning(Type type, ILogger log, string logInfo)
+        public static void LogIndirectMappingWarning(Type? type, ILogger log, string logInfo)
         {
             if (type == null)
                 return;
@@ -117,9 +115,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             // Unwrap nullable.
             var unwrapType = Nullable.GetUnderlyingType(type) ?? type;
 
-            Type directType;
-
-            return IndirectMappingTypes.TryGetValue(unwrapType, out directType) ? directType : type;
+            return IndirectMappingTypes.TryGetValue(unwrapType, out var directType) ? directType : type;
         }
 
         /// <summary>
@@ -127,18 +123,14 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         /// <param name="javaTypeName">Name of the java type.</param>
         /// <returns></returns>
-        public static Type GetDotNetType(string javaTypeName)
+        public static Type? GetDotNetType(string? javaTypeName)
         {
             if (string.IsNullOrEmpty(javaTypeName))
                 return null;
 
-            string fullJavaTypeName;
+            JavaPrimitiveToType.TryGetValue(javaTypeName!, out var fullJavaTypeName);
 
-            JavaPrimitiveToType.TryGetValue(javaTypeName, out fullJavaTypeName);
-
-            Type res;
-
-            return JavaToNet.TryGetValue(fullJavaTypeName ?? javaTypeName, out res) ? res : null;
+            return JavaToNet.TryGetValue(fullJavaTypeName ?? javaTypeName!, out var res) ? res : null;
         }
     }
 }

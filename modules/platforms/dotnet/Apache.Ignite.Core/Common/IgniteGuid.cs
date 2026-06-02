@@ -53,7 +53,7 @@ namespace Apache.Ignite.Core.Common
         {
             Debug.Assert(reader != null);
 
-            var stream = ((BinaryReader) reader).Stream;
+            var stream = ((BinaryReader) reader!).Stream;
 
             _localId = stream.ReadLong();
             _globalId = BinaryUtils.ReadGuid(stream);
@@ -94,7 +94,7 @@ namespace Apache.Ignite.Core.Common
         /// <returns>
         ///   <c>true</c> if the specified <see cref="object" /> is equal to this instance; otherwise, <c>false</c>.
         /// </returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             return obj is IgniteGuid && Equals((IgniteGuid) obj);
@@ -162,7 +162,7 @@ namespace Apache.Ignite.Core.Common
         {
             Debug.Assert(writer != null);
 
-            var stream = ((BinaryWriter) writer.GetRawWriter()).Stream;
+            var stream = ((BinaryWriter) writer!.GetRawWriter()).Stream;
 
             stream.WriteLong(_localId);
             BinaryUtils.WriteGuid(_globalId, stream);

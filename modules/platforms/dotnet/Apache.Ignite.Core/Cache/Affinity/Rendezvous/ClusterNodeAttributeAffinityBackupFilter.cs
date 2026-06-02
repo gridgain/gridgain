@@ -51,6 +51,6 @@ namespace Apache.Ignite.Core.Cache.Affinity.Rendezvous
         /// Gets or sets the attribute names.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<string> AttributeNames { get; set; }
+        public ICollection<string>? AttributeNames { get; set; }
     }
 }

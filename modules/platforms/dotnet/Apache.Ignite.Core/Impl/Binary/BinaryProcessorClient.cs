@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Impl.Binary
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Binary.Metadata;
@@ -38,13 +37,11 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="socket">The socket.</param>
         public BinaryProcessorClient(ClientFailoverSocket socket)
         {
-            Debug.Assert(socket != null);
-
             _socket = socket;
         }
 
         /** <inheritdoc /> */
-        public BinaryType GetBinaryType(int typeId)
+        public BinaryType? GetBinaryType(int typeId)
         {
             return _socket.DoOutInOp(ClientOp.BinaryTypeGet, ctx => ctx.Stream.WriteInt(typeId),
                 ctx => ctx.Stream.ReadBool() ? new BinaryType(ctx.Reader, true) : null);
@@ -71,8 +68,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         /** <inheritdoc /> */
         public void PutBinaryTypes(ICollection<BinaryType> types)
         {
-            Debug.Assert(types != null);
-
             foreach (var binaryType in types)
             {
                 var type = binaryType;  // Access to modified closure.
@@ -106,13 +101,13 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /** <inheritdoc /> */
-        public BinaryType RegisterEnum(string typeName, IEnumerable<KeyValuePair<string, int>> values)
+        public BinaryType RegisterEnum(string typeName, IEnumerable<KeyValuePair<string, int>>? values)
         {
             throw IgniteClient.GetClientNotSupportedException();
         }
 
         /** <inheritdoc /> */
-        public string GetTypeName(int id, byte platformId, Func<Exception, string> errorFunc = null)
+        public string GetTypeName(int id, byte platformId, Func<Exception, string>? errorFunc = null)
         {
             return _socket.DoOutInOp(ClientOp.BinaryTypeNameGet, ctx =>
                 {
@@ -121,7 +116,7 @@ namespace Apache.Ignite.Core.Impl.Binary
                 },
                 ctx => ctx.Reader.ReadString(),
                 errorFunc == null
-                    ? (Func<ClientStatusCode, string, string>) null
+                    ? (Func<ClientStatusCode, string, string>?) null
                     : (statusCode, msg) => errorFunc(new BinaryObjectException(msg)));
         }
 

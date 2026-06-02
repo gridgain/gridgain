@@ -44,7 +44,7 @@ namespace Apache.Ignite.Core.Client.Transactions
         /// <summary>
         /// Gets the transaction label.
         /// </summary>
-        string Label { get; }
+        string? Label { get; }
 
         /// <summary>
         /// Commits this transaction.

@@ -39,7 +39,7 @@ namespace Apache.Ignite.Core.Cache
         /// Initializes a new instance of the <see cref="CacheEntryProcessorException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public CacheEntryProcessorException(string message) : base(message)
+        public CacheEntryProcessorException(string? message) : base(message)
         {
             // No-op.
         }
@@ -49,7 +49,7 @@ namespace Apache.Ignite.Core.Cache
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public CacheEntryProcessorException(string message, Exception cause)
+        public CacheEntryProcessorException(string? message, Exception? cause)
             : base(message, cause)
         {
             // No-op.
@@ -59,7 +59,7 @@ namespace Apache.Ignite.Core.Cache
         /// Initializes a new instance of the <see cref="CacheEntryProcessorException"/> class.
         /// </summary>
         /// <param name="innerException">The inner exception.</param>
-        public CacheEntryProcessorException(Exception innerException)
+        public CacheEntryProcessorException(Exception? innerException)
             : base("Error occurred in CacheEntryProcessor, see InnerException for details.", innerException)
         {
             // No-op.

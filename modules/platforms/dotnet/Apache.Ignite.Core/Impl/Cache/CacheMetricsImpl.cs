@@ -306,7 +306,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             _averageTxRollbackTime = reader.ReadFloat();
             _cacheTxCommits = reader.ReadLong();
             _cacheTxRollbacks = reader.ReadLong();
-            _cacheName = reader.ReadString();
+            _cacheName = reader.ReadString()!;
             _offHeapGets = reader.ReadLong();
             _offHeapPuts = reader.ReadLong();
             _offHeapRemovals = reader.ReadLong();
@@ -346,8 +346,8 @@ namespace Apache.Ignite.Core.Impl.Cache
             _writeBehindCriticalOverflowCount = reader.ReadInt();
             _writeBehindErrorRetryCount = reader.ReadInt();
             _writeBehindBufferSize = reader.ReadInt();
-            _keyType = reader.ReadString();
-            _valueType = reader.ReadString();
+            _keyType = reader.ReadString()!;
+            _valueType = reader.ReadString()!;
             _isStoreByValue = reader.ReadBoolean();
             _isStatisticsEnabled = reader.ReadBoolean();
             _isManagementEnabled = reader.ReadBoolean();

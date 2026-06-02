@@ -42,9 +42,7 @@ namespace Apache.Ignite.Core.Impl.Resource
         {
             IDictionary<Type, ResourceTypeDescriptor> descs0 = _descs;
 
-            ResourceTypeDescriptor desc;
-
-            if (!descs0.TryGetValue(type, out desc))
+            if (!descs0.TryGetValue(type, out var desc))
             {
                 lock (Mux)
                 {
@@ -70,7 +68,7 @@ namespace Apache.Ignite.Core.Impl.Resource
         /// </summary>
         /// <param name="target">Target object.</param>
         /// <param name="grid">Grid.</param>
-        public static void Inject(object target, IIgniteInternal grid)
+        public static void Inject(object? target, IIgniteInternal grid)
         {
             if (target != null) {
                 var desc = Descriptor(target.GetType());
@@ -86,8 +84,6 @@ namespace Apache.Ignite.Core.Impl.Resource
         /// <param name="ses">Store session.</param>
         public static void InjectStoreSession(ICacheStore store, ICacheStoreSession ses)
         {
-            Debug.Assert(store != null);
-
             Descriptor(store.GetType()).InjectStoreSession(store, ses);
         }
     }

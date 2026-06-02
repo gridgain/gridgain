@@ -47,8 +47,8 @@ namespace Apache.Ignite.Core.Impl.Deployment
         /// <param name="reader">The reader.</param>
         public AssemblyRequestResult(IBinaryRawReader reader)
         {
-            _assemblyBytes = reader.ReadByteArray();
-            _message = reader.ReadString();
+            _assemblyBytes = reader.ReadByteArray()!;
+            _message = reader.ReadString()!;
         }
 
         /** <inheritdoc /> */

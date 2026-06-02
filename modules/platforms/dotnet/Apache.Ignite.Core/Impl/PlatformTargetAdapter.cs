@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Impl
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Impl.Binary;
@@ -68,8 +67,6 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="target">Target.</param>
         protected PlatformTargetAdapter(IPlatformTargetInternal target)
         {
-            Debug.Assert(target != null);
-
             _target = target;
             _marsh = target.Marshaller;
         }
@@ -120,7 +117,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="type">Operation type.</param>
         /// <param name="action">Action to be performed on the stream.</param>
         /// <returns>Resulting object.</returns>
-        protected IPlatformTargetInternal DoOutOpObject(int type, Action<BinaryWriter> action)
+        protected IPlatformTargetInternal? DoOutOpObject(int type, Action<BinaryWriter> action)
         {
             return _target.InStreamOutObject(type, stream => WriteToStream(action, stream, _marsh));
         }
@@ -131,7 +128,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="type">Operation type.</param>
         /// <param name="action">Action to be performed on the stream.</param>
         /// <returns>Resulting object.</returns>
-        protected IPlatformTargetInternal DoOutOpObject(int type, Action<IBinaryStream> action)
+        protected IPlatformTargetInternal? DoOutOpObject(int type, Action<IBinaryStream> action)
         {
             return _target.InStreamOutObject(type, action);
         }
@@ -213,7 +210,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="inAction">In action.</param>
         /// <param name="errorAction">Error action.</param>
         /// <returns>Result.</returns>
-        protected TR DoOutInOp<TR>(int type, Action<BinaryWriter> outAction, Func<IBinaryStream, TR> inAction, Func<Exception, TR> errorAction = null)
+        protected TR DoOutInOp<TR>(int type, Action<BinaryWriter> outAction, Func<IBinaryStream, TR> inAction, Func<Exception, TR>? errorAction = null)
         {
             return _target.InStreamOutStream(type, stream => WriteToStream(outAction, stream, _marsh), inAction, errorAction);
         }
@@ -312,7 +309,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="type">The type code.</param>
         /// <param name="writeAction">The write action.</param>
         /// <returns>Task for async operation</returns>
-        protected Task DoOutOpAsync(int type, Action<BinaryWriter> writeAction = null)
+        protected Task DoOutOpAsync(int type, Action<BinaryWriter>? writeAction = null)
         {
             return DoOutOpAsync<object>(type, writeAction);
         }
@@ -326,8 +323,8 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="keepBinary">Keep binary flag, only applicable to object futures. False by default.</param>
         /// <param name="convertFunc">The function to read future result from stream.</param>
         /// <returns>Task for async operation</returns>
-        protected Task<T> DoOutOpAsync<T>(int type, Action<BinaryWriter> writeAction = null, bool keepBinary = false,
-            Func<BinaryReader, T> convertFunc = null)
+        protected Task<T> DoOutOpAsync<T>(int type, Action<BinaryWriter>? writeAction = null, bool keepBinary = false,
+            Func<BinaryReader?, T>? convertFunc = null)
         {
             return GetFuture((futId, futType) => DoOutOp(type, w =>
             {
@@ -349,12 +346,12 @@ namespace Apache.Ignite.Core.Impl
         /// <returns>Future for async operation</returns>
         protected Future<T> DoOutOpObjectAsync<T>(int type, Action<BinaryWriter> writeAction)
         {
-            return GetFuture<T>((futId, futType) => DoOutOpObject(type, w =>
+            return GetFuture<T>((futId, futType) => DoOutOpObject(type, (BinaryWriter w) =>
             {
                 writeAction(w);
                 w.WriteLong(futId);
                 w.WriteInt(futType);
-            }));
+            })!);
         }
 
         /// <summary>
@@ -367,7 +364,7 @@ namespace Apache.Ignite.Core.Impl
         /// <returns>
         /// Task for async operation
         /// </returns>
-        protected Task<TR> DoOutOpAsync<T1, TR>(int type, T1 val1)
+        protected Task<TR> DoOutOpAsync<T1, TR>(int type, T1? val1)
         {
             return GetFuture<TR>((futId, futType) => DoOutOp(type, w =>
             {
@@ -389,7 +386,7 @@ namespace Apache.Ignite.Core.Impl
         /// <returns>
         /// Task for async operation
         /// </returns>
-        protected Task<TR> DoOutOpAsync<T1, T2, TR>(int type, T1 val1, T2 val2)
+        protected Task<TR> DoOutOpAsync<T1, T2, TR>(int type, T1? val1, T2? val2)
         {
             return GetFuture<TR>((futId, futType) => DoOutOp(type, w =>
             {
@@ -423,7 +420,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="convertFunc">The function to read future result from stream.</param>
         /// <returns>Created future.</returns>
         private Future<T> GetFuture<T>(Func<long, int, IPlatformTargetInternal> listenAction, bool keepBinary = false,
-            Func<BinaryReader, T> convertFunc = null)
+            Func<BinaryReader?, T>? convertFunc = null)
         {
             var futType = FutureType.Object;
 
@@ -465,7 +462,7 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="convertFunc">The function to read future result from stream.</param>
         /// <returns>Created future.</returns>
         private Future<T> GetFuture<T>(Action<long, int> listenAction, bool keepBinary = false,
-            Func<BinaryReader, T> convertFunc = null)
+            Func<BinaryReader?, T>? convertFunc = null)
         {
             var futType = FutureType.Object;
 

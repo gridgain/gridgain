@@ -48,6 +48,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     /// </summary>
     [SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")]
     internal class CacheImpl<TK, TV> : PlatformTargetAdapter, ICache<TK, TV>, ICacheInternal, ICacheLockInternal
+        where TK : notnull
     {
         /** Ignite instance. */
         private readonly IIgniteInternal _ignite;
@@ -68,13 +69,13 @@ namespace Apache.Ignite.Core.Impl.Cache
         private readonly bool _flagPartitionRecover;
 
         /** Transaction manager. */
-        private readonly CacheTransactionManager _txManager;
+        private readonly CacheTransactionManager? _txManager;
 
         /** Pre-allocated delegate. */
         private readonly Func<IBinaryStream, Exception> _readException;
 
         /** Platform cache. */
-        private readonly IPlatformCache _platformCache;
+        private readonly IPlatformCache? _platformCache;
 
         /** Whether persistence is enabled for this cache. */
         private readonly bool _persistenceEnabled;
@@ -152,7 +153,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Performs async operation.
         /// </summary>
-        private Task<TR> DoOutOpAsync<T1, TR>(CacheOp op, T1 val1)
+        private Task<TR> DoOutOpAsync<T1, TR>(CacheOp op, T1? val1)
         {
             return DoOutOpAsync<T1, TR>((int) op, val1);
         }
@@ -160,7 +161,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Performs async operation.
         /// </summary>
-        private Task DoOutOpAsync<T1, T2>(CacheOp op, T1 val1, T2 val2)
+        private Task DoOutOpAsync<T1, T2>(CacheOp op, T1? val1, T2? val2)
         {
             return DoOutOpAsync<T1, T2, object>((int) op, val1, val2);
         }
@@ -176,7 +177,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Performs async operation.
         /// </summary>
-        private Task DoOutOpAsync(CacheOp op, Action<BinaryWriter> writeAction = null)
+        private Task DoOutOpAsync(CacheOp op, Action<BinaryWriter>? writeAction = null)
         {
             return DoOutOpAsync<object>(op, writeAction);
         }
@@ -184,8 +185,8 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Performs async operation.
         /// </summary>
-        private Task<T> DoOutOpAsync<T>(CacheOp op, Action<BinaryWriter> writeAction = null,
-            Func<BinaryReader, T> convertFunc = null)
+        private Task<T> DoOutOpAsync<T>(CacheOp op, Action<BinaryWriter>? writeAction = null,
+            Func<BinaryReader?, T>? convertFunc = null)
         {
             return DoOutOpAsync((int)op, writeAction, IsKeepBinary, convertFunc);
         }
@@ -234,6 +235,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
         /** <inheritDoc /> */
         public ICache<TK1, TV1> WithKeepBinary<TK1, TV1>()
+            where TK1 : notnull
         {
             if (_flagKeepBinary)
             {
@@ -283,7 +285,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             var cache0 = DoOutOpObject((int)CacheOp.WithExpiryPolicy, w => ExpiryPolicySerializer.WritePolicy(w, plc));
 
             return new CacheImpl<TK, TV>(
-                cache0,
+                cache0!,
                 flagSkipStore: _flagSkipStore,
                 flagKeepBinary: _flagKeepBinary,
                 flagNoRetries: _flagNoRetries,
@@ -303,25 +305,25 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /** <inheritDoc /> */
-        public void LoadCache(ICacheEntryFilter<TK, TV> p, params object[] args)
+        public void LoadCache(ICacheEntryFilter<TK, TV>? p, params object?[]? args)
         {
             DoOutInOpX((int) CacheOp.LoadCache, writer => WriteLoadCacheData(writer, p, args), _readException);
         }
 
         /** <inheritDoc /> */
-        public Task LoadCacheAsync(ICacheEntryFilter<TK, TV> p, params object[] args)
+        public Task LoadCacheAsync(ICacheEntryFilter<TK, TV>? p, params object?[]? args)
         {
             return DoOutOpAsync(CacheOp.LoadCacheAsync, writer => WriteLoadCacheData(writer, p, args));
         }
 
         /** <inheritDoc /> */
-        public void LocalLoadCache(ICacheEntryFilter<TK, TV> p, params object[] args)
+        public void LocalLoadCache(ICacheEntryFilter<TK, TV>? p, params object?[]? args)
         {
             DoOutInOpX((int) CacheOp.LocLoadCache, writer => WriteLoadCacheData(writer, p, args), _readException);
         }
 
         /** <inheritDoc /> */
-        public Task LocalLoadCacheAsync(ICacheEntryFilter<TK, TV> p, params object[] args)
+        public Task LocalLoadCacheAsync(ICacheEntryFilter<TK, TV>? p, params object?[]? args)
         {
             return DoOutOpAsync(CacheOp.LocLoadCacheAsync, writer => WriteLoadCacheData(writer, p, args));
         }
@@ -329,7 +331,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Writes the load cache data to the writer.
         /// </summary>
-        private void WriteLoadCacheData(BinaryWriter writer, ICacheEntryFilter<TK, TV> p, object[] args)
+        private void WriteLoadCacheData(BinaryWriter writer, ICacheEntryFilter<TK, TV>? p, object?[]? args)
         {
             if (p != null)
             {
@@ -340,7 +342,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
             else
             {
-                writer.WriteObjectDetached<CacheEntryFilterHolder>(null);
+                writer.WriteObjectDetached<CacheEntryFilterHolder?>(null);
             }
 
             if (args != null && args.Length > 0)
@@ -380,7 +382,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
 
             TV _;
-            if (CanUsePlatformCache && _platformCache.TryGetValue(key, out _))
+            if (CanUsePlatformCache && _platformCache!.TryGetValue(key, out _))
             {
                 return true;
             }
@@ -394,7 +396,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
 
             TV _;
-            if (CanUsePlatformCache && _platformCache.TryGetValue(key, out _))
+            if (CanUsePlatformCache && _platformCache!.TryGetValue(key, out _))
             {
                 return TaskRunner.FromResult(true);
             }
@@ -418,7 +420,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                         var key = enumerator.Current;
 
                         TV _;
-                        if (!_platformCache.TryGetValue(key, out _))
+                        if (!_platformCache!.TryGetValue(key, out _))
                         {
                             allKeysAreInPlatformCache = false;
                             break;
@@ -431,7 +433,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                     }
 
                     // ReSharper disable AccessToDisposedClosure (operation is synchronous, not an issue).
-                    ICollection<ICacheEntry<TK, TV>> res = null;
+                    ICollection<ICacheEntry<TK, TV>>? res = null;
                     return DoOutOp(CacheOp.ContainsKeys,
                         writer => WriteKeysOrGetFromPlatformCache(writer, enumerator, ref res, discardResults: true));
                 }
@@ -456,7 +458,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                         var key = enumerator.Current;
 
                         TV _;
-                        if (!_platformCache.TryGetValue(key, out _))
+                        if (!_platformCache!.TryGetValue(key, out _))
                         {
                             allKeysAreInPlatformCache = false;
                             break;
@@ -469,7 +471,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                     }
 
                     // ReSharper disable AccessToDisposedClosure (write is synchronous, not an issue).
-                    ICollection<ICacheEntry<TK, TV>> res = null;
+                    ICollection<ICacheEntry<TK, TV>>? res = null;
                     return DoOutOpAsync<bool>(CacheOp.ContainsKeysAsync,
                         writer => WriteKeysOrGetFromPlatformCache(writer, enumerator, ref res, discardResults: true));
                 }
@@ -483,7 +485,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            TV res;
+            TV? res;
 
             if (TryLocalPeek(key, out res, modes))
                 return res;
@@ -492,7 +494,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /** <inheritDoc /> */
-        public bool TryLocalPeek(TK key, out TV value, params CachePeekMode[] modes)
+        public bool TryLocalPeek(TK key, [MaybeNullWhen(false)] out TV value, params CachePeekMode[] modes)
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
@@ -509,7 +511,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 if (peekModes == 0)
                 {
                     // Only Platform is specified.
-                    value = default(TV);
+                    value = default!;
                     return false;
                 }
             }
@@ -523,7 +525,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 (s, r) => r == True ? new CacheResult<TV>(Unmarshal<TV>(s)) : new CacheResult<TV>(),
                 _readException);
 
-            value = res.Success ? res.Value : default(TV);
+            value = res.Success ? res.Value : default!;
 
             return res.Success;
         }
@@ -549,7 +551,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             StartTxIfNeeded();
 
             TV val;
-            if (CanUsePlatformCache && _platformCache.TryGetValue(key, out val))
+            if (CanUsePlatformCache && _platformCache!.TryGetValue(key, out val))
             {
                 return val;
             }
@@ -573,7 +575,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             StartTxIfNeeded();
 
             TV val;
-            if (CanUsePlatformCache && _platformCache.TryGetValue(key, out val))
+            if (CanUsePlatformCache && _platformCache!.TryGetValue(key, out val))
             {
                 return TaskRunner.FromResult(val);
             }
@@ -588,13 +590,13 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /** <inheritDoc /> */
-        public bool TryGet(TK key, out TV value)
+        public bool TryGet(TK key, [MaybeNullWhen(false)] out TV value)
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
             StartTxIfNeeded();
 
-            if (CanUsePlatformCache && _platformCache.TryGetValue(key, out value))
+            if (CanUsePlatformCache && _platformCache!.TryGetValue(key, out value))
             {
                 return true;
             }
@@ -634,7 +636,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 // Resulting collection is null by default:
                 // When no keys are found in platform cache, there is no extra allocations,
                 // because result size will be known.
-                ICollection<ICacheEntry<TK, TV>> res = null;
+                ICollection<ICacheEntry<TK, TV>>? res = null;
                 var allKeysAreInPlatformCache = true;
 
                 using (var enumerator = keys.GetEnumerator())
@@ -644,7 +646,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                         var key = enumerator.Current;
 
                         TV val;
-                        if (_platformCache.TryGetValue(key, out val))
+                        if (_platformCache!.TryGetValue(key, out val))
                         {
                             res = res ?? new List<ICacheEntry<TK, TV>>();
                             res.Add(new CacheEntry<TK, TV>(key, val));
@@ -658,15 +660,15 @@ namespace Apache.Ignite.Core.Impl.Cache
 
                     if (allKeysAreInPlatformCache)
                     {
-                        return res;
+                        return res!;
                     }
 
                     // ReSharper disable AccessToDisposedClosure (operation is synchronous, not an issue).
                     return DoOutInOpX((int) CacheOp.GetAll,
                         w => WriteKeysOrGetFromPlatformCache(w, enumerator, ref res),
                         (s, r) => r == True
-                            ? ReadGetAllDictionary(Marshaller.StartUnmarshal(s, _flagKeepBinary), res)
-                            : res,
+                            ? ReadGetAllDictionary(Marshaller.StartUnmarshal(s, _flagKeepBinary), res)!
+                            : res!,
                         _readException);
                     // ReSharper restore AccessToDisposedClosure
                 }
@@ -675,8 +677,8 @@ namespace Apache.Ignite.Core.Impl.Cache
             return DoOutInOpX((int) CacheOp.GetAll,
                 writer => writer.WriteEnumerable(keys),
                 (s, r) => r == True
-                    ? ReadGetAllDictionary(Marshaller.StartUnmarshal(s, _flagKeepBinary))
-                    : null,
+                    ? ReadGetAllDictionary(Marshaller.StartUnmarshal(s, _flagKeepBinary))!
+                    : [],
                 _readException);
         }
 
@@ -691,7 +693,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 // Get what we can from platform cache, and the rest from Java.
                 // Duplicates the logic from GetAll above, but extracting common parts increases complexity too much.
-                ICollection<ICacheEntry<TK, TV>> res = null;
+                ICollection<ICacheEntry<TK, TV>>? res = null;
                 var allKeysAreInPlatformCache = true;
 
                 using (var enumerator = keys.GetEnumerator())
@@ -701,7 +703,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                         var key = enumerator.Current;
 
                         TV val;
-                        if (_platformCache.TryGetValue(key, out val))
+                        if (_platformCache!.TryGetValue(key, out val))
                         {
                             res = res ?? new List<ICacheEntry<TK, TV>>();
                             res.Add(new CacheEntry<TK, TV>(key, val));
@@ -715,20 +717,20 @@ namespace Apache.Ignite.Core.Impl.Cache
 
                     if (allKeysAreInPlatformCache)
                     {
-                        return TaskRunner.FromResult(res);
+                        return TaskRunner.FromResult(res!);
                     }
 
                     // ReSharper disable AccessToDisposedClosure (write operation is synchronous, not an issue).
                     return DoOutOpAsync(CacheOp.GetAllAsync,
                         w => WriteKeysOrGetFromPlatformCache(w, enumerator, ref res),
-                        r => ReadGetAllDictionary(r, res));
+                        r => ReadGetAllDictionary(r, res)!);
                     // ReSharper restore AccessToDisposedClosure
                 }
             }
 
             return DoOutOpAsync(CacheOp.GetAllAsync,
                 w => w.WriteEnumerable(keys),
-                r => ReadGetAllDictionary(r));
+                r => ReadGetAllDictionary(r)!);
         }
 
         /** <inheritdoc /> */
@@ -748,7 +750,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                     // Platform cache optimization on primary nodes:
                     // Update from Java comes in this same thread, so we don't need to pass key/val from Java.
                     // However, we still rely on a callback to maintain the order of updates.
-                    _platformCache.SetThreadLocalPair(key, val);
+                    _platformCache!.SetThreadLocalPair(key, val);
                 }
 
                 DoOutOp(CacheOp.PutWithPlatformCache, key, val);
@@ -757,7 +759,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 if (platformCache)
                 {
-                    _platformCache.ResetThreadLocalPair();
+                    _platformCache!.ResetThreadLocalPair();
                 }
             }
         }
@@ -1206,7 +1208,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             var op = loc ? CacheOp.SizeLongLoc : CacheOp.SizeLong;
 
-            return DoOutOp((int) op, writer =>
+            return DoOutOp((int) op, (BinaryWriter writer) =>
             {
                 writer.WriteInt(modes0);
 
@@ -1311,7 +1313,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             StartTxIfNeeded();
 
             var holder = new CacheEntryProcessorHolder(processor, arg,
-                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
+                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a!), typeof(TK), typeof(TV));
 
             var ptr = AllocateIfNoTx(holder);
 
@@ -1324,7 +1326,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                         writer.WriteLong(ptr);
                         writer.WriteObjectDetached(holder);
                     },
-                    (input, res) => res == True ? Unmarshal<TRes>(input) : default(TRes),
+                    (input, res) => res == True ? Unmarshal<TRes>(input) : default(TRes)!,
                     _readException);
             }
             finally
@@ -1343,7 +1345,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             StartTxIfNeeded();
 
             var holder = new CacheEntryProcessorHolder(processor, arg,
-                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
+                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a!), typeof(TK), typeof(TV));
 
             var ptr = AllocateIfNoTx(holder);
 
@@ -1361,7 +1363,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                             _ignite.HandleRegistry.Release(ptr);
 
                         if (reader == null)
-                            return default(TRes);
+                            return default(TRes)!;
 
                         var hasError = reader.ReadBoolean();
 
@@ -1390,7 +1392,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             StartTxIfNeeded();
 
             var holder = new CacheEntryProcessorHolder(processor, arg,
-                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
+                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a!), typeof(TK), typeof(TV));
 
             var ptr = AllocateIfNoTx(holder);
 
@@ -1405,7 +1407,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                     },
                     (input, res) => res == True
                         ? ReadInvokeAllResults<TRes>(Marshaller.StartUnmarshal(input, IsKeepBinary))
-                        : null, _readException);
+                        : null, _readException)!;
             }
             finally
             {
@@ -1424,7 +1426,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             StartTxIfNeeded();
 
             var holder = new CacheEntryProcessorHolder(processor, arg,
-                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a), typeof(TK), typeof(TV));
+                (e, a) => processor.Process((IMutableCacheEntry<TK, TV>)e, (TArg)a!), typeof(TK), typeof(TV));
 
             var ptr = AllocateIfNoTx(holder);
 
@@ -1442,7 +1444,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                         if (ptr != 0)
                             _ignite.HandleRegistry.Release(ptr);
 
-                        return ReadInvokeAllResults<TRes>(reader);
+                        return ReadInvokeAllResults<TRes>(reader!)!;
                     });
             }
             catch (Exception)
@@ -1466,7 +1468,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 },
                 (input, res) => res == True
                     ? readFunc(Marshaller.StartUnmarshal(input))
-                    : default(T), _readException);
+                    : default(T), _readException)!;
         }
 
         /** <inheritdoc /> */
@@ -1653,7 +1655,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             var cursor = DoOutOpObject((int) qry.OpId, writer => qry.Write(writer, IsKeepBinary));
 
-            return new QueryCursor<TK, TV>(cursor, _flagKeepBinary);
+            return new QueryCursor<TK, TV>(cursor!, _flagKeepBinary);
         }
 
         /** <inheritdoc /> */
@@ -1679,19 +1681,19 @@ namespace Apache.Ignite.Core.Impl.Cache
             qry.Validate();
 
             return new ContinuousQueryHandleImpl<TK, TV>(qry, Marshaller, _flagKeepBinary,
-                writeAction => DoOutOpObject((int) CacheOp.QryContinuous, writeAction), initialQry);
+                writeAction => DoOutOpObject((int) CacheOp.QryContinuous, writeAction)!, initialQry);
         }
 
         /// <summary>
         /// QueryContinuous implementation.
         /// </summary>
         private IContinuousQueryHandle<ICacheEntry<TK, TV>> QueryContinuousImpl(ContinuousQuery<TK, TV> qry,
-            QueryBase initialQry)
+            QueryBase? initialQry)
         {
             qry.Validate();
 
             return new ContinuousQueryHandleImpl<TK, TV>(qry, Marshaller, _flagKeepBinary,
-                writeAction => DoOutOpObject((int) CacheOp.QryContinuous, writeAction), initialQry);
+                writeAction => DoOutOpObject((int) CacheOp.QryContinuous, writeAction)!, initialQry);
         }
 
         #endregion
@@ -1710,10 +1712,10 @@ namespace Apache.Ignite.Core.Impl.Cache
                 if (onlyPlatformCacheMode)
                 {
                     // Only platform cache.
-                    return _platformCache.GetEntries<TK, TV>();
+                    return _platformCache!.GetEntries<TK, TV>();
                 }
 
-                return _platformCache.GetEntries<TK, TV>().Concat(new CacheEnumerable<TK, TV>(this, encodedPeekModes));
+                return _platformCache!.GetEntries<TK, TV>().Concat(new CacheEnumerable<TK, TV>(this, encodedPeekModes));
             }
 
             if (!HasPlatformCache && onlyPlatformCacheMode)
@@ -1748,7 +1750,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 var target = DoOutOpObject((int) CacheOp.LocIterator, (IBinaryStream s) => s.WriteInt(peekModes));
 
-                return new CacheEnumerator<TK, TV>(target, _flagKeepBinary);
+                return new CacheEnumerator<TK, TV>(target!, _flagKeepBinary);
             }
 
             return new CacheEnumerator<TK, TV>(DoOutOpObject((int) CacheOp.Iterator), _flagKeepBinary);
@@ -1768,7 +1770,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <typeparam name="T">The type of the result.</typeparam>
         /// <param name="reader">Stream.</param>
         /// <returns>Results of InvokeAll operation.</returns>
-        private ICollection<ICacheEntryProcessorResult<TK, T>> ReadInvokeAllResults<T>(BinaryReader reader)
+        private ICollection<ICacheEntryProcessorResult<TK, T>>? ReadInvokeAllResults<T>(BinaryReader reader)
         {
             var count = reader.ReadInt();
 
@@ -1818,8 +1820,8 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <param name="reader">Reader.</param>
         /// <param name="res">Resulting collection.</param>
         /// <returns>Dictionary.</returns>
-        private static ICollection<ICacheEntry<TK, TV>> ReadGetAllDictionary(BinaryReader reader,
-            ICollection<ICacheEntry<TK, TV>> res = null)
+        private static ICollection<ICacheEntry<TK, TV>>? ReadGetAllDictionary(BinaryReader? reader,
+            ICollection<ICacheEntry<TK, TV>>? res = null)
         {
             if (reader == null)
                 return null;
@@ -1848,7 +1850,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Gets the cache result.
         /// </summary>
-        private static CacheResult<TV> GetCacheResult(BinaryReader reader)
+        private static CacheResult<TV> GetCacheResult(BinaryReader? reader)
         {
             var res = reader == null
                 ? new CacheResult<TV>()
@@ -2025,7 +2027,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// Keys that are not in platform cache are written to the writer.
         /// </summary>
         private void WriteKeysOrGetFromPlatformCache(BinaryWriter writer, IEnumerator<TK> enumerator,
-            ref ICollection<ICacheEntry<TK, TV>> res, bool discardResults = false)
+            ref ICollection<ICacheEntry<TK, TV>>? res, bool discardResults = false)
         {
             var count = 1;
             var pos = writer.Stream.Position;
@@ -2036,7 +2038,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             while (enumerator.MoveNext())
             {
                 TV val;
-                if (_platformCache.TryGetValue(enumerator.Current, out val))
+                if (_platformCache!.TryGetValue(enumerator.Current, out val))
                 {
                     if (!discardResults)
                     {
@@ -2099,7 +2101,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
 
             var part = qry.Partition;
-            Action dispose = null;
+            Action? dispose = null;
 
             if (part != null)
             {
@@ -2108,7 +2110,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 dispose = () => ReleasePartition((int) part);
             }
 
-            return new PlatformCacheQueryCursor<TK, TV>(_platformCache, filter, part, dispose);
+            return new PlatformCacheQueryCursor<TK, TV>(_platformCache!, filter, part, dispose);
         }
 
         /// <summary>
@@ -2121,7 +2123,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             if (string.IsNullOrEmpty(qry.Sql))
                 throw new ArgumentException("Sql cannot be null or empty");
 
-            return DoOutOpObject((int) CacheOp.QrySqlFields, writer => qry.Write(writer));
+            return DoOutOpObject((int) CacheOp.QrySqlFields, writer => qry.Write(writer))!;
         }
     }
 }

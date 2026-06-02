@@ -34,11 +34,11 @@ namespace Apache.Ignite.Core.Impl.Client.Services
             if (reader == null)
                 throw new ArgumentNullException(nameof(reader));
 
-            Name = reader.ReadString();
-            ServiceClass = reader.ReadString();
+            Name = reader.ReadString()!;
+            ServiceClass = reader.ReadString()!;
             TotalCount = reader.ReadInt();
             MaxPerNodeCount = reader.ReadInt();
-            CacheName = reader.ReadString();
+            CacheName = reader.ReadString()!;
             OriginNodeId = reader.ReadGuid();
             PlatformType = (Platform.PlatformType) reader.ReadByte();
         }

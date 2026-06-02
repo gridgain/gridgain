@@ -36,7 +36,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// <param name="queryType">Type.</param>
         /// <param name="sql">SQL.</param>
         /// <param name="args">Arguments.</param>
-        public SqlQuery(Type queryType, string sql, params object[] args) : this(queryType, sql, false, args)
+        public SqlQuery(Type queryType, string sql, params object?[]? args) : this(queryType, sql, false, args)
         {
             // No-op.
         }
@@ -48,8 +48,8 @@ namespace Apache.Ignite.Core.Cache.Query
         /// <param name="sql">SQL.</param>
         /// <param name="local">Whether query should be executed locally.</param>
         /// <param name="args">Arguments.</param>
-        public SqlQuery(Type queryType, string sql, bool local, params object[] args) 
-            : this(queryType == null ? null : queryType.Name, sql, local, args)
+        public SqlQuery(Type queryType, string sql, bool local, params object?[]? args)
+            : this(queryType == null! ? null! : queryType.Name, sql, local, args)
         {
             // No-op.
         }
@@ -60,7 +60,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// <param name="queryType">Type.</param>
         /// <param name="sql">SQL.</param>
         /// <param name="args">Arguments.</param>
-        public SqlQuery(string queryType, string sql, params object[] args) : this(queryType, sql, false, args)
+        public SqlQuery(string queryType, string sql, params object?[]? args) : this(queryType, sql, false, args)
         {
             // No-op.
         }
@@ -72,7 +72,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// <param name="sql">SQL.</param>
         /// <param name="local">Whether query should be executed locally.</param>
         /// <param name="args">Arguments.</param>
-        public SqlQuery(string queryType, string sql, bool local, params object[] args)
+        public SqlQuery(string queryType, string sql, bool local, params object?[]? args)
         {
             IgniteArgumentCheck.NotNullOrEmpty("queryType", queryType);
             IgniteArgumentCheck.NotNullOrEmpty("sql", sql);
@@ -97,7 +97,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// Arguments.
         /// </summary>
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
-        public object[] Arguments { get; set; }
+        public object?[]? Arguments { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether distributed joins should be enabled for this query.
@@ -161,7 +161,9 @@ namespace Apache.Ignite.Core.Cache.Query
         /// </returns>
         public override string ToString()
         {
-            var args = string.Join(", ", Arguments.Select(x => x == null ? "null" : x.ToString()));
+            var args = Arguments == null
+                ? ""
+                : string.Join(", ", Arguments.Select(x => x == null ? "null" : x.ToString()));
 
             return string.Format("SqlQuery [Sql={0}, Arguments=[{1}], Local={2}, PageSize={3}, " +
                                  "EnableDistributedJoins={4}, Timeout={5}, ReplicatedOnly={6}]", Sql, args, Local,

@@ -36,6 +36,7 @@ namespace Apache.Ignite.Core.Cache.Store
     /// <typeparam name="TK">Key type.</typeparam>
     /// <typeparam name="TV">Value type.</typeparam>
     public abstract class CacheStoreAdapter<TK, TV> : ICacheStore<TK, TV>
+        where TK : notnull
     {
         /// <summary>
         /// Loads all values from underlying persistent storage. Note that keys are
@@ -51,7 +52,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// </summary>
         /// <param name="act">Action for loaded values.</param>
         /// <param name="args">Optional arguments passed to <see cref="ICache{K,V}.LocalLoadCache" /> method.</param>
-        public virtual void LoadCache(Action<TK, TV> act, params object[] args)
+        public virtual void LoadCache(Action<TK, TV> act, params object?[]? args)
         {
             // No-op.
         }
@@ -67,7 +68,8 @@ namespace Apache.Ignite.Core.Cache.Store
         /// </returns>
         public virtual IEnumerable<KeyValuePair<TK, TV>> LoadAll(IEnumerable<TK> keys)
         {
-            return keys.ToDictionary(key => key, Load);
+            // Load can return null for keys that can't be loaded; the resulting map mirrors that, as before.
+            return keys.ToDictionary(key => key, key => Load(key)!);
         }
 
         /// <summary>
@@ -126,7 +128,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// The value for the entry that is to be stored in the cache
         /// or <c>null</c> if the object can't be loaded
         /// </returns>
-        public abstract TV Load(TK key);
+        public abstract TV? Load(TK key);
 
         /// <summary>
         /// Write the specified value under the specified key to the external resource.

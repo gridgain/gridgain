@@ -39,7 +39,7 @@ namespace Apache.Ignite.Core.Compute
         private volatile bool _cancelled;
 
         /** Arguments. */
-        private object[] _args;
+        private object?[]? _args;
 
         /// <summary>
         /// No-arg constructor.
@@ -53,7 +53,7 @@ namespace Apache.Ignite.Core.Compute
         /// Creates job with specified arguments.
         /// </summary>
         /// <param name="args">Optional job arguments.</param>
-        protected ComputeJobAdapter(params object[] args)
+        protected ComputeJobAdapter(params object?[]? args)
         {
             _args = args;
         }
@@ -75,7 +75,7 @@ namespace Apache.Ignite.Core.Compute
         /// Sets given arguments.
         /// </summary>
         /// <param name="args">Optional job arguments to set.</param>
-        public void SetArguments(params object[] args)
+        public void SetArguments(params object?[]? args)
         {
             _args = args;
         }
@@ -89,7 +89,7 @@ namespace Apache.Ignite.Core.Compute
             if (_args == null || idx < 0 || idx >= _args.Length)
                 throw new ArgumentOutOfRangeException("Invalid argument index: " + idx);
 
-            return (TArg)_args[idx];
+            return (TArg)_args[idx]!;
         }
 
         /// <summary>

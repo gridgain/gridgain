@@ -34,7 +34,7 @@ namespace Apache.Ignite.Core.Binary
         /// Write byte array.
         /// </summary>
         /// <param name="val">Byte array.</param>
-        void WriteByteArray(byte[] val);
+        void WriteByteArray(byte[]? val);
 
         /// <summary>
         /// Write char value.
@@ -46,7 +46,7 @@ namespace Apache.Ignite.Core.Binary
         /// Write char array.
         /// </summary>
         /// <param name="val">Char array.</param>
-        void WriteCharArray(char[] val);
+        void WriteCharArray(char[]? val);
 
         /// <summary>
         /// Write short value.
@@ -58,7 +58,7 @@ namespace Apache.Ignite.Core.Binary
         /// Write short array.
         /// </summary>
         /// <param name="val">Short array.</param>
-        void WriteShortArray(short[] val);
+        void WriteShortArray(short[]? val);
 
         /// <summary>
         /// Write int value.
@@ -70,7 +70,7 @@ namespace Apache.Ignite.Core.Binary
         /// Write int array.
         /// </summary>
         /// <param name="val">Int array.</param>
-        void WriteIntArray(int[] val);
+        void WriteIntArray(int[]? val);
 
         /// <summary>
         /// Write long value.
@@ -82,7 +82,7 @@ namespace Apache.Ignite.Core.Binary
         /// Write long array.
         /// </summary>
         /// <param name="val">Long array.</param>
-        void WriteLongArray(long[] val);
+        void WriteLongArray(long[]? val);
 
         /// <summary>
         /// Write boolean value.
@@ -94,7 +94,7 @@ namespace Apache.Ignite.Core.Binary
         /// Write boolean array.
         /// </summary>
         /// <param name="val">Boolean array.</param>
-        void WriteBooleanArray(bool[] val);
+        void WriteBooleanArray(bool[]? val);
 
         /// <summary>
         /// Write float value.
@@ -106,7 +106,7 @@ namespace Apache.Ignite.Core.Binary
         /// Write float array.
         /// </summary>
         /// <param name="val">Float array.</param>
-        void WriteFloatArray(float[] val);
+        void WriteFloatArray(float[]? val);
 
         /// <summary>
         /// Write double value.
@@ -118,7 +118,7 @@ namespace Apache.Ignite.Core.Binary
         /// Write double array.
         /// </summary>
         /// <param name="val">Double array.</param>
-        void WriteDoubleArray(double[] val);
+        void WriteDoubleArray(double[]? val);
 
         /// <summary>
         /// Write decimal value.
@@ -130,7 +130,7 @@ namespace Apache.Ignite.Core.Binary
         /// Write decimal array.
         /// </summary>
         /// <param name="val">Decimal array.</param>
-        void WriteDecimalArray(decimal?[] val);
+        void WriteDecimalArray(decimal?[]? val);
 
         /// <summary>
         /// Write date value.
@@ -142,19 +142,19 @@ namespace Apache.Ignite.Core.Binary
         /// Write date array.
         /// </summary>
         /// <param name="val">Date array.</param>
-        void WriteTimestampArray(DateTime?[] val);
+        void WriteTimestampArray(DateTime?[]? val);
 
         /// <summary>
         /// Write string value.
         /// </summary>
         /// <param name="val">String value.</param>
-        void WriteString(string val);
+        void WriteString(string? val);
 
         /// <summary>
         /// Write string array.
         /// </summary>
         /// <param name="val">String array.</param>
-        void WriteStringArray(string[] val);
+        void WriteStringArray(string?[]? val);
 
         /// <summary>
         /// Write GUID value.
@@ -166,7 +166,7 @@ namespace Apache.Ignite.Core.Binary
         /// Write GUID array.
         /// </summary>
         /// <param name="val">GUID array.</param>
-        void WriteGuidArray(Guid?[] val);
+        void WriteGuidArray(Guid?[]? val);
 
         /// <summary>
         /// Write enum value.
@@ -178,19 +178,19 @@ namespace Apache.Ignite.Core.Binary
         /// Write enum array.
         /// </summary>
         /// <param name="val">Enum array.</param>
-        void WriteEnumArray<T>(T[] val);
+        void WriteEnumArray<T>(T[]? val);
 
         /// <summary>
         /// Write object value.
         /// </summary>
         /// <param name="val">Object value.</param>
-        void WriteObject<T>(T val);
+        void WriteObject<T>(T? val);
 
         /// <summary>
         /// Write object array.
         /// </summary>
         /// <param name="val">Object array.</param>
-        void WriteArray<T>(T[] val);
+        void WriteArray<T>(T[]? val);
 
         /// <summary>
         /// Writes a collection in interoperable form.
@@ -202,7 +202,7 @@ namespace Apache.Ignite.Core.Binary
         /// which will properly preserve generic collection type.
         /// </summary>
         /// <param name="val">Collection.</param>
-        void WriteCollection(ICollection val);
+        void WriteCollection(ICollection? val);
 
         /// <summary>
         /// Writes a dictionary in interoperable form.
@@ -214,6 +214,6 @@ namespace Apache.Ignite.Core.Binary
         /// which will properly preserve generic dictionary type.
         /// </summary>
         /// <param name="val">Dictionary.</param>
-        void WriteDictionary(IDictionary val);
+        void WriteDictionary(IDictionary? val);
     }
 }

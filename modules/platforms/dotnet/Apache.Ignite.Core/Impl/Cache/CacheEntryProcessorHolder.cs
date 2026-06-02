@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Impl.Cache
 {
     using System;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Reflection;
     using Apache.Ignite.Core.Binary;
@@ -36,10 +35,10 @@ namespace Apache.Ignite.Core.Impl.Cache
         private readonly object _proc;
 
         // argument
-        private readonly object _arg;
+        private readonly object? _arg;
 
         // func to invoke Process method on ICacheEntryProcessor in form of object.
-        private readonly Func<IMutableCacheEntryInternal, object, object> _processFunc;
+        private readonly Func<IMutableCacheEntryInternal, object?, object?> _processFunc;
 
         // entry creator delegate
         private readonly Func<object, object, bool, IMutableCacheEntryInternal> _entryCtor;
@@ -52,12 +51,9 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <param name="processFunc">Delegate to call generic <see cref="ICacheEntryProcessor{K, V, A, R}.Process"/> on local node.</param>
         /// <param name="keyType">Type of the key.</param>
         /// <param name="valType">Type of the value.</param>
-        public CacheEntryProcessorHolder(object proc, object arg, 
-            Func<IMutableCacheEntryInternal, object, object> processFunc, Type keyType, Type valType)
+        public CacheEntryProcessorHolder(object proc, object? arg,
+            Func<IMutableCacheEntryInternal, object?, object?> processFunc, Type keyType, Type valType)
         {
-            Debug.Assert(proc != null);
-            Debug.Assert(processFunc != null);
-
             _proc = proc;
             _arg = arg;
             _processFunc = processFunc;
@@ -131,7 +127,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <returns>
         /// Delegate to call generic <see cref="ICacheEntryProcessor{K, V, A, R}.Process"/>.
         /// </returns>
-        private static Func<IMutableCacheEntryInternal, object, object> GetProcessFunc(object proc)
+        private static Func<IMutableCacheEntryInternal, object?, object> GetProcessFunc(object proc)
         {
             var func = DelegateTypeDescriptor.GetCacheEntryProcessor(proc.GetType());
             

@@ -50,7 +50,8 @@ namespace Apache.Ignite.Core.Client
         /// <returns>Cache instance for given name.</returns>
         /// <typeparam name="TK">Cache key type.</typeparam>
         /// <typeparam name="TV">Cache value type.</typeparam>
-        ICacheClient<TK, TV> GetCache<TK, TV>(string name);
+        ICacheClient<TK, TV> GetCache<TK, TV>(string name)
+            where TK : notnull;
 
         /// <summary>
         /// Gets existing cache with the given name or creates new one using template configuration.
@@ -59,7 +60,8 @@ namespace Apache.Ignite.Core.Client
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="name">Cache name.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(string name);
+        ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(string name)
+            where TK : notnull;
 
         /// <summary>
         /// Gets existing cache with the given name or creates new one using provided configuration.
@@ -68,7 +70,8 @@ namespace Apache.Ignite.Core.Client
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="configuration">Cache configuration.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(CacheClientConfiguration configuration);
+        ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(CacheClientConfiguration configuration)
+            where TK : notnull;
 
         /// <summary>
         /// Dynamically starts new cache using template configuration.
@@ -77,7 +80,8 @@ namespace Apache.Ignite.Core.Client
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="name">Cache name.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICacheClient<TK, TV> CreateCache<TK, TV>(string name);
+        ICacheClient<TK, TV> CreateCache<TK, TV>(string name)
+            where TK : notnull;
 
         /// <summary>
         /// Dynamically starts new cache using provided configuration.
@@ -86,7 +90,8 @@ namespace Apache.Ignite.Core.Client
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="configuration">Cache configuration.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICacheClient<TK, TV> CreateCache<TK, TV>(CacheClientConfiguration configuration);
+        ICacheClient<TK, TV> CreateCache<TK, TV>(CacheClientConfiguration configuration)
+            where TK : notnull;
 
         /// <summary>
         /// Gets the collection of names of currently available caches, or empty collection if there are no caches.
@@ -166,7 +171,8 @@ namespace Apache.Ignite.Core.Client
         /// </summary>
         /// <param name="cacheName">Cache name.</param>
         /// <returns>Data streamer.</returns>
-        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName);
+        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName)
+            where TK : notnull;
 
         /// <summary>
         /// Gets a new instance of the data streamer associated with the given cache name.
@@ -177,7 +183,8 @@ namespace Apache.Ignite.Core.Client
         /// <param name="cacheName">Cache name.</param>
         /// <param name="options">Data streamer options.</param>
         /// <returns>Data streamer.</returns>
-        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName, DataStreamerClientOptions options);
+        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName, DataStreamerClientOptions options)
+            where TK : notnull;
 
         /// <summary>
         /// Gets a new instance of the data streamer associated with the given cache name.
@@ -188,7 +195,8 @@ namespace Apache.Ignite.Core.Client
         /// <param name="cacheName">Cache name.</param>
         /// <param name="options">Data streamer options.</param>
         /// <returns>Data streamer.</returns>
-        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName, DataStreamerClientOptions<TK, TV> options);
+        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName, DataStreamerClientOptions<TK, TV> options)
+            where TK : notnull;
 
         /// <summary>
         /// Gets an atomic long with the specified name.
@@ -201,7 +209,7 @@ namespace Apache.Ignite.Core.Client
         /// <param name="create">Flag indicating whether atomic long should be created if it does not exist.</param>
         /// <returns>Atomic long instance with the specified name,
         /// or null if it does not exist and <paramref name="create"/> is <c>false</c>.</returns>
-        IAtomicLongClient GetAtomicLong(string name, long initialValue, bool create);
+        IAtomicLongClient? GetAtomicLong(string name, long initialValue, bool create);
 
         /// <summary>
         /// Gets an atomic long with the specified name.
@@ -215,7 +223,7 @@ namespace Apache.Ignite.Core.Client
         /// <param name="create">Flag indicating whether atomic long should be created if it does not exist.</param>
         /// <returns>Atomic long instance with the specified name,
         /// or null if it does not exist and <paramref name="create"/> is <c>false</c>.</returns>
-        IAtomicLongClient GetAtomicLong(
+        IAtomicLongClient? GetAtomicLong(
             string name,
             AtomicClientConfiguration configuration,
             long initialValue,
@@ -229,6 +237,6 @@ namespace Apache.Ignite.Core.Client
         /// otherwise, creates a new set with the specified configuration.</param>
         /// <typeparam name="T">Element type.</typeparam>
         /// <returns>Ignite set.</returns>
-        IIgniteSetClient<T> GetIgniteSet<T>(string name, CollectionClientConfiguration configuration);
+        IIgniteSetClient<T>? GetIgniteSet<T>(string name, CollectionClientConfiguration? configuration);
     }
 }

@@ -82,6 +82,7 @@ namespace Apache.Ignite.Core.Datastream
     /// All members are thread-safe and may be used concurrently from multiple threads.
     /// </summary>
     public interface IDataStreamer<TK, TV> : IDisposable
+        where TK : notnull
     {
         /// <summary>
         /// Name of the cache to load data to.
@@ -180,7 +181,7 @@ namespace Apache.Ignite.Core.Datastream
         /// <summary>
         /// Gets or sets custom stream receiver.
         /// </summary>
-        IStreamReceiver<TK, TV> Receiver { get; set; }
+        IStreamReceiver<TK, TV>? Receiver { get; set; }
 
         /// <summary>
         /// Adds single key-value pair for loading. Passing <c>null</c> as value will be
@@ -278,7 +279,8 @@ namespace Apache.Ignite.Core.Datastream
         /// <typeparam name="TK1">Key type in binary mode.</typeparam>
         /// <typeparam name="TV1">Value type in binary mode.</typeparam>
         /// <returns>Streamer instance with binary mode enabled.</returns>
-        IDataStreamer<TK1, TV1> WithKeepBinary<TK1, TV1>();
+        IDataStreamer<TK1, TV1> WithKeepBinary<TK1, TV1>()
+            where TK1 : notnull;
 
         /// <summary>
         /// Gets or sets the timeout. Negative values mean no timeout.

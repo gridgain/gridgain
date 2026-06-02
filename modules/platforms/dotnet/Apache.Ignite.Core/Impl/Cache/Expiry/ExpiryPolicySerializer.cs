@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Impl.Cache.Expiry
 {
     using System;
-    using System.Diagnostics;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Common;
@@ -41,9 +40,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Expiry
         /// </summary>
         public static void WritePolicy(IBinaryRawWriter writer, IExpiryPolicy plc)
         {
-            Debug.Assert(plc != null);
-            Debug.Assert(writer != null);
-
             writer.WriteLong(ConvertDuration(plc.GetExpiryForCreate()));
             writer.WriteLong(ConvertDuration(plc.GetExpiryForUpdate()));
             writer.WriteLong(ConvertDuration(plc.GetExpiryForAccess()));
@@ -61,10 +57,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Expiry
         /// <summary>
         /// Writes the policy factory.
         /// </summary>
-        public static void WritePolicyFactory(IBinaryRawWriter writer, IFactory<IExpiryPolicy> factory)
+        public static void WritePolicyFactory(IBinaryRawWriter writer, IFactory<IExpiryPolicy>? factory)
         {
-            Debug.Assert(writer != null);
-
             if (factory != null)
             {
                 writer.WriteBoolean(true);
@@ -82,7 +76,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Expiry
         /// <summary>
         /// Reads the expiry policy factory.
         /// </summary>
-        public static IFactory<IExpiryPolicy> ReadPolicyFactory(IBinaryRawReader reader)
+        public static IFactory<IExpiryPolicy>? ReadPolicyFactory(IBinaryRawReader reader)
         {
             return reader.ReadBoolean() ? new ExpiryPolicyFactory(ReadPolicy(reader)) : null;
         }

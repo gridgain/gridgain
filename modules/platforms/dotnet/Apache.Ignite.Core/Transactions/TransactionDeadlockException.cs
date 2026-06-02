@@ -42,7 +42,7 @@ namespace Apache.Ignite.Core.Transactions
         /// Initializes a new instance of the <see cref="TransactionDeadlockException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public TransactionDeadlockException(string message) : base(message)
+        public TransactionDeadlockException(string? message) : base(message)
         {
             // No-op.
         }
@@ -52,7 +52,7 @@ namespace Apache.Ignite.Core.Transactions
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public TransactionDeadlockException(string message, Exception cause) : base(message, cause)
+        public TransactionDeadlockException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }
