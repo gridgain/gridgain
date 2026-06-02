@@ -25,7 +25,7 @@ namespace Apache.Ignite.Core.Impl.Compute
     internal class ComputeJobResultImpl : IComputeJobResult<object>
     {
         /** Data. */
-        private readonly object _data;
+        private readonly object? _data;
 
         /** Exception. */
         private readonly Exception _err;
@@ -58,7 +58,7 @@ namespace Apache.Ignite.Core.Impl.Compute
 
         /** <inheritDoc /> */
 
-        public object Data
+        public object? Data
         {
             get { return _data; }
         }

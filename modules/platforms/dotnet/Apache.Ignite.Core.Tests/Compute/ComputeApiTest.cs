@@ -1083,7 +1083,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         /** <inheritDoc /> */
         public NetSimpleTaskResult Reduce(IList<IComputeJobResult<NetSimpleJobResult>> results)
         {
-            return new NetSimpleTaskResult(results.Sum(res => res.Data.Res));
+            return new NetSimpleTaskResult(results.Sum(res => res.Data!.Res));
         }
     }
 

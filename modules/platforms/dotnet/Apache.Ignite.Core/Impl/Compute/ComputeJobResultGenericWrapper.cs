@@ -38,9 +38,9 @@ namespace Apache.Ignite.Core.Impl.Compute
 
         /** <inheritdoc /> */
 
-        public T Data
+        public T? Data
         {
-            get { return (T) _wrappedRes.Data; }
+            get { return (T?) _wrappedRes.Data; }
         }
 
         /** <inheritdoc /> */
