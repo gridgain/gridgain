@@ -56,6 +56,7 @@ import org.apache.ignite.internal.processors.rest.handlers.cluster.GridChangeSta
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridClusterNameCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.datastructures.DataStructuresCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.drain.GridDrainCommandHandler;
+import org.apache.ignite.internal.processors.rest.handlers.drain.GridSupplyStatusCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.log.GridLogCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.memory.MemoryMetricsCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.probe.GridProbeCommandHandler;
@@ -70,6 +71,7 @@ import org.apache.ignite.internal.processors.rest.protocols.tcp.GridTcpRestProto
 import org.apache.ignite.internal.processors.rest.request.GridRestCacheRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestDrainRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
+import org.apache.ignite.internal.processors.rest.request.GridRestSupplyStatusRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTaskRequest;
 import org.apache.ignite.internal.processors.rest.request.RestQueryRequest;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
@@ -103,6 +105,7 @@ import static org.apache.ignite.internal.processors.rest.GridRestCommand.AUTHENT
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.DRAIN;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.NODE_STATE_BEFORE_START;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.PROBE;
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.SUPPLY_STATUS;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.VERSION;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_AUTH_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_FAILED;
@@ -586,6 +589,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             addHandler(new NodeWarmupCommandHandler(ctx));
             addHandler(new GridProbeCommandHandler(ctx));
             addHandler(new GridDrainCommandHandler(ctx));
+            addHandler(new GridSupplyStatusCommandHandler(ctx));
             addHandler(new GridPropertyCommandHandler(ctx));
 
             // Start protocols.
@@ -998,6 +1002,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             case PROBE:
             case WARM_UP:
             case DRAIN:
+            case SUPPLY_STATUS:
                 break;
 
             default:
@@ -1028,6 +1033,15 @@ public class GridRestProcessor extends GridProcessorAdapter {
                 ? ((GridRestDrainRequest)req).action() : null;
 
             return act == GridRestDrainRequest.Action.STATUS;
+        }
+
+        if (req.command() == SUPPLY_STATUS) {
+            boolean shutdown = req instanceof GridRestSupplyStatusRequest
+                && ((GridRestSupplyStatusRequest)req).shutdown();
+
+            // bare-GET / shutdown=false / absent → informational read → auth-exempt;
+            // shutdown=true → mutating (triggers graceful shutdown) → auth REQUIRED.
+            return !shutdown;
         }
 
         return false;

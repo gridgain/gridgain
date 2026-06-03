@@ -242,7 +242,10 @@ public enum GridRestCommand {
     PROBE("probe"),
 
     /** Drain — k8s pod-lifecycle flag ({@code action=start}/{@code stop}/{@code status}). */
-    DRAIN("drain");
+    DRAIN("drain"),
+
+    /** Supply-status — k8s pre-termination gate; informational read, or atomic shutdown gate with {@code shutdown=true}. */
+    SUPPLY_STATUS("supply-status");
 
     /** Enum values. */
     private static final GridRestCommand[] VALS = values();

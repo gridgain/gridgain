@@ -67,6 +67,14 @@ public class GridRestResponse implements Externalizable {
     private Object obj;
 
     /**
+     * Optional action run by the protocol layer AFTER this response has been written and flushed to
+     * the client (HTTP/Jetty only). Used by {@code cmd=supply-status&shutdown=true} to start node
+     * stop only once the 200 is on the wire. {@code transient} + not part of {@link #writeExternal}
+     * → never serialized; no {@code getXxx} accessor → ignored by Jackson.
+     */
+    private transient Runnable afterWrite;
+
+    /**
      *
      */
     public GridRestResponse() {
@@ -115,6 +123,22 @@ public class GridRestResponse implements Externalizable {
      */
     public void setResponse(@Nullable Object obj) {
         this.obj = obj;
+    }
+
+    /**
+     * @return Action to run after this response is written and flushed to the client, or
+     *     {@code null} if none.
+     */
+    @Nullable public Runnable afterWrite() {
+        return afterWrite;
+    }
+
+    /**
+     * @param afterWrite Action to run after this response is written and flushed to the client
+     *     (HTTP/Jetty only).
+     */
+    public void afterWrite(@Nullable Runnable afterWrite) {
+        this.afterWrite = afterWrite;
     }
 
     /**

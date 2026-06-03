@@ -300,6 +300,29 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
         }
     }
 
+    /**
+     * Counts currently active thin-client connections (JDBC and ODBC sessions are excluded).
+     * Mirrors the per-type active-session metric registered in {@link #registerClientMetrics}.
+     * Used by {@code cmd=supply-status} to report {@code activeThinClients}.
+     *
+     * @return Number of active thin-client connections, or 0 if the client listener is not started.
+     */
+    public int activeThinClientConnections() {
+        if (srv == null)
+            return 0;
+
+        int res = 0;
+
+        for (GridNioSession ses : srv.sessions()) {
+            ClientListenerConnectionContext connCtx = ses.meta(CONN_CTX_META_KEY);
+
+            if (connCtx != null && connCtx.clientType() == ClientListenerNioListener.THIN_CLIENT)
+                ++res;
+        }
+
+        return res;
+    }
+
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) throws IgniteCheckedException {
         super.onKernalStart(active);
