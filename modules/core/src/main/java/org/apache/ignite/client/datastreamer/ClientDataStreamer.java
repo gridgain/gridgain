@@ -220,7 +220,7 @@ public interface ClientDataStreamer<K, V> extends AutoCloseable {
      *      Note: It may never complete unless {@link #flush()} or {@link #close()} are explicitly called.
      * @throws ClientException If failed to map key to node.
      */
-    public IgniteClientFuture<Void> removeData(K key) throws ClientException;
+    public IgniteClientFuture<Void> removeData(K key) throws ClientException, InterruptedException;
 
     /**
      * Adds data for streaming on remote node. This method can be called from multiple
@@ -241,7 +241,7 @@ public interface ClientDataStreamer<K, V> extends AutoCloseable {
      * @throws ClientException If failed to map key to node.
      * @see #allowOverwrite()
      */
-    public IgniteClientFuture<Void> addData(K key, V val) throws ClientException;
+    public IgniteClientFuture<Void> addData(K key, V val) throws ClientException, InterruptedException;
 
     /**
      * Adds data for streaming on remote node. This method can be called from multiple
@@ -261,7 +261,7 @@ public interface ClientDataStreamer<K, V> extends AutoCloseable {
      * @throws ClientException If failed to map key to node.
      * @see #allowOverwrite()
      */
-    public IgniteClientFuture<Void> addData(Map.Entry<K, V> entry) throws ClientException;
+    public IgniteClientFuture<Void> addData(Map.Entry<K, V> entry) throws ClientException, InterruptedException;
 
     /**
      * Adds data for streaming on remote node. This method can be called from multiple
@@ -281,7 +281,8 @@ public interface ClientDataStreamer<K, V> extends AutoCloseable {
      * @throws ClientException If failed to stream data.
      * @see #allowOverwrite()
      */
-    public IgniteClientFuture<Void> addData(Collection<? extends Map.Entry<K, V>> entries) throws ClientException;
+    public IgniteClientFuture<Void> addData(Collection<? extends Map.Entry<K, V>> entries)
+            throws ClientException, InterruptedException;
 
     /**
      * Adds data for streaming on remote node. This method can be called from multiple
@@ -301,7 +302,7 @@ public interface ClientDataStreamer<K, V> extends AutoCloseable {
      * @throws ClientException If failed to stream data.
      * @see #allowOverwrite()
      */
-    public IgniteClientFuture<Void> addData(Map<K, V> entries) throws ClientException;
+    public IgniteClientFuture<Void> addData(Map<K, V> entries) throws ClientException, InterruptedException;
 
     /**
      * Streams any remaining data, but doesn't close the streamer. Data can be still added after

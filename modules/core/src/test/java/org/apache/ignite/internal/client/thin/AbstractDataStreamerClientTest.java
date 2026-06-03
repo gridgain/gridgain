@@ -373,7 +373,12 @@ public abstract class AbstractDataStreamerClientTest extends AbstractThinClientT
                         if (key > count)
                             break;
 
-                        streamer.addData(key, key + 2);
+                        try {
+                            streamer.addData(key, key + 2);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new RuntimeException(e);
+                        }
                     }
                 }, 8, "streamer-thread");
             }

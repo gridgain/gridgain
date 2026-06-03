@@ -320,21 +320,21 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteClientFuture<Void> removeData(K key) {
+    @Override public IgniteClientFuture<Void> removeData(K key) throws InterruptedException {
         GridArgumentCheck.notNull(key, "key");
 
         return new IgniteClientFutureImpl<>(add0(key, null));
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteClientFuture<Void> addData(K key, V val) {
+    @Override public IgniteClientFuture<Void> addData(K key, V val) throws InterruptedException {
         GridArgumentCheck.notNull(key, "key");
 
         return new IgniteClientFutureImpl<>(add0(key, val));
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteClientFuture<Void> addData(Map.Entry<K, V> entry) {
+    @Override public IgniteClientFuture<Void> addData(Map.Entry<K, V> entry) throws InterruptedException {
         GridArgumentCheck.notNull(entry, "entry");
         GridArgumentCheck.notNull(entry.getKey(), "entry.key");
 
@@ -342,7 +342,8 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteClientFuture<Void> addData(Collection<? extends Map.Entry<K, V>> entries) {
+    @Override public IgniteClientFuture<Void> addData(Collection<? extends Map.Entry<K, V>> entries)
+            throws InterruptedException {
         GridArgumentCheck.notEmpty(entries, "entries");
 
         List<CompletableFuture<Void>> futs = new ArrayList<>(entries.size());
@@ -356,7 +357,7 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteClientFuture<Void> addData(Map<K, V> entries) {
+    @Override public IgniteClientFuture<Void> addData(Map<K, V> entries) throws InterruptedException {
         GridArgumentCheck.notNull(entries, "entries");
 
         if (entries.isEmpty())
@@ -493,17 +494,19 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
      * @param val Value, or {@code null} to remove.
      * @return Future that completes when the batch containing this entry is sent.
      */
-    private CompletableFuture<Void> add0(K key, V val) {
+    private CompletableFuture<Void> add0(K key, V val) throws InterruptedException {
+        int bufSndSize = perNodeBufferSize;
+        @Nullable UUID nodeId = ch.resolveAffinityNode(cacheId, key);
+        UUID partition = nodeId != null ? nodeId : UNKNOWN_NODE;
+        PartitionContext<K, V> partCtx = partitions.computeIfAbsent(
+                partition, k -> new PartitionContext<>(nodeId, perNodeParallelOperations, bufSndSize));
+
+        AtomicReference<Batch<K, V>> batchRef = partCtx.headBatchRef;
+
+        partCtx.waitForSendSlot();
+
         long stamp = addFlushLock.readLock();
         try {
-            int bufSndSize = perNodeBufferSize;
-            @Nullable UUID nodeId = ch.resolveAffinityNode(cacheId, key);
-            UUID partition = nodeId != null ? nodeId : UNKNOWN_NODE;
-            PartitionContext<K, V> partCtx = partitions.computeIfAbsent(
-                    partition, k -> new PartitionContext<>(nodeId, perNodeParallelOperations, bufSndSize));
-
-            AtomicReference<Batch<K, V>> batchRef = partCtx.headBatchRef;
-
             Batch<K, V> cur = null;
             int size = -1;
             while (size < 0) {
@@ -643,7 +646,7 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
             Batch<K, V> batch,
             Supplier<@Nullable Throwable> errSupplier
     ) {
-        ctx.inflightBatches.set(slot, null);
+        ctx.releaseSendSlot(slot);
         try {
             scheduler.submit(() -> sendToChannel(ctx));
         } catch (RejectedExecutionException e) {
@@ -794,6 +797,8 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
          */
         final AtomicReferenceArray<Batch<K, V>> inflightBatches;
 
+        final Object park = new Object();
+
         /**
          * @param nodeId             Primary node UUID, or {@code null} when the node is unknown.
          * @param perNodeParallelOps Maximum number of concurrently in-flight batches.
@@ -825,6 +830,27 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
             }
 
             return -1;
+        }
+
+        void releaseSendSlot(int slot) {
+            inflightBatches.set(slot, null);
+            synchronized (park) {
+                park.notifyAll();
+            }
+        }
+
+        void waitForSendSlot() throws InterruptedException {
+            while (true) {
+                for (int i = inflightBatches.length() - 1; i >= 0; i--) {
+                    if (inflightBatches.get(i) == null) {
+                        return;
+                    }
+                }
+
+                synchronized (park) {
+                    park.wait();
+                }
+            }
         }
 
         /**
