@@ -24,7 +24,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Map;
 
-/** Issues a GET against the node's Jetty REST endpoint and parses the JSON body. */
+/** Issues a request against the node's Jetty REST endpoint and parses the JSON body. */
 public final class GridRestHttpClient {
     /** */
     private GridRestHttpClient() {
@@ -38,11 +38,40 @@ public final class GridRestHttpClient {
      * @throws IOException If the request failed.
      */
     public static Response get(int port, String pathQ) throws IOException {
+        return http(port, "GET", pathQ);
+    }
+
+    /**
+     * Body-bearing methods ({@code POST}/{@code PUT}) send an explicit empty entity.
+     *
+     * @param port Jetty REST port.
+     * @param method HTTP method.
+     * @param pathQ Path with query string.
+     * @return HTTP status code and parsed body.
+     * @throws IOException If the request failed.
+     */
+    public static Response http(int port, String method, String pathQ) throws IOException {
         URL url = new URL("http://localhost:" + port + pathQ);
 
         HttpURLConnection conn = (HttpURLConnection)url.openConnection();
 
+        conn.setRequestMethod(method);
+
+        // Bound waits so a hung request fails the test instead of stalling.
+        conn.setConnectTimeout(10_000);
+        conn.setReadTimeout(15_000);
+
+        // Body-bearing methods: send an explicit empty entity so the server doesn't wait on a
+        // Content-Length it never receives.
+        if ("POST".equals(method) || "PUT".equals(method)) {
+            conn.setDoOutput(true);
+            conn.setFixedLengthStreamingMode(0);
+        }
+
         conn.connect();
+
+        if (conn.getDoOutput())
+            conn.getOutputStream().close();
 
         int code = conn.getResponseCode();
         boolean isHTTP_OK = code == HttpURLConnection.HTTP_OK;

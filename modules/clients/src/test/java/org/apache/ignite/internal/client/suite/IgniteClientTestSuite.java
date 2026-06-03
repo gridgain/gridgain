@@ -46,6 +46,7 @@ import org.apache.ignite.internal.client.integration.ClientTcpSslDirectSelfTest;
 import org.apache.ignite.internal.client.integration.ClientTcpSslMultiNodeSelfTest;
 import org.apache.ignite.internal.client.integration.ClientTcpSslSelfTest;
 import org.apache.ignite.internal.client.integration.ClientTcpUnreachableMultiNodeSelfTest;
+import org.apache.ignite.internal.client.rest.GridDrainCommandTest;
 import org.apache.ignite.internal.client.rest.GridProbeCommandTest;
 import org.apache.ignite.internal.client.rest.GridProbeReadinessRebalanceTest;
 import org.apache.ignite.internal.client.router.ClientFailedInitSelfTest;
@@ -149,6 +150,9 @@ import org.junit.runners.Suite;
     //Test REST probe cmd
     GridProbeCommandTest.class,
     GridProbeReadinessRebalanceTest.class,
+
+    //Test REST drain cmd
+    GridDrainCommandTest.class,
 
     // Test client with many nodes and in multithreaded scenarios
     ClientTcpMultiThreadedSelfTest.class,

@@ -239,7 +239,10 @@ public enum GridRestCommand {
      * {@code kind=readiness} is the k8s readiness/startup gate (latched
      * initial-rebalance complete, cluster active, not in maintenance).
      */
-    PROBE("probe");
+    PROBE("probe"),
+
+    /** Drain — k8s pod-lifecycle flag ({@code action=start}/{@code stop}/{@code status}). */
+    DRAIN("drain");
 
     /** Enum values. */
     private static final GridRestCommand[] VALS = values();
