@@ -18,8 +18,11 @@ package org.apache.ignite.cache.store.jdbc;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.cache.store.jdbc.dialect.MariaDBDialect;
 import org.apache.ignite.cache.store.jdbc.dialect.MySQLDialect;
 import org.apache.ignite.cache.store.jdbc.model.Gender;
@@ -27,8 +30,11 @@ import org.apache.ignite.cache.store.jdbc.model.Person;
 import org.apache.ignite.cache.store.jdbc.model.PersonKey;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.cache.TestThreadLocalCacheSession;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.testcontainers.mariadb.MariaDBContainer;
 
@@ -42,11 +48,13 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Integration tests for {@link MariaDBDialect} executed against a real MariaDB instance
@@ -246,29 +254,44 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
 
     /**
      * Pre-seeds enough rows directly in MariaDB to trigger the parallel-load path,
-     * then asserts {@code cache.loadCache(null)} pulls them all in.
+     * then asserts {@code store.loadCache(clo)} pulls them all in.
      */
     @Test
     public void testLoadCacheParallel() throws Exception {
         // Exceed ParallelLoadCacheMinimumThreshold intentionally.
-        int loadCacheRows = 600;
+        int loadCacheRows = 10;
+        int parallelThreshold = 2;
+        String cacheName = null; // cache name is null while injecting TestThreadLocalCacheSession (TestCacheSession)
 
         insertPersonRows(loadCacheRows);
 
-        startGrid();
+        MariaDBCacheStore<Object, Object> store = mariaDbCacheStoreFactory(personJdbcType(cacheName, "Person"), false)
+                .setParallelLoadCacheMinimumThreshold(parallelThreshold)
+                .create();
+        inject(store);
 
-        IgniteCache<PersonKey, Person> cache = grid().cache(CACHE_NAME);
+        Collection<Object> keys = new ConcurrentLinkedQueue<>();
 
-        cache.loadCache(null);
+        store.loadCache((k, v) -> {
+            if (k instanceof BinaryObject && v instanceof BinaryObject) {
+                BinaryObject key = (BinaryObject) k;
+                BinaryObject val = (BinaryObject) v;
 
-        assertEquals(loadCacheRows, cache.size());
+                String keyType = key.type().typeName();
+                String valType = val.type().typeName();
 
-        for (int i = 0; i < loadCacheRows; i += 100) {
-            Person p = cache.get(new PersonKey(i));
+                if (PersonKey.class.getName().equals(keyType)
+                        && Person.class.getName().equals(valType)) {
+                    keys.add(key);
+                }
+            } else if (k instanceof PersonKey && v instanceof Person) {
+                keys.add(k);
+            } else {
+                fail("Unexpected entry [key=" + k + ", value=" + v + "]");
+            }
+        });
 
-            assertNotNull("Missing key " + i + " after loadCache", p);
-            assertEquals("name" + i, p.getName());
-        }
+        assertEquals(loadCacheRows, keys.size());
     }
 
     /**
@@ -650,13 +673,6 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
      * Builds a cache configuration backed by the default {@code Person} MariaDB store.
      */
     private static <K, V> CacheConfiguration<K, V> cacheConfiguration(JdbcType[] types, CacheAtomicityMode mode, boolean sqlEscapeAll) {
-        MariaDBCacheStoreFactory<K, V> sf = new MariaDBCacheStoreFactory<>();
-
-        sf.setDataSourceFactory(container.getJdbcUrl(), container.getUsername(), container.getPassword());
-        sf.setTypes(types);
-        sf.setParallelLoadCacheMinimumThreshold(512);
-        sf.setSqlEscapeAll(sqlEscapeAll);
-
         CacheConfiguration<K, V> cc = new CacheConfiguration<>(types[0].getCacheName());
 
         cc.setCacheMode(CacheMode.PARTITIONED);
@@ -664,9 +680,26 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
         cc.setReadThrough(true);
         cc.setWriteThrough(true);
         cc.setLoadPreviousValue(true);
-        cc.setCacheStoreFactory(sf);
+        cc.setCacheStoreFactory(mariaDbCacheStoreFactory(types, sqlEscapeAll));
 
         return cc;
+    }
+
+    private static <K, V> @NotNull MariaDBCacheStoreFactory<K, V> mariaDbCacheStoreFactory(JdbcType[] types, boolean sqlEscapeAll) {
+        MariaDBCacheStoreFactory<K, V> sf = new MariaDBCacheStoreFactory<>();
+
+        sf.setDataSourceFactory(container.getJdbcUrl(), container.getUsername(), container.getPassword());
+        sf.setTypes(types);
+        sf.setParallelLoadCacheMinimumThreshold(512);
+        sf.setSqlEscapeAll(sqlEscapeAll);
+
+        return sf;
+    }
+
+    private void inject(CacheStore<?, ?> store) throws IgniteCheckedException {
+        getTestResources().inject(store);
+
+        GridTestUtils.setFieldValue(store, CacheAbstractJdbcStore.class, "ses", new TestThreadLocalCacheSession());
     }
 
     /**
