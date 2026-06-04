@@ -319,7 +319,7 @@ namespace Apache.Ignite.Core.Client
         /// Gets or creates an Ignite set with the specified name.
         /// </summary>
         /// <param name="name">Name.</param>
-        /// <param name="configuration">Configuration. When null, gets and existing set by name;
+        /// <param name="configuration">Configuration. When null, gets an existing set by name;
         /// otherwise, creates a new set with the specified configuration.</param>
         /// <typeparam name="T">Element type.</typeparam>
         /// <returns>Ignite set.</returns>
@@ -329,7 +329,7 @@ namespace Apache.Ignite.Core.Client
         /// Gets or creates an Ignite set with the specified name.
         /// </summary>
         /// <param name="name">Name.</param>
-        /// <param name="configuration">Configuration. When null, gets and existing set by name;
+        /// <param name="configuration">Configuration. When null, gets an existing set by name;
         /// otherwise, creates a new set with the specified configuration.</param>
         /// <typeparam name="T">Element type.</typeparam>
         /// <returns>Ignite set.</returns>

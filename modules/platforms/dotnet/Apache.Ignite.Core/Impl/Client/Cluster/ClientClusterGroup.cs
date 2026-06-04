@@ -238,7 +238,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <summary>
         /// Request topology information.
         /// </summary>
-        /// <returns>Topology version with nodes identifiers.</returns>rns>
+        /// <returns>Topology version with nodes identifiers.</returns>
         private Tuple<long, Guid[]>? RequestTopologyInformation(long oldTopVer)
         {
             return DoOutInOp(
