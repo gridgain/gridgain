@@ -293,7 +293,7 @@ namespace Apache.Ignite.Core.Client
         /// or null if it does not exist and <paramref name="create"/> is <c>false</c>.</returns>
         IAtomicLongClient? GetAtomicLong(
             string name,
-            AtomicClientConfiguration configuration,
+            AtomicClientConfiguration? configuration,
             long initialValue,
             bool create);
 
@@ -311,7 +311,7 @@ namespace Apache.Ignite.Core.Client
         /// or null if it does not exist and <paramref name="create"/> is <c>false</c>.</returns>
         Task<IAtomicLongClient?> GetAtomicLongAsync(
             string name,
-            AtomicClientConfiguration configuration,
+            AtomicClientConfiguration? configuration,
             long initialValue,
             bool create);
 
