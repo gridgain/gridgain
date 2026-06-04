@@ -151,17 +151,23 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         {
             var invalidNodeIds = new[] {Guid.Empty};
             var clusterGroup = (ClientClusterGroup) Client.GetCluster();
+            var oldNodeIds = clusterGroup.GetNodes().Select(x => x.Id).ToArray();
 
             var cfg = GetIgniteConfiguration();
             cfg.AutoGenerateIgniteInstanceName = true;
 
-            clusterGroup.UpdateTopology(1000L, invalidNodeIds);
+            try
+            {
+                clusterGroup.UpdateTopology(1000L, invalidNodeIds);
 
-            TestDelegate action = () => clusterGroup.GetNode();
-
-            ArgumentException exception = Assert.Throws<ArgumentException>(action);
-            Assert.AreEqual("Unable to find node with id='00000000-0000-0000-0000-000000000000'",
-                exception.Message);
+                ArgumentException exception = Assert.Throws<ArgumentException>(() => clusterGroup.GetNode());
+                Assert.AreEqual("Unable to find node with id='00000000-0000-0000-0000-000000000000'",
+                    exception.Message);
+            }
+            finally
+            {
+                clusterGroup.UpdateTopology(1001L, oldNodeIds);
+            }
         }
 
         /// <summary>
