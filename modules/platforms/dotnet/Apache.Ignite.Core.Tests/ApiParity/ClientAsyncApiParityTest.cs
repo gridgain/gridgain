@@ -199,13 +199,13 @@ namespace Apache.Ignite.Core.Tests.ApiParity
 
         /// <summary>
         /// Gets public instance methods declared directly on the interface, excluding property and
-        /// event accessors.
+        /// event accessors and obsolete members (deprecated APIs do not need async overloads).
         /// </summary>
         private static MethodInfo[] GetApiMethods(Type type)
         {
             return type
                 .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-                .Where(m => !m.IsSpecialName)
+                .Where(m => !m.IsSpecialName && m.GetCustomAttribute<ObsoleteAttribute>() == null)
                 .ToArray();
         }
 

@@ -69,6 +69,23 @@ namespace Apache.Ignite.Core.Tests.Client.DataStructures
         }
 
         [Test]
+        public async Task TestGetAtomicLongAsyncWithConfiguration()
+        {
+            var cfg = new AtomicClientConfiguration
+            {
+                AtomicSequenceReserveSize = 32,
+                Backups = 2,
+                CacheMode = CacheMode.Partitioned,
+                GroupName = "atomics-partitioned-async"
+            };
+
+            var atomicLong = await Client.GetAtomicLongAsync(TestUtils.TestName, cfg, 42, true);
+
+            Assert.IsNotNull(atomicLong);
+            Assert.AreEqual(42, await atomicLong.ReadAsync());
+        }
+
+        [Test]
         public void TestCreateIgnoresInitialValueWhenAlreadyExists()
         {
             var atomicLong = Client.GetAtomicLong(TestUtils.TestName, 42, true);

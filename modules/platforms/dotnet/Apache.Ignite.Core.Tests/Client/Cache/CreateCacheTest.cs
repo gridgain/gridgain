@@ -98,10 +98,19 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             var cacheB = await Client.GetOrCreateCacheAsync<int, int>(
                 new CacheClientConfiguration { Name = "b" });
             Assert.AreEqual("b", cacheB.Name);
-            Assert.AreEqual(new[] {"a", "b"}, (await Client.GetCacheNamesAsync()).OrderBy(x => x).ToArray());
+
+            var cacheC = await Client.CreateCacheAsync<int, int>(new CacheClientConfiguration { Name = "c" });
+            Assert.AreEqual("c", cacheC.Name);
+
+            // GetConfigurationAsync.
+            var cfgC = await cacheC.GetConfigurationAsync();
+            Assert.AreEqual("c", cfgC.Name);
+
+            Assert.AreEqual(
+                new[] {"a", "b", "c"}, (await Client.GetCacheNamesAsync()).OrderBy(x => x).ToArray());
 
             await Client.DestroyCacheAsync("a");
-            Assert.AreEqual("b", (await Client.GetCacheNamesAsync()).Single());
+            Assert.AreEqual(new[] {"b", "c"}, (await Client.GetCacheNamesAsync()).OrderBy(x => x).ToArray());
         }
 
         /// <summary>

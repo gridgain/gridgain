@@ -287,19 +287,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         }
 
         /** <inheritDoc /> */
-        [Obsolete]
-        public Task<IQueryCursor<ICacheEntry<TK, TV>>> QueryAsync(SqlQuery sqlQuery)
-        {
-            IgniteArgumentCheck.NotNull(sqlQuery, "sqlQuery");
-            IgniteArgumentCheck.NotNull(sqlQuery.Sql, "sqlQuery.Sql");
-            IgniteArgumentCheck.NotNull(sqlQuery.QueryType, "sqlQuery.QueryType");
-
-            return DoOutInOpAsync(ClientOp.QuerySql, w => WriteSqlQuery(w.Writer, sqlQuery),
-                ctx => (IQueryCursor<ICacheEntry<TK, TV>>) new ClientQueryCursor<TK, TV>(
-                    ctx.Socket, ctx.Stream.ReadLong(), _keepBinary, ctx.Stream, ClientOp.QuerySqlCursorGetPage));
-        }
-
-        /** <inheritDoc /> */
         public IFieldsQueryCursor Query(SqlFieldsQuery sqlFieldsQuery)
         {
             IgniteArgumentCheck.NotNull(sqlFieldsQuery, "sqlFieldsQuery");

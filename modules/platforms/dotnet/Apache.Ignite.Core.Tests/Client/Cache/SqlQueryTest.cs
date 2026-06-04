@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 {
     using System;
     using System.Linq;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Client;
     using NUnit.Framework;
@@ -86,6 +87,20 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             qry.EnableDistributedJoins = true;
             Assert.AreEqual(Count, cache.Query(qry).Count());
 #pragma warning restore 618
+        }
+
+        /// <summary>
+        /// Tests that the async fields query returns the same results as the sync one.
+        /// </summary>
+        [Test]
+        public async Task TestFieldsQueryAsync()
+        {
+            var cache = GetClientCache<Person>();
+
+            var cursor = await cache.QueryAsync(new SqlFieldsQuery("select Id from Person"));
+
+            CollectionAssert.AreEquivalent(Enumerable.Range(1, Count), cursor.Select(x => (int) x[0]));
+            Assert.AreEqual("ID", cursor.FieldNames.Single());
         }
 
         /// <summary>
