@@ -22,6 +22,7 @@ namespace Apache.Ignite.Core.Impl.Client.Services
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Reflection;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Services;
     using Apache.Ignite.Core.Impl.Binary;
@@ -97,16 +98,16 @@ namespace Apache.Ignite.Core.Impl.Client.Services
             return _ignite.Socket.DoOutInOp(
                 ClientOp.ServiceGetDescriptors,
                 ctx => { },
-                ctx =>
-                {
-                    var cnt = ctx.Reader.ReadInt();
-                    var res = new List<IClientServiceDescriptor>(cnt);
+                ReadDescriptors);
+        }
 
-                    for (var i = 0; i < cnt; i++)
-                        res.Add(new ClientServiceDescriptor(ctx.Reader));
-
-                    return res;
-                });
+        /** <inheritdoc /> */
+        public Task<ICollection<IClientServiceDescriptor>> GetServiceDescriptorsAsync()
+        {
+            return _ignite.Socket.DoOutInOpAsync(
+                ClientOp.ServiceGetDescriptors,
+                ctx => { },
+                ReadDescriptors);
         }
 
         /** <inheritdoc /> */
@@ -116,6 +117,29 @@ namespace Apache.Ignite.Core.Impl.Client.Services
                 ClientOp.ServiceGetDescriptor,
                 ctx => ctx.Writer.WriteString(serviceName),
                 ctx => new ClientServiceDescriptor(ctx.Reader));
+        }
+
+        /** <inheritdoc /> */
+        public Task<IClientServiceDescriptor> GetServiceDescriptorAsync(string serviceName)
+        {
+            return _ignite.Socket.DoOutInOpAsync(
+                ClientOp.ServiceGetDescriptor,
+                ctx => ctx.Writer.WriteString(serviceName),
+                ctx => (IClientServiceDescriptor) new ClientServiceDescriptor(ctx.Reader));
+        }
+
+        /// <summary>
+        /// Reads the service descriptor collection from the response.
+        /// </summary>
+        private static ICollection<IClientServiceDescriptor> ReadDescriptors(ClientResponseContext ctx)
+        {
+            var cnt = ctx.Reader.ReadInt();
+            var res = new List<IClientServiceDescriptor>(cnt);
+
+            for (var i = 0; i < cnt; i++)
+                res.Add(new ClientServiceDescriptor(ctx.Reader));
+
+            return res;
         }
 
         /** <inheritdoc /> */

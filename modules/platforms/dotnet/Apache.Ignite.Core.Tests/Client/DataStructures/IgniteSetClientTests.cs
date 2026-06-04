@@ -34,6 +34,24 @@ namespace Apache.Ignite.Core.Tests.Client.DataStructures
     public class IgniteSetClientTests : ClientTestBase
     {
         [Test]
+        public void TestGetIgniteSetAsyncCreatesSet()
+        {
+            var set = Client.GetIgniteSetAsync<int>(nameof(TestGetIgniteSetAsyncCreatesSet),
+                GetCollectionConfiguration()).GetResult();
+
+            Assert.IsNotNull(set);
+            Assert.AreEqual(nameof(TestGetIgniteSetAsyncCreatesSet), set.Name);
+
+            set.Add(1);
+            Assert.IsTrue(set.Contains(1));
+
+            // Existing set is returned without configuration.
+            var existing = Client.GetIgniteSetAsync<int>(nameof(TestGetIgniteSetAsyncCreatesSet), null).GetResult();
+            Assert.IsNotNull(existing);
+            Assert.IsTrue(existing.Contains(1));
+        }
+
+        [Test]
         public void TestCreateAddContainsRemove()
         {
             var set = Client.GetIgniteSet<int>(nameof(TestCreateAddContainsRemove),

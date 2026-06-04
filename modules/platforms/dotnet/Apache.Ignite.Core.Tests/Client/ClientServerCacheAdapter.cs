@@ -114,14 +114,29 @@ namespace Apache.Ignite.Core.Tests.Client
             return _cache.Query(scanQuery);
         }
 
+        public Task<IQueryCursor<ICacheEntry<TK, TV>>> QueryAsync(ScanQuery<TK, TV> scanQuery)
+        {
+            return Task.FromResult(_cache.Query(scanQuery));
+        }
+
         public IQueryCursor<ICacheEntry<TK, TV>> Query(SqlQuery sqlQuery)
         {
             return _cache.Query(sqlQuery);
         }
 
+        public Task<IQueryCursor<ICacheEntry<TK, TV>>> QueryAsync(SqlQuery sqlQuery)
+        {
+            return Task.FromResult(_cache.Query(sqlQuery));
+        }
+
         public IFieldsQueryCursor Query(SqlFieldsQuery sqlFieldsQuery)
         {
             return _cache.Query(sqlFieldsQuery);
+        }
+
+        public Task<IFieldsQueryCursor> QueryAsync(SqlFieldsQuery sqlFieldsQuery)
+        {
+            return Task.FromResult(_cache.Query(sqlFieldsQuery));
         }
 
         public CacheResult<TV> GetAndPut(TK key, TV val)
@@ -289,6 +304,11 @@ namespace Apache.Ignite.Core.Tests.Client
             throw new NotSupportedException();
         }
 
+        public Task<CacheClientConfiguration> GetConfigurationAsync()
+        {
+            throw new NotSupportedException();
+        }
+
         public ICacheClient<TK1, TV1> WithKeepBinary<TK1, TV1>()
         {
             throw new NotSupportedException();
@@ -300,6 +320,11 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         public IContinuousQueryHandleClient QueryContinuous(ContinuousQueryClient<TK, TV> continuousQuery)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IContinuousQueryHandleClient> QueryContinuousAsync(ContinuousQueryClient<TK, TV> continuousQuery)
         {
             throw new NotImplementedException();
         }

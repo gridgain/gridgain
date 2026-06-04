@@ -45,6 +45,26 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         }
 
         /// <summary>
+        /// Test thin client cluster group async APIs return the same nodes as the sync ones.
+        /// </summary>
+        [Test]
+        public void TestGetNodesAsyncReturnsSameNodesAsThickOne()
+        {
+            var nodes = Ignition.GetIgnite().GetCluster().GetNodes();
+            var clientNodesAsync = Client.GetCluster().GetNodesAsync().GetResult();
+
+            Assert.IsNotEmpty(clientNodesAsync);
+            AssertNodesAreEqual(nodes, clientNodesAsync);
+
+            var node = Ignition.GetIgnite().GetCluster().GetNode();
+            var nodeAsync = Client.GetCluster().GetNodeAsync().GetResult();
+            AssertNodesAreEqual(node, nodeAsync);
+
+            var byIdAsync = Client.GetCluster().GetNodeAsync(node.Id).GetResult();
+            AssertNodesAreEqual(node, byIdAsync);
+        }
+
+        /// <summary>
         /// Test thin client cluster group returns the same node as thick one.
         /// </summary>
         [Test]

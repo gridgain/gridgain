@@ -153,6 +153,13 @@ namespace Apache.Ignite.Core.Client.Cache
         IQueryCursor<ICacheEntry<TK, TV>> Query(ScanQuery<TK, TV> scanQuery);
 
         /// <summary>
+        /// Executes a Scan query.
+        /// </summary>
+        /// <param name="scanQuery">Scan query.</param>
+        /// <returns>Query cursor.</returns>
+        Task<IQueryCursor<ICacheEntry<TK, TV>>> QueryAsync(ScanQuery<TK, TV> scanQuery);
+
+        /// <summary>
         /// Executes an SQL query.
         /// </summary>
         /// <param name="sqlQuery">SQL query.</param>
@@ -162,11 +169,27 @@ namespace Apache.Ignite.Core.Client.Cache
         IQueryCursor<ICacheEntry<TK, TV>> Query(SqlQuery sqlQuery);
 
         /// <summary>
+        /// Executes an SQL query.
+        /// </summary>
+        /// <param name="sqlQuery">SQL query.</param>
+        /// <returns>Query cursor.</returns>
+        [Obsolete("Use SqlFieldsQuery instead. For strongly-typed queries use Apache.Ignite.Linq. " +
+                  "SqlQuery is a limited subset of SqlFieldsQuery.")]
+        Task<IQueryCursor<ICacheEntry<TK, TV>>> QueryAsync(SqlQuery sqlQuery);
+
+        /// <summary>
         /// Executes an SQL Fields query.
         /// </summary>
         /// <param name="sqlFieldsQuery">SQL query.</param>
         /// <returns>Query cursor.</returns>
         IFieldsQueryCursor Query(SqlFieldsQuery sqlFieldsQuery);
+
+        /// <summary>
+        /// Executes an SQL Fields query.
+        /// </summary>
+        /// <param name="sqlFieldsQuery">SQL query.</param>
+        /// <returns>Query cursor.</returns>
+        Task<IFieldsQueryCursor> QueryAsync(SqlFieldsQuery sqlFieldsQuery);
 
         /// <summary>
         /// Associates the specified value with the specified key in this cache,
@@ -418,6 +441,12 @@ namespace Apache.Ignite.Core.Client.Cache
         CacheClientConfiguration GetConfiguration();
 
         /// <summary>
+        /// Gets the cache configuration.
+        /// </summary>
+        /// <returns>Cache configuration.</returns>
+        Task<CacheClientConfiguration> GetConfigurationAsync();
+
+        /// <summary>
         /// Gets cache with KeepBinary mode enabled, changing key and/or value types if necessary.
         /// You can only change key/value types when transitioning from non-binary to binary cache;
         /// Changing type of binary cache is not allowed and will throw an <see cref="InvalidOperationException"/>.
@@ -445,5 +474,12 @@ namespace Apache.Ignite.Core.Client.Cache
         /// <param name="continuousQuery">Continuous query.</param>
         /// <returns>Handle to stop the query execution.</returns>
         IContinuousQueryHandleClient QueryContinuous(ContinuousQueryClient<TK, TV> continuousQuery);
+
+        /// <summary>
+        /// Starts the continuous query execution.
+        /// </summary>
+        /// <param name="continuousQuery">Continuous query.</param>
+        /// <returns>Handle to stop the query execution.</returns>
+        Task<IContinuousQueryHandleClient> QueryContinuousAsync(ContinuousQueryClient<TK, TV> continuousQuery);
     }
 }

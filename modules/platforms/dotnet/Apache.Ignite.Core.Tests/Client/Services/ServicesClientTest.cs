@@ -585,6 +585,26 @@ namespace Apache.Ignite.Core.Tests.Client.Services
             Assert.AreEqual(svc.PlatformType, svc1.PlatformType);
         }
 
+        [Test]
+        public void TestGetServiceDescriptorsAsync()
+        {
+            DeployAndGetTestService();
+
+            var svcs = Client.GetServices().GetServiceDescriptorsAsync().GetResult();
+
+            Assert.AreEqual(1, svcs.Count);
+            Assert.AreEqual(ServiceName, svcs.First().Name);
+
+            var svc = Client.GetServices().GetServiceDescriptorAsync(ServiceName).GetResult();
+
+            Assert.AreEqual(ServiceName, svc.Name);
+            Assert.AreEqual(
+                "org.apache.ignite.internal.processors.platform.dotnet.PlatformDotNetServiceImpl",
+                svc.ServiceClass
+            );
+            Assert.AreEqual(PlatformType.DotNet, svc.PlatformType);
+        }
+
         /// <summary>
         /// Deploys test service and returns client-side proxy.
         /// </summary>

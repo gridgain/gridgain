@@ -41,6 +41,33 @@ namespace Apache.Ignite.Core.Tests.Client.DataStructures
         }
 
         [Test]
+        public void TestAsyncOperationsMatchSyncBehavior()
+        {
+            var atomicLong = Client.GetAtomicLongAsync(TestUtils.TestName, 42, true).GetResult();
+
+            Assert.IsNotNull(atomicLong);
+            Assert.AreEqual(42, atomicLong.ReadAsync().GetResult());
+            Assert.AreEqual(43, atomicLong.IncrementAsync().GetResult());
+            Assert.AreEqual(53, atomicLong.AddAsync(10).GetResult());
+            Assert.AreEqual(52, atomicLong.DecrementAsync().GetResult());
+            Assert.AreEqual(52, atomicLong.ExchangeAsync(100).GetResult());
+            Assert.AreEqual(100, atomicLong.CompareExchangeAsync(7, 100).GetResult());
+            Assert.AreEqual(7, atomicLong.ReadAsync().GetResult());
+
+            Assert.IsFalse(atomicLong.IsClosedAsync().GetResult());
+            atomicLong.CloseAsync().WaitResult();
+            Assert.IsTrue(atomicLong.IsClosedAsync().GetResult());
+        }
+
+        [Test]
+        public void TestGetAtomicLongAsyncReturnsNullWhenDoesNotExistAndCreateIsFalse()
+        {
+            var atomicLong = Client.GetAtomicLongAsync(TestUtils.TestName, 0, false).GetResult();
+
+            Assert.IsNull(atomicLong);
+        }
+
+        [Test]
         public void TestCreateIgnoresInitialValueWhenAlreadyExists()
         {
             var atomicLong = Client.GetAtomicLong(TestUtils.TestName, 42, true);

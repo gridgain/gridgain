@@ -78,6 +78,33 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         }
 
         /// <summary>
+        /// Tests the async cache lifecycle APIs: CreateCacheAsync, GetOrCreateCacheAsync,
+        /// GetCacheNamesAsync, DestroyCacheAsync.
+        /// </summary>
+        [Test]
+        public void TestAsyncCacheLifecycle()
+        {
+            DestroyCaches();
+            Assert.AreEqual(0, Client.GetCacheNamesAsync().GetResult().Count);
+
+            var cacheA = Client.CreateCacheAsync<int, int>("a").GetResult();
+            Assert.AreEqual("a", cacheA.Name);
+            Assert.AreEqual("a", Client.GetCacheNamesAsync().GetResult().Single());
+
+            // GetOrCreateCacheAsync returns existing cache without error.
+            var cacheA2 = Client.GetOrCreateCacheAsync<int, int>("a").GetResult();
+            Assert.AreEqual("a", cacheA2.Name);
+
+            var cacheB = Client.GetOrCreateCacheAsync<int, int>(
+                new CacheClientConfiguration { Name = "b" }).GetResult();
+            Assert.AreEqual("b", cacheB.Name);
+            Assert.AreEqual(new[] {"a", "b"}, Client.GetCacheNamesAsync().GetResult().OrderBy(x => x).ToArray());
+
+            Client.DestroyCacheAsync("a").WaitResult();
+            Assert.AreEqual("b", Client.GetCacheNamesAsync().GetResult().Single());
+        }
+
+        /// <summary>
         /// Tests create from template.
         /// </summary>
         [Test]

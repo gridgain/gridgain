@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Client.Services
 {
     using System.Collections.Generic;
+    using System.Threading.Tasks;
 
     /// <summary>
     /// Ignite distributed services client.
@@ -46,11 +47,24 @@ namespace Apache.Ignite.Core.Client.Services
         ICollection<IClientServiceDescriptor> GetServiceDescriptors();
 
         /// <summary>
+        /// Gets metadata about all deployed services in the grid.
+        /// </summary>
+        /// <returns>Metadata about all deployed services in the grid.</returns>
+        Task<ICollection<IClientServiceDescriptor>> GetServiceDescriptorsAsync();
+
+        /// <summary>
         /// Gets metadata about service deployed in the grid.
         /// </summary>
         /// <param name="serviceName">Service name.</param>
         /// <returns>Metadata about all deployed services in the grid.</returns>
         IClientServiceDescriptor GetServiceDescriptor(string serviceName);
+
+        /// <summary>
+        /// Gets metadata about service deployed in the grid.
+        /// </summary>
+        /// <param name="serviceName">Service name.</param>
+        /// <returns>Metadata about all deployed services in the grid.</returns>
+        Task<IClientServiceDescriptor> GetServiceDescriptorAsync(string serviceName);
 
         /// <summary>
         /// Returns an instance with binary mode enabled.
