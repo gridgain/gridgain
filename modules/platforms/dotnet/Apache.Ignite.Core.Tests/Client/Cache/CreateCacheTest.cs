@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System;
     using System.Linq;
     using System.Threading;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Client;
@@ -82,26 +83,25 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         /// GetCacheNamesAsync, DestroyCacheAsync.
         /// </summary>
         [Test]
-        public void TestAsyncCacheLifecycle()
+        public async Task TestAsyncCacheLifecycle()
         {
             DestroyCaches();
-            Assert.AreEqual(0, Client.GetCacheNamesAsync().GetResult().Count);
+            Assert.AreEqual(0, (await Client.GetCacheNamesAsync()).Count);
 
-            var cacheA = Client.CreateCacheAsync<int, int>("a").GetResult();
+            var cacheA = await Client.CreateCacheAsync<int, int>("a");
             Assert.AreEqual("a", cacheA.Name);
-            Assert.AreEqual("a", Client.GetCacheNamesAsync().GetResult().Single());
+            Assert.AreEqual("a", (await Client.GetCacheNamesAsync()).Single());
 
-            // GetOrCreateCacheAsync returns existing cache without error.
-            var cacheA2 = Client.GetOrCreateCacheAsync<int, int>("a").GetResult();
+            var cacheA2 = await Client.GetOrCreateCacheAsync<int, int>("a");
             Assert.AreEqual("a", cacheA2.Name);
 
-            var cacheB = Client.GetOrCreateCacheAsync<int, int>(
-                new CacheClientConfiguration { Name = "b" }).GetResult();
+            var cacheB = await Client.GetOrCreateCacheAsync<int, int>(
+                new CacheClientConfiguration { Name = "b" });
             Assert.AreEqual("b", cacheB.Name);
-            Assert.AreEqual(new[] {"a", "b"}, Client.GetCacheNamesAsync().GetResult().OrderBy(x => x).ToArray());
+            Assert.AreEqual(new[] {"a", "b"}, (await Client.GetCacheNamesAsync()).OrderBy(x => x).ToArray());
 
-            Client.DestroyCacheAsync("a").WaitResult();
-            Assert.AreEqual("b", Client.GetCacheNamesAsync().GetResult().Single());
+            await Client.DestroyCacheAsync("a");
+            Assert.AreEqual("b", (await Client.GetCacheNamesAsync()).Single());
         }
 
         /// <summary>

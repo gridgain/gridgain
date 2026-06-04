@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Tests.Client.DataStructures
 {
     using System;
     using System.Linq;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.DataStructures;
@@ -41,28 +42,28 @@ namespace Apache.Ignite.Core.Tests.Client.DataStructures
         }
 
         [Test]
-        public void TestAsyncOperationsMatchSyncBehavior()
+        public async Task TestAsyncOperationsMatchSyncBehavior()
         {
-            var atomicLong = Client.GetAtomicLongAsync(TestUtils.TestName, 42, true).GetResult();
+            var atomicLong = await Client.GetAtomicLongAsync(TestUtils.TestName, 42, true);
 
             Assert.IsNotNull(atomicLong);
-            Assert.AreEqual(42, atomicLong.ReadAsync().GetResult());
-            Assert.AreEqual(43, atomicLong.IncrementAsync().GetResult());
-            Assert.AreEqual(53, atomicLong.AddAsync(10).GetResult());
-            Assert.AreEqual(52, atomicLong.DecrementAsync().GetResult());
-            Assert.AreEqual(52, atomicLong.ExchangeAsync(100).GetResult());
-            Assert.AreEqual(100, atomicLong.CompareExchangeAsync(7, 100).GetResult());
-            Assert.AreEqual(7, atomicLong.ReadAsync().GetResult());
+            Assert.AreEqual(42, await atomicLong.ReadAsync());
+            Assert.AreEqual(43, await atomicLong.IncrementAsync());
+            Assert.AreEqual(53, await atomicLong.AddAsync(10));
+            Assert.AreEqual(52, await atomicLong.DecrementAsync());
+            Assert.AreEqual(52, await atomicLong.ExchangeAsync(100));
+            Assert.AreEqual(100, await atomicLong.CompareExchangeAsync(7, 100));
+            Assert.AreEqual(7, await atomicLong.ReadAsync());
 
-            Assert.IsFalse(atomicLong.IsClosedAsync().GetResult());
-            atomicLong.CloseAsync().WaitResult();
-            Assert.IsTrue(atomicLong.IsClosedAsync().GetResult());
+            Assert.IsFalse(await atomicLong.IsClosedAsync());
+            await atomicLong.CloseAsync();
+            Assert.IsTrue(await atomicLong.IsClosedAsync());
         }
 
         [Test]
-        public void TestGetAtomicLongAsyncReturnsNullWhenDoesNotExistAndCreateIsFalse()
+        public async Task TestGetAtomicLongAsyncReturnsNullWhenDoesNotExistAndCreateIsFalse()
         {
-            var atomicLong = Client.GetAtomicLongAsync(TestUtils.TestName, 0, false).GetResult();
+            var atomicLong = await Client.GetAtomicLongAsync(TestUtils.TestName, 0, false);
 
             Assert.IsNull(atomicLong);
         }

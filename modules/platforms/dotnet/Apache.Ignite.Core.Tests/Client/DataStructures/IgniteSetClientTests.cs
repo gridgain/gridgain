@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Client.DataStructures
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.DataStructures;
@@ -34,10 +35,10 @@ namespace Apache.Ignite.Core.Tests.Client.DataStructures
     public class IgniteSetClientTests : ClientTestBase
     {
         [Test]
-        public void TestGetIgniteSetAsyncCreatesSet()
+        public async Task TestGetIgniteSetAsyncCreatesSet()
         {
-            var set = Client.GetIgniteSetAsync<int>(nameof(TestGetIgniteSetAsyncCreatesSet),
-                GetCollectionConfiguration()).GetResult();
+            var set = await Client.GetIgniteSetAsync<int>(nameof(TestGetIgniteSetAsyncCreatesSet),
+                GetCollectionConfiguration());
 
             Assert.IsNotNull(set);
             Assert.AreEqual(nameof(TestGetIgniteSetAsyncCreatesSet), set.Name);
@@ -46,7 +47,7 @@ namespace Apache.Ignite.Core.Tests.Client.DataStructures
             Assert.IsTrue(set.Contains(1));
 
             // Existing set is returned without configuration.
-            var existing = Client.GetIgniteSetAsync<int>(nameof(TestGetIgniteSetAsyncCreatesSet), null).GetResult();
+            var existing = await Client.GetIgniteSetAsync<int>(nameof(TestGetIgniteSetAsyncCreatesSet), null);
             Assert.IsNotNull(existing);
             Assert.IsTrue(existing.Contains(1));
         }

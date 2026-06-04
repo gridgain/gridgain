@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Client.Services
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Services;
@@ -586,16 +587,16 @@ namespace Apache.Ignite.Core.Tests.Client.Services
         }
 
         [Test]
-        public void TestGetServiceDescriptorsAsync()
+        public async Task TestGetServiceDescriptorsAsync()
         {
             DeployAndGetTestService();
 
-            var svcs = Client.GetServices().GetServiceDescriptorsAsync().GetResult();
+            var svcs = await Client.GetServices().GetServiceDescriptorsAsync();
 
             Assert.AreEqual(1, svcs.Count);
             Assert.AreEqual(ServiceName, svcs.First().Name);
 
-            var svc = Client.GetServices().GetServiceDescriptorAsync(ServiceName).GetResult();
+            var svc = await Client.GetServices().GetServiceDescriptorAsync(ServiceName);
 
             Assert.AreEqual(ServiceName, svc.Name);
             Assert.AreEqual(

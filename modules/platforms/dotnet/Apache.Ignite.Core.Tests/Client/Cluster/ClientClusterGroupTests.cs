@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Impl.Client.Cluster;
@@ -48,19 +49,19 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         /// Test thin client cluster group async APIs return the same nodes as the sync ones.
         /// </summary>
         [Test]
-        public void TestGetNodesAsyncReturnsSameNodesAsThickOne()
+        public async Task TestGetNodesAsyncReturnsSameNodesAsThickOne()
         {
             var nodes = Ignition.GetIgnite().GetCluster().GetNodes();
-            var clientNodesAsync = Client.GetCluster().GetNodesAsync().GetResult();
+            var clientNodesAsync = await Client.GetCluster().GetNodesAsync();
 
             Assert.IsNotEmpty(clientNodesAsync);
             AssertNodesAreEqual(nodes, clientNodesAsync);
 
             var node = Ignition.GetIgnite().GetCluster().GetNode();
-            var nodeAsync = Client.GetCluster().GetNodeAsync().GetResult();
+            var nodeAsync = await Client.GetCluster().GetNodeAsync();
             AssertNodesAreEqual(node, nodeAsync);
 
-            var byIdAsync = Client.GetCluster().GetNodeAsync(node.Id).GetResult();
+            var byIdAsync = await Client.GetCluster().GetNodeAsync(node.Id);
             AssertNodesAreEqual(node, byIdAsync);
         }
 
