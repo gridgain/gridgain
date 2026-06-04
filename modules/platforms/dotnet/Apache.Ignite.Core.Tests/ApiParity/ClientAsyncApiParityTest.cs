@@ -60,8 +60,8 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         /// Members that are intentionally sync-only because they perform no server IO
         /// (they create local wrappers, return local state, or build projections).
         /// </summary>
-        private static readonly HashSet<string> SyncOnlyMembers = new HashSet<string>
-        {
+        private static readonly HashSet<string> SyncOnlyMembers =
+        [
             // IIgniteClient: local facades and state.
             "GetCache",
             "GetCluster",
@@ -86,7 +86,7 @@ namespace Apache.Ignite.Core.Tests.ApiParity
             // IServicesClient: local proxy and wrappers.
             "GetServiceProxy",
             "WithServerKeepBinary"
-        };
+        ];
 
         /// <summary>
         /// Sync method base names whose async counterpart intentionally has a different shape, so
@@ -96,10 +96,7 @@ namespace Apache.Ignite.Core.Tests.ApiParity
         /// <c>TryGet(key, out value)</c> uses an <c>out</c> parameter that has no async equivalent;
         /// its async counterpart is <c>TryGetAsync(key)</c> returning <c>CacheResult&lt;TV&gt;</c>.
         /// </summary>
-        private static readonly HashSet<string> ShapeMismatchMembers = new HashSet<string>
-        {
-            "TryGet"
-        };
+        private static readonly HashSet<string> ShapeMismatchMembers = ["TryGet"];
 
         /// <summary>
         /// Tests that every sync IO method has a matching async overload.
@@ -197,10 +194,6 @@ namespace Apache.Ignite.Core.Tests.ApiParity
             }
         }
 
-        /// <summary>
-        /// Gets public instance methods declared directly on the interface, excluding property and
-        /// event accessors and obsolete members (deprecated APIs do not need async overloads).
-        /// </summary>
         private static MethodInfo[] GetApiMethods(Type type)
         {
             return type
@@ -209,9 +202,6 @@ namespace Apache.Ignite.Core.Tests.ApiParity
                 .ToArray();
         }
 
-        /// <summary>
-        /// Checks whether two methods have the same parameter types.
-        /// </summary>
         private static bool ParametersMatch(MethodInfo sync, MethodInfo async)
         {
             var syncParams = sync.GetParameters();
@@ -225,10 +215,6 @@ namespace Apache.Ignite.Core.Tests.ApiParity
             return !syncParams.Where((t, i) => t.ParameterType != asyncParams[i].ParameterType).Any();
         }
 
-        /// <summary>
-        /// Checks that the async method return type corresponds to the sync method return type:
-        /// <c>void</c> maps to <see cref="Task"/>, and <c>T</c> maps to <see cref="Task{T}"/>.
-        /// </summary>
         private static bool IsAsyncReturnType(MethodInfo sync, MethodInfo async)
         {
             var asyncReturn = async.ReturnType;
@@ -241,9 +227,6 @@ namespace Apache.Ignite.Core.Tests.ApiParity
             return asyncReturn.IsGenericType && asyncReturn.GetGenericTypeDefinition() == typeof(Task<>);
         }
 
-        /// <summary>
-        /// Gets a human-readable method signature for error reporting.
-        /// </summary>
         private static string GetSignature(MethodInfo method)
         {
             var args = string.Join(", ", method.GetParameters().Select(p => p.ParameterType.Name + " " + p.Name));
