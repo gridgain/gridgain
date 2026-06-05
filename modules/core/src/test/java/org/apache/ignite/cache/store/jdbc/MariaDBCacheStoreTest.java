@@ -272,6 +272,7 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
 
         MariaDBCacheStore<Object, Object> store = mariaDbCacheStoreFactory(personJdbcType(cacheName, "Person"), false)
                 .setParallelLoadCacheMinimumThreshold(parallelThreshold)
+                .setFetchSize(2)
                 .create();
         inject(store);
 
@@ -299,8 +300,8 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
             }
         });
 
-        assertEquals(loadCacheRows, keys.size());
-        assertThat(loadThreads, hasSize(greaterThan(1)));
+        assertEquals("load rows", loadCacheRows, keys.size());
+        assertThat("load threads", loadThreads, hasSize(greaterThan(1)));
     }
 
     /**
