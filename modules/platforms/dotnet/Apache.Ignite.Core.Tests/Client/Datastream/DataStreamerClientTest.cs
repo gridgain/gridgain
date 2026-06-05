@@ -785,6 +785,49 @@ namespace Apache.Ignite.Core.Tests.Client.Datastream
             Assert.AreEqual(3, await cache.GetAsync(3));
         }
 
+        /// <summary>
+        /// Tests that exiting an <c>await using</c> block disposes the streamer asynchronously and
+        /// flushes buffered data into the cache.
+        /// </summary>
+        [Test]
+        public async Task TestStreamingAwaitUsing()
+        {
+            var cache = GetClientCache<int>();
+
+            await using (var streamer = Client.GetDataStreamer<int, int>(cache.Name))
+            {
+                streamer.Add(1, 1);
+                streamer.Add(2, 2);
+            }
+
+            Assert.AreEqual(2, await cache.GetSizeAsync());
+            Assert.AreEqual(1, await cache.GetAsync(1));
+            Assert.AreEqual(2, await cache.GetAsync(2));
+        }
+
+        /// <summary>
+        /// Tests that <see cref="IDataStreamerClient{TK,TV}.DisposeAsync"/> flushes buffered data, closes the
+        /// streamer, and can be called multiple times.
+        /// </summary>
+        [Test]
+        public async Task TestDisposeAsyncFlushesDataAndClosesStreamer()
+        {
+            var cache = GetClientCache<int>();
+
+            var streamer = Client.GetDataStreamer<int, int>(cache.Name);
+            streamer.Add(1, 1);
+
+            Assert.IsFalse(streamer.IsClosed);
+
+            await streamer.DisposeAsync();
+
+            Assert.IsTrue(streamer.IsClosed);
+            Assert.AreEqual(1, await cache.GetAsync(1));
+
+            // DisposeAsync is idempotent.
+            await streamer.DisposeAsync();
+        }
+
 #endif
 
         internal static void CheckArrayPoolLeak<TK, TV>(IDataStreamerClient<TK, TV> streamer)
