@@ -20,6 +20,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
+#if NETCOREAPP
+    using System.Threading.Tasks;
+#endif
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Query;
@@ -243,6 +246,47 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 c3.Dispose();
             }
         }
+
+#if NETCOREAPP
+        /// <summary>
+        /// Tests that <c>await using</c> and <see cref="System.IAsyncDisposable.DisposeAsync"/> close the
+        /// server-side cursor asynchronously, freeing up a cursor slot just like synchronous disposal.
+        /// </summary>
+        [Test]
+        public async Task TestAwaitUsingClosesServerCursor()
+        {
+            GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+            var qry = new ScanQuery<int, Person>();
+
+            // MaxCursors = 3: open the maximum number of cursors.
+            var c1 = clientCache.Query(qry);
+            var c2 = clientCache.Query(qry);
+            var c3 = clientCache.Query(qry);
+
+            Assert.Throws<IgniteClientException>(() => clientCache.Query(qry));
+
+            // Async dispose frees a server-side cursor slot; awaiting guarantees the close completed.
+            await c1.DisposeAsync();
+
+            // A new cursor can be opened now, and exiting await using closes it again.
+            await using (clientCache.Query(qry))
+            {
+                Assert.Throws<IgniteClientException>(() => clientCache.Query(qry));
+            }
+
+            // Idempotent: a second async dispose is a no-op.
+            await c1.DisposeAsync();
+
+            c1 = clientCache.Query(qry);
+
+            c1.Dispose();
+            c2.Dispose();
+            c3.Dispose();
+        }
+#endif
 
         /// <summary>
         /// Gets the string cache.

@@ -25,11 +25,15 @@ namespace Apache.Ignite.Core.Cache.Query
     /// all entries using <see cref="IQueryCursor{T}.GetAll()"/> method.
     /// <para />
     /// Note that you get enumerator or call <c>GetAll()</c> method only once during
-    /// cursor lifetime. Any further attempts to get enumerator or all entries will result 
+    /// cursor lifetime. Any further attempts to get enumerator or all entries will result
     /// in exception.
+    /// <para />
+    /// Closing and disposing: <see cref="IDisposable.Dispose"/> closes the server-side cursor synchronously.
+    /// To avoid blocking threads when exiting a <c>using()</c> block, use <c>await using</c>
+    /// (see <see cref="IAsyncDisposable.DisposeAsync"/>), which closes the cursor asynchronously.
     /// </summary>
     [SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
-    public interface IQueryCursor<T> : IEnumerable<T>, IDisposable
+    public interface IQueryCursor<T> : IEnumerable<T>, IDisposable, IAsyncDisposable
     {
         /// <summary>
         /// Gets all query results. Use this method when you know in advance that query 
