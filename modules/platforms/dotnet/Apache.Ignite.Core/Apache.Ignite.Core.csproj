@@ -25,12 +25,10 @@
     <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="4.7.0" />
 
-    <!--
-    IAsyncDisposable and the non-generic ValueTask are part of the BCL on net8.0+ but not on
-    netstandard2.0; this package back-fills them (it pulls in System.Threading.Tasks.Extensions).
-    -->
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0"
-                      Condition="'$(TargetFramework)' == 'netstandard2.0'" />
+    <!-- Required for IAsyncDisposable and IAsyncEnumerable. -->
+    <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+      <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.8" />
+    </ItemGroup>
 
     <!--
     NOTE: Microsoft.CodeAnalysis.NetAnalyzers is the new replacement for FxCopAnalyzers,
