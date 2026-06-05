@@ -59,6 +59,7 @@ import org.apache.ignite.internal.processors.rest.request.GridRestClusterNameReq
 import org.apache.ignite.internal.processors.rest.request.GridRestClusterStateRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestLogRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestNodeStateBeforeStartRequest;
+import org.apache.ignite.internal.processors.rest.request.GridRestPropertyRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTaskRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTopologyRequest;
@@ -849,6 +850,19 @@ public class GridJettyRestHandler extends AbstractHandler {
 
                 restReq0.topologyVersion(longValue("topVer", params, null));
                 restReq0.consistentIds(values(null, "consistentId", params));
+
+                restReq = restReq0;
+
+                break;
+            }
+
+            case PROPERTY_LIST:
+            case PROPERTY_GET:
+            case PROPERTY_SET: {
+                GridRestPropertyRequest restReq0 = new GridRestPropertyRequest();
+
+                restReq0.name(params.get("name"));
+                restReq0.value(params.get("val"));
 
                 restReq = restReq0;
 
