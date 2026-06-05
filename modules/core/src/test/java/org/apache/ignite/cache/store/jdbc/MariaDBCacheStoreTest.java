@@ -55,6 +55,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentSkipListSet;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasSize;
 
 /**
  * Integration tests for {@link MariaDBDialect} executed against a real MariaDB instance
@@ -259,7 +264,7 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
     @Test
     public void testLoadCacheParallel() throws Exception {
         // Exceed ParallelLoadCacheMinimumThreshold intentionally.
-        int loadCacheRows = 10;
+        int loadCacheRows = 11;
         int parallelThreshold = 2;
         String cacheName = null; // cache name is null while injecting TestThreadLocalCacheSession (TestCacheSession)
 
@@ -271,8 +276,11 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
         inject(store);
 
         Collection<Object> keys = new ConcurrentLinkedQueue<>();
+        Set<String> loadThreads = new ConcurrentSkipListSet<>();
 
         store.loadCache((k, v) -> {
+            loadThreads.add(Thread.currentThread().getName());
+
             if (k instanceof BinaryObject && v instanceof BinaryObject) {
                 BinaryObject key = (BinaryObject) k;
                 BinaryObject val = (BinaryObject) v;
@@ -292,6 +300,7 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
         });
 
         assertEquals(loadCacheRows, keys.size());
+        assertThat(loadThreads, hasSize(greaterThan(1)));
     }
 
     /**
@@ -548,35 +557,6 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
         });
 
         assertNull("Cache must not hold the value after rollback", cache.get(key));
-    }
-
-    /**
-     * Same as {@link #testLoadCacheParallel} but the row count is intentionally not a clean
-     * multiple of the parallel-load threshold. Guards against off-by-one errors in the
-     * dialect's {@code @rownum mod ?} partitioning.
-     */
-    @Test
-    public void testLoadCacheParallelOddRowCount() throws Exception {
-        // Exceed ParallelLoadCacheMinimumThreshold intentionally.
-        int oddCnt = 555;
-
-        insertPersonRows(oddCnt);
-
-        startGrid();
-
-        IgniteCache<PersonKey, Person> cache = grid().cache(CACHE_NAME);
-
-        cache.loadCache(null);
-
-        assertEquals(oddCnt, cache.size());
-
-        // Spot-check the boundary rows.
-        for (int i : new int[]{0, oddCnt / 2, oddCnt - 1}) {
-            Person p = cache.get(new PersonKey(i));
-
-            assertNotNull("Missing key " + i + " after loadCache (odd row count)", p);
-            assertEquals("name" + i, p.getName());
-        }
     }
 
     /**
