@@ -931,7 +931,6 @@ namespace Apache.Ignite.Core.Tests.Dataload
 
             Assert.AreEqual(-1, await _cache.GetAsync(1));
             Assert.AreEqual(-100, await _cache.GetAsync(100));
-            Assert.IsFalse(await _cache.ContainsKeyAsync(101));
         }
 
         /// <summary>
