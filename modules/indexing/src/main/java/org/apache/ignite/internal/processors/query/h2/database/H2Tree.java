@@ -83,7 +83,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** @see #IGNITE_THROTTLE_INLINE_SIZE_CALCULATION */
     public static final int DFLT_THROTTLE_INLINE_SIZE_CALCULATION = 1_000;
 
-    /** */
+    /** How often the real invocation of inline size calculation will be skipped. */
     @SystemProperty(value = "How often real invocation of inline size calculation will be skipped.", type = Long.class,
         defaults = "" + DFLT_THROTTLE_INLINE_SIZE_CALCULATION)
     public static final String IGNITE_THROTTLE_INLINE_SIZE_CALCULATION = "IGNITE_THROTTLE_INLINE_SIZE_CALCULATION";

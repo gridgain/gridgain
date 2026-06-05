@@ -505,10 +505,10 @@ public final class ClientConfiguration implements Serializable {
     /**
      * Gets a value indicating whether partition awareness should be enabled.
      * <p>
-     * Default is {@code true}: client sends requests directly to the primary node for the given cache key.
+     * When {@code true}, client sends requests directly to the primary node for the given cache key.
      * To do so, connection is established to every known server node.
      * <p>
-     * When {@code false}, only one connection is established at a given moment to a random server node.
+     * Default is {@code false}: only one connection is established at a given moment to a random server node.
      */
     public boolean isAffinityAwarenessEnabled() {
         return affinityAwarenessEnabled;
@@ -517,10 +517,10 @@ public final class ClientConfiguration implements Serializable {
     /**
      * Sets a value indicating whether partition awareness should be enabled.
      * <p>
-     * Default is {@code true}: client sends requests directly to the primary node for the given cache key.
+     * When {@code true}, client sends requests directly to the primary node for the given cache key.
      * To do so, connection is established to every known server node.
      * <p>
-     * When {@code false}, only one connection is established at a given moment to a random server node.
+     * Default is {@code false}: only one connection is established at a given moment to a random server node.
      *
      * @return {@code this} for chaining.
      */

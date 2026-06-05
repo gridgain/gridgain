@@ -1145,7 +1145,7 @@ public final class IgniteSystemProperties {
      * index store is disabled. Ignored if inline size is provided when index is created.
      */
     @SystemProperty(
-        value = "Maximum auto-calcultated payload size in bytes for H2TreeIndex. 0 means that inline index store is disabled. " +
+        value = "Maximum auto-calculated payload size in bytes for H2TreeIndex. 0 means that inline index store is disabled. " +
             "Ignored if inline size is provided when index is created", type = Integer.class,
         defaults = "" + IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT)
     public static final String IGNITE_MAX_INDEX_PAYLOAD_SIZE = "IGNITE_MAX_INDEX_PAYLOAD_SIZE";
@@ -1163,8 +1163,9 @@ public final class IgniteSystemProperties {
      * When cache has entries with expired TTL and/or tombstones, each user operation will also remove this amount of
      * expired entries. Defaults to {@code 5}. Setting the value to {@code 0} will disable this behavior.
      */
-    @SystemProperty(value = "When cache has entries with expired TTL, each user operation will also " +
-        "remove this amount of expired entries", type = Integer.class, defaults = "" + DFLT_TTL_EXPIRE_BATCH_SIZE)
+    @SystemProperty(value = "When cache has entries with expired TTL and/or tombstones, each user operation will " +
+        "also remove this amount of expired entries. Setting the value to 0 will disable this behavior",
+        type = Integer.class, defaults = "" + DFLT_TTL_EXPIRE_BATCH_SIZE)
     public static final String IGNITE_TTL_EXPIRE_BATCH_SIZE = "IGNITE_TTL_EXPIRE_BATCH_SIZE";
 
     /**
@@ -1215,17 +1216,17 @@ public final class IgniteSystemProperties {
      * This property is intended for integration or performance tests.
      * Default is {@code false}.
      */
-    @SystemProperty("Prefer historical rebalance if there's enough history regardless off all heuristics. " +
+    @SystemProperty("Prefer historical rebalance if there's enough history regardless of all heuristics. " +
         "This property is intended for integration or performance tests")
     public static final String IGNITE_PREFER_WAL_REBALANCE = "IGNITE_PREFER_WAL_REBALANCE";
 
     /**
      * Threshold of the checkpoint quantity since the last earliest checkpoint map snapshot.
-     * After this thresold is reached, a snapshot of the earliest checkpoint map will be captured.
+     * After this threshold is reached, a snapshot of the earliest checkpoint map will be captured.
      * Default is {@code 5}.
      */
     @SystemProperty(value = "Threshold of the checkpoint quantity since the last earliest checkpoint map snapshot. " +
-        "After this thresold is reached, a snapshot of the earliest checkpoint map will be captured",
+        "After this threshold is reached, a snapshot of the earliest checkpoint map will be captured",
         type = Integer.class, defaults = "" + DFLT_IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD)
     public static final String IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD = "IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD";
 
@@ -1343,7 +1344,8 @@ public final class IgniteSystemProperties {
      * If this property is set, {@link DataStorageConfiguration#isWriteThrottlingEnabled()}
      * will be overridden to {@code true} regardless the initial value in the configuration.
      */
-    @SystemProperty(value = "Checkpoint throttling policy", type = String.class)
+    @SystemProperty(value = "If set, DataStorageConfiguration#isWriteThrottlingEnabled will be overridden to " +
+        "true regardless of the initial value in the configuration", type = String.class)
     public static final String IGNITE_OVERRIDE_WRITE_THROTTLING_ENABLED = "IGNITE_OVERRIDE_WRITE_THROTTLING_ENABLED";
 
     /**
