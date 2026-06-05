@@ -25,11 +25,6 @@
     <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="4.7.0" />
 
-    <!-- Required for IAsyncDisposable and IAsyncEnumerable. -->
-    <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-      <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.8" />
-    </ItemGroup>
-
     <!--
     NOTE: Microsoft.CodeAnalysis.NetAnalyzers is the new replacement for FxCopAnalyzers,
     but it has some issues on older SDKs (https://github.com/dotnet/roslyn-analyzers/issues/4776).
@@ -54,6 +49,11 @@
     <None Include="GridGain.Ignite.targets" Pack="true" PackagePath="build" Link="build\%(Filename)%(Extension)" />
     <None Include="..\..\..\..\config\java.util.logging.properties" Pack="true" PackagePath="build\output\config" Link="build\output\config\%(Filename)%(Extension)" />
     <None Include="NuGet\LINQPad\*.*" Pack="true" PackagePath="linqpad-samples" Link="linqpad-samples\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- Required for IAsyncDisposable and IAsyncEnumerable. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.8" />
   </ItemGroup>
 
 </Project>
