@@ -19,9 +19,10 @@ namespace Apache.Ignite.Core.Client.Cache.Query.Continuous
     using System;
 
     /// <summary>
-    /// Represents a continuous query handle. Call <see cref="IDisposable.Dispose"/> to stop the continuous query.
+    /// Represents a continuous query handle.
+    /// Call <see cref="IAsyncDisposable.DisposeAsync"/> to stop the continuous query.
     /// </summary>
-    public interface IContinuousQueryHandleClient : IDisposable
+    public interface IContinuousQueryHandleClient : IDisposable, IAsyncDisposable
     {
         /// <summary>
         /// Occurs when continuous query gets disconnected.

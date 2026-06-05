@@ -628,6 +628,24 @@ namespace Apache.Ignite.Core.Impl.Datastream
         }
 
         /** <inheritDoc /> */
+        public async ValueTask DisposeAsync()
+        {
+            // Flush remaining buffered data asynchronously so that the calling thread is not blocked
+            // while data is sent to the cluster. The subsequent Dispose() only finalizes the (already
+            // flushed) streamer, which is fast local cleanup, and also suppresses finalization.
+            var batch = _batch;
+
+            if (batch != null)
+            {
+                Flush0(batch, false, PlcFlush);
+
+                await batch.GetThisAndPreviousCompletionTask().ConfigureAwait(false);
+            }
+
+            Dispose();
+        }
+
+        /** <inheritDoc /> */
         public IDataStreamer<TK1, TV1> WithKeepBinary<TK1, TV1>()
             where TK1 : notnull
         {

@@ -129,6 +129,12 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         }
 
         /** <inheritdoc /> */
+        public ValueTask DisposeAsync()
+        {
+            return new ValueTask(CloseAsync(cancel: false));
+        }
+
+        /** <inheritdoc /> */
         public string CacheName
         {
             get { return _cacheName; }

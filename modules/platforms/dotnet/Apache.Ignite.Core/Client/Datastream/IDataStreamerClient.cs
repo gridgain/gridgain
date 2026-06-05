@@ -32,9 +32,10 @@ namespace Apache.Ignite.Core.Client.Datastream
     /// <para />
     /// Closing and disposing: <see cref="IDisposable.Dispose"/> method calls <see cref="Close"/><c>(false)</c>.
     /// This will flush any remaining data to the cache synchronously.
-    /// To avoid blocking threads when exiting <c>using()</c> block, use <see cref="CloseAsync"/>.
+    /// To avoid blocking threads when exiting <c>using()</c> block, use <c>await using</c>
+    /// (see <see cref="IAsyncDisposable.DisposeAsync"/>) or call <see cref="CloseAsync"/> explicitly.
     /// </summary>
-    public interface IDataStreamerClient<TK, TV> : IDisposable
+    public interface IDataStreamerClient<TK, TV> : IDisposable, IAsyncDisposable
         where TK : notnull
     {
         /// <summary>
