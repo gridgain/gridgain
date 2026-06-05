@@ -18,6 +18,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 {
     using System;
     using System.Linq;
+#if NETCOREAPP
+    using System.Threading.Tasks;
+#endif
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Client;
     using NUnit.Framework;
@@ -283,5 +286,49 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             Assert.IsTrue((bool)res[1]);
             Assert.AreEqual(label, (string)res[2]);
         }
+
+#if NETCOREAPP
+        /// <summary>
+        /// Tests that a fields query cursor (<c>ClientFieldsQueryCursor</c>) can be disposed with
+        /// <c>await using</c>, returning all rows and closing the server-side cursor asynchronously.
+        /// </summary>
+        [Test]
+        public async Task TestAwaitUsingFieldsQueryCursor()
+        {
+            var cache = GetClientCache<Person>();
+
+            var qry = new SqlFieldsQuery("select Id from Person");
+
+            await using var cursor = cache.Query(qry);
+
+            CollectionAssert.AreEquivalent(Enumerable.Range(1, Count), cursor.Select(x => (int)x[0]));
+        }
+
+        /// <summary>
+        /// Tests that <see cref="System.IAsyncDisposable.DisposeAsync"/> closes a fields query cursor that is
+        /// still open on the server (only partially enumerated), and is idempotent.
+        /// </summary>
+        [Test]
+        public async Task TestDisposeAsyncClosesOpenFieldsQueryCursor()
+        {
+            var cache = GetClientCache<Person>();
+
+            // Small page size keeps the server-side cursor open so DisposeAsync sends a real close request.
+            var qry = new SqlFieldsQuery("select Id from Person") { PageSize = 1 };
+            var cursor = cache.Query(qry);
+
+            // Read a single row, leaving the server-side cursor open (more pages remain).
+            var enumerator = cursor.GetEnumerator();
+            Assert.IsTrue(enumerator.MoveNext());
+
+            // DisposeAsync closes the still-open server cursor without blocking; repeated dispose is a no-op.
+            await cursor.DisposeAsync();
+            await cursor.DisposeAsync();
+            cursor.Dispose();
+
+            // Cursor is disposed: further iteration throws.
+            Assert.Throws<ObjectDisposedException>(() => enumerator.MoveNext());
+        }
+#endif
     }
 }

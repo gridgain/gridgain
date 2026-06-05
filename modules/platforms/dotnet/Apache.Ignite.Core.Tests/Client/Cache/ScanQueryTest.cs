@@ -286,6 +286,71 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             c2.Dispose();
             c3.Dispose();
         }
+
+        /// <summary>
+        /// Tests that <see cref="System.IAsyncDisposable.DisposeAsync"/> is a no-op for a cursor that has
+        /// already been drained by <c>GetAll</c> (the server closes the cursor when the last page is read,
+        /// so no redundant resource-close request is sent).
+        /// </summary>
+        [Test]
+        public async Task TestDisposeAsyncAfterGetAllIsNoOp()
+        {
+            var cache = GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+            var qry = new ScanQuery<int, Person>();
+
+            var cursor = clientCache.Query(qry);
+
+            // GetAll drains all pages; the server-side cursor is closed automatically on the last page.
+            Assert.AreEqual(cache.GetSize(), cursor.GetAll().Count);
+
+            // DisposeAsync must not send a resource-close for the already-closed cursor (would throw otherwise).
+            await cursor.DisposeAsync();
+
+            // The slot was never leaked: all cursors can still be opened.
+            await using (clientCache.Query(qry))
+            await using (clientCache.Query(qry))
+            await using (clientCache.Query(qry))
+            {
+                Assert.Throws<IgniteClientException>(() => clientCache.Query(qry));
+            }
+        }
+
+        /// <summary>
+        /// Tests that async and synchronous disposal can be mixed in any order on the same cursor:
+        /// the server-side cursor is closed exactly once and the slot is freed.
+        /// </summary>
+        [Test]
+        public async Task TestDisposeAsyncAndDisposeAreInterchangeable()
+        {
+            GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+            var qry = new ScanQuery<int, Person>();
+
+            // DisposeAsync first, then synchronous Dispose is a no-op.
+            var cursor = clientCache.Query(qry);
+            await cursor.DisposeAsync();
+            cursor.Dispose();
+
+            // Synchronous Dispose first, then DisposeAsync is a no-op.
+            cursor = clientCache.Query(qry);
+            cursor.Dispose();
+            await cursor.DisposeAsync();
+
+            // Both cursors were closed: the connection is back to zero open cursors.
+            var c1 = clientCache.Query(qry);
+            var c2 = clientCache.Query(qry);
+            var c3 = clientCache.Query(qry);
+            Assert.Throws<IgniteClientException>(() => clientCache.Query(qry));
+
+            c1.Dispose();
+            c2.Dispose();
+            c3.Dispose();
+        }
 #endif
 
         /// <summary>
