@@ -80,11 +80,6 @@ namespace Apache.Ignite.Core.Datastream
     /// </list>
     /// <para/>
     /// All members are thread-safe and may be used concurrently from multiple threads.
-    /// <para />
-    /// Closing and disposing: <see cref="IDisposable.Dispose"/> calls <see cref="Close"/><c>(false)</c>,
-    /// flushing any remaining data into the cache synchronously. To avoid blocking threads when exiting a
-    /// <c>using()</c> block, use <c>await using</c> (see <see cref="IAsyncDisposable.DisposeAsync"/>), which
-    /// flushes the remaining data asynchronously.
     /// </summary>
     public interface IDataStreamer<TK, TV> : IDisposable, IAsyncDisposable
         where TK : notnull

@@ -29,11 +29,6 @@ namespace Apache.Ignite.Core.Client.Datastream
     /// Note that streamer send data to remote nodes asynchronously, so cache updates can be reordered.
     /// <para />
     /// Instances of the implementing class are thread-safe: data can be added from multiple threads.
-    /// <para />
-    /// Closing and disposing: <see cref="IDisposable.Dispose"/> method calls <see cref="Close"/><c>(false)</c>.
-    /// This will flush any remaining data to the cache synchronously.
-    /// To avoid blocking threads when exiting <c>using()</c> block, use <c>await using</c>
-    /// (see <see cref="IAsyncDisposable.DisposeAsync"/>) or call <see cref="CloseAsync"/> explicitly.
     /// </summary>
     public interface IDataStreamerClient<TK, TV> : IDisposable, IAsyncDisposable
         where TK : notnull

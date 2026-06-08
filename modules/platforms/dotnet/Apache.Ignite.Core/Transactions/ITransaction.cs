@@ -88,10 +88,6 @@ namespace Apache.Ignite.Core.Transactions
     /// and distributed locking are not supported. Disabling transactions and locking allows to achieve much higher
     /// performance and throughput ratios. It is recommended that <c>CacheAtomicityMode.TRANSACTIONAL</c> mode
     /// is used whenever full <c>ACID</c>-compliant transactions are not needed.
-    /// <para />
-    /// Closing and disposing: <see cref="IDisposable.Dispose"/> rolls the transaction back synchronously
-    /// unless it has already been committed. To avoid blocking threads when exiting a <c>using()</c> block,
-    /// use <c>await using</c> (see <see cref="IAsyncDisposable.DisposeAsync"/>), which rolls back asynchronously.
     /// <example>
     ///     You can use cache transactions as follows:
     ///     <code>
