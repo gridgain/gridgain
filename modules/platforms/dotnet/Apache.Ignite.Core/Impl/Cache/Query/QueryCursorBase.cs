@@ -22,9 +22,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
     using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Diagnostics.CodeAnalysis;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
+    using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
     /// Abstract query cursor implementation.
@@ -304,6 +307,50 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
                 _disposed = true;
             }
+        }
+
+        /** <inheritdoc /> */
+        [SuppressMessage("Microsoft.Usage", "CA1816:CallGCSuppressFinalizeCorrectly",
+            Justification = "GC.SuppressFinalize is valid in DisposeAsync; the analyzer only recognizes Dispose.")]
+        public async ValueTask DisposeAsync()
+        {
+            Task task = null;
+
+            lock (_syncRoot)
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                // When _hasNext is false, cursor is already disposed by the server.
+                if (_hasNext)
+                {
+                    // Initiate the close under the lock; await its completion without blocking a thread.
+                    task = DisposeAsyncCore();
+                }
+
+                GC.SuppressFinalize(this);
+
+                _disposed = true;
+            }
+
+            if (task != null)
+            {
+                await task.ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Releases the server-side cursor and returns a task that completes when the resource is closed.
+        /// The default implementation has no asynchronous counterpart and falls back to the synchronous
+        /// <see cref="Dispose(bool)"/>.
+        /// </summary>
+        protected virtual Task DisposeAsyncCore()
+        {
+            Dispose(true);
+
+            return TaskRunner.CompletedTask;
         }
 
         /// <summary>

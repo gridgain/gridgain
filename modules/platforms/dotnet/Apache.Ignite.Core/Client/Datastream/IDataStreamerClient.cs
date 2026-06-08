@@ -30,11 +30,11 @@ namespace Apache.Ignite.Core.Client.Datastream
     /// <para />
     /// Instances of the implementing class are thread-safe: data can be added from multiple threads.
     /// <para />
-    /// Closing and disposing: <see cref="IDisposable.Dispose"/> method calls <see cref="Close"/><c>(false)</c>.
-    /// This will flush any remaining data to the cache synchronously.
-    /// To avoid blocking threads when exiting <c>using()</c> block, use <see cref="CloseAsync"/>.
+    /// Closing and disposing: <see cref="IDisposable.Dispose"/> method calls <see cref="Close"/><c>(false)</c>;
+    /// <see cref="IAsyncDisposable.DisposeAsync"/> calls <see cref="CloseAsync"/><c>(false)</c>.
+    /// This will flush any remaining data to the cache.
     /// </summary>
-    public interface IDataStreamerClient<TK, TV> : IDisposable
+    public interface IDataStreamerClient<TK, TV> : IDisposable, IAsyncDisposable
         where TK : notnull
     {
         /// <summary>

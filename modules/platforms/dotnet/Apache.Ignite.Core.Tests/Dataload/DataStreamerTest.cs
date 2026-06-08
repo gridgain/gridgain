@@ -914,6 +914,46 @@ namespace Apache.Ignite.Core.Tests.Dataload
                 await ldr.FlushAsync();
             }
         }
+
+        /// <summary>
+        /// Tests that exiting an <c>await using</c> block disposes the streamer asynchronously and
+        /// flushes buffered data into the cache.
+        /// </summary>
+        [Test]
+        public async Task TestStreamerAwaitUsing()
+        {
+            await using (var ldr = _grid.GetDataStreamer<int, int>(CacheName))
+            {
+                ldr.AllowOverwrite = true;
+
+                ldr.Add(Enumerable.Range(1, 100).ToDictionary(x => x, x => -x));
+            }
+
+            Assert.AreEqual(-1, await _cache.GetAsync(1));
+            Assert.AreEqual(-100, await _cache.GetAsync(100));
+        }
+
+        /// <summary>
+        /// Tests that <see cref="IDataStreamer{TK,TV}.DisposeAsync"/> flushes buffered data, completes the
+        /// streamer task, and can be called multiple times.
+        /// </summary>
+        [Test]
+        public async Task TestDisposeAsyncFlushesDataAndCompletesTask()
+        {
+            var ldr = _grid.GetDataStreamer<int, int>(CacheName);
+            ldr.AllowOverwrite = true;
+            ldr.Add(1, -1);
+
+            Assert.IsFalse(ldr.Task.IsCompleted);
+
+            await ldr.DisposeAsync();
+
+            Assert.IsTrue(ldr.Task.IsCompleted);
+            Assert.AreEqual(-1, await _cache.GetAsync(1));
+
+            // DisposeAsync is idempotent.
+            await ldr.DisposeAsync();
+        }
 #endif
 
         /// <summary>

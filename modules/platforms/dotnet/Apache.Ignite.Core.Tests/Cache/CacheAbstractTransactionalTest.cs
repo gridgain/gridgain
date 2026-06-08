@@ -286,6 +286,83 @@ namespace Apache.Ignite.Core.Tests.Cache
             Assert.IsNull(Transactions.Tx);
         }
 
+#if NETCOREAPP
+        /// <summary>
+        /// Tests that disposing a transaction asynchronously with <c>await using</c> (without an explicit commit)
+        /// rolls back the changes.
+        /// </summary>
+        [Test]
+        public async Task TestTxDisposeAsyncRollsBack()
+        {
+            var cache = Cache();
+
+            await cache.PutAsync(1, 1);
+            await cache.PutAsync(2, 2);
+
+            Assert.IsNull(Transactions.Tx);
+
+            await using (Transactions.TxStart())
+            {
+                await cache.PutAsync(1, 10);
+                await cache.PutAsync(2, 20);
+            }
+
+            Assert.AreEqual(1, await cache.GetAsync(1));
+            Assert.AreEqual(2, await cache.GetAsync(2));
+
+            Assert.IsNull(Transactions.Tx);
+        }
+
+        /// <summary>
+        /// Tests that committing a transaction before async disposal with <c>await using</c> preserves the changes.
+        /// </summary>
+        [Test]
+        public async Task TestTxCommitThenDisposeAsync()
+        {
+            var cache = Cache();
+
+            await cache.PutAsync(1, 1);
+            await cache.PutAsync(2, 2);
+
+            await using (var tx = Transactions.TxStart())
+            {
+                await cache.PutAsync(1, 10);
+                await cache.PutAsync(2, 20);
+
+                await tx.CommitAsync();
+            }
+
+            Assert.AreEqual(10, await cache.GetAsync(1));
+            Assert.AreEqual(20, await cache.GetAsync(2));
+
+            Assert.IsNull(Transactions.Tx);
+        }
+
+        /// <summary>
+        /// Tests that <see cref="IAsyncDisposable.DisposeAsync"/> rolls the transaction back and is idempotent
+        /// (a second async or synchronous dispose is a no-op).
+        /// </summary>
+        [Test]
+        public async Task TestTxDisposeAsyncIsIdempotent()
+        {
+            var cache = Cache();
+
+            await cache.PutAsync(1, 1);
+
+            var tx = Transactions.TxStart();
+            await cache.PutAsync(1, 10);
+
+            await tx.DisposeAsync();
+
+            // Idempotent: repeated async dispose and synchronous dispose are no-ops.
+            await tx.DisposeAsync();
+            tx.Dispose();
+
+            Assert.AreEqual(1, await cache.GetAsync(1));
+            Assert.IsNull(Transactions.Tx);
+        }
+#endif
+
         /// <summary>
         /// Tests all concurrency and isolation modes with and without timeout.
         /// </summary>

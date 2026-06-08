@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
     using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Impl.Cache.Platform;
@@ -91,6 +92,15 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         {
             ReleaseUnmanagedResources();
             GC.SuppressFinalize(this);
+        }
+
+        /** <inheritdoc /> */
+        public ValueTask DisposeAsync()
+        {
+            // Platform cache iteration is local: there is no asynchronous counterpart, so dispose synchronously.
+            Dispose();
+
+            return default;
         }
 
         /// <summary>
