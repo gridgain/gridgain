@@ -141,7 +141,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             // Query is stopped: the notification listener is removed and further updates are not delivered.
             Assert.IsEmpty(Client.GetActiveNotificationListeners());
 
-            cache.Put(2, 2);
+            await cache.PutAsync(2, 2);
             Thread.Sleep(100);
             Assert.AreEqual(1, events.Count);
         }

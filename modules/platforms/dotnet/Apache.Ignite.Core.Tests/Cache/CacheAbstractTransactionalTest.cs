@@ -321,19 +321,19 @@ namespace Apache.Ignite.Core.Tests.Cache
         {
             var cache = Cache();
 
-            cache.Put(1, 1);
-            cache.Put(2, 2);
+            await cache.PutAsync(1, 1);
+            await cache.PutAsync(2, 2);
 
             await using (var tx = Transactions.TxStart())
             {
-                cache.Put(1, 10);
-                cache.Put(2, 20);
+                await cache.PutAsync(1, 10);
+                await cache.PutAsync(2, 20);
 
-                tx.Commit();
+                await tx.CommitAsync();
             }
 
-            Assert.AreEqual(10, cache.Get(1));
-            Assert.AreEqual(20, cache.Get(2));
+            Assert.AreEqual(10, await cache.GetAsync(1));
+            Assert.AreEqual(20, await cache.GetAsync(2));
 
             Assert.IsNull(Transactions.Tx);
         }
@@ -347,10 +347,10 @@ namespace Apache.Ignite.Core.Tests.Cache
         {
             var cache = Cache();
 
-            cache.Put(1, 1);
+            await cache.PutAsync(1, 1);
 
             var tx = Transactions.TxStart();
-            cache.Put(1, 10);
+            await cache.PutAsync(1, 10);
 
             await tx.DisposeAsync();
 
@@ -358,7 +358,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             await tx.DisposeAsync();
             tx.Dispose();
 
-            Assert.AreEqual(1, cache.Get(1));
+            Assert.AreEqual(1, await cache.GetAsync(1));
             Assert.IsNull(Transactions.Tx);
         }
 #endif

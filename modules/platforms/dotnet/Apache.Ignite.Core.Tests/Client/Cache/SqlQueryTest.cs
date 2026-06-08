@@ -318,7 +318,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             var cursor = cache.Query(qry);
 
             // Read a single row, leaving the server-side cursor open (more pages remain).
-            var enumerator = cursor.GetEnumerator();
+            using var enumerator = cursor.GetEnumerator();
             Assert.IsTrue(enumerator.MoveNext());
 
             // DisposeAsync closes the still-open server cursor without blocking; repeated dispose is a no-op.
