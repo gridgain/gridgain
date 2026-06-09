@@ -25,11 +25,11 @@ namespace Apache.Ignite.Core.Cache.Query
     /// all entries using <see cref="IQueryCursor{T}.GetAll()"/> method.
     /// <para />
     /// Note that you get enumerator or call <c>GetAll()</c> method only once during
-    /// cursor lifetime. Any further attempts to get enumerator or all entries will result 
+    /// cursor lifetime. Any further attempts to get enumerator or all entries will result
     /// in exception.
     /// </summary>
     [SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
-    public interface IQueryCursor<T> : IEnumerable<T>, IDisposable
+    public interface IQueryCursor<T> : IEnumerable<T>, IDisposable, IAsyncDisposable
     {
         /// <summary>
         /// Gets all query results. Use this method when you know in advance that query 

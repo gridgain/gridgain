@@ -119,6 +119,63 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             }
         }
 
+#if NETCOREAPP
+        /// <summary>
+        /// Tests that exiting an <c>await using</c> block disposes the continuous query handle asynchronously
+        /// and stops the query: no events are delivered after disposal.
+        /// </summary>
+        [Test]
+        public async Task TestAwaitUsingStopsContinuousQuery()
+        {
+            var cache = Client.GetOrCreateCache<int, int>(TestUtils.TestName);
+
+            var events = new ConcurrentQueue<ICacheEntryEvent<int, int>>();
+            var qry = new ContinuousQueryClient<int, int>(new DelegateListener<int, int>(events.Enqueue));
+
+            await using (cache.QueryContinuous(qry))
+            {
+                await cache.PutAsync(1, 1);
+                TestUtils.WaitForTrueCondition(() => events.Count == 1);
+            }
+
+            // Query is stopped: the notification listener is removed and further updates are not delivered.
+            Assert.IsEmpty(Client.GetActiveNotificationListeners());
+
+            await cache.PutAsync(2, 2);
+            Thread.Sleep(100);
+            Assert.AreEqual(1, events.Count);
+        }
+
+        /// <summary>
+        /// Tests that <see cref="IContinuousQueryHandleClient.DisposeAsync"/> stops the query and is idempotent
+        /// (a second async or synchronous dispose is a no-op).
+        /// </summary>
+        [Test]
+        public async Task TestDisposeAsyncStopsContinuousQueryAndIsIdempotent()
+        {
+            var cache = Client.GetOrCreateCache<int, int>(TestUtils.TestName);
+
+            var events = new ConcurrentQueue<ICacheEntryEvent<int, int>>();
+            var qry = new ContinuousQueryClient<int, int>(new DelegateListener<int, int>(events.Enqueue));
+
+            var handle = cache.QueryContinuous(qry);
+            await cache.PutAsync(1, 1);
+            TestUtils.WaitForTrueCondition(() => events.Count == 1);
+
+            await handle.DisposeAsync();
+
+            // Idempotent: repeated async dispose and synchronous dispose are no-ops.
+            await handle.DisposeAsync();
+            handle.Dispose();
+
+            Assert.IsEmpty(Client.GetActiveNotificationListeners());
+
+            await cache.PutAsync(2, 2);
+            Thread.Sleep(100);
+            Assert.AreEqual(1, events.Count);
+        }
+#endif
+
         /// <summary>
         /// Tests that the async continuous query API registers the listener and delivers events.
         /// </summary>
