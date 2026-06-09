@@ -38,6 +38,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.NotWritablePropertyException;
 import org.springframework.beans.PropertyValue;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -245,6 +246,8 @@ public class IgniteSpringHelperImpl implements IgniteSpringHelper {
             springCtx.refresh();
         }
         catch (BeansException e) {
+            checkUnknownProperty(e);
+
             if (X.hasCause(e, ClassNotFoundException.class))
                 throw new IgniteCheckedException("Failed to instantiate Spring XML application context " +
                     "(make sure all classes used in Spring configuration are present at CLASSPATH) ", e);
@@ -272,6 +275,8 @@ public class IgniteSpringHelperImpl implements IgniteSpringHelper {
             springCtx.refresh();
         }
         catch (BeansException e) {
+            checkUnknownProperty(e);
+
             if (X.hasCause(e, ClassNotFoundException.class))
                 throw new IgniteCheckedException("Failed to instantiate Spring XML application context " +
                     "(make sure all classes used in Spring configuration are present at CLASSPATH) " +
@@ -382,6 +387,8 @@ public class IgniteSpringHelperImpl implements IgniteSpringHelper {
             return springCtx;
         }
         catch (BeansException e) {
+            checkUnknownProperty(e);
+
             if (X.hasCause(e, ClassNotFoundException.class))
                 throw new IgniteCheckedException("Failed to instantiate Spring XML application context " +
                     "(make sure all classes used in Spring configuration are present at CLASSPATH) " +
@@ -419,6 +426,8 @@ public class IgniteSpringHelperImpl implements IgniteSpringHelper {
             return springCtx;
         }
         catch (BeansException e) {
+            checkUnknownProperty(e);
+
             if (X.hasCause(e, ClassNotFoundException.class))
                 throw new IgniteCheckedException("Failed to instantiate Spring XML application context " +
                     "(make sure all classes used in Spring configuration are present at CLASSPATH) ", e);
@@ -426,6 +435,22 @@ public class IgniteSpringHelperImpl implements IgniteSpringHelper {
                 throw new IgniteCheckedException("Failed to instantiate Spring XML application context [err=" +
                     e.getMessage() + ']', e);
         }
+    }
+
+    /**
+     * Checks whether the given Spring exception was caused by an attempt to set a configuration property
+     * that does not exist on the target bean (typically an Ignite-only property left in the config of a
+     * user migrating to GridGain) and, if so, rethrows it with a user-friendly message.
+     *
+     * @param e Spring exception to inspect.
+     * @throws IgniteCheckedException If {@code e} was caused by an unknown configuration property.
+     */
+    private static void checkUnknownProperty(BeansException e) throws IgniteCheckedException {
+        NotWritablePropertyException pe = X.cause(e, NotWritablePropertyException.class);
+
+        if (pe != null && pe.getBeanClass() != null)
+            throw new IgniteCheckedException("No such configuration property '" + pe.getPropertyName() +
+                "' on '" + pe.getBeanClass().getSimpleName() + "'", e);
     }
 
     /**
