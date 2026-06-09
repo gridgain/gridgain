@@ -17,7 +17,6 @@
 package org.apache.ignite.internal;
 
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -39,14 +38,6 @@ public class UnsupportedSystemPropertyWarningTest extends GridCommonAbstractTest
             cfg.setGridLogger(testLog);
 
         return cfg;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        super.beforeTest();
-
-        // Messages are throttled by content; reset state so warnings are not suppressed across tests.
-        LT.clear();
     }
 
     /** {@inheritDoc} */
