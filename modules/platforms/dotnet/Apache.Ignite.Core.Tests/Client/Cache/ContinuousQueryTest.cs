@@ -177,6 +177,29 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 #endif
 
         /// <summary>
+        /// Tests that the async continuous query API registers the listener and delivers events.
+        /// </summary>
+        [Test]
+        public async Task TestQueryContinuousAsync()
+        {
+            var cache = Client.GetOrCreateCache<int, int>(TestUtils.TestName);
+
+            var events = new List<ICacheEntryEvent<int, int>>();
+            var qry = new ContinuousQueryClient<int, int>(new DelegateListener<int, int>(events.Add));
+
+            using (await cache.QueryContinuousAsync(qry))
+            {
+                await cache.PutAsync(1, 1);
+                TestUtils.WaitForTrueCondition(() => events.Count == 1);
+
+                var evt = events.Single();
+                Assert.AreEqual(CacheEntryEventType.Created, evt.EventType);
+                Assert.AreEqual(1, evt.Key);
+                Assert.AreEqual(1, evt.Value);
+            }
+        }
+
+        /// <summary>
         /// Tests that default query settings have correct values.
         /// </summary>
         [Test]

@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Client.Cluster
 {
     using System;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Cluster;
@@ -98,6 +99,26 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
 
             Assert.IsFalse(clientCluster.IsActive());
             Assert.IsFalse(GetCluster().IsActive());
+        }
+
+        /// <summary>
+        /// Test cluster activation and WAL state change via async APIs.
+        /// </summary>
+        [Test]
+        public async Task TestAsyncClusterAndWalOperations()
+        {
+            var clientCluster = GetClientCluster();
+
+            await clientCluster.SetActiveAsync(true);
+            Assert.IsTrue(await clientCluster.IsActiveAsync());
+            Assert.IsTrue(GetCluster().IsActive());
+
+            await clientCluster.DisableWalAsync(PersistentCache);
+            Assert.IsFalse(await clientCluster.IsWalEnabledAsync(PersistentCache));
+
+            Assert.IsTrue(await clientCluster.EnableWalAsync(PersistentCache));
+            Assert.IsTrue(await clientCluster.IsWalEnabledAsync(PersistentCache));
+            Assert.IsTrue(GetCluster().IsWalEnabled(PersistentCache));
         }
 
         /// <summary>

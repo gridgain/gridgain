@@ -262,6 +262,18 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         }
 
         /** <inheritDoc /> */
+        public Task<IQueryCursor<ICacheEntry<TK, TV>>> QueryAsync(ScanQuery<TK, TV> scanQuery)
+        {
+            IgniteArgumentCheck.NotNull(scanQuery, "scanQuery");
+
+            // Filter is a binary object for all platforms.
+            // For .NET it is a CacheEntryFilterHolder with a predefined id (BinaryTypeId.CacheEntryPredicateHolder).
+            return DoOutInOpAsync(ClientOp.QueryScan, w => WriteScanQuery(w.Writer, scanQuery),
+                ctx => (IQueryCursor<ICacheEntry<TK, TV>>) new ClientQueryCursor<TK, TV>(
+                    ctx.Socket, ctx.Stream.ReadLong(), _keepBinary, ctx.Stream, ClientOp.QueryScanCursorGetPage));
+        }
+
+        /** <inheritDoc /> */
         [Obsolete]
         public IQueryCursor<ICacheEntry<TK, TV>> Query(SqlQuery sqlQuery)
         {
@@ -283,6 +295,17 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             return DoOutInOp(ClientOp.QuerySqlFields,
                 ctx => WriteSqlFieldsQuery(ctx, sqlFieldsQuery),
                 ctx => GetFieldsCursor(ctx));
+        }
+
+        /** <inheritDoc /> */
+        public Task<IFieldsQueryCursor> QueryAsync(SqlFieldsQuery sqlFieldsQuery)
+        {
+            IgniteArgumentCheck.NotNull(sqlFieldsQuery, "sqlFieldsQuery");
+            IgniteArgumentCheck.NotNull(sqlFieldsQuery.Sql, "sqlFieldsQuery.Sql");
+
+            return DoOutInOpAsync(ClientOp.QuerySqlFields,
+                ctx => WriteSqlFieldsQuery(ctx, sqlFieldsQuery),
+                ctx => (IFieldsQueryCursor) GetFieldsCursor(ctx));
         }
 
         /** <inheritDoc /> */
@@ -597,6 +620,13 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         }
 
         /** <inheritDoc /> */
+        public Task<CacheClientConfiguration> GetConfigurationAsync()
+        {
+            return DoOutInOpAsync(ClientOp.CacheGetConfiguration, null,
+                ctx => new CacheClientConfiguration(ctx.Stream, ctx.Features));
+        }
+
+        /** <inheritDoc /> */
         CacheConfiguration ICacheInternal.GetConfiguration()
         {
             return GetConfiguration().ToCacheConfiguration();
@@ -642,6 +672,15 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(continuousQuery.Listener, "continuousQuery.Listener");
 
             return QueryContinuousInternal(continuousQuery);
+        }
+
+        /** <inheritDoc /> */
+        public Task<IContinuousQueryHandleClient> QueryContinuousAsync(ContinuousQueryClient<TK, TV> continuousQuery)
+        {
+            IgniteArgumentCheck.NotNull(continuousQuery, "continuousQuery");
+            IgniteArgumentCheck.NotNull(continuousQuery.Listener, "continuousQuery.Listener");
+
+            return QueryContinuousInternalAsync(continuousQuery);
         }
 
         /** <inheritDoc /> */
@@ -1070,17 +1109,37 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             return DoOutInOp(
                 ClientOp.QueryContinuous,
                 ctx => WriteContinuousQuery(ctx, continuousQuery),
-                ctx =>
-                {
-                    var queryId = ctx.Stream.ReadLong();
+                ctx => ReadContinuousQueryHandle(ctx, listener));
+        }
 
-                    var qryHandle = new ClientContinuousQueryHandle(ctx.Socket, queryId);
+        /// <summary>
+        /// Starts the continuous query asynchronously.
+        /// </summary>
+        private Task<IContinuousQueryHandleClient> QueryContinuousInternalAsync(
+            ContinuousQueryClient<TK, TV> continuousQuery)
+        {
+            var listener = continuousQuery.Listener;
 
-                    ctx.Socket.AddNotificationHandler(queryId,
-                        (stream, err) => HandleContinuousQueryEvents(stream, err, listener, qryHandle));
+            return DoOutInOpAsync(
+                ClientOp.QueryContinuous,
+                ctx => WriteContinuousQuery(ctx, continuousQuery),
+                ctx => (IContinuousQueryHandleClient) ReadContinuousQueryHandle(ctx, listener));
+        }
 
-                    return qryHandle;
-                });
+        /// <summary>
+        /// Reads the continuous query handle from the response and registers the notification handler.
+        /// </summary>
+        private ClientContinuousQueryHandle ReadContinuousQueryHandle(
+            ClientResponseContext ctx, ICacheEntryEventListener<TK, TV>? listener)
+        {
+            var queryId = ctx.Stream.ReadLong();
+
+            var qryHandle = new ClientContinuousQueryHandle(ctx.Socket, queryId);
+
+            ctx.Socket.AddNotificationHandler(queryId,
+                (stream, err) => HandleContinuousQueryEvents(stream, err, listener, qryHandle));
+
+            return qryHandle;
         }
 
         /// <summary>

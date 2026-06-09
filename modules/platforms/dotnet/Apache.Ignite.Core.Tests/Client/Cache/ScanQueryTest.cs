@@ -20,9 +20,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
-#if NETCOREAPP
     using System.Threading.Tasks;
-#endif
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Query;
@@ -106,6 +104,26 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 query.Local = true;
                 var localRes = clientCache.Query(query).ToList();
                 Assert.Less(localRes.Count, cache.GetSize());
+            }
+        }
+
+        /// <summary>
+        /// Tests async scan query returns the same results as the sync one.
+        /// </summary>
+        [Test]
+        public async Task TestQueryAsync()
+        {
+            var cache = GetPersonCache();
+
+            using (var client = GetClient())
+            {
+                var clientCache = client.GetCache<int, Person>(CacheName);
+
+                var cursor = await clientCache.QueryAsync(new ScanQuery<int, Person>());
+
+                Assert.AreEqual(
+                    cache.Select(x => x.Value.Name).OrderBy(x => x).ToArray(),
+                    cursor.GetAll().Select(x => x.Value.Name).OrderBy(x => x).ToArray());
             }
         }
 
