@@ -42,13 +42,13 @@
         </file>
 
         <file>
-            <source>examples-ml/pom-standalone.xml</source>
+            <source>${gg8.examples.dir}/examples-ml/pom.xml</source>
             <outputDirectory>/examples-ml</outputDirectory>
             <destName>pom.xml</destName>
         </file>
 
         <file>
-            <source>examples-ml/README.txt</source>
+            <source>${gg8.examples.dir}/examples-ml/README.txt</source>
             <outputDirectory>/examples-ml</outputDirectory>
             <destName>README.txt</destName>
         </file>
@@ -64,7 +64,7 @@
         </fileSet>
 
         <fileSet>
-            <directory>examples-ml</directory>
+            <directory>${gg8.examples.dir}/examples-ml</directory>
             <outputDirectory>/examples-ml</outputDirectory>
             <includes>
                 <include>config/**</include>
