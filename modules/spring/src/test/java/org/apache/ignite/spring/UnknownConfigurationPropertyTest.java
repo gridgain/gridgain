@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2026 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package org.apache.ignite.spring;
 
 import java.net.URL;
-import java.util.concurrent.Callable;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.util.spring.IgniteSpringHelper;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -36,16 +35,14 @@ public class UnknownConfigurationPropertyTest extends GridCommonAbstractTest {
     private final URL cfgLocation = U.resolveIgniteUrl(
         "modules/spring/src/test/java/org/apache/ignite/spring/unknown-property.xml");
 
-    /** Loading a config with an unknown property must fail with a clear "No such configuration property" message. */
+    /** Loading a config with an unknown property must fail with a clear "Configuration property ... does not exist" message. */
     @Test
     public void testUnknownPropertyReported() throws Exception {
-        final IgniteSpringHelper spring = SPRING.create(false);
+        IgniteSpringHelper spring = SPRING.create(false);
 
-        GridTestUtils.assertThrows(log, new Callable<Object>() {
-            @Override public Object call() throws Exception {
-                return spring.loadConfigurations(cfgLocation).get1();
-            }
-        }, IgniteCheckedException.class,
-            "No such configuration property 'txAwareQueriesEnabled' on 'TransactionConfiguration'");
+        GridTestUtils.assertThrows(log,
+            () -> spring.loadConfigurations(cfgLocation).get1(),
+            IgniteCheckedException.class,
+            "Configuration property TransactionConfiguration.txAwareQueriesEnabled does not exist");
     }
 }
