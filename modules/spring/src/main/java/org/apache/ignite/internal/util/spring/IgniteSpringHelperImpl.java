@@ -427,12 +427,13 @@ public class IgniteSpringHelperImpl implements IgniteSpringHelper {
                 pe.getBeanClass().getSimpleName(), pe.getPropertyName()), e);
 
         if (X.hasCause(e, ClassNotFoundException.class))
-            return new IgniteCheckedException("Failed to instantiate Spring XML application context " +
-                "(make sure all classes used in Spring configuration are present at CLASSPATH)" +
-                (srcDesc != null ? " [" + srcDesc + ']' : ""), e);
+            return new IgniteCheckedException(String.format("Failed to instantiate Spring XML application context " +
+                "(make sure all classes used in Spring configuration are present in CLASSPATH)%s",
+                srcDesc != null ? " [" + srcDesc + ']' : ""), e);
 
-        return new IgniteCheckedException("Failed to instantiate Spring XML application context [" +
-            (srcDesc != null ? srcDesc + ", " : "") + "err=" + e.getMessage() + ']', e);
+        return new IgniteCheckedException(String.format(
+            "Failed to instantiate Spring XML application context [%serr=%s]",
+            srcDesc != null ? srcDesc + ", " : "", e.getMessage()), e);
     }
 
     /**
