@@ -1010,6 +1010,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         ackRebalanceConfiguration();
         ackIPv4StackFlagIsSet();
         ackWaitForBackupsOnShutdownPropertyIsUsed();
+        UnsupportedSystemProperty.warnForConfigured(log);
 
         // Ack 3-rd party licenses location.
         if (log.isInfoEnabled() && cfg.getIgniteHome() != null)
