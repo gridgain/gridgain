@@ -343,12 +343,7 @@ public class BinaryEnumObjectImpl implements BinaryObjectEx, Externalizable, Cac
 
     /** {@inheritDoc} */
     @Override public byte[] valueBytes(CacheObjectValueContext cacheCtx) throws IgniteCheckedException {
-        if (valBytes != null)
-            return valBytes;
-
-        valBytes = U.marshal(ctx.marshaller(), this);
-
-        return valBytes;
+        return valueBytes();
     }
 
     /** {@inheritDoc} */
@@ -485,5 +480,27 @@ public class BinaryEnumObjectImpl implements BinaryObjectEx, Externalizable, Cac
         }
 
         return reader.afterMessageRead(BinaryEnumObjectImpl.class);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int size() {
+        try {
+            return valueBytes().length;
+        }
+        catch (IgniteCheckedException e) {
+            throw new BinaryObjectException("Failed to marshal enum object to compute its size [typeId=" + typeId +
+                ", clsName='" + clsName + "', ordinal=" + ord + ']', e);
+        }
+    }
+
+    /**
+     * @return Marshalled representation of this object.
+     * @throws IgniteCheckedException If marshalling failed.
+     */
+    private byte[] valueBytes() throws IgniteCheckedException {
+        if (valBytes == null)
+            valBytes = U.marshal(ctx.marshaller(), this);
+
+        return valBytes;
     }
 }

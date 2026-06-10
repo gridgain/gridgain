@@ -1643,6 +1643,33 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Checks that {@code size()} of a non-detached binary object nested inside another object returns the
+     * nested object's own serialized length rather than the length of the enclosing array.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testSizeOfNestedObject() throws Exception {
+        BinaryMarshaller marsh = binaryMarshaller(Arrays.asList(
+            new BinaryTypeConfiguration(SimpleObject.class.getName())));
+
+        SimpleObject outerObj = simpleObject();
+
+        BinaryObjectImpl outer = marshal(outerObj, marsh);
+
+        BinaryObjectImpl inner = outer.field("inner");
+
+        assertFalse(inner.detached());
+
+        byte[] expBytes = marshal(outerObj.inner, marsh).array();
+
+        assertArrayEquals(expBytes,
+            Arrays.copyOfRange(outer.array(), inner.start(), inner.start() + expBytes.length));
+
+        assertEquals(expBytes.length, inner.size());
+    }
+
+    /**
      * @throws Exception If failed.
      */
     @Test
@@ -2750,6 +2777,8 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
                 obj.array().length);
 
             assertTrue(offheapObj.equals(offheapObj));
+            assertEquals(obj.array().length, obj.size());
+            assertEquals(obj.size(), offheapObj.size());
             assertFalse(offheapObj.equals(null));
             assertFalse(offheapObj.equals("str"));
             assertTrue(offheapObj.equals(obj));
