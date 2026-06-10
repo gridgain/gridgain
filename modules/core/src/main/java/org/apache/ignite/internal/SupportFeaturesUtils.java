@@ -41,6 +41,11 @@ public class SupportFeaturesUtils {
     public static final String IGNITE_BASELINE_AUTO_ADJUST_FEATURE = "IGNITE_BASELINE_AUTO_ADJUST_FEATURE";
 
     /**
+     * Flag to enable separate baseline auto-adjust feature.
+     */
+    public static final String IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE";
+
+    /**
      * Disables Cluster ID and Tag feature. Default value is <code>true</code>.
      */
     public static final String IGNITE_CLUSTER_ID_AND_TAG_FEATURE = "IGNITE_CLUSTER_ID_AND_TAG_FEATURE";

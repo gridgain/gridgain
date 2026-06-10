@@ -23,6 +23,7 @@ import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.jetbrains.annotations.Nullable;
@@ -112,6 +113,16 @@ public class DetachedClusterNode implements ClusterNode {
     /** {@inheritDoc} */
     @Override public boolean isClient() {
         return false;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return uuid.hashCode();
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        return F.eqNodes(this, o);
     }
 
     /** {@inheritDoc} */

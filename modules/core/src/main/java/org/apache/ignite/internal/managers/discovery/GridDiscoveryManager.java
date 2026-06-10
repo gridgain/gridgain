@@ -727,7 +727,8 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                             notification.getTopSnapshot(),
                             discoCache,
                             topVer,
-                            minorTopVer
+                            minorTopVer,
+                            type == EVT_NODE_JOINED
                         );
 
                         if (discoCacheRecalculationRequired) {
