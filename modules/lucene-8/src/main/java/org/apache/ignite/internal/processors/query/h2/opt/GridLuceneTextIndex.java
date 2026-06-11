@@ -147,7 +147,7 @@ public class GridLuceneTextIndex implements LuceneIndex {
     }
 
     /** {@inheritDoc} */
-    @Override public void store(CacheObject k, CacheObject v, GridCacheVersion ver, long expires)
+    @Override public void store(CacheObject k, CacheObject v, GridCacheVersion ver, long expires, long link)
         throws IgniteCheckedException {
         CacheObjectContext coctx = objectContext();
 
@@ -276,7 +276,8 @@ public class GridLuceneTextIndex implements LuceneIndex {
 
     /** {@inheritDoc} */
     @Override public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> vectorQuery(String field,
-        float[] qryVector, int k, float threshold, IndexingQueryFilter filters) throws IgniteCheckedException {
+        float[] qryVector, int k, float threshold, int efSearch, IndexingQueryFilter filters)
+        throws IgniteCheckedException {
         throw new IllegalStateException("To use vector query feature, enable gridgain-vector-query module" +
             " (requires Enterprise or Ultimate Edition)");
     }

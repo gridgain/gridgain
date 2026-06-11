@@ -97,6 +97,6 @@ public class LuceneIndexRebuildClosure implements SchemaIndexCacheVisitorClosure
         if (expireTime == 0L)
             expireTime = Long.MAX_VALUE;
 
-        luceneIndex0.store(row.key(), row.value(), row.version(), expireTime);
+        luceneIndex0.store(row.key(), row.value(), row.version(), expireTime, row.link());
     }
 }

@@ -50,10 +50,13 @@ public interface LuceneIndex extends AutoCloseable {
      * @param v Value.
      * @param ver Version.
      * @param expires Expiration time.
+     * @param link Data-row link of the entry ({@code 0} if not available) — lets the index
+     *     materialize results by a direct row read instead of duplicating key/value bytes.
      * @throws IgniteCheckedException If failed.
      */
     @SuppressWarnings("ConstantConditions")
-    public void store(CacheObject k, CacheObject v, GridCacheVersion ver, long expires) throws IgniteCheckedException;
+    public void store(CacheObject k, CacheObject v, GridCacheVersion ver, long expires, long link)
+        throws IgniteCheckedException;
 
     /**
      * Removes entry for given key from this index.
