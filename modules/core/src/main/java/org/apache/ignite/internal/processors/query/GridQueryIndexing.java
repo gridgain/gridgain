@@ -433,6 +433,16 @@ public interface GridQueryIndexing {
     public void onKernalStop();
 
     /**
+     * Invoked early in the graceful node-stop sequence, before cache stop and before
+     * the database manager blocks checkpoint-lock acquisition — the last point where
+     * indexes can write persistent state (e.g. a parting vector-graph snapshot) that
+     * the final checkpoint will flush.
+     */
+    public default void beforeNodeStop() {
+        // No-op.
+    }
+
+    /**
      * Gets database schema from cache name.
      *
      * @param cacheName Cache name. {@code null} would be converted to an empty string.

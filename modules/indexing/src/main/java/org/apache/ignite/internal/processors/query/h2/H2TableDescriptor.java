@@ -452,10 +452,24 @@ public class H2TableDescriptor {
 
     /**
      * Handle drop.
+     *
+     * @param destroy {@code True} when the cache is destroyed — the index drops its
+     *      persistent state; {@code false} on node stop / cache close — it survives.
      */
-    void onDrop() {
+    void onDrop(boolean destroy) {
         tbl.destroy();
 
-        U.closeQuiet(luceneIdx);
+        if (luceneIdx != null) {
+            if (destroy) {
+                try {
+                    luceneIdx.destroy();
+                }
+                catch (Exception e) {
+                    // Mirrors the quiet-close behavior of the stop path.
+                }
+            }
+            else
+                U.closeQuiet(luceneIdx);
+        }
     }
 }
