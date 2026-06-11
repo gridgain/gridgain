@@ -23,6 +23,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
+    using System.Threading;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Impl.Binary;
@@ -32,7 +33,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
     /// <summary>
     /// Abstract query cursor implementation.
     /// </summary>
-    internal abstract class QueryCursorBase<T> : IQueryCursor<T>, IEnumerator<T>
+    internal abstract class QueryCursorBase<T> : IQueryCursor<T>, IEnumerator<T>, IAsyncEnumerator<T>
     {
         /** Position before head. */
         private const int BatchPosBeforeHead = -1;
@@ -56,7 +57,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         private bool _iterCalled;
 
         /** Batch with entries. */
-        private T[] _batch;
+        private ValueTask<T[]>? _batch;
 
         /** Current position in batch. */
         private int _batchPos = BatchPosBeforeHead;
@@ -116,7 +117,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         #region Public IEnumerable methods
 
         /** <inheritdoc /> */
-        public IEnumerator<T> GetEnumerator()
+        public IEnumerator<T> GetEnumerator() => GetEnumeratorInternal();
+
+        private QueryCursorBase<T> GetEnumeratorInternal()
         {
             if (_getAllCalled)
             {
@@ -145,6 +148,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = new())
+        {
+            // TODO: Cancellation - how?
+            return GetEnumeratorInternal();
         }
 
         #endregion
@@ -203,6 +212,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             }
         }
 
+        public ValueTask<bool> MoveNextAsync()
+        {
+            throw new NotImplementedException();
+        }
+
         /** <inheritdoc /> */
         public void Reset()
         {
@@ -219,13 +233,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// <summary>
         /// Requests next batch.
         /// </summary>
-        private void RequestBatch()
+        private void RequestBatch(bool async)
         {
             lock (_syncRoot)
             {
                 ThrowIfDisposed();
 
-                _batch = _hasNext ? GetBatch() : null;
+                _batch = _hasNext
+                    ? async
+                        ? GetBatchAsync()
+                        : new ValueTask<T[]>(GetBatch())
+                    : null;
 
                 _batchPos = 0;
             }
@@ -235,6 +253,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// Gets the next batch.
         /// </summary>
         protected abstract T[] GetBatch();
+
+        /// <summary>
+        /// Gets the next batch.
+        /// </summary>
+        protected abstract ValueTask<T[]> GetBatchAsync();
 
         /// <summary>
         /// Converter for GET_ALL operation.
