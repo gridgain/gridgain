@@ -374,9 +374,9 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
                 return errorFuture("WAL mode cannot be changed for LOCAL cache(s): " + cacheNames);
 
             // WAL mode change makes sense only for persistent groups.
-            if (!grpDesc.persistenceEnabled())
-                return errorFuture("Cannot change WAL mode because persistence is not enabled for cache(s) [" +
-                    "caches=" + cacheNames + ", dataRegion=" + grpDesc.config().getDataRegionName() + ']');
+//            if (!grpDesc.persistenceEnabled())
+//                return errorFuture("Cannot change WAL mode because persistence is not enabled for cache(s) [" +
+//                    "caches=" + cacheNames + ", dataRegion=" + grpDesc.config().getDataRegionName() + ']');
 
             // Send request.
             final UUID opId = UUID.randomUUID();

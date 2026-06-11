@@ -15,7 +15,6 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence.baseline;
 
-import javax.cache.CacheException;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -31,6 +30,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -50,6 +50,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -59,7 +60,6 @@ import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.apache.ignite.transactions.TransactionRollbackException;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
@@ -107,6 +107,8 @@ public class ClientAffinityAssignmentWithBaselineTest extends GridCommonAbstract
     /** Flaky node storage path. */
     public static final String FLAKY_STORAGE_PATH = "flakystorage";
 
+    boolean additionalDataRegions;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -116,16 +118,25 @@ public class ClientAffinityAssignmentWithBaselineTest extends GridCommonAbstract
             cfg.setClientMode(true);
         }
         else {
-            cfg.setDataStorageConfiguration(
-                new DataStorageConfiguration()
-                    .setWalSegmentSize(4 * 1024 * 1024)
-                    .setWalMode(WALMode.LOG_ONLY)
-                    .setDefaultDataRegionConfiguration(
-                        new DataRegionConfiguration()
-                            .setPersistenceEnabled(true)
-                            .setMaxSize(200 * 1024 * 1024)
-                    )
-            );
+            DataStorageConfiguration storageCfg = new DataStorageConfiguration()
+                .setWalSegmentSize(4 * 1024 * 1024)
+                .setWalMode(WALMode.LOG_ONLY);
+
+            DataRegionConfiguration defaultDataReg = new DataRegionConfiguration()
+                .setPersistenceEnabled(true)
+                .setMaxSize(200 * 1024 * 1024);
+
+            if (additionalDataRegions) {
+                DataRegionConfiguration dataReg = new DataRegionConfiguration()
+                    .setName("test-region")
+                    .setPersistenceEnabled(true)
+                    .setMaxSize(200 * 1024 * 1024);
+
+                storageCfg.setDataRegionConfigurations(dataReg);
+            }
+
+            storageCfg.setDefaultDataRegionConfiguration(defaultDataReg);
+            cfg.setDataStorageConfiguration(storageCfg);
         }
 
         if (igniteInstanceName.contains(FLAKY_NODE_NAME)) {
@@ -542,11 +553,75 @@ public class ClientAffinityAssignmentWithBaselineTest extends GridCommonAbstract
             assertEquals("txtxtxtx" + (i % 10), dynamicCache.get(i % 10));
     }
 
+    @Test
+    public void testAAA() throws Exception {
+        additionalDataRegions = true;
+        IgniteEx ig0 = startGrid(0);
+
+        ig0.cluster().active(true);
+
+        IgniteEx client = (IgniteEx)startGrid("client");
+
+        CacheConfiguration<Integer, String> dynamicCacheCfg = new CacheConfiguration<Integer, String>()
+            .setName("dyn")
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
+            .setAffinity(new RendezvousAffinityFunction(false, 32))
+            .setBackups(2)
+            .setDataRegionName("test-region")
+            .setNodeFilter(new ConsistentIdNodeFilter((Serializable)ig0.localNode().consistentId()));
+
+        IgniteCache<Integer, String> dynamicCache = client.getOrCreateCache(dynamicCacheCfg);
+
+        for (int i = 0; i < 1; ++i) {
+            boolean r = grid(i).context().cache().context().database().walEnabled(CU.cacheGroupId("dyn", null), false);
+            log.warning(">>>>> grid=" + i + ", walEnabled=" + grid(i).cluster().isWalEnabled("dyn") + ", walEnabled2=" + r);
+        }
+        log.warning(">>>>> grid=" + "client" + ", walEnabled=" + grid("client").cluster().isWalEnabled("dyn"));
+
+        additionalDataRegions = true;
+
+        for (int i = 1; i < 3; i++)
+            startGrid(i);
+
+        log.warning(">>>>> resetting baseline topology...");
+        resetBaselineTopology();
+
+//        grid(1).cluster().enableWal("dyn");
+
+        for (int i = 0; i < ENTRIES; i++)
+            dynamicCache.put(i, "abacaba" + i);
+
+        for (int i = 0; i < 3; ++i) {
+            boolean r = grid(i).context().cache().context().database().walEnabled(CU.cacheGroupId("dyn", null), false);
+            log.warning(">>>>> grid=" + i + ", walEnabled=" + grid(i).cluster().isWalEnabled("dyn") + ", walEnabled2=" + r);
+        }
+        log.warning(">>>>> grid=" + "client" + ", walEnabled=" + grid("client").cluster().isWalEnabled("dyn"));
+
+        boolean walEnabled = grid("client").cluster().enableWal("dyn");
+        awaitPartitionMapExchange();
+        log.warning(">>>>> client change (enabling wal): " + walEnabled);
+        for (int i = 0; i < 3; ++i) {
+            boolean r = grid(i).context().cache().context().database().walEnabled(CU.cacheGroupId("dyn", null), false);
+            log.warning(">>>>> grid=" + i + ", walEnabled=" + grid(i).cluster().isWalEnabled("dyn") + ", walEnabled2=" + r);
+        }
+        log.warning(">>>>> grid=" + "client" + ", walEnabled=" + grid("client").cluster().isWalEnabled("dyn"));
+
+        log.warning(">>>>> disabling wal...");
+        walEnabled = grid("client").cluster().disableWal("dyn");
+        awaitPartitionMapExchange();
+        log.warning(">>>>> client change (disabling wal): " + walEnabled);
+        for (int i = 0; i < 3; ++i) {
+            boolean r = grid(i).context().cache().context().database().walEnabled(CU.cacheGroupId("dyn", null), false);
+            log.warning(">>>>> grid=" + i + ", walEnabled=" + grid(i).cluster().isWalEnabled("dyn") + ", walEnabled2=" + r);
+        }
+        log.warning(">>>>> grid=" + "client" + ", walEnabled=" + grid("client").cluster().isWalEnabled("dyn"));
+    }
+
     /**
      * Tests that if dynamic cache has no affinity nodes at the moment of start,
      * it will still work correctly when affinity nodes will appear.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-8652")
     @Test
     public void testDynamicCacheStartNoAffinityNodes() throws Exception {
         IgniteEx ig0 = startGrid(0);

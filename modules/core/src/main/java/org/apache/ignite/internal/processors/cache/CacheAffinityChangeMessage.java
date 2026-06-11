@@ -31,7 +31,7 @@ import org.apache.ignite.spi.discovery.DiscoverySpiMutableCustomMessageSupport;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * CacheAffinityChangeMessage represent a message that switches to a new affinity assignmentafter rebalance is finished.
+ * CacheAffinityChangeMessage represent a message that switches to a new affinity assignment after rebalance is finished.
  * This message should not be mutated  in any way outside the "disco-notifier-worker" thread.
  */
 public class CacheAffinityChangeMessage implements DiscoveryCustomMessage {
@@ -180,7 +180,7 @@ public class CacheAffinityChangeMessage implements DiscoveryCustomMessage {
 
     /**
      * Sets stop processing flag. If this flag is {@code true} then this message is not passed to other nodes after
-     * the coordinator node notitied its own listner. If method {@link #ackMessage()} returns non-null ack message,
+     * the coordinator node notified its own listener. If method {@link #ackMessage()} returns non-null ack message,
      * it is sent to all nodes.
      * This flag is used when discovery SPI does not support mutable custom messages.
      * See {@link DiscoverySpiMutableCustomMessageSupport}.

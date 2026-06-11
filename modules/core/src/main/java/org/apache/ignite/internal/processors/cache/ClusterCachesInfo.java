@@ -2402,10 +2402,13 @@ public class ClusterCachesInfo {
      * @param exchActions Optional exchange actions to update if new group was added.
      * @param startedCacheCfg Started cache configuration.
      */
-    private boolean resolvePersistentFlag(@Nullable ExchangeActions exchActions,
-        CacheConfiguration<?, ?> startedCacheCfg) {
+    private boolean resolvePersistentFlag(
+        @Nullable ExchangeActions exchActions,
+        CacheConfiguration<?, ?> startedCacheCfg
+    ) {
         if (!ctx.clientNode()) {
             // On server, we always can determine whether cache is persistent by local storage configuration.
+            // Non-affinity server nodes?
             return CU.isPersistentCache(startedCacheCfg, ctx.config().getDataStorageConfiguration());
         }
         else if (exchActions == null) {
@@ -2429,22 +2432,27 @@ public class ClusterCachesInfo {
                             DataStorageConfiguration crdDsCfg = ctx.marshallerContext().jdkMarshaller().unmarshal(
                                 (byte[])dsCfgBytes, U.resolveClassLoader(ctx.config()));
 
-                            return CU.isPersistentCache(startedCacheCfg, crdDsCfg);
+                            boolean res = CU.isPersistentCache(startedCacheCfg, crdDsCfg);
+                            U.warn(log, ">>>>> Found affinity server node with data storage configuration for starting cache " +
+                                "[cacheName=" + startedCacheCfg.getName() +
+                                ", calculated=" + res + ", changedTo=false" +
+                                ", aliveSrvNodes=" + aliveSrvNodes + ']');
+                            return false;
                         }
                         catch (IgniteCheckedException e) {
                             U.error(log, "Failed to unmarshal remote data storage configuration [remoteNode=" +
-                                srvNode + ", cacheName=" + startedCacheCfg.getName() + "]", e);
+                                srvNode + ", cacheName=" + startedCacheCfg.getName() + ']', e);
                         }
                     }
                     else {
                         U.error(log, "Remote marshalled data storage configuration is absent [remoteNode=" + srvNode +
-                            ", cacheName=" + startedCacheCfg.getName() + ", dsCfg=" + dsCfgBytes + "]");
+                            ", cacheName=" + startedCacheCfg.getName() + ", dsCfg=" + dsCfgBytes + ']');
                     }
                 }
             }
 
             U.error(log, "Failed to find affinity server node with data storage configuration for starting cache " +
-                "[cacheName=" + startedCacheCfg.getName() + ", aliveSrvNodes=" + aliveSrvNodes + "]");
+                "[cacheName=" + startedCacheCfg.getName() + ", aliveSrvNodes=" + aliveSrvNodes + ']');
 
             return false;
         }
