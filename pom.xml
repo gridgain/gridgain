@@ -141,6 +141,7 @@
             <id>all-java</id> <!-- used to update project versions and check all modules compilation -->
             <modules> <!-- sorted alphabetically -->
                 <!-- these modules moved to gg8-examples repo -->
+                <!-- packaging will work when gg8-examples is cloned next to this repo -->
                 <!--module>examples</module-->
                 <!--module>examples-ml</module-->
                 <module>modules/benchmarks</module>
