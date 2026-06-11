@@ -75,6 +75,13 @@ namespace Apache.Ignite.Core.Impl.Client.Cache.Query
         }
 
         /** <inheritdoc /> */
+        protected override async ValueTask<T[]> GetBatchAsync()
+        {
+            return await _socket.DoOutInOpAsync(_getPageOp, ctx => ctx.Stream.WriteLong(_cursorId),
+                ctx => ConvertGetBatch(ctx.Stream)).ConfigureAwait(false);
+        }
+
+        /** <inheritdoc /> */
         protected override void Dispose(bool disposing)
         {
             try
