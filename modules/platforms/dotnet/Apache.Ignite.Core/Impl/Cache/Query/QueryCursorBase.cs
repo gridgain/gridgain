@@ -86,7 +86,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
             if (initialBatchStream != null)
             {
-                _batch = ConvertGetBatch(initialBatchStream);
+                _batch = new ValueTask<T[]>(ConvertGetBatch(initialBatchStream));
             }
         }
 
@@ -175,7 +175,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                     if (_batch == null)
                         throw new InvalidOperationException("Previous call to MoveNext returned false.");
 
-                    return _batch[_batchPos];
+                    if (!_batch.Value.IsCompleted)
+                        throw new InvalidOperationException("Async cursor should not be used synchronously.");
+
+                    var batch = _batch.Value.Result;
+
+                    return batch[_batchPos];
                 }
             }
         }
@@ -197,15 +202,18 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 {
                     if (_batchPos == BatchPosBeforeHead)
                         // Standing before head, let's get batch and advance position.
-                        RequestBatch();
+                        RequestBatch(async: false);
                 }
                 else
                 {
+                    if (!_batch.Value.IsCompleted)
+                        throw new InvalidOperationException("Async cursor should not be used synchronously.");
+
                     _batchPos++;
 
-                    if (_batch.Length == _batchPos)
+                    if (_batch.Value.Result.Length == _batchPos)
                         // Reached batch end => request another.
-                        RequestBatch();
+                        RequestBatch(async: false);
                 }
 
                 return _batch != null;
