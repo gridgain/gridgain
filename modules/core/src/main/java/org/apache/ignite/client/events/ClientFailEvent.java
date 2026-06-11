@@ -19,7 +19,7 @@ package org.apache.ignite.client.events;
 import org.apache.ignite.configuration.ClientConfiguration;
 
 /**
- * Event, triggered when Ignite client is failed to start.
+ * Event that is fired when an Ignite client fails to start.
  */
 public class ClientFailEvent implements ClientLifecycleEvent {
     /** */
