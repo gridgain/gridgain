@@ -17,8 +17,7 @@
 package org.apache.ignite.client.events;
 
 /**
- * Marker interface for all client's lifecycle events.
+ * Marker interface for all client lifecycle events.
  */
 public interface ClientLifecycleEvent {
-    // No-op.
 }
