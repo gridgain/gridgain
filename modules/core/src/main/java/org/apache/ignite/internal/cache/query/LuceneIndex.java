@@ -78,10 +78,13 @@ public interface LuceneIndex extends AutoCloseable {
      * Runs lucene vector query over this index.
      *
      * @param qryVector Query as vector.
+     * @param k Number of nearest neighbours to return.
+     * @param threshold Minimum similarity score, or a negative value for no threshold.
+     * @param efSearch Search-time beam width, or {@code 0} for the engine default.
      * @param filters Filters over result.
      * @return Query result.
      * @throws IgniteCheckedException If failed.
      */
     public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> vectorQuery(String field, float[] qryVector,
-        int k, float threshold, IndexingQueryFilter filters) throws IgniteCheckedException;
+        int k, float threshold, int efSearch, IndexingQueryFilter filters) throws IgniteCheckedException;
 }
