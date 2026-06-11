@@ -20,10 +20,9 @@ import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.configuration.ClientConfiguration;
 
 /**
- * Event, triggered when Ignite client is started.
+ * Event that is fired when an Ignite client is started.
  */
 public class ClientStartEvent implements ClientLifecycleEvent {
-    /** */
     private final IgniteClient client;
 
     /** */

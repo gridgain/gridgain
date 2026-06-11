@@ -19,7 +19,7 @@ package org.apache.ignite.client.events;
 import org.apache.ignite.client.IgniteClient;
 
 /**
- * Event, triggered when Ignite client is stopped.
+ * Event that is fired when an Ignite client is stopped.
  */
 public class ClientStopEvent implements ClientLifecycleEvent {
     /** */

@@ -34,8 +34,7 @@ import org.junit.Test;
  */
 public class IgniteClientLifecycleEventListenerTest extends AbstractThinClientTest {
     /** */
-    List<ClientLifecycleEvent> evts = new ArrayList<>();
-
+    private final List<ClientLifecycleEvent> evts = new ArrayList<>();
     /** {@inheritDoc} */
     @Override protected ClientConfiguration getClientConfiguration() {
         return super.getClientConfiguration()
