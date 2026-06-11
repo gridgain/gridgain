@@ -162,10 +162,19 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             }
         }
 
-        public IAsyncEnumerator<ICacheEntry<TK, TV>> GetAsyncEnumerator(CancellationToken cancellationToken = new CancellationToken())
+        /** <inheritdoc /> */
+        public async IAsyncEnumerator<ICacheEntry<TK, TV>> GetAsyncEnumerator(
+            CancellationToken cancellationToken = default)
         {
-            // TODO
-            throw new NotImplementedException();
+            // Platform cache iteration is local, so iterate synchronously within an async iterator.
+            await Task.CompletedTask.ConfigureAwait(false);
+
+            foreach (var entry in GetEnumerable())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                yield return entry;
+            }
         }
 
         /// <summary>
