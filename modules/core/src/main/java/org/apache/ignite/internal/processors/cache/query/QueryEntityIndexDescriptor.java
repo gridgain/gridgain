@@ -53,6 +53,12 @@ public class QueryEntityIndexDescriptor implements GridQueryIndexDescriptor {
      */
     private SimilarityFunction similarityFunction;
 
+    /** HNSW max connections per node for VECTOR index ({@code 0} — engine default). */
+    private int m;
+
+    /** HNSW build-time beam width for VECTOR index ({@code 0} — engine default). */
+    private int efConstruction;
+
     /** Fields which should be indexed in descending order. */
     private Collection<String> descendings;
 
@@ -74,6 +80,29 @@ public class QueryEntityIndexDescriptor implements GridQueryIndexDescriptor {
     QueryEntityIndexDescriptor(QueryIndexType type, SimilarityFunction similarityFunction) {
         this(type, -1);
         this.similarityFunction = similarityFunction;
+    }
+
+    /**
+     * @param type               Type.
+     * @param similarityFunction Vector Similarity Function for VECTOR Indexes.
+     * @param m                  HNSW max connections per node ({@code 0} — engine default).
+     * @param efConstruction     HNSW build-time beam width ({@code 0} — engine default).
+     */
+    QueryEntityIndexDescriptor(QueryIndexType type, SimilarityFunction similarityFunction, int m, int efConstruction) {
+        this(type, similarityFunction);
+
+        this.m = m;
+        this.efConstruction = efConstruction;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int m() {
+        return m;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int efConstruction() {
+        return efConstruction;
     }
 
     /**

@@ -602,6 +602,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         float[] qryVector,
         int k,
         float threshold,
+        int efSearch,
         String typeName,
         IndexingQueryFilter filter
     ) throws IgniteCheckedException {
@@ -624,7 +625,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             Throwable failReason = null;
             try {
-                return tbl.luceneIndex().vectorQuery(field.toUpperCase(), qryVector, k, threshold, filter);
+                return tbl.luceneIndex().vectorQuery(field.toUpperCase(), qryVector, k, threshold, efSearch, filter);
             }
             catch (Throwable t) {
                 failReason = t;

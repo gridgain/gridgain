@@ -375,11 +375,14 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
      *
      * @param field Field name.
      * @param similarityFunction Vector Similarity Function for VECTOR index.
+     * @param m HNSW max connections per node ({@code 0} — engine default).
+     * @param efConstruction HNSW build-time beam width ({@code 0} — engine default).
      * @throws IgniteCheckedException If failed.
      */
-    public void addFieldToVectorIndex(String field, SimilarityFunction similarityFunction) throws IgniteCheckedException {
+    public void addFieldToVectorIndex(String field, SimilarityFunction similarityFunction, int m, int efConstruction)
+        throws IgniteCheckedException {
         if (vectorIdx == null)
-            vectorIdx = new QueryIndexDescriptorImpl(this, null, QueryIndexType.VECTOR, 0, similarityFunction);
+            vectorIdx = new QueryIndexDescriptorImpl(this, null, QueryIndexType.VECTOR, 0, similarityFunction, m, efConstruction);
 
         vectorIdx.addField(field, 0, false);
     }

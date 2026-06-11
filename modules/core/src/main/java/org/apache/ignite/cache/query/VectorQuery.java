@@ -79,6 +79,9 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
     /** threshold, the threshold for cosine similarity. */
     private float threshold = -1;
 
+    /** Search-time beam width (efSearch); {@code 0} — use the engine default. */
+    private int efSearch;
+
     /**
      * Constructs query for the given search vector.
      *
@@ -216,6 +219,28 @@ public final class VectorQuery<K, V> extends Query<Cache.Entry<K, V>> {
      */
     public float getThreshold() {
         return threshold;
+    }
+
+    /**
+     * Sets the search-time beam width (efSearch). Higher values improve recall at
+     * the cost of latency. Must be at least {@code k} to take effect.
+     *
+     * @param efSearch efSearch, or {@code 0} to use the engine default.
+     * @return {@code this} For chaining.
+     */
+    public VectorQuery<K, V> setEfSearch(int efSearch) {
+        this.efSearch = efSearch;
+
+        return this;
+    }
+
+    /**
+     * Gets the search-time beam width (efSearch).
+     *
+     * @return efSearch, or {@code 0} if the engine default is used.
+     */
+    public int getEfSearch() {
+        return efSearch;
     }
 
     /**

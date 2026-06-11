@@ -155,6 +155,9 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
     /** Threshold for cosine similarity in case of vector query. */
     private final float threshold;
 
+    /** Search-time beam width in case of vector query ({@code 0} — engine default). */
+    private final int efSearch;
+
     /**
      * @param cctx Context.
      * @param type Query type.
@@ -196,6 +199,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         qryVector = null;
         k = -1;
         threshold = 0.5f;
+        efSearch = 0;
     }
 
     /**
@@ -242,6 +246,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         qryVector = null;
         k = -1;
         threshold = 0.5f;
+        efSearch = 0;
     }
 
     /**
@@ -267,6 +272,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         @Nullable float[] qryVector,
         int k,
         float threshold,
+        int efSearch,
         @Nullable IgniteBiPredicate<Object, Object> filter,
         @Nullable Integer part,
         boolean incMeta,
@@ -285,6 +291,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         this.qryVector = qryVector;
         this.k = k;
         this.threshold = threshold;
+        this.efSearch = efSearch;
         this.filter = filter;
         this.part = part;
         this.incMeta = incMeta;
@@ -357,6 +364,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         qryVector = null;
         k = -1;
         threshold = 0.5f;
+        efSearch = 0;
     }
 
     /**
@@ -385,6 +393,13 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
      */
     public float threshold() {
         return threshold;
+    }
+
+    /**
+     * @return Search-time beam width in case of vector query ({@code 0} — engine default).
+     */
+    public int efSearch() {
+        return efSearch;
     }
 
     /**
