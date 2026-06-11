@@ -260,6 +260,56 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
 #pragma warning restore 618
         }
 
+#if NETCOREAPP
+        /// <summary>
+        /// Tests that <c>await foreach</c> over a scan query cursor returns all entries, fetching multiple
+        /// pages asynchronously (the server cursor delegates batch retrieval to Java on a background thread).
+        /// </summary>
+        [Test]
+        public async Task TestScanQueryAsyncEnumeration()
+        {
+            var cache = Cache();
+            await cache.RemoveAllAsync();
+            await cache.PutAllAsync(Enumerable.Range(1, MaxItemCnt).ToDictionary(x => x, x => new QueryPerson(x.ToString(), x)));
+
+            // Small page size forces multiple async batch requests during enumeration.
+            var qry = new ScanQuery<int, QueryPerson> { PageSize = 10 };
+
+            var keys = new List<int>();
+
+            await foreach (var entry in cache.Query(qry))
+            {
+                Assert.IsNotNull(entry.Value);
+                keys.Add(entry.Key);
+            }
+
+            CollectionAssert.AreEquivalent(Enumerable.Range(1, MaxItemCnt), keys);
+        }
+
+        /// <summary>
+        /// Tests that <c>await foreach</c> over a SQL fields query cursor returns all rows asynchronously,
+        /// fetching multiple pages from the server cursor.
+        /// </summary>
+        [Test]
+        public async Task TestSqlFieldsQueryAsyncEnumeration()
+        {
+            var cache = Cache();
+            await cache.RemoveAllAsync();
+            await cache.PutAllAsync(Enumerable.Range(1, MaxItemCnt).ToDictionary(x => x, x => new QueryPerson(x.ToString(), x)));
+
+            var qry = new SqlFieldsQuery("SELECT age FROM QueryPerson ORDER BY age") { PageSize = 10 };
+
+            var ages = new List<int>();
+
+            await foreach (var row in cache.Query(qry))
+            {
+                ages.Add((int)row[0]);
+            }
+
+            CollectionAssert.AreEqual(Enumerable.Range(1, MaxItemCnt), ages);
+        }
+#endif
+
         /// <summary>
         /// Test SQL query arguments passing.
         /// </summary>

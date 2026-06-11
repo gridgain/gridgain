@@ -369,6 +369,56 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             c2.Dispose();
             c3.Dispose();
         }
+
+        /// <summary>
+        /// Tests that <c>await foreach</c> over a scan query cursor (<see cref="System.Collections.Generic.IAsyncEnumerable{T}"/>)
+        /// returns all entries, fetching multiple pages asynchronously from the server.
+        /// </summary>
+        [Test]
+        public async Task TestAwaitForeachReturnsAllEntries()
+        {
+            var cache = GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+
+            // Small page size forces multiple async batch requests (GetBatchAsync) during enumeration.
+            var qry = new ScanQuery<int, Person> { PageSize = 128 };
+
+            var keys = new List<int>();
+
+            await foreach (var entry in await clientCache.QueryAsync(qry))
+            {
+                Assert.AreEqual(entry.Key.ToString(), entry.Value.Name);
+                keys.Add(entry.Key);
+            }
+
+            CollectionAssert.AreEquivalent(Enumerable.Range(1, cache.GetSize()), keys);
+        }
+
+        /// <summary>
+        /// Tests that <see cref="System.Collections.Generic.IAsyncEnumerable{T}.GetAsyncEnumerator"/> enforces the
+        /// same single-consumption rules as the synchronous enumerator: it can not be obtained after
+        /// <c>GetAll</c> or after the cursor has already been (asynchronously) enumerated.
+        /// </summary>
+        [Test]
+        public void TestGetAsyncEnumeratorAfterGetAllOrSecondCallThrows()
+        {
+            GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+
+            // GetAsyncEnumerator after GetAll throws.
+            var cursor = clientCache.Query(new ScanQuery<int, Person>());
+            cursor.GetAll();
+            Assert.Throws<InvalidOperationException>(() => cursor.GetAsyncEnumerator());
+
+            // Second GetAsyncEnumerator on the same cursor throws.
+            cursor = clientCache.Query(new ScanQuery<int, Person>());
+            cursor.GetAsyncEnumerator();
+            Assert.Throws<InvalidOperationException>(() => cursor.GetAsyncEnumerator());
+        }
 #endif
 
         /// <summary>
