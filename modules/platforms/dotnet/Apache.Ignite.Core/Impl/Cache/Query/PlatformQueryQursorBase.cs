@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Impl.Binary;
 
     /// <summary>
@@ -77,6 +78,15 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         protected override T[] GetBatch()
         {
             return _target.OutStream(OpGetBatch, ConvertGetBatch);
+        }
+
+        /** <inheritdoc /> */
+        protected override async ValueTask<T[]> GetBatchAsync()
+        {
+            // Platform cursor does not support async data retrieval. It delegates to Java and blocks the thread.
+            // Run this in a separate thread to avoid blocking the user thread,
+            // which is unexpected for async cursor (await foreach).
+            return await Task.Run(GetBatch).ConfigureAwait(false);
         }
 
         /** <inheritdoc /> */
