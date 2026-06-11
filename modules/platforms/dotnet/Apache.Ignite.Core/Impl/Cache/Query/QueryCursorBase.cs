@@ -48,7 +48,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         private readonly Func<BinaryReader, T> _readFunc;
 
         /** Lock object. */
-        private readonly object _syncRoot = new object();
+        private readonly SemaphoreSlim _syncRoot = new SemaphoreSlim(1);
 
         /** Whether "GetAll" was called. */
         private bool _getAllCalled;
@@ -235,13 +235,19 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// </summary>
         private void RequestBatch()
         {
-            lock (_syncRoot)
+            _syncRoot.Wait();
+
+            try
             {
                 ThrowIfDisposed();
 
                 _batch = _hasNext ? GetBatch() : null;
 
                 _batchPos = 0;
+            }
+            finally
+            {
+                _syncRoot.Release();
             }
         }
 
