@@ -191,7 +191,7 @@ public class TcpIgniteClient implements IgniteClient {
 
             lsnrsRegistry = new ClientCacheEntryListenersRegistry();
         }
-        catch (Throwable e) {
+        catch (Exception e) {
             ch.close();
             throw e;
         }
@@ -524,7 +524,7 @@ public class TcpIgniteClient implements IgniteClient {
         if (F.isEmpty(lsnrs))
             return;
 
-        for (EventListener lsnr: lsnrs) {
+        for (EventListener lsnr : lsnrs) {
             if (lsnr instanceof ClientLifecycleEventListener) {
                 try {
                     ClientLifecycleEventListener lsnr0 = (ClientLifecycleEventListener)lsnr;
@@ -688,7 +688,7 @@ public class TcpIgniteClient implements IgniteClient {
                     .toArray(CompletableFuture[]::new)
                 ).get();
             }
-            catch (Throwable e) {
+            catch (Exception e) {
                 throw new ClientException(e);
             }
         }
