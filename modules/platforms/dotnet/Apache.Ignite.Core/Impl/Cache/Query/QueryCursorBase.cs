@@ -101,7 +101,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 throw new InvalidOperationException("Failed to get all entries because GetEnumerator() " +
                                                     "method has already been called.");
 
-            lock (_syncRoot)
+            _syncRoot.Wait();
+
+            try
             {
                 ThrowIfDisposed();
 
@@ -111,6 +113,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 _hasNext = false;
 
                 return res;
+            }
+            finally
+            {
+                _syncRoot.Release();
             }
         }
 
@@ -167,7 +173,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             {
                 ThrowIfDisposed();
 
-                lock (_syncRoot)
+                _syncRoot.Wait();
+
+                try
                 {
                     if (_batchPos == BatchPosBeforeHead)
                         throw new InvalidOperationException("MoveNext has not been called.");
@@ -176,6 +184,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                         throw new InvalidOperationException("Previous call to MoveNext returned false.");
 
                     return _batch[_batchPos];
+                }
+                finally
+                {
+                    _syncRoot.Release();
                 }
             }
         }
@@ -191,7 +203,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         {
             ThrowIfDisposed();
 
-            lock (_syncRoot)
+            _syncRoot.Wait();
+
+            try
             {
                 if (_batch == null)
                 {
@@ -209,6 +223,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 }
 
                 return _batch != null;
+            }
+            finally
+            {
+                _syncRoot.Release();
             }
         }
 
@@ -235,20 +253,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// </summary>
         private void RequestBatch()
         {
-            _syncRoot.Wait();
+            _batch = _hasNext ? GetBatch() : null;
 
-            try
-            {
-                ThrowIfDisposed();
-
-                _batch = _hasNext ? GetBatch() : null;
-
-                _batchPos = 0;
-            }
-            finally
-            {
-                _syncRoot.Release();
-            }
+            _batchPos = 0;
         }
 
         /// <summary>
@@ -291,31 +298,30 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
             var size = reader.ReadInt();
 
-            lock (_syncRoot)
+            if (size == 0)
             {
-                if (size == 0)
-                {
-                    _hasNext = false;
-                    return null;
-                }
-
-                var res = new T[size];
-
-                for (var i = 0; i < size; i++)
-                {
-                    res[i] = _readFunc(reader);
-                }
-
-                _hasNext = stream.ReadBool();
-
-                return res;
+                _hasNext = false;
+                return null;
             }
+
+            var res = new T[size];
+
+            for (var i = 0; i < size; i++)
+            {
+                res[i] = _readFunc(reader);
+            }
+
+            _hasNext = stream.ReadBool();
+
+            return res;
         }
 
         /** <inheritdoc /> */
         public void Dispose()
         {
-            lock (_syncRoot)
+            _syncRoot.Wait();
+
+            try
             {
                 if (_disposed)
                 {
@@ -332,6 +338,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
                 _disposed = true;
             }
+            finally
+            {
+                _syncRoot.Release();
+            }
         }
 
         /** <inheritdoc /> */
@@ -341,7 +351,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         {
             Task task = null;
 
-            lock (_syncRoot)
+            _syncRoot.Wait();
+
+            try
             {
                 if (_disposed)
                 {
@@ -358,6 +370,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 GC.SuppressFinalize(this);
 
                 _disposed = true;
+            }
+            finally
+            {
+                _syncRoot.Release();
             }
 
             if (task != null)
