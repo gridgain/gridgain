@@ -165,10 +165,14 @@ public class GridJavadocAntTask extends MatchingTask {
             // Parse HTML.
             Jerry doc = Jerry.jerry(fileContent);
 
-            if (file.endsWith("overview-summary.html")) {
+            if (file.endsWith("overview-summary.html") || file.endsWith("index.html")) {
                 // Try to find Other Packages section.
                 Jerry otherPackages =
                     doc.find("div.contentContainer table.overviewSummary caption span:contains('Other Packages')");
+
+                // JDK 9+ javadoc: the overview lives in index.html with tabbed package tables.
+                if (otherPackages.size() == 0)
+                    otherPackages = doc.find("div.table-tabs button:contains('Other Packages')");
 
                 if (otherPackages.size() > 0) {
                     System.err.println("[ERROR]: 'Other Packages' section should not be present, but found: " +
@@ -181,6 +185,10 @@ public class GridJavadocAntTask extends MatchingTask {
             else if (!isViewHtml(file)) {
                 // Try to find a class description block.
                 Jerry descBlock = doc.find("div.contentContainer div.description ul.blockList li.blockList div.block");
+
+                // JDK 9+ javadoc layout.
+                if (descBlock.size() == 0)
+                    descBlock = doc.find("section.class-description div.block");
 
                 if (descBlock.size() == 0)
                     throw new IllegalArgumentException("Class doesn't have description in file: " + file);
@@ -275,7 +283,7 @@ public class GridJavadocAntTask extends MatchingTask {
                 }
 
                 case TOKEN_CLOSE_TAG: {
-                    if ("</head>".equalsIgnoreCase(val))
+                    if ("</head>".equalsIgnoreCase(val) && !fileContent.contains("favicon_0.ico"))
                         tok.update(
                             "<link rel='shortcut icon' href='https://www.gridgain.com/sites/default/files/favicon_0.ico'/>\n" +
                             "</head>\n");
@@ -371,7 +379,7 @@ public class GridJavadocAntTask extends MatchingTask {
     private boolean isViewHtml(String fileName) {
         String baseName = new File(fileName).getName();
 
-        return "index.html".equals(baseName) || baseName.contains("-");
+        return "index.html".equals(baseName) || "search.html".equals(baseName) || baseName.contains("-");
     }
 
     /**
