@@ -524,7 +524,7 @@ public class TcpIgniteClient implements IgniteClient {
         if (F.isEmpty(lsnrs))
             return;
 
-        for (EventListener lsnr: lsnrs) {
+        for (EventListener lsnr : lsnrs) {
             if (lsnr instanceof ClientLifecycleEventListener) {
                 try {
                     ClientLifecycleEventListener lsnr0 = (ClientLifecycleEventListener)lsnr;
