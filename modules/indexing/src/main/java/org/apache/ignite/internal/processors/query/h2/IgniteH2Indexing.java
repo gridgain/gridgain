@@ -435,7 +435,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (expireTime == 0L)
                 expireTime = Long.MAX_VALUE;
 
-            tbl.luceneIndex().store(row.key(), row.value(), row.version(), expireTime);
+            tbl.luceneIndex().store(row.key(), row.value(), row.version(), expireTime, row.link());
         }
     }
 
