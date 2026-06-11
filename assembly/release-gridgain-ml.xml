@@ -46,12 +46,6 @@
             <outputDirectory>/examples-ml</outputDirectory>
             <destName>pom.xml</destName>
         </file>
-
-        <file>
-            <source>${gg8.examples.dir}/examples-ml/README.txt</source>
-            <outputDirectory>/examples-ml</outputDirectory>
-            <destName>README.txt</destName>
-        </file>
     </files>
 
     <fileSets>
