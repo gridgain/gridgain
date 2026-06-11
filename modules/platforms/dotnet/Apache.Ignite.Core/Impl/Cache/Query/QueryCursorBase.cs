@@ -444,7 +444,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// </param>
         protected virtual void Dispose(bool disposing)
         {
-            // No-op.
+            _syncRoot.Dispose();
         }
 
         /// <summary>

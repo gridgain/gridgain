@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
     using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Query;
@@ -159,6 +160,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                     _dispose();
                 }
             }
+        }
+
+        public IAsyncEnumerator<ICacheEntry<TK, TV>> GetAsyncEnumerator(CancellationToken cancellationToken = new CancellationToken())
+        {
+            // TODO
+            throw new NotImplementedException();
         }
 
         /// <summary>
