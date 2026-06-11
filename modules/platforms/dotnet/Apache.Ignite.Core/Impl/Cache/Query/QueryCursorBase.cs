@@ -166,7 +166,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
         #region Public IEnumerator methods
 
-        /** <inheritdoc /> */
+        /// <summary>
+        /// Gets the element in the collection at the current position of the enumerator.
+        /// </summary>
         public T Current
         {
             get
@@ -232,7 +234,33 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
         public async ValueTask<bool> MoveNextAsync()
         {
-            // TODO
+            ThrowIfDisposed();
+
+            await _syncRoot.WaitAsync().ConfigureAwait(false);
+
+            try
+            {
+                if (_batch == null)
+                {
+                    if (_batchPos == BatchPosBeforeHead)
+                        // Standing before head, let's get batch and advance position.
+                        await RequestBatchAsync();
+                }
+                else
+                {
+                    _batchPos++;
+
+                    if (_batch.Length == _batchPos)
+                        // Reached batch end => request another.
+                        await RequestBatchAsync();
+                }
+
+                return _batch != null;
+            }
+            finally
+            {
+                _syncRoot.Release();
+            }
         }
 
         /** <inheritdoc /> */
@@ -253,7 +281,21 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// </summary>
         private void RequestBatch()
         {
-            _batch = _hasNext ? GetBatch() : null;
+            _batch = _hasNext
+                ? GetBatch()
+                : null;
+
+            _batchPos = 0;
+        }
+
+        /// <summary>
+        /// Requests next batch.
+        /// </summary>
+        private async ValueTask RequestBatchAsync()
+        {
+            _batch = _hasNext
+                ? await GetBatchAsync().ConfigureAwait(false)
+                : null;
 
             _batchPos = 0;
         }
@@ -351,7 +393,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         {
             Task task = null;
 
-            _syncRoot.Wait();
+            await _syncRoot.WaitAsync().ConfigureAwait(false);
 
             try
             {
