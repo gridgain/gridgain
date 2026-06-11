@@ -140,6 +140,7 @@
         <profile>
             <id>all-java</id> <!-- used to update project versions and check all modules compilation -->
             <modules> <!-- sorted alphabetically -->
+                <!-- these modules moved to gg8-examples repo -->
                 <!--module>examples</module-->
                 <!--module>examples-ml</module-->
                 <module>modules/benchmarks</module>
