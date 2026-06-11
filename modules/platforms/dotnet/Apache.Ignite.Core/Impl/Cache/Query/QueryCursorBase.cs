@@ -68,6 +68,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /** Whether next batch is available. */
         private bool _hasNext = true;
 
+        /** Cancellation token captured by GetAsyncEnumerator and observed between async batch fetches. */
+        private CancellationToken _asyncEnumeratorToken;
+
         /// <summary>
         /// Constructor.
         /// </summary>
@@ -156,10 +159,16 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             return GetEnumerator();
         }
 
-        public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = new())
+        public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
-            // TODO: Cancellation - how?
-            return GetEnumeratorInternal();
+            // The cursor is its own single-use enumerator, so capture the token in a field and observe it
+            // in MoveNextAsync. Cancellation is cooperative: an already-issued batch request (network or JVM
+            // call) can not be aborted mid-flight, but cancellation is honored before each new batch is fetched.
+            var enumerator = GetEnumeratorInternal();
+
+            _asyncEnumeratorToken = cancellationToken;
+
+            return enumerator;
         }
 
         #endregion
@@ -236,7 +245,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         {
             ThrowIfDisposed();
 
-            await _syncRoot.WaitAsync().ConfigureAwait(false);
+            // Throws OperationCanceledException if the enumeration token is already cancelled.
+            await _syncRoot.WaitAsync(_asyncEnumeratorToken).ConfigureAwait(false);
 
             try
             {
@@ -244,7 +254,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 {
                     if (_batchPos == BatchPosBeforeHead)
                         // Standing before head, let's get batch and advance position.
-                        await RequestBatchAsync();
+                        await RequestBatchAsync(_asyncEnumeratorToken);
                 }
                 else
                 {
@@ -252,7 +262,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
                     if (_batch.Length == _batchPos)
                         // Reached batch end => request another.
-                        await RequestBatchAsync();
+                        await RequestBatchAsync(_asyncEnumeratorToken);
                 }
 
                 return _batch != null;
@@ -291,10 +301,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// <summary>
         /// Requests next batch.
         /// </summary>
-        private async ValueTask RequestBatchAsync()
+        private async ValueTask RequestBatchAsync(CancellationToken cancellationToken)
         {
             _batch = _hasNext
-                ? await GetBatchAsync().ConfigureAwait(false)
+                ? await GetBatchAsync(cancellationToken).ConfigureAwait(false)
                 : null;
 
             _batchPos = 0;
@@ -308,7 +318,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// <summary>
         /// Gets the next batch.
         /// </summary>
-        protected abstract ValueTask<T[]> GetBatchAsync();
+        /// <param name="cancellationToken">Cancellation token observed before the batch is fetched.</param>
+        protected abstract ValueTask<T[]> GetBatchAsync(CancellationToken cancellationToken);
 
         /// <summary>
         /// Converter for GET_ALL operation.

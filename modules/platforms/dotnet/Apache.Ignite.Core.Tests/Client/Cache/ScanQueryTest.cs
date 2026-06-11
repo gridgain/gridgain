@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
@@ -418,6 +419,41 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             cursor = clientCache.Query(new ScanQuery<int, Person>());
             cursor.GetAsyncEnumerator();
             Assert.Throws<InvalidOperationException>(() => cursor.GetAsyncEnumerator());
+        }
+
+        /// <summary>
+        /// Tests that <c>await foreach</c> over a scan query cursor stops with an
+        /// <see cref="OperationCanceledException"/> when the enumeration token is cancelled mid-iteration.
+        /// </summary>
+        [Test]
+        public void TestAsyncEnumerationHonorsCancellation()
+        {
+            GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+
+            // Small page size so iteration spans multiple async batches.
+            var qry = new ScanQuery<int, Person> { PageSize = 32 };
+            var cts = new CancellationTokenSource();
+
+            var count = 0;
+
+            Assert.CatchAsync<OperationCanceledException>(async () =>
+            {
+                await foreach (var entry in (await clientCache.QueryAsync(qry)).WithCancellation(cts.Token))
+                {
+                    Assert.IsNotNull(entry);
+
+                    if (++count == 10)
+                    {
+                        await cts.CancelAsync();
+                    }
+                }
+            });
+
+            // Enumeration stopped right after cancellation, well before draining the whole cache.
+            Assert.AreEqual(10, count);
         }
 #endif
 
