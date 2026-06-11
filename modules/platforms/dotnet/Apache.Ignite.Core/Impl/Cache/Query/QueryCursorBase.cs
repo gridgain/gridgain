@@ -57,7 +57,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         private bool _iterCalled;
 
         /** Batch with entries. */
-        private ValueTask<T[]>? _batch;
+        private T[] _batch;
 
         /** Current position in batch. */
         private int _batchPos = BatchPosBeforeHead;
@@ -86,7 +86,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
             if (initialBatchStream != null)
             {
-                _batch = new ValueTask<T[]>(ConvertGetBatch(initialBatchStream));
+                _batch = ConvertGetBatch(initialBatchStream);
             }
         }
 
@@ -175,12 +175,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                     if (_batch == null)
                         throw new InvalidOperationException("Previous call to MoveNext returned false.");
 
-                    if (!_batch.Value.IsCompleted)
-                        throw new InvalidOperationException("Async cursor should not be used synchronously.");
-
-                    var batch = _batch.Value.Result;
-
-                    return batch[_batchPos];
+                    return _batch[_batchPos];
                 }
             }
         }
@@ -202,27 +197,24 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 {
                     if (_batchPos == BatchPosBeforeHead)
                         // Standing before head, let's get batch and advance position.
-                        RequestBatch(async: false);
+                        RequestBatch();
                 }
                 else
                 {
-                    if (!_batch.Value.IsCompleted)
-                        throw new InvalidOperationException("Async cursor should not be used synchronously.");
-
                     _batchPos++;
 
-                    if (_batch.Value.Result.Length == _batchPos)
+                    if (_batch.Length == _batchPos)
                         // Reached batch end => request another.
-                        RequestBatch(async: false);
+                        RequestBatch();
                 }
 
                 return _batch != null;
             }
         }
 
-        public ValueTask<bool> MoveNextAsync()
+        public async ValueTask<bool> MoveNextAsync()
         {
-            throw new NotImplementedException();
+            // TODO
         }
 
         /** <inheritdoc /> */
@@ -241,17 +233,13 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// <summary>
         /// Requests next batch.
         /// </summary>
-        private void RequestBatch(bool async)
+        private void RequestBatch()
         {
             lock (_syncRoot)
             {
                 ThrowIfDisposed();
 
-                _batch = _hasNext
-                    ? async
-                        ? GetBatchAsync()
-                        : new ValueTask<T[]>(GetBatch())
-                    : null;
+                _batch = _hasNext ? GetBatch() : null;
 
                 _batchPos = 0;
             }
