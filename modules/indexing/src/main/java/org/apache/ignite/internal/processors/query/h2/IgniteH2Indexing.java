@@ -2316,6 +2316,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         Collection<H2TableDescriptor> descriptors = schemaMgr.tablesForCache(cacheName).stream()
             .filter(descriptor -> nonNull(descriptor.luceneIndex()))
+            // An index that restored itself from its own persistent state opts out of the row scan.
+            .filter(descriptor -> descriptor.luceneIndex().needsRebuild())
             .collect(toList());
 
         if (descriptors.isEmpty())
@@ -3072,6 +3074,27 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (!F.isEmpty(queries)) {
             for (Long qryId : queries)
                 runningQryMgr.cancel(qryId);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void beforeNodeStop() {
+        // Give text/vector indexes their last chance to write persistent state while
+        // the checkpoint lock is still grantable (the database manager blocks it
+        // later in the stop sequence).
+        for (String cacheName : ctx.cache().cacheNames()) {
+            for (H2TableDescriptor tbl : schemaMgr.tablesForCache(cacheName)) {
+                LuceneIndex luceneIdx = tbl.luceneIndex();
+
+                if (luceneIdx != null) {
+                    try {
+                        luceneIdx.beforeNodeStop();
+                    }
+                    catch (Throwable t) {
+                        U.warn(log, "Failed to flush index state on node stop [table=" + tbl.fullTableName() + ']', t);
+                    }
+                }
+            }
         }
     }
 

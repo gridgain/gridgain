@@ -336,6 +336,19 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     @Override public void onKernalStop(boolean cancel) {
         super.onKernalStop(cancel);
 
+        // On graceful stop, let indexes flush persistent state while the checkpoint
+        // lock is still grantable — the guaranteed final checkpoint will carry it to
+        // disk. On forced stop the final checkpoint is skipped anyway, and any torn
+        // index state self-invalidates on restart.
+        if (!cancel && idx != null) {
+            try {
+                idx.beforeNodeStop();
+            }
+            catch (Throwable t) {
+                U.warn(log, "Failed to flush index state on node stop.", t);
+            }
+        }
+
         if (cancel && idx != null) {
             try {
                 while (!busyLock.tryBlock(500))

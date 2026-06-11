@@ -373,7 +373,7 @@ public class SchemaManager {
                     U.error(log, "Failed to drop table on cache stop (will ignore): " + tbl.fullTableName(), e);
                 }
 
-                schema.drop(tbl);
+                schema.drop(tbl, destroy);
 
                 rmvTbls.add(tbl);
 
