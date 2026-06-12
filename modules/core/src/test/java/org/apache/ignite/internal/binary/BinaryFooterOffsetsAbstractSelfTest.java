@@ -134,6 +134,8 @@ public abstract class BinaryFooterOffsetsAbstractSelfTest extends GridCommonAbst
 
         BinaryObjectExImpl portObj = toBinary(marsh, obj);
 
+        assertEquals(marsh.marshal(obj).length, portObj.size());
+
         // 1. Test binary object content.
         assert portObj.hasField("field1");
         assert portObj.hasField("field2");

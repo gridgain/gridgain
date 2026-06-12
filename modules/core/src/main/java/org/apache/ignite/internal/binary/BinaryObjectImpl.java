@@ -288,6 +288,11 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
         return BinaryPrimitives.readInt(arr, start + GridBinaryMarshaller.TOTAL_LEN_POS);
     }
 
+    /** {@inheritDoc} */
+    @Override public int size() {
+        return length();
+    }
+
     /**
      * @return Detached binary object.
      */

@@ -182,4 +182,14 @@ public interface BinaryObject extends Serializable, Cloneable {
      * @throws BinaryObjectException If object is not enum.
      */
     public String enumName() throws BinaryObjectException;
+
+    /**
+     * Gets the size in bytes of the serialized representation of this object. The returned value corresponds to
+     * the canonical (uncompressed) binary form of the object, regardless of cache storage transforms such as
+     * entry compression, and does not include cache storage overhead.
+     *
+     * @return Size in bytes.
+     * @throws BinaryObjectException If the size could not be computed.
+     */
+    public int size() throws BinaryObjectException;
 }
