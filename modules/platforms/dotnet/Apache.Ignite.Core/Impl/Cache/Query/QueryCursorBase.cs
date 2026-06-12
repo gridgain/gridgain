@@ -471,9 +471,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// </param>
         protected virtual void Dispose(bool disposing)
         {
-            // No-op. The synchronization primitive is disposed by Dispose()/DisposeAsync(), not here:
-            // Dispose(bool) runs while the lock is held and only when the server cursor needs closing,
-            // so it is the wrong place to release _syncRoot.
+            // No-op.
         }
 
         /// <summary>
