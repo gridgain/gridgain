@@ -308,6 +308,67 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
 
             CollectionAssert.AreEqual(Enumerable.Range(1, MaxItemCnt), ages);
         }
+
+        /// <summary>
+        /// Tests that a server scan query cursor that was not fully enumerated can be disposed without throwing,
+        /// and that <c>Dispose</c>/<c>DisposeAsync</c> are idempotent and can be mixed. Guards against the cursor's
+        /// synchronization primitive being disposed while it is still considered in use (open server-side cursor).
+        /// </summary>
+        [Test]
+        public async Task TestScanQueryCursorDisposeIsIdempotentWhenNotDrained()
+        {
+            var cache = Cache();
+            await cache.RemoveAllAsync();
+            await cache.PutAllAsync(Enumerable.Range(1, MaxItemCnt).ToDictionary(x => x, x => new QueryPerson(x.ToString(), x)));
+
+            // Small page size leaves the server-side cursor open (more pages remain) so _hasNext stays true.
+            var qry = new ScanQuery<int, QueryPerson> { PageSize = 10 };
+
+            // Sync Dispose of a never-enumerated cursor must not throw, and must be idempotent.
+            var cursor = cache.Query(qry);
+            Assert.DoesNotThrow(() => cursor.Dispose());
+            Assert.DoesNotThrow(() => cursor.Dispose());
+
+            // DisposeAsync of a non-drained cursor, then a second DisposeAsync and a sync Dispose, must all be safe.
+            cursor = cache.Query(qry);
+            await cursor.DisposeAsync();
+            await cursor.DisposeAsync();
+            Assert.DoesNotThrow(() => cursor.Dispose());
+        }
+
+        /// <summary>
+        /// Tests that breaking out of <c>await foreach</c> over a server scan query cursor disposes the cursor
+        /// (closing the still-open server-side cursor) and that explicit disposal afterwards remains a safe no-op.
+        /// </summary>
+        [Test]
+        public async Task TestScanQueryAsyncEnumerationBreakDisposesCursor()
+        {
+            var cache = Cache();
+            await cache.RemoveAllAsync();
+            await cache.PutAllAsync(Enumerable.Range(1, MaxItemCnt).ToDictionary(x => x, x => new QueryPerson(x.ToString(), x)));
+
+            // Small page size keeps the server-side cursor open when we break early.
+            var cursor = cache.Query(new ScanQuery<int, QueryPerson> { PageSize = 10 });
+
+            var count = 0;
+
+            await foreach (var entry in cursor)
+            {
+                Assert.IsNotNull(entry.Value);
+
+                if (++count == 5)
+                {
+                    break;
+                }
+            }
+
+            Assert.AreEqual(5, count);
+
+            // await foreach disposed the still-open cursor on break (DisposeAsync on a non-drained cursor);
+            // explicit disposal afterwards must remain a safe, idempotent no-op.
+            Assert.DoesNotThrowAsync(async () => await cursor.DisposeAsync());
+            Assert.DoesNotThrow(() => cursor.Dispose());
+        }
 #endif
 
         /// <summary>

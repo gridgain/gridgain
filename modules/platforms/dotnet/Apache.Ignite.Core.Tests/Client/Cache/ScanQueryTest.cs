@@ -455,6 +455,34 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             // Enumeration stopped right after cancellation, well before draining the whole cache.
             Assert.AreEqual(10, count);
         }
+
+        /// <summary>
+        /// Tests that a client scan query cursor that was not enumerated can be disposed synchronously without
+        /// throwing, and that <c>Dispose</c>/<c>DisposeAsync</c> are idempotent and can be mixed. Guards against
+        /// the cursor's synchronization primitive being disposed while it is still considered in use.
+        /// </summary>
+        [Test]
+        public async Task TestScanQueryCursorDisposeIsIdempotentWhenNotDrained()
+        {
+            GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+
+            // Small page size leaves the server-side cursor open (more pages remain) so _hasNext stays true.
+            var qry = new ScanQuery<int, Person> { PageSize = 32 };
+
+            // Sync Dispose of a never-enumerated cursor must not throw, and must be idempotent.
+            var cursor = clientCache.Query(qry);
+            Assert.DoesNotThrow(() => cursor.Dispose());
+            Assert.DoesNotThrow(() => cursor.Dispose());
+
+            // DisposeAsync of a non-drained cursor, then a second DisposeAsync and a sync Dispose, must all be safe.
+            cursor = clientCache.Query(qry);
+            await cursor.DisposeAsync();
+            await cursor.DisposeAsync();
+            Assert.DoesNotThrow(() => cursor.Dispose());
+        }
 #endif
 
         /// <summary>
