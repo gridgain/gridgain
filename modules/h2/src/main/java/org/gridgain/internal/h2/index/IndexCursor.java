@@ -18,6 +18,7 @@ import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.table.Table;
 import org.gridgain.internal.h2.table.TableFilter;
+import org.gridgain.internal.h2.util.DebugLog;
 import org.gridgain.internal.h2.value.Value;
 import org.gridgain.internal.h2.value.ValueGeometry;
 import org.gridgain.internal.h2.value.ValueNull;
@@ -44,6 +45,21 @@ public class IndexCursor implements Cursor, AutoCloseable {
     private int inListIndex;
     private Value[] inList;
     private ResultInterface inResult;
+
+    /**
+     * Separate upper bound used while expanding an IN(...) list into per-value index scans
+     * when a range condition is present on a trailing index column. When non-null,
+     * find(Value) performs a range scan [start, inRangeEnd] per value instead of collapsing
+     * to a point lookup [start, start].
+     *
+     * <p>For example {@code SELECT * FROM t WHERE f1=X AND f2 IN (Y1, Y2) AND f3 > Z}
+     * with index {@code IDX(f1,f2,f3)} can be expanded into union of 2 range scans:
+     * <ol>
+     *     <li>{@code IDX.find(f1=X, f2=Y1, f3=Z)}</li>
+     *     <li>{@code IDX.find(f1=X, f2=Y1, f3=null)}</li>
+     * </ol>
+     */
+    private SearchRow inRangeEnd;
 
     public IndexCursor(TableFilter filter) {
         this.tableFilter = filter;
@@ -78,8 +94,14 @@ public class IndexCursor implements Cursor, AutoCloseable {
         inColumn = null;
         inResult = null;
         intersects = null;
+        inRangeEnd = null;
 
-        boolean canUseAnyIndexColumnForIn = true;
+        boolean onlyEqualityConditionsSoFar = true;
+
+        // Bitmask of index column positions constrained by an equality (constant/parameter).
+        // Used to decide whether an IN list can be expanded even when a range condition is
+        // present on a trailing index column (see canExpandInWithTrailingRange).
+        long eqPrefixMask = 0L;
 
         for (IndexCondition condition : indexConditions) {
             if (condition.isAlwaysFalse()) {
@@ -91,38 +113,56 @@ public class IndexCursor implements Cursor, AutoCloseable {
             if (index.isFindUsingFullTableScan()) {
                 continue;
             }
+
+            StringBuilder report = new StringBuilder()
+                .append("condition=").append(condition).append(" ");
+
             Column column = condition.getColumn();
             if (condition.getCompareType() == Comparison.IN_LIST) {
-                if (canUseAnyIndexColumnForIn || (start == null && end == null)) {
-                    // We can handle only one IN(...) index scan.
+                // Always record the IN column candidate, regardless of the conditions seen so far.
+                // Index conditions are not ordered, so a range and/or the equality prefix that make
+                // a per-value expansion legal may be processed before or after this IN. The final
+                // decision (per-value expansion vs. a single scan) is made after the loop, see the
+                // checkpoint below and canExpandInWithTrailingRange().
+                {
+                    // We can handle only one IN(...) index scan: keep the earliest index column.
                     if (inColumn != null && index.getColumnIndex(inColumn) <= index.getColumnIndex(column))
                         continue;
 
                     if (inResult != null)
                         inResult.close();
 
-                    this.inColumn = column;
+                    inColumn = column;
                     inList = condition.getCurrentValueList(s);
                     inListIndex = 0;
                 }
             } else if (condition.getCompareType() == Comparison.IN_QUERY) {
                 // Fallback to the table scan if the IN column is not the first column of the index.
-                if (inColumn != null && !canUseIndexFor(inColumn)) {
+                if (inColumn != null && !isFirstIndexOrViewColumn(inColumn)) {
                     inList = null;
                     inColumn = null;
                 }
 
-                canUseAnyIndexColumnForIn = false;
+                onlyEqualityConditionsSoFar = false;
 
                 if (start == null && end == null) {
-                    if (inColumn == null && canUseIndexFor(column)) {
-                        this.inColumn = column;
+                    if (inColumn == null && isFirstIndexOrViewColumn(column)) {
+                        inColumn = column;
                         inResult = condition.getCurrentResult();
                     }
                 }
             } else {
-                canUseAnyIndexColumnForIn &= condition.getCompareType() == Comparison.EQUAL &&
+                boolean isEquality = condition.getCompareType() == Comparison.EQUAL &&
                     (condition.getExpression().isConstant() || condition.getExpression() instanceof Parameter);
+
+                onlyEqualityConditionsSoFar &= isEquality;
+
+                if (isEquality) {
+                    int idxPos = index.getColumnIndex(column);
+
+                    if (idxPos >= 0 && idxPos < Long.SIZE)
+                        eqPrefixMask |= 1L << idxPos;
+                }
 
                 Value v = condition.getCurrentValue(s);
                 boolean isStart = condition.isStart();
@@ -142,32 +182,70 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 }
                 if (isStart) {
                     start = table.getSearchRow(start, columnId, v, true);
+                    report.append("start=").append(start).append(" ");
                 }
                 if (isEnd) {
                     end = table.getSearchRow(end, columnId, v, false);
+                    report.append("end=").append(end).append(" ");
                 }
                 if (isIntersects) {
                     intersects = getSpatialSearchRow(intersects, columnId, v);
                 }
             }
+
+            DebugLog.logTimeThreadCls(this, report.toString());
         }
 
-        // An X=? condition will produce less rows than
+        // An X=? condition will produce fewer rows than
         // an X IN(..) condition, unless the X IN condition can use the index.
-        if (!canUseAnyIndexColumnForIn && (start != null || end != null) && !canUseIndexFor(inColumn)) {
-            inColumn = null;
-            inList = null;
 
-            if (inResult != null)
-                inResult.close();
+        boolean canExpand = false;
+        boolean canUse = isFirstIndexOrViewColumn(inColumn);
 
-            inResult = null;
+        // A range condition is present (onlyEqualityConditionsSoFar == false) and an IN column was
+        // recorded. Decide how to use the IN list against the index.
+        if (inColumn != null && !onlyEqualityConditionsSoFar && (start != null || end != null)) {
+
+            if (start != null && end != null && canExpandInWithTrailingRange(inColumn, eqPrefixMask)) {
+                // The equality prefix plus a fixed IN value form an exact index prefix and the only
+                // remaining (range) conditions are on trailing index columns.
+                //
+                // Keep the IN expansion: each value from IN (...) list, is mapped to one
+                // range scan [start, inRangeEnd]  with the value fixed in both bounds
+                // and the trailing range left open,  instead of a single wide scan
+                // with the IN applied as a post-filter. Covers both a non-leading IN with an equality prefix
+                // and a leading IN (empty prefix).
+                inRangeEnd = end;
+
+                canExpand = true;
+            }
+            else if (!isFirstIndexOrViewColumn(inColumn)) {
+                // Non-leading IN that cannot form an exact prefix: an X=? condition produces fewer
+                // rows than X IN(..) here, so drop the IN expansion and fall back to a single range scan.
+                inColumn = null;
+                inList = null;
+
+                if (inResult != null)
+                    inResult.close();
+
+                inResult = null;
+            }
+            // else: a leading IN we could not set up as a range scan; the reset below handles it.
         }
+
+        DebugLog.logTimeThreadCls(this,
+            "onlyEq=" + onlyEqualityConditionsSoFar +
+            " canExpand=" + canExpand +
+            " canUse=" + canUse +
+            " start=" + start +
+            " end=" + end
+        );
 
         if (inColumn == null)
             return;
 
-        if (start == null || (!canUseAnyIndexColumnForIn && canUseIndexFor(inColumn))) {
+        if (start == null || (!onlyEqualityConditionsSoFar && isFirstIndexOrViewColumn(inColumn) && inRangeEnd == null)) {
+            // Clear the accumulated bound and the range becomes a post-filter.
             start = table.getTemplateRow();
         }
     }
@@ -193,7 +271,38 @@ public class IndexCursor implements Cursor, AutoCloseable {
         }
     }
 
-    private boolean canUseIndexFor(Column column) {
+    /**
+     * Checks whether an IN(...) condition on the given column can be expanded into a separate
+     * index range scan per value while a range condition exists on a trailing index column.
+     * For example {@code SELECT * FROM t WHERE f1=X AND f2 IN (Y1, Y2, ..) AND f3 > Z}
+     *
+     * <p>This is safe when every index column before the IN column is constrained by an equality
+     * (a leading IN column has an empty prefix and qualifies trivially). Then the equality prefix
+     * plus a fixed IN value form an exact index prefix, and the trailing range can be applied as
+     * the open part of each per-value scan without missing rows.
+     *
+     * @param column the IN column.
+     * @param eqPrefixMask bitmask of index column positions constrained by an equality.
+     * @return {@code true} if the IN list can be expanded together with a trailing range.
+     */
+    private boolean canExpandInWithTrailingRange(Column column, long eqPrefixMask) {
+        if (column == null)
+            return false;
+
+        int inIdx = index.getColumnIndex(column);
+
+        // Unknown/too-far positions are skipped. A leading IN column (inIdx == 0) has an empty
+        // prefix, so the check below trivially holds and it is always expandable.
+        if (inIdx < 0 || inIdx >= Long.SIZE)
+            return false;
+
+        // All index columns before the IN column must be pinned by an equality.
+        long prefixBitMask = (1L << inIdx) - 1;
+
+        return (eqPrefixMask & prefixBitMask) == prefixBitMask;
+    }
+
+    private boolean isFirstIndexOrViewColumn(Column column) {
         // The first column of the index must match this column,
         // or it must be a VIEW index (where the column is null).
         // Multiple IN conditions with views are not supported, see
@@ -306,7 +415,14 @@ public class IndexCursor implements Cursor, AutoCloseable {
         v = inColumn.convert(v);
         int id = inColumn.getColumnId();
         start.setValue(id, v);
-        cursor = index.find(tableFilter, start, start);
+
+        if (inRangeEnd != null) {
+            // IN expansion combined with a trailing range: fix the value in both bounds and let
+            // the trailing range columns define the open part of the per-value range scan.
+            inRangeEnd.setValue(id, v);
+            cursor = index.find(tableFilter, start, inRangeEnd);
+        } else
+            cursor = index.find(tableFilter, start, start);
     }
 
     @Override

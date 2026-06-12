@@ -21,6 +21,7 @@ import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.table.Table;
 import org.gridgain.internal.h2.table.TableFilter;
+import org.gridgain.internal.h2.util.DebugLog;
 import org.gridgain.internal.h2.util.StringUtils;
 import org.gridgain.internal.h2.value.DataType;
 import org.gridgain.internal.h2.value.Value;
@@ -129,6 +130,7 @@ public abstract class BaseIndex extends SchemaObjectBase implements Index {
 
     @Override
     public Cursor find(TableFilter filter, SearchRow first, SearchRow last) {
+        DebugLog.logTimeThreadCls(this, "find() f=" + first + ", l=" + last);
         return find(filter.getSession(), first, last);
     }
 
