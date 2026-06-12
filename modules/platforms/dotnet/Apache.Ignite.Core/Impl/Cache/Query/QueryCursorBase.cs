@@ -254,7 +254,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 {
                     if (_batchPos == BatchPosBeforeHead)
                         // Standing before head, let's get batch and advance position.
-                        await RequestBatchAsync(_asyncEnumeratorToken);
+                        await RequestBatchAsync(_asyncEnumeratorToken).ConfigureAwait(false);
                 }
                 else
                 {
@@ -262,7 +262,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
                     if (_batch.Length == _batchPos)
                         // Reached batch end => request another.
-                        await RequestBatchAsync(_asyncEnumeratorToken);
+                        await RequestBatchAsync(_asyncEnumeratorToken).ConfigureAwait(false);
                 }
 
                 return _batch != null;
@@ -372,6 +372,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /** <inheritdoc /> */
         public void Dispose()
         {
+            // Avoid waiting on the semaphore once it has been disposed (idempotent Dispose).
+            if (_disposed)
+            {
+                return;
+            }
+
             _syncRoot.Wait();
 
             try
@@ -395,6 +401,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             {
                 _syncRoot.Release();
             }
+
+            _syncRoot.Dispose();
         }
 
         /** <inheritdoc /> */
@@ -402,6 +410,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             Justification = "GC.SuppressFinalize is valid in DisposeAsync; the analyzer only recognizes Dispose.")]
         public async ValueTask DisposeAsync()
         {
+            // Avoid waiting on the semaphore once it has been disposed (idempotent DisposeAsync).
+            if (_disposed)
+            {
+                return;
+            }
+
             Task task = null;
 
             await _syncRoot.WaitAsync().ConfigureAwait(false);
@@ -433,6 +447,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             {
                 await task.ConfigureAwait(false);
             }
+
+            _syncRoot.Dispose();
         }
 
         /// <summary>
@@ -455,7 +471,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// </param>
         protected virtual void Dispose(bool disposing)
         {
-            _syncRoot.Dispose();
+            // No-op. The synchronization primitive is disposed by Dispose()/DisposeAsync(), not here:
+            // Dispose(bool) runs while the lock is held and only when the server cursor needs closing,
+            // so it is the wrong place to release _syncRoot.
         }
 
         /// <summary>
