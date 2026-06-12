@@ -16,6 +16,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.command.dml.Select;
 import org.gridgain.internal.h2.result.SortOrder;
@@ -106,7 +109,7 @@ public class TestIndex extends TestDb {
         testFunctionIndex();
 
         testInStatementUsesIndex();
-        testParametrizedQueryWithInStatementUsesIndex();
+        testParametrizedQueriesWithInStatementUseIndex();
 
         conn.close();
         deleteDb("index");
@@ -807,54 +810,6 @@ public class TestIndex extends TestDb {
         }
     }
 
-    private void testParametrizedQueryWithInStatementUsesIndex() throws SQLException {
-        stat.execute("create table in_table (f0 int, f1 int, f2 int, f3 int, f4 int, primary key (f0))");
-
-        try {
-            stat.execute("create index PK_IDX on in_table (f1, f2, f3)");
-
-            String sqlInsert = "insert into in_table (f0, f1, f2, f3, f4) values (%d, %d, %d, %d, 2)";
-
-            for (int i = 1; i <= 10; ++i)
-                for (int j = 1; j <= 10; ++j)
-                    for (int k = 1; k <= 10; ++k)
-                        stat.execute(String.format(sqlInsert, (i * 100) + (j * 10) + k, i, j, k));
-
-            String[] queries = new String[] {
-                "select * from in_table where f1 = 8 and f2 in (1, 5, 3, 7) and f3 = ?",
-                "select * from in_table where f1 in (1, 5, 3, 7) and f2 = 8 and f3 = ?",
-                "select * from in_table use index(PK_IDX) where f1 = 8 and f2 in (1, 5, 3, 7) and f3 = ?",
-                "select * from in_table use index(PK_IDX) where f1 in (1, 5, 3, 7) and f2 = 8 and f3 = ?",
-            };
-
-            for (String sql : queries) {
-                try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setInt(1, 5);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        int resCnt = 0;
-
-                        while (rs.next())
-                            resCnt++;
-
-                        assertEquals(4, resCnt);
-                    }
-                }
-
-                try (PreparedStatement ps = conn.prepareStatement("explain analyze " + sql)) {
-                    ps.setInt(1, 5);
-
-                    try (ResultSet rs = ps.executeQuery()) {
-                        rs.next();
-
-                        assertContains(rs.getString(1), "/* scanCount: 5 */");
-                    }
-                }
-            }
-        } finally {
-            stat.execute("drop table in_table");
-        }
-    }
-
     private void testEnumIndex() throws SQLException {
         if (config.memory || config.networked) {
             return;
@@ -878,4 +833,336 @@ public class TestIndex extends TestDb {
         deleteDb("index");
     }
 
+    private void testParametrizedQueriesWithInStatementUseIndex() throws SQLException {
+        stat.execute("create table in_table (f0 int, f1 int, f2 int, f3 int, f4 int, primary key (f0))");
+
+        try {
+            stat.execute("create index PK_IDX on in_table (f1, f2, f3)");
+
+            String sqlInsert = "insert into in_table (f0, f1, f2, f3, f4) values (%d, %d, %d, %d, 2)";
+
+            for (int i = 1; i <= 10; ++i)
+                for (int j = 1; j <= 10; ++j)
+                    for (int k = 1; k <= 10; ++k)
+                        stat.execute(String.format(sqlInsert, (i * 100) + (j * 10) + k, i, j, k));
+
+            QueryChallenge[] queries = new QueryChallenge[] {
+                // Format: challenge[query, expectedRsSize, expectedScanCount, params...]
+
+                // IN_LIST
+                // ========
+
+                // Approximate expected scan_count ~= 400.
+                // |{1-10}| * |{1, 5, 3, 7}| * |{1-10}| = 10 * 4 * 10 = 400
+                challenge(predicates("f1 in (1, 5, 3, 7)", null, null), 400, 400),
+
+                // Approximate expected scan_count ~= 40.
+                // |{8}| * |{1, 5, 3, 7}| * |{1-10}| = 1 * 4 * 10 = 40
+                challenge(predicates("f1 = ?", "f2 in (1, 5, 3, 7)", null), 40, 40, 8),
+                challenge(predicates("f1 in (1, 5, 3, 7)", "f2 = ?", null), 40, 40, 8),
+
+                // Approximate expected scan_count ~= 4.
+                // |{8}| * |{1, 5, 3, 7}| * |{5}| = 1 * 4 * 1 = 4
+                challenge(predicates("f1 = ?", "f2 in (1, 5, 3, 7)", "f3 = ?"), 4, 4, 8, 5),
+                challenge(predicates("f1 in (1, 5, 3, 7)", "f2 = ?", "f3 = ?"), 4, 4, 8, 5),
+
+                challenge("select * from in_table use index(PK_IDX) where f1 = 8 and f2 in (1, 5, 3, 7) and f3 = ?", 4, 4, 5),
+                challenge("select * from in_table use index(PK_IDX) where f1 in (1, 5, 3, 7) and f2 = 8 and f3 = ?", 4, 4, 5),
+
+                // Approximate expected scan_count ~= 8.
+                // |{8}| * |{1, 5, 3, 7}| * |{9,10}| = 1 * 4 * 2 = 8
+                challenge(predicates("f1 = ?", "f2 in (1, 5, 3, 7)", "f3 > ?"), 4, 8, 8, 9),
+                challenge(predicates("f1 = ?", "f2 in (1, 5, 3, 7)", "f3 < ?"), 4, 8, 8, 2),
+
+                challenge(predicates("f1 in (1, 5, 3, 7)", "f2 = ?", "f3 < ?"), 4, 8, 8, 2),
+                challenge(predicates("f1 in (1, 5, 3, 7)", "f2 = ?", "f3 > ?"), 4, 8, 8, 9),
+
+                // Approximate expected scan_count ~= 16
+                // |{8}| * |{1, 5, 3, 7}| * |{3-4}| = 1 * 4 * 2
+                challenge(predicates("f1 in (1, 5, 3, 7)", "f2 = ?", "f3 < ? and f3 > ?"), 8, 16, 8, 5, 2),
+                challenge(predicates("f1 in (1, 5, 3, 7)", "f2 = ?", "f3 > ? and f3 < ?"), 8, 16, 8, 5, 8),
+
+                // Approximate expected scan_count ~= 40 = 36 + 4
+                // 36 :: Number of valid rows: |{8}| * |{1, 5, 3, 7}| * |{1-10} \ {7}| = 1 * 4 * 9
+                //  4 :: Times index scan meets rows that don't satisfy criteria but this still increment scan count
+                challenge(predicates("f1 in (1, 5, 3, 7)", "f2 = ?", "f3 <> ?"), 36, 40, 8, 7),
+                challenge(predicates("f1 = ?", "f2 in (1, 5, 3, 7)", "f3 <> ?"), 36, 40, 8, 7),
+
+                // Approximate ideal scan_count ~= 160
+                // |{1, 5, 3, 7}| * |{1, 5, 3, 7}| * |{1-10}| = 4 * 4 * 10 = 160
+                // Since 2 IN statements are not supported only first one will be expanded, so scan count is going to be = 400
+                challenge(predicates("f1 in (1, 5, 3, 7)", "f2 in (1, 5, 3, 7)", null), 160, 400),
+                challenge(predicates("f1 in (1, 5, 3, 7)", "f2 in (1, 5, 3, 7)", "f3 = ?"), 16, 400, 1),
+                challenge(predicates("f1 in (1, 5, 3, 7)", "f2 in (1, 5, 3, 7)", "f3 > ?"), 80, 400, 5),
+                challenge(predicates("f1 in (1, 5, 3, 7)", "f2 in (1, 5, 3, 7)", "f3 < ?"), 64, 400, 5),
+                challenge(predicates("f1 in (1, 5, 3, 7)", "f2 in (1, 5, 3, 7)", "f3 <> ?"), 144, 400, 5),
+
+                // IN_QUERY
+                // ========
+
+                challenge(predicates(inScalarSubquery("f1"), "f2=?", null), 10, 10, 7),
+                challenge(predicates("f1=?", inScalarSubquery("f2"), null), 10, 10, 7),
+                challenge(predicates("f1=?", inScalarSubquery("f2"), "f3 = ?"), 1, 1, 7, 5),
+                challenge(predicates("f1=?", inScalarSubquery("f2"), "f3 > ?"), 5, 6, 7, 5),
+                challenge(predicates("f1=?", inScalarSubquery("f2"), "f3 < ?"), 4, 5, 7, 5),
+                challenge(predicates("f1=?", inScalarSubquery("f2"), "f3 <> ?"), 9, 10, 7, 5),
+
+                challenge(predicates(inMultirowSubquery("f1"), "f2=?", null), 50, 50, 7),
+                challenge(predicates("f1=?", inMultirowSubquery("f2"), null), 50, 50, 7),
+                challenge(predicates("f1=?", inMultirowSubquery("f2"), "f3 = ?"), 5, 5, 7, 5),
+                challenge(predicates("f1=?", inMultirowSubquery("f2"), "f3 > ?"), 25, 30, 7, 5),
+                challenge(predicates("f1=?", inMultirowSubquery("f2"), "f3 < ?"), 20, 25, 7, 5),
+                challenge(predicates("f1=?", inMultirowSubquery("f2"), "f3 <> ?"), 45, 50, 7, 5),
+
+                // N x M
+                // =====
+
+                // Approximate ideal scan_count ~= 40 (we don't take inner query under consideration)
+                // |{10}| * |{1, 5, 3, 7}| * |{1-10}| = 1 * 4 * 10 = 40
+                // Current limitation: For multiple IN predicates we pick only first one, so scan count is going to be = 100
+                challenge(predicates(inScalarSubquery("f1"), "f2 in (1, 5, 3, 7)", null), 40, 100),
+                challenge(predicates("f1 in (1, 5, 3, 7)", inScalarSubquery("f2"), null), 40, 400),
+
+                challenge(predicates(inMultirowSubquery("f1"), "f2 in (1, 5, 3, 7)", null), 200, 500),
+                challenge(predicates("f1 in (1, 5, 3, 7)", inMultirowSubquery("f2"), null), 200, 400),
+
+                challenge(predicates(inScalarSubquery("f1"), "f2 in (1, 5, 3, 7)", "f3 = ?"), 4, 100, 5),
+                challenge(predicates("f1 in (1, 5, 3, 7)", inScalarSubquery("f2"), "f3 > ?"), 20, 400, 5),
+                challenge(predicates(inScalarSubquery("f1"), "f2 in (1, 5, 3, 7)", "f3 < ?"), 16, 100, 5),
+                challenge(predicates("f1 in (1, 5, 3, 7)", inScalarSubquery("f2"), "f3 <> ?"), 36, 400, 5),
+            };
+
+            SqlConsumer<QueryChallenge> checks = qc -> {
+                qc.assertResult(conn, rs -> {
+                    int resCnt = 0;
+
+                    while (rs.next())
+                        resCnt++;
+
+                    assertEquals(
+                        "Unexpected result set size in query \"" + qc.description() + "\"",
+                        qc.expectedRsSize,
+                        resCnt
+                    );
+                });
+
+                qc.assertPlan(conn, plan -> {
+                    System.out.println(plan);
+
+                    assertScanCount(plan, sc -> assertEquals(
+                        "Unexpected scan count in query \"" + qc.description() + "\"",
+                        qc.expectedSc,
+                        sc
+                    ));
+                });
+            };
+
+            for (QueryChallenge template : queries) {
+                for (QueryChallenge challenge : template.expand()) {
+                    System.out.println("\n" + challenge.description());
+                    checks.exec(challenge);
+                }
+            }
+        }
+        finally {
+            stat.execute("drop table in_table");
+        }
+    }
+
+    private static QueryChallenge challenge(String query, int expectedRsSize, int expectedSc, int... params) {
+        return new QueryChallenge(query, params, expectedRsSize, expectedSc);
+    }
+
+    private static String predicates(String f1, String f2, String f3) {
+        StringBuilder query = new StringBuilder()
+            .append("select * from in_table where ");
+
+        boolean and = false;
+        if (f1 != null) {
+            query.append(f1);
+            and = true;
+        }
+
+        if (f2 != null) {
+            if (and)
+                query.append(" and ");
+            query.append(f2);
+            and = true;
+        }
+
+        if (f3 != null) {
+            if (and)
+                query.append(" and ");
+            query.append(f3);
+        }
+
+        return query.toString();
+    }
+
+    private static String inScalarSubquery(String column) {
+        return column + " in (select count(distinct(f3)) from in_table)";
+    }
+
+    private static String inMultirowSubquery(String column) {
+        return column + " in (select distinct(f3) from in_table where f3 > 5)";
+    }
+
+    private static class QueryChallenge {
+        private final String query;
+
+        /** Query params. */
+        private final int[] params;
+
+        /** Expected ResultSet size. */
+        private final int expectedRsSize;
+
+        /** Expected scan_count. */
+        private final int expectedSc;
+
+        QueryChallenge(String query, int[] params, int expectedRsSize, int expectedSc) {
+            this.query = query;
+            this.params = params;
+            this.expectedRsSize = expectedRsSize;
+            this.expectedSc = expectedSc;
+        }
+
+        /**
+         * Generate all possible combinations of queries based on original query pattern.
+         * For example, query {@code SELECT * FROM t WHERE f1=?, f2=?} with supplied
+         * params {@code [3,7]} will be expanded to the following list:
+         * <pre>
+         *     1. SELECT * FROM t WHERE f1=?, f2=?       params=[3,7]
+         *     2. SELECT * FROM t WHERE f1=3, f2=?       params=[3]
+         *     3. SELECT * FROM t WHERE f1=?, f2=7       params=[7]
+         *     4. SELECT * FROM t WHERE f1=3, f2=7       params=[]
+         * </pre>
+         *
+         * @return Arrays of expanded challenge variants.
+         */
+        QueryChallenge[] expand() {
+            int variantsCnt = (int)Math.pow(2, params.length);
+            QueryChallenge[] result = new QueryChallenge[variantsCnt];
+
+            for (int i = 0; i < variantsCnt; i++) {
+                result[i] = expand(i);
+            }
+
+            return result;
+        }
+
+        /**
+         * Inlines params to the original query string according to specified bitmask.
+         * I.e. if bitmask=5, and original params=[1,3,5] then resulting query will look like:
+         * {@code SELECT * FROM t WHERE f1=1, f2=?, f3=5}, {@code params=[3]}.
+         *
+         * @param inlineMask bitmask of param indexes that should be inlined.
+         * @return Challenge with inlined params.
+         */
+        QueryChallenge expand(int inlineMask) {
+            int[] remainedParams = new int[params.length - Integer.bitCount(inlineMask)];
+            int remainedParamsCnt = 0;
+            String inlinedQuery = query;
+
+            for (int i = 0; i < params.length; i++) {
+                if ((1 << i & inlineMask) != 0) {
+                    inlinedQuery = replaceNthOccurrence(inlinedQuery, "?", String.valueOf(params[i]), remainedParamsCnt);
+                }
+                else {
+                    remainedParams[remainedParamsCnt++] = params[i];
+                }
+            }
+
+            return new QueryChallenge(inlinedQuery, remainedParams, expectedRsSize, expectedSc);
+        }
+
+        PreparedStatement prepareStatement(Connection conn, String qry) throws SQLException {
+            PreparedStatement ps = conn.prepareStatement(qry);
+
+            if (isParametrized()) {
+                int pos = 1;
+
+                for (int p : params) {
+                    ps.setInt(pos++, p);
+                }
+            }
+
+            return ps;
+        }
+
+        boolean isParametrized() {
+            return query.contains("?");
+        }
+
+        String description() {
+            String description = query;
+
+            for (int i = 0; i < params.length; i++) {
+                description = replaceNthOccurrence(description, "?", "[?:" + params[i] + "]", i);
+            }
+
+            return description;
+        }
+
+        void assertResult(Connection conn, SqlConsumer<ResultSet> checks) throws SQLException {
+            try (PreparedStatement ps = prepareStatement(conn, query)) {
+                try (ResultSet rs = ps.executeQuery()) {
+                    checks.exec(rs);
+                }
+            }
+        }
+
+        void assertPlan(Connection conn, Consumer<String> checks) throws SQLException {
+            try (PreparedStatement ps = prepareStatement(conn, "explain analyze " + query)) {
+                try (ResultSet rs = ps.executeQuery()) {
+                    rs.next();
+
+                    String plan = rs.getString(1);
+
+                    checks.accept(plan);
+                }
+            }
+        }
+    }
+
+    private static String replaceNthOccurrence(String input, String target, String replacement, int n) {
+        int index = -1;
+
+        for (int i = 0; i <= n; i++) {
+            index = input.indexOf(target, index + 1);
+
+            if (index == -1) {
+                return input;
+            }
+        }
+
+        return input.substring(0, index)
+            + replacement
+            + input.substring(index + target.length());
+    }
+
+    private static void assertScanCount(String plan, Consumer<Integer> assertion) {
+        // Remove trailing scan count increment (happens in TablerFilter.next() before method exit),
+        // for better alignment with number of read rows
+        int scanCount = extractScanCount(plan) - 1;
+        assertion.accept(scanCount);
+    }
+
+    private static final Pattern SCAN_COUNT_REGEXP = Pattern.compile("/\\*\\s*scanCount:\\s*(\\d+)\\s*\\*/");
+
+    private static int extractScanCount(String plan) {
+        assert plan != null;
+
+        Matcher matcher = SCAN_COUNT_REGEXP.matcher(plan);
+
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(1));
+        }
+
+        throw new IllegalStateException("Scan count not found in the plan: " + plan);
+    }
+
+    @FunctionalInterface
+    private interface SqlConsumer<T> {
+        void exec(T arg) throws SQLException;
+    }
 }
