@@ -32,6 +32,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
 import org.apache.ignite.client.ClientAddressFinder;
 import org.apache.ignite.client.ClientAuthorizationException;
 import org.apache.ignite.client.ClientConnectionException;
@@ -41,6 +42,7 @@ import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.internal.client.thin.io.ClientConnectionMultiplexer;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -69,7 +71,7 @@ public class ReliableChannelTest {
         ClientConfiguration ccfg = new ClientConfiguration().setAddresses(
             "127.0.0.1:10800", "127.0.0.1:10800", "127.0.0.1:10801");
 
-        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null, NullLogger.INSTANCE);
 
         rc.channelsInit();
 
@@ -83,7 +85,7 @@ public class ReliableChannelTest {
     public void testAddressWithoutPort() {
         ClientConfiguration ccfg = new ClientConfiguration().setAddresses("127.0.0.1");
 
-        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null, NullLogger.INSTANCE);
 
         rc.channelsInit();
 
@@ -114,7 +116,7 @@ public class ReliableChannelTest {
         Set<String> usedChannels = new HashSet<>();
 
         for (int i = 0; i < 100; i++) {
-            ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+            ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null, NullLogger.INSTANCE);
 
             rc.channelsInit();
 
@@ -140,7 +142,7 @@ public class ReliableChannelTest {
             .nextAddresesResponse("127.0.0.1:10800", "127.0.0.1:10801", "127.0.0.1:10802");
 
         ClientConfiguration ccfg = new ClientConfiguration().setAddressesFinder(finder);
-        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null, NullLogger.INSTANCE);
 
         Supplier<List<String>> holderAddresses = () -> rc.getChannelHolders().stream()
             .map(h -> F.first(h.getAddresses()).toString())
@@ -196,7 +198,7 @@ public class ReliableChannelTest {
 
     /** */
     private void checkDoesNotReinit(ClientConfiguration ccfg) {
-        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null, NullLogger.INSTANCE);
 
         rc.channelsInit();
 
@@ -227,7 +229,7 @@ public class ReliableChannelTest {
                 .setAddresses(dfltAddrs)
                 .setAffinityAwarenessEnabled(false);
 
-        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null, NullLogger.INSTANCE);
 
         rc.channelsInit();
 
@@ -253,7 +255,7 @@ public class ReliableChannelTest {
 
         ClientConfiguration ccfg = new ClientConfiguration().setAddressesFinder(finder);
 
-        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null, NullLogger.INSTANCE);
 
         rc.channelsInit();
 
@@ -292,7 +294,7 @@ public class ReliableChannelTest {
                 .setAddressesFinder(finder)
                 .setAffinityAwarenessEnabled(false);
 
-        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null, NullLogger.INSTANCE);
 
         rc.channelsInit();
 
@@ -316,7 +318,7 @@ public class ReliableChannelTest {
             .setAddresses(dfltAddrs)
             .setAffinityAwarenessEnabled(true);
 
-        ReliableChannel rc = new ReliableChannel((cfg, hnd) -> new TestFailureClientChannel(), ccfg, null);
+        ReliableChannel rc = new ReliableChannel((cfg, hnd) -> new TestFailureClientChannel(), ccfg, null, NullLogger.INSTANCE);
 
         rc.channelsInit();
     }
@@ -366,7 +368,7 @@ public class ReliableChannelTest {
                 return new TestAsyncServiceFailureClientChannel();
             else
                 return new TestFailureClientChannel();
-        }, ccfg, null);
+        }, ccfg, null, NullLogger.INSTANCE);
 
         rc.channelsInit();
 

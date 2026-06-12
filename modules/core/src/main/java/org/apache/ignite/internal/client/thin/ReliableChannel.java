@@ -52,7 +52,6 @@ import org.apache.ignite.internal.client.thin.io.ClientConnectionMultiplexer;
 import org.apache.ignite.internal.client.thin.io.gridnioserver.GridNioClientConnectionMultiplexer;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.logger.NullLogger;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -122,7 +121,8 @@ final class ReliableChannel implements AutoCloseable {
     ReliableChannel(
             BiFunction<ClientChannelConfiguration, ClientConnectionMultiplexer, ClientChannel> chFactory,
             ClientConfiguration clientCfg,
-            IgniteBinary binary
+            IgniteBinary binary,
+            IgniteLogger log
     ) {
         if (chFactory == null)
             throw new NullPointerException("chFactory");
@@ -132,7 +132,7 @@ final class ReliableChannel implements AutoCloseable {
 
         this.clientCfg = clientCfg;
         this.chFactory = chFactory;
-        log = NullLogger.whenNull(clientCfg.getLogger());
+        this.log = log;
 
         partitionAwarenessEnabled = clientCfg.isAffinityAwarenessEnabled();
 
@@ -371,6 +371,45 @@ final class ReliableChannel implements AutoCloseable {
                 if (result != null)
                     return new IgniteClientFutureImpl<>(fut);
             }
+        }
+
+        return serviceAsync(op, payloadWriter, payloadReader);
+    }
+
+    /**
+     * Resolves the primary node UUID for the given cache key when partition awareness is enabled.
+     *
+     * @return Node UUID, or {@code null} if partition awareness is disabled or affinity info is not yet available.
+     */
+    @Nullable public UUID resolveAffinityNode(int cacheId, Object key) {
+        if (partitionAwarenessEnabled && affinityInfoIsUpToDate(cacheId))
+            return affinityCtx.affinityNode(cacheId, key);
+
+        return null;
+    }
+
+    /**
+     * Sends a request to a specific node asynchronously, falling back to the default channel when {@code nodeId}
+     * is {@code null} or the node channel is unavailable.
+     */
+    public <T> IgniteClientFuture<T> nodeServiceAsync(
+        @Nullable UUID nodeId,
+        ClientOperation op,
+        Consumer<PayloadOutputChannel> payloadWriter,
+        Function<PayloadInputChannel, T> payloadReader
+    ) {
+        if (nodeId != null) {
+            CompletableFuture<T> fut = new CompletableFuture<>();
+            List<ClientConnectionException> failures = new ArrayList<>();
+
+            Object result = applyOnNodeChannel(
+                nodeId,
+                channel -> applyOnClientChannelAsync(fut, channel, op, payloadWriter, payloadReader, failures),
+                failures
+            );
+
+            if (result != null)
+                return new IgniteClientFutureImpl<>(fut);
         }
 
         return serviceAsync(op, payloadWriter, payloadReader);

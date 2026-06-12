@@ -16,14 +16,16 @@
 
 package org.apache.ignite.client;
 
-import java.util.Collection;
-import java.util.List;
 import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.client.datastreamer.ClientDataStreamer;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Ignite thin client.
@@ -142,6 +144,18 @@ public interface IgniteClient extends AutoCloseable {
      * @return Cursor.
      */
     public FieldsQueryCursor<List<?>> query(SqlFieldsQuery qry);
+
+    /**
+     * Creates a new data streamer for the given cache name.
+     * <p>
+     * Data streamer is an efficient way to load data into cache. Updates are buffered and mapped
+     * to primary nodes to ensure minimal data movement and optimal resource utilization.
+     *
+     * @param cacheName Cache name.
+     * @return Data streamer.
+     * @see ClientDataStreamer
+     */
+    public <K, V> ClientDataStreamer<K, V> dataStreamer(String cacheName);
 
     /**
      * Gets client transactions facade.
