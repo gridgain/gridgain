@@ -104,6 +104,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 throw new InvalidOperationException("Failed to get all entries because GetEnumerator() " +
                                                     "method has already been called.");
 
+            ThrowIfDisposed();
+
             _syncRoot.Wait();
 
             try
