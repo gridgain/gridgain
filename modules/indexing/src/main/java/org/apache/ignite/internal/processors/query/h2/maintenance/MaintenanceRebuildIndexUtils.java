@@ -20,8 +20,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.maintenance.MaintenanceTask;
 import org.jetbrains.annotations.Nullable;
 
@@ -92,6 +95,34 @@ public class MaintenanceRebuildIndexUtils {
             TASK_DESCRIPTION,
             cacheId + INDEX_REBUILD_PARAMETER_SEPARATOR + encodedIdxName
         );
+    }
+
+    /**
+     * Returns the names of the indexes that an active {@code indexRebuildMaintenanceTask} has
+     * scheduled for rebuild on the given cache.
+     *
+     * @param reg Maintenance registry.
+     * @param cacheId Cache id.
+     * @return Set of scheduled index names for the cache; empty if the node is not in maintenance
+     *         mode or no such task targets this cache.
+     */
+    public static Set<String> indexNamesScheduledForRebuild(MaintenanceRegistry reg, int cacheId) {
+        if (!reg.isMaintenanceMode())
+            return Collections.emptySet();
+
+        MaintenanceTask task = reg.activeMaintenanceTask(INDEX_REBUILD_MNTC_TASK_NAME);
+
+        if (task == null)
+            return Collections.emptySet();
+
+        Set<String> res = new HashSet<>();
+
+        for (MaintenanceRebuildIndexTarget target : parseMaintenanceTaskParameters(task.parameters())) {
+            if (target.cacheId() == cacheId)
+                res.add(target.idxName());
+        }
+
+        return res;
     }
 
     /**
