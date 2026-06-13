@@ -947,8 +947,6 @@ public class TestIndex extends TestDb {
                 });
 
                 qc.assertPlan(conn, plan -> {
-                    System.out.println(plan);
-
                     assertScanCount(plan, sc -> assertEquals(
                         "Unexpected scan count in query \"" + qc.description() + "\"",
                         qc.expectedSc,
@@ -959,7 +957,6 @@ public class TestIndex extends TestDb {
 
             for (QueryChallenge template : queries) {
                 for (QueryChallenge challenge : template.expand()) {
-                    System.out.println("\n" + challenge.description());
                     checks.exec(challenge);
                 }
             }

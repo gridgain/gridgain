@@ -130,7 +130,6 @@ public abstract class BaseIndex extends SchemaObjectBase implements Index {
 
     @Override
     public Cursor find(TableFilter filter, SearchRow first, SearchRow last) {
-        DebugLog.logTimeThreadCls(this, "find() f=" + first + ", l=" + last);
         return find(filter.getSession(), first, last);
     }
 
