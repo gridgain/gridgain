@@ -21,7 +21,6 @@ import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.table.Table;
 import org.gridgain.internal.h2.table.TableFilter;
-import org.gridgain.internal.h2.util.DebugLog;
 import org.gridgain.internal.h2.util.StringUtils;
 import org.gridgain.internal.h2.value.DataType;
 import org.gridgain.internal.h2.value.Value;
