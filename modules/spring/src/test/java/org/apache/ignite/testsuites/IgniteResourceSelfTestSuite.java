@@ -18,6 +18,7 @@ package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.processors.resource.GridLoggerInjectionSelfTest;
 import org.apache.ignite.internal.processors.resource.GridResourceProcessorSelfTest;
+import org.apache.ignite.internal.processors.resource.GridServiceContextInjectionSelfTest;
 import org.apache.ignite.internal.processors.resource.GridServiceInjectionSelfTest;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceInjectionSelfTest;
 import org.junit.runner.RunWith;
@@ -32,6 +33,7 @@ import org.junit.runners.Suite;
     GridLoggerInjectionSelfTest.class,
     GridServiceInjectionSelfTest.class,
     GridSpringResourceInjectionSelfTest.class,
+    GridServiceContextInjectionSelfTest.class,
 })
 public class IgniteResourceSelfTestSuite {
 }
