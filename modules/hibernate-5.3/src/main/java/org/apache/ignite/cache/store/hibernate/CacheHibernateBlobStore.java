@@ -77,7 +77,10 @@ import org.jetbrains.annotations.Nullable;
  * {@code GridCacheHibernateStoreEntry.hbm.xml} is included automatically.
  * <p>
  * Use {@link CacheHibernateBlobStoreFactory} factory to pass {@link CacheHibernateBlobStore} to {@link CacheConfiguration}.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class CacheHibernateBlobStore<K, V> extends CacheStoreAdapter<K, V> {
     /**
      * Default connection URL

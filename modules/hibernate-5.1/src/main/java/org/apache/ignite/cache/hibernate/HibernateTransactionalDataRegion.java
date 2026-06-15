@@ -29,7 +29,10 @@ import org.hibernate.cache.spi.access.AccessType;
  * data in the region is updated in connection with database transaction).
  * This interface defines base contract for {@link EntityRegion}, {@link CollectionRegion}
  * and {@link NaturalIdRegion}.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateTransactionalDataRegion extends HibernateRegion implements TransactionalDataRegion {
     /** */
     private final CacheDataDescription dataDesc;

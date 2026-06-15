@@ -50,7 +50,10 @@ import org.hibernate.cache.spi.access.SoftLock;
  * &#064;org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
  * public class Entity { ... }
  * </pre>
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateEntityRegion extends HibernateTransactionalDataRegion implements EntityRegion {
     /**
      * @param factory Region factory.

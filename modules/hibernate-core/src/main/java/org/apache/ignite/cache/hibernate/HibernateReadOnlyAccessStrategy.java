@@ -47,7 +47,9 @@ import org.apache.ignite.IgniteCheckedException;
  * public class Entity { ... }
  * </pre>
  *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateReadOnlyAccessStrategy extends HibernateAccessStrategyAdapter {
     /**
      * @param ignite Node.

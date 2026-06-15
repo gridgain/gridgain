@@ -26,7 +26,10 @@ import org.hibernate.cache.spi.support.AbstractRegion;
 
 /**
  * Implementation of {@link Region}. This interface defines base contract for all L2 cache regions.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public abstract class HibernateRegion extends AbstractRegion implements ExtendedStatisticsSupport {
     /** Cache instance. */
     protected final HibernateCacheProxy cache;

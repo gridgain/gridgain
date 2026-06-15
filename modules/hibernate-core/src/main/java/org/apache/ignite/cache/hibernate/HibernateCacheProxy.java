@@ -49,7 +49,10 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Hibernate cache proxy used to substitute hibernate keys with ignite keys.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateCacheProxy implements IgniteInternalCache<Object, Object> {
     /** Delegate is lazily loaded which allows for creation of caches after the SPI is bootstrapped */
     private final Supplier<IgniteInternalCache<Object, Object>> delegate;

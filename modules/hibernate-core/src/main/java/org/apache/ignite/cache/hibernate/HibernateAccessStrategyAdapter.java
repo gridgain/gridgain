@@ -80,7 +80,10 @@ import org.jetbrains.annotations.Nullable;
  *     <li>Commit DB transaction.</li>
  *     <li>Call {@link HibernateAccessStrategyAdapter#unlockRegion}.</li>
  * </ul>
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public abstract class HibernateAccessStrategyAdapter {
     /** */
     protected final HibernateCacheProxy cache;

@@ -60,7 +60,10 @@ import org.hibernate.cache.spi.access.CollectionRegionAccessStrategy;
  * Note: the collection cache does not cache the state of the actual entities in the cache, it caches only identifier
  * values. For this reason, the collection cache should always be used in conjunction with
  * the second-level cache for those entities expected to be cached as part of a collection cache.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateCollectionRegion extends HibernateTransactionalDataRegion implements CollectionRegion {
     /**
      * @param factory Region factory.

@@ -43,7 +43,10 @@ import org.hibernate.persister.entity.EntityPersister;
  *     ...
  * }
  * </pre>
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateNaturalIdRegion extends HibernateTransactionalDataRegion implements NaturalIdRegion {
     /**
      * @param factory Region factory.

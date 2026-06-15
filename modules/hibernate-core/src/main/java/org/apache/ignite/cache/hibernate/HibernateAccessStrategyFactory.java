@@ -37,7 +37,10 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 
 /**
  * Access strategy factory.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateAccessStrategyFactory {
     /** */
     private final HibernateKeyTransformer keyTransformer;

@@ -53,7 +53,10 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * &#064;org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
  * public class Entity { ... }
  * </pre>
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateNonStrictAccessStrategy extends HibernateAccessStrategyAdapter {
     /** */
     private final ThreadLocal<WriteContext> writeCtx;

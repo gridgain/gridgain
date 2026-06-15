@@ -21,7 +21,10 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Hibernate cache key wrapper.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateKeyWrapper implements Serializable {
     /** Key. */
     private final Object key;

@@ -53,7 +53,10 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
  * &#064;org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
  * public class Entity { ... }
  * </pre>
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateReadWriteAccessStrategy extends HibernateAccessStrategyAdapter {
     /** */
     private final ThreadLocal<TxContext> txCtx;

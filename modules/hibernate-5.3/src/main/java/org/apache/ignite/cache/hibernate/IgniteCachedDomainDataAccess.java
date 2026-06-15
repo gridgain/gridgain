@@ -27,7 +27,10 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Implementation of L2 cache access strategy delegating to {@link HibernateAccessStrategyAdapter}.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public abstract class IgniteCachedDomainDataAccess extends HibernateRegion implements CachedDomainDataAccess {
     /** */
     protected final HibernateAccessStrategyAdapter stgy;

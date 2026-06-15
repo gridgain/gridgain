@@ -18,7 +18,10 @@ package org.apache.ignite.cache.hibernate;
 
 /**
  * Converts Ignite errors into Hibernate runtime exceptions.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public interface HibernateExceptionConverter {
     /**
      * @param e Exception.

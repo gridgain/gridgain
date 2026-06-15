@@ -29,7 +29,10 @@ import org.hibernate.persister.entity.EntityPersister;
 
 /**
  * Ignite implementation of {@code NaturalIdDataAccess} for Hibernate integration.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class IgniteNaturalIdDataAccess extends IgniteCachedDomainDataAccess implements NaturalIdDataAccess {
     /** */
     private final AccessType accessType;

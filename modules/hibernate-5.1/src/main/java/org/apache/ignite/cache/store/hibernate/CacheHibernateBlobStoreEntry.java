@@ -27,7 +27,10 @@ import javax.persistence.Table;
  * Note that this is a reference implementation for tests only.
  * When running on production systems use concrete key-value types to
  * get better performance.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 @Entity
 @Table(name = "ENTRIES")
 public class CacheHibernateBlobStoreEntry {
