@@ -25,6 +25,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -35,20 +36,20 @@ import org.junit.Test;
  * Multi-node HTTP-level test for the core behaviour of
  * {@code cmd=probe&kind=readiness}: a (re)joining node that is still
  * <em>demanding</em> (inbound-rebalancing) its partitions reports 503, and only
- * reports 200 once its initial rebalance completes — then stays 200 (latched)
+ * reports 200 once its initial rebalance completes - then stays 200 (latched)
  * across later topology rebalances.
  *
  * <p>This is the regression that the bare {@code cmd=probe} (kernel-started only)
  * misses: a (re)joining node has its join PME done while it is still pulling its
- * partitions, so a kernel-only check reports ready — exactly the
+ * partitions, so a kernel-only check reports ready - exactly the
  * bounce-the-next-pod trigger for Lost Partitions.</p>
  *
  * <h3>Rebalance-stall recipe (read before editing)</h3>
  * <ul>
  *   <li><b>3 servers + 1 joiner</b>, persistence on, {@code backups=1} so the
  *       joiner has a real demand exchange.</li>
- *   <li><b>{@link CacheRebalanceMode#ASYNC}</b> (not {@code SYNC}) so the joiner's
- *       {@code onKernalStart} does not block on rebalance and its REST endpoint
+ *   <li><b>{@link CacheRebalanceMode#ASYNC}</b> (the cache default, not {@code SYNC}) so the
+ *       joiner's {@code onKernalStart} does not block on rebalance and its REST endpoint
  *       comes up while it is still demanding.</li>
  *   <li><b>Baseline auto-adjust</b> so the joiner is added to the baseline (and
  *       thus assigned partitions to demand) as soon as it joins.</li>
@@ -56,16 +57,14 @@ import org.junit.Test;
  *       test cache group via {@link TestRecordingCommunicationSpi} (installed in
  *       {@link #getConfiguration}). Only the test group is blocked so system
  *       caches finish and the joiner completes start.</li>
- *   <li>Each node's Jetty REST binds the first free port from 8080, so by start
- *       order node {@code i} → port {@code 8080 + i}; the joiner (node 3) → 8083.</li>
+ *   <li>Each node's Jetty REST binds the first free port from its configured range, so the
+ *       joiner's port is resolved from its {@link IgniteNodeAttributes#ATTR_REST_JETTY_PORT}
+ *       attribute rather than assumed (see {@link #restPort(int)}).</li>
  * </ul>
  */
 public class GridProbeReadinessRebalanceTest extends GridCommonAbstractTest {
     /** Cache name / group used for the rebalance-controlled cache group. */
     private static final String CACHE = "test";
-
-    /** Jetty REST port of the joiner node (node 3, 4th node started → 8083). */
-    private static final int JOINER_PORT = 8083;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -81,8 +80,7 @@ public class GridProbeReadinessRebalanceTest extends GridCommonAbstractTest {
         // Joiner nodes (index >= 3): hold their inbound demand for the test group so
         // they stay mid-rebalance until the test releases them.
         if (trailingIdx(igniteInstanceName) >= 3) {
-            spi.blockMessages((node, msg) -> msg instanceof GridDhtPartitionDemandMessage
-                && ((GridDhtPartitionDemandMessage)msg).groupId() == CU.cacheId(CACHE));
+            spi.blockMessages(TestRecordingCommunicationSpi.blockDemandMessageForGroup(CU.cacheId(CACHE)));
         }
 
         cfg.setCommunicationSpi(spi);
@@ -100,7 +98,7 @@ public class GridProbeReadinessRebalanceTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Demander mid-rebalance → 503; after rebalance → 200; latched stays 200
+     * Demander mid-rebalance -> 503; after rebalance -> 200; latched stays 200
      * during a later rebalance.
      *
      * @throws Exception If failed.
@@ -109,13 +107,13 @@ public class GridProbeReadinessRebalanceTest extends GridCommonAbstractTest {
     public void testReadinessGatesInboundRebalanceAndLatches() throws Exception {
         seedCluster();
 
-        // --- Stage 1: joiner mid inbound-rebalance -> 503 ---------------------------------
+        // Stage 1: joiner mid inbound-rebalance -> 503.
         // ASYNC rebalance: startGrid returns after kernel start; demand is held by the SPI.
         startGrid(3);
 
         TestRecordingCommunicationSpi.spi(grid(3)).waitForBlocked();
 
-        GridRestHttpClient.Response demanding = GridRestHttpClient.get(JOINER_PORT, "/ignite?cmd=probe&kind=readiness");
+        GridRestHttpClient.Response demanding = GridRestHttpClient.get(restPort(3), "/ignite?cmd=probe&kind=readiness");
 
         log.info("joiner readiness while demanding: code=" + demanding.code + " body=" + demanding.body);
 
@@ -124,63 +122,72 @@ public class GridProbeReadinessRebalanceTest extends GridCommonAbstractTest {
         assertEquals("rebalance in progress", demanding.body.get("error"));
 
         // BC pin: bare cmd=probe stays 200 on the demander (kernel-only check).
-        GridRestHttpClient.Response bare = GridRestHttpClient.get(JOINER_PORT, "/ignite?cmd=probe");
+        GridRestHttpClient.Response bare = GridRestHttpClient.get(restPort(3), "/ignite?cmd=probe");
         assertEquals("bare cmd=probe must remain 200 while demanding (BC): " + bare.body, 200, bare.code);
         assertEquals("grid has started", bare.body.get("response"));
 
-        // Liveness stays 200 too — a rebalancing node is alive.
-        GridRestHttpClient.Response live = GridRestHttpClient.get(JOINER_PORT, "/ignite?cmd=probe&kind=liveness");
+        // Liveness stays 200 too - a rebalancing node is alive.
+        GridRestHttpClient.Response live = GridRestHttpClient.get(restPort(3), "/ignite?cmd=probe&kind=liveness");
         assertEquals("liveness must remain 200 while demanding: " + live.body, 200, live.code);
         assertEquals("grid has started", live.body.get("response"));
 
-        // --- Stage 2: release rebalance -> joiner becomes ready ---------------------------
+        // Stage 2: release rebalance -> every server node reports ready and latches.
         TestRecordingCommunicationSpi.spi(grid(3)).stopBlock();
 
         awaitPartitionMapExchange();
 
-        GridRestHttpClient.Response ready = GridRestHttpClient.get(JOINER_PORT, "/ignite?cmd=probe&kind=readiness");
+        // Probe each server node while the cluster is fully rebalanced so every node latches its
+        // initial-rebalance-complete state.
+        for (int node = 0; node <= 3; node++) {
+            GridRestHttpClient.Response ready = GridRestHttpClient.get(restPort(node), "/ignite?cmd=probe&kind=readiness");
 
-        log.info("joiner readiness after rebalance: code=" + ready.code + " body=" + ready.body);
+            log.info("node " + node + " readiness after rebalance: code=" + ready.code + " body=" + ready.body);
 
-        assertEquals(200, ready.code);
-        assertEquals(0, ready.body.get("successStatus"));
-        assertEquals("ready", ready.body.get("response"));
+            assertEquals("node " + node + " must be ready after rebalance: " + ready.body, 200, ready.code);
+            assertEquals(0, ready.body.get("successStatus"));
+            assertEquals("ready", ready.body.get("response"));
+        }
 
-        // --- Stage 3: a LATER rebalance must NOT flip the joiner back to 503 (latched) ----
-        // Start node 4 with its demand blocked: the cluster is no longer fully rebalanced,
-        // yet node 3 is already latched and must stay 200.
+        // Stage 3: a LATER rebalance must NOT flip any already-ready node back to 503 (latched).
+        // Start node 4 with its demand blocked so the cluster is no longer fully rebalanced.
         startGrid(4);
 
         TestRecordingCommunicationSpi.spi(grid(4)).waitForBlocked();
 
-        for (int i = 0; i < 3; i++) {
-            GridRestHttpClient.Response latched = GridRestHttpClient.get(JOINER_PORT, "/ignite?cmd=probe&kind=readiness");
+        // The new joiner is mid inbound-rebalance -> 503.
+        GridRestHttpClient.Response joiner = GridRestHttpClient.get(restPort(4), "/ignite?cmd=probe&kind=readiness");
+        assertEquals("new joiner must be 503 while demanding: " + joiner.body, 503, joiner.code);
+        assertEquals("rebalance in progress", joiner.body.get("error"));
 
-            assertEquals("latched readiness must stay 200 during a later rebalance: " + latched.body,
+        // Every previously-ready node stays 200 despite the cluster no longer being fully rebalanced.
+        for (int node = 0; node <= 3; node++) {
+            GridRestHttpClient.Response latched = GridRestHttpClient.get(restPort(node), "/ignite?cmd=probe&kind=readiness");
+
+            assertEquals("node " + node + " latched readiness must stay 200 during a later rebalance: " + latched.body,
                 200, latched.code);
             assertEquals("ready", latched.body.get("response"));
         }
 
+        // Release the joiner: it completes its own rebalance and becomes ready too.
         TestRecordingCommunicationSpi.spi(grid(4)).stopBlock();
 
         awaitPartitionMapExchange();
 
-        GridRestHttpClient.Response afterAll = GridRestHttpClient.get(JOINER_PORT, "/ignite?cmd=probe&kind=readiness");
+        GridRestHttpClient.Response afterAll = GridRestHttpClient.get(restPort(4), "/ignite?cmd=probe&kind=readiness");
         assertEquals(200, afterAll.code);
         assertEquals("ready", afterAll.body.get("response"));
     }
 
     /**
      * Bring up nodes 0/1/2, activate, enable baseline auto-adjust, create a
-     * partitioned cache with backups configured for ASYNC rebalance, seed it, and
-     * let the initial rebalance settle.
+     * partitioned cache with one backup, and seed it.
      *
      * @throws Exception If failed.
      */
     private void seedCluster() throws Exception {
-        IgniteEx g0 = startGrid(0);
-        startGrid(1);
-        startGrid(2);
+        startGridsMultiThreaded(3);
+
+        IgniteEx g0 = grid(0);
 
         g0.cluster().state(ClusterState.ACTIVE);
 
@@ -188,15 +195,22 @@ public class GridProbeReadinessRebalanceTest extends GridCommonAbstractTest {
         g0.cluster().baselineAutoAdjustTimeout(0);
 
         IgniteCache<Integer, Integer> cache = g0.getOrCreateCache(
-            new CacheConfiguration<Integer, Integer>(CACHE)
-                .setBackups(1)
-                .setRebalanceMode(CacheRebalanceMode.ASYNC)
-                .setRebalanceBatchSize(256));
+            new CacheConfiguration<Integer, Integer>(CACHE).setBackups(1));
 
         for (int i = 0; i < 5_000; i++)
             cache.put(i, i);
+    }
 
-        awaitPartitionMapExchange();
+    /**
+     * Resolves a node's actual Jetty REST port from its node attributes rather than assuming a
+     * fixed value: the configured port may be taken, in which case Jetty binds the next free port
+     * in {@link ConnectorConfiguration#getPortRange()}.
+     *
+     * @param nodeIdx Node index.
+     * @return Jetty REST port the node bound.
+     */
+    private int restPort(int nodeIdx) {
+        return (Integer)grid(nodeIdx).context().nodeAttribute(IgniteNodeAttributes.ATTR_REST_JETTY_PORT);
     }
 
     /**

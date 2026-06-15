@@ -19,6 +19,7 @@ package org.apache.ignite.internal.client.rest;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -41,28 +42,31 @@ import org.junit.Test;
  * Tests the {@code cmd=probe} REST command and its {@code kind} sub-commands.
  *
  * <ul>
- *     <li>Bare {@code cmd=probe} (BC): kernel-started check → "grid has started" / 503
+ *     <li>Bare {@code cmd=probe} (BC): kernel-started check -> "grid has started" / 503
  *         "grid has not started".</li>
  *     <li>{@code kind=liveness}: the same kernel-started check as bare (same body).</li>
  *     <li>{@code kind=readiness}: 503 "kernel not started" while starting; 200 "ready"
- *         once active and rebalanced; cluster INACTIVE → 200 "ready"; maintenance mode →
+ *         once active and rebalanced; cluster INACTIVE -> 200 "ready"; maintenance mode ->
  *         503 "maintenance mode".</li>
- *     <li>Unknown {@code kind} → application-level {@code STATUS_FAILED}.</li>
+ *     <li>Unknown {@code kind} -> application-level {@code STATUS_FAILED}.</li>
  * </ul>
  *
- * Multi-node, rebalance-gated readiness (the inbound-demand 503 → 200 latch) is covered by
+ * Multi-node, rebalance-gated readiness (the inbound-demand 503 -> 200 latch) is covered by
  * {@link GridProbeReadinessRebalanceTest}.
  */
 public class GridProbeCommandTest extends GridCommonAbstractTest {
 
     private static final int JETTY_PORT = 8080;
 
-    /** Enables persistence (so a non-activated node stays INACTIVE / supports maintenance mode). */
+    /** Enables persistence (required by the maintenance-mode test). */
     private boolean persistence;
 
-    private CountDownLatch triggerRestCmdLatch = new CountDownLatch(1);
+    /** Forces the cluster INACTIVE on start (an in-memory node left un-activated). */
+    private boolean inactiveOnStart;
 
-    private CountDownLatch triggerPluginStartLatch = new CountDownLatch(1);
+    private final CountDownLatch triggerRestCmdLatch = new CountDownLatch(1);
+
+    private final CountDownLatch triggerPluginStartLatch = new CountDownLatch(1);
 
 
     /**
@@ -77,10 +81,13 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true)));
         }
 
+        if (inactiveOnStart)
+            cfg.setClusterStateOnStart(ClusterState.INACTIVE);
+
         if (igniteInstanceName.equals("delayedStart")) {
             PluginProvider delayedStartPluginProvider = new DelayedStartPluginProvider(triggerPluginStartLatch, triggerRestCmdLatch);
 
-            cfg.setPluginProviders(new PluginProvider[] {delayedStartPluginProvider});
+            cfg.setPluginProviders(delayedStartPluginProvider);
         }
 
         return cfg;
@@ -130,7 +137,7 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
 
     /**
      * <p>Test rest cmd=probe command given a non fully started kernal. </p>
-     *  <p>1. start the grid on a seperate thread w/a plugin that will keep it waiting, at a point after rest http processor is ready, until signaled to proceed. </p>
+     *  <p>1. start the grid on a separate thread w/a plugin that will keep it waiting, at a point after rest http processor is ready, until signaled to proceed. </p>
      *  <p>2. when the grid.start() has reached the plugin init method(rest http processor has started now), issue a rest command against the non-fully started kernal. </p>
      *  <p>3. validate that the probe cmd has returned the appropriate erroneous code and message. </p>
      *  <p>4. stop the grid. </p>
@@ -146,12 +153,11 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
     }
 
     /**
-     * <p>Start a regular grid, issue a cmd=probe rest command, and validate restponse
+     * <p>Start a regular grid, issue a cmd=probe rest command, and validate response
      * @throws Exception If failed.
      */
     @Test
     public void testRestProbeCommandGridStarted() throws Exception {
-
         startGrid("regular");
 
         Map<String, Object> probeRestCommandResponse;
@@ -164,7 +170,7 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
 
     /**
      * {@code kind=liveness} is the same kernel-started check as bare {@code cmd=probe}:
-     * a started node → 200 "grid has started".
+     * a started node -> 200 "grid has started".
      *
      * @throws Exception If failed.
      */
@@ -179,7 +185,7 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
     }
 
     /**
-     * {@code kind=readiness} on a node whose kernel has not finished starting → 503
+     * {@code kind=readiness} on a node whose kernel has not finished starting -> 503
      * "kernel not started".
      *
      * @throws Exception If failed.
@@ -193,7 +199,7 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
     }
 
     /**
-     * {@code kind=readiness} on an active node with nothing to rebalance → 200 "ready".
+     * {@code kind=readiness} on an active node with nothing to rebalance -> 200 "ready".
      *
      * @throws Exception If failed.
      */
@@ -210,14 +216,14 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
     }
 
     /**
-     * {@code kind=readiness} on an INACTIVE cluster → 200 "ready" (so a k8s rolling update
-     * may proceed). Uses a persistent node deliberately left un-activated.
+     * {@code kind=readiness} on an INACTIVE cluster -> 200 "ready" (so a k8s rolling update
+     * may proceed). Uses an in-memory node forced INACTIVE on start.
      *
      * @throws Exception If failed.
      */
     @Test
     public void testRestProbeCommandReadinessInactive() throws Exception {
-        persistence = true;
+        inactiveOnStart = true;
 
         startGrid("regular");
 
@@ -230,7 +236,7 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
     }
 
     /**
-     * {@code kind=readiness} on a node restarted into maintenance mode → 503 "maintenance
+     * {@code kind=readiness} on a node restarted into maintenance mode -> 503 "maintenance
      * mode" (liveness, by contrast, stays 200). Maintenance is re-evaluated live and wins
      * over the INACTIVE short-circuit (a maintenance node is forced INACTIVE).
      *
@@ -260,7 +266,7 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Unknown {@code kind} → application-level {@code STATUS_FAILED} (HTTP 200).
+     * Unknown {@code kind} -> application-level {@code STATUS_FAILED} (HTTP 200).
      *
      * @throws Exception If failed.
      */
@@ -296,7 +302,8 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
             }
         }).start();
 
-        triggerPluginStartLatch.await();
+        assertTrue("timed out waiting for delayedStart plugin to reach onIgniteStart",
+            triggerPluginStartLatch.await(getTestTimeout(), TimeUnit.MILLISECONDS));
 
         try {
             return executeProbeRestRequest(query);
@@ -329,9 +336,9 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
      */
     public static class DelayedStartPluginProvider extends AbstractTestPluginProvider {
 
-        private CountDownLatch triggerRestCmd;
+        private final CountDownLatch triggerRestCmd;
 
-        private CountDownLatch triggerPluginStart;
+        private final CountDownLatch triggerPluginStart;
 
         public DelayedStartPluginProvider(CountDownLatch triggerPluginStartLatch,
             CountDownLatch triggerRestCmdLatch) {
@@ -343,7 +350,7 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
          * {@inheritDoc}
          */
         @Override public String name() {
-            return "DelatedStartPlugin";
+            return "DelayedStartPlugin";
         }
 
         @Override public void onIgniteStart() {

@@ -233,18 +233,20 @@ public class GridProbeCommandHandler extends GridRestCommandHandlerAdapter {
     }
 
     /**
-     * @return {@code true} if maintenance mode is active. Non-blocking, null-safe.
+     * @return {@code true} if maintenance mode is active. Non-blocking. The maintenance
+     *     registry is created and started before the REST processor, so it is never
+     *     {@code null} by the time a probe request is handled.
      */
     private boolean isMaintenanceMode() {
-        return ctx.maintenanceRegistry() != null && ctx.maintenanceRegistry().isMaintenanceMode();
+        return ctx.maintenanceRegistry().isMaintenanceMode();
     }
 
     /**
-     * Instantaneous "this node has completed its (initial) rebalance" predicate —
+     * Instantaneous "this node has completed its (initial) rebalance" predicate -
      * the value the readiness latch captures. Reads the cluster-wide rebalanced
      * flag of the last finished partition-map exchange: {@code false} while this
      * node is still demanding its initial partitions and {@code false} while the cluster
-     * is INACTIVE (callers MUST short-circuit INACTIVE → ready before relying on
+     * is INACTIVE (callers MUST short-circuit INACTIVE -> ready before relying on
      * this). Non-blocking, null-safe; returns {@code false} while the cache
      * subsystem is still initializing so readiness stays 503 until the node is
      * genuinely settled.
@@ -266,7 +268,7 @@ public class GridProbeCommandHandler extends GridRestCommandHandlerAdapter {
     }
 
     /**
-     * Initial/local-join PME finished and affinity is ready (server nodes only —
+     * Initial/local-join PME finished and affinity is ready (server nodes only -
      * the sole caller short-circuits client/daemon nodes). Non-blocking, null-safe;
      * returns {@code false} while the cache subsystem is still initializing or no
      * exchange has finished yet.
@@ -279,9 +281,7 @@ public class GridProbeCommandHandler extends GridRestCommandHandlerAdapter {
 
         GridCachePartitionExchangeManager<?, ?> exch = ctx.cache().context().exchange();
 
-        GridDhtPartitionsExchangeFuture lastFinished = exch.lastFinishedFuture();
-
         // readyAffinityVersion() is never null; NONE (0,0) means no exchange has completed yet.
-        return lastFinished != null && exch.readyAffinityVersion().compareTo(AffinityTopologyVersion.NONE) > 0;
+        return exch.readyAffinityVersion().compareTo(AffinityTopologyVersion.NONE) > 0;
     }
 }
