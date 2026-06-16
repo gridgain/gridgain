@@ -48,6 +48,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         private readonly Func<BinaryReader, T> _readFunc;
 
         /** Lock object. */
+        [SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed",
+            Justification = "SemaphoreSlim.Dispose is not thread-safe and would race with concurrent Wait calls " +
+                            "from other threads (e.g. iterating while disposing), causing the internal lock object " +
+                            "to be nulled mid-Wait and throwing ArgumentNullException. Since only Wait/WaitAsync/" +
+                            "Release are used (never AvailableWaitHandle), there is no wait handle to release and " +
+                            "the semaphore is safely reclaimed by the GC.")]
         private readonly SemaphoreSlim _syncRoot = new SemaphoreSlim(1);
 
         /** Whether "GetAll" was called. */
@@ -374,7 +380,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /** <inheritdoc /> */
         public void Dispose()
         {
-            // Avoid waiting on the semaphore once it has been disposed (idempotent Dispose).
+            // Fast path for the common idempotent-Dispose case.
             if (_disposed)
             {
                 return;
@@ -403,8 +409,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             {
                 _syncRoot.Release();
             }
-
-            _syncRoot.Dispose();
         }
 
         /** <inheritdoc /> */
@@ -412,7 +416,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             Justification = "GC.SuppressFinalize is valid in DisposeAsync; the analyzer only recognizes Dispose.")]
         public async ValueTask DisposeAsync()
         {
-            // Avoid waiting on the semaphore once it has been disposed (idempotent DisposeAsync).
+            // Fast path for the common idempotent-DisposeAsync case.
             if (_disposed)
             {
                 return;
@@ -449,8 +453,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             {
                 await task.ConfigureAwait(false);
             }
-
-            _syncRoot.Dispose();
         }
 
         /// <summary>
