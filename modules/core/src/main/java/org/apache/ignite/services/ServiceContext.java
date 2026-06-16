@@ -18,11 +18,13 @@ package org.apache.ignite.services;
 
 import java.io.Serializable;
 import java.util.UUID;
+import org.apache.ignite.resources.ServiceContextResource;
 
 /**
- * Service execution context. Execution context is provided into {@link Service#execute(ServiceContext)}
- * and {@link Service#cancel(ServiceContext)} methods and contains information about specific service
- * execution.
+ * Service execution context. This context is provided using {@link ServiceContextResource} annotation and contains
+ * information about specific service execution.
+ *
+ * @see ServiceContextResource
  */
 public interface ServiceContext extends Serializable {
     /**
@@ -30,7 +32,7 @@ public interface ServiceContext extends Serializable {
      *
      * @return Service name.
      */
-    public String name();
+    String name();
 
     /**
      * Gets service execution ID. Execution ID is guaranteed to be unique across
@@ -38,14 +40,14 @@ public interface ServiceContext extends Serializable {
      *
      * @return Service execution ID.
      */
-    public UUID executionId();
+    UUID executionId();
 
     /**
      * Get flag indicating whether service has been cancelled or not.
      *
      * @return Flag indicating whether service has been cancelled or not.
      */
-    public boolean isCancelled();
+    boolean isCancelled();
 
     /**
      * Gets cache name used for key-to-node affinity calculation. This parameter is optional
@@ -53,7 +55,7 @@ public interface ServiceContext extends Serializable {
      *
      * @return Cache name, possibly {@code null}.
      */
-    public String cacheName();
+    String cacheName();
 
     /**
      * Gets affinity key used for key-to-node affinity calculation. This parameter is optional
@@ -61,7 +63,7 @@ public interface ServiceContext extends Serializable {
      *
      * @return Affinity key, possibly {@code null}.
      */
-    public <K> K affinityKey();
+    <K> K affinityKey();
 
     /**
      * Gets context of the current service call.
@@ -69,5 +71,5 @@ public interface ServiceContext extends Serializable {
      * @return Context of the current service call, possibly {@code null}.
      * @see ServiceCallContext
      */
-    public ServiceCallContext currentCallContext();
+    ServiceCallContext currentCallContext();
 }
