@@ -25,12 +25,15 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointManager;
+import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.aware.IndexBuildStatusStorage;
 import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
@@ -134,13 +137,12 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
 
         SchemaManager schemaManager = indexing.schemaManager();
 
-        H2TreeIndex targetIndex = findIndex(cacheName, idxName, schemaManager);
+        H2TreeIndex targetIndex = reconstructIndex(cacheName, idxName, schemaManager);
 
         if (targetIndex == null) {
-            if (log.isInfoEnabled()) {
-                log.info("Could not find index: [indexName=" + idxName + ", "
-                    + createCacheTablesInfo(cacheName, schemaManager) + ']');
-            }
+            log.warning("Cannot rebuild index via maintenance task; descriptor is missing " +
+                    "[indexName=" + idxName + ", " + createCacheTablesInfo(cacheName, schemaManager) + ']'
+            );
 
             return;
         }
@@ -152,6 +154,33 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
         recreateIndex(targetIndex, context, cacheName, storage, schemaManager, targetTable);
 
         manager.forceCheckpoint("afterIndexRebuild", null).futureFor(FINISHED).get();
+    }
+
+    /**
+     * Reconstructs a reference to a user index that was not constructed at cache start because it
+     * was scheduled for rebuild — see {@link H2TableDescriptor#createUserIndexes}.
+     *
+     * <p>Returns {@code null} for system indexes: they are not in {@link GridQueryTypeDescriptor#indexes()}, and
+     * this per-index action cannot rebuild them in place.
+     *
+     * @param cacheName Cache name.
+     * @param idxName Name of the index.
+     * @param schemaManager Schema manager.
+     * @return Reconstructed index reference, or {@code null} if no matching user tree index descriptor exists.
+     */
+    private @Nullable H2TreeIndex reconstructIndex(String cacheName, String idxName, SchemaManager schemaManager) {
+        for (H2TableDescriptor desc : schemaManager.tablesForCache(cacheName)) {
+            GridQueryIndexDescriptor idxDesc = desc.type().indexes().get(idxName);
+
+            if (idxDesc == null)
+                continue;
+
+            GridH2IndexBase idxRef = desc.createUserIndex(idxDesc);
+
+            return idxRef instanceof H2TreeIndex ? (H2TreeIndex)idxRef : null;
+        }
+
+        return null;
     }
 
     /**

@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -32,28 +31,18 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.localtask.DurableBackgroundTaskState;
 import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2;
-import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
-import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
-import org.apache.ignite.internal.processors.query.h2.database.io.H2LeafIO;
 import org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesClosure;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesJobResult;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.maintenance.MaintenanceTask;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static java.util.Arrays.asList;
@@ -67,7 +56,7 @@ import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 /**
  * Test for the maintenance task that rebuild a corrupted index.
  */
-public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
+public class IndexCorruptionRebuildTest extends AbstractIndexCorruptionTest {
     /** */
     private static final String FAIL_IDX_1 = "FAIL_IDX_1";
 
@@ -108,28 +97,6 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
         ));
 
         return cfg;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        super.beforeTest();
-
-        stopAllGrids();
-
-        cleanPersistenceDir();
-
-        GridQueryProcessor.idxCls = null;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        stopAllGrids();
-
-        cleanPersistenceDir();
-
-        GridQueryProcessor.idxCls = null;
-
-        super.afterTest();
     }
 
     /** */
@@ -244,42 +211,6 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
         assertTrue(idxsForCache2.contains(FAIL_IDX_3));
     }
 
-    /**
-     * Corrupts the index.
-     *
-     * @param srv Node.
-     * @param indexing Indexing.
-     * @param cacheName Name of the cache.
-     * @param idxName Name of the index.
-     * @throws IgniteCheckedException If failed.
-     */
-    private void corruptIndex(IgniteEx srv, IgniteH2Indexing indexing, String cacheName,
-        String idxName) throws IgniteCheckedException {
-        PageMemoryEx mem = (PageMemoryEx) srv.context().cache().context().cacheContext(CU.cacheId(cacheName))
-            .dataRegion().pageMemory();
-
-        Collection<H2TableDescriptor> tables = indexing.schemaManager().tablesForCache(cacheName);
-
-        for (H2TableDescriptor descriptor : tables) {
-            H2TreeIndex index = (H2TreeIndex) descriptor.table().getIndex(idxName);
-            int segments = index.segmentsCount();
-
-            for (int segment = 0; segment < segments; segment++) {
-                H2Tree tree = index.treeForRead(segment);
-
-                GridCacheDatabaseSharedManager manager = dbMgr(srv);
-                manager.checkpointReadLock();
-
-                try {
-                    corruptTreeRoot(mem, tree.groupId(), tree.getMetaPageId());
-                }
-                finally {
-                    manager.checkpointReadUnlock();
-                }
-            }
-        }
-    }
-
     /** */
     private static void validateIndexes(IgniteEx node) throws Exception {
         ValidateIndexesClosure clo = new ValidateIndexesClosure(
@@ -328,54 +259,6 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
                 assertNotNull(task);
             }
         });
-    }
-
-    /** */
-    private void corruptTreeRoot(PageMemoryEx pageMemory, int grpId, long metaPageId) throws IgniteCheckedException {
-        long leafId = findFirstLeafId(grpId, metaPageId, pageMemory);
-
-        if (leafId != 0L) {
-            long leafPage = pageMemory.acquirePage(grpId, leafId);
-
-            try {
-                long leafPageAddr = pageMemory.writeLock(grpId, leafId, leafPage);
-
-                try {
-                    H2LeafIO io = PageIO.getBPlusIO(leafPageAddr);
-
-                    for (int idx = 0; idx < io.getCount(leafPageAddr); idx++) {
-                        PageUtils.putLong(leafPageAddr, io.offset(idx) + io.getPayloadSize(), 0);
-                    }
-                }
-                finally {
-                    pageMemory.writeUnlock(grpId, leafId, leafPage, true, true);
-                }
-            }
-            finally {
-                pageMemory.releasePage(grpId, leafId, leafPage);
-            }
-        }
-    }
-
-    /** */
-    private long findFirstLeafId(int grpId, long metaPageId, PageMemoryEx partPageMemory) throws IgniteCheckedException {
-        long metaPage = partPageMemory.acquirePage(grpId, metaPageId);
-
-        try {
-            long metaPageAddr = partPageMemory.readLock(grpId, metaPageId, metaPage);
-
-            try {
-                BPlusMetaIO metaIO = PageIO.getPageIO(metaPageAddr);
-
-                return metaIO.getFirstPageId(metaPageAddr, 0);
-            }
-            finally {
-                partPageMemory.readUnlock(grpId, metaPageId, metaPage);
-            }
-        }
-        finally {
-            partPageMemory.releasePage(grpId, metaPageId, metaPage);
-        }
     }
 
     /**
