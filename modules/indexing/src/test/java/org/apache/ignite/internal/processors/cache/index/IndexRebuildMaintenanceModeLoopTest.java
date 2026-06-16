@@ -38,6 +38,9 @@ import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 
 /**
  * Tests the following scenario: when an index is corrupted, the node schedules {@code indexRebuildMaintenanceTask} and
@@ -104,11 +107,9 @@ public class IndexRebuildMaintenanceModeLoopTest extends AbstractIndexCorruption
         // Initial data — enough rows to populate at least one leaf.
         for (int i = 0; i < 100; i++) {
             cache.query(new SqlFieldsQuery(
-                    "insert into " + TABLE_NAME + "(col1, col2) values (?1, ?2)")
+                    "insert into " + TABLE_NAME + "(col1, col2) values (?, ?)")
                     .setArgs(String.valueOf(i), "v" + i));
         }
-
-        forceCheckpoint(srv);
 
         // Corrupt the secondary index's leaf pages in-memory.
         IgniteH2Indexing indexing = (IgniteH2Indexing) srv.context().query().getIndexing();
@@ -119,10 +120,9 @@ public class IndexRebuildMaintenanceModeLoopTest extends AbstractIndexCorruption
 
         MaintenanceRegistry registry = srv.context().maintenanceRegistry();
 
-        // First detection: select that traverses the corrupted leaf. This registers the
-        // maintenance task and fires processFailure(CRITICAL_ERROR).
+        // First detection: select that traverses the corrupted leaf. This registers the maintenance task.
         try {
-            cache.query(new SqlFieldsQuery("select * from " + TABLE_NAME + " where col2=?1").setArgs("v50")).getAll();
+            cache.query(new SqlFieldsQuery("select * from " + TABLE_NAME + " where col2=?").setArgs("v50")).getAll();
 
             fail("Expected CorruptedTreeException from corrupted index");
         } catch (CacheException ignored) {
@@ -134,17 +134,22 @@ public class IndexRebuildMaintenanceModeLoopTest extends AbstractIndexCorruption
                 registry.requestedTask(INDEX_REBUILD_MNTC_TASK_NAME)
         );
 
-        // Drive a few more inserts into WAL so recovery-mode startup has work to replay that
-        // touches the corrupted index leaves. Inserts may themselves throw — swallow and continue.
+        // Insert some data and verify that insertion fails. This will leave a WAL logical record which will be replayed
+        // on restart and will produce a corruption error.
+        int failed = 0;
+
         for (int i = 100; i < 110; i++) {
             try {
                 cache.query(new SqlFieldsQuery(
-                        "insert into " + TABLE_NAME + "(col1, col2) values (?1, ?2)")
+                        "insert into " + TABLE_NAME + "(col1, col2) values (?, ?)")
                         .setArgs(String.valueOf(i), "v" + i));
             } catch (CacheException ignored) {
-                // Expected if the corrupted leaf intercepts the insert.
+                // Expected: the insert reaches the corrupted FAIL_IDX leaf and fails.
+                failed++;
             }
         }
+
+        assertThat(failed, is(greaterThan(0)));
 
         // Suppress the final checkpoint on stop so WAL retains the post-checkpoint inserts.
         GridCacheDatabaseSharedManager db = (GridCacheDatabaseSharedManager) srv.context().cache().context().database();
@@ -168,6 +173,11 @@ public class IndexRebuildMaintenanceModeLoopTest extends AbstractIndexCorruption
                 critical.isEmpty()
         );
 
+        assertNull(
+                "Index rebuild should have completed (maintenance task cleared) during startup",
+                srv.context().maintenanceRegistry().activeMaintenanceTask(INDEX_REBUILD_MNTC_TASK_NAME)
+        );
+
         // Third boot: maintenance complete, cluster activates normally; verify the
         // rebuilt index is actually populated by querying via the corrupted column.
         stopGrid(0);
@@ -185,7 +195,7 @@ public class IndexRebuildMaintenanceModeLoopTest extends AbstractIndexCorruption
 
         IgniteCache<?, ?> rebuiltCache = srv.getOrCreateCache(DEFAULT_CACHE_NAME);
         List<List<?>> rows = rebuiltCache.query(new SqlFieldsQuery(
-                "select col1 from " + TABLE_NAME + " where col2=?1").setArgs("v50")).getAll();
+                "select col1 from " + TABLE_NAME + " where col2=?").setArgs("v50")).getAll();
 
         assertEquals("Rebuilt index must be populated — expected exactly one row matching col2='v50'",
                 1, rows.size());
