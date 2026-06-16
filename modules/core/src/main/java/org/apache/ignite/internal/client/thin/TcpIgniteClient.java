@@ -19,6 +19,7 @@ package org.apache.ignite.internal.client.thin;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EventListener;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +52,10 @@ import org.apache.ignite.client.ClientServices;
 import org.apache.ignite.client.ClientTransactions;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.client.IgniteClientFuture;
+import org.apache.ignite.client.events.ClientFailEvent;
+import org.apache.ignite.client.events.ClientLifecycleEventListener;
+import org.apache.ignite.client.events.ClientStartEvent;
+import org.apache.ignite.client.events.ClientStopEvent;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
@@ -70,6 +75,7 @@ import org.apache.ignite.internal.client.thin.io.ClientConnectionMultiplexer;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
 import org.apache.ignite.internal.util.GridArgumentCheck;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.logger.NullLogger;
@@ -106,6 +112,12 @@ public class TcpIgniteClient implements IgniteClient {
 
     /** Registered entry listeners for all caches. */
     private final ClientCacheEntryListenersRegistry lsnrsRegistry;
+
+    /** Event listeners. */
+    private final EventListener[] evtLsnrs;
+
+    /** Logger. */
+    private final IgniteLogger log;
 
     /** Marshaller. */
     private final ClientBinaryMarshaller marsh;
@@ -144,6 +156,10 @@ public class TcpIgniteClient implements IgniteClient {
         binary = new ClientBinary(marsh);
 
         ch = new ReliableChannel(chFactory, cfg, binary);
+
+        evtLsnrs = cfg.getEventListeners() == null ? null : cfg.getEventListeners().clone();
+
+        log = NullLogger.whenNull(cfg.getLogger());
 
         try {
             ch.channelsInit();
@@ -207,6 +223,10 @@ public class TcpIgniteClient implements IgniteClient {
     /** {@inheritDoc} */
     @Override public void close() {
         ch.close();
+
+        ClientStopEvent evt = new ClientStopEvent(this);
+
+        triggerLifecycleEventListeners(log, evtLsnrs, lsnr -> lsnr.onClientStop(evt));
     }
 
     /** {@inheritDoc} */
@@ -477,7 +497,48 @@ public class TcpIgniteClient implements IgniteClient {
      * @return Client with successfully opened thin client connection.
      */
     public static IgniteClient start(ClientConfiguration cfg) throws ClientException {
-        return new TcpIgniteClient(cfg);
+        try {
+            TcpIgniteClient client = new TcpIgniteClient(cfg);
+
+            ClientStartEvent evt = new ClientStartEvent(client, cfg);
+
+            triggerLifecycleEventListeners(client.log, client.evtLsnrs, lsnr -> lsnr.onClientStart(evt));
+
+            return client;
+        }
+        catch (Throwable throwable) {
+            ClientFailEvent evt = new ClientFailEvent(cfg, throwable);
+
+            triggerLifecycleEventListeners(cfg.getLogger(), cfg.getEventListeners(), lsnr -> lsnr.onClientFail(evt));
+
+            throw throwable;
+        }
+    }
+
+    /** */
+    private static void triggerLifecycleEventListeners(
+        @Nullable IgniteLogger log,
+        EventListener[] lsnrs,
+        Consumer<ClientLifecycleEventListener> action
+    ) {
+        if (F.isEmpty(lsnrs))
+            return;
+
+        for (EventListener lsnr : lsnrs) {
+            if (lsnr instanceof ClientLifecycleEventListener) {
+                try {
+                    ClientLifecycleEventListener lsnr0 = (ClientLifecycleEventListener)lsnr;
+
+                    action.accept(lsnr0);
+                }
+                // Unlike the upstream version, also catches errors: a throwing listener must not fail a started
+                // client (a spurious ClientFailEvent and a leaked open client when an error escapes to start()).
+                catch (Throwable e) {
+                    if (log != null)
+                        log.warning("Exception thrown while consuming event in listener " + lsnr, e);
+                }
+            }
+        }
     }
 
     /**
