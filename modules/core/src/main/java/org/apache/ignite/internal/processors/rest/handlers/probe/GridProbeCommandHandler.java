@@ -22,8 +22,10 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.processors.rest.GridRestResponse;
@@ -52,9 +54,9 @@ import static org.apache.ignite.internal.processors.rest.GridRestCommand.PROBE;
  *
  * <p>{@code kind=readiness} reports a (re)joining node not-ready until it has finished pulling
  * its partitions (inbound rebalance), so a rolling restart does not bounce the next pod (a
- * supplier) mid-rebalance and lose partitions. It gates on the cluster-wide rebalanced flag of
- * the last finished partition-map exchange, latched once the node's initial rebalance completes
- * so later topology rebalances don't flap an already-loaded node out of the Service endpoints
+ * supplier) mid-rebalance and lose partitions. It gates on this node holding no MOVING partitions
+ * (full or historical rebalance), latched once the node's initial rebalance completes so later
+ * topology rebalances don't flap an already-loaded node out of the Service endpoints
  * (see {@link #isInitialRebalanceComplete()}). An unknown {@code kind} returns
  * {@link GridRestResponse#STATUS_FAILED}; the {@code NODE_STATE_BEFORE_START} branch is unchanged.</p>
  */
@@ -242,17 +244,22 @@ public class GridProbeCommandHandler extends GridRestCommandHandlerAdapter {
     }
 
     /**
-     * Instantaneous "this node has completed its (initial) rebalance" predicate -
-     * the value the readiness latch captures. Reads the cluster-wide rebalanced
-     * flag of the last finished partition-map exchange: {@code false} while this
-     * node is still demanding its initial partitions and {@code false} while the cluster
-     * is INACTIVE (callers MUST short-circuit INACTIVE -> ready before relying on
-     * this). Non-blocking, null-safe; returns {@code false} while the cache
-     * subsystem is still initializing so readiness stays 503 until the node is
-     * genuinely settled.
+     * Instantaneous "this node has finished its (initial) inbound rebalance" predicate - the value
+     * the readiness latch captures. The node is settled once none of its local partitions in any
+     * affinity cache group is {@link GridDhtPartitionState#MOVING} (full and historical/WAL rebalance
+     * both hold a partition MOVING until it is pulled). This is a per-node signal: a node reports
+     * ready as soon as its own partitions are loaded, regardless of other (re)joining nodes still
+     * rebalancing.
      *
-     * @return {@code true} if the node's initial PME is complete and the cluster
-     *     reports fully rebalanced.
+     * <p>Partition state is read rather than the per-group rebalance future because MOVING is set
+     * in-band during the exchange (before {@link GridCachePartitionExchangeManager#readyAffinityVersion()}
+     * advances), whereas the rebalance future is (re)created only afterwards in the exchange worker -
+     * so reading it in that window could see a stale done future and report ready prematurely.</p>
+     *
+     * <p>Non-blocking, null-safe; {@link #isInitialPmeComplete()} guards the pre-affinity window so
+     * readiness stays 503 until the node is genuinely settled.</p>
+     *
+     * @return {@code true} if the node's initial PME is complete and it holds no MOVING partition.
      */
     private boolean isNodeRebalanceComplete() {
         if (ctx.clientNode())
@@ -261,10 +268,17 @@ public class GridProbeCommandHandler extends GridRestCommandHandlerAdapter {
         if (!isInitialPmeComplete())
             return false;
 
-        // isInitialPmeComplete() guarantees the cache subsystem and a finished exchange exist.
-        GridDhtPartitionsExchangeFuture lastFinished = ctx.cache().context().exchange().lastFinishedFuture();
+        for (CacheGroupContext grp : ctx.cache().cacheGroups()) {
+            if (!grp.affinityNode())
+                continue; // Node holds no data for this group.
 
-        return lastFinished != null && lastFinished.rebalanced();
+            for (GridDhtLocalPartition part : grp.topology().localPartitions()) {
+                if (part.state() == GridDhtPartitionState.MOVING)
+                    return false; // Still demanding this partition.
+            }
+        }
+
+        return true;
     }
 
     /**

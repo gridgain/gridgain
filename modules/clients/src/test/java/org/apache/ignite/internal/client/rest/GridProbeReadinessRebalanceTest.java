@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.client.rest;
 
+import java.io.IOException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cluster.ClusterState;
@@ -29,6 +30,7 @@ import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -176,6 +178,54 @@ public class GridProbeReadinessRebalanceTest extends GridCommonAbstractTest {
         GridRestHttpClient.Response afterAll = GridRestHttpClient.get(restPort(4), "/ignite?cmd=probe&kind=readiness");
         assertEquals(200, afterAll.code);
         assertEquals("ready", afterAll.body.get("response"));
+    }
+
+    /**
+     * Per-node readiness: with two joiners demanding simultaneously, releasing one makes it ready
+     * while the other still reports 503 - readiness reflects this node's own rebalance, not the
+     * cluster-wide state.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testReadinessIsPerNodeWithSimultaneousJoiners() throws Exception {
+        seedCluster();
+
+        // Two joiners, both holding their inbound demand.
+        startGrid(3);
+        startGrid(4);
+
+        TestRecordingCommunicationSpi.spi(grid(3)).waitForBlocked();
+        TestRecordingCommunicationSpi.spi(grid(4)).waitForBlocked();
+
+        // Both mid inbound-rebalance -> 503.
+        assertEquals(503, GridRestHttpClient.get(restPort(3), "/ignite?cmd=probe&kind=readiness").code);
+        assertEquals(503, GridRestHttpClient.get(restPort(4), "/ignite?cmd=probe&kind=readiness").code);
+
+        // Release ONLY node 3; node 4 keeps demanding.
+        TestRecordingCommunicationSpi.spi(grid(3)).stopBlock();
+
+        // Node 3 finishes its own rebalance and reports ready even though the cluster is not fully
+        // rebalanced (node 4 still demands) - unattainable with a cluster-wide rebalanced flag.
+        assertTrue("node 3 must become ready once its own rebalance completes",
+            GridTestUtils.waitForCondition(() -> {
+                try {
+                    return GridRestHttpClient.get(restPort(3), "/ignite?cmd=probe&kind=readiness").code == 200;
+                }
+                catch (IOException e) {
+                    return false;
+                }
+            }, getTestTimeout()));
+
+        assertEquals("node 4 must still be 503 while demanding",
+            503, GridRestHttpClient.get(restPort(4), "/ignite?cmd=probe&kind=readiness").code);
+
+        // Release node 4 too; it becomes ready and the cluster settles.
+        TestRecordingCommunicationSpi.spi(grid(4)).stopBlock();
+
+        awaitPartitionMapExchange();
+
+        assertEquals(200, GridRestHttpClient.get(restPort(4), "/ignite?cmd=probe&kind=readiness").code);
     }
 
     /**
