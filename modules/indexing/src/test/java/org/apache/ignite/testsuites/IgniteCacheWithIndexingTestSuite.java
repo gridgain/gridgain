@@ -47,6 +47,7 @@ import org.apache.ignite.internal.processors.cache.WrongIndexedTypesTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationTombstonesWithIndicesTest;
 import org.apache.ignite.internal.processors.cache.index.H2TreeCorruptedTreeExceptionTest;
 import org.apache.ignite.internal.processors.cache.index.IndexCorruptionRebuildTest;
+import org.apache.ignite.internal.processors.cache.index.IndexRebuildMaintenanceModeLoopTest;
 import org.apache.ignite.internal.processors.cache.persistence.RebuildIndexLogMessageTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheSizeTtlTest;
 import org.apache.ignite.internal.processors.cache.ttl.CacheTtlAtomicLocalSelfTest;
@@ -126,6 +127,7 @@ import org.junit.runners.Suite;
     EnumClassImplementingIndexedInterfaceTest.class,
 
     IndexCorruptionRebuildTest.class,
+    IndexRebuildMaintenanceModeLoopTest.class,
 
     PartitionReconciliationTombstonesWithIndicesTest.class
 })
