@@ -321,7 +321,6 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             var qry = new ScanQuery<int, Person>();
 
             var cursor = clientCache.Query(qry);
-            cursor.GetAll();
 
             // GetAll drains all pages; the server-side cursor is closed automatically on the last page.
             Assert.AreEqual(cache.GetSize(), cursor.GetAll().Count);

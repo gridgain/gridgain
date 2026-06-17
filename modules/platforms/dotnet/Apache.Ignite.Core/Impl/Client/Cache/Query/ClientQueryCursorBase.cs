@@ -17,7 +17,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache.Query
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Impl.Binary;
@@ -65,7 +64,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache.Query
         /** <inheritdoc /> */
         protected override IList<T> GetAllInternal()
         {
-            return this.ToArray();
+            return EnumerateAllLocked();
         }
 
         /** <inheritdoc /> */

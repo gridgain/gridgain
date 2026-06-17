@@ -224,22 +224,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
             try
             {
-                if (_batch == null)
-                {
-                    if (_batchPos == BatchPosBeforeHead)
-                        // Standing before head, let's get batch and advance position.
-                        RequestBatch();
-                }
-                else
-                {
-                    _batchPos++;
-
-                    if (_batch.Length == _batchPos)
-                        // Reached batch end => request another.
-                        RequestBatch();
-                }
-
-                return _batch != null;
+                return MoveNextLocked();
             }
             finally
             {
@@ -247,11 +232,42 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             }
         }
 
+        private bool MoveNextLocked()
+        {
+            if (_batch == null)
+            {
+                if (_batchPos == BatchPosBeforeHead)
+                    // Standing before head, let's get batch and advance position.
+                    RequestBatch();
+            }
+            else
+            {
+                _batchPos++;
+
+                if (_batch.Length == _batchPos)
+                    // Reached batch end => request another.
+                    RequestBatch();
+            }
+
+            return _batch != null;
+        }
+
+        protected IList<T> EnumerateAllLocked()
+        {
+            var res = new List<T>();
+
+            while (MoveNextLocked())
+            {
+                res.Add(_batch[_batchPos]);
+            }
+
+            return res;
+        }
+
         public async ValueTask<bool> MoveNextAsync()
         {
             ThrowIfDisposed();
 
-            // Throws OperationCanceledException if the enumeration token is already cancelled.
             await _syncRoot.WaitAsync(_asyncEnumeratorToken).ConfigureAwait(false);
 
             try
