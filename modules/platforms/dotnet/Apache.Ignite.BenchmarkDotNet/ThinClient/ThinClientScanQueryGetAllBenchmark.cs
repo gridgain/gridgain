@@ -23,9 +23,10 @@ namespace Apache.Ignite.BenchmarkDotNet.ThinClient
     /// <summary>
     /// Scan query cursor GetAll benchmarks.
     /// <para />
-    /// Compares the synchronous <c>GetAll</c> against the asynchronous <c>GetAllAsync</c> on a thin-client
-    /// scan query cursor. The page size is small relative to the dataset, so every scan spans multiple server
-    /// pages and the per-page fetch cost (where the sync and async paths diverge) dominates the measurement.
+    /// |      Method |     Mean |     Error |    StdDev |   Median | Ratio | RatioSD |   Gen 0 |   Gen 1 |   Gen 2 | Allocated |
+    /// |------------ |---------:|----------:|----------:|---------:|------:|--------:|--------:|--------:|--------:|----------:|
+    /// |      GetAll | 3.162 ms | 0.2648 ms | 0.7337 ms | 2.950 ms |  1.00 |    0.00 | 62.5000 | 46.8750 | 31.2500 |  682.4 KB |
+    /// | GetAllAsync | 5.239 ms | 0.4657 ms | 1.3730 ms | 4.813 ms |  1.68 |    0.48 | 62.5000 | 46.8750 | 31.2500 | 697.44 KB |.
     /// </summary>
     [MemoryDiagnoser]
     public class ThinClientScanQueryGetAllBenchmark : ThinClientBenchmarkBase
