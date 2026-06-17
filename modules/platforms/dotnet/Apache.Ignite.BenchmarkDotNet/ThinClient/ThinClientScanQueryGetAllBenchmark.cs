@@ -25,8 +25,8 @@ namespace Apache.Ignite.BenchmarkDotNet.ThinClient
     /// <para />
     /// |      Method |     Mean |     Error |    StdDev |   Median | Ratio | RatioSD |   Gen 0 |   Gen 1 |   Gen 2 | Allocated |
     /// |------------ |---------:|----------:|----------:|---------:|------:|--------:|--------:|--------:|--------:|----------:|
-    /// |      GetAll | 3.162 ms | 0.2648 ms | 0.7337 ms | 2.950 ms |  1.00 |    0.00 | 62.5000 | 46.8750 | 31.2500 |  682.4 KB |
-    /// | GetAllAsync | 5.239 ms | 0.4657 ms | 1.3730 ms | 4.813 ms |  1.68 |    0.48 | 62.5000 | 46.8750 | 31.2500 | 697.44 KB |.
+    /// |      GetAll | 4.350 ms | 0.3644 ms | 1.0688 ms | 4.602 ms |  1.00 |    0.00 | 78.1250 | 70.3125 | 39.0625 | 682.34 KB |
+    /// | GetAllAsync | 4.593 ms | 0.2544 ms | 0.7422 ms | 4.366 ms |  1.12 |    0.33 | 78.1250 | 70.3125 | 39.0625 | 697.36 KB |.
     /// </summary>
     [MemoryDiagnoser]
     public class ThinClientScanQueryGetAllBenchmark : ThinClientBenchmarkBase
