@@ -26,7 +26,6 @@ namespace Apache.Ignite.BenchmarkDotNet.ThinClient
     /// |      Method |     Mean |     Error |    StdDev | Ratio | RatioSD |   Gen 0 |   Gen 1 |   Gen 2 | Allocated |
     /// |------------ |---------:|----------:|----------:|------:|--------:|--------:|--------:|--------:|----------:|
     /// |      GetAll | 4.762 ms | 0.1990 ms | 0.5867 ms |  1.00 |    0.00 | 46.8750 | 15.6250 |       - | 632.77 KB |
-    /// | GetAllAsync | 5.162 ms | 0.3892 ms | 1.1228 ms |  1.11 |    0.31 | 78.1250 | 70.3125 | 39.0625 | 697.36 KB |.
     /// </summary>
     [MemoryDiagnoser]
     public class ThinClientScanQueryGetAllBenchmark : ThinClientBenchmarkBase
@@ -64,16 +63,6 @@ namespace Apache.Ignite.BenchmarkDotNet.ThinClient
         {
             using var cursor = _cache.Query(GetScanQuery());
             cursor.GetAll();
-        }
-
-        /// <summary>
-        /// Scan query GetAllAsync (asynchronous).
-        /// </summary>
-        [Benchmark]
-        public void GetAllAsync()
-        {
-            using var cursor = _cache.Query(GetScanQuery());
-            cursor.GetAllAsync().GetAwaiter().GetResult();
         }
 
         private static ScanQuery<int, int> GetScanQuery() => new()

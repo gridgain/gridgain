@@ -117,27 +117,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             }
         }
 
-        /** <inheritdoc /> */
-        public async Task<IList<T>> GetAllAsync(CancellationToken cancellationToken = default)
-        {
-            if (_getAllCalled)
-                throw new InvalidOperationException("Failed to get all entries because GetAll() " +
-                                                    "method has already been called.");
-
-            if (_iterCalled)
-                throw new InvalidOperationException("Failed to get all entries because GetEnumerator() " +
-                                                    "method has already been called.");
-
-            ThrowIfDisposed();
-
-            var res = await GetAllInternalAsync(cancellationToken).ConfigureAwait(false);
-
-            _getAllCalled = true;
-            _hasNext = false;
-
-            return res;
-        }
-
         #region Public IEnumerable methods
 
         /** <inheritdoc /> */
@@ -308,12 +287,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// Gets all entries.
         /// </summary>
         protected abstract IList<T> GetAllInternal();
-
-        /// <summary>
-        /// Gets all entries asynchronously.
-        /// </summary>
-        /// <param name="cancellationToken">Cancellation token observed before each round-trip to the server.</param>
-        protected abstract ValueTask<IList<T>> GetAllInternalAsync(CancellationToken cancellationToken);
 
         /// <summary>
         /// Requests next batch.

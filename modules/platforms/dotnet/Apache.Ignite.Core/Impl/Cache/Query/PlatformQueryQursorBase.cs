@@ -70,15 +70,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         }
 
         /** <inheritdoc /> */
-        protected override async ValueTask<IList<T>> GetAllInternalAsync(CancellationToken cancellationToken)
-        {
-            // Platform cursor does not support async data retrieval. The single GET_ALL op delegates to Java
-            // and blocks the thread. Run it on a separate thread to avoid blocking the user thread, which is
-            // unexpected for an async API.
-            return await Task.Run(GetAllInternal, cancellationToken).ConfigureAwait(false);
-        }
-
-        /** <inheritdoc /> */
         protected override void InitIterator()
         {
             _target.InLongOutLong(OpIterator, 0);

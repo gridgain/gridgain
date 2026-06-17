@@ -19,8 +19,6 @@ namespace Apache.Ignite.Core.Cache.Query
     using System;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
-    using System.Threading;
-    using System.Threading.Tasks;
 
     /// <summary>
     /// Query result cursor. Can be processed either in iterative mode, or by taking
@@ -41,13 +39,5 @@ namespace Apache.Ignite.Core.Cache.Query
         [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate",
             Justification = "Expensive operation.")]
         IList<T> GetAll();
-
-        /// <summary>
-        /// Gets all query results asynchronously. Use this method when you know in advance that query
-        /// result is relatively small and will not cause memory utilization issues.
-        /// </summary>
-        /// <param name="cancellationToken">The cancellation token.</param>
-        /// <returns>A task that, when completed, contains the list with all query results.</returns>
-        Task<IList<T>> GetAllAsync(CancellationToken cancellationToken = default);
     }
 }
