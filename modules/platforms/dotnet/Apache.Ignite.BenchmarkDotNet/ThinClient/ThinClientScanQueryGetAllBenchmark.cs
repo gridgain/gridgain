@@ -23,10 +23,10 @@ namespace Apache.Ignite.BenchmarkDotNet.ThinClient
     /// <summary>
     /// Scan query cursor GetAll benchmarks.
     /// <para />
-    /// |      Method |     Mean |     Error |    StdDev |   Median | Ratio | RatioSD |   Gen 0 |   Gen 1 |   Gen 2 | Allocated |
-    /// |------------ |---------:|----------:|----------:|---------:|------:|--------:|--------:|--------:|--------:|----------:|
-    /// |      GetAll | 4.350 ms | 0.3644 ms | 1.0688 ms | 4.602 ms |  1.00 |    0.00 | 78.1250 | 70.3125 | 39.0625 | 682.34 KB |
-    /// | GetAllAsync | 4.593 ms | 0.2544 ms | 0.7422 ms | 4.366 ms |  1.12 |    0.33 | 78.1250 | 70.3125 | 39.0625 | 697.36 KB |.
+    /// |      Method |     Mean |     Error |    StdDev | Ratio | RatioSD |   Gen 0 |   Gen 1 |   Gen 2 | Allocated |
+    /// |------------ |---------:|----------:|----------:|------:|--------:|--------:|--------:|--------:|----------:|
+    /// |      GetAll | 4.762 ms | 0.1990 ms | 0.5867 ms |  1.00 |    0.00 | 46.8750 | 15.6250 |       - | 632.77 KB |
+    /// | GetAllAsync | 5.162 ms | 0.3892 ms | 1.1228 ms |  1.11 |    0.31 | 78.1250 | 70.3125 | 39.0625 | 697.36 KB |.
     /// </summary>
     [MemoryDiagnoser]
     public class ThinClientScanQueryGetAllBenchmark : ThinClientBenchmarkBase

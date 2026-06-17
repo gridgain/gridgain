@@ -253,20 +253,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             return _batch != null;
         }
 
-        protected IList<T> EnumerateAllLocked()
-        {
-            Debug.Assert(Monitor.IsEntered(_syncRoot), "_syncRoot must be held");
-
-            var res = new List<T>();
-
-            while (MoveNextLocked())
-            {
-                res.Add(_batch[_batchPos]);
-            }
-
-            return res;
-        }
-
         protected async ValueTask<IList<T>> EnumerateAllAsync(CancellationToken cancellationToken)
         {
             var res = new List<T>();
