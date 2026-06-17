@@ -233,7 +233,12 @@ public enum GridRestCommand {
     /** Set a distributed property by name. */
     PROPERTY_SET("setproperty"),
 
-    /** probe. */
+    /**
+     * Probe — k8s probe dispatch on the {@code kind} query parameter. Bare GET and
+     * {@code kind=liveness} are the backward-compatible kernel-started check;
+     * {@code kind=readiness} is the k8s readiness/startup gate (latched
+     * initial-rebalance complete, cluster active, not in maintenance).
+     */
     PROBE("probe");
 
     /** Enum values. */
