@@ -110,8 +110,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 throw new InvalidOperationException("Failed to get all entries because GetEnumerator() " +
                                                     "method has already been called.");
 
-            ThrowIfDisposed();
-
             _syncRoot.Wait();
 
             try
@@ -380,12 +378,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /** <inheritdoc /> */
         public void Dispose()
         {
-            // Fast path for the common idempotent-Dispose case.
-            if (_disposed)
-            {
-                return;
-            }
-
             _syncRoot.Wait();
 
             try
@@ -416,12 +408,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             Justification = "GC.SuppressFinalize is valid in DisposeAsync; the analyzer only recognizes Dispose.")]
         public async ValueTask DisposeAsync()
         {
-            // Fast path for the common idempotent-DisposeAsync case.
-            if (_disposed)
-            {
-                return;
-            }
-
             Task task = null;
 
             await _syncRoot.WaitAsync().ConfigureAwait(false);
