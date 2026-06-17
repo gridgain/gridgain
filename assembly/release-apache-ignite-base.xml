@@ -163,7 +163,7 @@
         </fileSet>
 
         <fileSet>
-            <directory>examples</directory>
+            <directory>${gg8.examples.dir}/examples</directory>
             <outputDirectory>/examples</outputDirectory>
             <includes>
                 <include>rest/**</include>
@@ -179,7 +179,7 @@
         </fileSet>
 
         <fileSet>
-            <directory>examples</directory>
+            <directory>${gg8.examples.dir}/examples</directory>
             <outputDirectory>/examples</outputDirectory>
             <includes>
                 <include>config/**</include>
