@@ -48,13 +48,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         private readonly Func<BinaryReader, T> _readFunc;
 
         /** Lock object. */
-        [SuppressMessage("Microsoft.Usage", "CA2213:DisposableFieldsShouldBeDisposed",
-            Justification = "SemaphoreSlim.Dispose is not thread-safe and would race with concurrent Wait calls " +
-                            "from other threads (e.g. iterating while disposing), causing the internal lock object " +
-                            "to be nulled mid-Wait and throwing ArgumentNullException. Since only Wait/WaitAsync/" +
-                            "Release are used (never AvailableWaitHandle), there is no wait handle to release and " +
-                            "the semaphore is safely reclaimed by the GC.")]
-        private readonly SemaphoreSlim _syncRoot = new SemaphoreSlim(1);
+        private readonly object _syncRoot = new object();
 
         /** Whether "GetAll" was called. */
         private bool _getAllCalled;
@@ -110,9 +104,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 throw new InvalidOperationException("Failed to get all entries because GetEnumerator() " +
                                                     "method has already been called.");
 
-            _syncRoot.Wait();
-
-            try
+            lock (_syncRoot)
             {
                 ThrowIfDisposed();
 
@@ -122,10 +114,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 _hasNext = false;
 
                 return res;
-            }
-            finally
-            {
-                _syncRoot.Release();
             }
         }
 
@@ -140,23 +128,14 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 throw new InvalidOperationException("Failed to get all entries because GetEnumerator() " +
                                                     "method has already been called.");
 
-            await _syncRoot.WaitAsync(cancellationToken).ConfigureAwait(false);
+            ThrowIfDisposed();
 
-            try
-            {
-                ThrowIfDisposed();
+            var res = await GetAllInternalAsync(cancellationToken).ConfigureAwait(false);
 
-                var res = await GetAllInternalAsync(cancellationToken).ConfigureAwait(false);
+            _getAllCalled = true;
+            _hasNext = false;
 
-                _getAllCalled = true;
-                _hasNext = false;
-
-                return res;
-            }
-            finally
-            {
-                _syncRoot.Release();
-            }
+            return res;
         }
 
         #region Public IEnumerable methods
@@ -220,9 +199,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             {
                 ThrowIfDisposed();
 
-                _syncRoot.Wait();
-
-                try
+                lock (_syncRoot)
                 {
                     if (_batchPos == BatchPosBeforeHead)
                         throw new InvalidOperationException("MoveNext has not been called.");
@@ -231,10 +208,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                         throw new InvalidOperationException("Previous call to MoveNext returned false.");
 
                     return _batch[_batchPos];
-                }
-                finally
-                {
-                    _syncRoot.Release();
                 }
             }
         }
@@ -250,21 +223,15 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         {
             ThrowIfDisposed();
 
-            _syncRoot.Wait();
-
-            try
+            lock (_syncRoot)
             {
                 return MoveNextLocked();
-            }
-            finally
-            {
-                _syncRoot.Release();
             }
         }
 
         private bool MoveNextLocked()
         {
-            Debug.Assert(_syncRoot.CurrentCount == 0, "_syncRoot must be held");
+            Debug.Assert(Monitor.IsEntered(_syncRoot), "_syncRoot must be held");
 
             ThrowIfDisposed();
 
@@ -288,7 +255,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
         protected IList<T> EnumerateAllLocked()
         {
-            Debug.Assert(_syncRoot.CurrentCount == 0, "_syncRoot must be held");
+            Debug.Assert(Monitor.IsEntered(_syncRoot), "_syncRoot must be held");
 
             var res = new List<T>();
 
@@ -300,13 +267,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             return res;
         }
 
-        protected async ValueTask<IList<T>> EnumerateAllLockedAsync(CancellationToken cancellationToken)
+        protected async ValueTask<IList<T>> EnumerateAllAsync(CancellationToken cancellationToken)
         {
-            Debug.Assert(_syncRoot.CurrentCount == 0, "_syncRoot must be held");
-
             var res = new List<T>();
 
-            while (await MoveNextLockedAsync(cancellationToken).ConfigureAwait(false))
+            while (await MoveNextCoreAsync(cancellationToken).ConfigureAwait(false))
             {
                 res.Add(_batch[_batchPos]);
             }
@@ -316,24 +281,15 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
         public async ValueTask<bool> MoveNextAsync()
         {
+            // Not locked: an async enumerator is consumed sequentially (await foreach), so there is no
+            // concurrent MoveNextAsync. Use-after-dispose is observed via the volatile _disposed flag.
             ThrowIfDisposed();
 
-            await _syncRoot.WaitAsync(_asyncEnumeratorToken).ConfigureAwait(false);
-
-            try
-            {
-                return await MoveNextLockedAsync(_asyncEnumeratorToken).ConfigureAwait(false);
-            }
-            finally
-            {
-                _syncRoot.Release();
-            }
+            return await MoveNextCoreAsync(_asyncEnumeratorToken).ConfigureAwait(false);
         }
 
-        private async ValueTask<bool> MoveNextLockedAsync(CancellationToken cancellationToken)
+        private async ValueTask<bool> MoveNextCoreAsync(CancellationToken cancellationToken)
         {
-            Debug.Assert(_syncRoot.CurrentCount == 0, "_syncRoot must be held");
-
             ThrowIfDisposed();
 
             if (_batch == null)
@@ -459,9 +415,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /** <inheritdoc /> */
         public void Dispose()
         {
-            _syncRoot.Wait();
-
-            try
+            lock (_syncRoot)
             {
                 if (_disposed)
                 {
@@ -478,10 +432,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
                 _disposed = true;
             }
-            finally
-            {
-                _syncRoot.Release();
-            }
         }
 
         /** <inheritdoc /> */
@@ -491,9 +441,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         {
             Task task = null;
 
-            await _syncRoot.WaitAsync().ConfigureAwait(false);
-
-            try
+            lock (_syncRoot)
             {
                 if (_disposed)
                 {
@@ -510,10 +458,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 GC.SuppressFinalize(this);
 
                 _disposed = true;
-            }
-            finally
-            {
-                _syncRoot.Release();
             }
 
             if (task != null)

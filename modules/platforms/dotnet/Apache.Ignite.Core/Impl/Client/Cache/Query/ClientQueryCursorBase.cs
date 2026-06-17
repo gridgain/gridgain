@@ -71,7 +71,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache.Query
         protected override async ValueTask<IList<T>> GetAllInternalAsync(CancellationToken cancellationToken)
         {
             // The thin client protocol has no single GET_ALL op, so page through the server asynchronously.
-            return await EnumerateAllLockedAsync(cancellationToken).ConfigureAwait(false);
+            return await EnumerateAllAsync(cancellationToken).ConfigureAwait(false);
         }
 
         /** <inheritdoc /> */
