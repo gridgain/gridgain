@@ -111,6 +111,11 @@ public class BinaryObjectOffheapImpl extends BinaryObjectExImpl implements Exter
     }
 
     /** {@inheritDoc} */
+    @Override public int size() {
+        return length();
+    }
+
+    /** {@inheritDoc} */
     @Override public int hashCode() {
         return BinaryPrimitives.readInt(ptr, start + GridBinaryMarshaller.HASH_CODE_POS);
     }
