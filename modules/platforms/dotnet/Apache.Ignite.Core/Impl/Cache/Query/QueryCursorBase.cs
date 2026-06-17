@@ -234,6 +234,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
         private bool MoveNextLocked()
         {
+            ThrowIfDisposed();
+
             if (_batch == null)
             {
                 if (_batchPos == BatchPosBeforeHead)
@@ -272,6 +274,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
             try
             {
+                ThrowIfDisposed();
+
                 if (_batch == null)
                 {
                     if (_batchPos == BatchPosBeforeHead)
