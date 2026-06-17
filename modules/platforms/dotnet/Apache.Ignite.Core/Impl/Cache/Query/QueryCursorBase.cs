@@ -158,11 +158,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             // The cursor is its own single-use enumerator, so capture the token in a field and observe it
             // in MoveNextAsync. Cancellation is cooperative: an already-issued batch request (network or JVM
             // call) can not be aborted mid-flight, but cancellation is honored before each new batch is fetched.
-            var enumerator = GetEnumeratorInternal();
-
             _asyncEnumeratorToken = cancellationToken;
 
-            return enumerator;
+            return GetEnumeratorInternal();
         }
 
         #endregion
