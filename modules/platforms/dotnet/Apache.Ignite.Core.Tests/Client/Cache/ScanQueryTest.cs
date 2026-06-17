@@ -383,9 +383,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             using var client = GetClient();
             var clientCache = client.GetCache<int, Person>(CacheName);
 
-            // Small page size forces multiple async batch requests (GetBatchAsync) during enumeration.
             var qry = new ScanQuery<int, Person> { PageSize = 128 };
-
             var keys = new List<int>();
 
             await foreach (var entry in await clientCache.QueryAsync(qry))
