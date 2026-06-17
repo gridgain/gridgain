@@ -234,6 +234,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
         private bool MoveNextLocked()
         {
+            Debug.Assert(_syncRoot.CurrentCount == 0, "_syncRoot must be held");
+
             ThrowIfDisposed();
 
             if (_batch == null)
@@ -256,6 +258,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
         protected IList<T> EnumerateAllLocked()
         {
+            Debug.Assert(_syncRoot.CurrentCount == 0, "_syncRoot must be held");
+
             var res = new List<T>();
 
             while (MoveNextLocked())
