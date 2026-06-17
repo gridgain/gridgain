@@ -233,6 +233,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         public async ValueTask<bool> MoveNextAsync()
         {
             ThrowIfDisposed();
+            _asyncEnumeratorToken.ThrowIfCancellationRequested();
 
             if (_batch == null)
             {
