@@ -145,6 +145,7 @@ import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDataba
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsConsistentIdProcessor;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
+import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.processors.cluster.ClusterProcessor;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor;
@@ -159,7 +160,9 @@ import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
 import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
+import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageVersion;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.nodevalidation.DiscoveryNodeValidationProcessor;
@@ -2289,6 +2292,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             String dataStorageInfo = dataStorageReport(ctx.cache().context().database(), dblFmt, true);
 
+            String dmsInfo = distributedMetastorageReport();
+
             String id = localNode().id().toString();
 
             AffinityTopologyVersion topVer = ctx.discovery().topologyVersionEx();
@@ -2340,6 +2345,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 .a(", used=").a(directUsedInMBytes)
                 .a(", free=").a(freeDirectPctStr).a("%]").nl()
                 .a(dataStorageInfo)
+                .a(dmsInfo)
                 .a("    ^-- Outbound messages queue [size=").a(m.getOutboundMessagesQueueSize()).a("]").nl()
                 .a("    ^-- Unacknowledged messages queue [size=").a(m.getUnacknowledgedMessagesQueueSize()).a("]").nl()
                 .a("    ^-- ").a(createExecutorDescription("Public thread pool", execSvc)).nl()
@@ -2392,6 +2398,36 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         }
 
         return res;
+    }
+
+    /**
+     * @return Distributed metastorage info for the periodic metrics log (one line terminated with a line
+     *      separator), or an empty string if the distributed metastorage is not available or not
+     *      initialized yet (e.g. on daemon nodes).
+     */
+    private String distributedMetastorageReport() {
+        DistributedMetaStorage dms = ctx.distributedMetastorage();
+
+        if (!(dms instanceof DistributedMetaStorageImpl))
+            return "";
+
+        DistributedMetaStorageImpl dmsImpl = (DistributedMetaStorageImpl)dms;
+
+        DistributedMetaStorageVersion dmsVer = dmsImpl.version();
+
+        if (dmsVer == null)
+            return "";
+
+        BaselineTopology blt = ctx.state().clusterState().baselineTopology();
+
+        return new SB()
+            .a("    ^-- Distributed metastorage [ver=").a(dmsVer.id)
+            .a(", hash=").a(dmsVer.hash)
+            .a(", histItems=").a(dmsImpl.getHistoryItemsCount())
+            .a(", histBytes=").a(dmsImpl.getHistorySizeBytes())
+            .a(", baselineId=").a(blt != null ? blt.id() : -1) // -1 means no baseline is set.
+            .a(']').nl()
+            .toString();
     }
 
     /** */

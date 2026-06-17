@@ -28,7 +28,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 
 /** Version class for distributed metastorage. */
 @SuppressWarnings("PublicField")
-final class DistributedMetaStorageVersion extends IgniteDataTransferObject {
+public final class DistributedMetaStorageVersion extends IgniteDataTransferObject {
     /** Serial version UID. */
     private static final long serialVersionUID = 0L;
 
