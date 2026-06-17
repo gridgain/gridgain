@@ -30,7 +30,10 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Implementation of {@link DirectAccessRegion}. This interface defines common contract for {@link QueryResultsRegion}
  * and {@link TimestampsRegion}.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class IgniteGeneralDataRegion extends HibernateRegion implements DirectAccessRegion {
     /** */
     private final IgniteLogger log;

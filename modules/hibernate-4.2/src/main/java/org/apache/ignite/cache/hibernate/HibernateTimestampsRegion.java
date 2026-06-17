@@ -23,7 +23,10 @@ import org.hibernate.cache.spi.TimestampsRegion;
  * Implementation of {@link TimestampsRegion}. This region is automatically created when query
  * caching is enabled and it holds most recent updates timestamps to queryable tables.
  * Name of timestamps region is {@code "org.hibernate.cache.spi.UpdateTimestampsCache"}.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateTimestampsRegion extends HibernateGeneralDataRegion implements TimestampsRegion {
     /**
      * @param factory Region factory.

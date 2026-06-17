@@ -58,7 +58,10 @@ import static org.hibernate.cache.spi.access.AccessType.NONSTRICT_READ_WRITE;
  * <pre name="code" class="brush: xml; gutter: false;">
  * org.apache.ignite.hibernate.region_cache.region1=cache1
  * </pre>
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateRegionFactory implements RegionFactory {
     /** */
     private static final long serialVersionUID = 0L;

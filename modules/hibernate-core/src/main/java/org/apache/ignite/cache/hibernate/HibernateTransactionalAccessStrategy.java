@@ -51,7 +51,10 @@ import org.jetbrains.annotations.Nullable;
  * &#064;org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
  * public class Entity { ... }
  * </pre>
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateTransactionalAccessStrategy extends HibernateAccessStrategyAdapter {
     /**
      * @param ignite Grid.

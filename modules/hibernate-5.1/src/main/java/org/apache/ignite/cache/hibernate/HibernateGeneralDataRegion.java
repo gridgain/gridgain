@@ -28,7 +28,10 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Implementation of {@link GeneralDataRegion}. This interface defines common contract for {@link QueryResultsRegion}
  * and {@link TimestampsRegion}.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateGeneralDataRegion extends HibernateRegion implements GeneralDataRegion {
     /**
      * @param factory Region factory.

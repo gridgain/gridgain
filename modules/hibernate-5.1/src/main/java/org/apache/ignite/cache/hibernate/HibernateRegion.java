@@ -24,7 +24,10 @@ import org.hibernate.cache.spi.Region;
 
 /**
  * Implementation of {@link Region}. This interface defines base contract for all L2 cache regions.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class HibernateRegion implements Region {
     /** */
     protected final HibernateRegionFactory factory;

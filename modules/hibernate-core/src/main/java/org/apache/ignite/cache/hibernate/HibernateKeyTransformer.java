@@ -18,7 +18,10 @@ package org.apache.ignite.cache.hibernate;
 
 /**
  * An interface for transforming hibernate keys to Ignite keys.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public interface HibernateKeyTransformer {
     /**
      * @param key Hibernate key.

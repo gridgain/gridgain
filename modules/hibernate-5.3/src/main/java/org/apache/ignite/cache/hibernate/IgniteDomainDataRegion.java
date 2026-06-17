@@ -34,7 +34,10 @@ import org.hibernate.cache.spi.support.AbstractDomainDataRegion;
 
 /**
  * Ignite implementation of {@code DomainDataRegion} interface for Hibernate integration.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class IgniteDomainDataRegion extends AbstractDomainDataRegion implements ExtendedStatisticsSupport {
     /** */
     private final HibernateCacheProxy cache;

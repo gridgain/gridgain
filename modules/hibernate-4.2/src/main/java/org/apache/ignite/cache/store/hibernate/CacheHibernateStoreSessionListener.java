@@ -74,7 +74,10 @@ import org.hibernate.cfg.Configuration;
  * or {@link #setHibernateConfigurationPath(String) Hibernate configuration file}
  * is provided. If non of them is set, exception is thrown. Is both are provided,
  * session factory will be used.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class CacheHibernateStoreSessionListener implements CacheStoreSessionListener, LifecycleAware {
     /** Hibernate session factory. */
     private SessionFactory sesFactory;

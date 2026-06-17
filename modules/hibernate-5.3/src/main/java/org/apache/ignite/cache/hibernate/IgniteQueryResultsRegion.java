@@ -54,7 +54,10 @@ import org.hibernate.query.Query;
  * Note: the query cache does not cache the state of the actual entities in the cache, it caches only identifier
  * values. For this reason, the query cache should always be used in conjunction with
  * the second-level cache for those entities expected to be cached as part of a query result cache
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class IgniteQueryResultsRegion extends IgniteGeneralDataRegion implements QueryResultsRegion {
     /**
      * @param factory Region factory.

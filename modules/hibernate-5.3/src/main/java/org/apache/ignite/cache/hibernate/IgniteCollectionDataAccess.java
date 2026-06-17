@@ -26,7 +26,10 @@ import org.hibernate.persister.collection.CollectionPersister;
 
 /**
  * Ignite implementation of {@code CollectionDataAccess} interface for Hibernate integration.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class IgniteCollectionDataAccess extends IgniteCachedDomainDataAccess implements CollectionDataAccess {
     /** */
     private final AccessType accessType;

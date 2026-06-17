@@ -28,7 +28,10 @@ import org.hibernate.persister.entity.EntityPersister;
 
 /**
  * Ignite implementation of {@code EntityDataAccess} for Hibernate integration.
+ *
+ * @deprecated The Hibernate L2 cache integration is deprecated and will be removed in a future release.
  */
+@Deprecated
 public class IgniteEntityDataAccess extends IgniteCachedDomainDataAccess implements EntityDataAccess {
     /** */
     private final AccessType accessType;
