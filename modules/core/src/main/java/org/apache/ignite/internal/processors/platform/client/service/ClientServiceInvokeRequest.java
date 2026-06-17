@@ -20,6 +20,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,16 +33,19 @@ import org.apache.ignite.internal.cluster.ClusterGroupAdapter;
 import org.apache.ignite.internal.processors.platform.PlatformNativeException;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientObjectResponse;
+import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
 import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 import org.apache.ignite.internal.processors.platform.services.PlatformService;
 import org.apache.ignite.internal.processors.platform.services.PlatformServices;
 import org.apache.ignite.internal.processors.service.GridServiceProxy;
+import org.apache.ignite.internal.processors.service.ServiceCallContextImpl;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.services.Service;
-import org.apache.ignite.services.ServiceCallContext;
 import org.apache.ignite.services.ServiceDescriptor;
+
+import static org.apache.ignite.internal.processors.platform.client.ClientBitmaskFeature.SERVICE_INVOKE_CALLCTX;
 
 /**
  * Request to invoke service method.
@@ -80,12 +84,16 @@ public class ClientServiceInvokeRequest extends ClientRequest {
     /** Objects reader. */
     private final BinaryRawReaderEx reader;
 
+    /** Service call context attributes. */
+    private final Map<String, Object> callAttrs;
+
     /**
      * Constructor.
      *
      * @param reader Reader.
+     * @param protocolCtx Protocol context.
      */
-    public ClientServiceInvokeRequest(BinaryReaderExImpl reader) {
+    public ClientServiceInvokeRequest(BinaryReaderExImpl reader, ClientProtocolContext protocolCtx) {
         super(reader);
 
         name = reader.readString();
@@ -126,6 +134,8 @@ public class ClientServiceInvokeRequest extends ClientRequest {
             args[i] = reader.readObjectDetached();
         }
 
+        callAttrs = protocolCtx.isFeatureSupported(SERVICE_INVOKE_CALLCTX) ? reader.readMap() : null;
+
         reader.in().position(argsStartPos);
     }
 
@@ -157,7 +167,7 @@ public class ClientServiceInvokeRequest extends ClientRequest {
                 // Never deserialize platform service arguments and result: may contain platform-only types.
                 PlatformService proxy = services.serviceProxy(name, PlatformService.class, false, timeout);
 
-                res = proxy.invokeMethod(methodName, keepBinary(), false, args, null);
+                res = proxy.invokeMethod(methodName, keepBinary(), false, args, callAttrs);
             }
             else {
                 // Deserialize Java service arguments when not in keepBinary mode.
@@ -186,13 +196,12 @@ public class ClientServiceInvokeRequest extends ClientRequest {
                 else
                     subjId = ctx.kernalContext().localNodeId();
 
-                res = proxy.invokeMethod(
-                        method, args,
-                        ServiceCallContext.builder()
-                                .put(GridServiceProxy.SUBJECT_ID_KEY, subjId.toString())
-                                .put(GridServiceProxy.REQUEST_ID_KEY, UUID.randomUUID().toString())
-                                .build()
-                );
+                Map<String, Object> attrs = callAttrs == null ? new HashMap<>() : new HashMap<>(callAttrs);
+
+                attrs.put(GridServiceProxy.SUBJECT_ID_KEY, subjId.toString());
+                attrs.put(GridServiceProxy.REQUEST_ID_KEY, UUID.randomUUID().toString());
+
+                res = proxy.invokeMethod(method, args, new ServiceCallContextImpl(attrs));
             }
 
             return new ClientObjectResponse(requestId(), res);
