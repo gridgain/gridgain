@@ -364,6 +364,23 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
             CollectionAssert.AreEqual(Enumerable.Range(1, Count), ids);
         }
+
+        /// <summary>
+        /// Tests that <c>GetAllAsync</c> on a fields query cursor (<c>ClientFieldsQueryCursor</c>) returns all
+        /// rows, paging from the server asynchronously without blocking the calling thread.
+        /// </summary>
+        [Test]
+        public async Task TestFieldsQueryGetAllAsyncReturnsAllRows()
+        {
+            var cache = GetClientCache<Person>();
+
+            // Small page size forces multiple async page requests inside GetAllAsync.
+            var cursor = await cache.QueryAsync(new SqlFieldsQuery("select Id from Person order by Id") { PageSize = 1 });
+
+            var rows = await cursor.GetAllAsync();
+
+            CollectionAssert.AreEqual(Enumerable.Range(1, Count), rows.Select(r => (int)r[0]));
+        }
 #endif
     }
 }

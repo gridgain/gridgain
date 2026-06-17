@@ -481,6 +481,46 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             await cursor.DisposeAsync();
             Assert.DoesNotThrow(() => cursor.Dispose());
         }
+
+        /// <summary>
+        /// Tests that <c>GetAllAsync</c> on a client scan query cursor returns all entries, paging from the
+        /// server asynchronously without blocking the calling thread.
+        /// </summary>
+        [Test]
+        public async Task TestScanQueryGetAllAsyncReturnsAllEntries()
+        {
+            var cache = GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+
+            // Small page size forces multiple async page requests inside GetAllAsync.
+            var cursor = await clientCache.QueryAsync(new ScanQuery<int, Person> { PageSize = 32 });
+
+            var all = await cursor.GetAllAsync();
+
+            CollectionAssert.AreEquivalent(Enumerable.Range(1, cache.GetSize()), all.Select(e => e.Key));
+        }
+
+        /// <summary>
+        /// Tests that <c>GetAllAsync</c> on a client scan query cursor honors a cancellation token that is
+        /// already cancelled before the call.
+        /// </summary>
+        [Test]
+        public void TestScanQueryGetAllAsyncHonorsCancellation()
+        {
+            GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+
+            var cursor = clientCache.Query(new ScanQuery<int, Person> { PageSize = 32 });
+
+            var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            Assert.CatchAsync<OperationCanceledException>(async () => await cursor.GetAllAsync(cts.Token));
+        }
 #endif
 
         /// <summary>

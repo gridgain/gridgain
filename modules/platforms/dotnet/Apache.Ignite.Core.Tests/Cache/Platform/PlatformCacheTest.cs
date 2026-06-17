@@ -716,6 +716,31 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
                 }
             });
         }
+
+        /// <summary>
+        /// Tests that <c>GetAllAsync</c> over a local platform-cache scan query cursor
+        /// (<c>PlatformCacheQueryCursor</c>) returns the same entries as synchronous <c>GetAll</c>.
+        /// </summary>
+        [Test]
+        public async Task TestLocalScanQueryGetAllAsync()
+        {
+            var cache = GetCache<int, Foo>(CacheTestMode.ServerLocal);
+            await cache.PutAllAsync(Enumerable.Range(1, 100).ToDictionary(x => x, x => new Foo(x)));
+
+            // Local scan with a partition iterates the platform cache directly via PlatformCacheQueryCursor.
+            var part = _grid.GetAffinity(cache.Name).GetPartition(TestUtils.GetPrimaryKey(_grid, cache.Name));
+
+            var expected = cache.Query(new ScanQuery<int, Foo> {Local = true, Partition = part})
+                .Select(e => e.Key)
+                .OrderBy(k => k)
+                .ToList();
+
+            var all = await cache.Query(new ScanQuery<int, Foo> {Local = true, Partition = part}).GetAllAsync();
+            var actual = all.Select(e => e.Key).OrderBy(k => k).ToList();
+
+            Assert.IsNotEmpty(actual);
+            CollectionAssert.AreEqual(expected, actual);
+        }
 #endif
 
         /// <summary>

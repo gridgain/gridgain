@@ -129,6 +129,36 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             }
         }
 
+        /** <inheritdoc /> */
+        public async Task<IList<T>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            if (_getAllCalled)
+                throw new InvalidOperationException("Failed to get all entries because GetAll() " +
+                                                    "method has already been called.");
+
+            if (_iterCalled)
+                throw new InvalidOperationException("Failed to get all entries because GetEnumerator() " +
+                                                    "method has already been called.");
+
+            await _syncRoot.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+            try
+            {
+                ThrowIfDisposed();
+
+                var res = await GetAllInternalAsync(cancellationToken).ConfigureAwait(false);
+
+                _getAllCalled = true;
+                _hasNext = false;
+
+                return res;
+            }
+            finally
+            {
+                _syncRoot.Release();
+            }
+        }
+
         #region Public IEnumerable methods
 
         /** <inheritdoc /> */
@@ -270,6 +300,20 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             return res;
         }
 
+        protected async ValueTask<IList<T>> EnumerateAllLockedAsync(CancellationToken cancellationToken)
+        {
+            Debug.Assert(_syncRoot.CurrentCount == 0, "_syncRoot must be held");
+
+            var res = new List<T>();
+
+            while (await MoveNextLockedAsync(cancellationToken).ConfigureAwait(false))
+            {
+                res.Add(_batch[_batchPos]);
+            }
+
+            return res;
+        }
+
         public async ValueTask<bool> MoveNextAsync()
         {
             ThrowIfDisposed();
@@ -278,29 +322,36 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
             try
             {
-                ThrowIfDisposed();
-
-                if (_batch == null)
-                {
-                    if (_batchPos == BatchPosBeforeHead)
-                        // Standing before head, let's get batch and advance position.
-                        await RequestBatchAsync(_asyncEnumeratorToken).ConfigureAwait(false);
-                }
-                else
-                {
-                    _batchPos++;
-
-                    if (_batch.Length == _batchPos)
-                        // Reached batch end => request another.
-                        await RequestBatchAsync(_asyncEnumeratorToken).ConfigureAwait(false);
-                }
-
-                return _batch != null;
+                return await MoveNextLockedAsync(_asyncEnumeratorToken).ConfigureAwait(false);
             }
             finally
             {
                 _syncRoot.Release();
             }
+        }
+
+        private async ValueTask<bool> MoveNextLockedAsync(CancellationToken cancellationToken)
+        {
+            Debug.Assert(_syncRoot.CurrentCount == 0, "_syncRoot must be held");
+
+            ThrowIfDisposed();
+
+            if (_batch == null)
+            {
+                if (_batchPos == BatchPosBeforeHead)
+                    // Standing before head, let's get batch and advance position.
+                    await RequestBatchAsync(cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                _batchPos++;
+
+                if (_batch.Length == _batchPos)
+                    // Reached batch end => request another.
+                    await RequestBatchAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            return _batch != null;
         }
 
         /** <inheritdoc /> */
@@ -315,6 +366,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// Gets all entries.
         /// </summary>
         protected abstract IList<T> GetAllInternal();
+
+        /// <summary>
+        /// Gets all entries asynchronously.
+        /// </summary>
+        /// <param name="cancellationToken">Cancellation token observed before each round-trip to the server.</param>
+        protected abstract ValueTask<IList<T>> GetAllInternalAsync(CancellationToken cancellationToken);
 
         /// <summary>
         /// Requests next batch.
