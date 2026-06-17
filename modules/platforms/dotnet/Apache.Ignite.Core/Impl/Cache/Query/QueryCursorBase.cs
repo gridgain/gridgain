@@ -232,28 +232,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             return _batch != null;
         }
 
-        protected async ValueTask<IList<T>> EnumerateAllAsync(CancellationToken cancellationToken)
-        {
-            var res = new List<T>();
-
-            while (await MoveNextCoreAsync(cancellationToken).ConfigureAwait(false))
-            {
-                res.Add(_batch[_batchPos]);
-            }
-
-            return res;
-        }
-
         public async ValueTask<bool> MoveNextAsync()
-        {
-            // Not locked: an async enumerator is consumed sequentially (await foreach), so there is no
-            // concurrent MoveNextAsync. Use-after-dispose is observed via the volatile _disposed flag.
-            ThrowIfDisposed();
-
-            return await MoveNextCoreAsync(_asyncEnumeratorToken).ConfigureAwait(false);
-        }
-
-        private async ValueTask<bool> MoveNextCoreAsync(CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
 
@@ -261,7 +240,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             {
                 if (_batchPos == BatchPosBeforeHead)
                     // Standing before head, let's get batch and advance position.
-                    await RequestBatchAsync(cancellationToken).ConfigureAwait(false);
+                    await RequestBatchAsync(_asyncEnumeratorToken).ConfigureAwait(false);
             }
             else
             {
@@ -269,7 +248,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
                 if (_batch.Length == _batchPos)
                     // Reached batch end => request another.
-                    await RequestBatchAsync(cancellationToken).ConfigureAwait(false);
+                    await RequestBatchAsync(_asyncEnumeratorToken).ConfigureAwait(false);
             }
 
             return _batch != null;
