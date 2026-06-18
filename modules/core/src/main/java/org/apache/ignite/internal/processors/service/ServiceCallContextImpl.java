@@ -71,7 +71,7 @@ public class ServiceCallContextImpl implements ServiceCallContext {
     /**
      * @return Service call context attributes.
      */
-    Map<String, Object> values() {
+    public Map<String, Object> values() {
         return attrs;
     }
 }
