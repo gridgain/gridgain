@@ -32,7 +32,7 @@ public class DrainUniqueDataResponse {
         this.cacheGroups = cacheGroups;
     }
 
-    /** @return Always {@code true} — this body is only built when unique data is held. */
+    /** @return Always {@code true} - this body is only built when unique data is held. */
     public boolean isUniqueDataHeld() {
         return true;
     }

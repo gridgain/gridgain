@@ -26,7 +26,7 @@ import java.util.List;
  * policies but only gate the {@code shutdown=true} path under {@code GRACEFUL}.
  */
 public class SupplyStatusResponse {
-    /** Aggregate flag — {@code true} if any non-system, non-local cache group is currently supplying. */
+    /** Aggregate flag - {@code true} if any non-system, non-local cache group is currently supplying. */
     private final boolean supplying;
 
     /** Names of the cache groups currently supplying. */

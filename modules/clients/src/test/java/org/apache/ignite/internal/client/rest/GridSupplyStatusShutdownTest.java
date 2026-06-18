@@ -21,7 +21,6 @@ import java.util.Map;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteState;
 import org.apache.ignite.Ignition;
-import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -29,6 +28,7 @@ import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
@@ -43,12 +43,6 @@ import org.junit.Test;
  * informational read, the idle gate-pass clean stop, and the in-flight-supply 503.
  */
 public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
-    /** Default Jetty REST port (the first node started → 8080). */
-    private static final int JETTY_PORT = 8080;
-
-    /** Jetty REST port of the joiner (second node started → 8081). */
-    private static final int JOINER_PORT = 8081;
-
     /** Cache/group whose rebalance messages the SPI holds for the in-flight 503 tests. */
     private static final String SUPPLY_CACHE = "supplyTest";
 
@@ -93,7 +87,7 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
      * pool that the stop itself tears down, and that the 200 is flushed first.
      *
      * <p>Single node, ACTIVE, no in-flight supply/PME and the OSS
-     * replication stub reports inactive → the gate passes.</p>
+     * replication stub reports inactive -> the gate passes.</p>
      */
     @Test
     public void testIdleShutdownTrue_stopsNodeCleanly() throws Exception {
@@ -104,8 +98,8 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        // Gate passes (idle) → 200 with the supply-status body; stop is triggered after the flush.
-        GridRestHttpClient.Response resp = GridRestHttpClient.get(JETTY_PORT, "/ignite?cmd=supply-status&shutdown=true");
+        // Gate passes (idle) -> 200 with the supply-status body; stop is triggered after the flush.
+        GridRestHttpClient.Response resp = GridRestHttpClient.get(restPort("regular"), "/ignite?cmd=supply-status&shutdown=true");
         assertEquals(200, resp.code);
         assertEquals(0, resp.body.get("successStatus"));
 
@@ -118,13 +112,13 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
             GridTestUtils.waitForCondition(
                 () -> IgnitionEx.state(name) == IgniteState.STOPPED, 30_000));
 
-        // Clean stop — NOT a failure stop.
+        // Clean stop - NOT a failure stop.
         assertEquals(IgniteState.STOPPED, IgnitionEx.state(name));
     }
 
     /**
      * Lenient parse (Boolean.parseBoolean, matching the rest of the REST surface): a non-canonical
-     * {@code shutdown} token takes the informational path — 200 with the supply-status body — and
+     * {@code shutdown} token takes the informational path - 200 with the supply-status body - and
      * does NOT trigger a shutdown. Only a literal case-insensitive {@code "true"} fires the gate, so
      * a sloppy token can never stop the node by accident.
      */
@@ -136,7 +130,7 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
         final String name = grid.name();
 
         for (String tok : new String[] {"yes", "1", "on", "tru"}) {
-            GridRestHttpClient.Response resp = GridRestHttpClient.get(JETTY_PORT, "/ignite?cmd=supply-status&shutdown=" + tok);
+            GridRestHttpClient.Response resp = GridRestHttpClient.get(restPort("regular"), "/ignite?cmd=supply-status&shutdown=" + tok);
 
             assertEquals("shutdown=" + tok + " must take the informational path (200): " + resp.body,
                 200, resp.code);
@@ -146,14 +140,14 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
                 resp.body.get("response") instanceof Map);
         }
 
-        // None of the garbage tokens triggered a shutdown — the node is still running.
+        // None of the garbage tokens triggered a shutdown - the node is still running.
         assertEquals("non-canonical shutdown tokens must NOT stop the node",
             IgniteState.STARTED, IgnitionEx.state(name));
     }
 
     /**
      * {@code shutdown=false} returns 200 with the body shape
-     * {@code {supplying, supplyingCacheGroups, activeThinClients, ...}} — same as the bare-GET form.
+     * {@code {supplying, supplyingCacheGroups, activeThinClients, ...}} - same as the bare-GET form.
      * Two successive calls return identical bodies (no side-effect from the {@code shutdown=false}
      * read path).
      */
@@ -161,7 +155,7 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
     public void testShutdownFalse_idempotentInformational() throws Exception {
         startGrid("regular").cluster().state(ClusterState.ACTIVE);
 
-        GridRestHttpClient.Response first = GridRestHttpClient.get(JETTY_PORT, "/ignite?cmd=supply-status&shutdown=false");
+        GridRestHttpClient.Response first = GridRestHttpClient.get(restPort("regular"), "/ignite?cmd=supply-status&shutdown=false");
         assertEquals(200, first.code);
         assertEquals(0, first.body.get("successStatus"));
 
@@ -171,8 +165,8 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
         assertEquals(Boolean.FALSE, fp.get("supplying"));
         assertTrue("activeThinClients must be present", fp.containsKey("activeThinClients"));
 
-        // Second call — same body, no state change.
-        GridRestHttpClient.Response second = GridRestHttpClient.get(JETTY_PORT, "/ignite?cmd=supply-status&shutdown=false");
+        // Second call - same body, no state change.
+        GridRestHttpClient.Response second = GridRestHttpClient.get(restPort("regular"), "/ignite?cmd=supply-status&shutdown=false");
         assertEquals(200, second.code);
         Map<?, ?> sp = (Map<?, ?>)second.body.get("response");
         assertEquals(fp.get("supplying"), sp.get("supplying"));
@@ -188,14 +182,14 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
         startGrid("regular").cluster().state(ClusterState.ACTIVE);
 
         for (String v : new String[]{"FALSE", "False", "false"}) {
-            GridRestHttpClient.Response resp = GridRestHttpClient.get(JETTY_PORT, "/ignite?cmd=supply-status&shutdown=" + v);
+            GridRestHttpClient.Response resp = GridRestHttpClient.get(restPort("regular"), "/ignite?cmd=supply-status&shutdown=" + v);
             assertEquals("shutdown=" + v + " must parse cleanly: " + resp.body, 200, resp.code);
             assertEquals(0, resp.body.get("successStatus"));
         }
     }
 
     /**
-     * In-flight outbound supply → 503 (retryable), shutdown NOT triggered. The first node (port
+     * In-flight outbound supply -> 503 (retryable), shutdown NOT triggered. The first node (port
      * 8080) seeds a {@code backups=1} cache; a second node joins and demands a copy, and the first
      * node's {@link GridDhtPartitionSupplyMessage} is held by the SPI so it is mid-supply
      * ({@code isSupply()==true}). {@code cmd=supply-status&shutdown=true} on the supplier must 503,
@@ -210,9 +204,7 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
 
         IgniteCache<Integer, Integer> cache = supplier.getOrCreateCache(
             new CacheConfiguration<Integer, Integer>(SUPPLY_CACHE)
-                .setBackups(1)
-                .setRebalanceMode(CacheRebalanceMode.ASYNC)
-                .setRebalanceBatchSize(256));
+                .setBackups(1));
 
         for (int i = 0; i < 5_000; i++)
             cache.put(i, i);
@@ -224,15 +216,15 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
 
         TestRecordingCommunicationSpi.spi(supplier).waitForBlocked();
 
-        GridRestHttpClient.Response supplying = GridRestHttpClient.get(JETTY_PORT, "/ignite?cmd=supply-status&shutdown=true");
+        GridRestHttpClient.Response supplying = GridRestHttpClient.get(restPort("regular"), "/ignite?cmd=supply-status&shutdown=true");
 
         assertEquals("shutdown gate must 503 while supplying: " + supplying.body, 503, supplying.code);
         assertEquals(503, supplying.body.get("successStatus"));
         assertTrue("503 reason must name the supplying group: " + supplying.body.get("error"),
             String.valueOf(supplying.body.get("error")).contains("supplying"));
 
-        // Supplier still alive — a 503 gate path never triggers Ignition.stop.
-        GridRestHttpClient.Response live = GridRestHttpClient.get(JETTY_PORT, "/ignite?cmd=probe&kind=liveness");
+        // Supplier still alive - a 503 gate path never triggers Ignition.stop.
+        GridRestHttpClient.Response live = GridRestHttpClient.get(restPort("regular"), "/ignite?cmd=probe&kind=liveness");
         assertEquals("supplier must stay alive after a 503 shutdown gate: " + live.body, 200, live.code);
 
         TestRecordingCommunicationSpi.spi(supplier).stopBlock();
@@ -241,7 +233,7 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Inbound rebalance (demander) → 503 (retryable), shutdown NOT triggered. The first node seeds a
+     * Inbound rebalance (demander) -> 503 (retryable), shutdown NOT triggered. The first node seeds a
      * {@code backups=1} cache; a joiner (port 8081) demands a copy, and the joiner's
      * {@link GridDhtPartitionDemandMessage} is held by the SPI so it stays a demander
      * ({@code rebalanceFuture().isDone()==false}). {@code shutdown=true} on the joiner must 503,
@@ -258,29 +250,27 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
 
         IgniteCache<Integer, Integer> cache = node0.getOrCreateCache(
             new CacheConfiguration<Integer, Integer>(SUPPLY_CACHE)
-                .setBackups(1)
-                .setRebalanceMode(CacheRebalanceMode.ASYNC)
-                .setRebalanceBatchSize(256));
+                .setBackups(1));
 
         for (int i = 0; i < 5_000; i++)
             cache.put(i, i);
 
         awaitPartitionMapExchange();
 
-        // Joiner demands a backup copy; its demand is held → it stays mid inbound-rebalance.
+        // Joiner demands a backup copy; its demand is held -> it stays mid inbound-rebalance.
         IgniteEx joiner = startGrid("regular1");
 
         TestRecordingCommunicationSpi.spi(joiner).waitForBlocked();
 
-        GridRestHttpClient.Response demanding = GridRestHttpClient.get(JOINER_PORT, "/ignite?cmd=supply-status&shutdown=true");
+        GridRestHttpClient.Response demanding = GridRestHttpClient.get(restPort("regular1"), "/ignite?cmd=supply-status&shutdown=true");
 
         assertEquals("shutdown gate must 503 while demanding: " + demanding.body, 503, demanding.code);
         assertEquals(503, demanding.body.get("successStatus"));
         assertTrue("503 reason must name the inbound rebalance: " + demanding.body.get("error"),
             String.valueOf(demanding.body.get("error")).contains("rebalancing"));
 
-        // Joiner still alive — a 503 gate path never triggers Ignition.stop.
-        GridRestHttpClient.Response live = GridRestHttpClient.get(JOINER_PORT, "/ignite?cmd=probe&kind=liveness");
+        // Joiner still alive - a 503 gate path never triggers Ignition.stop.
+        GridRestHttpClient.Response live = GridRestHttpClient.get(restPort("regular1"), "/ignite?cmd=probe&kind=liveness");
         assertEquals("demander must stay alive after a 503 shutdown gate: " + live.body, 200, live.code);
 
         TestRecordingCommunicationSpi.spi(joiner).stopBlock();
@@ -308,15 +298,15 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
                 waitForActiveThinClients(2);
             }
 
-            // c2 closed → count drops back to one (server-side session close is observed asynchronously).
+            // c2 closed -> count drops back to one (server-side session close is observed asynchronously).
             waitForActiveThinClients(1);
         }
 
-        // Both closed → back to the baseline.
+        // Both closed -> back to the baseline.
         waitForActiveThinClients(0);
     }
 
-    /** @return thin-client config for the first node's connector (single node → one connection per client). */
+    /** @return thin-client config for the first node's connector (single node -> one connection per client). */
     private static ClientConfiguration thinClientCfg() {
         return new ClientConfiguration().setAddresses("127.0.0.1:10800..10809");
     }
@@ -325,8 +315,8 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
      * @return {@code activeThinClients} reported by the informational {@code cmd=supply-status}.
      * @throws IOException If the request failed.
      */
-    private static int activeThinClients() throws IOException {
-        Object payload = GridRestHttpClient.get(JETTY_PORT, "/ignite?cmd=supply-status").body.get("response");
+    private int activeThinClients() throws IOException {
+        Object payload = GridRestHttpClient.get(restPort("regular"), "/ignite?cmd=supply-status").body.get("response");
 
         return ((Number)((Map<?, ?>)payload).get("activeThinClients")).intValue();
     }
@@ -335,7 +325,7 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
      * @param expected Expected active thin-client count.
      * @throws Exception If the count is not reached within the timeout.
      */
-    private static void waitForActiveThinClients(int expected) throws Exception {
+    private void waitForActiveThinClients(int expected) throws Exception {
         assertTrue("activeThinClients did not reach " + expected,
             GridTestUtils.waitForCondition(() -> {
                 try {
@@ -345,5 +335,10 @@ public class GridSupplyStatusShutdownTest extends GridCommonAbstractTest {
                     return false;
                 }
             }, 10_000));
+    }
+
+    /** @return REST (Jetty) port the named node actually bound (no brittle hardcoded port). */
+    private int restPort(String name) {
+        return (Integer)grid(name).context().nodeAttribute(IgniteNodeAttributes.ATTR_REST_JETTY_PORT);
     }
 }

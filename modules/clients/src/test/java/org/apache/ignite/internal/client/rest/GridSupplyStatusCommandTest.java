@@ -118,7 +118,7 @@ public class GridSupplyStatusCommandTest extends GridCommonAbstractTest {
         assertTrue(payload.getSupplyingCacheGroups().isEmpty());
     }
 
-    /** GRACEFUL sole-owner: shutdown=true (no force) → 503 unique-data guard, no trigger (afterWrite null). */
+    /** GRACEFUL sole-owner: shutdown=true (no force) -> 503 unique-data guard, no trigger (afterWrite null). */
     @Test
     public void testShutdownUniqueDataGuardUnderGraceful() throws Exception {
         shutdownPlc = ShutdownPolicy.GRACEFUL;
@@ -144,7 +144,7 @@ public class GridSupplyStatusCommandTest extends GridCommonAbstractTest {
         assertFalse("503 guard must NOT trigger shutdown", grid("regular").context().isStopping());
     }
 
-    /** GRACEFUL sole-owner + force=true: bypasses the guard, idle node → gate passes (200 + afterWrite set). */
+    /** GRACEFUL sole-owner + force=true: bypasses the guard, idle node -> gate passes (200 + afterWrite set). */
     @Test
     public void testShutdownForceTrueBypassesUniqueDataGuard() throws Exception {
         shutdownPlc = ShutdownPolicy.GRACEFUL;
@@ -158,7 +158,7 @@ public class GridSupplyStatusCommandTest extends GridCommonAbstractTest {
 
         GridRestResponse forced = invoke(hnd, true, true);
 
-        assertEquals("force=true must bypass the guard → 200: " + forced.getError(),
+        assertEquals("force=true must bypass the guard -> 200: " + forced.getError(),
             GridRestResponse.STATUS_SUCCESS, forced.getSuccessStatus());
         assertNotNull("gate pass must register a shutdown trigger", forced.afterWrite());
         assertFalse("handler-level call must not stop the grid", grid("regular").context().isStopping());
@@ -181,21 +181,21 @@ public class GridSupplyStatusCommandTest extends GridCommonAbstractTest {
         GridRestResponse second = invoke(hnd, true, false);
 
         assertEquals(GridRestResponse.STATUS_SUCCESS, second.getSuccessStatus());
-        assertNull("second shutdown=true must be idempotent — no re-trigger", second.afterWrite());
+        assertNull("second shutdown=true must be idempotent - no re-trigger", second.afterWrite());
         assertFalse("handler-level calls must not stop the grid", grid("regular").context().isStopping());
     }
 
     /** @return supply-status informational response (no shutdown / force). */
-    private static GridRestResponse invoke(GridSupplyStatusCommandHandler hnd) throws Exception {
+    private GridRestResponse invoke(GridSupplyStatusCommandHandler hnd) throws Exception {
         GridRestRequest req = new GridRestRequest();
 
         req.command(GridRestCommand.SUPPLY_STATUS);
 
-        return hnd.handleAsync(req).get();
+        return hnd.handleAsync(req).get(getTestTimeout());
     }
 
     /** @return supply-status response for {@code shutdown} + {@code force}. */
-    private static GridRestResponse invoke(GridSupplyStatusCommandHandler hnd, boolean shutdown,
+    private GridRestResponse invoke(GridSupplyStatusCommandHandler hnd, boolean shutdown,
         boolean force) throws Exception {
         GridRestSupplyStatusRequest req = new GridRestSupplyStatusRequest();
 
@@ -205,6 +205,6 @@ public class GridSupplyStatusCommandTest extends GridCommonAbstractTest {
 
         IgniteInternalFuture<GridRestResponse> fut = hnd.handleAsync(req);
 
-        return fut.get();
+        return fut.get(getTestTimeout());
     }
 }

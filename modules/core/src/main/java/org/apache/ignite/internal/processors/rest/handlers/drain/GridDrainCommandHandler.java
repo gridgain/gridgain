@@ -34,7 +34,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.DRAIN;
 
 /**
- * Handler for {@link GridRestCommand#DRAIN} — the k8s pod-lifecycle flag for rolling restarts.
+ * Handler for {@link GridRestCommand#DRAIN} - the k8s pod-lifecycle flag for rolling restarts.
  * {@code action=start} sets a process-scoped {@code drainingFlag} (read by {@code cmd=probe&kind=readiness},
  * which then 503s and removes the pod from Service endpoints); under {@code ShutdownPolicy.GRACEFUL} the
  * unique-data guard refuses it (503, {@link DrainUniqueDataResponse}) when this node is the sole owner of a
@@ -49,7 +49,7 @@ public class GridDrainCommandHandler extends GridRestCommandHandlerAdapter {
     /**
      * Process-scoped drain flag. {@code volatile} for visibility across REST
      * worker threads and the {@code cmd=probe} handler that reads it. No
-     * metastore round-trip — automatically reset on JVM restart.
+     * metastore round-trip - automatically reset on JVM restart.
      */
     private volatile boolean drainingFlag = false;
 

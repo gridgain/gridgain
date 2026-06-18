@@ -45,8 +45,8 @@ import static org.apache.ignite.internal.processors.rest.GridRestCommand.SUPPLY_
  * Handler for {@link GridRestCommand#SUPPLY_STATUS}. Bare / {@code shutdown=false} is an auth-exempt
  * informational read (200, {@link SupplyStatusResponse} body). {@code shutdown=true} is the auth-required atomic
  * check-and-shutdown gate, evaluated in fixed order with NO shutdown on any 503 path: (1) GRACEFUL +
- * {@code force=false} + {@code uniqueDataHeld} → 503 (IMMEDIATE skips); (2) PME in flight → 503;
- * (3) demander → 503; (4) supplying → 503; (5) replication active → 503; else 200, then
+ * {@code force=false} + {@code uniqueDataHeld} -> 503 (IMMEDIATE skips); (2) PME in flight -> 503;
+ * (3) demander -> 503; (4) supplying -> 503; (5) replication active -> 503; else 200, then
  * {@code Ignition.stop(name, true)} on a dedicated daemon thread AFTER the response is flushed
  * (after-write hook). Idempotent via the {@code shutdownInitiated} CAS.
  */
@@ -64,7 +64,7 @@ public class GridSupplyStatusCommandHandler extends GridRestCommandHandlerAdapte
     private final Object shutdownLock = new Object();
 
     /**
-     * Replication-state provider — the GG-side override if registered, else the OSS stub
+     * Replication-state provider - the GG-side override if registered, else the OSS stub
      * (returns {@code isReplicationActive() == false}). Resolved once at handler init.
      */
     private final IgniteReplicationStateProvider replicationProvider;
@@ -111,14 +111,14 @@ public class GridSupplyStatusCommandHandler extends GridRestCommandHandlerAdapte
 
         SupplyStatusResponse body = new SupplyStatusResponse(supplying, supplyingGroups, activeClients, uniqueDataHeld, uniqueGroups);
 
-        // Informational variant — no gate, no side-effect.
+        // Informational variant - no gate, no side-effect.
         if (!shutdown)
             return new GridFinishedFuture<>(new GridRestResponse(body));
 
-        // shutdown=true variant — atomic gate + trigger.
+        // shutdown=true variant - atomic gate + trigger.
         synchronized (shutdownLock) {
             if (shutdownInitiated) {
-                // Idempotent return — same body shape, NO re-trigger.
+                // Idempotent return - same body shape, NO re-trigger.
                 if (log.isInfoEnabled())
                     log.info("cmd=supply-status&shutdown=true: idempotent (shutdown already initiated)");
 
@@ -135,7 +135,7 @@ public class GridSupplyStatusCommandHandler extends GridRestCommandHandlerAdapte
             if (!isPmeIdle())
                 return new GridFinishedFuture<>(notSafe("pme in progress", body));
 
-            // 3. Inbound rebalance — this node is a demander.
+            // 3. Inbound rebalance - this node is a demander.
             List<String> demandingGroups = inboundRebalanceCacheGroups();
 
             if (!demandingGroups.isEmpty())
@@ -149,7 +149,7 @@ public class GridSupplyStatusCommandHandler extends GridRestCommandHandlerAdapte
             if (replicationProvider.isReplicationActive())
                 return new GridFinishedFuture<>(notSafe("replication active", body));
 
-            // Gate passed — set the flag inside the lock.
+            // Gate passed - set the flag inside the lock.
             shutdownInitiated = true;
         }
 
@@ -162,7 +162,7 @@ public class GridSupplyStatusCommandHandler extends GridRestCommandHandlerAdapte
         GridRestResponse resp = new GridRestResponse(body);
 
         resp.afterWrite(() -> {
-            // Run Ignition.stop on a dedicated daemon thread — NOT a ctx.pools() executor
+            // Run Ignition.stop on a dedicated daemon thread - NOT a ctx.pools() executor
             // (node stop tears those pools down via U.shutdownNow during IgniteKernal.stop0,
             // which would interrupt the very thread running the stop) and NOT the protocol/Jetty
             // thread (stop can block). Mirrors the failure-handler self-stop pattern.
@@ -173,7 +173,7 @@ public class GridSupplyStatusCommandHandler extends GridRestCommandHandlerAdapte
 
                     // cancel=true cancels in-flight compute jobs on the way down (the node
                     // is already drained out of the Service plane, so no client traffic is
-                    // lost). It does NOT skip the configured ShutdownPolicy — the GRACEFUL
+                    // lost). It does NOT skip the configured ShutdownPolicy - the GRACEFUL
                     // backup-wait runs inside IgniteKernal.stop0 regardless of this flag.
                     Ignition.stop(instanceName, true);
                 }
@@ -229,7 +229,7 @@ public class GridSupplyStatusCommandHandler extends GridRestCommandHandlerAdapte
 
     /**
      * @return Names of all non-system, non-local cache groups whose inbound rebalance (this node as
-     *     a demander) has not completed — i.e. the node does not yet own a consistent copy of the
+     *     a demander) has not completed - i.e. the node does not yet own a consistent copy of the
      *     partitions it is pulling; empty if none.
      */
     private List<String> inboundRebalanceCacheGroups() {

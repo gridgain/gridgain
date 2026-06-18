@@ -497,7 +497,7 @@ public class GridJettyRestHandler extends AbstractHandler {
         }
 
         // Response is now written and flushed to the client (ServletOutputStream closed above). Run
-        // any after-write action — e.g. cmd=supply-status&shutdown=true starts node stop here, so the
+        // any after-write action - e.g. cmd=supply-status&shutdown=true starts node stop here, so the
         // 200 is guaranteed on the wire first.
         Runnable afterWrite = cmdRes.afterWrite();
 

@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.cache.dr;
 
 /**
- * DR replication-state SPI. OSS stub — always reports inactive; the GridGain plugin registers a
+ * DR replication-state SPI. OSS stub - always reports inactive; the GridGain plugin registers a
  * DR-aware subclass via {@link org.apache.ignite.plugin.PluginProvider#createComponent}. Used by
  * {@code cmd=supply-status&shutdown=true} to refuse the gate while DR is in flight.
  */
