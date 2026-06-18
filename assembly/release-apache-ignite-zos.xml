@@ -37,9 +37,15 @@
 
     <files>
         <file>
-            <source>${gg8.examples.dir}/examples/pom.xml</source>
+            <source>examples/pom-standalone.xml</source>
             <outputDirectory>/examples</outputDirectory>
             <destName>pom.xml</destName>
+        </file>
+
+        <file>
+            <source>examples/README.txt</source>
+            <outputDirectory>/examples</outputDirectory>
+            <destName>README.txt</destName>
         </file>
     </files>
 </assembly>
