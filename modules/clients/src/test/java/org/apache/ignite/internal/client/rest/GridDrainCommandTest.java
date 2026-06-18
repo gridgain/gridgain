@@ -152,9 +152,10 @@ public class GridDrainCommandTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Unknown action over HTTP is rejected by {@code createRequest} at the protocol layer (before the
-     * handler / auth): HTTP 200 with {@code STATUS_FAILED} and a message naming the valid actions.
-     * No security plugin here, so this is the pure parse-error path.
+     * Unknown action over HTTP is rejected with HTTP 200 / {@code STATUS_FAILED} and a message naming
+     * the valid actions. {@code createRequest} resolves the action leniently (so authentication runs
+     * first); the handler then rejects the null action. No security plugin here, so it reaches the
+     * handler directly.
      */
     @Test
     public void testHttpUnknownActionRejected() throws Exception {
