@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.h2.opt;
 
 import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneFile;
 import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneOutputStream;
+import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.offheap.unsafe.GridUnsafeMemory;
 import org.apache.lucene.store.AlreadyClosedException;
 import org.apache.lucene.store.IndexInput;
@@ -154,6 +155,45 @@ public class GridLuceneInputStream extends IndexInput implements Cloneable {
             len -= bytesToCp;
 
             bufPosition += bytesToCp;
+        }
+    }
+
+    /** Reusable per-thread scratch for bulk primitive reads (IndexInput is cloned per query thread). */
+    private static final ThreadLocal<byte[]> SCRATCH = ThreadLocal.withInitial(() -> new byte[0]);
+
+    /**
+     * Bulk float read. Fast path: when the whole vector is contiguous in the current off-heap buffer,
+     * copy native memory straight into the destination {@code float[]} (native little-endian order
+     * matches Lucene's vector encoding) — no heap {@code byte[]} staging and no scalar decode loop.
+     * Falls back to a buffered byte read + little-endian decode only when a vector straddles a buffer
+     * boundary. Replaces the default per-{@code readByte} scalar loop that dominated vector-search CPU.
+     */
+    @Override public void readFloats(float[] dst, int offset, int len) throws IOException {
+        int n = len << 2;
+
+        if (bufPosition >= bufLength) {
+            currBufIdx++;
+
+            switchCurrentBuffer(true);
+        }
+
+        if (bufPosition + n <= bufLength) {
+            GridUnsafe.copyMemory(null, currBuf + bufPosition, dst, GridUnsafe.FLOAT_ARR_OFF + ((long)offset << 2), n);
+
+            bufPosition += n;
+        }
+        else {
+            byte[] buf = SCRATCH.get();
+            if (buf.length < n) {
+                buf = new byte[n];
+                SCRATCH.set(buf);
+            }
+            readBytes(buf, 0, n);
+            for (int i = 0; i < len; i++) {
+                int j = i << 2;
+                dst[offset + i] = Float.intBitsToFloat(
+                    (buf[j] & 0xFF) | ((buf[j + 1] & 0xFF) << 8) | ((buf[j + 2] & 0xFF) << 16) | ((buf[j + 3] & 0xFF) << 24));
+            }
         }
     }
 
