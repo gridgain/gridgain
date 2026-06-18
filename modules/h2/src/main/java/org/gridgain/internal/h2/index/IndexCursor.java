@@ -115,7 +115,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
 
             Column column = condition.getColumn();
             if (condition.getCompareType() == Comparison.IN_LIST) {
-                // Always record the IN column candidate, regardless of the other conditions seen so far.
+                // Always record the IN(list) column candidate, regardless of the other conditions seen so far.
                 // Index conditions are not ordered, so a range and/or the equality prefix that make
                 // a per-value expansion legal may be processed before or after this IN.
 
@@ -181,16 +181,21 @@ public class IndexCursor implements Cursor, AutoCloseable {
         // recorded. Decide how to use the IN list/query against the index.
         if (inColumn != null && !onlyEqualityConditionsSoFar && (start != null || end != null)) {
 
-            if (start != null && end != null && canExpandInWithTrailingRange(inColumn, eqPrefixMask)) {
+            if (start != null && canExpandInWithTrailingRange(inColumn, eqPrefixMask)) {
                 // The equality prefix plus a fixed IN value form an exact index prefix and the only
                 // remaining (range) conditions are on trailing index columns.
                 //
                 // Keep the IN expansion: each value from IN (...) list, is mapped to one
-                // range scan [start, inRangeEnd]  with the value fixed in both bounds
-                // and the trailing range left open,  instead of a single wide scan
+                // range scan [start, inRangeEnd] with the value fixed in both bounds
+                // and the trailing range left open, instead of a single wide scan
                 // with the IN applied as a post-filter. Covers both a non-leading IN with an equality prefix
                 // and a leading IN (empty prefix).
-                inRangeEnd = end;
+                //
+                // When end == null (one-sided lower-bound range, e.g. f3 > ?), use a template row
+                // so that find(v) can still pin the IN column in the upper bound. The template's
+                // null values cause compareRows to return 0 for unset columns, so the cursor stops
+                // naturally when the IN column value changes (e.g. when f1 advances past v).
+                inRangeEnd = (end != null) ? end : table.getTemplateRow();
             }
             else if (!isFirstIndexOrViewColumn(inColumn)) {
                 // Non-leading IN that cannot form an exact prefix.
