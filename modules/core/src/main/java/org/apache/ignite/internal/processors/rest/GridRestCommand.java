@@ -234,14 +234,14 @@ public enum GridRestCommand {
     PROPERTY_SET("setproperty"),
 
     /**
-     * Probe — k8s probe dispatch on the {@code kind} query parameter. Bare GET and
+     * Probe - k8s probe dispatch on the {@code kind} query parameter. Bare GET and
      * {@code kind=liveness} are the backward-compatible kernel-started check;
      * {@code kind=readiness} is the k8s readiness/startup gate (latched
      * initial-rebalance complete, cluster active, not in maintenance).
      */
     PROBE("probe"),
 
-    /** Drain — k8s pod-lifecycle flag ({@code action=start}/{@code stop}/{@code status}). */
+    /** Drain - k8s pod-lifecycle flag ({@code action=start}/{@code stop}/{@code status}). */
     DRAIN("drain");
 
     /** Enum values. */

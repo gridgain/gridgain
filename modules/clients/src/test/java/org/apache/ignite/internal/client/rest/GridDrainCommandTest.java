@@ -22,6 +22,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.processors.rest.GridRestResponse;
 import org.apache.ignite.internal.processors.rest.handlers.drain.DrainStatusResponse;
@@ -44,9 +45,6 @@ import static org.apache.ignite.internal.processors.rest.request.GridRestDrainRe
  * Readiness lives behind {@code cmd=probe&kind=readiness}.
  */
 public class GridDrainCommandTest extends GridCommonAbstractTest {
-    /** Default Jetty REST port (the first node started → 8080). */
-    private static final int JETTY_PORT = 8080;
-
     /** Shutdown policy applied to the next started node (Ignite default is IMMEDIATE). */
     private ShutdownPolicy shutdownPlc = ShutdownPolicy.IMMEDIATE;
 
@@ -79,7 +77,7 @@ public class GridDrainCommandTest extends GridCommonAbstractTest {
     }
 
     /**
-     * action=status — returns the {@link DrainStatusResponse} payload with the
+     * action=status - returns the {@link DrainStatusResponse} payload with the
      * current flag. Body is {@code {draining}} only.
      */
     @Test
@@ -109,7 +107,7 @@ public class GridDrainCommandTest extends GridCommonAbstractTest {
 
     /**
      * action=start sets the drain flag; action=stop clears it (operator
-     * rollback path). Default policy (IMMEDIATE) and no user caches — the
+     * rollback path). Default policy (IMMEDIATE) and no user caches - the
      * unique-data guard does not apply.
      */
     @Test
@@ -125,7 +123,7 @@ public class GridDrainCommandTest extends GridCommonAbstractTest {
         assertEquals("draining", start.getResponse());
         assertTrue(hnd.drainingFlag());
 
-        // Stop — clears flag, opens cmd=probe&kind=readiness back to ready state.
+        // Stop - clears flag, opens cmd=probe&kind=readiness back to ready state.
         GridRestResponse stop = invoke(hnd, STOP);
 
         assertEquals(GridRestResponse.STATUS_SUCCESS, stop.getSuccessStatus());
@@ -136,7 +134,7 @@ public class GridDrainCommandTest extends GridCommonAbstractTest {
     /**
      * Missing action (handler invoked with a {@code null} action) returns
      * {@code STATUS_FAILED} naming the expected actions. An <em>unknown</em> action
-     * string never reaches the handler — it is rejected at the protocol layer; see
+     * string never reaches the handler - it is rejected at the protocol layer; see
      * {@link #testHttpUnknownActionRejected()}.
      */
     @Test
@@ -162,7 +160,7 @@ public class GridDrainCommandTest extends GridCommonAbstractTest {
     public void testHttpUnknownActionRejected() throws Exception {
         startGrid("regular").cluster().state(ClusterState.ACTIVE);
 
-        GridRestHttpClient.Response resp = GridRestHttpClient.get(JETTY_PORT, "/ignite?cmd=drain&action=bogus");
+        GridRestHttpClient.Response resp = GridRestHttpClient.get(restPort("regular"), "/ignite?cmd=drain&action=bogus");
 
         log.info("malformed drain action response: code=" + resp.code + " body=" + resp.body);
 
@@ -175,7 +173,7 @@ public class GridDrainCommandTest extends GridCommonAbstractTest {
     /**
      * Unique-data guard: under {@code ShutdownPolicy.GRACEFUL}, a node that is the
      * only owner of a cache group's partitions (here a {@code backups=1} cache on a
-     * single node — the backup cannot be placed) refuses {@code action=start} with a
+     * single node - the backup cannot be placed) refuses {@code action=start} with a
      * {@code 503}/{@link DrainUniqueDataResponse} and does NOT flip the flag.
      * {@code force=true} bypasses the guard.
      */
@@ -214,7 +212,7 @@ public class GridDrainCommandTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Under {@code ShutdownPolicy.IMMEDIATE} the unique-data guard is NOT applied —
+     * Under {@code ShutdownPolicy.IMMEDIATE} the unique-data guard is NOT applied -
      * the same sole-owner topology drains without {@code force} (Mode B: data loss
      * accepted by design).
      */
@@ -241,7 +239,7 @@ public class GridDrainCommandTest extends GridCommonAbstractTest {
      * @param action Sub-action ({@code null} = absent).
      * @return Resolved response.
      */
-    private static GridRestResponse invoke(GridDrainCommandHandler hnd, GridRestDrainRequest.Action action)
+    private GridRestResponse invoke(GridDrainCommandHandler hnd, GridRestDrainRequest.Action action)
         throws Exception {
         return invoke(hnd, action, false);
     }
@@ -252,7 +250,7 @@ public class GridDrainCommandTest extends GridCommonAbstractTest {
      * @param force {@code force} flag.
      * @return Resolved response.
      */
-    private static GridRestResponse invoke(GridDrainCommandHandler hnd, GridRestDrainRequest.Action action,
+    private GridRestResponse invoke(GridDrainCommandHandler hnd, GridRestDrainRequest.Action action,
         boolean force) throws Exception {
         GridRestDrainRequest req = new GridRestDrainRequest();
 
@@ -262,6 +260,11 @@ public class GridDrainCommandTest extends GridCommonAbstractTest {
 
         IgniteInternalFuture<GridRestResponse> fut = hnd.handleAsync(req);
 
-        return fut.get();
+        return fut.get(getTestTimeout());
+    }
+
+    /** @return REST (Jetty) port the named node actually bound (no brittle hardcoded port). */
+    private int restPort(String name) {
+        return (Integer)grid(name).context().nodeAttribute(IgniteNodeAttributes.ATTR_REST_JETTY_PORT);
     }
 }

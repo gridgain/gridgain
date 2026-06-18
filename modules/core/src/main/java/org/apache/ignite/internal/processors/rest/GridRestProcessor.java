@@ -1014,7 +1014,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
      * mixes read and mutate actions on one command key, so {@code action=status} (the sole read
      * path) is auth-exempt while {@code action=start} and {@code action=stop} (mutates) require
      * authentication. Adding {@code DRAIN} wholesale to {@link #SKIP_AUTHENTICATION_COMMANDS} would
-     * be a violation — it would expose the mutating actions unauthenticated.
+     * be a violation - it would expose the mutating actions unauthenticated.
      *
      * @param req Request.
      * @return {@code true} if the request is exempt from authentication.
