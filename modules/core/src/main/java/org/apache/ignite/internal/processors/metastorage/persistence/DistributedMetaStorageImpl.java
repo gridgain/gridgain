@@ -484,7 +484,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      *
      * @return Number of items in the in-memory distributed metastorage history cache.
      */
-    public int getHistoryItemsCount() {
+    public int getEstimatedHistoryItemsCount() {
         return histCache.size();
     }
 
@@ -493,7 +493,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
      *
      * @return Size of the in-memory distributed metastorage history cache in bytes.
      */
-    public long getHistorySizeBytes() {
+    public long getEstimatedHistorySizeBytes() {
         return histCache.sizeInBytes();
     }
 

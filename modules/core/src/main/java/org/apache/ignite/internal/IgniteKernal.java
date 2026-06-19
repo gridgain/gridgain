@@ -2423,8 +2423,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         return new SB()
             .a("    ^-- Distributed metastorage [ver=").a(dmsVer.id)
             .a(", hash=").a(dmsVer.hash)
-            .a(", histItems=").a(dmsImpl.getHistoryItemsCount())
-            .a(", histBytes=").a(dmsImpl.getHistorySizeBytes())
+            .a(", histItems=").a(dmsImpl.getEstimatedHistoryItemsCount())
+            .a(", histBytes=").a(dmsImpl.getEstimatedHistorySizeBytes())
             .a(", baselineId=").a(blt != null ? blt.id() : -1) // -1 means no baseline is set.
             .a(']').nl()
             .toString();
