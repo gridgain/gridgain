@@ -319,9 +319,6 @@ public class TcpIgniteClient implements IgniteClient {
     /** Builds a payload writer for the {@link ClientOperation#CACHES_DESTROY} operation. */
     private static Consumer<PayloadOutputChannel> destroyCachesWriter(Collection<String> names) {
         return req -> {
-            if (!req.clientChannel().protocolCtx().isFeatureSupported(ProtocolBitmaskFeature.CACHES_DESTROY))
-                throw new ClientFeatureNotSupportedByServerException(ProtocolBitmaskFeature.CACHES_DESTROY);
-
             BinaryOutputStream out = req.out();
 
             out.writeInt(names.size());

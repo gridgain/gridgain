@@ -88,10 +88,7 @@ public enum ProtocolBitmaskFeature {
     QUERY_INDEX_VECTOR_SIMILARITY(33),
 
     /** Invoke service methods with caller context. GG-specific id (Ignite uses 10, reserved above). */
-    SERVICE_INVOKE_CALLCTX(34),
-
-    /** Destroy multiple caches with a single request ({@link ClientOperation#CACHES_DESTROY}). GG-specific id. */
-    CACHES_DESTROY(35);
+    SERVICE_INVOKE_CALLCTX(34);
 
     /** */
     private static final EnumSet<ProtocolBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =
