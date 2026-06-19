@@ -306,18 +306,29 @@ public class TcpIgniteClient implements IgniteClient {
     @Override public void destroyCaches(Collection<String> names) throws ClientException {
         ensureCacheNames(names);
 
-        for (String name : names)
-            ch.request(ClientOperation.CACHE_DESTROY, req -> req.out().writeInt(ClientUtils.cacheId(name)));
+        ch.request(ClientOperation.CACHES_DESTROY, destroyCachesWriter(names));
     }
 
     /** {@inheritDoc} */
     @Override public IgniteClientFuture<Void> destroyCachesAsync(Collection<String> names) throws ClientException {
         ensureCacheNames(names);
 
-        return new IgniteClientFutureImpl<>(CompletableFuture.allOf(names.stream()
-            .map(name -> ch.requestAsync(ClientOperation.CACHE_DESTROY,
-                req -> req.out().writeInt(ClientUtils.cacheId(name))).toCompletableFuture())
-            .toArray(CompletableFuture[]::new)));
+        return ch.requestAsync(ClientOperation.CACHES_DESTROY, destroyCachesWriter(names));
+    }
+
+    /** Builds a payload writer for the {@link ClientOperation#CACHES_DESTROY} operation. */
+    private static Consumer<PayloadOutputChannel> destroyCachesWriter(Collection<String> names) {
+        return req -> {
+            if (!req.clientChannel().protocolCtx().isFeatureSupported(ProtocolBitmaskFeature.CACHES_DESTROY))
+                throw new ClientFeatureNotSupportedByServerException(ProtocolBitmaskFeature.CACHES_DESTROY);
+
+            BinaryOutputStream out = req.out();
+
+            out.writeInt(names.size());
+
+            for (String name : names)
+                out.writeInt(ClientUtils.cacheId(name));
+        };
     }
 
     /** {@inheritDoc} */
