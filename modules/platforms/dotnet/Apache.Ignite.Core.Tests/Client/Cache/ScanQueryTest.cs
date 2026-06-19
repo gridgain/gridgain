@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
@@ -368,6 +369,117 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             c1.Dispose();
             c2.Dispose();
             c3.Dispose();
+        }
+
+        /// <summary>
+        /// Tests that <c>await foreach</c> over a scan query cursor (<see cref="System.Collections.Generic.IAsyncEnumerable{T}"/>)
+        /// returns all entries, fetching multiple pages asynchronously from the server.
+        /// </summary>
+        [Test]
+        public async Task TestAwaitForeachReturnsAllEntries()
+        {
+            var cache = GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+
+            var qry = new ScanQuery<int, Person> { PageSize = 128 };
+            var keys = new List<int>();
+
+            await foreach (var entry in await clientCache.QueryAsync(qry))
+            {
+                Assert.AreEqual(entry.Key.ToString(), entry.Value.Name);
+                keys.Add(entry.Key);
+            }
+
+            CollectionAssert.AreEquivalent(Enumerable.Range(1, cache.GetSize()), keys);
+        }
+
+        /// <summary>
+        /// Tests that <see cref="System.Collections.Generic.IAsyncEnumerable{T}.GetAsyncEnumerator"/> enforces the
+        /// same single-consumption rules as the synchronous enumerator: it can not be obtained after
+        /// <c>GetAll</c> or after the cursor has already been (asynchronously) enumerated.
+        /// </summary>
+        [Test]
+        public void TestGetAsyncEnumeratorAfterGetAllOrSecondCallThrows()
+        {
+            GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+
+            // GetAsyncEnumerator after GetAll throws.
+            var cursor = clientCache.Query(new ScanQuery<int, Person>());
+            cursor.GetAll();
+            Assert.Throws<InvalidOperationException>(() => cursor.GetAsyncEnumerator());
+
+            // Second GetAsyncEnumerator on the same cursor throws.
+            cursor = clientCache.Query(new ScanQuery<int, Person>());
+            cursor.GetAsyncEnumerator();
+            Assert.Throws<InvalidOperationException>(() => cursor.GetAsyncEnumerator());
+        }
+
+        /// <summary>
+        /// Tests that <c>await foreach</c> over a scan query cursor stops with an
+        /// <see cref="OperationCanceledException"/> when the enumeration token is cancelled mid-iteration.
+        /// </summary>
+        [Test]
+        public void TestAsyncEnumerationHonorsCancellation()
+        {
+            GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+
+            // Small page size so iteration spans multiple async batches.
+            var qry = new ScanQuery<int, Person> { PageSize = 32 };
+            var cts = new CancellationTokenSource();
+
+            var count = 0;
+
+            Assert.CatchAsync<OperationCanceledException>(async () =>
+            {
+                await foreach (var entry in (await clientCache.QueryAsync(qry)).WithCancellation(cts.Token))
+                {
+                    Assert.IsNotNull(entry);
+
+                    if (++count == 10)
+                    {
+                        await cts.CancelAsync();
+                    }
+                }
+            });
+
+            // Enumeration stopped right after cancellation, well before draining the whole cache.
+            Assert.AreEqual(10, count);
+        }
+
+        /// <summary>
+        /// Tests that a client scan query cursor that was not enumerated can be disposed synchronously without
+        /// throwing, and that <c>Dispose</c>/<c>DisposeAsync</c> are idempotent and can be mixed. Guards against
+        /// the cursor's synchronization primitive being disposed while it is still considered in use.
+        /// </summary>
+        [Test]
+        public async Task TestScanQueryCursorDisposeIsIdempotentWhenNotDrained()
+        {
+            GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+
+            // Small page size leaves the server-side cursor open (more pages remain) so _hasNext stays true.
+            var qry = new ScanQuery<int, Person> { PageSize = 32 };
+
+            // Sync Dispose of a never-enumerated cursor must not throw, and must be idempotent.
+            var cursor = clientCache.Query(qry);
+            Assert.DoesNotThrow(() => cursor.Dispose());
+            Assert.DoesNotThrow(() => cursor.Dispose());
+
+            // DisposeAsync of a non-drained cursor, then a second DisposeAsync and a sync Dispose, must all be safe.
+            cursor = clientCache.Query(qry);
+            await cursor.DisposeAsync();
+            await cursor.DisposeAsync();
+            Assert.DoesNotThrow(() => cursor.Dispose());
         }
 #endif
 

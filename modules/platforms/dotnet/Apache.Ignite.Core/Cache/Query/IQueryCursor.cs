@@ -29,14 +29,14 @@ namespace Apache.Ignite.Core.Cache.Query
     /// in exception.
     /// </summary>
     [SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
-    public interface IQueryCursor<T> : IEnumerable<T>, IDisposable, IAsyncDisposable
+    public interface IQueryCursor<T> : IEnumerable<T>, IDisposable, IAsyncDisposable, IAsyncEnumerable<T>
     {
         /// <summary>
         /// Gets all query results. Use this method when you know in advance that query 
         /// result is relatively small and will not cause memory utilization issues.
         /// </summary>
         /// <returns>List containing all query results.</returns>
-        [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate", 
+        [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate",
             Justification = "Expensive operation.")]
         IList<T> GetAll();
     }
