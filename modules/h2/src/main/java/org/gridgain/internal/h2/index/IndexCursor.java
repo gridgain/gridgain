@@ -7,6 +7,7 @@ package org.gridgain.internal.h2.index;
 
 import java.util.ArrayList;
 import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.expression.Parameter;
 import org.gridgain.internal.h2.expression.condition.Comparison;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.result.ResultInterface;
@@ -121,7 +122,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 }
             } else {
                 canUseAnyIndexColumnForIn &= condition.getCompareType() == Comparison.EQUAL &&
-                    condition.getExpression().isConstant();
+                    (condition.getExpression().isConstant() || condition.getExpression() instanceof Parameter);
 
                 Value v = condition.getCurrentValue(s);
                 boolean isStart = condition.isStart();

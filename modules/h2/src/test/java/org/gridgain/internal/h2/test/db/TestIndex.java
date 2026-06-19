@@ -106,6 +106,7 @@ public class TestIndex extends TestDb {
         testFunctionIndex();
 
         testInStatementUsesIndex();
+        testParametrizedQueryWithInStatementUsesIndex();
 
         conn.close();
         deleteDb("index");
@@ -799,6 +800,54 @@ public class TestIndex extends TestDb {
                     rs.next();
 
                     assertContains(rs.getString(1), "/* scanCount: 5 */");
+                }
+            }
+        } finally {
+            stat.execute("drop table in_table");
+        }
+    }
+
+    private void testParametrizedQueryWithInStatementUsesIndex() throws SQLException {
+        stat.execute("create table in_table (f0 int, f1 int, f2 int, f3 int, f4 int, primary key (f0))");
+
+        try {
+            stat.execute("create index PK_IDX on in_table (f1, f2, f3)");
+
+            String sqlInsert = "insert into in_table (f0, f1, f2, f3, f4) values (%d, %d, %d, %d, 2)";
+
+            for (int i = 1; i <= 10; ++i)
+                for (int j = 1; j <= 10; ++j)
+                    for (int k = 1; k <= 10; ++k)
+                        stat.execute(String.format(sqlInsert, (i * 100) + (j * 10) + k, i, j, k));
+
+            String[] queries = new String[] {
+                "select * from in_table where f1 = 8 and f2 in (1, 5, 3, 7) and f3 = ?",
+                "select * from in_table where f1 in (1, 5, 3, 7) and f2 = 8 and f3 = ?",
+                "select * from in_table use index(PK_IDX) where f1 = 8 and f2 in (1, 5, 3, 7) and f3 = ?",
+                "select * from in_table use index(PK_IDX) where f1 in (1, 5, 3, 7) and f2 = 8 and f3 = ?",
+            };
+
+            for (String sql : queries) {
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, 5);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        int resCnt = 0;
+
+                        while (rs.next())
+                            resCnt++;
+
+                        assertEquals(4, resCnt);
+                    }
+                }
+
+                try (PreparedStatement ps = conn.prepareStatement("explain analyze " + sql)) {
+                    ps.setInt(1, 5);
+
+                    try (ResultSet rs = ps.executeQuery()) {
+                        rs.next();
+
+                        assertContains(rs.getString(1), "/* scanCount: 5 */");
+                    }
                 }
             }
         } finally {
