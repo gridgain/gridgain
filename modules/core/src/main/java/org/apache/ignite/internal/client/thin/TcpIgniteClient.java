@@ -303,6 +303,24 @@ public class TcpIgniteClient implements IgniteClient {
     }
 
     /** {@inheritDoc} */
+    @Override public void destroyCaches(Collection<String> names) throws ClientException {
+        ensureCacheNames(names);
+
+        for (String name : names)
+            ch.request(ClientOperation.CACHE_DESTROY, req -> req.out().writeInt(ClientUtils.cacheId(name)));
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Void> destroyCachesAsync(Collection<String> names) throws ClientException {
+        ensureCacheNames(names);
+
+        return new IgniteClientFutureImpl<>(CompletableFuture.allOf(names.stream()
+            .map(name -> ch.requestAsync(ClientOperation.CACHE_DESTROY,
+                req -> req.out().writeInt(ClientUtils.cacheId(name))).toCompletableFuture())
+            .toArray(CompletableFuture[]::new)));
+    }
+
+    /** {@inheritDoc} */
     @Override public <K, V> ClientCache<K, V> createCache(String name) throws ClientException {
         ensureCacheName(name);
 
@@ -552,6 +570,15 @@ public class TcpIgniteClient implements IgniteClient {
     private static void ensureCacheName(String name) {
         if (name == null || name.isEmpty())
             throw new IllegalArgumentException("Cache name must be specified");
+    }
+
+    /** @throws IllegalArgumentException if the specified collection of cache names is invalid. */
+    private static void ensureCacheNames(Collection<String> names) {
+        if (names == null)
+            throw new IllegalArgumentException("Cache names must be specified");
+
+        for (String name : names)
+            ensureCacheName(name);
     }
 
     /** @throws IllegalArgumentException if the specified cache name is invalid. */
