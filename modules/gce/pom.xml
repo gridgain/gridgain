@@ -76,7 +76,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>${jackson.core.version}</version>
+            <version>${jackson-core.version}</version>
         </dependency>
 
         <dependency>
