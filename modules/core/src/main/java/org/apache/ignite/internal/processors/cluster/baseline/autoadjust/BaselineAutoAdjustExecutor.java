@@ -106,6 +106,6 @@ class BaselineAutoAdjustExecutor {
             return data.isInvalidated() || (!isBaselineScaleUpAutoAdjustEnabled.getAsBoolean() && scaleUp) ||
                 (!isBaselineScaleDownAutoAdjustEnabled.getAsBoolean() && !scaleUp);
 
-        return data.isInvalidated() || isBaselineScaleUpAutoAdjustEnabled.getAsBoolean();
+        return data.isInvalidated() || !isBaselineScaleUpAutoAdjustEnabled.getAsBoolean();
     }
 }

@@ -279,7 +279,7 @@ public enum IgniteFeatures {
     PARTITION_RECONCILIATION_LATEST_ALG_UPDATE(74),
 
     /** Support of separate baseline auto adjustment. */
-    BASELINE_SEPARATE_AUTO_ADJUSTMENT_ON_SCALE_UP(75);
+    BASELINE_SEPARATE_AUTO_ADJUSTMENT(75);
 
     /**
      * Unique feature identifier.
@@ -462,7 +462,7 @@ public enum IgniteFeatures {
             if (BASELINE_AUTO_ADJUSTMENT == value && !isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE))
                 continue;
 
-            if (BASELINE_SEPARATE_AUTO_ADJUSTMENT_ON_SCALE_UP == value && !isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
+            if (BASELINE_SEPARATE_AUTO_ADJUSTMENT == value && !isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
                 continue;
 
             if (SPLITTED_CACHE_CONFIGURATIONS == value && isFeatureEnabled(IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER))

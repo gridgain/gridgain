@@ -545,7 +545,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         );
 
         distributedBaselineConfiguration.listenAutoAdjustEnabled((name, oldVal, newVal) -> {
-           if (newVal != null && newVal) {
+           if (newVal != null && newVal && !isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
                long topVer = ctx.discovery().topologyVersion();
                baselineTopologyUpdater.triggerBaselineUpdate(topVer, false);
            }

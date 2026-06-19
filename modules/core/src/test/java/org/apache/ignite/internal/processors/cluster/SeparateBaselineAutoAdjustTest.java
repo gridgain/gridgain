@@ -1,80 +1,73 @@
+/*
+ * Copyright 2026 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.processors.cluster;
 
 import org.apache.ignite.cluster.ClusterState;
-import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.lifecycle.LifecycleBean;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
-public class SeparateBaselineAutoAdjustTest extends GridCommonAbstractTest {
+public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
+    private static final String TEST_NAME = "TEST_NAME";
 
-    private static int autoAdjustTimeout = 5_000;
+    private int autoAdjustTimeout = 5_000;
 
-    private static int scaleUpAutoAdjustTimeout = 5_000;
+    private int scaleUpAutoAdjustTimeout;
 
-    private static int scaleDownAutoAdjustTimeout = 5_000;
+    private int scaleDownAutoAdjustTimeout;
 
-    /** */
-    protected boolean isPersistent() {
-        return true;
-    }
+    /** Lifecycle bean. */
+    private LifecycleBean lifecycleBean;
 
     /**
      * @throws Exception if failed.
      */
     @Before
-    public void before() throws Exception {
+    @Override public void before() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
 
-        scaleUpAutoAdjustTimeout = 5_000;
+        scaleUpAutoAdjustTimeout = autoAdjustTimeout;
 
-        scaleDownAutoAdjustTimeout = 5_000;
+        scaleDownAutoAdjustTimeout = autoAdjustTimeout;
     }
 
-    /**
-     * @throws Exception if failed.
-     */
-    @After
-    public void after() throws Exception {
-        stopAllGrids();
+    @Override
+    public void setBaselineAutoAdjustEnabled(IgniteEx ignite, boolean enabled) {
+        super.setBaselineAutoAdjustEnabled(ignite, enabled);
 
-        cleanPersistenceDir();
+        ignite.cluster().baselineScaleUpAutoAdjustEnabled(enabled);
+        ignite.cluster().baselineScaleDownAutoAdjustEnabled(enabled);
     }
 
+    @Override
+    public void setBaselineAutoAdjustTimeout(IgniteEx ignite, int timeout) {
+        super.setBaselineAutoAdjustTimeout(ignite, timeout);
 
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        cfg.setConsistentId(igniteInstanceName);
-
-        DataStorageConfiguration storageCfg = new DataStorageConfiguration();
-
-        storageCfg.getDefaultDataRegionConfiguration()
-            .setPersistenceEnabled(isPersistent())
-            .setMaxSize(500L * 1024 * 1024);
-
-        storageCfg
-            .setWalSegments(3)
-            .setWalSegmentSize(512 * 1024);
-
-        cfg.setDataStorageConfiguration(storageCfg);
-
-        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
-
-//        cfg.setLifecycleBeans(lifecycleBean);
-
-        return cfg;
+        ignite.cluster().baselineScaleUpAutoAdjustTimeout(timeout);
+        ignite.cluster().baselineScaleDownAutoAdjustTimeout(timeout);
     }
 
     @Test
@@ -145,7 +138,11 @@ public class SeparateBaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
-        ignite0.cluster().baselineScaleUpAutoAdjustEnabled(true);
+        if (isPersistent())
+            ignite0.cluster().baselineScaleUpAutoAdjustEnabled(true);
+        else
+            ignite0.cluster().baselineScaleDownAutoAdjustEnabled(false);
+
         ignite0.cluster().baselineScaleUpAutoAdjustTimeout(scaleUpAutoAdjustTimeout);
 
         ignite0.cluster().state(ClusterState.ACTIVE);
@@ -166,29 +163,46 @@ public class SeparateBaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
-        ignite0.cluster().baselineScaleDownAutoAdjustEnabled(true);
+        if (isPersistent())
+            ignite0.cluster().baselineScaleDownAutoAdjustEnabled(true);
+        else
+            ignite0.cluster().baselineScaleUpAutoAdjustEnabled(false);
+
         ignite0.cluster().baselineScaleDownAutoAdjustTimeout(scaleDownAutoAdjustTimeout);
 
         ignite0.cluster().state(ClusterState.ACTIVE);
 
         startGrid(3);
 
-        System.out.println("========================================");
-        System.out.println("4th node started");
-
         stopGrid(1);
-
-        System.out.println("========================================");
-        System.out.println("2nd node stopped");
-
-        awaitPartitionMapExchange();
 
         assertTrue(waitForCondition(
             () -> ignite0.cluster().currentBaselineTopology().size() == 2,
             scaleDownAutoAdjustTimeout * 2
         ));
+    }
 
-        System.out.println("========================================");
-        System.out.println("test finished");
+    @Test
+    public void testSeparateAutoAdjustShouldBeEnabledExplicitly() throws Exception {
+        IgniteEx ignite0 = startGrids(3);
+
+        ignite0.cluster().baselineAutoAdjustEnabled(true);
+
+        ignite0.cluster().state(ClusterState.ACTIVE);
+
+        startGrid(3);
+
+        stopGrid(1);
+
+        assertTrue(waitForCondition(
+            () -> ignite0.cluster().currentBaselineTopology().size() == 3,
+            autoAdjustTimeout * 2
+        ));
+    }
+
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
+    @WithSystemProperty(key = IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
+    @Override public void testBaselineAutoAdjustDisableBecauseFlagIsSetToFalse() throws Exception {
+        super.testBaselineAutoAdjustDisableBecauseFlagIsSetToFalse();
     }
 }
