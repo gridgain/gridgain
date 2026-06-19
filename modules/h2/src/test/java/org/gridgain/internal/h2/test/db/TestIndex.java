@@ -950,8 +950,9 @@ public class TestIndex extends TestDb {
             //            rs_size: |{9, 10}| * |{1, 5, 3, 7}| * |{?}| = 2 * 4 * 1 = 8
             // optimal scan_count: |{9, 10}| * |{1-10}| * |{1-10}| = 2 * 10 * 10 = 200
             //    real scan_count: |{8, 9, 10}| * |{1-10}| * |{1-10}| = 3 * 10 * 10 = 300
-            // H2 can is not smart enough to infer that in case of enumerable types end boundary
-            // can be set to (?+1 = 8+1 = 9), so it scans with filter (f1=8, f2=null, f3=null)
+            //
+            // H2 is not smart enough to infer that in case of enumerable types end-boundary can be set
+            // to (?+1 = 8+1 = 9), so it scans with filter (f1=8, f2=null, f3=null)
             challenge(predicates("f1 > ?", "f2 in (1, 5, 3, 7)", "f3 = ?"), 8, 300, 8, 5),
 
             // rs_size: |{1, 2}| * |{1-10}| * |{1, 5, 3, 7}| = 2 * 10 * 4 = 80
@@ -960,8 +961,6 @@ public class TestIndex extends TestDb {
     }
 
     private void testQueriesWithInStatementAndIndexWithSkippedColumnsInPrefix() throws SQLException {
-        System.out.println("\n\n");
-
         testIndexesAndQueriesWithInStatements(null, () -> {
             stat.execute("create index IDX_F1_F3 on in_table (f1, f3)");
         },
@@ -971,7 +970,7 @@ public class TestIndex extends TestDb {
             challenge(predicates("f1 = ?", null, "f3 in (1, 5, 3, 7)"), 40, 40, 7),
 
             //         rs: |{1, 5, 3, 7}| * |{1-10}| * |{9, 10}| = 4 * 10 * 2 = 80
-            // scan_count: |{1, 5, 3, 7}| * |{1-10}| * |{8, 9, 10}| = 4 * 10 * 3 = 300
+            // scan_count: |{1, 5, 3, 7}| * |{1-10}| * |{8, 9, 10}| = 4 * 10 * 3 = 120
             challenge(predicates("f1 in (1, 5, 3, 7)", null, "f3 > ?"), 80, 120, 8),
 
             // rs & optimal scan_count: |{8, 9, 10}| * |{1-10}| * |{1, 5, 3, 7}| = 3 * 10 * 4 = 120
