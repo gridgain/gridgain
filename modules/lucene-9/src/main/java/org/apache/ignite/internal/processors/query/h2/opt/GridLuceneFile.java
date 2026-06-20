@@ -52,6 +52,20 @@ public class GridLuceneFile implements Accountable {
     private final AtomicBoolean deleted = new AtomicBoolean();
 
     /**
+     * Kill switch for the no-copy contiguous mirror (default on). When off, {@link #contiguousAddr()}
+     * returns 0 and Lucene falls back to its copy-based vector scorer — useful to trade the mirror's extra
+     * memory back for RAM, or to isolate regressions.
+     */
+    private static final boolean NOCOPY_MIRROR =
+        Boolean.parseBoolean(System.getProperty("GRIDGAIN_VECTOR_NOCOPY_SCORER", "true"));
+
+    /** Lazily-built contiguous off-heap mirror of the whole file (0 = not built). See {@link #contiguousAddr()}. */
+    private volatile long contiguousPtr;
+
+    /** Allocation size of the contiguous mirror, for release on delete. */
+    private long contiguousLen;
+
+    /**
      * File used as buffer, in no RAMDirectory
      *
      * @param dir Directory.
@@ -152,6 +166,54 @@ public class GridLuceneFile implements Accountable {
     }
 
     /**
+     * Address of a contiguous off-heap copy of the entire file, built lazily on first call. The file is
+     * normally stored as discontiguous {@link GridLuceneOutputStream#BUFFER_SIZE} pages; this single
+     * contiguous mirror lets Lucene's memory-segment vector scorer read each candidate vector in place
+     * (no per-candidate copy into a scratch {@code float[]}). Returns {@code 0} when unavailable
+     * (empty/deleted file). Freed in {@link #deferredDelete()}. The sequential read path is unaffected.
+     *
+     * @return Contiguous mirror address, or {@code 0}.
+     */
+    final long contiguousAddr() {
+        long p = contiguousPtr;
+
+        if (p != 0)
+            return p;
+
+        return NOCOPY_MIRROR ? buildContiguous() : 0;
+    }
+
+    /**
+     * Builds the contiguous mirror once (synchronized so concurrent query threads build at most one).
+     *
+     * @return Mirror address, or {@code 0}.
+     */
+    private synchronized long buildContiguous() {
+        if (contiguousPtr != 0)
+            return contiguousPtr;
+
+        if (deleted.get() || length <= 0)
+            return 0;
+
+        long dst = dir.memory().allocate(length);
+
+        long copied = 0;
+
+        for (int i = 0, nb = buffers.size(); i < nb && copied < length; i++) {
+            long chunk = Math.min(BUFFER_SIZE, length - copied);
+
+            dir.memory().copyMemory(buffers.get(i), dst + copied, chunk);
+
+            copied += chunk;
+        }
+
+        contiguousLen = length;
+        contiguousPtr = dst;
+
+        return dst;
+    }
+
+    /**
      * Expert: allocate a new buffer. Subclasses can allocate differently.
      *
      * @return allocated buffer.
@@ -181,6 +243,12 @@ public class GridLuceneFile implements Accountable {
 
         for (int i = 0; i < buffers.idx; i++)
             dir.memory().release(buffers.arr[i], BUFFER_SIZE);
+
+        if (contiguousPtr != 0) {
+            dir.memory().release(contiguousPtr, contiguousLen);
+
+            contiguousPtr = 0;
+        }
 
         buffers = null;
         dir.pendingDeletions.remove(name);
