@@ -306,12 +306,18 @@ public class TcpIgniteClient implements IgniteClient {
     @Override public void destroyCaches(Collection<String> names) throws ClientException {
         ensureCacheNames(names);
 
+        if (names.isEmpty())
+            return;
+
         ch.request(ClientOperation.CACHES_DESTROY, destroyCachesWriter(names));
     }
 
     /** {@inheritDoc} */
     @Override public IgniteClientFuture<Void> destroyCachesAsync(Collection<String> names) throws ClientException {
         ensureCacheNames(names);
+
+        if (names.isEmpty())
+            return IgniteClientFutureImpl.completedFuture(null);
 
         return ch.requestAsync(ClientOperation.CACHES_DESTROY, destroyCachesWriter(names));
     }
