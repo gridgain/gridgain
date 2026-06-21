@@ -182,4 +182,3 @@ ZIP:
         zip -r9 apache-ignite-X.X.X-src.zip apache-ignite-X.X.X-src
 GPG:
         gpg --armor --output apache-ignite-X.X.X-src.zip.asc --detach-sig apache-ignite-X.X.X-src.zip
-
