@@ -137,6 +137,37 @@
                     <skip>true</skip>
                 </configuration>
             </plugin>
+            <!--
+              Cross-JDK compat tests: the forked (remote) Ignite JVM may run on JDK 8
+              while the test driver runs on JDK 17. The fork's classpath includes
+              modules/compatibility/target/test-classes/ (its own test-jar artifact
+              is built from these), so the .class files produced here must remain
+              loadable by JDK 8. Compile with JDK 17's javac but emit class file 52
+              (Java 8 bytecode) AND restrict the API surface to JDK 8 via
+              maven.compiler.release=8.
+              Source has no post-Java-8 syntax or API usage.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <configuration>
+                            <release>8</release>
+                            <!--
+                              The parent pom adds JDK 9+ module-export compilerArgs
+                              that are incompatible with the release=8 setting (Maven
+                              Compiler 3.7+ rejects the combination). Compat test
+                              sources do not use the jdk.internal.* APIs that those
+                              args expose, so suppress the inherited args for this
+                              execution only.
+                            -->
+                            <compilerArgs combine.self="override"/>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>

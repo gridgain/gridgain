@@ -29,9 +29,10 @@ git-patch-prop-local.sh
 **/dotnet/libs/
 *.classname*
 *.exe
-.mvn/
+.mvn/wrapper/
 mvnw
 mvnw.cmd
+!.mvn/jvm.config
 
 #Ignore all Intellij IDEA files (except default inspections config)
 .idea/

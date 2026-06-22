@@ -125,7 +125,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <forkMode>pertest</forkMode>
-                    <argLine>-javaagent:${basedir}/target/libs/aspectjweaver-${aspectj.version}.jar</argLine>
+                    <argLine>${surefire.opens} -javaagent:${basedir}/target/libs/aspectjweaver-${aspectj.version}.jar</argLine>
                     <workingDirectory>${basedir}/target</workingDirectory>
                 </configuration>
             </plugin>

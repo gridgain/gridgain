@@ -91,48 +91,12 @@
         <module>modules/schedule</module>
         <module>modules/control-utility</module>
         <module>modules/opentelemetry</module>
+        <module>modules/lucene-9</module>
+        <module>modules/lucene-8</module>
+        <module>modules/spring-6</module>
     </modules>
 
     <profiles>
-        <profile>
-            <id>java-11+</id>
-            <activation>
-                <jdk>[11,)</jdk>
-            </activation>
-            <modules>
-                <module>modules/lucene-9</module>
-                <module>modules/lucene-8</module>
-            </modules>
-        </profile>
-        <profile>
-            <id>java-15+</id>
-            <activation>
-                <jdk>[15,)</jdk>
-            </activation>
-            <modules>
-                <module>modules/lucene-9</module>
-                <module>modules/lucene-8</module>
-            </modules>
-        </profile>
-        <profile>
-            <id>target-java-17+</id>
-            <activation>
-                <jdk>[17,)</jdk>
-            </activation>
-            <modules>
-                <module>modules/spring-6</module>
-            </modules>
-        </profile>
-        <profile>
-            <id>java-8</id>
-            <activation>
-                <jdk>1.8</jdk>
-            </activation>
-            <modules>
-                <module>modules/lucene-8</module>
-            </modules>
-        </profile>
-
         <profile>
             <id>all-java</id> <!-- used to update project versions and check all modules compilation -->
             <modules> <!-- sorted alphabetically -->
@@ -237,10 +201,37 @@
                                 </goals>
                                 <phase>validate</phase>
                                 <configuration>
-                                    <reportOutputDirectory>${basedir}/target/javadoc</reportOutputDirectory>
-                                    <destDir>core</destDir>
+                                    <outputDirectory>${basedir}/target/javadoc</outputDirectory>
                                     <stylesheetfile>${basedir}/assembly/docfiles/css/stylesheet.css</stylesheetfile>
-                                    <subpackages>org.apache.ignite -exclude org.apache.ignite.codegen:org.apache.ignite.examples:org.apache.ignite.internal:org.apache.ignite.schema:org.apache.ignite.tests:org.apache.ignite.tools:org.apache.ignite.util:org.apache.ignite.spi.discovery.tcp.messages:org.apache.ignite.spi.discovery.tcp.internal:org.apache.ignite.spi.communication.tcp.internal:org.apache.ignite.spi.discovery.zk.internal:org.apache.ignite.spi.deployment.uri.scanners:org.apache.ignite.spi.deployment.uri.tasks:org.apache.ignite.yardstick:org.apache.ignite.webtest</subpackages>
+                                    <!-- ignite-tools is a reactor project here, so the inherited tagletArtifact resolves
+                                         to a not-yet-packaged artifact at the validate phase; point the taglet path at
+                                         the installed jar instead (the docs flow builds/installs before -Pjavadoc). -->
+                                    <tagletpath>${settings.localRepository}/org/gridgain/ignite-tools/${project.version}/ignite-tools-${project.version}.jar</tagletpath>
+                                    <!-- Source-file patterns instead of -subpackages/-exclude: on JDK 9+ the javadoc
+                                         tool matches -exclude package names exactly (JDK 8 excluded recursively), so
+                                         subpackages of the excluded packages would leak into the docs. -->
+                                    <sourceFileIncludes>
+                                        <sourceFileInclude>org/apache/ignite/**/*.java</sourceFileInclude>
+                                    </sourceFileIncludes>
+                                    <sourceFileExcludes>
+                                        <sourceFileExclude>**/internal/**</sourceFileExclude>
+                                        <sourceFileExclude>org/apache/ignite/codegen/**</sourceFileExclude>
+                                        <sourceFileExclude>org/apache/ignite/examples/**</sourceFileExclude>
+                                        <sourceFileExclude>org/apache/ignite/schema/**</sourceFileExclude>
+                                        <sourceFileExclude>org/apache/ignite/tests/**</sourceFileExclude>
+                                        <sourceFileExclude>org/apache/ignite/tools/**</sourceFileExclude>
+                                        <sourceFileExclude>org/apache/ignite/util/**</sourceFileExclude>
+                                        <sourceFileExclude>org/apache/ignite/spi/discovery/tcp/messages/**</sourceFileExclude>
+                                        <sourceFileExclude>org/apache/ignite/spi/deployment/uri/scanners/**</sourceFileExclude>
+                                        <sourceFileExclude>org/apache/ignite/spi/deployment/uri/tasks/**</sourceFileExclude>
+                                        <sourceFileExclude>org/apache/ignite/yardstick/**</sourceFileExclude>
+                                        <sourceFileExclude>org/apache/ignite/webtest/**</sourceFileExclude>
+                                        <!-- Package-private classes: explicit-file mode would document them,
+                                             unlike the package selection the JDK 8 pipeline used. -->
+                                        <sourceFileExclude>org/apache/ignite/cache/spring/SpringCache.java</sourceFileExclude>
+                                        <sourceFileExclude>org/apache/ignite/transactions/spring/IgniteTransactionHolder.java</sourceFileExclude>
+                                    </sourceFileExcludes>
+                                    <additionalOptions>${javadoc.opts} ${javadoc.exports.opts}</additionalOptions>
                                 </configuration>
                             </execution>
                         </executions>
@@ -330,7 +321,7 @@
                                 <phase>initialize</phase>
                                 <configuration>
                                     <target>
-                                        <copy todir="${basedir}/target/javadoc/core">
+                                        <copy todir="${basedir}/target/javadoc/apidocs">
                                             <fileset dir="assembly/docfiles">
                                                 <include name="img/**" />
                                                 <include name="*.js" />
@@ -339,7 +330,7 @@
 
                                             <taskdef name="doctask" classname="org.apache.ignite.tools.ant.beautifier.GridJavadocAntTask" />
 
-                                            <doctask css="dotted" dir="target/javadoc/core">
+                                            <doctask css="dotted" dir="target/javadoc/apidocs">
                                                 <include name="**/*.html" />
                                                 <exclude name="overview-frame.html" />
                                                 <exclude name="allclasses-frame.html" />

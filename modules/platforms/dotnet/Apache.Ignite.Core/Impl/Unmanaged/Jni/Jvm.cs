@@ -51,7 +51,6 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             "--add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED",
             "--add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED",
             "--add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED",
-            "--illegal-access=permit",
 
             "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
             "--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED",
@@ -73,7 +72,8 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             "--add-opens=java.base/java.time=ALL-UNNAMED",
             "--add-opens=java.base/sun.security.ssl=ALL-UNNAMED",
             "--add-opens=java.base/sun.security.x509=ALL-UNNAMED",
-            "--add-opens=java.sql/java.sql=ALL-UNNAMED"
+            "--add-opens=java.sql/java.sql=ALL-UNNAMED",
+            "--add-opens=java.logging/java.util.logging=ALL-UNNAMED"
         };
 
         /** */
@@ -125,6 +125,8 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             _threadExitCallbackId = UnmanagedThread.SetThreadExitCallback(func.DetachCurrentThread);
 
             var env = AttachCurrentThread();
+
+            EnsureSupportedJdkVersion(env);
 
             _methodId = new MethodId(env);
 
@@ -282,10 +284,73 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
         }
 
         /// <summary>
+        /// Throws if the live JVM is older than the supported floor.
+        /// The check runs after JVM creation but before any GG/Ignite class
+        /// is looked up, so a misconfigured JAVA_HOME=JDK 8 produces a clear
+        /// actionable error instead of a downstream "class not found".
+        /// </summary>
+        private static void EnsureSupportedJdkVersion(Env env)
+        {
+            const int minSupportedMajor = 17;
+
+            string versionStr;
+            using (var systemCls = env.FindClass("java/lang/System"))
+            {
+                var getPropertyId = env.GetStaticMethodId(
+                    systemCls, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;");
+
+                using (var propName = env.NewString("java.specification.version"))
+                {
+                    long arg = propName.Target.ToInt64();
+                    using (var result = env.CallStaticObjectMethod(systemCls, getPropertyId, &arg))
+                    {
+                        versionStr = result == null ? null : env.JStringToString(result.Target);
+                    }
+                }
+            }
+
+            var major = ParseJavaSpecMajor(versionStr);
+            if (major < minSupportedMajor)
+            {
+                throw new IgniteException(
+                    "Unsupported Java version: " + versionStr +
+                    ". GridGain requires Java " + minSupportedMajor + " or later. " +
+                    "Set JAVA_HOME (or IgniteConfiguration.JvmDllPath) to a JDK " +
+                    minSupportedMajor + "+ installation.");
+            }
+        }
+
+        /// <summary>
+        /// Parses the major version from a java.specification.version string.
+        /// Returns 8 for "1.8", 17 for "17", 21 for "21", 0 if unparseable.
+        /// </summary>
+        private static int ParseJavaSpecMajor(string versionStr)
+        {
+            if (string.IsNullOrEmpty(versionStr))
+            {
+                return 0;
+            }
+
+            if (versionStr.StartsWith("1.", StringComparison.Ordinal))
+            {
+                var dot = versionStr.IndexOf('.', 2);
+                var tail = dot >= 0 ? versionStr.Substring(2, dot - 2) : versionStr.Substring(2);
+                int oldFormat;
+                return int.TryParse(tail, out oldFormat) ? oldFormat : 0;
+            }
+
+            int major;
+            return int.TryParse(versionStr, out major) ? major : 0;
+        }
+
+        /// <summary>
         /// Creates the JVM.
         /// </summary>
         private static IntPtr CreateJvm(IList<string> options)
         {
+            // The IsJava9 guard lets a misconfigured JDK 8 reach JVM creation
+            // (without unknown --add-opens flags) so the post-create version
+            // check in the Jvm constructor can throw an actionable error.
             if (IsJava9())
             {
                 options = options == null

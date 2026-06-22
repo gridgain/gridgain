@@ -67,7 +67,7 @@ checkJava() {
         if ! type -p java > /dev/null; then
             echo $0", [ERROR]:"
             echo "JAVA_HOME environment variable is not found."
-            echo "Please point JAVA_HOME variable to location of JDK 1.8 or later."
+            echo "Please point JAVA_HOME variable to location of JDK 17 or later."
             echo "You can also download latest JDK at http://java.com/download"
 
             exit 1
@@ -85,10 +85,10 @@ checkJava() {
     #
     javaMajorVersion "$JAVA"
 
-    if [ $version -lt 8 ]; then
+    if [ $version -lt 17 ]; then
         echo "$0, ERROR:"
         echo "The $version version of JAVA installed in JAVA_HOME=$JAVA_HOME is incompatible."
-        echo "Please point JAVA_HOME variable to installation of JDK 1.8 or later."
+        echo "Please point JAVA_HOME variable to installation of JDK 17 or later."
         echo "You can also download latest JDK at http://java.com/download"
         exit 1
     fi
