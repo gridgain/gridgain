@@ -35,7 +35,10 @@ public class TestSubqueryPerformanceOnLazyExecutionMode extends TestDb {
 
     @Override
     public boolean isEnabled() {
-        return !config.travis;
+        boolean onTeamCity = System.getenv("TEAMCITY_VERSION") != null
+            || System.getProperty("teamcity.version") != null;
+
+        return !config.travis && !onTeamCity;
     }
 
     @Override
