@@ -355,25 +355,14 @@ final class ReliableChannel implements AutoCloseable {
         Consumer<PayloadOutputChannel> payloadWriter,
         Function<PayloadInputChannel, T> payloadReader
     ) throws ClientException, ClientError {
+        @Nullable UUID affNodeId;
         if (partitionAwarenessEnabled && affinityInfoIsUpToDate(cacheId)) {
-            UUID affNodeId = affinityCtx.affinityNode(cacheId, key);
-
-            if (affNodeId != null) {
-                CompletableFuture<T> fut = new CompletableFuture<>();
-                List<ClientConnectionException> failures = new ArrayList<>();
-
-                Object result = applyOnNodeChannel(
-                    affNodeId,
-                    channel -> applyOnClientChannelAsync(fut, channel, op, payloadWriter, payloadReader, failures),
-                    failures
-                );
-
-                if (result != null)
-                    return new IgniteClientFutureImpl<>(fut);
-            }
+            affNodeId = affinityCtx.affinityNode(cacheId, key);
+        } else {
+            affNodeId = null;
         }
 
-        return serviceAsync(op, payloadWriter, payloadReader);
+        return nodeServiceAsync(affNodeId, op, payloadWriter, payloadReader);
     }
 
     /**
