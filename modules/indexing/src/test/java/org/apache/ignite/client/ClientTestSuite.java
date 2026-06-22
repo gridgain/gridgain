@@ -21,6 +21,7 @@ import org.apache.ignite.internal.client.thin.AtomicSequenceTest;
 import org.apache.ignite.internal.client.thin.BlockingTxOpsTest;
 import org.apache.ignite.internal.client.thin.CacheAsyncTest;
 import org.apache.ignite.internal.client.thin.CacheEntryListenersTest;
+import org.apache.ignite.internal.client.thin.ClientCacheSizeLongTest;
 import org.apache.ignite.internal.client.thin.ClusterApiTest;
 import org.apache.ignite.internal.client.thin.ClusterGroupTest;
 import org.apache.ignite.internal.client.thin.ComputeTaskTest;
@@ -78,6 +79,7 @@ import org.junit.runners.Suite;
     ThinClientPartitionAwarenessDiscoveryTest.class,
     ReliableChannelTest.class,
     CacheAsyncTest.class,
+    ClientCacheSizeLongTest.class,
     TimeoutTest.class,
     OptimizedMarshallerClassesCachedTest.class,
     AtomicLongTest.class,

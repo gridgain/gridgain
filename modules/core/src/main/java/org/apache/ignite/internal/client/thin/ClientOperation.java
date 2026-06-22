@@ -53,6 +53,9 @@ public enum ClientOperation {
     /** Cache destroy. */
     CACHE_DESTROY(1056),
 
+    /** Destroy multiple caches with a single request. */
+    CACHES_DESTROY(1057),
+
     /** Cache get or create with configuration. */
     CACHE_GET_OR_CREATE_WITH_CONFIGURATION(1054),
 
@@ -359,6 +362,7 @@ public enum ClientOperation {
                 return ClientOperationType.CACHE_GET_NAMES;
 
             case CACHE_DESTROY:
+            case CACHES_DESTROY:
                 return ClientOperationType.CACHE_DESTROY;
 
             case CACHE_CONTAINS_KEY:

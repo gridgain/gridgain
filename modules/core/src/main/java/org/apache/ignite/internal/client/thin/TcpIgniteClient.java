@@ -303,6 +303,38 @@ public class TcpIgniteClient implements IgniteClient {
     }
 
     /** {@inheritDoc} */
+    @Override public void destroyCaches(Collection<String> names) throws ClientException {
+        ensureCacheNames(names);
+
+        if (names.isEmpty())
+            return;
+
+        ch.request(ClientOperation.CACHES_DESTROY, destroyCachesWriter(names));
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Void> destroyCachesAsync(Collection<String> names) throws ClientException {
+        ensureCacheNames(names);
+
+        if (names.isEmpty())
+            return IgniteClientFutureImpl.completedFuture(null);
+
+        return ch.requestAsync(ClientOperation.CACHES_DESTROY, destroyCachesWriter(names));
+    }
+
+    /** Builds a payload writer for the {@link ClientOperation#CACHES_DESTROY} operation. */
+    private static Consumer<PayloadOutputChannel> destroyCachesWriter(Collection<String> names) {
+        return req -> {
+            BinaryOutputStream out = req.out();
+
+            out.writeInt(names.size());
+
+            for (String name : names)
+                out.writeInt(ClientUtils.cacheId(name));
+        };
+    }
+
+    /** {@inheritDoc} */
     @Override public <K, V> ClientCache<K, V> createCache(String name) throws ClientException {
         ensureCacheName(name);
 
@@ -552,6 +584,15 @@ public class TcpIgniteClient implements IgniteClient {
     private static void ensureCacheName(String name) {
         if (name == null || name.isEmpty())
             throw new IllegalArgumentException("Cache name must be specified");
+    }
+
+    /** @throws IllegalArgumentException if the specified collection of cache names is invalid. */
+    private static void ensureCacheNames(Collection<String> names) {
+        if (names == null)
+            throw new IllegalArgumentException("Cache names must be specified");
+
+        for (String name : names)
+            ensureCacheName(name);
     }
 
     /** @throws IllegalArgumentException if the specified cache name is invalid. */
