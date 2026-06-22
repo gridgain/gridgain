@@ -149,6 +149,9 @@ public class FunctionalTest extends GridCommonAbstractTest {
             assertEquals(1, cache.size());
             assertEquals(2, cache.size(CachePeekMode.ALL));
 
+            assertEquals(1L, cache.sizeLong());
+            assertEquals(2L, cache.sizeLong(CachePeekMode.ALL));
+
             cache = client.cache(CACHE_NAME);
 
             Person cachedVal = cache.get(key);
