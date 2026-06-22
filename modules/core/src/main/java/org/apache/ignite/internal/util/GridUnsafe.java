@@ -27,6 +27,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import jdk.internal.access.SharedSecrets;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.jetbrains.annotations.NotNull;
@@ -116,17 +117,11 @@ public abstract class GridUnsafe {
     /** Whether to use newDirectByteBuffer(long, long) constructor */
     private static final boolean IS_DIRECT_BUF_LONG_CAP = majorJavaVersion(jdkVersion()) >= 21;
 
-    /** Whether {@link jdk.internal.access.JavaNioAccess} has new byte buffer api. */
-    private static final boolean HAS_JAVA_NIO_ACCESS_NEW_API = majorJavaVersion(jdkVersion()) >= 14;
-
     /** Whether {@link jdk.internal.access.JavaNioAccess#newDirectByteBuffer} has param of type {@link java.lang.foreign.MemorySegment}. */
     private static final boolean HAS_JAVA_NIO_ACCESS_MEMORY_SEGMENT_PARAM = majorJavaVersion(jdkVersion()) >= 19;
 
     /** Cleaner code for direct {@code java.nio.ByteBuffer}. */
-    private static final DirectBufferCleaner DIRECT_BUF_CLEANER =
-        majorJavaVersion(jdkVersion()) < 9
-            ? new ReflectiveDirectBufferCleaner()
-            : new UnsafeDirectBufferCleaner();
+    private static final DirectBufferCleaner DIRECT_BUF_CLEANER = new UnsafeDirectBufferCleaner();
 
     /** JavaNioAccess object. If {@code null} then {@link #NEW_DIRECT_BUF_CONSTRUCTOR} should be available. */
     @Nullable private static final Object JAVA_NIO_ACCESS_OBJ;
@@ -149,54 +144,26 @@ public abstract class GridUnsafe {
 
         Constructor<?> directBufCtor = null;
 
-        if (majorJavaVersion(jdkVersion()) < 12) {
-            // for old java prefer Java NIO & Shared Secrets obect init way
+        try {
+            directBufCtor = createAndTestNewDirectBufferCtor();
+        }
+        catch (Exception e) {
             try {
-                nioAccessObj = javaNioAccessObject();
+                nioAccessObj = SharedSecrets.getJavaNioAccess();
                 directBufMtd = newDirectBufferMethod(nioAccessObj);
             }
-            catch (Exception e) {
-                nioAccessObj = null;
-                directBufMtd = null;
+            // Throwable: a missing jdk.internal.access export surfaces as IllegalAccessError
+            // (an Error); rethrow e so its actionable missing-JVM-options message survives.
+            catch (Throwable eFallback) {
+                eFallback.printStackTrace();
 
-                try {
-                    directBufCtor = createAndTestNewDirectBufferCtor();
-                }
-                catch (Exception eFallback) {
-                    eFallback.printStackTrace();
+                e.addSuppressed(eFallback);
 
-                    e.addSuppressed(eFallback);
-
-                    throw e; // fallback was not suceefull
-                }
-
-                if (directBufCtor == null)
-                    throw e;
+                throw e; //fallback to shared secrets failed.
             }
-        }
-        else {
-            try {
-                directBufCtor = createAndTestNewDirectBufferCtor();
-            }
-            catch (Exception e) {
-                if (!HAS_JAVA_NIO_ACCESS_NEW_API)
-                    throw e;
 
-                try {
-                    nioAccessObj = javaNioAccessObject();
-                    directBufMtd = newDirectBufferMethod(nioAccessObj);
-                }
-                catch (Exception eFallback) {
-                    eFallback.printStackTrace();
-
-                    e.addSuppressed(eFallback);
-
-                    throw e; //fallback to shared secrets failed.
-                }
-
-                if (nioAccessObj == null || directBufMtd == null)
-                    throw e;
-            }
+            if (nioAccessObj == null || directBufMtd == null)
+                throw e;
         }
 
         JAVA_NIO_ACCESS_OBJ = nioAccessObj;
@@ -262,11 +229,7 @@ public abstract class GridUnsafe {
         @NotNull Method newDirectBufMtd,
         @NotNull Object javaNioAccessObj) {
         try {
-            ByteBuffer buf;
-            if (HAS_JAVA_NIO_ACCESS_NEW_API)
-                buf = (ByteBuffer)newDirectBufMtd.invoke(javaNioAccessObj, ptr, len, null, null);
-            else
-                buf = (ByteBuffer)newDirectBufMtd.invoke(javaNioAccessObj, ptr, len, null);
+            ByteBuffer buf = (ByteBuffer)newDirectBufMtd.invoke(javaNioAccessObj, ptr, len, null, null);
 
             assert buf.isDirect();
 
@@ -1610,28 +1573,6 @@ public abstract class GridUnsafe {
     }
 
     /**
-     * Returns {@code JavaNioAccess} instance from private API for corresponding Java version.
-     *
-     * @return {@code JavaNioAccess} instance for corresponding Java version.
-     * @throws RuntimeException If getting access to the private API is failed.
-     */
-    private static Object javaNioAccessObject() {
-        String pkgName = getSharedSecretsPackage();
-
-        try {
-            Class<?> cls = Class.forName(pkgName + ".SharedSecrets");
-
-            Method mth = cls.getMethod("getJavaNioAccess");
-
-            return mth.invoke(null);
-        }
-        catch (ReflectiveOperationException e) {
-            throw new RuntimeException(pkgName + ".JavaNioAccess class is unavailable."
-                + FeatureChecker.JAVA_VER_SPECIFIC_WARN, e);
-        }
-    }
-
-    /**
      * Returns reference to {@code JavaNioAccess.newDirectByteBuffer} method
      * from private API for corresponding Java version.
      *
@@ -1643,40 +1584,22 @@ public abstract class GridUnsafe {
         try {
             Class<?> cls = nioAccessObj.getClass();
 
-            Method mtd;
-            if (HAS_JAVA_NIO_ACCESS_NEW_API) {
-                Class<?> forthParamCls;
-                if (HAS_JAVA_NIO_ACCESS_MEMORY_SEGMENT_PARAM)
-                    forthParamCls = Class.forName("java.lang.foreign.MemorySegment");
-                else
-                    forthParamCls = Class.forName("jdk.internal.access.foreign.MemorySegmentProxy");
-
-                mtd = cls.getMethod("newDirectByteBuffer", long.class, int.class, Object.class, forthParamCls);
-            }
+            Class<?> fourthParamCls;
+            if (HAS_JAVA_NIO_ACCESS_MEMORY_SEGMENT_PARAM)
+                fourthParamCls = Class.forName("java.lang.foreign.MemorySegment");
             else
-                mtd = cls.getMethod("newDirectByteBuffer", long.class, int.class, Object.class);
+                fourthParamCls = Class.forName("jdk.internal.access.foreign.MemorySegmentProxy");
+
+            Method mtd = cls.getMethod("newDirectByteBuffer", long.class, int.class, Object.class, fourthParamCls);
 
             mtd.setAccessible(true);
 
             return mtd;
         }
         catch (ReflectiveOperationException e) {
-            throw new RuntimeException(getSharedSecretsPackage() + ".JavaNioAccess#newDirectByteBuffer() method is unavailable."
+            throw new RuntimeException("jdk.internal.access.JavaNioAccess#newDirectByteBuffer() method is unavailable."
                 + FeatureChecker.JAVA_VER_SPECIFIC_WARN, e);
         }
-    }
-
-    /** */
-    @NotNull private static String getSharedSecretsPackage() {
-        int javaVer = majorJavaVersion(jdkVersion());
-
-        if (javaVer < 9)
-            return "sun.misc";
-
-        if (javaVer < 12)
-            return "jdk.internal.misc";
-
-        return "jdk.internal.access";
     }
 
     /**

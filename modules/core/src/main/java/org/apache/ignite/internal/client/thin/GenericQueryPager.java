@@ -24,7 +24,7 @@ import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.ClientReconnectedException;
 
 /**
- * Generic query pager. Override {@link this#readResult(PayloadInputChannel, boolean)} to make it specific.
+ * Generic query pager. Override {@link #readResult(PayloadInputChannel, boolean)} to make it specific.
  */
 abstract class GenericQueryPager<T> implements QueryPager<T> {
     /** Query op. */

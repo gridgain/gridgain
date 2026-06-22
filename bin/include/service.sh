@@ -52,7 +52,7 @@ case "$1" in
 
         # Set default JVM options if they was not passed.
         if [ -z "$JVM_OPTS" ]; then
-            JVM_OPTS="-Xms1g -Xmx1g -server -XX:+AggressiveOpts -XX:MaxPermSize=512m"
+            JVM_OPTS="-Xms1g -Xmx1g -server"
         fi
 
         # Resolve config directory.
