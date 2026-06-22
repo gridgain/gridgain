@@ -909,19 +909,37 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     }
 
     /** */
-    private String printHistoryItem(DistributedMetaStorageHistoryItem item) throws IgniteCheckedException {
+    private String printHistoryItem(DistributedMetaStorageHistoryItem item) {
         StringBuilder sb = new StringBuilder("[");
 
         for (int i = 0; i < item.keys.length; i++) {
-            Serializable value = item.valBytesArray[i] == null ? null : unmarshal(marshaller, item.valBytesArray[i]);
-
-            sb.append(item.keys[i]).append('=').append(value);
+            sb.append(item.keys[i]).append('=').append(printValue(item.valBytesArray[i]));
 
             if (i < item.keys.length - 1)
                 sb.append(", ");
         }
 
         return sb.append(']').toString();
+    }
+
+    /**
+     * Unmarshals a stored value for logging only. The value's class may be unavailable or forbidden on this node
+     * (for example, excluded via the marshaller blacklist), so an unmarshalling failure must never propagate and
+     * fail the node -- a placeholder is returned instead.
+     *
+     * @param valBytes Marshalled value, possibly {@code null}.
+     * @return Human-readable value, or a placeholder if it cannot be unmarshalled.
+     */
+    private String printValue(byte[] valBytes) {
+        if (valBytes == null)
+            return "null";
+
+        try {
+            return String.valueOf(unmarshal(marshaller, valBytes));
+        }
+        catch (Exception ignored) {
+            return "<unmarshallable value>";
+        }
     }
 
     /** */
