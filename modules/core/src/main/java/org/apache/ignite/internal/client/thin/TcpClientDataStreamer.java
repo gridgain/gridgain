@@ -497,9 +497,9 @@ class TcpClientDataStreamer<K, V> implements ClientDataStreamer<K, V> {
     private CompletableFuture<Void> add0(K key, V val) throws InterruptedException {
         int bufSndSize = perNodeBufferSize;
         @Nullable UUID nodeId = ch.resolveAffinityNode(cacheId, key);
-        UUID partition = nodeId != null ? nodeId : UNKNOWN_NODE;
+        UUID ctxKey = nodeId != null ? nodeId : UNKNOWN_NODE;
         PartitionContext<K, V> partCtx = partitions.computeIfAbsent(
-                partition, k -> new PartitionContext<>(nodeId, perNodeParallelOperations, bufSndSize));
+                ctxKey, k -> new PartitionContext<>(nodeId, perNodeParallelOperations, bufSndSize));
 
         AtomicReference<Batch<K, V>> batchRef = partCtx.headBatchRef;
 
