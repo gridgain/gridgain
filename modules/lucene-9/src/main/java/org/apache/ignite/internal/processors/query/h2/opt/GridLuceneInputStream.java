@@ -162,13 +162,16 @@ public class GridLuceneInputStream extends IndexInput implements Cloneable {
     private static final ThreadLocal<byte[]> SCRATCH = ThreadLocal.withInitial(() -> new byte[0]);
 
     /**
-     * Bulk float read. Fast path: when the whole vector is contiguous in the current off-heap buffer,
-     * copy native memory straight into the destination {@code float[]} (native little-endian order
-     * matches Lucene's vector encoding) — no heap {@code byte[]} staging and no scalar decode loop.
-     * Falls back to a buffered byte read + little-endian decode only when a vector straddles a buffer
-     * boundary. Replaces the default per-{@code readByte} scalar loop that dominated vector-search CPU.
+     * Bulk float read. Fast path: on little-endian hardware, when the whole vector is contiguous in the
+     * current off-heap buffer, copy native memory straight into the destination {@code float[]} (the
+     * native byte order then matches Lucene's little-endian vector encoding) — no heap {@code byte[]}
+     * staging and no scalar decode loop. Falls back to a buffered byte read + explicit little-endian
+     * decode when a vector straddles a buffer boundary or the platform is big-endian. Replaces the
+     * default per-{@code readByte} scalar loop that dominated vector-search CPU.
      */
     @Override public void readFloats(float[] dst, int offset, int len) throws IOException {
+        assert offset >= 0 && (long)offset + len <= dst.length;
+
         int n = len << 2;
 
         if (bufPosition >= bufLength) {
@@ -177,7 +180,9 @@ public class GridLuceneInputStream extends IndexInput implements Cloneable {
             switchCurrentBuffer(true);
         }
 
-        if (bufPosition + n <= bufLength) {
+        // Fast path is valid only on little-endian platforms: copyMemory reinterprets the off-heap bytes
+        // in native byte order, which matches Lucene's little-endian encoding only when the JVM is LE.
+        if (!GridUnsafe.BIG_ENDIAN && bufPosition + n <= bufLength) {
             GridUnsafe.copyMemory(null, currBuf + bufPosition, dst, GridUnsafe.FLOAT_ARR_OFF + ((long)offset << 2), n);
 
             bufPosition += n;
