@@ -186,16 +186,25 @@ public class GridLuceneInputStream extends IndexInput implements Cloneable {
             GridUnsafe.copyMemory(null, currBuf + bufPosition, dst, GridUnsafe.FLOAT_ARR_OFF + ((long)offset << 2), n);
 
             bufPosition += n;
-        }
-        else {
+        } else {
+            // Slow path: the vector straddles a page-buffer boundary (or the JVM is big-endian), so a
+            // single native copy can't be used. Read all len*4 bytes into a reusable per-thread scratch
+            // array — readBytes() transparently walks across buffer boundaries — then rebuild each float
+            // from its 4 bytes in little-endian order (Lucene's on-disk vector encoding), which stays
+            // correct regardless of the platform's native byte order.
             byte[] buf = SCRATCH.get();
+
             if (buf.length < n) {
                 buf = new byte[n];
+
                 SCRATCH.set(buf);
             }
+
             readBytes(buf, 0, n);
+
             for (int i = 0; i < len; i++) {
                 int j = i << 2;
+
                 dst[offset + i] = Float.intBitsToFloat(
                     (buf[j] & 0xFF) | ((buf[j + 1] & 0xFF) << 8) | ((buf[j + 2] & 0xFF) << 16) | ((buf[j + 3] & 0xFF) << 24));
             }
