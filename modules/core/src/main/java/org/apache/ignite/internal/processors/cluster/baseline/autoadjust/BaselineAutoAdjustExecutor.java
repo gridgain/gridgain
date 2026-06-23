@@ -22,6 +22,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
@@ -40,8 +41,13 @@ class BaselineAutoAdjustExecutor {
     /** Service for execute this task in async. */
     private final ExecutorService executorService;
 
+    /** {@code true} if baseline auto-adjust enabled. */
+    private final BooleanSupplier isBaselineAutoAdjustEnabled;
+
+    /** {@code true} if baseline scale up auto-adjust enabled. */
     private final BooleanSupplier isBaselineScaleUpAutoAdjustEnabled;
 
+    /** {@code true} if baseline scale down auto-adjust enabled. */
     private final BooleanSupplier isBaselineScaleDownAutoAdjustEnabled;
 
     /** This protect from execution more than one task at same moment. */
@@ -52,17 +58,21 @@ class BaselineAutoAdjustExecutor {
      * @param cluster Ignite cluster.
      * @param executorService Thread pool for changing baseline.
      * @param enabledSupplier Supplier return {@code true} if baseline auto-adjust enabled.
+     * @param scalUpEnabledSupplier Supplier return {@code true} if baseline scale up auto-adjust enabled.
+     * @param scalDownEnabledSupplier Supplier return {@code true} if baseline scale down auto-adjust enabled.
      */
     public BaselineAutoAdjustExecutor(
         IgniteLogger log,
         IgniteClusterImpl cluster,
         ExecutorService executorService,
+        BooleanSupplier enabledSupplier,
         BooleanSupplier scalUpEnabledSupplier,
         BooleanSupplier scalDownEnabledSupplier
     ) {
         this.log = log;
         this.cluster = cluster;
         this.executorService = executorService;
+        isBaselineAutoAdjustEnabled = enabledSupplier;
         isBaselineScaleUpAutoAdjustEnabled = scalUpEnabledSupplier;
         isBaselineScaleDownAutoAdjustEnabled = scalDownEnabledSupplier;
     }
@@ -71,6 +81,7 @@ class BaselineAutoAdjustExecutor {
      * Try to set baseline if all conditions it allowed.
      *
      * @param data Data for operation.
+     * @param scaleUp If {@code true}, the baseline will be scaled up, if {@code false}, the baseline will be scaled down.
      */
     public void execute(BaselineAutoAdjustData data, boolean scaleUp) {
         executorService.submit(() ->
@@ -99,6 +110,9 @@ class BaselineAutoAdjustExecutor {
 
     /**
      * @param data Baseline data for adjust.
+     * @param scaleUp Whether the baseline is adjusted for scale up {@code true}, or scale down {@code false}.
+     *                If the {@link SupportFeaturesUtils#IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE} is false, then
+     *                the flag will be ignored.
      * @return {@code true} If baseline auto-adjust shouldn't be executed for given data.
      */
     public boolean isExecutionExpired(BaselineAutoAdjustData data, boolean scaleUp) {
@@ -106,6 +120,6 @@ class BaselineAutoAdjustExecutor {
             return data.isInvalidated() || (!isBaselineScaleUpAutoAdjustEnabled.getAsBoolean() && scaleUp) ||
                 (!isBaselineScaleDownAutoAdjustEnabled.getAsBoolean() && !scaleUp);
 
-        return data.isInvalidated() || !isBaselineScaleUpAutoAdjustEnabled.getAsBoolean();
+        return data.isInvalidated() || !isBaselineAutoAdjustEnabled.getAsBoolean();
     }
 }

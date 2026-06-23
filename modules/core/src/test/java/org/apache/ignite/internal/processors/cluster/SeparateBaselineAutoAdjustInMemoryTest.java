@@ -21,7 +21,12 @@ import org.junit.Test;
 
 import java.util.UUID;
 
+/**
+ * Checks existing scenarios for baseline auto adjust of in-memory clusters as well as new ones for scale up and scale
+ * down separately.
+ */
 public class SeparateBaselineAutoAdjustInMemoryTest extends SeparateBaselineAutoAdjustTest {
+    /** {@inheritDoc} */
     @Override
     protected boolean isPersistent() {
         return false;

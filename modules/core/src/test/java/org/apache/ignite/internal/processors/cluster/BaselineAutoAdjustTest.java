@@ -104,10 +104,12 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
+    /** Sets baseline auto adjust enabled flag. */
     public void setBaselineAutoAdjustEnabled(IgniteEx ignite, boolean enabled) {
         ignite.cluster().baselineAutoAdjustEnabled(enabled);
     }
 
+    /** Sets baseline auto adjust timeout. */
     public void setBaselineAutoAdjustTimeout(IgniteEx ignite, int timeout) {
         ignite.cluster().baselineAutoAdjustTimeout(timeout);
     }

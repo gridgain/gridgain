@@ -38,10 +38,13 @@ class BaselineAutoAdjustScheduler {
     /** Executor of set baseline operation. */
     private final BaselineAutoAdjustExecutor baselineAutoAdjustExecutor;
 
+    /** Last scheduled task for adjust new baseline. It needed for removing from queue. */
     private BaselineMultiplyUseTimeoutObject baselineTimeoutObj;
 
+    /** Last scheduled task for scaleUp adjustment. It needed for removing from queue. */
     private BaselineMultiplyUseTimeoutObject baselineScaleUpTimeoutObj;
 
+    /** Last scheduled task for scale down adjustment. It needed for removing from queue. */
     private BaselineMultiplyUseTimeoutObject baselineScaleDownTimeoutObj;
 
     /** */
@@ -59,14 +62,41 @@ class BaselineAutoAdjustScheduler {
         this.log = log;
     }
 
+    /**
+     * Adds a new task to queue based on the given {@code baselineAutoAdjustData} with delay and remove previous one.
+     * A new task can be rejected in case of the given {@code baselineAutoAdjustData} is expired or
+     * the target topology version is less than the already scheduled version.
+     *
+     * @param baselineAutoAdjustData Data for changing baseline.
+     * @param delay Delay after which set baseline should be started.
+     * @return {@code true} If a new task was successfully scheduled.
+     */
     public boolean schedule(BaselineAutoAdjustData baselineAutoAdjustData, long delay) {
         return schedule(baselineAutoAdjustData, delay, BaselineAutoAdjustType.DEFAULT);
     }
 
+    /**
+     * Adds a new scale up task to queue based on the given {@code baselineAutoAdjustData} with delay and remove previous
+     * one. A new task can be rejected in case of the given {@code baselineAutoAdjustData} is expired or
+     * the target topology version is less than the already scheduled version.
+     *
+     * @param baselineAutoAdjustData Data for changing baseline.
+     * @param delay Delay after which set baseline should be started.
+     * @return {@code true} If a new task was successfully scheduled.
+     */
     public boolean scheduleScaleUp(BaselineAutoAdjustData baselineAutoAdjustData, long delay) {
         return schedule(baselineAutoAdjustData, delay, BaselineAutoAdjustType.SCALE_UP);
     }
 
+    /**
+     * Adds a new scale down task to queue based on the given {@code baselineAutoAdjustData} with delay and remove
+     * previous one. A new task can be rejected in case of the given {@code baselineAutoAdjustData} is expired or
+     * the target topology version is less than the already scheduled version.
+     *
+     * @param baselineAutoAdjustData Data for changing baseline.
+     * @param delay Delay after which set baseline should be started.
+     * @return {@code true} If a new task was successfully scheduled.
+     */
     public boolean scheduleScaleDown(BaselineAutoAdjustData baselineAutoAdjustData, long delay) {
         return schedule(baselineAutoAdjustData, delay, BaselineAutoAdjustType.SCALE_DOWN);
     }
@@ -88,7 +118,7 @@ class BaselineAutoAdjustScheduler {
             if (alreadyScheduledVer > targetVer) {
                 if (log.isDebugEnabled()) {
                     log.debug(type.label + " auto adjust data is targeted to obsolete version (will not be scheduled) " +
-                        "[data=" + baselineAutoAdjustData + ", scheduled=" + baselineTimeoutObj.baselineAutoAdjustData + ']');
+                        "[data=" + baselineAutoAdjustData + ", scheduled=" + baselineTimeoutObj.baselineAutoAdjustData.get() + ']');
                 }
 
                 return false;
@@ -111,12 +141,13 @@ class BaselineAutoAdjustScheduler {
 
         if (log.isDebugEnabled()) {
             log.info("New " + type.label.toLowerCase() + " timeout object was " + (added ? "successfully scheduled " : " rejected ") +
-                " [data=" + baselineScaleUpTimeoutObj.baselineAutoAdjustData + ']');
+                " [data=" + timeoutObject.baselineAutoAdjustData.get() + ']');
         }
 
         return added;
     }
 
+    /** Returns the corresponding timeout object. */
     private BaselineMultiplyUseTimeoutObject currentTimeoutObj(BaselineAutoAdjustType type) {
         switch (type) {
             case SCALE_UP:
@@ -128,6 +159,7 @@ class BaselineAutoAdjustScheduler {
         }
     }
 
+    /** Sets the corresponding timeout object. */
     private void setTimeoutObj(BaselineMultiplyUseTimeoutObject timeoutObj, BaselineAutoAdjustType type) {
         switch (type) {
             case SCALE_UP:
@@ -200,6 +232,7 @@ class BaselineAutoAdjustScheduler {
          * @param executor Executor of set baseline operation.
          * @param processor Timeout processor.
          * @param log Log object.
+         * @param scaleUp The flag that indicates whether it's the scale up {@code true} or scale down {@code false} scenario.
          */
         protected BaselineMultiplyUseTimeoutObject(
             BaselineAutoAdjustData data,
@@ -267,14 +300,24 @@ class BaselineAutoAdjustScheduler {
         }
     }
 
+    /**
+     * Helps to handle different baseline auto adjust scenarios.
+     */
     private enum BaselineAutoAdjustType {
         DEFAULT(true, "Baseline"),
         SCALE_UP(true, "Baseline scale up"),
         SCALE_DOWN(false,  "Baseline scale down");
 
+        /** */
         private final boolean scaleUp;
+
+        /** */
         private final String label;
 
+        /**
+         * @param scaleUp The flag that indicates whether it's the scale up {@code true} or scale down {@code false} scenario.
+         * @param label The log message label.
+         */
         BaselineAutoAdjustType(boolean scaleUp, String label) {
             this.scaleUp = scaleUp;
             this.label = label;

@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cluster;
 
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.lifecycle.LifecycleBean;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,22 +26,18 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AU
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
+/**
+ * Checks existing scenarios for baseline auto adjust as well as new ones for scale up and scale down separately.
+ */
 @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
 public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
-    private static final String TEST_NAME = "TEST_NAME";
-
     private int autoAdjustTimeout = 5_000;
 
     private int scaleUpAutoAdjustTimeout;
 
     private int scaleDownAutoAdjustTimeout;
 
-    /** Lifecycle bean. */
-    private LifecycleBean lifecycleBean;
-
-    /**
-     * @throws Exception if failed.
-     */
+    /** {@inheritDoc} */
     @Before
     @Override public void before() throws Exception {
         stopAllGrids();
@@ -54,6 +49,7 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
         scaleDownAutoAdjustTimeout = autoAdjustTimeout;
     }
 
+    /** {@inheritDoc} */
     @Override
     public void setBaselineAutoAdjustEnabled(IgniteEx ignite, boolean enabled) {
         super.setBaselineAutoAdjustEnabled(ignite, enabled);
@@ -62,6 +58,7 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
         ignite.cluster().baselineScaleDownAutoAdjustEnabled(enabled);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void setBaselineAutoAdjustTimeout(IgniteEx ignite, int timeout) {
         super.setBaselineAutoAdjustTimeout(ignite, timeout);
@@ -70,6 +67,9 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
         ignite.cluster().baselineScaleDownAutoAdjustTimeout(timeout);
     }
 
+    /**
+     * @throws Exception if failed.
+     */
     @Test
     public void testAutoAdjustWithSeparateScaleUpBeforeScaleDown() throws Exception {
         scaleDownAutoAdjustTimeout = 5_000 * 2;
@@ -101,6 +101,9 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
         ));
     }
 
+    /**
+     * @throws Exception if failed.
+     */
     @Test
     public void testAutoAdjustWithSeparateScaleUpAfterScaleDown() throws Exception {
         scaleUpAutoAdjustTimeout = 5_000 * 2;
@@ -132,6 +135,9 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
         ));
     }
 
+    /**
+     * @throws Exception if failed.
+     */
     @Test
     public void testAutoAdjustWithOnlyScaleUpEnabled() throws Exception {
         IgniteEx ignite0 = startGrids(3);
@@ -157,6 +163,9 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
         ));
     }
 
+    /**
+     * @throws Exception if failed.
+     */
     @Test
     public void testAutoAdjustWithOnlyScaleDownEnabled() throws Exception {
         IgniteEx ignite0 = startGrids(3);
@@ -182,6 +191,9 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
         ));
     }
 
+    /**
+     * @throws Exception if failed.
+     */
     @Test
     public void testSeparateAutoAdjustShouldBeEnabledExplicitly() throws Exception {
         IgniteEx ignite0 = startGrids(3);
@@ -200,6 +212,9 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
         ));
     }
 
+    /**
+     * @throws Exception if failed.
+     */
     @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     @WithSystemProperty(key = IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     @Override public void testBaselineAutoAdjustDisableBecauseFlagIsSetToFalse() throws Exception {

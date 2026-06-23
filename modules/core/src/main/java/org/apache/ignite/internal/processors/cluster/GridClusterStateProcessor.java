@@ -55,6 +55,7 @@ import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.internal.cluster.ClusterGroupAdapter;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.DistributedBaselineConfiguration;
@@ -1900,6 +1901,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * @param discoCache Discovery cache from the discovery manager.
      * @param topVer Topology version.
      * @param minorTopVer Minor topology version.
+     * @param scaleUp The flag which indicates whether it's scale up {@code true} or scale down {@code false} adjustment.
      * @return {@code true} if baseline was changed and discovery cache recalculation is required.
      */
     public boolean autoAdjustInMemoryClusterState(
@@ -2025,11 +2027,18 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         return true;
     }
 
+    /**
+     * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
+     * {@code False} If cluster in manuale.
+     */
     public boolean isBaselineAutoAdjustEnabled() {
         return distributedBaselineConfiguration.isBaselineAutoAdjustEnabled();
     }
 
     /**
+     * @param scaleUp Whether the baseline is adjusted for scale up {@code true}, or scale down {@code false}.
+     *                If the {@link SupportFeaturesUtils#IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE} is false, then
+     *                the flag will be ignored.
      * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
      * {@code False} If cluster in manuale.
      */
@@ -2100,6 +2109,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
+     * @param scaleUp If {@code true}, the timeout for scaleUp will be return, if {@code false} - for scale down.
+     *                If the {@link SupportFeaturesUtils#IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE} is false, then
+     *                the flag will be ignored.
      * @return Value of time which we would wait before the actual topology change since last server topology change
      * (node join/left/fail).
      * @throws IgniteException If operation failed.
