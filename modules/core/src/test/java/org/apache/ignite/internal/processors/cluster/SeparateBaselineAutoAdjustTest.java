@@ -50,8 +50,7 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public void setBaselineAutoAdjustEnabled(IgniteEx ignite, boolean enabled) {
+    @Override public void setBaselineAutoAdjustEnabled(IgniteEx ignite, boolean enabled) {
         super.setBaselineAutoAdjustEnabled(ignite, enabled);
 
         ignite.cluster().baselineScaleUpAutoAdjustEnabled(enabled);
@@ -59,8 +58,7 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public void setBaselineAutoAdjustTimeout(IgniteEx ignite, int timeout) {
+    @Override public void setBaselineAutoAdjustTimeout(IgniteEx ignite, int timeout) {
         super.setBaselineAutoAdjustTimeout(ignite, timeout);
 
         ignite.cluster().baselineScaleUpAutoAdjustTimeout(timeout);

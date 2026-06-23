@@ -263,7 +263,6 @@ public class DistributedBaselineConfiguration {
                 getBaselineScaleDownAutoAdjustTimeout()
             ));
 
-
         if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) && log.isInfoEnabled())
             log.info(format(AUTO_ADJUST_CONFIGURED_MESSAGE,
                 (isBaselineAutoAdjustEnabled() ? "enabled" : "disabled"),

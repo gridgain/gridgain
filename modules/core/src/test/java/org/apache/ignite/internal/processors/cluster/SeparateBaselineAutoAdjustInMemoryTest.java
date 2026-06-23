@@ -27,8 +27,7 @@ import java.util.UUID;
  */
 public class SeparateBaselineAutoAdjustInMemoryTest extends SeparateBaselineAutoAdjustTest {
     /** {@inheritDoc} */
-    @Override
-    protected boolean isPersistent() {
+    @Override protected boolean isPersistent() {
         return false;
     }
 

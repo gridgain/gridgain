@@ -2184,7 +2184,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         }
     }
 
-
     /**
      * @return Baseline configuration.
      */

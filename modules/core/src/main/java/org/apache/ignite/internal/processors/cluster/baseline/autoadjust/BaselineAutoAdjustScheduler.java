@@ -191,7 +191,7 @@ class BaselineAutoAdjustScheduler {
      * @return {@code true} If baseline auto-adjust shouldn't be executed for given data.
      */
     boolean isExecutionExpired(BaselineAutoAdjustData data, boolean scaleUp) {
-        return baselineAutoAdjustExecutor.isExecutionExpired(data,  scaleUp);
+        return baselineAutoAdjustExecutor.isExecutionExpired(data, scaleUp);
     }
 
     /**
@@ -306,7 +306,7 @@ class BaselineAutoAdjustScheduler {
     private enum BaselineAutoAdjustType {
         DEFAULT(true, "Baseline"),
         SCALE_UP(true, "Baseline scale up"),
-        SCALE_DOWN(false,  "Baseline scale down");
+        SCALE_DOWN(false, "Baseline scale down");
 
         /** */
         private final boolean scaleUp;

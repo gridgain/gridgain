@@ -719,8 +719,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
-    @Override
-    public boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
+    @Override public boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
         return ctx.state().isBaselineAutoAdjustEnabled(scaleUp);
     }
 
@@ -788,8 +787,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
-    @Override
-    public long baselineAutoAdjustTimeout() {
+    @Override public long baselineAutoAdjustTimeout() {
         return ctx.state().baselineAutoAdjustTimeout();
     }
 
