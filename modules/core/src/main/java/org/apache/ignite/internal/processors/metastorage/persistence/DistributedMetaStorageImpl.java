@@ -162,13 +162,13 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
     /**
      * All available history. Contains latest changes in distributed metastorage. Latest version is always present in
-     * the cache. This means that the it is empty only if version is {@code 0}.
+     * the cache. This means that the history is empty only if version is {@code 0}.
      */
     private final DistributedMetaStorageHistoryCache histCache = new DistributedMetaStorageHistoryCache();
 
     /**
      * Maximal acceptable value of {@link #histCache}'s size in bytes. History will shrink after every write until its
-     * size is not greater then given value.
+     * size is not greater than given value.
      */
     private final long histMaxBytes = IgniteSystemProperties.getLong(
         IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES,
@@ -470,6 +470,31 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     /** {@inheritDoc} */
     @Override public long getUpdatesCount() {
         return ver.id;
+    }
+
+    /**
+     * @return Current distributed metastorage version, or {@code null} if it is not initialized yet.
+     */
+    @Nullable public DistributedMetaStorageVersion version() {
+        return ver;
+    }
+
+    /**
+     * Value is approximate: read without the distributed metastorage lock, intended for monitoring only.
+     *
+     * @return Number of items in the in-memory distributed metastorage history cache.
+     */
+    public int getEstimatedHistoryItemsCount() {
+        return histCache.size();
+    }
+
+    /**
+     * Value is approximate: read without the distributed metastorage lock, intended for monitoring only.
+     *
+     * @return Size of the in-memory distributed metastorage history cache in bytes.
+     */
+    public long getEstimatedHistorySizeBytes() {
+        return histCache.sizeInBytes();
     }
 
     /** {@inheritDoc} */
@@ -884,19 +909,37 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     }
 
     /** */
-    private String printHistoryItem(DistributedMetaStorageHistoryItem item) throws IgniteCheckedException {
+    private String printHistoryItem(DistributedMetaStorageHistoryItem item) {
         StringBuilder sb = new StringBuilder("[");
 
         for (int i = 0; i < item.keys.length; i++) {
-            Serializable value = item.valBytesArray[i] == null ? null : unmarshal(marshaller, item.valBytesArray[i]);
-
-            sb.append(item.keys[i]).append('=').append(value);
+            sb.append(item.keys[i]).append('=').append(printValue(item.valBytesArray[i]));
 
             if (i < item.keys.length - 1)
                 sb.append(", ");
         }
 
         return sb.append(']').toString();
+    }
+
+    /**
+     * Unmarshals a stored value for logging only. The value's class may be unavailable or forbidden on this node
+     * (for example, excluded via the marshaller blacklist), so an unmarshalling failure must never propagate and
+     * fail the node -- a placeholder is returned instead.
+     *
+     * @param valBytes Marshalled value, possibly {@code null}.
+     * @return Human-readable value, or a placeholder if it cannot be unmarshalled.
+     */
+    private String printValue(byte[] valBytes) {
+        if (valBytes == null)
+            return "null";
+
+        try {
+            return String.valueOf(unmarshal(marshaller, valBytes));
+        }
+        catch (Exception ignored) {
+            return "<unmarshallable value>";
+        }
     }
 
     /** */
@@ -1403,14 +1446,14 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     }
 
     /**
-     * Store data in local metastorage or in memory and log to DEBUG-level with given prefix. Doesn't optimise history items.
+     * Store data in local metastorage or in memory and log to INFO-level with given prefix. Doesn't optimise history items.
      *
      * @param prefix Prefix for log message, should end with '['.
      * @param items Items to store.
      * @param startingIndex Starting index.
      */
     private void completeWritesNotOptimisedAndLog(String prefix, DistributedMetaStorageHistoryItem[] items, int startingIndex) {
-        if (log.isDebugEnabled()) {
+        if (log.isInfoEnabled()) {
             StringBuilder sb = new StringBuilder(prefix);
 
             sb.append("updates=[");
@@ -1436,7 +1479,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
                 .append(ver)
                 .append("]");
 
-            log.debug(sb.toString());
+            log.info(sb.toString());
         } else {
             for (int i = startingIndex; i < items.length; i++) {
                 try {
@@ -1449,7 +1492,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     }
 
     /**
-     * Store data in local metastorage or in memory and log to DEBUG-level. Removes history item values that match already existing
+     * Store data in local metastorage or in memory and log to INFO-level. Removes history item values that match already existing
      * values. Might lead to no-op.
      *
      * @param histItem {@code <key, value>} pairs to process.
@@ -1458,16 +1501,16 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     private void completeWriteOptimisedAndLog(DistributedMetaStorageHistoryItem histItem) throws IgniteCheckedException {
         DistributedMetaStorageHistoryItem writtenItem = completeWrite(histItem, true);
 
-        if (log.isDebugEnabled()) {
+        if (log.isInfoEnabled()) {
             if (writtenItem == null)
-                log.debug("Skipped metastorage history item as it matches already existing values [ver=" + ver +
+                log.info("Skipped metastorage history item as it matches already existing values [ver=" + ver +
                     ", histItem=" + printHistoryItem(histItem) + ']');
             else if (histItem.keys.length != writtenItem.keys.length)
-                log.debug("Wrote optimised metastorage history item [ver= " + ver +
+                log.info("Wrote optimised metastorage history item [ver= " + ver +
                     ", histItem=" + printHistoryItem(histItem) +
                     ", itemToWrite=" + printHistoryItem(writtenItem) + ']');
             else
-                log.debug("Wrote metastorage history item [ver=" + ver + ", itemToWrite=" + printHistoryItem(histItem) + ']');
+                log.info("Wrote metastorage history item [ver=" + ver + ", itemToWrite=" + printHistoryItem(histItem) + ']');
         }
     }
 
