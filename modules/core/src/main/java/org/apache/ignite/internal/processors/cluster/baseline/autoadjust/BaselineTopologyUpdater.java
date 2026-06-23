@@ -158,13 +158,20 @@ public class BaselineTopologyUpdater {
      * @return {@code true} if auto-adjust baseline enabled for the scale up {@code true} or scale down {@code false}.
      */
     private boolean isTopologyWatcherEnabled(boolean scaleUp) {
-        return isSeparateAutoAdjustSupported(ctx)
+        return isSupported(ctx)
             && !ctx.clientNode()
             && stateProcessor.clusterState().active()
-            && ((baselineConfiguration.isBaselineScaleUpAutoAdjustEnabled() && scaleUp)
-                || (baselineConfiguration.isBaselineScaleDownAutoAdjustEnabled() && !scaleUp))
+            && isBaselineAutoAdjustEnabled(scaleUp)
             && (CU.isPersistenceEnabled(cluster.ignite().configuration())
                 || cluster.baselineAutoAdjustTimeout(scaleUp) != 0L);
+    }
+
+    private boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
+        if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
+            return ((baselineConfiguration.isBaselineScaleUpAutoAdjustEnabled() && scaleUp)
+                || (baselineConfiguration.isBaselineScaleDownAutoAdjustEnabled() && !scaleUp));
+
+        return baselineConfiguration.isBaselineAutoAdjustEnabled();
     }
 
     /**
@@ -172,15 +179,10 @@ public class BaselineTopologyUpdater {
      * @see IgniteFeatures#BASELINE_AUTO_ADJUSTMENT
      */
     public static boolean isSupported(GridKernalContext ctx) {
-        return IgniteFeatures.allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT);
-    }
+        if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
+            return IgniteFeatures.allNodesSupport(ctx, BASELINE_SEPARATE_AUTO_ADJUSTMENT);
 
-    /**
-     * @return {@code True} if all nodes in the cluster support auto-adjust baseline.
-     * @see IgniteFeatures#BASELINE_SEPARATE_AUTO_ADJUSTMENT
-     */
-    public static boolean isSeparateAutoAdjustSupported(GridKernalContext ctx) {
-        return IgniteFeatures.allNodesSupport(ctx, BASELINE_SEPARATE_AUTO_ADJUSTMENT);
+        return IgniteFeatures.allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT);
     }
 
     /**
