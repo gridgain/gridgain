@@ -31,8 +31,6 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
  */
 @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
 public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
-    private int autoAdjustTimeout = 5_000;
-
     private int scaleUpAutoAdjustTimeout;
 
     private int scaleDownAutoAdjustTimeout;
@@ -40,9 +38,7 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
     /** {@inheritDoc} */
     @Before
     @Override public void before() throws Exception {
-        stopAllGrids();
-
-        cleanPersistenceDir();
+        super.before();
 
         scaleUpAutoAdjustTimeout = autoAdjustTimeout;
 

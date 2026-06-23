@@ -203,6 +203,4 @@ public class BaselineTopologyUpdater {
             return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
         }
     }
-
-
 }

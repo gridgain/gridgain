@@ -77,7 +77,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     private static final String TEST_NAME = "TEST_NAME";
 
     /** */
-    private static int autoAdjustTimeout = 5000;
+    protected static int autoAdjustTimeout = 5000;
 
     /** Lifecycle bean. */
     private LifecycleBean lifecycleBean;

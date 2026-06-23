@@ -553,14 +553,14 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         });
 
         distributedBaselineConfiguration.listenAutoAdjustScaleUpEnabled((name, oldVal, newVal) -> {
-            if (newVal != null && newVal) {
+            if (newVal != null && newVal && isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
                 long topVer = ctx.discovery().topologyVersion();
                 baselineTopologyUpdater.triggerBaselineUpdate(topVer, true);
             }
         });
 
         distributedBaselineConfiguration.listenAutoAdjustScaleDownEnabled((name, oldVal, newVal) -> {
-            if (newVal != null && newVal) {
+            if (newVal != null && newVal && isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
                 long topVer = ctx.discovery().topologyVersion();
                 baselineTopologyUpdater.triggerBaselineUpdate(topVer, false);
             }
