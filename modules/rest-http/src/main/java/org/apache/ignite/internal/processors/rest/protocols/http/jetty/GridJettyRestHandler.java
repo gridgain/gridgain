@@ -825,14 +825,7 @@ public class GridJettyRestHandler extends AbstractHandler {
             case DRAIN: {
                 GridRestDrainRequest restReq0 = new GridRestDrainRequest();
 
-                String action = params.get("action");
-                GridRestDrainRequest.Action act = GridRestDrainRequest.Action.of(action);
-
-                if (act == null)
-                    throw new IgniteCheckedException("Failed to parse drain action: " + action +
-                        " (expected one of: start, stop, status)");
-
-                restReq0.action(act);
+                restReq0.action(GridRestDrainRequest.Action.of(params.get("action")));
                 restReq0.force(Boolean.parseBoolean(params.get("force")));
 
                 restReq = restReq0;
