@@ -33,7 +33,11 @@ public enum VisorBaselineOperation {
     /** Set baseline for topology version. */
     VERSION,
     /** Set baseline autoadjustment settings. */
-    AUTOADJUST;
+    AUTOADJUST,
+    /** Set baseline scaleUp autoadjustment settings. */
+    SCALE_UP_AUTOADJUST,
+    /** Set baseline scaleDown autoadjustment settings. */
+    SCALE_DOWN_AUTOADJUST,;
 
     /** Enumerated values. */
     private static final VisorBaselineOperation[] VALS = values();

@@ -682,7 +682,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     /**
      * @return Status of baseline auto-adjust.
      */
-    public BaselineAutoAdjustStatus baselineAutoAdjustStatus();
+    public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp);
 
     /**
      * Returns a policy of shutdown or default value {@code IgniteConfiguration.DFLT_SHUTDOWN_POLICY}

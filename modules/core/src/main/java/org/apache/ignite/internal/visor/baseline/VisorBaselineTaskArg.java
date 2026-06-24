@@ -43,8 +43,20 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
     /** Baseline auto adjust enable flag. */
     private Boolean autoAdjustEnabled;
 
+    /** Baseline scale up auto adjust enable flag. */
+    private Boolean scaleUpAutoAdjustEnabled;
+
+    /** Baseline scale down auto adjust enable flag. */
+    private Boolean scaleDownAutoAdjustEnabled;
+
     /** Awaiting time of baseline auto adjust after last topology event in ms. */
     private Long autoAdjustAwaitingTime;
+
+    /** Awaiting time of baseline scale up auto adjust after the last topology event in ms. */
+    private Long scaleUpAutoAdjustAwaitingTime;
+
+    /** Awaiting time of baseline scale down auto adjust after the last topology event in ms. */
+    private Long scaleDownAutoAdjustAwaitingTime;
 
     /**
      * Default constructor.
@@ -65,7 +77,7 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
         long topVer,
         List<String> consistentIds
     ) {
-        this(op, topVer, consistentIds, null, null);
+        this(op, topVer, consistentIds, null, null, null, null, null, null);
     }
 
     /**
@@ -73,19 +85,31 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
      * @param consistentIds Consistent ids.
      * @param autoAdjustEnabled Baseline auto adjust enable flag.
      * @param autoAdjustAwaitingTime Await time of baseline auto adjust after last topology event in ms.
+     * @param scaleUpAutoAdjustEnabled Baseline scale up auto adjust enable flag.
+     * @param scaleUpAutoAdjustAwaitingTime Await time of baseline scale up auto adjust after last topology event in ms.
+     * @param scaleDownAutoAdjustEnabled Baseline scale down auto adjust enable flag.
+     * @param scaleDownAutoAdjustAwaitingTime Await time of baseline scale down auto adjust after last topology event in ms.
      */
     public VisorBaselineTaskArg(
         VisorBaselineOperation op,
         long topVer,
         List<String> consistentIds,
         Boolean autoAdjustEnabled,
-        Long autoAdjustAwaitingTime
+        Long autoAdjustAwaitingTime,
+        Boolean scaleUpAutoAdjustEnabled,
+        Long scaleUpAutoAdjustAwaitingTime,
+        Boolean scaleDownAutoAdjustEnabled,
+        Long scaleDownAutoAdjustAwaitingTime
     ) {
         this.op = op;
         this.topVer = topVer;
         this.consistentIds = consistentIds;
         this.autoAdjustEnabled = autoAdjustEnabled;
         this.autoAdjustAwaitingTime = autoAdjustAwaitingTime;
+        this.scaleUpAutoAdjustEnabled = scaleUpAutoAdjustEnabled;
+        this.scaleUpAutoAdjustAwaitingTime = scaleUpAutoAdjustAwaitingTime;
+        this.scaleDownAutoAdjustEnabled = scaleDownAutoAdjustEnabled;
+        this.scaleDownAutoAdjustAwaitingTime = scaleDownAutoAdjustAwaitingTime;
     }
 
     /**
@@ -111,7 +135,7 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V2;
+        return V3;
     }
 
     /**
@@ -128,6 +152,34 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
         return autoAdjustAwaitingTime;
     }
 
+    /**
+     * @return Baseline scale up auto adjust enable flag.
+     */
+    public Boolean isScaleUpAutoAdjustEnabled() {
+        return scaleUpAutoAdjustEnabled;
+    }
+
+    /**
+     * @return Await time of baseline scale up auto adjust after last topology event in ms.
+     */
+    public Long getScaleUpAutoAdjustAwaitingTime() {
+        return scaleUpAutoAdjustAwaitingTime;
+    }
+
+    /**
+     * @return Baseline scale down auto adjust enable flag.
+     */
+    public Boolean isScaleDownAutoAdjustEnabled() {
+        return scaleDownAutoAdjustEnabled;
+    }
+
+    /**
+     * @return Await time of baseline scale down auto adjust after last topology event in ms.
+     */
+    public Long getScaleDownAutoAdjustAwaitingTime() {
+        return scaleDownAutoAdjustAwaitingTime;
+    }
+
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         U.writeEnum(out, op);
@@ -135,6 +187,10 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
         U.writeCollection(out, consistentIds);
         out.writeObject(autoAdjustEnabled);
         out.writeObject(autoAdjustAwaitingTime);
+        out.writeObject(scaleUpAutoAdjustEnabled);
+        out.writeObject(scaleUpAutoAdjustAwaitingTime);
+        out.writeObject(scaleDownAutoAdjustEnabled);
+        out.writeObject(scaleDownAutoAdjustAwaitingTime);
     }
 
     /** {@inheritDoc} */
@@ -146,6 +202,14 @@ public class VisorBaselineTaskArg extends VisorDataTransferObject {
         if (protoVer > V1) {
             autoAdjustEnabled = (Boolean)in.readObject();
             autoAdjustAwaitingTime = (Long)in.readObject();
+        }
+
+        if (protoVer > V2) {
+            scaleUpAutoAdjustEnabled = (Boolean)in.readObject();
+            scaleUpAutoAdjustAwaitingTime = (Long)in.readObject();
+
+            scaleDownAutoAdjustEnabled = (Boolean)in.readObject();
+            scaleDownAutoAdjustAwaitingTime = (Long)in.readObject();
         }
     }
 

@@ -1629,6 +1629,69 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
+    public void testBaselineScaleDownAutoAdjustmentAutoRemoveNode() throws Exception {
+        Ignite ignite = startGrids(3);
+
+        LogListener[] lsnrs = new LogListener[3];
+
+        for (int g = 0; g < 3; g++) {
+            IgniteEx grid = grid(g);
+
+            ListeningTestLogger log = U.field(grid.configuration().getGridLogger(), "impl");
+
+            LogListener.Builder bldr = LogListener
+                .matches("Baseline parameter 'baselineAutoAdjustTimeout' was changed from '300000' to '2000'");
+
+            if (g == 0) {
+                // The BLT change info is printed on coordinator.
+                bldr = bldr
+                    .andMatches("Baseline auto-adjust will be executed in '2000' ms")
+                    .andMatches("Baseline auto-adjust will be executed right now.");
+            }
+
+            log.registerListener(lsnrs[g] = bldr.build());
+        }
+
+        ignite.cluster().state(ACTIVE);
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_down_auto_adjust", "enable", "timeout", "2000"));
+
+        assertEquals(3, ignite.cluster().currentBaselineTopology().size());
+
+        stopGrid(2);
+
+        for (int i = 0; i < lsnrs.length; i++) {
+            LogListener lsnr = lsnrs[i];
+            assertTrue("Failed to wait for the expected log output on " + i, lsnr.check(10000));
+        }
+
+        assertTrue(waitForCondition(() -> ignite.cluster().currentBaselineTopology().size() == 2, 10000));
+
+        Collection<BaselineNode> baselineNodesAfter = ignite.cluster().currentBaselineTopology();
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_down_auto_adjust", "disable"));
+
+        stopGrid(1);
+
+        Thread.sleep(3000L);
+
+        Collection<BaselineNode> baselineNodesFinal = ignite.cluster().currentBaselineTopology();
+
+        assertEquals(
+            baselineNodesAfter.stream().map(BaselineNode::consistentId).collect(Collectors.toList()),
+            baselineNodesFinal.stream().map(BaselineNode::consistentId).collect(Collectors.toList())
+        );
+    }
+
+    /**
+     * Test that updating of baseline auto_adjustment settings via control.sh actually influence cluster's baseline.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
     public void testBaselineAutoAdjustmentAutoAddNode() throws Exception {
         Ignite ignite = startGrids(1);
 
@@ -1668,6 +1731,47 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
+    public void testBaselineScaleUpAutoAdjustmentAutoAddNode() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        ignite.cluster().state(ACTIVE);
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_up_auto_adjust", "enable", "timeout", "2000"));
+
+        assertEquals(1, ignite.cluster().currentBaselineTopology().size());
+
+        startGrid(1);
+
+        assertEquals(1, ignite.cluster().currentBaselineTopology().size());
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline"));
+
+        assertTrue(waitForCondition(() -> ignite.cluster().currentBaselineTopology().size() == 2, 10000));
+
+        Collection<BaselineNode> baselineNodesAfter = ignite.cluster().currentBaselineTopology();
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_up_auto_adjust", "disable"));
+
+        startGrid(2);
+
+        Thread.sleep(3000L);
+
+        Collection<BaselineNode> baselineNodesFinal = ignite.cluster().currentBaselineTopology();
+
+        assertEquals(
+            baselineNodesAfter.stream().map(BaselineNode::consistentId).collect(Collectors.toList()),
+            baselineNodesFinal.stream().map(BaselineNode::consistentId).collect(Collectors.toList())
+        );
+    }
+
+    /**
+     * Test that updating of baseline auto_adjustment settings via control.sh actually influence cluster's baseline.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
     @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "false")
     @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
@@ -1677,6 +1781,21 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         ignite.cluster().state(ACTIVE);
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));
+    }
+
+    /**
+     * Test that updating of baseline auto_adjustment settings via control.sh actually influence cluster's baseline.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testBaselineScaleUpAndScaleAutoAdjustmentFeatureDisabled() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        ignite.cluster().state(ACTIVE);
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "scale_up_auto_adjust", "enable", "timeout", "2000"));
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "scale_down_auto_adjust", "enable", "timeout", "2000"));
     }
 
     /**

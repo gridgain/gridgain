@@ -55,12 +55,14 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
 
     /** {@inheritDoc} */
     @Override public long getTimeUntilAutoAdjust() {
-        return state.baselineAutoAdjustStatus().getTimeUntilAutoAdjust();
+//        return state.baselineAutoAdjustStatus().getTimeUntilAutoAdjust();
+        return 0;
     }
 
     /** {@inheritDoc} */
     @Override public String getTaskState() {
-        return state.baselineAutoAdjustStatus().getTaskState().toString();
+//        return state.baselineAutoAdjustStatus().getTaskState().toString();
+        return "";
     }
 
     /** {@inheritDoc} */

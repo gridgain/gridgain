@@ -188,14 +188,39 @@ public class BaselineTopologyUpdater {
     /**
      * @return Statistic of baseline auto-adjust.
      */
-    public BaselineAutoAdjustStatus getStatus() {
+    public BaselineAutoAdjustStatus getStatus(boolean scaleUp) {
         synchronized (this) {
-            if (lastBaselineData.isAdjusted()
-                || (baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, true)
-                    && baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, false)))
+            if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
+                if (scaleUp) {
+                    if (lastBaselineData.isAdjusted(true) ||
+                        baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, true))
+                        return BaselineAutoAdjustStatus.notScheduled();
+
+                    long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(true);
+
+                    if (timeToLastTask <= 0)
+                        return BaselineAutoAdjustStatus.inProgress();
+
+                    return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
+                }
+                else {
+                    if (lastBaselineData.isAdjusted(false) ||
+                        baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, false))
+                        return BaselineAutoAdjustStatus.notScheduled();
+
+                    long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(true);
+
+                    if (timeToLastTask <= 0)
+                        return BaselineAutoAdjustStatus.inProgress();
+
+                    return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
+                }
+            }
+
+            if (lastBaselineData.isAdjusted() || baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, false))
                 return BaselineAutoAdjustStatus.notScheduled();
 
-            long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime();
+            long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(false);
 
             if (timeToLastTask <= 0)
                 return BaselineAutoAdjustStatus.inProgress();

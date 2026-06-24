@@ -45,6 +45,12 @@ public enum CommandList {
     /** */
     BASELINE("--baseline", new BaselineCommand()),
 
+//    /** */
+//    BASELINE_SCALE_UP("--baseline-scale-up", new BaselineCommand()),
+//
+//    /** */
+//    BASELINE_SCALE_DOWN("--baseline-scale-down", new BaselineCommand()),
+
     /** */
     TX("--tx", new TxCommands()),
 

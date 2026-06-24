@@ -100,7 +100,10 @@ class BaselineAutoAdjustExecutor {
                     log.error("Error during baseline changing", e);
                 }
                 finally {
-                    data.onAdjust();
+                    if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
+                        data.onAdjust(scaleUp);
+                    else
+                        data.onAdjust();
 
                     executionGuard.unlock();
                 }

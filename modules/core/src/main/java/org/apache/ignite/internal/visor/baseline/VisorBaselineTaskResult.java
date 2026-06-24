@@ -33,6 +33,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.managers.discovery.IgniteClusterNode;
+import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -67,7 +68,27 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
     private long remainingTimeToBaselineAdjust = -1;
 
     /** Is baseline adjust in progress? */
-    private boolean baselineAdjustInProgress = false;
+    private boolean baselineAdjustInProgress;
+
+    private Boolean scaleUpAutoAdjustEnabled;
+
+    private Long scaleUpAutoAdjustAwaitingTime;
+
+    private Boolean scaleDownAutoAdjustEnabled;
+
+    private Long scaleDownAutoAdjustAwaitingTime;
+
+    /** Time to next baseline adjust. */
+    private long remainingTimeToBaselineScaleUpAdjust = -1;
+
+    /** Is baseline adjust in progress? */
+    private boolean baselineScaleUpAdjustInProgress;
+
+    /** Time to next baseline adjust. */
+    private long remainingTimeToBaselineScaleDownAdjust = -1;
+
+    /** Is baseline adjust in progress? */
+    private boolean baselineScaleDownAdjustInProgress;
 
     /**
      * Default constructor.
@@ -186,8 +207,13 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         Collection<? extends BaselineNode> servers,
         Boolean autoAdjustEnabled,
         Long autoAdjustAwaitingTime,
-        long remainingTimeToBaselineAdjust,
-        boolean baselineAdjustInProgress
+        Boolean scaleUpAutoAdjustEnabled,
+        Long scaleUpAutoAdjustAwaitingTime,
+        Boolean scaleDownAutoAdjustEnabled,
+        Long scaleDownAutoAdjustAwaitingTime,
+        BaselineAutoAdjustStatus adjustStatus,
+        BaselineAutoAdjustStatus scaleUpAdjustStatus,
+        BaselineAutoAdjustStatus scaleDownAdjustStatus
     ) {
         this.active = active;
         this.topVer = topVer;
@@ -195,8 +221,21 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         this.servers = toMapWithResolvedAddresses(servers);
         this.autoAdjustEnabled = autoAdjustEnabled;
         this.autoAdjustAwaitingTime = autoAdjustAwaitingTime;
-        this.remainingTimeToBaselineAdjust = remainingTimeToBaselineAdjust;
-        this.baselineAdjustInProgress = baselineAdjustInProgress;
+
+        this.scaleUpAutoAdjustEnabled = scaleUpAutoAdjustEnabled;
+        this.scaleUpAutoAdjustAwaitingTime = scaleUpAutoAdjustAwaitingTime;
+
+        this.scaleDownAutoAdjustEnabled = scaleDownAutoAdjustEnabled;
+        this.scaleDownAutoAdjustAwaitingTime = scaleDownAutoAdjustAwaitingTime;
+
+        this.remainingTimeToBaselineAdjust = adjustStatus.getTimeUntilAutoAdjust();
+        this.baselineAdjustInProgress = adjustStatus.getTaskState() == BaselineAutoAdjustStatus.TaskState.IN_PROGRESS;
+
+        this.remainingTimeToBaselineScaleUpAdjust = scaleUpAdjustStatus.getTimeUntilAutoAdjust();
+        this.baselineScaleUpAdjustInProgress = scaleUpAdjustStatus.getTaskState() == BaselineAutoAdjustStatus.TaskState.IN_PROGRESS;
+
+        this.remainingTimeToBaselineScaleDownAdjust = scaleDownAdjustStatus.getTimeUntilAutoAdjust();
+        this.baselineScaleDownAdjustInProgress = scaleDownAdjustStatus.getTaskState() == BaselineAutoAdjustStatus.TaskState.IN_PROGRESS;
     }
 
     /**
@@ -229,7 +268,7 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V2;
+        return V3;
     }
 
     /**
@@ -246,6 +285,22 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         return autoAdjustAwaitingTime;
     }
 
+    public Boolean isScaleUpAutoAdjustEnabled() {
+        return scaleUpAutoAdjustEnabled;
+    }
+
+    public Long getScaleUpAutoAdjustAwaitingTime() {
+        return scaleUpAutoAdjustAwaitingTime;
+    }
+
+    public Boolean isScaleDownAutoAdjustEnabled() {
+        return scaleDownAutoAdjustEnabled;
+    }
+
+    public Long getScaleDownAutoAdjustAwaitingTime() {
+        return scaleDownAutoAdjustAwaitingTime;
+    }
+
     /**
      * @return Time to next baseline adjust.
      */
@@ -260,6 +315,22 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         return baselineAdjustInProgress;
     }
 
+    public long getRemainingTimeToBaselineScaleUpAdjust() {
+        return remainingTimeToBaselineScaleUpAdjust;
+    }
+
+    public boolean isBaselineScaleUpAdjustInProgress() {
+        return baselineScaleUpAdjustInProgress;
+    }
+
+    public long getRemainingTimeToBaselineScaleDownAdjust() {
+        return remainingTimeToBaselineScaleDownAdjust;
+    }
+
+    public boolean isBaselineScaleDownAdjustInProgress() {
+        return baselineScaleDownAdjustInProgress;
+    }
+
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeBoolean(active);
@@ -270,6 +341,14 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         out.writeObject(autoAdjustAwaitingTime);
         out.writeLong(remainingTimeToBaselineAdjust);
         out.writeBoolean(baselineAdjustInProgress);
+        out.writeObject(scaleUpAutoAdjustEnabled);
+        out.writeLong(scaleUpAutoAdjustAwaitingTime);
+        out.writeObject(scaleDownAutoAdjustEnabled);
+        out.writeLong(scaleDownAutoAdjustAwaitingTime);
+        out.writeLong(remainingTimeToBaselineScaleUpAdjust);
+        out.writeBoolean(baselineScaleUpAdjustInProgress);
+        out.writeLong(remainingTimeToBaselineScaleDownAdjust);
+        out.writeBoolean(baselineScaleDownAdjustInProgress);
     }
 
     /** {@inheritDoc} */
@@ -285,6 +364,20 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
             autoAdjustAwaitingTime = (Long)in.readObject();
             remainingTimeToBaselineAdjust = in.readLong();
             baselineAdjustInProgress = in.readBoolean();
+        }
+
+        if (protoVer > V2) {
+            scaleUpAutoAdjustEnabled = (Boolean)in.readObject();
+            scaleUpAutoAdjustAwaitingTime = (Long)in.readObject();
+
+            scaleDownAutoAdjustEnabled = (Boolean)in.readObject();
+            scaleDownAutoAdjustAwaitingTime = (Long)in.readObject();
+
+            remainingTimeToBaselineScaleUpAdjust = in.readLong();
+            baselineScaleUpAdjustInProgress = in.readBoolean();
+
+            remainingTimeToBaselineScaleDownAdjust = in.readLong();
+            baselineScaleDownAdjustInProgress = in.readBoolean();
         }
     }
 

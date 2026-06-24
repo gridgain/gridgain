@@ -188,19 +188,25 @@ class BaselineAutoAdjustScheduler {
     /**
      * @return Time of last scheduled task or -1 if it doesn't exist.
      */
-    public synchronized long lastScheduledTaskTime() {
+    public synchronized long lastScheduledTaskTime(boolean scaleUp) {
         long now = System.currentTimeMillis();
 
         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
-            long lastScheduledTaskTime = Long.MAX_VALUE;
+            long lastScheduledTaskTime;
+            if (scaleUp) {
+                if (baselineScaleUpTimeoutObj == null)
+                    return -1;
+                else
+                    lastScheduledTaskTime = baselineScaleUpTimeoutObj.getTotalEndTime() - now;
+            }
+            else {
+                if (baselineScaleDownTimeoutObj == null)
+                    return -1;
+                else
+                    lastScheduledTaskTime = baselineScaleDownTimeoutObj.getTotalEndTime() - now;
+            }
 
-            if (baselineScaleUpTimeoutObj != null)
-                lastScheduledTaskTime = baselineScaleUpTimeoutObj.getTotalEndTime() - now;
-
-            if (baselineScaleDownTimeoutObj != null)
-                lastScheduledTaskTime = Math.min(lastScheduledTaskTime, baselineScaleDownTimeoutObj.getTotalEndTime() - now);
-
-            return lastScheduledTaskTime == Long.MAX_VALUE || lastScheduledTaskTime < 0 ? -1 : lastScheduledTaskTime;
+            return lastScheduledTaskTime < 0 ? -1 : lastScheduledTaskTime;
         }
 
         if (baselineTimeoutObj == null)

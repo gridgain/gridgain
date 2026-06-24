@@ -2194,8 +2194,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     /**
      * @return Status of baseline auto-adjust.
      */
-    public BaselineAutoAdjustStatus baselineAutoAdjustStatus() {
-        return baselineTopologyUpdater.getStatus();
+    public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp) {
+        return baselineTopologyUpdater.getStatus(scaleUp);
     }
 
     /**

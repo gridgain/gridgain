@@ -439,8 +439,8 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus() {
-        return cluster.baselineAutoAdjustStatus();
+    @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp) {
+        return cluster.baselineAutoAdjustStatus(scaleUp);
     }
 
     /** {@inheritDoc} */
